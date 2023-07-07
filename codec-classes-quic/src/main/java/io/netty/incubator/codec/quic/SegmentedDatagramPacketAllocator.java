@@ -42,7 +42,7 @@ public interface SegmentedDatagramPacketAllocator {
     };
 
     /**
-     * The maximum number of segments to use per packet. By default this is {@code 10} but this may be overriden by
+     * The maximum number of segments to use per packet. By default this is {@code 10} but this may be overridden by
      * the implementation of the interface.
      *
      * @return  the segments.

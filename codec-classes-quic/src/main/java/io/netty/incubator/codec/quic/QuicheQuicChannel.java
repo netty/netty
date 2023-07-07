@@ -1037,37 +1037,39 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 } catch (Exception e) {
                     done = true;
                     close = Quiche.shouldClose(written);
-                    if (tryFailConnectPromise(e)) {
-                        // We are done, release the buffer and send what we did build up so far.
-                        out.release();
-                        return packetWasWritten;
+                    if (!tryFailConnectPromise(e)) {
+                        // Only fire through the pipeline if this does not fail the connect promise.
+                        fireExceptionEvents(e);
                     }
-                    fireExceptionEvents(e);
                 }
+                int size = bufferList.size();
                 if (done) {
                     // We are done, release the buffer and send what we did build up so far.
                     out.release();
 
-                    int size = bufferList.size();
                     switch (size) {
                         case 0:
                             // Nothing more to write.
-                            return packetWasWritten;
+                            break;
                         case 1:
                             // We can write a normal datagram packet.
                             parent().write(new DatagramPacket(bufferList.get(0), sendToAddress));
-                            return true;
+                            packetWasWritten = true;
+                            break;
                         default:
+                            int segmentSize = segmentSize(bufferList);
+                            ByteBuf compositeBuffer = Unpooled.wrappedBuffer(bufferList.toArray(new ByteBuf[0]));
                             // We had more than one buffer, create a segmented packet.
                             parent().write(segmentedDatagramPacketAllocator.newPacket(
-                                    Unpooled.wrappedBuffer(bufferList.toArray(new ByteBuf[0])),
-                                    bufferList.get(size - 1).readableBytes(), sendToAddress));
-                            return true;
+                                    compositeBuffer, segmentSize, sendToAddress));
+                            packetWasWritten = true;
+                            break;
                     }
+                    bufferList.clear();
+                    return packetWasWritten;
                 }
                 out.writerIndex(writerIndex + written);
 
-                int size = bufferList.size();
                 int segmentSize = -1;
                 if (connection.isSendInfoChanged()) {
                     // Change the cached address and let the user know there was a connection migration.
@@ -1079,10 +1081,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     if (size > 0) {
                         // We have something in the out list already, we need to send this now and so we set the
                         // segmentSize.
-                        segmentSize = bufferList.get(size - 1).readableBytes();
+                        segmentSize = segmentSize(bufferList);
                     }
                 } else if (size > 0) {
-                    int lastReadable = bufferList.get(size - 1).readableBytes();
+                    int lastReadable = segmentSize(bufferList);
                     // Check if we either need to send now because the last buffer we added has a smaller size then this
                     // one or if we reached the maximum number of segments that we can send.
                     if (lastReadable != out.readableBytes() ||
@@ -1091,28 +1093,22 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     }
                 }
 
-                // If the segmentSize is not -1 we know we need to send now what was in the out list (which might be
-                // nothing as well).
+                // If the segmentSize is not -1 we know we need to send now what was in the out list.
                 if (segmentSize != -1) {
-                    boolean stop = false;
-                    switch (size) {
-                        case 0:
-                            // There was nothing in the out list, just move on.
-                            break;
-                        case 1:
-                            // Only one buffer in the out list, there is no need to use segments.
-                            stop = writePacket(new DatagramPacket(
-                                    bufferList.get(0), sendToAddress), maxDatagramSize, len);
-                            packetWasWritten = true;
-                            break;
-                        default:
-                            // Create a packet with segments in.
-                            stop = writePacket(segmentedDatagramPacketAllocator.newPacket(
-                                    Unpooled.wrappedBuffer(bufferList.toArray(
-                                            new ByteBuf[0])), segmentSize, sendToAddress), maxDatagramSize, len);
-                            packetWasWritten = true;
-                            break;
+                    final boolean stop;
+                    if (size == 1) {
+                        // Only one buffer in the out list, there is no need to use segments.
+                        stop = writePacket(new DatagramPacket(
+                                bufferList.get(0), sendToAddress), maxDatagramSize, len);
+                    } else {
+                        // Create a packet with segments in.
+                        ByteBuf compositeBuffer = Unpooled.wrappedBuffer(bufferList.toArray(new ByteBuf[0]));
+                        stop = writePacket(segmentedDatagramPacketAllocator.newPacket(
+                                compositeBuffer, segmentSize, sendToAddress), maxDatagramSize, len);
                     }
+                    bufferList.clear();
+                    packetWasWritten = true;
+
                     if (stop) {
                         // Nothing left in the window, continue later. That said we still need to also
                         // write the previous filled out buffer as otherwise we would either leak or need
@@ -1124,9 +1120,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         }
                         return true;
                     }
-                    // We processed everything that was in the list, clear it.
-                    bufferList.clear();
                 }
+                // Let's add a touch with the bufferList as a hint. This will help us to debug leaks if there
+                // are any.
+                out.touch(bufferList);
                 // store for later, so we can make use of segments.
                 bufferList.add(out);
             }
@@ -1136,6 +1133,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 unsafe().close(newPromise());
             }
         }
+    }
+
+    private static int segmentSize(List<ByteBuf> bufferList) {
+        assert !bufferList.isEmpty();
+        int size = bufferList.size();
+        return bufferList.get(size - 1).readableBytes();
     }
 
     private boolean connectionSendSimple() {
@@ -1569,7 +1572,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                 }
                             }
                             if (readable < readableStreams.length) {
-                                // We did consome all readable streams.
+                                // We did consume all readable streams.
                                 streamReadable = false;
                                 break;
                             }
