@@ -17,6 +17,7 @@ package io.netty5.channel.epoll;
 
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.DefaultFileRegion;
+import io.netty5.channel.unix.Errors;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.NativeInetAddress;
 import io.netty5.channel.unix.PeerCredentials;
@@ -33,6 +34,7 @@ import java.net.UnknownHostException;
 import java.util.Enumeration;
 
 import static io.netty5.channel.unix.Errors.ioResult;
+import static io.netty5.channel.unix.Errors.newIOException;
 
 /**
  * A socket which provides access Linux native methods.
@@ -306,6 +308,46 @@ public final class LinuxSocket extends Socket {
         return ioResult("sendfile", (int) res);
     }
 
+    public void bindVSock(VSockAddress address) throws IOException {
+        int res = bindVSock(/*fd*/intValue(), address.getCid(), address.getPort());
+        if (res < 0) {
+            throw newIOException("bindVSock", res);
+        }
+    }
+
+    public boolean connectVSock(VSockAddress address) throws IOException {
+        int res = connectVSock(/*fd*/intValue(), address.getCid(), address.getPort());
+        if (res < 0) {
+            return Errors.handleConnectErrno("connectVSock", res);
+        }
+        return true;
+    }
+
+    public VSockAddress remoteVSockAddress() {
+        byte[] addr = remoteVSockAddress(/*fd*/intValue());
+        if (addr == null) {
+            return null;
+        }
+        int cid = getIntAt(addr, 0);
+        int port = getIntAt(addr, 4);
+        return new VSockAddress(cid, port);
+    }
+
+    public VSockAddress localVSockAddress() {
+        byte[] addr = localVSockAddress(/*fd*/intValue());
+        if (addr == null) {
+            return null;
+        }
+        int cid = getIntAt(addr, 0);
+        int port = getIntAt(addr, 4);
+        return new VSockAddress(cid, port);
+    }
+
+    private static int getIntAt(byte[] array, int startIndex) {
+        return array[startIndex] << 24 | (array[startIndex + 1] & 0xFF) << 16
+                | (array[startIndex + 2] & 0xFF) << 8 | (array[startIndex + 3] & 0xFF);
+    }
+
     private static InetAddress deriveInetAddress(NetworkInterface netInterface, boolean ipv6) {
         final InetAddress ipAny = ipv6 ? INET6_ANY : INET_ANY;
         if (netInterface != null) {
@@ -319,6 +361,22 @@ public final class LinuxSocket extends Socket {
             }
         }
         return ipAny;
+    }
+
+    public static LinuxSocket newSocket(int fd) {
+        return new LinuxSocket(fd, /*consistent with 4.1*/SocketProtocolFamily.INET);
+    }
+
+    public static LinuxSocket newVSockStream() {
+        return new LinuxSocket(newVSockStream0(), /*consistent with 4.1*/SocketProtocolFamily.INET);
+    }
+
+    static int newVSockStream0() {
+        int res = newVSockStreamFd();
+        if (res < 0) {
+            throw new ChannelException(newIOException("newVSockStream", res));
+        }
+        return res;
     }
 
     public static LinuxSocket newDatagramSocket(ProtocolFamily family) {
@@ -393,6 +451,12 @@ public final class LinuxSocket extends Socket {
             throw new ChannelException(uhe);
         }
     }
+
+    private static native int newVSockStreamFd();
+    private static native int bindVSock(int fd, int cid, int port);
+    private static native int connectVSock(int fd, int cid, int port);
+    private static native byte[] remoteVSockAddress(int fd);
+    private static native byte[] localVSockAddress(int fd);
 
     private static native void joinGroup(int fd, boolean ipv6, byte[] group, byte[] interfaceAddress,
                                          int scopeId, int interfaceIndex) throws IOException;
