@@ -14,8 +14,8 @@
  * under the License.
  */
 
-#ifndef NETTY_VM_SOCKETS_H_
-#define NETTY_VM_SOCKETS_H_
+#ifndef NETTY_EPOLL_VMSOCKET_H_
+#define NETTY_EPOLL_VMSOCKET_H_
 
 #include <sys/socket.h>
 
@@ -35,4 +35,4 @@ struct sockaddr_vm {
                            sizeof(unsigned int)];
 };
 
-#endif /* NETTY_VM_SOCKETS_H_ */
+#endif /* NETTY_EPOLL_VMSOCKET_H_ */

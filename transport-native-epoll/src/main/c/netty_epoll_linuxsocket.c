@@ -29,7 +29,7 @@
 #include <sys/sendfile.h>
 #include <linux/tcp.h> // TCP_NOTSENT_LOWAT is a linux specific define
 #include "netty_epoll_linuxsocket.h"
-#include "netty_vm_sockets.h"
+#include "netty_epoll_vmsocket.h"
 #include "netty_unix_errors.h"
 #include "netty_unix_filedescriptor.h"
 #include "netty_unix_jni.h"
@@ -115,7 +115,7 @@ static jint netty_epoll_linuxsocket_connectVSock(JNIEnv* env, jclass clazz, jint
     return res;
 }
 
-jbyteArray createVSockAddressArray(JNIEnv* env, const struct sockaddr_vm* addr) {
+static jbyteArray createVSockAddressArray(JNIEnv* env, const struct sockaddr_vm* addr) {
     jbyteArray bArray = (*env)->NewByteArray(env, 8);
     if (bArray == NULL) {
         return NULL;
