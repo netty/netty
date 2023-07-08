@@ -45,10 +45,6 @@ public final class LinuxSocket extends Socket {
     private static final InetAddress INET_ANY = unsafeInetAddrByName("0.0.0.0");
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
 
-    public static LinuxSocket create(int fd) {
-        return new LinuxSocket(fd);
-    }
-
     LinuxSocket(int fd) {
         super(fd);
     }
@@ -371,6 +367,10 @@ public final class LinuxSocket extends Socket {
             }
         }
         return ipAny;
+    }
+
+    public static LinuxSocket newSocket(int fd) {
+        return new LinuxSocket(fd);
     }
 
     public static LinuxSocket newVSockStream() {
