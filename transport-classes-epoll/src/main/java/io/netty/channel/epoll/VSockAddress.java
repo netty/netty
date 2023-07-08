@@ -51,7 +51,7 @@ public final class VSockAddress extends SocketAddress {
 
     @Override
     public String toString() {
-        return "VSockSocketAddress{" +
+        return "VSockAddress{" +
                 "cid=" + cid +
                 ", port=" + port +
                 '}';
