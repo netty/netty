@@ -74,7 +74,7 @@ static jfieldID fileDescriptorFieldId = NULL;
 // JNI Registered Methods Begin
 
 static jint netty5_epoll_linuxsocket_newVSockStreamFd(JNIEnv* env, jclass clazz) {
-    int fd = nettyNonBlockingSocket(AF_VSOCK, SOCK_STREAM, 0);
+    int fd = netty5_unix_socket_nonBlockingSocket(AF_VSOCK, SOCK_STREAM, 0);
     if (fd == -1) {
         return -errno;
     }

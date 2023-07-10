@@ -61,7 +61,7 @@ extern int accept4(int sockFd, struct sockaddr* addr, socklen_t* addrlen, int fl
 // see sys/un.h#SUN_LEN, this is modified to allow nul bytes
 #define _UNIX_ADDR_LENGTH(path_len) ((uintptr_t) offsetof(struct sockaddr_un, sun_path) + (uintptr_t) path_len)
 
-int nettyNonBlockingSocket(int domain, int type, int protocol) {
+int netty5_unix_socket_nonBlockingSocket(int domain, int type, int protocol) {
 #ifdef SOCK_NONBLOCK
     return socket(domain, type | SOCK_NONBLOCK, protocol);
 #else
@@ -226,7 +226,7 @@ static jboolean netty5_unix_socket_isIPv6Preferred0(JNIEnv* env, jclass clazz, j
         return JNI_FALSE;
     }
 
-    int fd = nettyNonBlockingSocket(AF_INET6, SOCK_STREAM, 0);
+    int fd = netty5_unix_socket_nonBlockingSocket(AF_INET6, SOCK_STREAM, 0);
     if (fd == -1) {
         return errno == EAFNOSUPPORT ? JNI_FALSE : JNI_TRUE;
     }
@@ -272,7 +272,7 @@ static int netty5_unix_socket_setOption0(jint fd, int level, int optname, const 
 }
 
 static jint _socket(JNIEnv* env, jclass clazz, int domain, int type) {
-    int fd = nettyNonBlockingSocket(domain, type, 0);
+    int fd = netty5_unix_socket_nonBlockingSocket(domain, type, 0);
     if (fd == -1) {
         return -errno;
     } else if (domain == AF_INET6) {
@@ -721,7 +721,7 @@ static jint netty5_unix_socket_newSocketStreamFd(JNIEnv* env, jclass clazz, jboo
 }
 
 static jint netty5_unix_socket_newSocketDomainFd(JNIEnv* env, jclass clazz) {
-    int fd = nettyNonBlockingSocket(PF_UNIX, SOCK_STREAM, 0);
+    int fd = netty5_unix_socket_nonBlockingSocket(PF_UNIX, SOCK_STREAM, 0);
     if (fd == -1) {
         return -errno;
     }
@@ -729,7 +729,7 @@ static jint netty5_unix_socket_newSocketDomainFd(JNIEnv* env, jclass clazz) {
 }
 
 static jint netty5_unix_socket_newSocketDomainDgramFd(JNIEnv* env, jclass clazz) {
-    int fd = nettyNonBlockingSocket(PF_UNIX, SOCK_DGRAM, 0);
+    int fd = netty5_unix_socket_nonBlockingSocket(PF_UNIX, SOCK_DGRAM, 0);
     if (fd == -1) {
         return -errno;
     }
