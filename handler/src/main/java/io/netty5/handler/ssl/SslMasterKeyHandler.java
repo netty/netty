@@ -175,7 +175,9 @@ public abstract class SslMasterKeyHandler implements ChannelHandler {
      * Record the session identifier and master key to the {@link Logger} named {@code io.netty5.wireshark}.
      * ex. {@code RSA Session-ID:XXX Master-Key:YYY}
      * This format is understood by Wireshark 1.6.0.
-     * https://code.wireshark.org/review/gitweb?p=wireshark.git;a=commit;h=686d4cabb41185591c361f9ec6b709034317144b
+     * See: <a href=
+     * "https://code.wireshark.org/review/gitweb?p=wireshark.git;a=commit;h=686d4cabb41185591c361f9ec6b709034317144b"
+     * >Wireshark</a>
      * The key and session identifier are forwarded to the log named 'io.netty5.wireshark'.
      */
     private static final class WiresharkSslMasterKeyHandler extends SslMasterKeyHandler {
