@@ -108,7 +108,7 @@ final class QuicheQuicConnection {
         if (release) {
             recvInfoBuffer.release();
             sendInfoBuffer.release();
-            if (closeLeakTracker) {
+            if (closeLeakTracker && leakTracker != null) {
                 leakTracker.close(this);
             }
         }
