@@ -17,6 +17,9 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.ResourceLeakDetector;
+import io.netty.util.ResourceLeakDetectorFactory;
+import io.netty.util.ResourceLeakTracker;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -25,7 +28,12 @@ import java.util.function.Supplier;
 final class QuicheQuicConnection {
     private static final int TOTAL_RECV_INFO_SIZE = Quiche.SIZEOF_QUICHE_RECV_INFO +
             Quiche.SIZEOF_SOCKADDR_STORAGE + Quiche.SIZEOF_SOCKADDR_STORAGE;
+    private static final ResourceLeakDetector<QuicheQuicConnection> leakDetector =
+            ResourceLeakDetectorFactory.instance().newResourceLeakDetector(QuicheQuicConnection.class);
     private final QuicheQuicSslEngine engine;
+
+    private final ResourceLeakTracker<QuicheQuicConnection> leakTracker;
+
     final long ssl;
     private ReferenceCounted refCnt;
 
@@ -70,6 +78,7 @@ final class QuicheQuicConnection {
         sendInfoBuffer1 = sendInfoBuffer.nioBuffer(0, Quiche.SIZEOF_QUICHE_SEND_INFO);
         sendInfoBuffer2 = sendInfoBuffer.nioBuffer(Quiche.SIZEOF_QUICHE_SEND_INFO, Quiche.SIZEOF_QUICHE_SEND_INFO);
         this.engine.connection = this;
+        leakTracker = leakDetector.track(this);
     }
 
     synchronized void reattach(ReferenceCounted refCnt) {
@@ -78,6 +87,10 @@ final class QuicheQuicConnection {
     }
 
     void free() {
+        free(true);
+    }
+
+    private void free(boolean closeLeakTracker) {
         boolean release = false;
         synchronized (this) {
             if (connection != -1) {
@@ -95,6 +108,9 @@ final class QuicheQuicConnection {
         if (release) {
             recvInfoBuffer.release();
             sendInfoBuffer.release();
+            if (closeLeakTracker) {
+                leakTracker.close(this);
+            }
         }
     }
 
@@ -194,7 +210,7 @@ final class QuicheQuicConnection {
     @Override
     protected void finalize() throws Throwable {
         try {
-            free();
+            free(false);
         } finally {
             super.finalize();
         }
