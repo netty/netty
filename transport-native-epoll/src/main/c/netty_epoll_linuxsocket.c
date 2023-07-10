@@ -29,6 +29,7 @@
 #include <sys/sendfile.h>
 #include <linux/tcp.h> // TCP_NOTSENT_LOWAT is a linux specific define
 #include "netty_epoll_linuxsocket.h"
+#include "netty_epoll_vmsocket.h"
 #include "netty_unix_errors.h"
 #include "netty_unix_filedescriptor.h"
 #include "netty_unix_jni.h"
@@ -71,6 +72,91 @@ static jfieldID fdFieldId = NULL;
 static jfieldID fileDescriptorFieldId = NULL;
 
 // JNI Registered Methods Begin
+static jint netty_epoll_linuxsocket_newVSockStreamFd(JNIEnv* env, jclass clazz) {
+    int fd = netty_unix_socket_nonBlockingSocket(AF_VSOCK, SOCK_STREAM, 0);
+    if (fd == -1) {
+        return -errno;
+    }
+    return fd;
+}
+
+static jint netty_epoll_linuxsocket_bindVSock(JNIEnv* env, jclass clazz, jint fd, jint cid, jint port) {
+    struct sockaddr_vm addr;
+    memset(&addr, 0, sizeof(struct sockaddr_vm));
+
+    addr.svm_family = AF_VSOCK;
+    addr.svm_port = port;
+    addr.svm_cid = cid;
+
+    int res = bind(fd, (struct sockaddr*) &addr, sizeof(struct sockaddr_vm));
+
+    if (res == -1) {
+        return -errno;
+    }
+    return res;
+}
+
+static jint netty_epoll_linuxsocket_connectVSock(JNIEnv* env, jclass clazz, jint fd, jint cid, jint port) {
+    struct sockaddr_vm addr;
+    memset(&addr, 0, sizeof(struct sockaddr_vm));
+    addr.svm_family = AF_VSOCK;
+    addr.svm_port = port;
+    addr.svm_cid = cid;
+
+    int res;
+    int err;
+    do {
+        res = connect(fd, (struct sockaddr*) &addr, sizeof(struct sockaddr_vm));
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res == -1) {
+        return -errno;
+    }
+    return res;
+}
+
+static jbyteArray createVSockAddressArray(JNIEnv* env, const struct sockaddr_vm* addr) {
+    jbyteArray bArray = (*env)->NewByteArray(env, 8);
+    if (bArray == NULL) {
+        return NULL;
+    }
+
+    unsigned int cid = (addr->svm_cid);
+    unsigned int port = (addr->svm_port);
+
+    unsigned char a[4];
+    a[0] = cid >> 24;
+    a[1] = cid >> 16;
+    a[2] = cid >> 8;
+    a[3] = cid;
+    (*env)->SetByteArrayRegion(env, bArray, 0, 4, (jbyte*) &a);
+
+    a[0] = port >> 24;
+    a[1] = port >> 16;
+    a[2] = port >> 8;
+    a[3] = port;
+    (*env)->SetByteArrayRegion(env, bArray, 4, 4, (jbyte*) &a);
+    return bArray;
+}
+
+static jbyteArray netty_epoll_linuxsocket_remoteVSockAddress(JNIEnv* env, jclass clazz, jint fd) {
+    struct sockaddr_vm addr = { 0 };
+    socklen_t len = sizeof(addr);
+    if (getpeername(fd, (struct sockaddr*) &addr, &len) == -1) {
+        return NULL;
+    }
+    return createVSockAddressArray(env, &addr);
+}
+
+static jbyteArray netty_epoll_linuxsocket_localVSockAddress(JNIEnv* env, jclass clazz, jint fd) {
+    struct sockaddr_vm addr = { 0 };
+    socklen_t len = sizeof(addr);
+    if (getsockname(fd, (struct sockaddr*) &addr, &len) == -1) {
+        return NULL;
+    }
+    return createVSockAddressArray(env, &addr);
+}
+
 static void netty_epoll_linuxsocket_setTimeToLive(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_TTL, &optval, sizeof(optval));
 }
@@ -665,6 +751,11 @@ static jlong netty_epoll_linuxsocket_sendFile(JNIEnv* env, jclass clazz, jint fd
 
 // JNI Method Registration Table Begin
 static const JNINativeMethod fixed_method_table[] = {
+  { "newVSockStreamFd", "()I", (void *) netty_epoll_linuxsocket_newVSockStreamFd },
+  { "bindVSock", "(III)I", (void *) netty_epoll_linuxsocket_bindVSock },
+  { "connectVSock", "(III)I", (void *) netty_epoll_linuxsocket_connectVSock },
+  { "remoteVSockAddress", "(I)[B", (void *) netty_epoll_linuxsocket_remoteVSockAddress },
+  { "localVSockAddress", "(I)[B", (void *) netty_epoll_linuxsocket_localVSockAddress },
   { "setTimeToLive", "(II)V", (void *) netty_epoll_linuxsocket_setTimeToLive },
   { "getTimeToLive", "(I)I", (void *) netty_epoll_linuxsocket_getTimeToLive },
   { "setInterface", "(IZ[BII)V", (void *) netty_epoll_linuxsocket_setInterface },
