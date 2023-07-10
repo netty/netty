@@ -160,17 +160,12 @@ jobs:
             **/hs_err*.log
 
   build-pr-android:
-    # Disable until fixed
-    if: ${{ false }}
     runs-on: ubuntu-latest
     name: android
     env:
       SDK_VER: "android-21"
-      NDK_VER: "21.4.7075529"
+      NDK_VER: "25.2.9519653"
     steps:
-      - name: Set environmental variables
-        run: echo "ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/$NDK_VER" >> $GITHUB_ENV
-
       - name: Checkout code
         uses: actions/checkout@v3
 

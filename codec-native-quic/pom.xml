@@ -228,7 +228,6 @@
         <!-- https://github.com/android/ndk/issues/1324 -->
         <androidAbi>armeabi-v7a</androidAbi>
         <androidTriple>armv7a-linux-androideabi</androidTriple>
-        <androidTriple2>arm-linux-androideabi</androidTriple2>
         <quicheTarget>armv7-linux-androideabi</quicheTarget>
       </properties>
     </profile>
@@ -237,7 +236,6 @@
       <properties>
         <androidAbi>arm64-v8a</androidAbi>
         <androidTriple>aarch64-linux-android</androidTriple>
-        <androidTriple2>aarch64-linux-android</androidTriple2>
         <quicheTarget>aarch64-linux-android</quicheTarget>
       </properties>
     </profile>
@@ -246,7 +244,6 @@
       <properties>
         <androidAbi>x86</androidAbi>
         <androidTriple>i686-linux-android</androidTriple>
-        <androidTriple2>i686-linux-android</androidTriple2>
         <quicheTarget>i686-linux-android</quicheTarget>
       </properties>
     </profile>
@@ -255,7 +252,6 @@
       <properties>
         <androidAbi>x86_64</androidAbi>
         <androidTriple>x86_64-linux-android</androidTriple>
-        <androidTriple2>x86_64-linux-android</androidTriple2>
         <quicheTarget>x86_64-linux-android</quicheTarget>
       </properties>
     </profile>
@@ -369,13 +365,13 @@
                     <configureArg>TOOLCHAIN=${ndkToolchain}</configureArg>
                     <configureArg>TARGET=${androidTriple}</configureArg>
                     <configureArg>API=${androidMinSdkVersion}</configureArg>
-                    <configureArg>AR=${ndkToolchain}/bin/${androidTriple2}-ar</configureArg>
+                    <configureArg>AR=${ndkToolchain}/bin/llvm-ar</configureArg>
                     <configureArg>CC=${ndkToolchain}/bin/${androidTriple}${androidMinSdkVersion}-clang</configureArg>
-                    <configureArg>AS=${ndkToolchain}/bin/${androidTriple2}-as</configureArg>
+                    <configureArg>AS=${ndkToolchain}/bin/${androidTriple}${androidMinSdkVersion}-clang</configureArg>
                     <configureArg>CXX=${ndkToolchain}/bin/${androidTriple}${androidMinSdkVersion}-clang++</configureArg>
-                    <configureArg>LD=${ndkToolchain}/bin/${androidTriple2}-ld</configureArg>
-                    <configureArg>RANLIB=${ndkToolchain}/bin/${androidTriple2}-ranlib</configureArg>
-                    <configureArg>STRIP=${ndkToolchain}/bin/${androidTriple2}-strip</configureArg>
+                    <configureArg>LD=${ndkToolchain}/bin/ld</configureArg>
+                    <configureArg>RANLIB=${ndkToolchain}/bin/llvm-ranlib</configureArg>
+                    <configureArg>STRIP=${ndkToolchain}/bin/llvm-strip</configureArg>
                   </configureArgs>
                   <buildDirectory>${hawtjniBuildDir}</buildDirectory>
                 </configuration>
