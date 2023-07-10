@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
@@ -35,12 +36,23 @@ import static io.netty.channel.unix.Limits.SSIZE_MAX;
 public class EpollChannelConfig extends DefaultChannelConfig {
     private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
-    EpollChannelConfig(AbstractEpollChannel channel) {
-        super(channel);
+    protected EpollChannelConfig(Channel channel) {
+        super(checkAbstractEpollChannel(channel));
     }
 
-    EpollChannelConfig(AbstractEpollChannel channel, RecvByteBufAllocator recvByteBufAllocator) {
-        super(channel, recvByteBufAllocator);
+    protected EpollChannelConfig(Channel channel, RecvByteBufAllocator recvByteBufAllocator) {
+        super(checkAbstractEpollChannel(channel), recvByteBufAllocator);
+    }
+
+    protected LinuxSocket socket() {
+        return ((AbstractEpollChannel) channel).socket;
+    }
+
+    private static Channel checkAbstractEpollChannel(Channel channel) {
+        if (!(channel instanceof AbstractEpollChannel)) {
+            throw new IllegalArgumentException("channel is not AbstractEpollChannel: " + channel.getClass());
+        }
+        return channel;
     }
 
     @Override
@@ -215,11 +227,11 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         ((AbstractEpollChannel) channel).clearEpollIn();
     }
 
-    final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
+    protected final void setMaxBytesPerGatheringWrite(long maxBytesPerGatheringWrite) {
         this.maxBytesPerGatheringWrite = maxBytesPerGatheringWrite;
     }
 
-    final long getMaxBytesPerGatheringWrite() {
+    protected final long getMaxBytesPerGatheringWrite() {
         return maxBytesPerGatheringWrite;
     }
 }
