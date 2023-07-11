@@ -45,10 +45,9 @@
     <boringsslHomeBuildDir>${boringsslHomeDir}/build</boringsslHomeBuildDir>
     <boringsslHomeIncludeDir>${boringsslHomeDir}/include</boringsslHomeIncludeDir>
     <boringsslRepository>https://boringssl.googlesource.com/boringssl</boringsslRepository>
-    <!-- Follow what is used in quiche for now -->
-    <!-- https://github.com/cloudflare/quiche/tree/master/quiche/deps -->
-    <boringsslBranch>master</boringsslBranch>
-    <boringsslCommitSha>f1c75347daa2ea81a941e953f2263e0a4d970c8d</boringsslCommitSha>
+    <!-- Lets use what we use in netty-tcnative-boringssl-static -->
+    <boringsslBranch>chromium-stable</boringsslBranch>
+    <boringsslCommitSha>ca1690e221677cea3fb946f324eb89d846ec53f2</boringsslCommitSha>
 
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
@@ -725,10 +724,10 @@
 
                     <!-- Only copy the libs and header files we need -->
                     <mkdir dir="${boringsslHomeBuildDir}" />
-                    <copy file="${boringsslBuildDir}/${libssl}" todir="${boringsslHomeBuildDir}" verbose="true" />
-                    <copy file="${boringsslBuildDir}/${libcrypto}" todir="${boringsslHomeBuildDir}" verbose="true" />
+                    <copy file="${boringsslBuildDir}/ssl/${libssl}" todir="${boringsslHomeBuildDir}" verbose="true" />
+                    <copy file="${boringsslBuildDir}/crypto/${libcrypto}" todir="${boringsslHomeBuildDir}" verbose="true" />
                     <copy todir="${boringsslHomeIncludeDir}" verbose="true">
-                      <fileset dir="${boringsslSourceDir}/src/include" />
+                      <fileset dir="${boringsslSourceDir}/include" />
                     </copy>
                   </else>
                 </if>
