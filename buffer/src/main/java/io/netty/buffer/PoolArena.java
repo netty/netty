@@ -230,6 +230,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     }
 
     void free(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity, PoolArenasCache cache) {
+        chunk.decrementPinnedMemory(normCapacity);
         if (chunk.unpooled) {
             int size = chunk.chunkSize();
             destroyChunk(chunk);

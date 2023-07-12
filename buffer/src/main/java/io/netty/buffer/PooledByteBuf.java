@@ -119,7 +119,6 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         }
 
         // Reallocation required.
-        chunk.decrementPinnedMemory(maxLength);
         chunk.arena.reallocate(this, newCapacity);
         return this;
     }
@@ -173,7 +172,6 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
-            chunk.decrementPinnedMemory(maxLength);
             chunk.arena.free(chunk, tmpNioBuf, handle, maxLength, cache);
             tmpNioBuf = null;
             chunk = null;
