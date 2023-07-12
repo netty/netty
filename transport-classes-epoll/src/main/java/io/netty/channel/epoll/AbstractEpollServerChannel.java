@@ -34,11 +34,11 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
         this(new LinuxSocket(fd), false);
     }
 
-    AbstractEpollServerChannel(LinuxSocket fd) {
+    protected AbstractEpollServerChannel(LinuxSocket fd) {
         this(fd, isSoErrorZero(fd));
     }
 
-    AbstractEpollServerChannel(LinuxSocket fd, boolean active) {
+    protected AbstractEpollServerChannel(LinuxSocket fd, boolean active) {
         super(null, fd, active);
     }
 
@@ -72,7 +72,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
         throw new UnsupportedOperationException();
     }
 
-    abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
+    protected abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
 
     final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
         // Will hold the remote address after accept(...) was successful.
