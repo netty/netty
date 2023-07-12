@@ -911,4 +911,50 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         }
         return totalUsed;
     }
+
+    @Test
+    public void testCapacityChangeDoesntThrowAssertionError() throws Exception {
+        ByteBufAllocator allocator = newAllocator(true);
+        List<ByteBuf> buffers = new ArrayList<ByteBuf>();
+        try {
+            for (int i = 0; i < 31; i++) {
+                buffers.add(allocator.heapBuffer());
+            }
+
+            final ByteBuf buf = allocator.heapBuffer();
+            buffers.add(buf);
+            final AtomicReference<AssertionError> assertionRef = new AtomicReference<AssertionError>();
+            Runnable capacityChangeTask = new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        buf.capacity(512);
+                    } catch (AssertionError e) {
+                        assertionRef.compareAndSet(null, e);
+                        throw e;
+                    }
+                }
+            };
+            Thread thread1 = new Thread(capacityChangeTask);
+            Thread thread2 = new Thread(capacityChangeTask);
+
+            thread1.start();
+            thread2.start();
+
+            thread1.join();
+            thread2.join();
+
+            buffers.add(allocator.heapBuffer());
+            buffers.add(allocator.heapBuffer());
+
+            AssertionError error = assertionRef.get();
+            if (error != null) {
+                throw error;
+            }
+        } finally {
+            for (ByteBuf buffer: buffers) {
+                buffer.release();
+            }
+        }
+    }
 }
