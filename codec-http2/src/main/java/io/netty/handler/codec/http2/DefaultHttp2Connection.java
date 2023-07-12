@@ -748,12 +748,15 @@ public class DefaultHttp2Connection implements Http2Connection {
         public DefaultStream createStream(int streamId, boolean halfClosed) throws Http2Exception {
             State state = activeState(streamId, IDLE, isLocal(), halfClosed);
 
-            checkNewStreamAllowed(streamId, state);
+            try {
+                checkNewStreamAllowed(streamId, state);
+            } finally {
+                // Always increment Expected stream ID
+                incrementExpectedStreamId(streamId);
+            }
 
             // Create and initialize the stream.
             DefaultStream stream = new DefaultStream(streamId, state);
-
-            incrementExpectedStreamId(streamId);
 
             addStream(stream);
 
