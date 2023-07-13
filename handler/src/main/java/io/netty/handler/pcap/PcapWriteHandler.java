@@ -700,8 +700,8 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         if (state.get() == State.CLOSED) {
             logger.debug("PcapWriterHandler is already closed");
         } else {
-            markClosed();
             pCapWriter.close();
+            markClosed();
             logger.debug("PcapWriterHandler is now closed");
         }
     }
