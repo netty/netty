@@ -88,13 +88,15 @@ public class PcapWriteHandlerTest {
         ChannelFuture channelFutureServer = server.bind(serverAddr).sync();
         assertTrue(channelFutureServer.isSuccess());
 
+        CloseDetectingByteBufOutputStream outputStream = new CloseDetectingByteBufOutputStream(byteBuf);
+
         // We'll bootstrap a UDP Client for sending UDP Packets to UDP Server.
         Bootstrap client = new Bootstrap()
                 .group(eventLoopGroup)
                 .channel(NioDatagramChannel.class)
                 .handler(PcapWriteHandler.builder()
                         .sharedOutputStream(sharedOutputStream)
-                        .build(new ByteBufOutputStream(byteBuf)));
+                        .build(outputStream));
 
         ChannelFuture channelFutureClient =
                 client.connect(channelFutureServer.channel().localAddress(), clientAddr).sync();
@@ -109,6 +111,10 @@ public class PcapWriteHandlerTest {
                 (InetSocketAddress) clientChannel.remoteAddress(),
                 (InetSocketAddress) clientChannel.localAddress()
         );
+
+        // If sharedOutputStream is true, we don't close the outputStream.
+        // If sharedOutputStream is false, we close the outputStream.
+        assertEquals(!sharedOutputStream, outputStream.closeCalled());
     }
 
     @Test
