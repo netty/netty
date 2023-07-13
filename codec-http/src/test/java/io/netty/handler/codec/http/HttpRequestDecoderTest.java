@@ -633,6 +633,7 @@ public class HttpRequestDecoderTest {
         assertEquals("x1", headers.get("X-1-Header"));
         assertEquals("x2", headers.get("X-2-Header"));
         assertEquals("x3", headers.get("X-3-Header"));
+        assertFalse(channel.finish());
     }
 
     private static void testInvalidHeaders0(String requestStr) {
