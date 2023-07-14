@@ -179,7 +179,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                     }
                 }
                 expansions++;
-            } while (expansions < 3 && tryExpandMagazines(mags.length));
+            } while (expansions <= 3 && tryExpandMagazines(mags.length));
         }
         // The magazines failed us, or the buffer is too big to be pooled. Allocate unpooled buffer.
         return manager.allocateShared(allocatorControl, size, standardDrop(manager), allocationType);
