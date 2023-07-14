@@ -26,29 +26,76 @@ import io.netty5.buffer.internal.ArcDrop;
 import io.netty5.buffer.internal.CleanerDrop;
 import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.util.NettyRuntime;
+import io.netty5.util.internal.PlatformDependent;
+import io.netty5.util.internal.SystemPropertyUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.Arrays;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Queue;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.Supplier;
 
 import static io.netty5.buffer.internal.InternalBufferUtils.allocatorClosedException;
 import static io.netty5.buffer.internal.InternalBufferUtils.standardDrop;
 import static io.netty5.util.internal.PlatformDependent.threadId;
+import static java.util.Objects.requireNonNull;
 
+/**
+ * An auto-tuning pooling allocator.
+ * <p>
+ * The allocator is organized into a list of Magazines, and each magazine has a chunk-buffer that they allocate buffers
+ * from.
+ * <p>
+ * The magazines hold the mutexes that ensure the thread-safety of the allocator, and each thread picks a magazine
+ * based on the id of the thread. This spreads the contention of multi-threaded access across the magazines.
+ * If contention is detected above a certain threshold, the number of magazines are increased in response to the
+ * contention.
+ * <p>
+ * The magazines maintain histograms of the sizes of the allocations they do. The histograms are used to compute the
+ * preferred chunk size. The preferred chunk size is one that is big enough to service 10 allocations of the
+ * 99-percentile size. This way, the chunk size is adapted to the allocation patterns.
+ * <p>
+ * Computing the preferred chunk size is a somewhat expensive operation. Therefore, the frequency with which this is
+ * done, is also adapted to the allocation pattern. If a newly computed preferred chunk is the same as the previous
+ * preferred chunk size, then the frequency is reduced. Otherwise, the frequency is increased.
+ * <p>
+ * This allows the allocator to quickly respond to changes in the application workload,
+ * without suffering undue overhead from maintaining its statistics.
+ * <p>
+ * Since magazines "relatively thread-local", the allocator has a central queue that allow excess chunks from any
+ * magazine, to be shared with other magazines.
+ * The {@link #createSharedChunkQueue()} method can be overridden to customize this queue.
+ */
 public class AdaptablePoolingAllocator implements BufferAllocator {
     private static final int RETIRE_CAPACITY = 4 * 1024;
     private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
     private static final int BUFS_PER_CHUNK = 10; // For large buffers, aim to have about this many buffers per chunk.
-    private static final int MAX_CHUNK_SIZE =
+
+    /**
+     * The maximum size of a pooled chunk, in bytes. Allocations bigger than this will never be pooled.
+     * <p>
+     * This number is 10 MiB, and is derived from the limitations of internal histograms.
+     */
+    protected static final int MAX_CHUNK_SIZE =
             BUFS_PER_CHUNK * (1 << AllocationStatistics.HISTO_MAX_BUCKET_SHIFT); // 10 MiB.
+
+    /**
+     * The capacity if the central queue that allow chunks to be shared across magazines.
+     * The default size is {@link NettyRuntime#availableProcessors()},
+     * and the maximum number of magazines is twice this.
+     * <p>
+     * This means the maximum amount of memory that we can have allocated-but-not-in-use is
+     * 5 * {@link NettyRuntime#availableProcessors()} * {@link #MAX_CHUNK_SIZE} bytes.
+     */
+    protected static final int CENTRAL_QUEUE_CAPACITY = SystemPropertyUtil.getInt(
+            "io.netty5.allocator.centralQueueCapacity", NettyRuntime.availableProcessors());
 
     private final AllocationType allocationType;
     private final MemoryManager manager;
-    private final ConcurrentLinkedQueue<Buffer> centralQueue;
+    private final Queue<Buffer> centralQueue;
     private final AllocatorControl allocatorControl;
     private final StampedLock magazineExpandLock;
     private volatile Magazine[] magazines;
@@ -61,7 +108,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
     public AdaptablePoolingAllocator(MemoryManager manager, boolean direct) {
         allocationType = direct ? StandardAllocationTypes.OFF_HEAP : StandardAllocationTypes.ON_HEAP;
         this.manager = manager;
-        centralQueue = new ConcurrentLinkedQueue<>();
+        centralQueue = requireNonNull(createSharedChunkQueue());
         allocatorControl = new SimpleAllocatorControl(this);
         magazineExpandLock = new StampedLock();
         Magazine[] mags = new Magazine[4];
@@ -71,13 +118,38 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         magazines = mags;
     }
 
+    /**
+     * Create a thread-safe multi-producer, multi-consumer queue to hold chunks that spill over from the
+     * internal Magazines.
+     * <p>
+     * Each Magazine can only hold two chunks at any one time: the chunk it currently allocates from,
+     * and the next-in-line chunk which will be used for allocation once the current one has been used up.
+     * This queue will be used by magazines to share any excess chunks they allocate, so that they don't need to
+     * allocate new chunks when their current and next-in-line chunks have both been used up.
+     * <p>
+     * The simplest implementation of this method is to return a new {@link java.util.concurrent.ConcurrentLinkedQueue}.
+     * However, the {@code CLQ} is unbounded, and this means there's no limit to how many chunks can be cached in this
+     * queue.
+     * <p>
+     * Each chunk in this queue can be up to {@link #MAX_CHUNK_SIZE} in size, so it is recommended to use a bounded
+     * queue to limit the maximum memory usage.
+     * <p>
+     * The default implementation will create a bounded queue with a capacity of {@link #CENTRAL_QUEUE_CAPACITY}.
+     *
+     * @return A new multi-producer, multi-consumer queue.
+     */
+    @NotNull
+    protected Queue<Buffer> createSharedChunkQueue() {
+        return PlatformDependent.newMpmcQueue(CENTRAL_QUEUE_CAPACITY);
+    }
+
     @Override
-    public boolean isPooling() {
+    public final boolean isPooling() {
         return true;
     }
 
     @Override
-    public AllocationType getAllocationType() {
+    public final AllocationType getAllocationType() {
         return allocationType;
     }
 
@@ -171,7 +243,9 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
     }
 
     private void offerToQueue(Buffer buffer) {
-        centralQueue.offer(buffer);
+        if (!centralQueue.offer(buffer)) {
+            buffer.close();
+        }
         if (closed) {
             drainCloseCentralQueue();
         }
