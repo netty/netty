@@ -43,8 +43,8 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
     private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
     private static final int BUFS_PER_CHUNK = 10; // For large buffers, aim to have about this many buffers per chunk.
-    private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
-    private static final int MAX_POOLABLE_SIZE = MAX_CHUNK_SIZE / BUFS_PER_CHUNK; // Roughly 100 MiB.
+    private static final int MAX_CHUNK_SIZE =
+            BUFS_PER_CHUNK * (1 << AllocationStatistics.HISTO_MAX_BUCKET_SHIFT); // 10 MiB.
 
     private final AllocationType allocationType;
     private final MemoryManager manager;
@@ -87,7 +87,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
             throw allocatorClosedException();
         }
         InternalBufferUtils.assertValidBufferSize(size);
-        if (size <= MAX_POOLABLE_SIZE) {
+        if (size <= MAX_CHUNK_SIZE) {
             int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
             int expansions = 0;
             do {
