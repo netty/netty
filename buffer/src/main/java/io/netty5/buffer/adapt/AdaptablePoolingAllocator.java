@@ -186,6 +186,9 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
     }
 
     private boolean tryExpandMagazines(int currentLength) {
+        if (currentLength >= MAX_STRIPES) {
+            return true;
+        }
         long writeLock = magazineExpandLock.tryWriteLock();
         if (writeLock != 0) {
             try {
