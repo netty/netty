@@ -185,7 +185,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         private static final int INIT_DATUM_TARGET = 8192;
         private static final int HISTO_MIN_BUCKET_SHIFT = 13; // Smallest bucket is 1 << 13 = 8192 bytes in size.
         private static final int HISTO_MAX_BUCKET_SHIFT = 20; // Biggest bucket is 1 << 20 = 1 MiB bytes in size.
-        private static final int HISTO_BUCKET_COUNT = 1 << HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT;
+        private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 8 buckets
         private static final int HISTO_MAX_BUCKET_MASK = HISTO_BUCKET_COUNT - 1;
 
         protected final AdaptablePoolingAllocator parent;
