@@ -162,8 +162,9 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         if (size <= MAX_CHUNK_SIZE) {
             int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
             int expansions = 0;
+            Magazine[] mags;
             do {
-                Magazine[] mags = magazines;
+                mags = magazines;
                 int mask = mags.length - 1;
                 int index = (int) (threadId(Thread.currentThread()) & mask);
                 for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
@@ -178,18 +179,18 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                     }
                 }
                 expansions++;
-            } while (expansions < 3 && tryExpandMagazines());
+            } while (expansions < 3 && tryExpandMagazines(mags.length));
         }
         // The magazines failed us, or the buffer is too big to be pooled. Allocate unpooled buffer.
         return manager.allocateShared(allocatorControl, size, standardDrop(manager), allocationType);
     }
 
-    private boolean tryExpandMagazines() {
+    private boolean tryExpandMagazines(int currentLength) {
         long writeLock = magazineExpandLock.tryWriteLock();
         if (writeLock != 0) {
             try {
                 Magazine[] mags = magazines;
-                if (mags.length >= MAX_STRIPES) {
+                if (mags.length >= MAX_STRIPES || mags.length > currentLength) {
                     return true;
                 }
                 Magazine[] expanded = Arrays.copyOf(mags, mags.length * 2);
