@@ -185,7 +185,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         private static final int INIT_DATUM_TARGET = 8192;
         private static final int HISTO_MIN_BUCKET_SHIFT = 13; // Smallest bucket is 1 << 13 = 8192 bytes in size.
         private static final int HISTO_MAX_BUCKET_SHIFT = 20; // Biggest bucket is 1 << 20 = 1 MiB bytes in size.
-        private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 8 buckets
+        private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 8 buckets.
         private static final int HISTO_MAX_BUCKET_MASK = HISTO_BUCKET_COUNT - 1;
 
         protected final AdaptablePoolingAllocator parent;
@@ -223,13 +223,9 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         }
 
         private void rotateHistograms() {
-            Arrays.fill(sums, 0);
-            for (short[] buckets : histos) {
-                int len = buckets.length;
-                for (int i = 0; i < len; i++) {
-                    int count = buckets[i] & 0xFFFF; // Read as unsigned short.
-                    sums[i] += count;
-                }
+            short[][] hs = histos;
+            for (int i = 0; i < HISTO_BUCKET_COUNT; i++) {
+                sums[i] = (hs[0][i] & 0xFFFF) + (hs[1][i] & 0xFFFF) + (hs[2][i] & 0xFFFF) + (hs[3][i] & 0xFFFF);
             }
             int sum = 0;
             for (int count : sums) {
@@ -252,13 +248,13 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
             if (sharedPrefChunkSize != prefChunkSize) {
                 // Preferred chunk size changed. Increase check frequency.
                 datumTarget = Math.max(datumTarget >> 1, MIN_DATUM_TARGET);
+                sharedPrefChunkSize = prefChunkSize;
             } else {
                 // Preferred chunk size did not change. Check less often.
                 datumTarget = Math.min(datumTarget << 1, MAX_DATUM_TARGET);
             }
-            sharedPrefChunkSize = prefChunkSize;
 
-            histoIndex = histoIndex + 1 & histos.length - 1;
+            histoIndex = histoIndex + 1 & 3;
             histo = histos[histoIndex];
             datumCount = 0;
             Arrays.fill(histo, (short) 0);
