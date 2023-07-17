@@ -150,13 +150,11 @@ jobs:
           run: |
             JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64 ./mvnw -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
-  build-pr-java20panama:
-    name: linux-x86_64-java20-panama
+  build-pr-java21panama:
+    name: linux-x86_64-java21-panama
     # The host should always be Linux
     runs-on: ubuntu-latest
     needs: verify-pr
-    # Disable until fixed (possible compiler bug)
-    if: ${{ false }}
     steps:
       - uses: actions/checkout@v3
 

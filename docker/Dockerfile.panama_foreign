@@ -12,7 +12,7 @@ RUN yum install -y alsa-lib-devel cups-devel fontconfig-devel libXtst-devel libX
 # Downloading and installing SDKMAN!
 RUN curl -s  "https://get.sdkman.io" | bash
 
-ENV BOOTSTRAP_JAVA 19.0.1-zulu
+ENV BOOTSTRAP_JAVA 20.0.1-zulu
 
 # Installing Java removing some unnecessary SDKMAN files
 RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
