@@ -564,8 +564,12 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 totalBytesWritten = toIntExact(gatheringChannel.write(byteBuffers, 0, bufferCount));
             } else {
                 for (int i = 0; i < bufferCount; i++) {
+                    int expectWritten = byteBuffers[i].remaining();
                     int bytesWritten = channel.write(byteBuffers[i]);
                     totalBytesWritten = addExact(totalBytesWritten, bytesWritten);
+                    if (bytesWritten < expectWritten) {
+                        break;
+                    }
                 }
             }
         } finally {
@@ -593,8 +597,12 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             }
             int bufferCount = countAndPrepareBuffersForChannelIO(length, byteBuffers);
             for (int i = 0; i < bufferCount; i++) {
+                int expectWritten = byteBuffers[i].remaining();
                 int bytesWritten = channel.write(byteBuffers[i], addExact(position, totalBytesWritten));
                 totalBytesWritten = addExact(totalBytesWritten, bytesWritten);
+                if (bytesWritten < expectWritten) {
+                    break;
+                }
             }
         } finally {
             skipReadableBytes(totalBytesWritten);

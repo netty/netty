@@ -372,6 +372,60 @@ public class BufferAndChannelTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
+    public void transferToIntermittentWrite(Fixture fixture) throws IOException {
+        doTransferToIntermittentWrite(fixture, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void transferToWithPositionIntermittentWrite(Fixture fixture) throws IOException {
+        doTransferToIntermittentWrite(fixture, true);
+    }
+
+    private static void doTransferToIntermittentWrite(Fixture fixture, boolean withPosition)
+            throws IOException {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             Buffer input = allocator.allocate(4).writeInt(0x01234567);
+             Buffer received = allocator.allocate(4);
+             WritableByteChannel mockChannel = withPosition ? new MockFileChannel() {
+                 @Override
+                 public int write(ByteBuffer src, long position) {
+                     received.writeByte(src.get());
+                     return 1;
+                 }
+             } : new WritableByteChannel() {
+                 // can't use FileChannel here because there's special handling for GatheringByteChannel that we don't
+                 // want to test
+
+                 @Override
+                 public boolean isOpen() {
+                     return true;
+                 }
+
+                 @Override
+                 public void close() {
+                 }
+
+                 @Override
+                 public int write(ByteBuffer src) {
+                     received.writeByte(src.get());
+                     return 1;
+                 }
+             }) {
+            long pos = 0;
+            while (input.readableBytes() > 0) {
+                if (withPosition) {
+                    pos += input.transferTo((FileChannel) mockChannel, pos, 4);
+                } else {
+                    input.transferTo(mockChannel, 4);
+                }
+            }
+            assertEquals(0x01234567, received.readInt());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
     public void transferFromMustThrowIfBufferIsClosed(Fixture fixture) throws IOException {
         doTransferFromMustThrowIfBufferIsClosed(fixture, false);
     }

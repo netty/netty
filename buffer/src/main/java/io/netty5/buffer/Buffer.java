@@ -344,7 +344,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * No more than the given {@code length} of bytes, or the number of {@linkplain #readableBytes() readable bytes},
      * will be written to the channel, whichever is smaller.
      * If the channel has a position, then it will be advanced by the number of bytes written.
-     * The {@linkplain #readerOffset() reader-offset} of this buffer will likewise be advanced by the number of bytes
+     * The {@linkplain #readerOffset() reader-offset} of this buffer will, however, be advanced by the number of bytes
      * written.
      *
      * @implNote {@linkplain CompositeBuffer composite buffers} may offer an optimized implementation of this method,
@@ -363,7 +363,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * No more than the given {@code length} of bytes, or the number of {@linkplain #readableBytes() readable bytes},
      * will be written to the channel, whichever is smaller.
      * The channel's position is not modified.
-     * The {@linkplain #readerOffset() reader-offset} of this buffer will likewise be advanced by the number of bytes
+     * The {@linkplain #readerOffset() reader-offset} of this buffer will, however, be advanced by the number of bytes
      * written.
      *
      * @param channel The channel to write to.
