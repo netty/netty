@@ -575,6 +575,34 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
+    public int transferTo(FileChannel channel, long position, int length) throws IOException {
+        if (!isAccessible()) {
+            throw bufferIsClosed(this);
+        }
+        length = Math.min(readableBytes(), length);
+        if (length == 0) {
+            return 0;
+        }
+        checkReadBounds(readerOffset(), length);
+        int totalBytesWritten = 0;
+        try (var iterator = forEachComponent()) {
+            ByteBuffer[] byteBuffers = new ByteBuffer[countReadableComponents()];
+            int counter = 0;
+            for (var c = iterator.firstReadable(); c != null; c = c.nextReadable()) {
+                byteBuffers[counter++] = c.readableBuffer();
+            }
+            int bufferCount = countAndPrepareBuffersForChannelIO(length, byteBuffers);
+            for (int i = 0; i < bufferCount; i++) {
+                int bytesWritten = channel.write(byteBuffers[i], addExact(position, totalBytesWritten));
+                totalBytesWritten = addExact(totalBytesWritten, bytesWritten);
+            }
+        } finally {
+            skipReadableBytes(totalBytesWritten);
+        }
+        return totalBytesWritten;
+    }
+
+    @Override
     public int transferFrom(FileChannel channel, long position, int length) throws IOException {
         checkPositiveOrZero(position, "position");
         checkPositiveOrZero(length, "length");

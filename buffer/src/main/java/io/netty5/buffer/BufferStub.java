@@ -147,6 +147,11 @@ public class BufferStub implements Buffer {
     }
 
     @Override
+    public int transferTo(FileChannel channel, long position, int length) throws IOException {
+        return delegate.transferTo(channel, position, length);
+    }
+
+    @Override
     public int transferFrom(FileChannel channel, long position, int length) throws IOException {
         return delegate.transferFrom(channel, position, length);
     }

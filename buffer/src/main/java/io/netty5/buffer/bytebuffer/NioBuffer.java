@@ -327,6 +327,21 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     @Override
+    public int transferTo(FileChannel channel, long position, int length) throws IOException {
+        if (!isAccessible()) {
+            throw bufferIsClosed();
+        }
+        length = Math.min(readableBytes(), length);
+        if (length == 0) {
+            return 0;
+        }
+        checkGet(readerOffset(), length);
+        int bytesWritten = channel.write(readableBuffer().limit(length), position);
+        skipReadableBytes(bytesWritten);
+        return bytesWritten;
+    }
+
+    @Override
     public int transferFrom(FileChannel channel, long position, int length) throws IOException {
         checkPositiveOrZero(position, "position");
         checkPositiveOrZero(length, "length");
