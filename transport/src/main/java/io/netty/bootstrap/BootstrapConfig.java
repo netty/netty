@@ -38,7 +38,7 @@ public final class BootstrapConfig extends AbstractBootstrapConfig<Bootstrap, Ch
 
     /**
      * Returns the configured {@link AddressResolverGroup}, {@code null} if resolver was disabled
-     * with {@link Bootstrap#disableResolver()}, or the default if non is configured yet.
+     * with {@link Bootstrap#disableResolver()}, or the default if not configured yet.
      */
     public AddressResolverGroup<?> resolver() {
         return bootstrap.resolver();
