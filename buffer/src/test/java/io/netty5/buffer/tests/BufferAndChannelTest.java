@@ -77,7 +77,8 @@ public class BufferAndChannelTest extends BufferTestSupport {
         doTransferToMustThrowIfBufferIsClosed(fixture, true);
     }
 
-    private static void doTransferToMustThrowIfBufferIsClosed(Fixture fixture, boolean withPosition) throws IOException {
+    private static void doTransferToMustThrowIfBufferIsClosed(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             long position = channel.position();
             long size = channel.size();
@@ -270,7 +271,8 @@ public class BufferAndChannelTest extends BufferTestSupport {
         doTransferToMustIgnoreZeroLengthOperations(fixture, true);
     }
 
-    private static void doTransferToMustIgnoreZeroLengthOperations(Fixture fixture, boolean withPosition) throws IOException {
+    private static void doTransferToMustIgnoreZeroLengthOperations(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             long position = channel.position();
@@ -324,7 +326,8 @@ public class BufferAndChannelTest extends BufferTestSupport {
         doTransferToMustMoveReadOnlyDataToChannel(fixture, true);
     }
 
-    private static void doTransferToMustMoveReadOnlyDataToChannel(Fixture fixture, boolean withPosition) throws IOException {
+    private static void doTransferToMustMoveReadOnlyDataToChannel(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             long value = ThreadLocalRandom.current().nextLong();
@@ -352,7 +355,8 @@ public class BufferAndChannelTest extends BufferTestSupport {
         doTransferToZeroBytesMustNotThrowOnClosedChannel(fixture, true);
     }
 
-    private static void doTransferToZeroBytesMustNotThrowOnClosedChannel(Fixture fixture, boolean withPosition) throws IOException {
+    private static void doTransferToZeroBytesMustNotThrowOnClosedChannel(Fixture fixture, boolean withPosition)
+            throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer empty = allocator.allocate(0);
              Buffer notEmpty = allocator.allocate(4).writeInt(42)) {
