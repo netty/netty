@@ -682,6 +682,7 @@ public class Http2MultiplexTransportTest {
                     ch.config().setOption(ChannelOption.SO_SNDBUF, 1);
                     ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInitializer<Channel>() {
+                        @Override
                         protected void initChannel(Channel ch) {
                             ch.pipeline().remove(this);
                             ch.pipeline().addLast(new MultiplexInboundStream(handlerInactivatedFlushed,
