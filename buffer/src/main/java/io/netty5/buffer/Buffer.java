@@ -358,6 +358,23 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     int transferTo(WritableByteChannel channel, int length) throws IOException;
 
     /**
+     * Read from this buffer and write to the given channel at the given position.
+     * The number of bytes actually written to the channel are returned.
+     * No more than the given {@code length} of bytes, or the number of {@linkplain #readableBytes() readable bytes},
+     * will be written to the channel, whichever is smaller.
+     * The channel's position is not modified.
+     * The {@linkplain #readerOffset() reader-offset} of this buffer will, however, be advanced by the number of bytes
+     * written.
+     *
+     * @param channel The channel to write to.
+     * @param position The file position.
+     * @param length The maximum number of bytes to write.
+     * @return The actual number of bytes written, possibly zero.
+     * @throws IOException If the write-operation on the channel failed for some reason.
+     */
+    int transferTo(FileChannel channel, long position, int length) throws IOException;
+
+    /**
      * Read from the given channel starting from the given position and write to this buffer.
      * The number of bytes actually read from the channel are returned, or -1 is returned if the channel has reached
      * the end-of-stream.
