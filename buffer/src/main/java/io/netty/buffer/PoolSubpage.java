@@ -50,7 +50,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     PoolSubpage() {
         chunk = null;
         lock = new ReentrantLock();
-
         pageShifts = -1;
         runOffset = -1;
         elemSize = -1;
