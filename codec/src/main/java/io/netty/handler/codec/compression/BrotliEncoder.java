@@ -207,6 +207,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
                 // in only 1 call at `write(ByteBuffer)`.
                 brotliEncoderChannel.write(msg.nioBuffer());
                 brotliEncoderChannel.flush();
+                msg.skipBytes(msg.readableBytes());
             } catch (Exception e) {
                 ReferenceCountUtil.release(msg);
                 throw e;
