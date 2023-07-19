@@ -87,6 +87,7 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
         final int dataLength = data.readableBytes();
         assertTrue(channel.writeOutbound(data.retain()));
         assertTrue(channel.finish());
+        assertEquals(0, data.readableBytes());
 
         ByteBuf decompressed = readDecompressed(dataLength);
         assertEquals(data.resetReaderIndex(), decompressed);
@@ -101,12 +102,14 @@ public abstract class AbstractEncoderTest extends AbstractCompressionTest {
         while (written + length < dataLength) {
             ByteBuf in = data.retainedSlice(written, length);
             assertTrue(channel.writeOutbound(in));
+            assertEquals(0, in.readableBytes());
             written += length;
             length = rand.nextInt(100);
         }
         ByteBuf in = data.retainedSlice(written, dataLength - written);
         assertTrue(channel.writeOutbound(in));
         assertTrue(channel.finish());
+        assertEquals(0, in.readableBytes());
 
         ByteBuf decompressed = readDecompressed(dataLength);
         assertEquals(data, decompressed);
