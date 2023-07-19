@@ -208,7 +208,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
                 ByteBuffer nioBuffer = msg.nioBuffer();
                 int position = nioBuffer.position();
                 brotliEncoderChannel.write(nioBuffer);
-                msg.skipBytes(position - nioBuffer.position());
+                msg.skipBytes(nioBuffer.position() - position);
                 brotliEncoderChannel.flush();
             } catch (Exception e) {
                 ReferenceCountUtil.release(msg);
