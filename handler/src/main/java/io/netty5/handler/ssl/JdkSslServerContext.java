@@ -19,7 +19,9 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedTrustManager;
 import java.io.File;
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -82,6 +84,11 @@ final class JdkSslServerContext extends JdkSslContext {
         try {
             if (trustCertCollection != null) {
                 trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory, keyStore);
+            } else if (trustManagerFactory == null) {
+                // Mimic the way SSLContext.getInstance(KeyManager[], null, null) works
+                trustManagerFactory = TrustManagerFactory.getInstance(
+                        TrustManagerFactory.getDefaultAlgorithm());
+                trustManagerFactory.init((KeyStore) null);
             }
             if (key != null) {
                 keyManagerFactory = buildKeyManagerFactory(keyCertChain, null,
@@ -92,8 +99,7 @@ final class JdkSslServerContext extends JdkSslContext {
             SSLContext ctx = sslContextProvider == null ? SSLContext.getInstance(PROTOCOL)
                 : SSLContext.getInstance(PROTOCOL, sslContextProvider);
             ctx.init(keyManagerFactory.getKeyManagers(),
-                     trustManagerFactory == null ? null : trustManagerFactory.getTrustManagers(),
-                     null);
+                    wrapTrustManagerIfNeeded(trustManagerFactory.getTrustManagers()), null);
 
             SSLSessionContext sessCtx = ctx.getServerSessionContext();
             if (sessionCacheSize > 0) {
@@ -109,5 +115,17 @@ final class JdkSslServerContext extends JdkSslContext {
             }
             throw new SSLException("failed to initialize the server-side SSL context", e);
         }
+    }
+
+    private static TrustManager[] wrapTrustManagerIfNeeded(TrustManager[] trustManagers) {
+        for (int i = 0; i < trustManagers.length; i++) {
+            TrustManager tm = trustManagers[i];
+            if (tm instanceof X509ExtendedTrustManager) {
+                // Wrap the TrustManager to provide a better exception message for users to debug hostname
+                // validation failures.
+                trustManagers[i] = new EnhancingX509ExtendedTrustManager((X509ExtendedTrustManager) tm);
+            }
+        }
+        return trustManagers;
     }
 }

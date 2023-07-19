@@ -660,7 +660,13 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     protected static X509TrustManager chooseTrustManager(TrustManager[] managers) {
         for (TrustManager m : managers) {
             if (m instanceof X509TrustManager) {
-                return OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
+                X509TrustManager tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
+                if (useExtendedTrustManager(tm)) {
+                    // Wrap the TrustManager to provide a better exception message for users to debug hostname
+                    // validation failures.
+                    tm = new EnhancingX509ExtendedTrustManager(tm);
+                }
+                return tm;
             }
         }
         throw new IllegalStateException("no X509TrustManager found");
