@@ -24,6 +24,7 @@ import javax.net.ssl.X509TrustManager;
 import java.net.Socket;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Collection;
 import java.util.List;
 
 
@@ -100,10 +101,13 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
             StringBuilder names = new StringBuilder(64);
             for (int i = 0; i < chain.length; i++) {
                 X509Certificate cert = chain[i];
-                for (List<?> altNames : cert.getSubjectAlternativeNames()) {
-                    // 2 is dNSName. See X509Certificate javadocs.
-                    if (altNames.size() >= 2 && ((Integer) altNames.get(0)) == 2) {
-                        names.append((String) altNames.get(1)).append(",");
+                Collection<List<?>> collection = cert.getSubjectAlternativeNames();
+                if (collection != null) {
+                    for (List<?> altNames : collection) {
+                        // 2 is dNSName. See X509Certificate javadocs.
+                        if (altNames.size() >= 2 && ((Integer) altNames.get(0)).intValue() == 2) {
+                            names.append((String) altNames.get(1)).append(",");
+                        }
                     }
                 }
             }
@@ -111,7 +115,8 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
                 // Strip of ,
                 names.setLength(names.length() - 1);
                 throw new CertificateException(message +
-                        " Subject alternative DNS names in the certificate chain: " + names, e);
+                        " Subject alternative DNS names in the certificate chain of " + chain.length +
+                        " certificate(s): " + names, e);
             }
         }
         throw e;
