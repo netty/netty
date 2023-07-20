@@ -21,7 +21,6 @@ import static io.netty5.buffer.pool.PoolChunk.IS_SUBPAGE_SHIFT;
 import static io.netty5.buffer.pool.PoolChunk.IS_USED_SHIFT;
 import static io.netty5.buffer.pool.PoolChunk.RUN_OFFSET_SHIFT;
 import static io.netty5.buffer.pool.PoolChunk.SIZE_SHIFT;
-import static io.netty5.buffer.pool.SizeClasses.LOG2_QUANTUM;
 
 final class PoolSubpage implements PoolSubpageMetric {
     final PoolChunk chunk;
@@ -29,27 +28,30 @@ final class PoolSubpage implements PoolSubpageMetric {
     private final int runOffset;
     private final int runSize;
     private final long[] bitmap;
+    private final int bitmapLength;
+    private final int maxNumElems;
 
     PoolSubpage prev;
     PoolSubpage next;
 
     boolean doNotDestroy;
     int elemSize;
-    private int maxNumElems;
-    private int bitmapLength;
     private int nextAvail;
     private int numAvail;
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock;
 
     /** Special constructor that creates a linked list head */
     PoolSubpage() {
         chunk = null;
+        lock = new ReentrantLock();
         pageShifts = -1;
         runOffset = -1;
         elemSize = -1;
         runSize = -1;
         bitmap = null;
+        bitmapLength = -1;
+        maxNumElems = -1;
     }
 
     PoolSubpage(PoolSubpage head, PoolChunk chunk, int pageShifts, int runOffset, int runSize, int elemSize) {
@@ -58,17 +60,19 @@ final class PoolSubpage implements PoolSubpageMetric {
         this.runOffset = runOffset;
         this.runSize = runSize;
         this.elemSize = elemSize;
-        bitmap = new long[runSize >>> 6 + LOG2_QUANTUM]; // runSize / 64 / QUANTUM
 
         doNotDestroy = true;
-        if (elemSize != 0) {
-            maxNumElems = numAvail = runSize / elemSize;
-            nextAvail = 0;
-            bitmapLength = maxNumElems >>> 6;
-            if ((maxNumElems & 63) != 0) {
-                bitmapLength ++;
-            }
+
+        maxNumElems = numAvail = runSize / elemSize;
+        int bitmapLength = maxNumElems >>> 6;
+        if ((maxNumElems & 63) != 0) {
+            bitmapLength ++;
         }
+        this.bitmapLength = bitmapLength;
+        bitmap = new long[bitmapLength];
+        nextAvail = 0;
+
+        lock = null;
         addToPool(head);
     }
 
@@ -104,9 +108,6 @@ final class PoolSubpage implements PoolSubpageMetric {
      *         {@code false} if this subpage is not used by its chunk and thus it's OK to be released.
      */
     boolean free(PoolSubpage head, int bitmapIdx) {
-        if (elemSize == 0) {
-            return true;
-        }
         int q = bitmapIdx >>> 6;
         int r = bitmapIdx & 63;
         assert (bitmap[q] >>> r & 1) != 0;
