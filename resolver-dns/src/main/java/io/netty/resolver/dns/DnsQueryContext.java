@@ -278,7 +278,7 @@ abstract class DnsQueryContext {
         }
 
         // Schedule a query timeout task if necessary.
-        if (queryTimeoutMillis > 0) {
+        if (queryTimeoutMillis > 0 && queryTimeoutMillis < Long.MAX_VALUE) {
             timeoutFuture = channel.eventLoop().schedule(new Runnable() {
                 @Override
                 public void run() {
