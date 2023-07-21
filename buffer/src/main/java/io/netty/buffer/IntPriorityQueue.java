@@ -21,12 +21,12 @@ import java.util.Arrays;
  * Internal primitive priority queue, used by {@link PoolChunk}.
  * The implementation is based on the binary heap, as described in Algorithms by Sedgewick and Wayne.
  */
-final class LongPriorityQueue {
+final class IntPriorityQueue {
     public static final int NO_VALUE = -1;
-    private long[] array = new long[9];
+    private int[] array = new int[9];
     private int size;
 
-    public void offer(long handle) {
+    public void offer(int handle) {
         if (handle == NO_VALUE) {
             throw new IllegalArgumentException("The NO_VALUE (" + NO_VALUE + ") cannot be added to the queue.");
         }
@@ -39,7 +39,7 @@ final class LongPriorityQueue {
         lift(size);
     }
 
-    public void remove(long value) {
+    public void remove(int value) {
         for (int i = 1; i <= size; i++) {
             if (array[i] == value) {
                 array[i] = array[size--];
@@ -50,18 +50,18 @@ final class LongPriorityQueue {
         }
     }
 
-    public long peek() {
+    public int peek() {
         if (size == 0) {
             return NO_VALUE;
         }
         return array[1];
     }
 
-    public long poll() {
+    public int poll() {
         if (size == 0) {
             return NO_VALUE;
         }
-        long val = array[1];
+        int val = array[1];
         array[1] = array[size];
         array[size] = 0;
         size--;
@@ -100,7 +100,7 @@ final class LongPriorityQueue {
     }
 
     private void swap(int a, int b) {
-        long value = array[a];
+        int value = array[a];
         array[a] = array[b];
         array[b] = value;
     }
