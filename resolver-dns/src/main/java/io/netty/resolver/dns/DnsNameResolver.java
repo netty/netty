@@ -280,7 +280,8 @@ public class DnsNameResolver extends InetNameResolver {
      * @param authoritativeDnsServerCache the cache used to find the authoritative DNS server for a domain
      * @param dnsQueryLifecycleObserverFactory used to generate new instances of {@link DnsQueryLifecycleObserver} which
      *                                         can be used to track metrics for DNS servers.
-     * @param queryTimeoutMillis timeout of each DNS query in millis
+     * @param queryTimeoutMillis timeout of each DNS query in millis. {@code 0} disables the timeout. If not set or a
+     *                           negative number is set, the default timeout is used.
      * @param resolvedAddressTypes the preferred address types
      * @param recursionDesired if recursion desired flag must be set
      * @param maxQueriesPerResolve the maximum allowed number of DNS queries for a given name resolution
@@ -332,7 +333,8 @@ public class DnsNameResolver extends InetNameResolver {
      * @param authoritativeDnsServerCache the cache used to find the authoritative DNS server for a domain
      * @param dnsQueryLifecycleObserverFactory used to generate new instances of {@link DnsQueryLifecycleObserver} which
      *                                         can be used to track metrics for DNS servers.
-     * @param queryTimeoutMillis timeout of each DNS query in millis
+     * @param queryTimeoutMillis timeout of each DNS query in millis. {@code 0} disables the timeout. If not set or a
+     *                           negative number is set, the default timeout is used.
      * @param resolvedAddressTypes the preferred address types
      * @param recursionDesired if recursion desired flag must be set
      * @param maxQueriesPerResolve the maximum allowed number of DNS queries for a given name resolution
@@ -426,7 +428,7 @@ public class DnsNameResolver extends InetNameResolver {
             boolean completeOncePreferredResolved,
             int maxNumConsolidation) {
         super(eventLoop);
-        this.queryTimeoutMillis = queryTimeoutMillis > 0
+        this.queryTimeoutMillis = queryTimeoutMillis >= 0
             ? queryTimeoutMillis
             : TimeUnit.SECONDS.toMillis(DEFAULT_OPTIONS.timeout());
         this.resolvedAddressTypes = resolvedAddressTypes != null ? resolvedAddressTypes : DEFAULT_RESOLVE_ADDRESS_TYPES;
