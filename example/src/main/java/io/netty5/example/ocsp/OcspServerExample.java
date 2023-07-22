@@ -26,6 +26,7 @@ import io.netty5.handler.ssl.ReferenceCountedOpenSslEngine;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslProvider;
+import io.netty5.util.internal.EmptyArrays;
 import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -194,6 +195,6 @@ public class OcspServerExample {
             }
         }
 
-        return dst.toArray(new X509Certificate[0]);
+        return dst.toArray(EmptyArrays.EMPTY_X509_CERTIFICATES);
     }
 }

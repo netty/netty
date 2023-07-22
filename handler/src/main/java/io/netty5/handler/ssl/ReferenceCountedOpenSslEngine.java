@@ -71,8 +71,10 @@ import java.util.Set;
 import java.util.concurrent.locks.Lock;
 
 import static io.netty5.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
+import static io.netty5.util.internal.EmptyArrays.EMPTY_STRINGS;
 import static io.netty5.util.internal.ObjectUtil.checkNotNullArrayParam;
 import static io.netty5.util.internal.ObjectUtil.checkNotNullWithIAE;
+
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
@@ -349,7 +351,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
 
     final synchronized String[] authMethods() {
         if (isDestroyed()) {
-            return EmptyArrays.EMPTY_STRINGS;
+            return EMPTY_STRINGS;
         }
         return SSL.authenticationMethods(ssl);
     }
@@ -1565,7 +1567,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
 
     @Override
     public final String[] getSupportedCipherSuites() {
-        return OpenSsl.AVAILABLE_CIPHER_SUITES.toArray(EmptyArrays.EMPTY_STRINGS);
+        return OpenSsl.AVAILABLE_CIPHER_SUITES.toArray(EMPTY_STRINGS);
     }
 
     @Override
@@ -1581,15 +1583,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                     extraCiphers = OpenSsl.EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
                     tls13Enabled = true;
                 } else {
-                    extraCiphers = EmptyArrays.EMPTY_STRINGS;
+                    extraCiphers = EMPTY_STRINGS;
                     tls13Enabled = false;
                 }
             } else {
-                return EmptyArrays.EMPTY_STRINGS;
+                return EMPTY_STRINGS;
             }
         }
         if (enabled == null) {
-            return EmptyArrays.EMPTY_STRINGS;
+            return EMPTY_STRINGS;
         } else {
             Set<String> enabledSet = new LinkedHashSet<>(enabled.length + extraCiphers.length);
             synchronized (this) {
@@ -1603,7 +1605,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                 }
                 Collections.addAll(enabledSet, extraCiphers);
             }
-            return enabledSet.toArray(EmptyArrays.EMPTY_STRINGS);
+            return enabledSet.toArray(EMPTY_STRINGS);
         }
     }
 
@@ -1647,7 +1649,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                     }
                     // Update the protocols but not cache the value. We only cache when we call it from the user
                     // code or when we construct the engine.
-                    setEnabledProtocols0(protocols.toArray(EmptyArrays.EMPTY_STRINGS), false);
+                    setEnabledProtocols0(protocols.toArray(EMPTY_STRINGS), false);
                 } catch (Exception e) {
                     throw new IllegalStateException("failed to enable cipher suites: " + cipherSuiteSpec, e);
                 }
@@ -1669,7 +1671,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
 
     @Override
     public final String[] getSupportedProtocols() {
-        return OpenSsl.SUPPORTED_PROTOCOLS_SET.toArray(EmptyArrays.EMPTY_STRINGS);
+        return OpenSsl.SUPPORTED_PROTOCOLS_SET.toArray(EMPTY_STRINGS);
     }
 
     @SuppressWarnings("deprecation")
@@ -1684,7 +1686,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             if (!isDestroyed()) {
                 opts = SSL.getOptions(ssl);
             } else {
-                return enabled.toArray(EmptyArrays.EMPTY_STRINGS);
+                return enabled.toArray(EMPTY_STRINGS);
             }
         }
         if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1, SslProtocols.TLS_v1)) {
@@ -1705,7 +1707,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv3, SslProtocols.SSL_v3)) {
             enabled.add(SslProtocols.SSL_v3);
         }
-        return enabled.toArray(EmptyArrays.EMPTY_STRINGS);
+        return enabled.toArray(EMPTY_STRINGS);
     }
 
     private static boolean isProtocolEnabled(int opts, int disableMask, String protocolString) {
@@ -2366,11 +2368,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             synchronized (ReferenceCountedOpenSslEngine.this) {
                 if (peerSupportedSignatureAlgorithms == null) {
                     if (isDestroyed()) {
-                        peerSupportedSignatureAlgorithms = EmptyArrays.EMPTY_STRINGS;
+                        peerSupportedSignatureAlgorithms = EMPTY_STRINGS;
                     } else {
                         String[] algs = SSL.getSigAlgs(ssl);
                         if (algs == null) {
-                            peerSupportedSignatureAlgorithms = EmptyArrays.EMPTY_STRINGS;
+                            peerSupportedSignatureAlgorithms = EMPTY_STRINGS;
                         } else {
                             Set<String> algorithmList = new LinkedHashSet<>(algs.length);
                             for (String alg: algs) {
@@ -2380,7 +2382,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                                     algorithmList.add(converted);
                                 }
                             }
-                            peerSupportedSignatureAlgorithms = algorithmList.toArray(EmptyArrays.EMPTY_STRINGS);
+                            peerSupportedSignatureAlgorithms = algorithmList.toArray(EMPTY_STRINGS);
                         }
                     }
                 }
@@ -2529,9 +2531,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         public synchronized String[] getValueNames() {
             Map<String, Object> values = this.values;
             if (values == null || values.isEmpty()) {
-                return EmptyArrays.EMPTY_STRINGS;
+                return EMPTY_STRINGS;
             }
-            return values.keySet().toArray(EmptyArrays.EMPTY_STRINGS);
+            return values.keySet().toArray(EMPTY_STRINGS);
         }
 
         private void notifyUnbound(Object value, String name) {

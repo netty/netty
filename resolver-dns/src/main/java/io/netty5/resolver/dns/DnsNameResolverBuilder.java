@@ -23,6 +23,7 @@ import io.netty5.channel.socket.SocketChannel;
 import io.netty5.resolver.HostsFileEntriesResolver;
 import io.netty5.resolver.ResolvedAddressTypes;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.ObjectUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -429,7 +430,7 @@ public final class DnsNameResolverBuilder {
             list.add(f);
         }
 
-        this.searchDomains = list.toArray(new String[0]);
+        this.searchDomains = list.toArray(EmptyArrays.EMPTY_STRINGS);
         return this;
     }
 

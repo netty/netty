@@ -148,7 +148,7 @@ public class DnsNameResolver extends InetNameResolver {
             searchDomains = EmptyArrays.EMPTY_STRINGS;
             if (!PlatformDependent.isWindows()) {
                 List<String> list = UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains();
-                searchDomains = list.toArray(String[]::new);
+                searchDomains = list.toArray(EmptyArrays.EMPTY_STRINGS);
             }
         } catch (Exception ignore) {
             // Failed to get the system name search domain list.

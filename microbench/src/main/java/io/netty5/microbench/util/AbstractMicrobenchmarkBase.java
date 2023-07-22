@@ -16,6 +16,7 @@
 package io.netty5.microbench.util;
 
 import io.netty5.util.ResourceLeakDetector;
+import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.SystemPropertyUtil;
 import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.annotations.Measurement;
@@ -101,7 +102,7 @@ public abstract class AbstractMicrobenchmarkBase {
             }
         }
         if (jvmArgs.length != customArgs.size()) {
-            jvmArgs = customArgs.toArray(new String[0]);
+            jvmArgs = customArgs.toArray(EmptyArrays.EMPTY_STRINGS);
         }
         return jvmArgs;
     }
