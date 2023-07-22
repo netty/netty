@@ -397,7 +397,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
 
         int intMask = mask;
         // Avoid sign extension on widening primitive conversion
-        long longMask = (long) intMask & 0xFFFFFFFFL;
+        long longMask = intMask & 0xFFFFFFFFL;
         longMask |= longMask << 32;
 
         for (int lim = end - 7; i < lim; i += 8) {

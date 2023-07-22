@@ -676,14 +676,14 @@ public abstract class AbstractByteBuf extends ByteBuf {
             // Not need to update the index as we not will use it after this.
         } else if (nBytes < 4) {
             for (int i = nBytes; i > 0; i --) {
-                _setByte(index, (byte) 0);
+                _setByte(index, 0);
                 index ++;
             }
         } else {
             _setInt(index, 0);
             index += 4;
             for (int i = nBytes - 4; i > 0; i --) {
-                _setByte(index, (byte) 0);
+                _setByte(index, 0);
                 index ++;
             }
         }
@@ -1167,14 +1167,14 @@ public abstract class AbstractByteBuf extends ByteBuf {
             wIndex += 4;
         } else if (nBytes < 4) {
             for (int i = nBytes; i > 0; i --) {
-                _setByte(wIndex, (byte) 0);
+                _setByte(wIndex, 0);
                 wIndex++;
             }
         } else {
             _setInt(wIndex, 0);
             wIndex += 4;
             for (int i = nBytes - 4; i > 0; i --) {
-                _setByte(wIndex, (byte) 0);
+                _setByte(wIndex, 0);
                 wIndex++;
             }
         }
