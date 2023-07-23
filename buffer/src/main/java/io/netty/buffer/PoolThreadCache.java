@@ -58,6 +58,8 @@ final class PoolThreadCache {
 
     private final int freeSweepAllocationThreshold;
     private final AtomicBoolean freed = new AtomicBoolean();
+    @SuppressWarnings("unused") // Field is only here for the finalizer.
+    private final FreeOnFinalize freeOnFinalize;
 
     private int allocations;
 
@@ -66,7 +68,7 @@ final class PoolThreadCache {
 
     PoolThreadCache(PoolArena<byte[]> heapArena, PoolArena<ByteBuffer> directArena,
                     int smallCacheSize, int normalCacheSize, int maxCachedBufferCapacity,
-                    int freeSweepAllocationThreshold) {
+                    int freeSweepAllocationThreshold, boolean useFinalizer) {
         checkPositiveOrZero(maxCachedBufferCapacity, "maxCachedBufferCapacity");
         this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
         this.heapArena = heapArena;
@@ -106,6 +108,7 @@ final class PoolThreadCache {
             throw new IllegalArgumentException("freeSweepAllocationThreshold: "
                     + freeSweepAllocationThreshold + " (expected: > 0)");
         }
+        freeOnFinalize = useFinalizer ? new FreeOnFinalize(this) : null;
     }
 
     private static <T> MemoryRegionCache<T>[] createSubPageCaches(
@@ -199,16 +202,6 @@ final class PoolThreadCache {
             return cacheForSmall(area, sizeIdx);
         default:
             throw new Error();
-        }
-    }
-
-    /// TODO: In the future when we move to Java9+ we should use java.lang.ref.Cleaner.
-    @Override
-    protected void finalize() throws Throwable {
-        try {
-            super.finalize();
-        } finally {
-            free(true);
         }
     }
 
@@ -495,5 +488,24 @@ final class PoolThreadCache {
                 return new Entry(handle);
             }
         });
+    }
+
+    private static final class FreeOnFinalize {
+        private final PoolThreadCache cache;
+
+        private FreeOnFinalize(PoolThreadCache cache) {
+            this.cache = cache;
+        }
+
+        /// TODO: In the future when we move to Java9+ we should use java.lang.ref.Cleaner.
+        @SuppressWarnings({"FinalizeDeclaration", "deprecation"})
+        @Override
+        protected void finalize() throws Throwable {
+            try {
+                super.finalize();
+            } finally {
+                cache.free(true);
+            }
+        }
     }
 }
