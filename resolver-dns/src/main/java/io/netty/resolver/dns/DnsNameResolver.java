@@ -149,7 +149,7 @@ public class DnsNameResolver extends InetNameResolver {
             List<String> list = PlatformDependent.isWindows()
                     ? getSearchDomainsHack()
                     : UnixResolverDnsServerAddressStreamProvider.parseEtcResolverSearchDomains();
-            searchDomains = list.toArray(new String[0]);
+            searchDomains = list.toArray(EmptyArrays.EMPTY_STRINGS);
         } catch (Exception ignore) {
             // Failed to get the system name search domain list.
             searchDomains = EmptyArrays.EMPTY_STRINGS;

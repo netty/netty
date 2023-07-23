@@ -1117,7 +1117,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             }
         }
 
-        return res.toArray(new AsciiString[0]);
+        return res.toArray(EmptyArrays.EMPTY_ASCII_STRINGS);
     }
 
     /**

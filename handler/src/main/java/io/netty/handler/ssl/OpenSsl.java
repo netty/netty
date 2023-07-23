@@ -708,7 +708,7 @@ public final class OpenSsl {
         libNames.add(staticLibName);
 
         NativeLibraryLoader.loadFirstAvailable(PlatformDependent.getClassLoader(SSLContext.class),
-            libNames.toArray(new String[0]));
+            libNames.toArray(EmptyArrays.EMPTY_STRINGS));
     }
 
     private static boolean initializeTcNative(String engine) throws Exception {
@@ -766,7 +766,7 @@ public final class OpenSsl {
                 protocols.add(proto);
             }
         }
-        return protocols.toArray(new String[0]);
+        return protocols.toArray(EmptyArrays.EMPTY_STRINGS);
     }
 
     static boolean isBoringSSL() {

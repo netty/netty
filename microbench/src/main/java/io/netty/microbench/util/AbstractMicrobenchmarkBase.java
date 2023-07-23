@@ -16,6 +16,7 @@
 package io.netty.microbench.util;
 
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.File;
@@ -93,7 +94,7 @@ public abstract class AbstractMicrobenchmarkBase {
             }
         }
         if (jvmArgs.length != customArgs.size()) {
-            jvmArgs = customArgs.toArray(new String[0]);
+            jvmArgs = customArgs.toArray(EmptyArrays.EMPTY_STRINGS);
         }
         return jvmArgs;
     }
