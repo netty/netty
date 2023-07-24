@@ -187,7 +187,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                     if (srcOrder == dstOrder) {
                         // Use the optimized path only when byte orders match.
                         // Avoid sign extension on widening primitive conversion
-                        long longMask = (long) mask & 0xFFFFFFFFL;
+                        long longMask = mask & 0xFFFFFFFFL;
                         longMask |= longMask << 32;
 
                         // If the byte order of our buffers it little endian we have to bring our mask
