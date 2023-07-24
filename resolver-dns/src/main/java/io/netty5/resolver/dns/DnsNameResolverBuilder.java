@@ -256,6 +256,7 @@ public final class DnsNameResolverBuilder {
 
     /**
      * Sets the timeout of each DNS query performed by this resolver (in milliseconds).
+     * {@code 0} disables the timeout. If not set or a negative number is set, the default timeout is used.
      *
      * @param queryTimeoutMillis the query timeout
      * @return {@code this}
