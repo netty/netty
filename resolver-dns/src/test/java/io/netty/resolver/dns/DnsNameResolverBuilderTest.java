@@ -144,6 +144,12 @@ class DnsNameResolverBuilderTest {
         assertThat(resolver.authoritativeDnsServerCache()).isSameAs(testAuthoritativeDnsServerCache);
     }
 
+    @Test
+    void disableQueryTimeoutWithZero() {
+        resolver = builder.queryTimeoutMillis(0).build();
+        assertThat(resolver.queryTimeoutMillis()).isEqualTo(0);
+    }
+
     private static void checkDefaultDnsCache(DefaultDnsCache dnsCache,
             int expectedMaxTtl, int expectedMinTtl, int expectedNegativeTtl) {
         assertThat(dnsCache.maxTtl()).isEqualTo(expectedMaxTtl);
