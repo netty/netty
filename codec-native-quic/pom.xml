@@ -1208,14 +1208,14 @@
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.2.0</version>
+      <version>1.3.8</version>
       <scope>test</scope>
     </dependency>
     <!-- Also include bouncycastle so we can use SelfSignedCertificate even on more recent JDKs during testing -->
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk15on</artifactId>
-      <version>1.68</version>
+      <version>1.70</version>
       <scope>test</scope>
     </dependency>
     <dependency>
