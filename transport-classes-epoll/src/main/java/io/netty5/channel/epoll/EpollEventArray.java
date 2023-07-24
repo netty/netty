@@ -111,7 +111,7 @@ public final class EpollEventArray {
 
     private int getInt(int index, int offset) {
         if (PlatformDependent.hasUnsafe()) {
-            long n = (long) index * (long) EPOLL_EVENT_SIZE;
+            long n = (long) index * EPOLL_EVENT_SIZE;
             return PlatformDependent.getInt(memoryAddress + n + offset);
         }
         return memory.getInt(index * EPOLL_EVENT_SIZE + offset);

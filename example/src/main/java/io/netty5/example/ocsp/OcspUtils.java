@@ -80,7 +80,7 @@ public final class OcspUtils {
         }
 
         byte[] encoded = taggedObject.getEncoded();
-        int length = (int) encoded[1] & 0xFF;
+        int length = encoded[1] & 0xFF;
         String uri = new String(encoded, 2, length, StandardCharsets.UTF_8);
         return URI.create(uri);
     }
