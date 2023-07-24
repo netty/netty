@@ -369,13 +369,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         return chunkSize;
     }
 
-    private PoolArenasCache getPoolThreadCache() {
-        return threadCache.get();
-    }
-
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        PoolArenasCache cache = getPoolThreadCache();
+        PoolThreadCache cache = threadCache.get();
         PoolArena<byte[]> heapArena = cache.heapArena;
 
         final ByteBuf buf;
@@ -392,7 +388,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        PoolArenasCache cache = getPoolThreadCache();
+        PoolThreadCache cache = threadCache.get();
         PoolArena<ByteBuffer> directArena = cache.directArena;
 
         final ByteBuf buf;
@@ -504,7 +500,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         threadCache.remove();
     }
 
-    private final class PoolThreadLocalCache extends FastThreadLocal<PoolArenasCache> {
+    private final class PoolThreadLocalCache extends FastThreadLocal<PoolThreadCache> {
         private final boolean useCacheForAllThreads;
 
         PoolThreadLocalCache(boolean useCacheForAllThreads) {
@@ -512,22 +508,22 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         }
 
         @Override
-        protected synchronized PoolArenasCache initialValue() {
+        protected synchronized PoolThreadCache initialValue() {
             final PoolArena<byte[]> heapArena = leastUsedArena(heapArenas);
             final PoolArena<ByteBuffer> directArena = leastUsedArena(directArenas);
 
             final Thread current = Thread.currentThread();
-            EventExecutor executor = ThreadExecutorMap.currentExecutor();
-            if ((smallCacheSize != 0 || normalCacheSize != 0) &&
-                (useCacheForAllThreads ||
-                 // If the current thread is a FastThreadLocalThread we will always use the cache
-                 current instanceof FastThreadLocalThread ||
-                 // The Thread is used by an EventExecutor, let's use the cache as the chances are good that we
-                 // will allocate a lot!
-                 executor != null)) {
+            final EventExecutor executor = ThreadExecutorMap.currentExecutor();
+
+            if (useCacheForAllThreads ||
+                    // If the current thread is a FastThreadLocalThread we will always use the cache
+                    current instanceof FastThreadLocalThread ||
+                    // The Thread is used by an EventExecutor, let's use the cache as the chances are good that we
+                    // will allocate a lot!
+                    executor != null) {
                 final PoolThreadCache cache = new PoolThreadCache(
                         heapArena, directArena, smallCacheSize, normalCacheSize,
-                        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL);
+                        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL, true);
 
                 if (DEFAULT_CACHE_TRIM_INTERVAL_MILLIS > 0) {
                     if (executor != null) {
@@ -537,12 +533,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                 }
                 return cache;
             }
-            // No small/normal thread-local caches
-            return new PoolArenasCache(heapArena, directArena);
+            // No caching so just use 0 as sizes.
+            return new PoolThreadCache(heapArena, directArena, 0, 0, 0, 0, false);
         }
 
         @Override
-        protected void onRemoval(PoolArenasCache threadCache) {
+        protected void onRemoval(PoolThreadCache threadCache) {
             threadCache.free(false);
         }
 
@@ -729,8 +725,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         return used;
     }
 
-    final PoolArenasCache threadCache() {
-        PoolArenasCache cache = getPoolThreadCache();
+    final PoolThreadCache threadCache() {
+        PoolThreadCache cache =  threadCache.get();
         assert cache != null;
         return cache;
     }
@@ -742,7 +738,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
      * Returns {@code true} if a cache for the current {@link Thread} exists and so was trimmed, false otherwise.
      */
     public boolean trimCurrentThreadCache() {
-        PoolArenasCache cache = threadCache.getIfExists();
+        PoolThreadCache cache = threadCache.getIfExists();
         if (cache != null) {
             cache.trim();
             return true;
