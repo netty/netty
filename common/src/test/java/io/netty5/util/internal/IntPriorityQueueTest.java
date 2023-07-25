@@ -26,29 +26,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class LongPriorityQueueTest {
+class IntPriorityQueueTest {
     @Test
     public void mustThrowWhenAddingNoValue() {
-        final LongPriorityQueue pq = new LongPriorityQueue();
-        assertThrows(IllegalArgumentException.class, () -> pq.offer(LongPriorityQueue.NO_VALUE));
+        final IntPriorityQueue pq = new IntPriorityQueue();
+        assertThrows(IllegalArgumentException.class, () -> pq.offer(IntPriorityQueue.NO_VALUE));
     }
 
     @Test
     public void mustReturnValuesInOrder() {
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
         int initialValues = tlr.nextInt(5, 30);
-        ArrayList<Long> values = new ArrayList<Long>();
+        ArrayList<Integer> values = new ArrayList<Integer>();
         for (int i = 0; i < initialValues; i++) {
-            values.add(tlr.nextLong(0, Long.MAX_VALUE));
+            values.add(tlr.nextInt(0, Integer.MAX_VALUE));
         }
-        LongPriorityQueue pq = new LongPriorityQueue();
+        IntPriorityQueue pq = new IntPriorityQueue();
         assertTrue(pq.isEmpty());
-        for (Long value : values) {
+        for (Integer value : values) {
             pq.offer(value);
         }
         Collections.sort(values);
         int valuesToRemove = initialValues / 2;
-        ListIterator<Long> itr = values.listIterator();
+        ListIterator<Integer> itr = values.listIterator();
         for (int i = 0; i < valuesToRemove; i++) {
             assertTrue(itr.hasNext());
             assertThat(pq.poll()).isEqualTo(itr.next());
@@ -56,7 +56,7 @@ class LongPriorityQueueTest {
         }
         int moreValues = tlr.nextInt(5, 30);
         for (int i = 0; i < moreValues; i++) {
-            long value = tlr.nextLong(0, Long.MAX_VALUE);
+            int value = tlr.nextInt(0, Integer.MAX_VALUE);
             pq.offer(value);
             values.add(value);
         }
@@ -66,54 +66,54 @@ class LongPriorityQueueTest {
             assertThat(pq.poll()).isEqualTo(itr.next());
         }
         assertTrue(pq.isEmpty());
-        assertThat(pq.poll()).isEqualTo(LongPriorityQueue.NO_VALUE);
+        assertThat(pq.poll()).isEqualTo(IntPriorityQueue.NO_VALUE);
     }
 
     @Test
     public void internalRemoveOfAllElements() {
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
         int initialValues = tlr.nextInt(5, 30);
-        ArrayList<Long> values = new ArrayList<Long>();
-        LongPriorityQueue pq = new LongPriorityQueue();
+        ArrayList<Integer> values = new ArrayList<Integer>();
+        IntPriorityQueue pq = new IntPriorityQueue();
         for (int i = 0; i < initialValues; i++) {
-            long value = tlr.nextLong(0, Long.MAX_VALUE);
+            int value = tlr.nextInt(0, Integer.MAX_VALUE);
             pq.offer(value);
             values.add(value);
         }
-        for (Long value : values) {
+        for (Integer value : values) {
             pq.remove(value);
         }
         assertTrue(pq.isEmpty());
-        assertThat(pq.poll()).isEqualTo(LongPriorityQueue.NO_VALUE);
+        assertThat(pq.poll()).isEqualTo(IntPriorityQueue.NO_VALUE);
     }
 
     @Test
     public void internalRemoveMustPreserveOrder() {
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
         int initialValues = tlr.nextInt(1, 30);
-        ArrayList<Long> values = new ArrayList<Long>();
-        LongPriorityQueue pq = new LongPriorityQueue();
+        ArrayList<Integer> values = new ArrayList<Integer>();
+        IntPriorityQueue pq = new IntPriorityQueue();
         for (int i = 0; i < initialValues; i++) {
-            long value = tlr.nextLong(0, Long.MAX_VALUE);
+            int value = tlr.nextInt(0, Integer.MAX_VALUE);
             pq.offer(value);
             values.add(value);
         }
 
-        long toRemove = values.get(values.size() / 2);
+        Integer toRemove = values.get(values.size() / 2);
         values.remove(toRemove);
         pq.remove(toRemove);
 
         Collections.sort(values);
-        for (Long value : values) {
+        for (Integer value : values) {
             assertThat(pq.poll()).isEqualTo(value);
         }
         assertTrue(pq.isEmpty());
-        assertThat(pq.poll()).isEqualTo(LongPriorityQueue.NO_VALUE);
+        assertThat(pq.poll()).isEqualTo(IntPriorityQueue.NO_VALUE);
     }
 
     @Test
     public void mustSupportDuplicateValues() {
-        LongPriorityQueue pq = new LongPriorityQueue();
+        IntPriorityQueue pq = new IntPriorityQueue();
         pq.offer(10);
         pq.offer(5);
         pq.offer(6);
@@ -136,7 +136,7 @@ class LongPriorityQueueTest {
         assertThat(pq.poll()).isEqualTo(10);
         assertThat(pq.poll()).isEqualTo(10);
         assertTrue(pq.isEmpty());
-        assertThat(pq.poll()).isEqualTo(LongPriorityQueue.NO_VALUE);
-        assertThat(pq.peek()).isEqualTo(LongPriorityQueue.NO_VALUE);
+        assertThat(pq.poll()).isEqualTo(IntPriorityQueue.NO_VALUE);
+        assertThat(pq.peek()).isEqualTo(IntPriorityQueue.NO_VALUE);
     }
 }
