@@ -242,6 +242,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     private void insertAvailRun(int runOffset, int pages, long handle) {
         int pageIdxFloor = arena.pages2pageIdxFloor(pages);
         IntPriorityQueue queue = runsAvail[pageIdxFloor];
+        assert isRun(handle);
         queue.offer((int) (handle >> BITMAP_IDX_BIT_LENGTH));
 
         //insert first page of run
