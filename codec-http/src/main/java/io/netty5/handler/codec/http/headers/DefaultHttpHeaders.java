@@ -263,7 +263,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
     public HttpHeaders addCookie(final HttpCookiePair cookie) {
         // HTTP/1.x requires that all cookies/crumbs are combined into a single Cookie header.
         // https://tools.ietf.org/html/rfc6265#section-5.4
-        CharSequence encoded = cookie.encoded();
+        CharSequence encoded = cookie.encodedCookie();
         final int keyHash = hashCode(COOKIE);
         final BucketHead<CharSequence, CharSequence> bucketHead = entries[index(keyHash)];
         if (bucketHead != null) {
@@ -283,7 +283,7 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
 
     @Override
     public HttpHeaders addSetCookie(final HttpSetCookie cookie) {
-        put(SET_COOKIE, cookie.encoded());
+        put(SET_COOKIE, cookie.encodedSetCookie());
         return this;
     }
 

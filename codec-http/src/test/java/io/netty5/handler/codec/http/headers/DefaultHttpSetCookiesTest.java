@@ -132,21 +132,21 @@ class DefaultHttpSetCookiesTest {
         HttpSetCookie next = cookieItr.next();
         assertTrue(areSetCookiesEqual(new TestSetCookie(
                 "foo", "12345", "/", "somecompany.co.uk", null, null, SameSite.Lax, false, false, true), next));
-        assertThat(next.encoded()).containsIgnoringCase("samesite=lax");
+        assertThat(next.encodedSetCookie()).containsIgnoringCase("samesite=lax");
         assertFalse(cookieItr.hasNext());
         cookieItr = headers.getSetCookiesIterator("bar");
         assertTrue(cookieItr.hasNext());
         next = cookieItr.next();
         assertTrue(areSetCookiesEqual(new TestSetCookie("bar", "abcd", "/2", "somecompany.co.uk", null,
                 3000L, SameSite.None, false, false, false), next));
-        assertThat(next.encoded()).containsIgnoringCase("samesite=none");
+        assertThat(next.encodedSetCookie()).containsIgnoringCase("samesite=none");
         assertFalse(cookieItr.hasNext());
         cookieItr = headers.getSetCookiesIterator("baz");
         assertTrue(cookieItr.hasNext());
         next = cookieItr.next();
         assertTrue(areSetCookiesEqual(new TestSetCookie("baz", "xyz", "/3", "somecompany.co.uk", null,
                 null, SameSite.Strict, false, true, false), next));
-        assertThat(next.encoded()).containsIgnoringCase("samesite=strict");
+        assertThat(next.encodedSetCookie()).containsIgnoringCase("samesite=strict");
         assertFalse(cookieItr.hasNext());
     }
 
@@ -888,9 +888,15 @@ class DefaultHttpSetCookiesTest {
         }
 
         @Override
-        public CharSequence encoded() {
+        public CharSequence encodedCookie() {
             return new DefaultHttpSetCookie(name, value, path, domain, expires, maxAge, sameSite, isWrapped, isSecure,
-                    isHttpOnly).encoded();
+                    isHttpOnly).encodedCookie();
+        }
+
+        @Override
+        public CharSequence encodedSetCookie() {
+            return new DefaultHttpSetCookie(name, value, path, domain, expires, maxAge, sameSite, isWrapped, isSecure,
+                    isHttpOnly).encodedSetCookie();
         }
 
         @Override

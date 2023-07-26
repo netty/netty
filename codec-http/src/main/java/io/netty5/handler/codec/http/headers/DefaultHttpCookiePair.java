@@ -133,7 +133,7 @@ public final class DefaultHttpCookiePair implements HttpCookiePair {
     }
 
     @Override
-    public CharSequence encoded() {
+    public CharSequence encodedCookie() {
         StringBuilder sb = new StringBuilder(name.length() + value.length() + 1 + (isWrapped ? 2 : 0));
         sb.append(name).append('=');
         if (isWrapped) {

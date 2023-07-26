@@ -57,9 +57,9 @@ public interface HttpCookiePair {
     boolean isWrapped();
 
     /**
-     * Get the encoded value of this {@link HttpCookiePair}.
+     * Get the encoded value of this {@link HttpCookiePair} for the {@code Cookie} HTTP header.
      *
      * @return the encoded value of this {@link HttpCookiePair}.
      */
-    CharSequence encoded();
+    CharSequence encodedCookie();
 }

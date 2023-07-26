@@ -454,7 +454,12 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
     }
 
     @Override
-    public CharSequence encoded() {
+    public CharSequence encodedCookie() {
+        return new DefaultHttpCookiePair(name, value, wrapped).encodedCookie();
+    }
+
+    @Override
+    public CharSequence encodedSetCookie() {
         StringBuilder sb = new StringBuilder(1 + name.length() + value.length() +
                 (wrapped ? 2 : 0) +
                 (domain != null ? ENCODED_LABEL_DOMAIN.length() + domain.length() : 0) +
