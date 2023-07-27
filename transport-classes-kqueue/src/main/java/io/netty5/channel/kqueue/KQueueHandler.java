@@ -49,6 +49,10 @@ public final class KQueueHandler implements IoHandler {
     private static final AtomicIntegerFieldUpdater<KQueueHandler> WAKEN_UP_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(KQueueHandler.class, "wakenUp");
     private static final int KQUEUE_WAKE_UP_IDENT = 0;
+    // `kqueue()` may return EINVAL when a large number such as Integer.MAX_VALUE is specified as timeout.
+    // 24 hours would be a large enough value.
+    // https://man.freebsd.org/cgi/man.cgi?query=kevent&apropos=0&sektion=0&manpath=FreeBSD+6.1-RELEASE&format=html#end
+    private static final int KQUEUE_MAX_TIMEOUT_SECONDS = 86399; // 24 hours - 1 second
 
     static {
         // Ensure JNI is initialized by the time this class is loaded by this time!
@@ -197,8 +201,9 @@ public final class KQueueHandler implements IoHandler {
         }
 
         long totalDelay = context.delayNanos(System.nanoTime());
-        int delaySeconds = (int) min(totalDelay / 1000000000L, Integer.MAX_VALUE);
-        return kqueueWait(delaySeconds, (int) min(totalDelay - delaySeconds * 1000000000L, Integer.MAX_VALUE));
+        int delaySeconds = (int) min(totalDelay / 1000000000L, KQUEUE_MAX_TIMEOUT_SECONDS);
+        int delayNanos = (int) (totalDelay % 1000000000L);
+        return kqueueWait(delaySeconds, delayNanos);
     }
 
     private int kqueueWaitNow() throws IOException {
