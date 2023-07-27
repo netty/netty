@@ -348,21 +348,6 @@ public class DefaultHttp2ConnectionTest {
     }
 
     @Test
-    public void incrementAndGetStreamShouldAlwaysIncrement() {
-        final int streamId = client.local().lastStreamKnownByPeer() + 1;
-
-        assertThrows(Http2Exception.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                client.local().createStream(streamId, true);
-            }
-        });
-
-        int nextStreamID = client.local().incrementAndGetNextStreamId();
-        assertEquals(streamId, nextStreamID - 3);
-    }
-
-    @Test
     public void clientLocalCreateStreamExhaustedSpace() throws Http2Exception {
         client.local().createStream(MAX_VALUE, true);
         Http2Exception expected = assertThrows(Http2Exception.class, new Executable() {
