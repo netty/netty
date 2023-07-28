@@ -52,7 +52,7 @@ public interface HttpHeaders extends Iterable<Entry<CharSequence, CharSequence>>
      * @return A new headers instance that use up as few resources as possible.
      */
     static HttpHeaders emptyHeaders() {
-        return newHeaders(2, false, false, false);
+        return newHeaders(2, true, true, true);
     }
 
     /**
