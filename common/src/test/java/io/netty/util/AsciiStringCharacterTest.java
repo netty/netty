@@ -424,4 +424,34 @@ public class AsciiStringCharacterTest {
         int i4 = foo.indexOf(' ', i3 + 1);
         assertEquals(i4, -1);
     }
+
+    @Test
+    public void testToLowerCaseAndToUpperCase() {
+        final AsciiString foo = AsciiString.of("This is a test");
+        assertEquals("this is a test", foo.toLowerCase().toString());
+        assertEquals("THIS IS A TEST", foo.toUpperCase().toString());
+
+        for (int i = Character.MIN_VALUE; i <= Character.MAX_VALUE; ++i) {
+            final char c = (char) i;
+            if (c >= 'A' && c <= 'Z') {
+                assertEquals((char) (c + 32), AsciiString.toLowerCase(c));
+            } else {
+                assertEquals(c, AsciiString.toLowerCase(c));
+            }
+        }
+
+        for (int i = Byte.MIN_VALUE; i < Byte.MAX_VALUE; ++i) {
+            final byte b = (byte) i;
+            if (b >= 'A' && b <= 'Z') {
+                assertEquals((byte) (b + 32), AsciiString.toLowerCase(b));
+                assertEquals(b, AsciiString.toUpperCase(b));
+            } else if (b >= 'a' && b <= 'z') {
+                assertEquals(b, AsciiString.toLowerCase(b));
+                assertEquals((byte) (b - 32), AsciiString.toUpperCase(b));
+            } else {
+                assertEquals(b, AsciiString.toLowerCase(b));
+                assertEquals(b, AsciiString.toUpperCase(b));
+            }
+        }
+    }
 }

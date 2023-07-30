@@ -50,6 +50,14 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
 
     public static final int INDEX_NOT_FOUND = -1;
 
+    private static final int UPPER_CASE_A_MINUS_ONE = 'A' - 1;
+
+    private static final int UPPER_CASE_Z_PLUS_ONE = 'Z' + 1;
+
+    private static final int LOWER_CASE_A_MINUS_ONE = 'a' - 1;
+
+    private static final int LOWER_CASE_Z_PLUS_ONE = 'z' + 1;
+
     /**
      * If this value is modified outside the constructor then call {@link #arrayChanged()}.
      */
@@ -1825,8 +1833,10 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         return a == b || toLowerCase(a) == toLowerCase(b);
     }
 
-    private static byte toLowerCase(byte b) {
-        return isUpperCase(b) ? (byte) (b + 32) : b;
+    // visible for testing
+    static byte toLowerCase(byte b) {
+        final int mask = UPPER_CASE_A_MINUS_ONE - b & b - UPPER_CASE_Z_PLUS_ONE & Integer.MIN_VALUE;
+        return (byte) (b | mask >>> 26);
     }
 
     /**
@@ -1836,11 +1846,14 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return lowercase ASCII character equivalent
      */
     public static char toLowerCase(char c) {
-        return isUpperCase(c) ? (char) (c + 32) : c;
+        final int mask = UPPER_CASE_A_MINUS_ONE - c & c - UPPER_CASE_Z_PLUS_ONE & Integer.MIN_VALUE;
+        return (char) (c | mask >>> 26);
     }
 
-    private static byte toUpperCase(byte b) {
-        return isLowerCase(b) ? (byte) (b - 32) : b;
+    // visible for testing
+    static byte toUpperCase(byte b) {
+        final int mask = LOWER_CASE_A_MINUS_ONE - b & b - LOWER_CASE_Z_PLUS_ONE & Integer.MIN_VALUE;
+        return (byte) (b & ~(mask >>> 26));
     }
 
     private static boolean isLowerCase(byte value) {
