@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.AsciiString;
+import io.netty.util.AsciiStringUtil.SWARByteSearch;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
@@ -512,21 +513,6 @@ public final class ByteBufUtil {
 
     private static long uintFromLE(long value) {
         return Long.reverseBytes(value) >>> Integer.SIZE;
-    }
-
-    private static final class SWARByteSearch {
-
-        private static long compilePattern(byte byteToFind) {
-            return (byteToFind & 0xFFL) * 0x101010101010101L;
-        }
-
-        private static int firstAnyPattern(long word, long pattern, boolean leading) {
-            long input = word ^ pattern;
-            long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
-            tmp = ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
-            final int binaryPosition = leading? Long.numberOfLeadingZeros(tmp) : Long.numberOfTrailingZeros(tmp);
-            return binaryPosition >>> 3;
-        }
     }
 
     private static int unrolledFirstIndexOf(AbstractByteBuf buffer, int fromIndex, int byteCount, byte value) {

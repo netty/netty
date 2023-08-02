@@ -744,13 +744,13 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         }
 
         final byte chAsByte = c2b0(ch);
-        final int len = offset + length;
-        for (int i = start + offset; i < len; ++i) {
-            if (value[i] == chAsByte) {
-                return i - offset;
-            }
+        final int fromIndex = start + offset;
+        final int toIndex = offset + length;
+        final int index = AsciiStringUtil.firstIndexOf(value, fromIndex, toIndex, chAsByte);
+        if (index < 0) {
+            return INDEX_NOT_FOUND;
         }
-        return INDEX_NOT_FOUND;
+        return index - offset;
     }
 
     /**
