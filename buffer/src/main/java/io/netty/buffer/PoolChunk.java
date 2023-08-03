@@ -474,7 +474,6 @@ final class PoolChunk<T> implements PoolChunkMetric {
      * @param handle handle to free
      */
     void free(long handle, int normCapacity, ByteBuffer nioBuffer) {
-        int runSize = runSize(pageShifts, handle);
         if (isSubpage(handle)) {
             int sizeIdx = arena.size2SizeIdx(normCapacity);
             PoolSubpage<T> head = arena.findSubpagePoolHead(sizeIdx);
@@ -499,6 +498,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             }
         }
 
+        int runSize = runSize(pageShifts, handle);
         //start free run
         runsAvailLock.lock();
         try {
