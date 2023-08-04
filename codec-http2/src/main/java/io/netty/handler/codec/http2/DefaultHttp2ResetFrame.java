@@ -79,7 +79,7 @@ public final class DefaultHttp2ResetFrame extends AbstractHttp2StreamFrame imple
     @Override
     public int hashCode() {
         int hash = super.hashCode();
-        hash = hash * 31 + (int) (errorCode ^ (errorCode >>> 32));
+        hash = hash * 31 + (int) (errorCode ^ errorCode >>> 32);
         return hash;
     }
 }

@@ -36,6 +36,7 @@ import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
@@ -379,7 +380,7 @@ public class HttpClientCodecTest {
         HttpContent content = ch.readInbound();
         // HTTP 102 is not allowed to have content.
         assertThat(content.content().readableBytes(), is(0));
-        assertThat(content, CoreMatchers.<HttpContent>instanceOf(LastHttpContent.class));
+        assertThat(content, instanceOf(LastHttpContent.class));
         content.release();
 
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
@@ -394,7 +395,7 @@ public class HttpClientCodecTest {
         content = ch.readInbound();
         // HTTP 200 has content.
         assertThat(content.content().readableBytes(), is(8));
-        assertThat(content, CoreMatchers.<HttpContent>instanceOf(LastHttpContent.class));
+        assertThat(content, instanceOf(LastHttpContent.class));
         content.release();
 
         assertThat(ch.finish(), is(false));
@@ -423,4 +424,19 @@ public class HttpClientCodecTest {
         assertTrue(ch.finishAndReleaseAll());
     }
 
+    @Test
+    public void testWriteThroughAfterUpgrade() {
+        HttpClientCodec codec = new HttpClientCodec();
+        EmbeddedChannel ch = new EmbeddedChannel(codec);
+        codec.prepareUpgradeFrom(null);
+
+        ByteBuf buffer = ch.alloc().buffer();
+        assertThat(buffer.refCnt(), is(1));
+        assertTrue(ch.writeOutbound(buffer));
+        // buffer should pass through unchanged
+        assertThat(ch.<ByteBuf>readOutbound(), sameInstance(buffer));
+        assertThat(buffer.refCnt(), is(1));
+
+        buffer.release();
+    }
 }

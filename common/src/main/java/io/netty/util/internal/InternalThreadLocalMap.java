@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,18 +39,25 @@ import java.util.concurrent.atomic.AtomicInteger;
  * unless you know what you are doing.
  */
 public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(InternalThreadLocalMap.class);
     private static final ThreadLocal<InternalThreadLocalMap> slowThreadLocalMap =
             new ThreadLocal<InternalThreadLocalMap>();
     private static final AtomicInteger nextIndex = new AtomicInteger();
+    // Internal use only.
+    public static final int VARIABLES_TO_REMOVE_INDEX = nextVariableIndex();
 
     private static final int DEFAULT_ARRAY_LIST_INITIAL_CAPACITY = 8;
-    private static final int STRING_BUILDER_INITIAL_SIZE;
-    private static final int STRING_BUILDER_MAX_SIZE;
+    private static final int ARRAY_LIST_CAPACITY_EXPAND_THRESHOLD = 1 << 30;
+    // Reference: https://hg.openjdk.java.net/jdk8/jdk8/jdk/file/tip/src/share/classes/java/util/ArrayList.java#l229
+    private static final int ARRAY_LIST_CAPACITY_MAX_SIZE = Integer.MAX_VALUE - 8;
+
     private static final int HANDLER_SHARABLE_CACHE_INITIAL_CAPACITY = 4;
     private static final int INDEXED_VARIABLE_TABLE_INITIAL_SIZE = 32;
 
+    private static final int STRING_BUILDER_INITIAL_SIZE;
+    private static final int STRING_BUILDER_MAX_SIZE;
+
+    private static final InternalLogger logger;
+    /** Internal use only. */
     public static final Object UNSET = new Object();
 
     /** Used by {@link FastThreadLocal} */
@@ -75,14 +83,21 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private BitSet cleanerFlags;
 
     /** @deprecated These padding fields will be removed in the future. */
-    public long rp1, rp2, rp3, rp4, rp5, rp6, rp7, rp8, rp9;
+    public long rp1, rp2, rp3, rp4, rp5, rp6, rp7, rp8;
 
     static {
         STRING_BUILDER_INITIAL_SIZE =
                 SystemPropertyUtil.getInt("io.netty.threadLocalMap.stringBuilder.initialSize", 1024);
-        logger.debug("-Dio.netty.threadLocalMap.stringBuilder.initialSize: {}", STRING_BUILDER_INITIAL_SIZE);
+        STRING_BUILDER_MAX_SIZE =
+                SystemPropertyUtil.getInt("io.netty.threadLocalMap.stringBuilder.maxSize", 1024 * 4);
 
-        STRING_BUILDER_MAX_SIZE = SystemPropertyUtil.getInt("io.netty.threadLocalMap.stringBuilder.maxSize", 1024 * 4);
+        // Ensure the InternalLogger is initialized as last field in this class as InternalThreadLocalMap might be used
+        // by the InternalLogger itself. For this its important that all the other static fields are correctly
+        // initialized.
+        //
+        // See https://github.com/netty/netty/issues/12931.
+        logger = InternalLoggerFactory.getInstance(InternalThreadLocalMap.class);
+        logger.debug("-Dio.netty.threadLocalMap.stringBuilder.initialSize: {}", STRING_BUILDER_INITIAL_SIZE);
         logger.debug("-Dio.netty.threadLocalMap.stringBuilder.maxSize: {}", STRING_BUILDER_MAX_SIZE);
     }
 
@@ -135,8 +150,8 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
 
     public static int nextVariableIndex() {
         int index = nextIndex.getAndIncrement();
-        if (index < 0) {
-            nextIndex.decrementAndGet();
+        if (index >= ARRAY_LIST_CAPACITY_MAX_SIZE || index < 0) {
+            nextIndex.set(ARRAY_LIST_CAPACITY_MAX_SIZE);
             throw new IllegalStateException("too many thread-local indexed variables");
         }
         return index;
@@ -193,15 +208,14 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
             count ++;
         }
 
-        for (Object o: indexedVariables) {
-            if (o != UNSET) {
-                count ++;
-            }
+        Object v = indexedVariable(VARIABLES_TO_REMOVE_INDEX);
+        if (v != null && v != InternalThreadLocalMap.UNSET) {
+            @SuppressWarnings("unchecked")
+            Set<FastThreadLocal<?>> variablesToRemove = (Set<FastThreadLocal<?>>) v;
+            count += variablesToRemove.size();
         }
 
-        // We should subtract 1 from the count because the first element in 'indexedVariables' is reserved
-        // by 'FastThreadLocal' to keep the list of 'FastThreadLocal's to remove on 'FastThreadLocal.removeAll()'.
-        return count - 1;
+        return count;
     }
 
     public StringBuilder stringBuilder() {
@@ -331,13 +345,18 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private void expandIndexedVariableTableAndSet(int index, Object value) {
         Object[] oldArray = indexedVariables;
         final int oldCapacity = oldArray.length;
-        int newCapacity = index;
-        newCapacity |= newCapacity >>>  1;
-        newCapacity |= newCapacity >>>  2;
-        newCapacity |= newCapacity >>>  4;
-        newCapacity |= newCapacity >>>  8;
-        newCapacity |= newCapacity >>> 16;
-        newCapacity ++;
+        int newCapacity;
+        if (index < ARRAY_LIST_CAPACITY_EXPAND_THRESHOLD) {
+            newCapacity = index;
+            newCapacity |= newCapacity >>>  1;
+            newCapacity |= newCapacity >>>  2;
+            newCapacity |= newCapacity >>>  4;
+            newCapacity |= newCapacity >>>  8;
+            newCapacity |= newCapacity >>> 16;
+            newCapacity ++;
+        } else {
+            newCapacity = ARRAY_LIST_CAPACITY_MAX_SIZE;
+        }
 
         Object[] newArray = Arrays.copyOf(oldArray, newCapacity);
         Arrays.fill(newArray, oldCapacity, newArray.length, UNSET);

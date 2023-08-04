@@ -108,7 +108,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             @Override
             public void onStreamHalfClosed(Http2Stream stream) {
                 if (HALF_CLOSED_LOCAL == stream.state()) {
-                    /**
+                    /*
                      * When this method is called there should not be any
                      * pending frames left if the API is used correctly. However,
                      * it is possible that a erroneous application can sneak

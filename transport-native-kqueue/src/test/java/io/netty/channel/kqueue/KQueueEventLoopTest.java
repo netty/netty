@@ -31,6 +31,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Override
+    protected boolean supportsChannelIteration() {
+        return true;
+    }
+
+    @Override
     protected EventLoopGroup newEventLoopGroup() {
         return new KQueueEventLoopGroup();
     }

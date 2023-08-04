@@ -130,7 +130,7 @@ class OpenSslSessionCache implements SSLSessionCache {
             NativeSslSession session = iterator.next().getValue();
             // As we use a LinkedHashMap we can break the while loop as soon as we find a valid session.
             // This is true as we always drain the cache as soon as we change the timeout to a smaller value as
-            // it was set before. This way its true that the insertation order matches the timeout order.
+            // it was set before. This way its true that the insertion order matches the timeout order.
             if (session.isValid(now)) {
                 break;
             }

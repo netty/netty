@@ -15,19 +15,19 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.compression.Brotli;
-import io.netty.handler.codec.compression.BrotliDecoder;
-import io.netty.handler.codec.compression.ZlibCodecFactory;
-import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.compression.ZstdDecoder;
-
 import static io.netty.handler.codec.http.HttpHeaderValues.BR;
 import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
-import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
+import static io.netty.handler.codec.http.HttpHeaderValues.SNAPPY;
+
+import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.BrotliDecoder;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
+import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.compression.SnappyFrameDecoder;
 
 /**
  * Decompresses an {@link HttpMessage} and an {@link HttpContent} compressed in
@@ -73,9 +73,10 @@ public class HttpContentDecompressor extends HttpContentDecoder {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
               ctx.channel().config(), new BrotliDecoder());
         }
-        if (ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
+
+        if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new ZstdDecoder());
+                    ctx.channel().config(), new SnappyFrameDecoder());
         }
 
         // 'identity' or unsupported

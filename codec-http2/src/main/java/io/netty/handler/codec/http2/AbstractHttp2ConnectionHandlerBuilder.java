@@ -18,7 +18,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
@@ -83,6 +82,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private Http2FrameListener frameListener;
     private long gracefulShutdownTimeoutMillis = Http2CodecUtil.DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
     private boolean decoupleCloseAndGoAway;
+    private boolean flushPreface = true;
 
     // The property that will prohibit connection() and codec() if set by server(),
     // because this property is used only when this builder creates an Http2Connection.
@@ -347,7 +347,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B encoderEnforceMaxQueuedControlFrames(int maxQueuedControlFrames) {
         enforceNonCodecConstraints("encoderEnforceMaxQueuedControlFrames");
-        this.maxQueuedControlFrames = ObjectUtil.checkPositiveOrZero(maxQueuedControlFrames, "maxQueuedControlFrames");
+        this.maxQueuedControlFrames = checkPositiveOrZero(maxQueuedControlFrames, "maxQueuedControlFrames");
         return self();
     }
 
@@ -376,7 +376,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B encoderIgnoreMaxHeaderListSize(boolean ignoreMaxHeaderListSize) {
         enforceNonCodecConstraints("encoderIgnoreMaxHeaderListSize");
-        this.encoderIgnoreMaxHeaderListSize = ignoreMaxHeaderListSize;
+        encoderIgnoreMaxHeaderListSize = ignoreMaxHeaderListSize;
         return self();
     }
 
@@ -428,7 +428,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B decoderEnforceMaxConsecutiveEmptyDataFrames(int maxConsecutiveEmptyFrames) {
         enforceNonCodecConstraints("maxConsecutiveEmptyFrames");
-        this.maxConsecutiveEmptyFrames = ObjectUtil.checkPositiveOrZero(
+        this.maxConsecutiveEmptyFrames = checkPositiveOrZero(
                 maxConsecutiveEmptyFrames, "maxConsecutiveEmptyFrames");
         return self();
     }
@@ -439,7 +439,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected B autoAckSettingsFrame(boolean autoAckSettings) {
         enforceNonCodecConstraints("autoAckSettingsFrame");
-        this.autoAckSettingsFrame = autoAckSettings;
+        autoAckSettingsFrame = autoAckSettings;
         return self();
     }
 
@@ -485,6 +485,36 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      */
     protected boolean decoupleCloseAndGoAway() {
         return decoupleCloseAndGoAway;
+    }
+
+    /**
+     * Determine if the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-3.5">Preface</a>
+     * should be automatically flushed when the {@link Channel} becomes active or not.
+     * <p>
+     * Client may choose to opt-out from this automatic behavior and manage flush manually if it's ready to send
+     * request frames immediately after the preface. It may help to avoid unnecessary latency.
+     *
+     * @param flushPreface {@code true} to automatically flush, {@code false otherwise}.
+     * @return {@code this}.
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-3.5">HTTP/2 Connection Preface</a>
+     */
+    protected B flushPreface(boolean flushPreface) {
+        this.flushPreface = flushPreface;
+        return self();
+    }
+
+    /**
+     * Determine if the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-3.5">Preface</a>
+     * should be automatically flushed when the {@link Channel} becomes active or not.
+     * <p>
+     * Client may choose to opt-out from this automatic behavior and manage flush manually if it's ready to send
+     * request frames immediately after the preface. It may help to avoid unnecessary latency.
+     *
+     * @return {@code true} if automatically flushed.
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-3.5">HTTP/2 Connection Preface</a>
+     */
+    protected boolean flushPreface() {
+        return flushPreface;
     }
 
     /**

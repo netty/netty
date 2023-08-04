@@ -382,7 +382,8 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     public boolean equals(Object o) {
         if (o == this) {
             return true;
-        } else if (!(o instanceof PemX509Certificate)) {
+        }
+        if (!(o instanceof PemX509Certificate)) {
             return false;
         }
 

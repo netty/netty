@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.67.Final-SNAPSHOT</version>
+    <version>4.1.97.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-epoll</artifactId>
 
@@ -27,17 +27,20 @@
   <packaging>jar</packaging>
 
   <properties>
-    <javaModuleName>io.netty.transport.epoll</javaModuleName>
+    <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
+    <javaModuleName>io.netty.transport.epoll.${javaModuleNameClassifier}</javaModuleName>
     <!-- Needed as we use SelfSignedCertificate in our tests -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
     <unix.common.include.unpacked.dir>${unix.common.lib.dir}/META-INF/native/include</unix.common.include.unpacked.dir>
-    <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
-    <jni.compiler.args.ldflags>LDFLAGS=-L${unix.common.lib.unpacked.dir} -Wl,--no-as-needed -lrt -ldl -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
+    <jni.compiler.args.cflags>CFLAGS=-O2 -pipe -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -D_FORTIFY_SOURCE=2 -ffunction-sections -fdata-sections -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
+    <jni.compiler.args.ldflags>LDFLAGS=-Wl,-z,relro -Wl,-z,now -Wl,--as-needed -Wl,--gc-sections -L${unix.common.lib.unpacked.dir}</jni.compiler.args.ldflags>
+    <jni.compiler.args.libs>LIBS=-Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive -ldl</jni.compiler.args.libs>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>true</skipTests>
+    <japicmp.skip>true</japicmp.skip>
   </properties>
 
   <profiles>
@@ -57,7 +60,7 @@
           <plugins>
             <plugin>
               <artifactId>maven-enforcer-plugin</artifactId>
-              <version>1.4.1</version>
+              <version>3.0.0</version>
               <dependencies>
                 <!-- Provides the 'requireFilesContent' enforcer rule. -->
                 <dependency>
@@ -142,7 +145,7 @@
 
           <plugin>
             <groupId>org.fusesource.hawtjni</groupId>
-            <artifactId>maven-hawtjni-plugin</artifactId>
+            <artifactId>hawtjni-maven-plugin</artifactId>
             <executions>
               <execution>
                 <id>build-native-lib</id>
@@ -156,6 +159,7 @@
                   <platform>.</platform>
                   <configureArgs>
                     <arg>${jni.compiler.args.ldflags}</arg>
+                    <arg>${jni.compiler.args.libs}</arg>
                     <arg>${jni.compiler.args.cflags}</arg>
                     <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
                   </configureArgs>
@@ -183,6 +187,7 @@
                     </manifest>
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_transport_native_epoll_${os.detected.arch}.so; osname=Linux; processor=${os.detected.arch},*</Bundle-NativeCode>
+                      <Fragment-Host>io.netty.transport-classes-epoll</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
                     <index>true</index>
@@ -215,13 +220,14 @@
       <properties>
         <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
         <jni.classifier>${os.detected.name}-aarch_64</jni.classifier>
+        <javaModuleNameClassifier>${os.detected.name}.aarch_64</javaModuleNameClassifier>
       </properties>
       <build>
         <pluginManagement>
           <plugins>
             <plugin>
               <artifactId>maven-enforcer-plugin</artifactId>
-              <version>1.4.1</version>
+              <version>3.0.0</version>
               <dependencies>
                 <!-- Provides the 'requireFilesContent' enforcer rule. -->
                 <dependency>
@@ -290,7 +296,7 @@
 
           <plugin>
             <groupId>org.fusesource.hawtjni</groupId>
-            <artifactId>maven-hawtjni-plugin</artifactId>
+            <artifactId>hawtjni-maven-plugin</artifactId>
             <executions>
               <execution>
                 <id>build-native-lib</id>
@@ -304,6 +310,7 @@
                   <platform>.</platform>
                   <configureArgs>
                     <arg>${jni.compiler.args.ldflags}</arg>
+                    <arg>${jni.compiler.args.libs}</arg>
                     <arg>${jni.compiler.args.cflags}</arg>
                     <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
                     <configureArg>--host=aarch64-linux-gnu</configureArg>
@@ -332,7 +339,8 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_epoll_aarch_64.so; osname=Linux; processor=aarch_64,*</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_epoll_aarch_64.so; osname=Linux; processor=aarch64,*</Bundle-NativeCode>
+                      <Fragment-Host>io.netty.transport-classes-epoll</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
                     <index>true</index>
@@ -385,6 +393,11 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
+      <artifactId>netty-transport-classes-epoll</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
       <artifactId>netty-testsuite</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
@@ -400,6 +413,17 @@
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.github.artsok</groupId>
+      <artifactId>rerunner-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- For SelfSignedCertificate usage on JDK20+ -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <optional>true</optional>
     </dependency>
   </dependencies>
 

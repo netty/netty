@@ -79,7 +79,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
             CharSequence roName = nameValuePairs[i];
             if (AsciiString.hashCode(roName) == nameHash && contentEqualsIgnoreCase(roName, name)) {
                 // Suppress a warning out of bounds access since the constructor allows only pairs
-                return nameValuePairs[i + 1]; // lgtm[java/index-out-of-bounds]
+                return nameValuePairs[i + 1];
             }
         }
         return null;
@@ -137,7 +137,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         for (int i = 0; i < nameValuePairs.length; i += 2) {
             CharSequence roName = nameValuePairs[i];
             if (AsciiString.hashCode(roName) == nameHash && contentEqualsIgnoreCase(roName, name)) {
-                values.add(nameValuePairs[i + 1].toString()); // lgtm[java/index-out-of-bounds]
+                values.add(nameValuePairs[i + 1].toString());
             }
         }
         return values;
@@ -151,7 +151,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         List<Map.Entry<String, String>> entries = new ArrayList<Map.Entry<String, String>>(size());
         for (int i = 0; i < nameValuePairs.length; i += 2) {
             entries.add(new SimpleImmutableEntry<String, String>(nameValuePairs[i].toString(),
-                    nameValuePairs[i + 1].toString())); // lgtm[java/index-out-of-bounds]
+                    nameValuePairs[i + 1].toString())); // [java/index-out-of-bounds]
         }
         return entries;
     }
@@ -171,14 +171,14 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
         if (ignoreCase) {
             for (int i = 0; i < nameValuePairs.length; i += 2) {
                 if (contentEqualsIgnoreCase(nameValuePairs[i], name) &&
-                        contentEqualsIgnoreCase(nameValuePairs[i + 1], value)) { // lgtm[java/index-out-of-bounds]
+                        contentEqualsIgnoreCase(nameValuePairs[i + 1], value)) {
                     return true;
                 }
             }
         } else {
             for (int i = 0; i < nameValuePairs.length; i += 2) {
                 if (contentEqualsIgnoreCase(nameValuePairs[i], name) &&
-                        contentEquals(nameValuePairs[i + 1], value)) { // lgtm[java/index-out-of-bounds]
+                        contentEquals(nameValuePairs[i + 1], value)) {
                     return true;
                 }
             }

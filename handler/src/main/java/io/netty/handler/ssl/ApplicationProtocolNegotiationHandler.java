@@ -72,6 +72,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     private final String fallbackProtocol;
     private final RecyclableArrayList bufferedMessages = RecyclableArrayList.newInstance();
     private ChannelHandlerContext ctx;
+    private boolean sslHandlerChecked;
 
     /**
      * Creates a new instance with the specified fallback protocol name.
@@ -100,6 +101,14 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         // Let's buffer all data until this handler will be removed from the pipeline.
         bufferedMessages.add(msg);
+        if (!sslHandlerChecked) {
+            sslHandlerChecked = true;
+            if (ctx.pipeline().get(SslHandler.class) == null) {
+                // Just remove ourself if there is no SslHandler in the pipeline and so we would otherwise
+                // buffer forever.
+                removeSelfIfPresent(ctx);
+            }
+        }
     }
 
     /**
@@ -160,7 +169,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
 
     private void removeSelfIfPresent(ChannelHandlerContext ctx) {
         ChannelPipeline pipeline = ctx.pipeline();
-        if (pipeline.context(this) != null) {
+        if (!ctx.isRemoved()) {
             pipeline.remove(this);
         }
     }

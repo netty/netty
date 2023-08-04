@@ -23,10 +23,10 @@ public final class ConstantTimeUtils {
      * <p>
      * The {@code int} return type is intentional and is designed to allow cascading of constant time operations:
      * <pre>
-     *     int v1 = 1;
-     *     int v1 = 1;
-     *     int v1 = 1;
-     *     int v1 = 500;
+     *     int l1 = 1;
+     *     int l2 = 1;
+     *     int l3 = 1;
+     *     int l4 = 500;
      *     boolean equals = (equalsConstantTime(l1, l2) & equalsConstantTime(l3, l4)) != 0;
      * </pre>
      * @param x the first value.
@@ -48,10 +48,10 @@ public final class ConstantTimeUtils {
      * <p>
      * The {@code int} return type is intentional and is designed to allow cascading of constant time operations:
      * <pre>
-     *     long v1 = 1;
-     *     long v1 = 1;
-     *     long v1 = 1;
-     *     long v1 = 500;
+     *     long l1 = 1;
+     *     long l2 = 1;
+     *     long l3 = 1;
+     *     long l4 = 500;
      *     boolean equals = (equalsConstantTime(l1, l2) & equalsConstantTime(l3, l4)) != 0;
      * </pre>
      * @param x the first value.

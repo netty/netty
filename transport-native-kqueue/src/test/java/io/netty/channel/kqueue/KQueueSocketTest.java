@@ -40,7 +40,7 @@ public class KQueueSocketTest extends SocketTest<BsdSocket> {
         BsdSocket s2 = BsdSocket.newSocketDomain();
 
         try {
-            DomainSocketAddress dsa = UnixTestUtils.newSocketAddress();
+            DomainSocketAddress dsa = UnixTestUtils.newDomainSocketAddress();
             s1.bind(dsa);
             s1.listen(1);
 
@@ -61,7 +61,7 @@ public class KQueueSocketTest extends SocketTest<BsdSocket> {
         BsdSocket s2 = BsdSocket.newSocketDomain();
 
         try {
-            DomainSocketAddress dsa = UnixTestUtils.newSocketAddress();
+            DomainSocketAddress dsa = UnixTestUtils.newDomainSocketAddress();
             s1.bind(dsa);
             s1.listen(1);
 
@@ -85,5 +85,19 @@ public class KQueueSocketTest extends SocketTest<BsdSocket> {
     @Override
     protected BsdSocket newSocket() {
         return BsdSocket.newSocketStream();
+    }
+
+    @Override
+    protected int level() {
+        // Value for SOL_SOCKET
+        // See https://opensource.apple.com/source/xnu/xnu-201/bsd/sys/socket.h.auto.html
+        return 0xffff;
+    }
+
+    @Override
+    protected int optname() {
+        // Value for SO_REUSEADDR
+        // See https://opensource.apple.com/source/xnu/xnu-201/bsd/sys/socket.h.auto.html
+        return 0x0004;
     }
 }

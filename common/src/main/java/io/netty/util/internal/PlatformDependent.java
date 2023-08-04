@@ -89,7 +89,7 @@ public final class PlatformDependent {
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause0();
     private static final boolean DIRECT_BUFFER_PREFERRED;
-    private static final long MAX_DIRECT_MEMORY = maxDirectMemory0();
+    private static final long MAX_DIRECT_MEMORY = estimateMaxDirectMemory();
 
     private static final int MPSC_CHUNK_SIZE =  1024;
     private static final int MIN_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * 2;
@@ -219,6 +219,15 @@ public final class PlatformDependent {
         final Set<String> allowedClassifiers = Collections.unmodifiableSet(
                 new HashSet<String>(Arrays.asList(ALLOWED_LINUX_OS_CLASSIFIERS)));
         final Set<String> availableClassifiers = new LinkedHashSet<String>();
+
+        if (!addPropertyOsClassifiers(allowedClassifiers, availableClassifiers)) {
+            addFilesystemOsClassifiers(allowedClassifiers, availableClassifiers);
+        }
+        LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
+    }
+
+    static void addFilesystemOsClassifiers(final Set<String> allowedClassifiers,
+                                           final Set<String> availableClassifiers) {
         for (final String osReleaseFileName : OS_RELEASE_FILES) {
             final File file = new File(osReleaseFileName);
             boolean found = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
@@ -271,7 +280,37 @@ public final class PlatformDependent {
                 break;
             }
         }
-        LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
+    }
+
+    static boolean addPropertyOsClassifiers(Set<String> allowedClassifiers, Set<String> availableClassifiers) {
+        // empty: -Dio.netty.osClassifiers (no distro specific classifiers for native libs)
+        // single ID: -Dio.netty.osClassifiers=ubuntu
+        // pair ID, ID_LIKE: -Dio.netty.osClassifiers=ubuntu,debian
+        // illegal otherwise
+        String osClassifiersPropertyName = "io.netty.osClassifiers";
+        String osClassifiers = SystemPropertyUtil.get(osClassifiersPropertyName);
+        if (osClassifiers == null) {
+            return false;
+        }
+        if (osClassifiers.isEmpty()) {
+            // let users omit classifiers with just -Dio.netty.osClassifiers
+            return true;
+        }
+        String[] classifiers = osClassifiers.split(",");
+        if (classifiers.length == 0) {
+            throw new IllegalArgumentException(
+                    osClassifiersPropertyName + " property is not empty, but contains no classifiers: "
+                            + osClassifiers);
+        }
+        // at most ID, ID_LIKE classifiers
+        if (classifiers.length > 2) {
+            throw new IllegalArgumentException(
+                    osClassifiersPropertyName + " property contains more than 2 classifiers: " + osClassifiers);
+        }
+        for (String classifier : classifiers) {
+            addClassifier(allowedClassifiers, availableClassifiers, classifier);
+        }
+        return true;
     }
 
     public static long byteArrayBaseOffset() {
@@ -502,6 +541,10 @@ public final class PlatformDependent {
 
     public static int getInt(Object object, long fieldOffset) {
         return PlatformDependent0.getInt(object, fieldOffset);
+    }
+
+    static void safeConstructPutInt(Object object, long fieldOffset, int value) {
+        PlatformDependent0.safeConstructPutInt(object, fieldOffset, value);
     }
 
     public static int getIntVolatile(long address) {
@@ -974,8 +1017,12 @@ public final class PlatformDependent {
             // This is forced by the MpscChunkedArrayQueue implementation as will try to round it
             // up to the next power of two and so will overflow otherwise.
             final int capacity = max(min(maxCapacity, MAX_ALLOWED_MPSC_CAPACITY), MIN_MAX_MPSC_CAPACITY);
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<T>(MPSC_CHUNK_SIZE, capacity)
-                                                : new MpscChunkedAtomicArrayQueue<T>(MPSC_CHUNK_SIZE, capacity);
+            return newChunkedMpscQueue(MPSC_CHUNK_SIZE, capacity);
+        }
+
+        static <T> Queue<T> newChunkedMpscQueue(final int chunkSize, final int capacity) {
+            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<T>(chunkSize, capacity)
+                    : new MpscChunkedAtomicArrayQueue<T>(chunkSize, capacity);
         }
 
         static <T> Queue<T> newMpscQueue() {
@@ -999,6 +1046,15 @@ public final class PlatformDependent {
      */
     public static <T> Queue<T> newMpscQueue(final int maxCapacity) {
         return Mpsc.newMpscQueue(maxCapacity);
+    }
+
+    /**
+     * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and a single
+     * consumer (one thread!).
+     * The queue will grow and shrink its capacity in units of the given chunk size.
+     */
+    public static <T> Queue<T> newMpscQueue(final int chunkSize, final int maxCapacity) {
+        return Mpsc.newChunkedMpscQueue(chunkSize, maxCapacity);
     }
 
     /**
@@ -1134,7 +1190,16 @@ public final class PlatformDependent {
         return vmName.equals("IKVM.NET");
     }
 
-    private static long maxDirectMemory0() {
+    /**
+     * Compute an estimate of the maximum amount of direct memory available to this JVM.
+     * <p>
+     * The computation is not cached, so you probably want to use {@link #maxDirectMemory()} instead.
+     * <p>
+     * This will produce debug log output when called.
+     *
+     * @return The estimated max direct memory, in bytes.
+     */
+    public static long estimateMaxDirectMemory() {
         long maxDirectMemory = 0;
 
         ClassLoader systemClassLoader = null;
@@ -1421,13 +1486,20 @@ public final class PlatformDependent {
             }
             return Files.createTempFile(directory.toPath(), prefix, suffix).toFile();
         }
+        final File file;
         if (directory == null) {
-            return File.createTempFile(prefix, suffix);
+            file = File.createTempFile(prefix, suffix);
+        } else {
+            file = File.createTempFile(prefix, suffix, directory);
         }
-        File file = File.createTempFile(prefix, suffix, directory);
+
         // Try to adjust the perms, if this fails there is not much else we can do...
-        file.setReadable(false, false);
-        file.setReadable(true, true);
+        if (!file.setReadable(false, false)) {
+            throw new IOException("Failed to set permissions on temporary file " + file);
+        }
+        if (!file.setReadable(true, true)) {
+            throw new IOException("Failed to set permissions on temporary file " + file);
+        }
         return file;
     }
 
@@ -1492,6 +1564,9 @@ public final class PlatformDependent {
         }
         if ("s390x".equals(value)) {
             return "s390_64";
+        }
+        if ("loongarch64".equals(value)) {
+            return "loongarch_64";
         }
 
         return "unknown";

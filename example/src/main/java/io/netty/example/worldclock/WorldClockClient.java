@@ -20,9 +20,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.example.util.ServerUtil;
 import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.util.Arrays;
 import java.util.List;
@@ -33,7 +32,6 @@ import java.util.List;
  */
 public final class WorldClockClient {
 
-    static final boolean SSL = System.getProperty("ssl") != null;
     static final String HOST = System.getProperty("host", "127.0.0.1");
     static final int PORT = Integer.parseInt(System.getProperty("port", "8463"));
     static final List<String> CITIES = Arrays.asList(System.getProperty(
@@ -41,13 +39,7 @@ public final class WorldClockClient {
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
-        final SslContext sslCtx;
-        if (SSL) {
-            sslCtx = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-        } else {
-            sslCtx = null;
-        }
+        final SslContext sslCtx = ServerUtil.buildSslContext();
 
         EventLoopGroup group = new NioEventLoopGroup();
         try {

@@ -70,7 +70,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
         HANDSHAKE_ISSUED,
 
         /**
-         * The Handshake was complete succesful and so the channel was upgraded to websockets
+         * The Handshake was complete successful and so the channel was upgraded to websockets
          */
         HANDSHAKE_COMPLETE
     }
@@ -94,7 +94,8 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
             clientConfig.performMasking(),
             clientConfig.allowMaskMismatch(),
             clientConfig.forceCloseTimeoutMillis(),
-            clientConfig.absoluteUpgradeUrl()
+            clientConfig.absoluteUpgradeUrl(),
+            clientConfig.generateOriginHeader()
         );
         this.clientConfig = clientConfig;
     }
@@ -383,7 +384,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
             ctx.pipeline().addBefore(ctx.name(), WebSocketClientProtocolHandshakeHandler.class.getName(),
                 new WebSocketClientProtocolHandshakeHandler(handshaker, clientConfig.handshakeTimeoutMillis()));
         }
-        if (cp.get(Utf8FrameValidator.class) == null) {
+        if (clientConfig.withUTF8Validator() && cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
             ctx.pipeline().addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
                     new Utf8FrameValidator());

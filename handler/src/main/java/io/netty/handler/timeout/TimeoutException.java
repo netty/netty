@@ -28,13 +28,13 @@ public class TimeoutException extends ChannelException {
     TimeoutException() {
     }
 
-    TimeoutException(boolean shared) {
-        super(null, null, shared);
+    TimeoutException(String message, boolean shared) {
+        super(message, null, shared);
     }
 
     // Suppress a warning since the method doesn't need synchronization
     @Override
-    public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+    public Throwable fillInStackTrace() {
         return this;
     }
 }

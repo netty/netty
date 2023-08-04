@@ -23,13 +23,18 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.ChannelOutputShutdownEvent;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.ReferenceCounted;
-
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 
+import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR;
+import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR;
+import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.SSL_CLOSE_COMPLETION_EVENT_VISITOR;
 import static io.netty.handler.codec.http2.Http2CodecUtil.HTTP_UPGRADE_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
@@ -102,8 +107,8 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                         Http2ConnectionDecoder decoder,
                         Http2Settings initialSettings,
                         ChannelHandler inboundStreamHandler,
-                        ChannelHandler upgradeStreamHandler, boolean decoupleCloseAndGoAway) {
-        super(encoder, decoder, initialSettings, decoupleCloseAndGoAway);
+                        ChannelHandler upgradeStreamHandler, boolean decoupleCloseAndGoAway, boolean flushPreface) {
+        super(encoder, decoder, initialSettings, decoupleCloseAndGoAway, flushPreface);
         this.inboundStreamHandler = inboundStreamHandler;
         this.upgradeStreamHandler = upgradeStreamHandler;
     }
@@ -208,7 +213,9 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         try {
             channel.pipeline().fireExceptionCaught(cause.getCause());
         } finally {
-            channel.unsafe().closeForcibly();
+            // Close with the correct error that causes this stream exception.
+            // See https://github.com/netty/netty/issues/13235#issuecomment-1441994672
+            channel.closeWithError(cause.error());
         }
     }
 
@@ -281,6 +288,18 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         }
 
         super.channelWritabilityChanged(ctx);
+    }
+
+    @Override
+    final void onUserEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+            forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR);
+        } else if (evt == ChannelOutputShutdownEvent.INSTANCE) {
+            forEachActiveStream(CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR);
+        } else if (evt == SslCloseCompletionEvent.SUCCESS) {
+            forEachActiveStream(SSL_CLOSE_COMPLETION_EVENT_VISITOR);
+        }
+        super.onUserEventTriggered(ctx, evt);
     }
 
     final void flush0(ChannelHandlerContext ctx) {

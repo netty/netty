@@ -182,15 +182,15 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             case SUBSCRIBE:
             case UNSUBSCRIBE:
                 if (dupFlag) {
-                    throw new DecoderException("Illegal BIT 3 in fixed header of " + messageType.toString()
+                    throw new DecoderException("Illegal BIT 3 in fixed header of " + messageType
                             + " message, must be 0, found 1");
                 }
                 if (qosLevel != 1) {
-                    throw new DecoderException("Illegal QOS Level in fixed header of " + messageType.toString()
+                    throw new DecoderException("Illegal QOS Level in fixed header of " + messageType
                             + " message, must be 1, found " + qosLevel);
                 }
                 if (retain) {
-                    throw new DecoderException("Illegal BIT 0 in fixed header of " + messageType.toString()
+                    throw new DecoderException("Illegal BIT 0 in fixed header of " + messageType
                             + " message, must be 0, found 1");
                 }
                 break;
@@ -207,15 +207,15 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             case SUBACK:
             case UNSUBACK:
                 if (dupFlag) {
-                    throw new DecoderException("Illegal BIT 3 in fixed header of " + messageType.toString()
+                    throw new DecoderException("Illegal BIT 3 in fixed header of " + messageType
                             + " message, must be 0, found 1");
                 }
                 if (qosLevel != 0) {
-                    throw new DecoderException("Illegal BIT 2 or 1 in fixed header of " + messageType.toString()
+                    throw new DecoderException("Illegal BIT 2 or 1 in fixed header of " + messageType
                             + " message, must be 0, found " + qosLevel);
                 }
                 if (retain) {
-                    throw new DecoderException("Illegal BIT 0 in fixed header of " + messageType.toString()
+                    throw new DecoderException("Illegal BIT 0 in fixed header of " + messageType
                             + " message, must be 0, found 1");
                 }
                 break;

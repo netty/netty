@@ -4,7 +4,7 @@ ARG gcc_version=10.2-2020.11
 ENV GCC_VERSION $gcc_version
 
 # Install requirements
-RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools
+RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools unzip zip
 
 # Install Java
 RUN yum install -y java-1.8.0-openjdk-devel

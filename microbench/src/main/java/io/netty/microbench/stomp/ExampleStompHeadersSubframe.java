@@ -59,8 +59,8 @@ public final class ExampleStompHeadersSubframe {
                        .set(StompHeaders.DESTINATION, "/queue/chat")
                        .set(StompHeaders.CONTENT_TYPE, "application/octet-stream")
                        .set(StompHeaders.ACK, UUID.randomUUID().toString())
-                       .setLong("timestamp", System.currentTimeMillis())
-                       .set("Message-Type: 007");
+                       .setLong("_:timestamp:_", System.currentTimeMillis())
+                       .set("Message-Type: 007_:\\\r\n:_");
         EXAMPLES.put(HeadersType.SEVEN, headersSubframe);
 
         headersSubframe = new DefaultStompHeadersSubframe(StompCommand.MESSAGE);
@@ -70,10 +70,10 @@ public final class ExampleStompHeadersSubframe {
                        .set(StompHeaders.DESTINATION, "/queue/chat")
                        .set(StompHeaders.CONTENT_TYPE, "application/octet-stream")
                        .set(StompHeaders.ACK, UUID.randomUUID().toString())
-                       .setLong("timestamp", System.currentTimeMillis())
+                       .setLong("_:timestamp:_", System.currentTimeMillis())
                        .set("Message-Type: 0011")
                        .set("Strict-Transport-Security", "max-age=31536000; includeSubdomains; preload")
-                       .set("Server", "GitHub.com")
+                       .set("\\Server\\", "\\GitHub.com\\")
                        .set("Expires", "Sat, 01 Jan 2000 00:00:00 GMT")
                        .set("Content-Language", "en");
         EXAMPLES.put(HeadersType.ELEVEN, headersSubframe);
@@ -85,17 +85,17 @@ public final class ExampleStompHeadersSubframe {
                        .set(StompHeaders.DESTINATION, "/queue/chat")
                        .set(StompHeaders.CONTENT_TYPE, "application/octet-stream")
                        .set(StompHeaders.ACK, UUID.randomUUID().toString())
-                       .setLong("timestamp", System.currentTimeMillis())
+                       .setLong("_:timestamp:_", System.currentTimeMillis())
                        .set("Message-Type: 0020")
                        .set("date", "Wed, 22 Apr 2015 00:40:28 GMT")
                        .set("expires", "Tue, 31 Mar 1981 05:00:00 GMT")
                        .set("last-modified", "Wed, 22 Apr 2015 00:40:28 GMT")
                        .set("ms", "ms")
-                       .set("pragma", "no-cache")
-                       .set("server", "tsa_b")
-                       .set("set-cookie", "noneofyourbusiness")
+                       .set("\\\\pragma\\\\", "no-cache")
+                       .set("\\Server\\", "\\GitHub.com\\")
+                       .set("set-cookie", "\nnoneofyourbusiness\n")
                        .set("strict-transport-security", "max-age=631138519")
-                       .set("version", "STOMP_v1.2")
+                       .set("\rversion\r", "STOMP_v1.2")
                        .set("x-connection-hash", "e176fe40accc1e2c613a34bc1941aa98")
                        .set("x-content-type-options", "nosniff")
                        .set("x-frame-options", "SAMEORIGIN")

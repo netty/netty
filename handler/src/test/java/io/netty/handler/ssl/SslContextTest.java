@@ -144,4 +144,221 @@ public abstract class SslContextTest {
     }
 
     protected abstract SslContext newSslContext(File crtFile, File keyFile, String pass) throws SSLException;
+
+    @Test
+    public void testPkcs1UnencryptedRsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(
+                new File(getClass().getResource("rsa_pkcs1_unencrypted.key").getFile()), null);
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs8UnencryptedRsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(
+                new File(getClass().getResource("rsa_pkcs8_unencrypted.key").getFile()), null);
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs8AesEncryptedRsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs8_aes_encrypted.key")
+                .getFile()), "example");
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs8Des3EncryptedRsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs8_des3_encrypted.key")
+                .getFile()), "example");
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs1UnencryptedRsaEmptyPassword() throws Exception {
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(
+                        new File(getClass().getResource("rsa_pkcs1_unencrypted.key").getFile()), "");
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1Des3EncryptedRsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs1_des3_encrypted.key")
+                .getFile()), "example");
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs1AesEncryptedRsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs1_aes_encrypted.key")
+                .getFile()), "example");
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs1Des3EncryptedRsaNoPassword() throws Exception {
+        assertThrows(InvalidKeySpecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs1_des3_encrypted.key")
+                        .getFile()), null);
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1AesEncryptedRsaNoPassword() throws Exception {
+        assertThrows(InvalidKeySpecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs1_aes_encrypted.key")
+                        .getFile()), null);
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1Des3EncryptedRsaEmptyPassword() throws Exception {
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs1_des3_encrypted.key")
+                        .getFile()), "");
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1AesEncryptedRsaEmptyPassword() throws Exception {
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs1_aes_encrypted.key")
+                        .getFile()), "");
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1Des3EncryptedRsaWrongPassword() throws Exception {
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs1_des3_encrypted.key")
+                        .getFile()), "wrong");
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1AesEncryptedRsaWrongPassword() throws Exception {
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("rsa_pkcs1_aes_encrypted.key")
+                        .getFile()), "wrong");
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1UnencryptedDsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(
+                new File(getClass().getResource("dsa_pkcs1_unencrypted.key").getFile()), null);
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs1UnencryptedDsaEmptyPassword() throws Exception {
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                PrivateKey key = SslContext.toPrivateKey(
+                        new File(getClass().getResource("dsa_pkcs1_unencrypted.key").getFile()), "");
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1Des3EncryptedDsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(new File(getClass().getResource("dsa_pkcs1_des3_encrypted.key")
+                .getFile()), "example");
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs1AesEncryptedDsa() throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(new File(getClass().getResource("dsa_pkcs1_aes_encrypted.key")
+                .getFile()), "example");
+        assertNotNull(key);
+    }
+
+    @Test
+    public void testPkcs1Des3EncryptedDsaNoPassword() throws Exception {
+        assertThrows(InvalidKeySpecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("dsa_pkcs1_des3_encrypted.key")
+                        .getFile()), null);
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1AesEncryptedDsaNoPassword() throws Exception {
+        assertThrows(InvalidKeySpecException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("dsa_pkcs1_aes_encrypted.key")
+                        .getFile()), null);
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1Des3EncryptedDsaEmptyPassword() throws Exception {
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("dsa_pkcs1_des3_encrypted.key")
+                        .getFile()), "");
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1AesEncryptedDsaEmptyPassword() throws Exception {
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("dsa_pkcs1_aes_encrypted.key")
+                        .getFile()), "");
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1Des3EncryptedDsaWrongPassword() throws Exception {
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("dsa_pkcs1_des3_encrypted.key")
+                        .getFile()), "wrong");
+            }
+        });
+    }
+
+    @Test
+    public void testPkcs1AesEncryptedDsaWrongPassword() throws Exception {
+        assertThrows(IOException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                SslContext.toPrivateKey(new File(getClass().getResource("dsa_pkcs1_aes_encrypted.key")
+                        .getFile()), "wrong");
+            }
+        });
+    }
 }

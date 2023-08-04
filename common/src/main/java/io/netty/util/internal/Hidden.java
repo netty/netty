@@ -76,6 +76,26 @@ class Hidden {
             );
 
             builder.allowBlockingCallsInside(
+                    "io.netty.buffer.PoolArena",
+                    "lock"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.buffer.PoolSubpage",
+                    "lock"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.buffer.PoolChunk",
+                    "allocateRun"
+            );
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.buffer.PoolChunk",
+                    "free"
+            );
+
+            builder.allowBlockingCallsInside(
                     "io.netty.handler.ssl.SslHandler",
                     "handshake"
             );
@@ -108,6 +128,10 @@ class Hidden {
                     "io.netty.handler.ssl.ReferenceCountedOpenSslClientContext$ExtendedTrustManagerVerifyCallback",
                     "verify");
 
+            builder.allowBlockingCallsInside(
+                    "io.netty.handler.ssl.JdkSslContext$Defaults",
+                    "init");
+
             // Let's whitelist SSLEngineImpl.unwrap(...) for now as it may fail otherwise for TLS 1.3.
             // See https://mail.openjdk.java.net/pipermail/security-dev/2020-August/022271.html
             builder.allowBlockingCallsInside(
@@ -134,6 +158,11 @@ class Hidden {
                     "io.netty.resolver.HostsFileEntriesProvider$ParserImpl",
                     "parse");
 
+            builder.allowBlockingCallsInside(
+                    "io.netty.util.NetUtil$SoMaxConnAction",
+                    "run");
+
+            builder.allowBlockingCallsInside("io.netty.util.internal.PlatformDependent", "createTempFile");
             builder.nonBlockingThreadPredicate(new Function<Predicate<Thread>, Predicate<Thread>>() {
                 @Override
                 public Predicate<Thread> apply(final Predicate<Thread> p) {
@@ -141,7 +170,9 @@ class Hidden {
                         @Override
                         @SuppressJava6Requirement(reason = "Predicate#test")
                         public boolean test(Thread thread) {
-                            return p.test(thread) || thread instanceof FastThreadLocalThread;
+                            return p.test(thread) ||
+                                    thread instanceof FastThreadLocalThread &&
+                                            !((FastThreadLocalThread) thread).permitBlockingCalls();
                         }
                     };
                 }

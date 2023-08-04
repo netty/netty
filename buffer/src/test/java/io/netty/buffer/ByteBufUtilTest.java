@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -132,13 +133,19 @@ public class ByteBufUtilTest {
         final ByteBuf needle = Unpooled.copiedBuffer("abc12", CharsetUtil.UTF_8);
         haystack.readerIndex(1);
         needle.readerIndex(1);
-        assertEquals(0, ByteBufUtil.indexOf(needle, haystack));
+        assertEquals(1, ByteBufUtil.indexOf(needle, haystack));
         haystack.readerIndex(2);
         needle.readerIndex(3);
-        assertEquals(1, ByteBufUtil.indexOf(needle, haystack));
+        assertEquals(3, ByteBufUtil.indexOf(needle, haystack));
         haystack.readerIndex(1);
         needle.readerIndex(2);
-        assertEquals(1, ByteBufUtil.indexOf(needle, haystack));
+        assertEquals(2, ByteBufUtil.indexOf(needle, haystack));
+        haystack.release();
+
+        haystack = new WrappedByteBuf(Unpooled.copiedBuffer("abc123", CharsetUtil.UTF_8));
+        assertEquals(0, ByteBufUtil.indexOf(Unpooled.copiedBuffer("a", CharsetUtil.UTF_8), haystack));
+        assertEquals(1, ByteBufUtil.indexOf(Unpooled.copiedBuffer("bc".getBytes(CharsetUtil.UTF_8)), haystack));
+        assertEquals(-1, ByteBufUtil.indexOf(Unpooled.copiedBuffer("abcdef".getBytes(CharsetUtil.UTF_8)), haystack));
         haystack.release();
 
         haystack = Unpooled.copiedBuffer("123aab123", CharsetUtil.UTF_8);
@@ -276,6 +283,72 @@ public class ByteBufUtilTest {
         assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMediumLE());
         buf.resetReaderIndex();
         assertEquals(ByteBufUtil.swapMedium(mediumValue), buf.readMedium());
+        buf.release();
+    }
+
+    @SuppressWarnings("deprecation")
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("noUnsafe")
+    public void readUnsignedShortBE(BufferType bufferType) {
+        int shortValue = 0x1234; // unsigned short
+        int swappedShortValue = 0x3412; // swapped version of the value above
+
+        ByteBuf buf = buffer(bufferType, 2).order(ByteOrder.BIG_ENDIAN);
+        buf.writeShort(shortValue);
+        assertEquals(shortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.clear();
+        buf.writeShortLE(shortValue);
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.release();
+
+        buf = buffer(bufferType, 2).order(ByteOrder.LITTLE_ENDIAN);
+        buf.writeShort(shortValue);
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.clear();
+        buf.writeShortLE(shortValue);
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.release();
+
+        shortValue = 0xfedc; // unsigned short
+        swappedShortValue = 0xdcfe; // swapped version of the value above
+
+        buf = buffer(bufferType, 2).order(ByteOrder.BIG_ENDIAN);
+        buf.writeShort(shortValue);
+        assertEquals(shortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.clear();
+        buf.writeShortLE(shortValue);
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.release();
+
+        buf = buffer(bufferType, 2).order(ByteOrder.LITTLE_ENDIAN);
+        buf.writeShort(shortValue);
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.clear();
+        buf.writeShortLE(shortValue);
+        assertEquals(swappedShortValue, ByteBufUtil.readUnsignedShortBE(buf));
+        buf.release();
+    }
+
+    @SuppressWarnings("deprecation")
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("noUnsafe")
+    public void readIntBE(BufferType bufferType) {
+        int intValue = 0x12345678;
+
+        ByteBuf buf = buffer(bufferType, 4).order(ByteOrder.BIG_ENDIAN);
+        buf.writeInt(intValue);
+        assertEquals(intValue, ByteBufUtil.readIntBE(buf));
+        buf.clear();
+        buf.writeIntLE(intValue);
+        assertEquals(ByteBufUtil.swapInt(intValue), ByteBufUtil.readIntBE(buf));
+        buf.release();
+
+        buf = buffer(bufferType, 4).order(ByteOrder.LITTLE_ENDIAN);
+        buf.writeInt(intValue);
+        assertEquals(ByteBufUtil.swapInt(intValue), ByteBufUtil.readIntBE(buf));
+        buf.clear();
+        buf.writeIntLE(intValue);
+        assertEquals(ByteBufUtil.swapInt(intValue), ByteBufUtil.readIntBE(buf));
         buf.release();
     }
 
@@ -611,7 +684,7 @@ public class ByteBufUtilTest {
     }
 
     private static void assertWrapped(ByteBuf buf) {
-        assertTrue(buf instanceof WrappedByteBuf);
+        assertThat(buf, instanceOf(WrappedByteBuf.class));
     }
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
@@ -667,7 +740,7 @@ public class ByteBufUtilTest {
                 ByteBufUtil.utf8Bytes(usAscii, 5, 18));
     }
 
-    private static int[][] INVALID_RANGES = new int[][] {
+    private static final int[][] INVALID_RANGES = new int[][] {
         { -1, 5 }, { 5, 30 }, { 10, 5 }
     };
 

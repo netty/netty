@@ -97,7 +97,7 @@ public class DefaultDnsRecordEncoderTest {
             // Pad the leftover of the last byte with zeros.
             int idx = addressPart.writerIndex() - 1;
             byte lastByte = addressPart.getByte(idx);
-            int paddingMask = ~((1 << (8 - lowOrderBitsToPreserve)) - 1);
+            int paddingMask = -1 << 8 - lowOrderBitsToPreserve;
             addressPart.setByte(idx, lastByte & paddingMask);
         }
 

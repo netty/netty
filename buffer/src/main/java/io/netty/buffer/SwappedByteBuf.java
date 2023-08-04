@@ -246,7 +246,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public short getShortLE(int index) {
-        return buf.getShort(index);
+        return buf.getShortLE(index);
     }
 
     @Override
@@ -266,7 +266,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public int getMediumLE(int index) {
-        return buf.getMedium(index);
+        return buf.getMediumLE(index);
     }
 
     @Override
@@ -286,7 +286,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public int getIntLE(int index) {
-        return buf.getInt(index);
+        return buf.getIntLE(index);
     }
 
     @Override
@@ -306,7 +306,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public long getLongLE(int index) {
-        return buf.getLong(index);
+        return buf.getLongLE(index);
     }
 
     @Override
@@ -401,7 +401,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf setShortLE(int index, int value) {
-        buf.setShort(index, (short) value);
+        buf.setShortLE(index, (short) value);
         return this;
     }
 
@@ -413,7 +413,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf setMediumLE(int index, int value) {
-        buf.setMedium(index, value);
+        buf.setMediumLE(index, value);
         return this;
     }
 
@@ -425,7 +425,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf setIntLE(int index, int value) {
-        buf.setInt(index, value);
+        buf.setIntLE(index, value);
         return this;
     }
 
@@ -437,7 +437,7 @@ public class SwappedByteBuf extends ByteBuf {
 
     @Override
     public ByteBuf setLongLE(int index, long value) {
-        buf.setLong(index, value);
+        buf.setLongLE(index, value);
         return this;
     }
 

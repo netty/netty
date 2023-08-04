@@ -32,7 +32,6 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.util.List;
-import java.util.concurrent.locks.Lock;
 
 /**
  * {@link ServerSocketChannel} which accepts new connections and create the {@link OioSocketChannel}'s for them.

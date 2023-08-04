@@ -23,7 +23,8 @@ public final class Http2FrameStreamEvent {
     private final Http2FrameStream stream;
     private final Type type;
 
-    enum Type {
+    @UnstableApi
+    public enum Type {
         State,
         Writability
     }

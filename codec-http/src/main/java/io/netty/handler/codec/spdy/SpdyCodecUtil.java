@@ -321,7 +321,7 @@ final class SpdyCodecUtil {
             char c = value.charAt(i);
             if (c == 0) {
                 throw new IllegalArgumentException(
-                        "value contains null character: " + value);
+                        "value contains null character");
             }
         }
     }

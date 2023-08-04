@@ -71,7 +71,7 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
         private static final CharSequenceMap<PseudoHeaderName> PSEUDO_HEADERS = new CharSequenceMap<PseudoHeaderName>();
 
         static {
-            for (PseudoHeaderName pseudoHeader : PseudoHeaderName.values()) {
+            for (PseudoHeaderName pseudoHeader : values()) {
                 PSEUDO_HEADERS.add(pseudoHeader.value(), pseudoHeader);
             }
         }

@@ -15,7 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 final class OpenSslTestUtils {
     private OpenSslTestUtils() {

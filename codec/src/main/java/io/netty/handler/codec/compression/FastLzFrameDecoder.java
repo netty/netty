@@ -23,7 +23,10 @@ import java.util.List;
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
-import static io.netty.handler.codec.compression.FastLz.*;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_TYPE_COMPRESSED;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_WITH_CHECKSUM;
+import static io.netty.handler.codec.compression.FastLz.MAGIC_NUMBER;
+import static io.netty.handler.codec.compression.FastLz.decompress;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded by {@link FastLzFrameEncoder} using the FastLZ algorithm.
@@ -149,21 +152,11 @@ public class FastLzFrameDecoder extends ByteToMessageDecoder {
 
                 try {
                     if (isCompressed) {
-                        final byte[] input;
-                        final int inputOffset;
-                        if (in.hasArray()) {
-                            input = in.array();
-                            inputOffset = in.arrayOffset() + idx;
-                        } else {
-                            input = new byte[chunkLength];
-                            in.getBytes(idx, input);
-                            inputOffset = 0;
-                        }
 
-                        output = ctx.alloc().heapBuffer(originalLength);
-                        int outputOffset = output.arrayOffset() + output.writerIndex();
-                        final int decompressedBytes = decompress(input, inputOffset, chunkLength,
-                                output.array(), outputOffset, originalLength);
+                        output = ctx.alloc().buffer(originalLength);
+                        int outputOffset = output.writerIndex();
+                        final int decompressedBytes = decompress(in, idx, chunkLength,
+                                output, outputOffset, originalLength);
                         if (originalLength != decompressedBytes) {
                             throw new DecompressionException(String.format(
                                     "stream corrupted: originalLength(%d) and actual length(%d) mismatch",

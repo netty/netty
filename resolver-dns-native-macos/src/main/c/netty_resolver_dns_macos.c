@@ -36,7 +36,7 @@ static jclass dnsResolverClass = NULL;
 static jclass byteArrayClass = NULL;
 static jclass stringClass = NULL;
 static jmethodID dnsResolverMethodId = NULL;
-static char* staticPackagePrefix = NULL;
+static char const* staticPackagePrefix = NULL;
 
 // JNI Registered Methods Begin
 
@@ -154,6 +154,7 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
 static void netty_resolver_dns_native_macos_JNI_OnUnLoad(JNIEnv* env) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, byteArrayClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, dnsResolverClass);
     netty_jni_util_unregister_natives(env, staticPackagePrefix, STREAM_CLASSNAME);
 
     if (staticPackagePrefix != NULL) {
@@ -164,7 +165,7 @@ static void netty_resolver_dns_native_macos_JNI_OnUnLoad(JNIEnv* env) {
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
 //            MacOSDnsServerAddressStreamProvider to reflect that.
-static jint netty_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
+static jint netty_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, char const* packagePrefix) {
     int ret = JNI_ERR;
     int providerRegistered = 0;
     char* nettyClassName = NULL;
@@ -191,9 +192,7 @@ static jint netty_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, const char* 
     NETTY_JNI_UTIL_LOAD_CLASS(env, byteArrayClass, "[B", done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, stringClass, "java/lang/String", done);
 
-    if (packagePrefix != NULL) {
-        staticPackagePrefix = strdup(packagePrefix);
-    }
+    staticPackagePrefix = packagePrefix;
 
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:

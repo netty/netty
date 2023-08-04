@@ -44,7 +44,6 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.HpackBenchmarkUtil.http2Headers;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 
 public class HpackDecoderBenchmark extends AbstractMicrobenchmark {
 

@@ -105,6 +105,9 @@ public class QueryStringDecoderTest {
         assertEquals(2, d.parameters().get("abc").size());
         assertEquals("1 23", d.parameters().get("abc").get(0));
         assertEquals("124 ", d.parameters().get("abc").get(1));
+
+        d = new QueryStringDecoder("/foo?abc=%7E");
+        assertEquals("~", d.parameters().get("abc").get(0));
     }
 
     @Test

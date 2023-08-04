@@ -18,9 +18,11 @@ package io.netty.channel.local;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -29,8 +31,11 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.DefaultMaxMessagesRecvByteBufAllocator;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.FixedRecvByteBufAllocator;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
@@ -1219,6 +1224,76 @@ public class LocalChannelTest {
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             ctx.fireExceptionCaught(cause);
             ctx.close();
+        }
+    }
+
+    @Test
+    public void testReadCompleteCalledOnHandle() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+
+        cb.group(sharedGroup)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        // NOOP
+                    }
+                });
+
+        CountDownLatch serverLatch = new CountDownLatch(1);
+        CountDownLatch childLatch = new CountDownLatch(1);
+
+        sb.group(sharedGroup)
+                .channel(LocalServerChannel.class)
+                .option(ChannelOption.RCVBUF_ALLOCATOR, new ReadCompleteRecvAllocator(serverLatch))
+                .childHandler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        // NOOP
+                    }
+                })
+                .childOption(ChannelOption.RCVBUF_ALLOCATOR, new ReadCompleteRecvAllocator(childLatch));
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            try {
+                cc = cb.connect(TEST_ADDRESS).sync().channel();
+                cc.writeAndFlush("msg").sync();
+            } finally {
+                closeChannel(cc);
+            }
+
+            serverLatch.await();
+            childLatch.await();
+        } finally {
+            closeChannel(sc);
+        }
+    }
+
+    private static final class ReadCompleteRecvAllocator extends DefaultMaxMessagesRecvByteBufAllocator {
+        private final CountDownLatch latch;
+        ReadCompleteRecvAllocator(CountDownLatch latch) {
+            this.latch = latch;
+        }
+
+        @Override
+        public Handle newHandle() {
+            return new MaxMessageHandle() {
+                @Override
+                public int guess() {
+                    return 128;
+                }
+
+                @Override
+                public void readComplete() {
+                    super.readComplete();
+                    latch.countDown();
+                }
+            };
         }
     }
 }

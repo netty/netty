@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ByteProcessor;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -152,8 +153,8 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             ByteBuf _buf = buf.componentAtOffset(index++);
             assertNotNull(_buf);
             assertTrue(_buf.capacity() > 0);
-            assertNotNull(_buf.getByte(0));
-            assertNotNull(_buf.getByte(_buf.readableBytes() - 1));
+            assertTrue(_buf.getByte(0) > 0);
+            assertTrue(_buf.getByte(_buf.readableBytes() - 1) > 0);
         }
 
         buf.release();
@@ -1479,6 +1480,64 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testDecomposeReturnNonUnwrappedBuffer() {
+        ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer(1024);
+        buf.writeZero(1024);
+        ByteBuf sliced = buf.retainedSlice(100, 200);
+        sliced.retain();
+        assertEquals(2, sliced.refCnt());
+        CompositeByteBuf composite = newCompositeBuffer();
+        composite.addComponents(true, sliced);
+
+        List<ByteBuf> bufferList = composite.decompose(0, 100);
+        assertEquals(1, bufferList.size());
+        ByteBuf decomposed = bufferList.get(0);
+        assertSame(sliced.refCnt(), decomposed.refCnt());
+        decomposed.release();
+
+        assertSame(sliced.refCnt(), decomposed.refCnt());
+
+        composite.release();
+        buf.release();
+
+        for (ByteBuf buffer: bufferList) {
+            assertEquals(0, buffer.refCnt());
+        }
+    }
+
+    @Test
+    public void testDecomposeReturnNonUnwrappedBuffers() {
+        ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer(1024);
+        buf.writeZero(1024);
+        ByteBuf sliced = buf.retainedSlice(100, 200);
+        ByteBuf sliced2 = buf.retainedSlice(400, 100);
+        sliced.retain();
+        sliced2.retain();
+        assertEquals(2, sliced.refCnt());
+        CompositeByteBuf composite = compositeBuffer();
+        composite.addComponents(true, sliced);
+        composite.addComponents(true, sliced2);
+
+        List<ByteBuf> bufferList = composite.decompose(100, 150);
+        assertEquals(2, bufferList.size());
+        ByteBuf decomposed = bufferList.get(0);
+        ByteBuf decomposed2 = bufferList.get(1);
+        assertSame(sliced.refCnt(), decomposed.refCnt());
+        decomposed.release();
+        decomposed2.release();
+
+        assertSame(sliced.refCnt(), decomposed.refCnt());
+        assertSame(sliced2.refCnt(), decomposed2.refCnt());
+
+        composite.release();
+        buf.release();
+
+        for (ByteBuf buffer: bufferList) {
+            assertEquals(0, buffer.refCnt());
+        }
+    }
+
+    @Test
     public void testComponentsLessThanLowerBound() {
         try {
             new CompositeByteBuf(ALLOC, true, 0);
@@ -1576,6 +1635,20 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertTrue(cbuf.release());
     }
 
+    // See https://github.com/netty/netty/issues/11612
+    @Test
+    public void testAddComponentWithNullEntry() {
+        final ByteBuf buffer = Unpooled.buffer(8).writeZero(8);
+        final CompositeByteBuf compositeByteBuf = compositeBuffer(Integer.MAX_VALUE);
+        try {
+            compositeByteBuf.addComponents(true, new ByteBuf[] { buffer, null });
+            assertEquals(8, compositeByteBuf.readableBytes());
+            assertEquals(1, compositeByteBuf.numComponents());
+        } finally {
+            compositeByteBuf.release();
+        }
+    }
+
     @Test
     public void testOverflowWhileAddingComponent() {
         int capacity = 1024 * 1024; // 1MB
@@ -1643,6 +1716,47 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     }
 
     @Test
+    public void testOverflowWhileUseConstructorWithOffset() {
+        int capacity = 1024 * 1024; // 1MB
+        final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        final List<ByteBuf> buffers = new ArrayList<ByteBuf>();
+        for (long i = 0; i <= Integer.MAX_VALUE; i += capacity) {
+            buffers.add(buffer.duplicate());
+        }
+        // Add one more
+        buffers.add(buffer.duplicate());
+
+        try {
+            assertThrows(IllegalArgumentException.class, new Executable() {
+                @Override
+                public void execute() {
+                    ByteBuf[] bufferArray = buffers.toArray(new ByteBuf[0]);
+                    new CompositeByteBuf(ALLOC, false, Integer.MAX_VALUE, bufferArray, 0);
+                }
+            });
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testNotOverflowWhileUseConstructorWithOffset() {
+        int capacity = 1024 * 1024; // 1MB
+        final ByteBuf buffer = Unpooled.buffer(capacity).writeZero(capacity);
+        final List<ByteBuf> buffers = new ArrayList<ByteBuf>();
+        for (long i = 0; i <= Integer.MAX_VALUE; i += capacity) {
+            buffers.add(buffer.duplicate());
+        }
+        // Add one more
+        buffers.add(buffer.duplicate());
+
+        ByteBuf[] bufferArray = buffers.toArray(new ByteBuf[0]);
+        CompositeByteBuf compositeByteBuf =
+                new CompositeByteBuf(ALLOC, false, Integer.MAX_VALUE, bufferArray, bufferArray.length - 1);
+        compositeByteBuf.release();
+    }
+
+    @Test
     public void sliceOfCompositeBufferMustThrowISEAfterDiscardBytes() {
         CompositeByteBuf composite = compositeBuffer();
         composite.addComponent(true, buffer(8).writeZero(8));
@@ -1660,5 +1774,37 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
             slice.release();
             composite.release();
         }
+    }
+
+    @Test
+    public void forEachByteOnNestedCompositeByteBufMustSeeEntireFlattenedContents() {
+        CompositeByteBuf buf = newCompositeBuffer();
+        buf.addComponent(true, newCompositeBuffer().addComponents(
+                true,
+                wrappedBuffer(new byte[] {1, 2, 3}),
+                wrappedBuffer(new byte[] {4, 5, 6})));
+        final byte[] arrayAsc = new byte[6];
+        final byte[] arrayDesc = new byte[6];
+        buf.forEachByte(new ByteProcessor() {
+            int index;
+
+            @Override
+            public boolean process(byte value) throws Exception {
+                arrayAsc[index++] = value;
+                return true;
+            }
+        });
+        buf.forEachByteDesc(new ByteProcessor() {
+            int index;
+
+            @Override
+            public boolean process(byte value) throws Exception {
+                arrayDesc[index++] = value;
+                return true;
+            }
+        });
+        assertArrayEquals(new byte[] {1, 2, 3, 4, 5, 6}, arrayAsc);
+        assertArrayEquals(new byte[] {6, 5, 4, 3, 2, 1}, arrayDesc);
+        buf.release();
     }
 }

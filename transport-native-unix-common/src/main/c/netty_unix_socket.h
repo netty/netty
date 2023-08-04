@@ -20,6 +20,7 @@
 #include <jni.h>
 
 // External C methods
+int netty_unix_socket_nonBlockingSocket(int domain, int type, int protocol);
 int netty_unix_socket_initSockaddr(JNIEnv* env, jboolean ipv6, jbyteArray address, jint scopeId, jint jport, const struct sockaddr_storage* addr, socklen_t* addrSize);
 jbyteArray netty_unix_socket_createInetSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr);
 

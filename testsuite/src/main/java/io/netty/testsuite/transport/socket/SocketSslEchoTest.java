@@ -351,15 +351,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             if (serverException.get() != null) {
                 break;
             }
-            if (serverException.get() != null) {
+            if (clientException.get() != null) {
                 break;
             }
 
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
+            Thread.sleep(50);
         }
 
         while (serverRecvCounter.get() < data.length) {
@@ -370,11 +366,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 break;
             }
 
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
+            Thread.sleep(50);
         }
 
         // Wait until renegotiation is done.

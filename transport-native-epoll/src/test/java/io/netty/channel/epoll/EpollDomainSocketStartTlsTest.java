@@ -26,7 +26,7 @@ import java.util.List;
 public class EpollDomainSocketStartTlsTest extends SocketStartTlsTest {
     @Override
     protected SocketAddress newSocketAddress() {
-        return EpollSocketTestPermutation.newSocketAddress();
+        return EpollSocketTestPermutation.newDomainSocketAddress();
     }
 
     @Override

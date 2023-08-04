@@ -46,7 +46,7 @@ final class Http2FrameInboundWriter {
     }
 
     Http2FrameInboundWriter(EmbeddedChannel channel, Http2FrameWriter writer) {
-        this.ctx = new WriteInboundChannelHandlerContext(channel);
+        ctx = new WriteInboundChannelHandlerContext(channel);
         this.writer = writer;
     }
 

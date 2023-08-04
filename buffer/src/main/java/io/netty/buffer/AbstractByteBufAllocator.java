@@ -20,6 +20,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakTracker;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -272,12 +273,8 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
             return newCapacity;
         }
 
-        // Not over threshold. Double up to 4 MiB, starting from 64.
-        int newCapacity = 64;
-        while (newCapacity < minNewCapacity) {
-            newCapacity <<= 1;
-        }
-
+        // 64 <= newCapacity is a power of 2 <= threshold
+        final int newCapacity = MathUtil.findNextPositivePowerOfTwo(Math.max(minNewCapacity, 64));
         return Math.min(newCapacity, maxCapacity);
     }
 }

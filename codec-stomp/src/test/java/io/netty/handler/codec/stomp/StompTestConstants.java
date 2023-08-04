@@ -77,5 +77,29 @@ public final class StompTestConstants {
             '\n' +
             "body\0";
 
+    public static final String FRAME_WITHOUT_NULL_ENDING = "SEND\n" +
+             "destination:/queue/a\n" +
+             "content-type:text/plain\n" +
+             "content-length:4\n" +
+             '\n' +
+             "body\1";
+
+    public static final String ESCAPED_MESSAGE_FRAME = "MESSAGE\n" +
+             "message-id:100\n" +
+             "subscription:1\n" +
+             "destination:/queue/a\\c\n" +
+             "header\\\\\\r\\n\\cName:header\\\\\\r\\n\\cValue\n" +
+             "header_\\\\_\\r_\\n_\\c_Name:header_\\\\_\\r_\\n_\\c_Value\n" +
+             "headerName\\c:\\cheaderValue\n" +
+             '\n' + '\0';
+
+    public static final String INVALID_ESCAPED_MESSAGE_FRAME = "MESSAGE\n" +
+             "message-id:100\n" +
+             "subscription:0\n" +
+             "destination:/queue/a\n" +
+             "custom_colon\\c_header_\\ckey:custom_colon\\c_header_\\cvalue\n" +
+             "custom_invalid\\t_header_\\tkey:custom_invalid\\t_header_\\tvalue\n" +
+             '\n' + '\0';
+
     private StompTestConstants() { }
 }

@@ -34,11 +34,11 @@ public abstract class AbstractSocketTest extends AbstractComboTestsuiteTest<Serv
     }
 
     @Override
-    protected void configure(ServerBootstrap bootstrap, Bootstrap bootstrap2, ByteBufAllocator allocator) {
-        bootstrap.localAddress(newSocketAddress());
-        bootstrap.option(ChannelOption.ALLOCATOR, allocator);
-        bootstrap.childOption(ChannelOption.ALLOCATOR, allocator);
-        bootstrap2.option(ChannelOption.ALLOCATOR, allocator);
+    protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
+        sb.localAddress(newSocketAddress());
+        sb.option(ChannelOption.ALLOCATOR, allocator);
+        sb.childOption(ChannelOption.ALLOCATOR, allocator);
+        cb.option(ChannelOption.ALLOCATOR, allocator);
     }
 
     protected SocketAddress newSocketAddress() {

@@ -23,8 +23,8 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.PromiseNotifier;
-import io.netty.util.concurrent.ScheduledFuture;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -69,7 +69,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> out) throws Exception {
         if (frame instanceof PingWebSocketFrame) {
             frame.content().retain();
-            ctx.channel().writeAndFlush(new PongWebSocketFrame(frame.content()));
+            ctx.writeAndFlush(new PongWebSocketFrame(frame.content()));
             readIfNeeded(ctx);
             return;
         }
@@ -128,7 +128,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             return;
         }
 
-        final ScheduledFuture<?> timeoutTask = ctx.executor().schedule(new Runnable() {
+        final Future<?> timeoutTask = ctx.executor().schedule(new Runnable() {
             @Override
             public void run() {
                 if (!closeSent.isDone()) {

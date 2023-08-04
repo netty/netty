@@ -47,7 +47,7 @@ public class EpollSocketTest extends SocketTest<LinuxSocket> {
         LinuxSocket s2 = LinuxSocket.newSocketDomain();
 
         try {
-            DomainSocketAddress dsa = UnixTestUtils.newSocketAddress();
+            DomainSocketAddress dsa = UnixTestUtils.newDomainSocketAddress();
             s1.bind(dsa);
             s1.listen(1);
 
@@ -65,5 +65,19 @@ public class EpollSocketTest extends SocketTest<LinuxSocket> {
     @Override
     protected LinuxSocket newSocket() {
         return LinuxSocket.newSocketStream();
+    }
+
+    @Override
+    protected int level() {
+        // Value for SOL_SOCKET
+        // See https://github.com/torvalds/linux/blob/v5.17/include/uapi/asm-generic/socket.h
+        return 1;
+    }
+
+    @Override
+    protected int optname() {
+        // Value for SO_REUSEADDR
+        // See https://github.com/torvalds/linux/blob/v5.17/include/uapi/asm-generic/socket.h
+        return 2;
     }
 }

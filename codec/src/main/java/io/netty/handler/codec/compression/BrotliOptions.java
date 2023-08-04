@@ -34,11 +34,11 @@ public final class BrotliOptions implements CompressionOptions {
     );
 
     BrotliOptions(Encoder.Parameters parameters) {
-        this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
-
         if (!Brotli.isAvailable()) {
             throw new IllegalStateException("Brotli is not available", Brotli.cause());
         }
+
+        this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
     }
 
     public Encoder.Parameters parameters() {

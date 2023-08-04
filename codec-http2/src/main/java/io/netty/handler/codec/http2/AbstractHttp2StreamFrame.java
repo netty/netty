@@ -45,7 +45,7 @@ public abstract class AbstractHttp2StreamFrame implements Http2StreamFrame {
             return false;
         }
         Http2StreamFrame other = (Http2StreamFrame) o;
-        return stream == other.stream() || (stream != null && stream.equals(other.stream()));
+        return stream == other.stream() || stream != null && stream.equals(other.stream());
     }
 
     @Override

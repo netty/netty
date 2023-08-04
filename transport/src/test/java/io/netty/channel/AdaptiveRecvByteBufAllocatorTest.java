@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 public class AdaptiveRecvByteBufAllocatorTest {
     @Mock
     private ChannelConfig config;
-    private ByteBufAllocator alloc = UnpooledByteBufAllocator.DEFAULT;
+    private final ByteBufAllocator alloc = UnpooledByteBufAllocator.DEFAULT;
     private RecvByteBufAllocator.ExtendedHandle handle;
 
     @BeforeEach

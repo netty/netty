@@ -30,6 +30,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDec
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.MultiPartStatus;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.NotEnoughDataDecoderException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -97,7 +98,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
     /**
      * If multipart, this is the boundary for the global multipart
      */
-    private String multipartDataBoundary;
+    private final String multipartDataBoundary;
 
     /**
      * If multipart, there could be internal multiparts (mixed) to the global
@@ -771,6 +772,18 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                                 throw new ErrorDataDecoderException(e);
                             }
                             currentFieldAttributes.put(HttpHeaderValues.CHARSET, attribute);
+                        } else if (contents[i].contains("=")) {
+                            String name = StringUtil.substringBefore(contents[i], '=');
+                            String values = StringUtil.substringAfter(contents[i], '=');
+                            Attribute attribute;
+                            try {
+                                attribute = factory.createAttribute(request, cleanString(name), values);
+                            } catch (NullPointerException e) {
+                                throw new ErrorDataDecoderException(e);
+                            } catch (IllegalArgumentException e) {
+                                throw new ErrorDataDecoderException(e);
+                            }
+                            currentFieldAttributes.put(name, attribute);
                         } else {
                             Attribute attribute;
                             try {
@@ -1175,12 +1188,22 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             // Possible last bytes contain partially delimiter
             // (delimiter is possibly partially there, at least 1 missing byte),
             // therefore searching last delimiter.length +1 (+1 for CRLF instead of LF)
-            int lastPosition = undecodedChunk.readableBytes() - bdelimiter.length - 1;
+            int readableBytes = undecodedChunk.readableBytes();
+            int lastPosition = readableBytes - bdelimiter.length - 1;
             if (lastPosition < 0) {
                 // Not enough bytes, but at most delimiter.length bytes available so can still try to find CRLF there
                 lastPosition = 0;
             }
-            posDelimiter = HttpPostBodyUtil.findLastLineBreak(undecodedChunk, startReaderIndex  + lastPosition);
+            posDelimiter = HttpPostBodyUtil.findLastLineBreak(undecodedChunk, startReaderIndex + lastPosition);
+            // No LineBreak, however CR can be at the end of the buffer, LF not yet there (issue #11668)
+            // Check if last CR (if any) shall not be in the content (definedLength vs actual length + buffer - 1)
+            if (posDelimiter < 0 &&
+                httpData.definedLength() == httpData.length() + readableBytes - 1 &&
+                undecodedChunk.getByte(readableBytes + startReaderIndex - 1) == HttpConstants.CR) {
+                // Last CR shall precede a future LF
+                lastPosition = 0;
+                posDelimiter = readableBytes - 1;
+            }
             if (posDelimiter < 0) {
                 // not found so this chunk can be fully added
                 ByteBuf content = undecodedChunk.copy();
@@ -1355,7 +1378,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             }
         }
         values.add(svalue.substring(start));
-        return values.toArray(new String[0]);
+        return values.toArray(EmptyArrays.EMPTY_STRINGS);
     }
 
     /**

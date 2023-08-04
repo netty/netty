@@ -56,7 +56,7 @@ public final class FixedRedisMessagePool implements RedisMessagePool {
         WRONGTYPE("WRONGTYPE Operation against a key holding the wrong kind of value"),
         NOT_AUTH("NOAUTH Authentication required.");
 
-        private String msg;
+        private final String msg;
 
         RedisErrorKey(String msg) {
             this.msg = msg;

@@ -175,15 +175,13 @@ public class StringUtilTest {
     @Test
     public void escapeCsvEmpty() {
         CharSequence value = "";
-        CharSequence expected = value;
-        escapeCsv(value, expected);
+        escapeCsv(value, value);
     }
 
     @Test
     public void escapeCsvUnquoted() {
         CharSequence value = "something";
-        CharSequence expected = value;
-        escapeCsv(value, expected);
+        escapeCsv(value, value);
     }
 
     @Test
@@ -259,8 +257,7 @@ public class StringUtilTest {
     @Test
     public void escapeCsvQuoted() {
         CharSequence value = "\"foo,goo\"";
-        CharSequence expected = value;
-        escapeCsv(value, expected);
+        escapeCsv(value, value);
     }
 
     @Test

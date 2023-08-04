@@ -21,7 +21,20 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
-import static io.netty.handler.codec.compression.Bzip2Constants.*;
+import static io.netty.handler.codec.compression.Bzip2Constants.BASE_BLOCK_SIZE;
+import static io.netty.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MAGIC_1;
+import static io.netty.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MAGIC_2;
+import static io.netty.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_1;
+import static io.netty.handler.codec.compression.Bzip2Constants.END_OF_STREAM_MAGIC_2;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_MAXIMUM_TABLES;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_MAX_ALPHABET_SIZE;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_MINIMUM_TABLES;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_SELECTOR_LIST_MAX_LENGTH;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_SYMBOL_RANGE_SIZE;
+import static io.netty.handler.codec.compression.Bzip2Constants.MAGIC_NUMBER;
+import static io.netty.handler.codec.compression.Bzip2Constants.MAX_BLOCK_SIZE;
+import static io.netty.handler.codec.compression.Bzip2Constants.MAX_SELECTORS;
+import static io.netty.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
 
 /**
  * Uncompresses a {@link ByteBuf} encoded with the Bzip2 format.
@@ -291,26 +304,27 @@ public class Bzip2Decoder extends ByteToMessageDecoder {
                 }
 
                 final int blockLength = blockDecompressor.blockLength();
-                final ByteBuf uncompressed = ctx.alloc().buffer(blockLength);
-                boolean success = false;
+                ByteBuf uncompressed = ctx.alloc().buffer(blockLength);
                 try {
                     int uncByte;
                     while ((uncByte = blockDecompressor.read()) >= 0) {
                         uncompressed.writeByte(uncByte);
                     }
-
+                    // We did read all the data, lets reset the state and do the CRC check.
+                    currentState = State.INIT_BLOCK;
                     int currentBlockCRC = blockDecompressor.checkCRC();
                     streamCRC = (streamCRC << 1 | streamCRC >>> 31) ^ currentBlockCRC;
 
                     out.add(uncompressed);
-                    success = true;
+                    uncompressed = null;
                 } finally {
-                    if (!success) {
+                    if (uncompressed != null) {
                         uncompressed.release();
                     }
                 }
-                currentState = State.INIT_BLOCK;
-                break;
+                // Return here so the ByteBuf that was put in the List will be forwarded to the user and so can be
+                // released as soon as possible.
+                return;
             case EOF:
                 in.skipBytes(in.readableBytes());
                 return;

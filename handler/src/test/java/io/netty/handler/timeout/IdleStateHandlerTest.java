@@ -22,11 +22,11 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -384,7 +384,7 @@ public class IdleStateHandlerTest {
         }
 
         @Override
-        ScheduledFuture<?> schedule(ChannelHandlerContext ctx, Runnable task, long delay, TimeUnit unit) {
+        Future<?> schedule(ChannelHandlerContext ctx, Runnable task, long delay, TimeUnit unit) {
             this.task = task;
             this.delayInNanos = unit.toNanos(delay);
             return null;

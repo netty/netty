@@ -89,7 +89,7 @@ public interface Http2Connection {
 
         /**
          * Called when a {@code GOAWAY} was received from the remote endpoint. This event handler duplicates {@link
-         * Http2FrameListener#onGoAwayRead(io.netty.channel.ChannelHandlerContext, int, long, io.netty.buffer.ByteBuf)}
+         * Http2FrameListener#onGoAwayRead(io.netty.channel.ChannelHandlerContext, int, long, ByteBuf)}
          * but is added here in order to simplify application logic for handling {@code GOAWAY} in a uniform way. An
          * application should generally not handle both events, but if it does this method is called second, after
          * notifying the {@link Http2FrameListener}.

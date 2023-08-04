@@ -18,7 +18,6 @@ package io.netty.handler.codec.http;
 import io.netty.util.AsciiString;
 
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 
 /**
@@ -107,6 +106,14 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
+        // fast-path
+        if (name == HttpMethod.GET.name()) {
+            return HttpMethod.GET;
+        }
+        if (name == HttpMethod.POST.name()) {
+            return HttpMethod.POST;
+        }
+        // "slow"-path
         HttpMethod result = methodMap.get(name);
         return result != null ? result : new HttpMethod(name);
     }

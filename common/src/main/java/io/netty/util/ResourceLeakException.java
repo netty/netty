@@ -49,9 +49,8 @@ public class ResourceLeakException extends RuntimeException {
 
     @Override
     public int hashCode() {
-        StackTraceElement[] trace  = cachedStackTrace;
         int hashCode = 0;
-        for (StackTraceElement e: trace) {
+        for (StackTraceElement e: cachedStackTrace) {
             hashCode = hashCode * 31 + e.hashCode();
         }
         return hashCode;

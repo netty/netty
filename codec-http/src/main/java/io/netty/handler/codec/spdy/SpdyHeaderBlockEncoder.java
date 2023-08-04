@@ -19,7 +19,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 
-abstract class SpdyHeaderBlockEncoder {
+/**
+ * Super-class for SPDY header-block encoders.
+ *
+ * @see SpdyHeaderBlockZlibEncoder
+ * @see SpdyHeaderBlockJZlibEncoder
+ * @see SpdyHeaderBlockRawEncoder
+ */
+public abstract class SpdyHeaderBlockEncoder {
 
     static SpdyHeaderBlockEncoder newInstance(
             SpdyVersion version, int compressionLevel, int windowBits, int memLevel) {

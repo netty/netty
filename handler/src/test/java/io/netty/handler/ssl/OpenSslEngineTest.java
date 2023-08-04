@@ -25,23 +25,14 @@ import io.netty.internal.tcnative.SSL;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.opentest4j.TestAbortedException;
 
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLEngineResult.HandshakeStatus;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.X509ExtendedKeyManager;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.AlgorithmConstraints;
@@ -55,9 +46,22 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.X509ExtendedKeyManager;
 
+import static io.netty.handler.ssl.OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES;
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty.handler.ssl.ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH;
+import static io.netty.handler.ssl.SslProvider.OPENSSL;
+import static io.netty.handler.ssl.SslProvider.isOptionSupported;
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static java.lang.Integer.MAX_VALUE;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -75,7 +79,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
 
     public OpenSslEngineTest() {
-        super(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
+        super(SslProvider.isTlsv13Supported(OPENSSL));
     }
 
     @Override
@@ -1030,7 +1034,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
             } catch (SSLException e) {
                 if (e.getMessage().contains("unsupported protocol") ||
                         e.getMessage().contains("no protocols available")) {
-                    throw new AssumptionViolatedException(protocol + " not supported with cipher " + cipher, e);
+                    throw new TestAbortedException(protocol + " not supported with cipher " + cipher, e);
                 }
                 throw e;
             }
@@ -1103,7 +1107,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
             SSLParameters parameters = new SSLParameters();
             Java8SslTestUtils.setSNIMatcher(parameters, name);
             engine.setSSLParameters(parameters);
-            assertTrue(unwrapEngine(engine).checkSniHostnameMatch(name));
             assertFalse(unwrapEngine(engine).checkSniHostnameMatch("other".getBytes(CharsetUtil.UTF_8)));
         } finally {
             cleanupServerSslEngine(engine);
@@ -1177,14 +1180,14 @@ public class OpenSslEngineTest extends SSLEngineTest {
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(cert.key(), cert.cert())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
-                .sslProvider(SslProvider.OPENSSL).build());
+                .sslProvider(OPENSSL).build());
         final SSLEngine serverEngine =
                 wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(cert.certificate())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
-                .sslProvider(SslProvider.OPENSSL).build());
+                .sslProvider(OPENSSL).build());
         final SSLEngine clientEngine =
                 wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -1397,12 +1400,16 @@ public class OpenSslEngineTest extends SSLEngineTest {
         }
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionLocalWhenNonMutualWithKeyManager(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSessionLocalWhenNonMutualWithKeyManager(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionLocalWhenNonMutualWithoutKeyManager(SSLEngineTestParam param) throws Exception {
         // This only really works when the KeyManagerFactory is supported as otherwise we not really know when
@@ -1473,12 +1480,12 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Override
     protected SslProvider sslClientProvider() {
-        return SslProvider.OPENSSL;
+        return OPENSSL;
     }
 
     @Override
     protected SslProvider sslServerProvider() {
-        return SslProvider.OPENSSL;
+        return OPENSSL;
     }
 
     private static ApplicationProtocolConfig acceptingNegotiator(Protocol protocol,
@@ -1517,6 +1524,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
         return context;
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCache(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
@@ -1525,12 +1534,16 @@ public class OpenSslEngineTest extends SSLEngineTest {
         assertSessionContext(serverSslCtx);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCacheTimeout(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
         super.testSessionCacheTimeout(param);
     }
 
+    @MethodSource("newTestParams")
+    @ParameterizedTest
     @Override
     public void testSessionCacheSize(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isSessionCacheSupported());
@@ -1559,5 +1572,77 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @Override
     protected boolean isSessionMaybeReused(SSLEngine engine) {
         return unwrapEngine(engine).isSessionReused();
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    @Override
+    public void testRSASSAPSS(SSLEngineTestParam param) throws Exception {
+        checkShouldUseKeyManagerFactory();
+        super.testRSASSAPSS(param);
+    }
+
+    @Test
+    public void testExtraDataInLastSrcBufferForClientUnwrapNonjdkCompatabilityMode() throws Exception {
+        SSLEngineTestParam param = new SSLEngineTestParam(BufferType.Direct, ProtocolCipherCombo.tlsv12(), false);
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .build());
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .clientAuth(ClientAuth.NONE)
+                .build());
+        testExtraDataInLastSrcBufferForClientUnwrap(param,
+                wrapEngine(clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine()),
+                wrapEngine(serverSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine()));
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testMaxCertificateList(final SSLEngineTestParam param) throws Exception {
+        assumeTrue(isOptionSupported(sslClientProvider(), MAX_CERTIFICATE_LIST_BYTES));
+        assumeTrue(isOptionSupported(sslServerProvider(), MAX_CERTIFICATE_LIST_BYTES));
+        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .keyManager(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .option(MAX_CERTIFICATE_LIST_BYTES, 10)
+                .build());
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .option(MAX_CERTIFICATE_LIST_BYTES, 10)
+                .clientAuth(ClientAuth.REQUIRE)
+                .build());
+
+        final SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        final SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+        try {
+            assertThrows(SSLHandshakeException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    handshake(param.type(), param.delegate(), client, server);
+                }
+            });
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+            ssc.delete();
+        }
     }
 }

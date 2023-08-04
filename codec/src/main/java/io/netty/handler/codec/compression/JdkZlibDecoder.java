@@ -204,12 +204,15 @@ public class JdkZlibDecoder extends ZlibDecoder {
             if (gzipState != GzipState.HEADER_END) {
                 if (gzipState == GzipState.FOOTER_START) {
                     if (!handleGzipFooter(in)) {
+                        // Either there was not enough data or the input is finished.
                         return;
                     }
-                } else {
-                    if (!readGZIPHeader(in)) {
-                        return;
-                    }
+                    // If we consumed the footer we will start with the header again.
+                    assert gzipState == GzipState.HEADER_START;
+                }
+                if (!readGZIPHeader(in)) {
+                    // There was not enough data readable to read the GZIP header.
+                    return;
                 }
                 // Some bytes may have been consumed, and so we must re-set the number of readable bytes.
                 readableBytes = in.readableBytes();
@@ -385,7 +388,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
                 // fall through
             case PROCESS_FHCRC:
                 if ((flags & FHCRC) != 0) {
-                    if (!verifyCrc(in)) {
+                    if (!verifyCrc16(in)) {
                         return false;
                     }
                 }
@@ -471,6 +474,25 @@ public class JdkZlibDecoder extends ZlibDecoder {
         if (crcValue != readCrc) {
             throw new DecompressionException(
                     "CRC value mismatch. Expected: " + crcValue + ", Got: " + readCrc);
+        }
+        return true;
+    }
+
+    private boolean verifyCrc16(ByteBuf in) {
+        if (in.readableBytes() < 2) {
+            return false;
+        }
+        long readCrc32 = crc.getValue();
+        long crc16Value = 0;
+        long readCrc16 = 0; // the two least significant bytes from the CRC32
+        for (int i = 0; i < 2; ++i) {
+            crc16Value |= (long) in.readUnsignedByte() << (i * 8);
+            readCrc16 |= ((readCrc32 >> (i * 8)) & 0xff) << (i * 8);
+        }
+
+        if (crc16Value != readCrc16) {
+            throw new DecompressionException(
+                    "CRC16 value mismatch. Expected: " + crc16Value + ", Got: " + readCrc16);
         }
         return true;
     }

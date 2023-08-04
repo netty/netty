@@ -19,6 +19,9 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import org.jetbrains.annotations.Async.Execute;
+import org.jetbrains.annotations.Async.Schedule;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -161,20 +164,22 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
      */
     protected static void safeExecute(Runnable task) {
         try {
-            task.run();
+            runTask(task);
         } catch (Throwable t) {
             logger.warn("A task raised an exception. Task: {}", task, t);
         }
     }
 
+    protected static void runTask(@Execute Runnable task) {
+        task.run();
+    }
+
     /**
      * Like {@link #execute(Runnable)} but does not guarantee the task will be run until either
      * a non-lazy task is executed or the executor is shut down.
-     *
-     * This is equivalent to submitting a {@link AbstractEventExecutor.LazyRunnable} to
-     * {@link #execute(Runnable)} but for an arbitrary {@link Runnable}.
-     *
+     * <p>
      * The default implementation just delegates to {@link #execute(Runnable)}.
+     * </p>
      */
     @UnstableApi
     public void lazyExecute(Runnable task) {
@@ -182,9 +187,9 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     /**
-     * Marker interface for {@link Runnable} to indicate that it should be queued for execution
-     * but does not need to run immediately.
+     *  @deprecated override {@link SingleThreadEventExecutor#wakesUpForTask} to re-create this behaviour
+     *
      */
-    @UnstableApi
+    @Deprecated
     public interface LazyRunnable extends Runnable { }
 }

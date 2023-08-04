@@ -1,0 +1,72 @@
+[
+  {
+    "name": "io.netty.handler.codec.http2.CleartextHttp2ServerUpgradeHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.CleartextHttp2ServerUpgradeHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.Http2ChannelDuplexHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.Http2ChannelDuplexHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.Http2ConnectionHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.Http2ConnectionHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.Http2FrameCodec",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.Http2FrameCodec"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.Http2FrameLogger",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.Http2FrameLogger"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.Http2MultiplexCodec",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.Http2MultiplexCodec"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.Http2MultiplexHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.Http2MultiplexHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.Http2StreamFrameToHttpObjectCodec"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.HttpToHttp2ConnectionHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.InboundHttpToHttp2Adapter",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.InboundHttpToHttp2Adapter"
+    },
+    "queryAllPublicMethods": true
+  }
+]

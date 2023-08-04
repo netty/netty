@@ -25,6 +25,7 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -33,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Disabled("Flaky test; See: https://github.com/netty/netty/issues/11551")
 public class ThreadPerChannelEventLoopGroupTest {
 
     private static final ChannelHandler NOOP_HANDLER = new ChannelHandlerAdapter() {

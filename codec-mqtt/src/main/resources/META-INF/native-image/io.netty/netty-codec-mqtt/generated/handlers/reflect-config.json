@@ -1,0 +1,16 @@
+[
+  {
+    "name": "io.netty.handler.codec.mqtt.MqttDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.mqtt.MqttDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.mqtt.MqttEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.mqtt.MqttEncoder"
+    },
+    "queryAllPublicMethods": true
+  }
+]

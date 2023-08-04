@@ -25,7 +25,7 @@ import java.util.List;
 public class EpollDomainSocketFileRegionTest extends EpollSocketFileRegionTest {
     @Override
     protected SocketAddress newSocketAddress() {
-        return EpollSocketTestPermutation.newSocketAddress();
+        return EpollSocketTestPermutation.newDomainSocketAddress();
     }
 
     @Override

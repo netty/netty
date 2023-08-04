@@ -100,7 +100,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
         domainToNameServerStreamMap = useEtcResolverFiles ? parse(etcResolverFiles) : etcResolvConfMap;
 
         DnsServerAddresses defaultNameServerAddresses
-                = etcResolvConfMap.get(etcResolvConf.getName());  // lgtm[java/dereferenced-value-may-be-null]
+                = etcResolvConfMap.get(etcResolvConf.getName());
         if (defaultNameServerAddresses == null) {
             Collection<DnsServerAddresses> values = etcResolvConfMap.values();
             if (values.isEmpty()) {

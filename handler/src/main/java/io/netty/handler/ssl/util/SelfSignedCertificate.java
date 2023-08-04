@@ -31,7 +31,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.file.Files;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -221,7 +220,7 @@ public final class SelfSignedCertificate {
     public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, Date notBefore, Date notAfter,
                                  String algorithm) throws CertificateException {
 
-        if (!algorithm.equalsIgnoreCase("EC") && !algorithm.equalsIgnoreCase("RSA")) {
+        if (!"EC".equalsIgnoreCase(algorithm) && !"RSA".equalsIgnoreCase(algorithm)) {
             throw new IllegalArgumentException("Algorithm not valid: " + algorithm);
         }
 
@@ -241,7 +240,12 @@ public final class SelfSignedCertificate {
             paths = BouncyCastleSelfSignedCertGenerator.generate(
                     fqdn, keypair, random, notBefore, notAfter, algorithm);
         } catch (Throwable t) {
-            logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t);
+            if (!isBouncyCastleAvailable()) {
+                logger.debug("Failed to generate a self-signed X.509 certificate because " +
+                        "BouncyCastle PKIX is not available in classpath");
+            } else {
+                logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t);
+            }
             try {
                 // Try the OpenJDK's proprietary implementation.
                 paths = OpenJdkSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter, algorithm);
@@ -285,7 +289,7 @@ public final class SelfSignedCertificate {
     }
 
     /**
-     * Returns the generated RSA private key file in PEM format.
+     * Returns the generated EC/RSA private key file in PEM format.
      */
     public File privateKey() {
         return privateKey;
@@ -299,14 +303,14 @@ public final class SelfSignedCertificate {
     }
 
     /**
-     * Returns the generated RSA private key.
+     * Returns the generated EC/RSA private key.
      */
     public PrivateKey key() {
         return key;
     }
 
     /**
-     * Deletes the generated X.509 certificate file and RSA private key file.
+     * Deletes the generated X.509 certificate file and EC/RSA private key file.
      */
     public void delete() {
         safeDelete(certificate);
@@ -400,6 +404,15 @@ public final class SelfSignedCertificate {
             if (logger.isWarnEnabled()) {
                 logger.warn("Failed to close a file: " + keyFile, e);
             }
+        }
+    }
+
+    private static boolean isBouncyCastleAvailable() {
+        try {
+            Class.forName("org.bouncycastle.cert.X509v3CertificateBuilder");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
         }
     }
 }

@@ -166,7 +166,7 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
     @Override
     public int hashCode() {
         int hash = super.hashCode();
-        hash = hash * 31 + (int) (errorCode ^ (errorCode >>> 32));
+        hash = hash * 31 + (int) (errorCode ^ errorCode >>> 32);
         hash = hash * 31 + extraStreamIds;
         return hash;
     }

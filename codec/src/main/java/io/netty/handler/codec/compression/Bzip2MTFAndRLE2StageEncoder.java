@@ -15,7 +15,9 @@
  */
 package io.netty.handler.codec.compression;
 
-import static io.netty.handler.codec.compression.Bzip2Constants.*;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_MAX_ALPHABET_SIZE;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_SYMBOL_RUNA;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_SYMBOL_RUNB;
 
 /**
  * An encoder for the Bzip2 Move To Front Transform and Run-Length Encoding[2] stages.<br>

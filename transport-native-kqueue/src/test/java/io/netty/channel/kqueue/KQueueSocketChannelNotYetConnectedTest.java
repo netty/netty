@@ -24,6 +24,6 @@ import java.util.List;
 public class KQueueSocketChannelNotYetConnectedTest extends SocketChannelNotYetConnectedTest {
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
-        return KQueueSocketTestPermutation.INSTANCE.clientSocket();
+        return KQueueSocketTestPermutation.INSTANCE.clientSocketWithFastOpen();
     }
 }

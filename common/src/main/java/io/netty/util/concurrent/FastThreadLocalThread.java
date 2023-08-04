@@ -17,11 +17,16 @@ package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * A special {@link Thread} that provides fast access to {@link FastThreadLocal} variables.
  */
 public class FastThreadLocalThread extends Thread {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(FastThreadLocalThread.class);
+
     // This will be set to true if we have a chance to wrap the Runnable.
     private final boolean cleanupFastThreadLocals;
 
@@ -71,6 +76,10 @@ public class FastThreadLocalThread extends Thread {
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
     public final InternalThreadLocalMap threadLocalMap() {
+        if (this != Thread.currentThread() && logger.isWarnEnabled()) {
+            logger.warn(new RuntimeException("It's not thread-safe to get 'threadLocalMap' " +
+                    "which doesn't belong to the caller thread"));
+        }
         return threadLocalMap;
     }
 
@@ -79,6 +88,10 @@ public class FastThreadLocalThread extends Thread {
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
     public final void setThreadLocalMap(InternalThreadLocalMap threadLocalMap) {
+        if (this != Thread.currentThread() && logger.isWarnEnabled()) {
+            logger.warn(new RuntimeException("It's not thread-safe to set 'threadLocalMap' " +
+                    "which doesn't belong to the caller thread"));
+        }
         this.threadLocalMap = threadLocalMap;
     }
 
@@ -97,5 +110,19 @@ public class FastThreadLocalThread extends Thread {
     public static boolean willCleanupFastThreadLocals(Thread thread) {
         return thread instanceof FastThreadLocalThread &&
                 ((FastThreadLocalThread) thread).willCleanupFastThreadLocals();
+    }
+
+    /**
+     * Query whether this thread is allowed to perform blocking calls or not.
+     * {@link FastThreadLocalThread}s are often used in event-loops, where blocking calls are forbidden in order to
+     * prevent event-loop stalls, so this method returns {@code false} by default.
+     * <p>
+     * Subclasses of {@link FastThreadLocalThread} can override this method if they are not meant to be used for
+     * running event-loops.
+     *
+     * @return {@code false}, unless overriden by a subclass.
+     */
+    public boolean permitBlockingCalls() {
+        return false;
     }
 }

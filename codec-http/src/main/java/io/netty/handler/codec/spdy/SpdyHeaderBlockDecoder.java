@@ -18,7 +18,13 @@ package io.netty.handler.codec.spdy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-abstract class SpdyHeaderBlockDecoder {
+/**
+ * Super-class for SPDY header-block decoders.
+ *
+ * @see SpdyHeaderBlockRawDecoder
+ * @see SpdyHeaderBlockZlibDecoder
+ */
+public abstract class SpdyHeaderBlockDecoder {
 
     static SpdyHeaderBlockDecoder newInstance(SpdyVersion spdyVersion, int maxHeaderSize) {
         return new SpdyHeaderBlockZlibDecoder(spdyVersion, maxHeaderSize);

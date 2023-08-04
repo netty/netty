@@ -22,6 +22,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -187,7 +188,8 @@ public final class HttpUploadClient {
         );
 
         // send request
-        channel.writeAndFlush(request);
+        channel.write(request);
+        channel.writeAndFlush(LastHttpContent.EMPTY_LAST_CONTENT);
 
         // Wait for the server to close the connection.
         channel.closeFuture().sync();

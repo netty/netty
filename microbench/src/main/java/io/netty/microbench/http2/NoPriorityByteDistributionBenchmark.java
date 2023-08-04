@@ -98,7 +98,7 @@ public class NoPriorityByteDistributionBenchmark extends AbstractMicrobenchmark 
         }
     }
 
-    private Http2StreamVisitor invocationVisitor = new Http2StreamVisitor() {
+    private final Http2StreamVisitor invocationVisitor = new Http2StreamVisitor() {
         @Override
         public boolean visit(Http2Stream stream) throws Http2Exception {
             // Restore the connection window.

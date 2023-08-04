@@ -126,7 +126,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
     public StreamBufferingEncoder(Http2ConnectionEncoder delegate, int initialMaxConcurrentStreams) {
         super(delegate);
-        this.maxConcurrentStreams = initialMaxConcurrentStreams;
+        maxConcurrentStreams = initialMaxConcurrentStreams;
         connection().addListener(new Http2ConnectionAdapter() {
 
             @Override

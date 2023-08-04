@@ -27,7 +27,7 @@ public class EpollDomainSocketFixedLengthEchoTest extends SocketFixedLengthEchoT
 
     @Override
     protected SocketAddress newSocketAddress() {
-        return EpollSocketTestPermutation.newSocketAddress();
+        return EpollSocketTestPermutation.newDomainSocketAddress();
     }
 
     @Override

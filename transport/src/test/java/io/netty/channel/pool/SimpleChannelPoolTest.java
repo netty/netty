@@ -353,4 +353,49 @@ public class SimpleChannelPoolTest {
         pool.close();
         group.shutdownGracefully();
     }
+
+    @Test
+    public void testChannelAcquiredException() throws InterruptedException {
+        final LocalAddress addr = new LocalAddress(getLocalAddrId());
+        final EventLoopGroup group = new DefaultEventLoopGroup();
+
+        // Start server
+        final ServerBootstrap sb = new ServerBootstrap()
+              .group(group)
+              .channel(LocalServerChannel.class)
+              .childHandler(new ChannelInitializer<LocalChannel>() {
+                  @Override
+                  protected void initChannel(LocalChannel ch) throws Exception {
+                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                  }
+              });
+        final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+
+        // Create pool, acquire and return channels
+        final Bootstrap bootstrap = new Bootstrap()
+              .channel(LocalChannel.class).group(group).remoteAddress(addr);
+        final NullPointerException exception = new NullPointerException();
+        final SimpleChannelPool pool = new SimpleChannelPool(bootstrap, new ChannelPoolHandler() {
+            @Override
+            public void channelReleased(Channel ch) {
+            }
+            @Override
+            public void channelAcquired(Channel ch) {
+                throw exception;
+            }
+            @Override
+            public void channelCreated(Channel ch) {
+            }
+        });
+
+        try {
+            pool.acquire().sync();
+        } catch (NullPointerException e) {
+            assertSame(e, exception);
+        }
+
+        sc.close().sync();
+        pool.close();
+        group.shutdownGracefully();
+    }
 }

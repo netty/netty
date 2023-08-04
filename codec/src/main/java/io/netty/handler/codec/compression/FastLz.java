@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.buffer.ByteBuf;
+
 /**
  * Core of FastLZ compression algorithm.
  *
@@ -51,13 +53,13 @@ final class FastLz {
     static final int MAX_CHUNK_LENGTH = 0xFFFF;
 
     /**
-     * Do not call {@link #compress(byte[], int, int, byte[], int, int)} for input buffers
+     * Do not call {@link #compress(ByteBuf, int, int, ByteBuf, int, int)} for input buffers
      * which length less than this value.
      */
     static final int MIN_LENGTH_TO_COMPRESSION = 32;
 
     /**
-     * In this case {@link #compress(byte[], int, int, byte[], int, int)} will choose level
+     * In this case {@link #compress(ByteBuf, int, int, ByteBuf, int, int)} will choose level
      * automatically depending on the length of the input buffer. If length less than
      * {@link #MIN_RECOMENDED_LENGTH_FOR_LEVEL_2} {@link #LEVEL_1} will be chosen,
      * otherwise {@link #LEVEL_2}.
@@ -91,8 +93,8 @@ final class FastLz {
      * If the input is not compressible, the return value might be larger than length (input buffer size).
      */
     @SuppressWarnings("IdentityBinaryExpression")
-    static int compress(final byte[] input, final int inOffset, final int inLength,
-                        final byte[] output, final int outOffset, final int proposedLevel) {
+    static int compress(final ByteBuf input, final int inOffset, final int inLength,
+                        final ByteBuf output, final int outOffset, final int proposedLevel) {
         final int level;
         if (proposedLevel == LEVEL_AUTO) {
             level = inLength < MIN_RECOMENDED_LENGTH_FOR_LEVEL_2 ? LEVEL_1 : LEVEL_2;
@@ -121,10 +123,10 @@ final class FastLz {
         if (inLength < 4) {
             if (inLength != 0) {
                 // *op++ = length-1;
-                output[outOffset + op++] = (byte) (inLength - 1);
+                output.setByte(outOffset + op++, (byte) (inLength - 1));
                 ipBound++;
                 while (ip <= ipBound) {
-                    output[outOffset + op++] = input[inOffset + ip++];
+                    output.setByte(outOffset + op++, input.getByte(inOffset + ip++));
                 }
                 return inLength + 1;
             }
@@ -141,9 +143,9 @@ final class FastLz {
 
         /* we start with literal copy */
         copy = 2;
-        output[outOffset + op++] = MAX_COPY - 1;
-        output[outOffset + op++] = input[inOffset + ip++];
-        output[outOffset + op++] = input[inOffset + ip++];
+        output.setByte(outOffset + op++, MAX_COPY - 1);
+        output.setByte(outOffset + op++, input.getByte(inOffset + ip++));
+        output.setByte(outOffset + op++, input.getByte(inOffset + ip++));
 
         /* main loop */
         while (ip < ipLimit) {
@@ -164,7 +166,7 @@ final class FastLz {
             /* check for a run */
             if (level == LEVEL_2) {
                 //if(ip[0] == ip[-1] && FASTLZ_READU16(ip-1)==FASTLZ_READU16(ip+1))
-                if (input[inOffset + ip] == input[inOffset + ip - 1] &&
+                if (input.getByte(inOffset + ip) == input.getByte(inOffset + ip - 1) &&
                         readU16(input, inOffset + ip - 1) == readU16(input, inOffset + ip + 1)) {
                     distance = 1;
                     ip += 3;
@@ -195,18 +197,18 @@ final class FastLz {
                 /* is this a match? check the first 3 bytes */
                 if (distance == 0
                         || (level == LEVEL_1 ? distance >= MAX_DISTANCE : distance >= MAX_FARDISTANCE)
-                        || input[inOffset + ref++] != input[inOffset + ip++]
-                        || input[inOffset + ref++] != input[inOffset + ip++]
-                        || input[inOffset + ref++] != input[inOffset + ip++]) {
+                        || input.getByte(inOffset + ref++) != input.getByte(inOffset + ip++)
+                        || input.getByte(inOffset + ref++) != input.getByte(inOffset + ip++)
+                        || input.getByte(inOffset + ref++) != input.getByte(inOffset + ip++)) {
                     /*
                      * goto literal;
                      */
-                    output[outOffset + op++] = input[inOffset + anchor++];
+                    output.setByte(outOffset + op++, input.getByte(inOffset + anchor++));
                     ip = anchor;
                     copy++;
                     if (copy == MAX_COPY) {
                         copy = 0;
-                        output[outOffset + op++] = MAX_COPY - 1;
+                        output.setByte(outOffset + op++, MAX_COPY - 1);
                     }
                     continue;
                 }
@@ -214,17 +216,17 @@ final class FastLz {
                 if (level == LEVEL_2) {
                     /* far, needs at least 5-byte match */
                     if (distance >= MAX_DISTANCE) {
-                        if (input[inOffset + ip++] != input[inOffset + ref++]
-                                || input[inOffset + ip++] != input[inOffset + ref++]) {
+                        if (input.getByte(inOffset + ip++) != input.getByte(inOffset + ref++)
+                                || input.getByte(inOffset + ip++) != input.getByte(inOffset + ref++)) {
                             /*
                              * goto literal;
                              */
-                            output[outOffset + op++] = input[inOffset + anchor++];
+                            output.setByte(outOffset + op++, input.getByte(inOffset + anchor++));
                             ip = anchor;
                             copy++;
                             if (copy == MAX_COPY) {
                                 copy = 0;
-                                output[outOffset + op++] = MAX_COPY - 1;
+                                output.setByte(outOffset + op++, MAX_COPY - 1);
                             }
                             continue;
                         }
@@ -244,47 +246,29 @@ final class FastLz {
             if (distance == 0) {
                 /* zero distance means a run */
                 //flzuint8 x = ip[-1];
-                byte x = input[inOffset + ip - 1];
+                byte x = input.getByte(inOffset + ip - 1);
                 while (ip < ipBound) {
-                    if (input[inOffset + ref++] != x) {
+                    if (input.getByte(inOffset + ref++) != x) {
                         break;
                     } else {
                         ip++;
                     }
                 }
             } else {
-                for (;;) {
-                    /* safe because the outer check against ip limit */
-                    if (input[inOffset + ref++] != input[inOffset + ip++]) {
+                /* safe because the outer check against ip limit */
+                boolean missMatch = false;
+                for (int i = 0; i < 8; i++) {
+                    if (input.getByte(inOffset + ref++) != input.getByte(inOffset + ip++)) {
+                        missMatch = true;
                         break;
                     }
-                    if (input[inOffset + ref++] != input[inOffset + ip++]) {
-                        break;
-                    }
-                    if (input[inOffset + ref++] != input[inOffset + ip++]) {
-                        break;
-                    }
-                    if (input[inOffset + ref++] != input[inOffset + ip++]) {
-                        break;
-                    }
-                    if (input[inOffset + ref++] != input[inOffset + ip++]) {
-                        break;
-                    }
-                    if (input[inOffset + ref++] != input[inOffset + ip++]) {
-                        break;
-                    }
-                    if (input[inOffset + ref++] != input[inOffset + ip++]) {
-                        break;
-                    }
-                    if (input[inOffset + ref++] != input[inOffset + ip++]) {
-                        break;
-                    }
+                }
+                if (!missMatch) {
                     while (ip < ipBound) {
-                        if (input[inOffset + ref++] != input[inOffset + ip++]) {
+                        if (input.getByte(inOffset + ref++) != input.getByte(inOffset + ip++)) {
                             break;
                         }
                     }
-                    break;
                 }
             }
 
@@ -292,7 +276,7 @@ final class FastLz {
             if (copy != 0) {
                 /* copy is biased, '0' means 1 byte copy */
                 // *(op-copy-1) = copy-1;
-                output[outOffset + op - copy - 1] = (byte) (copy - 1);
+                output.setByte(outOffset + op - copy - 1, (byte) (copy - 1));
             } else {
                 /* back, to overwrite the copy count */
                 op--;
@@ -309,53 +293,53 @@ final class FastLz {
             if (level == LEVEL_2) {
                 if (distance < MAX_DISTANCE) {
                     if (len < 7) {
-                        output[outOffset + op++] = (byte) ((len << 5) + (distance >>> 8));
-                        output[outOffset + op++] = (byte) (distance & 255);
+                        output.setByte(outOffset + op++, (byte) ((len << 5) + (distance >>> 8)));
+                        output.setByte(outOffset + op++, (byte) (distance & 255));
                     } else {
-                        output[outOffset + op++] = (byte) ((7 << 5) + (distance >>> 8));
+                        output.setByte(outOffset + op++, (byte) ((7 << 5) + (distance >>> 8)));
                         for (len -= 7; len >= 255; len -= 255) {
-                            output[outOffset + op++] = (byte) 255;
+                            output.setByte(outOffset + op++, (byte) 255);
                         }
-                        output[outOffset + op++] = (byte) len;
-                        output[outOffset + op++] = (byte) (distance & 255);
+                        output.setByte(outOffset + op++, (byte) len);
+                        output.setByte(outOffset + op++, (byte) (distance & 255));
                     }
                 } else {
                     /* far away, but not yet in the another galaxy... */
                     if (len < 7) {
                         distance -= MAX_DISTANCE;
-                        output[outOffset + op++] = (byte) ((len << 5) + 31);
-                        output[outOffset + op++] = (byte) 255;
-                        output[outOffset + op++] = (byte) (distance >>> 8);
-                        output[outOffset + op++] = (byte) (distance & 255);
+                        output.setByte(outOffset + op++, (byte) ((len << 5) + 31));
+                        output.setByte(outOffset + op++, (byte) 255);
+                        output.setByte(outOffset + op++, (byte) (distance >>> 8));
+                        output.setByte(outOffset + op++, (byte) (distance & 255));
                     } else {
                         distance -= MAX_DISTANCE;
-                        output[outOffset + op++] = (byte) ((7 << 5) + 31);
+                        output.setByte(outOffset + op++, (byte) ((7 << 5) + 31));
                         for (len -= 7; len >= 255; len -= 255) {
-                            output[outOffset + op++] = (byte) 255;
+                            output.setByte(outOffset + op++, (byte) 255);
                         }
-                        output[outOffset + op++] = (byte) len;
-                        output[outOffset + op++] = (byte) 255;
-                        output[outOffset + op++] = (byte) (distance >>> 8);
-                        output[outOffset + op++] = (byte) (distance & 255);
+                        output.setByte(outOffset + op++, (byte) len);
+                        output.setByte(outOffset + op++, (byte) 255);
+                        output.setByte(outOffset + op++, (byte) (distance >>> 8));
+                        output.setByte(outOffset + op++, (byte) (distance & 255));
                     }
                 }
             } else {
                 if (len > MAX_LEN - 2) {
                     while (len > MAX_LEN - 2) {
-                        output[outOffset + op++] = (byte) ((7 << 5) + (distance >>> 8));
-                        output[outOffset + op++] = (byte) (MAX_LEN - 2 - 7 - 2);
-                        output[outOffset + op++] = (byte) (distance & 255);
+                        output.setByte(outOffset + op++, (byte) ((7 << 5) + (distance >>> 8)));
+                        output.setByte(outOffset + op++, (byte) (MAX_LEN - 2 - 7 - 2));
+                        output.setByte(outOffset + op++, (byte) (distance & 255));
                         len -= MAX_LEN - 2;
                     }
                 }
 
                 if (len < 7) {
-                    output[outOffset + op++] = (byte) ((len << 5) + (distance >>> 8));
-                    output[outOffset + op++] = (byte) (distance & 255);
+                    output.setByte(outOffset + op++, (byte) ((len << 5) + (distance >>> 8)));
+                    output.setByte(outOffset + op++, (byte) (distance & 255));
                 } else {
-                    output[outOffset + op++] = (byte) ((7 << 5) + (distance >>> 8));
-                    output[outOffset + op++] = (byte) (len - 7);
-                    output[outOffset + op++] = (byte) (distance & 255);
+                    output.setByte(outOffset + op++, (byte) ((7 << 5) + (distance >>> 8)));
+                    output.setByte(outOffset + op++, (byte) (len - 7));
+                    output.setByte(outOffset + op++, (byte) (distance & 255));
                 }
             }
 
@@ -369,7 +353,7 @@ final class FastLz {
             htab[hval] = ip++;
 
             /* assuming literal copy */
-            output[outOffset + op++] = MAX_COPY - 1;
+            output.setByte(outOffset + op++, MAX_COPY - 1);
 
             continue;
 
@@ -390,25 +374,25 @@ final class FastLz {
         /* left-over as literal copy */
         ipBound++;
         while (ip <= ipBound) {
-            output[outOffset + op++] = input[inOffset + ip++];
+            output.setByte(outOffset + op++, input.getByte(inOffset + ip++));
             copy++;
             if (copy == MAX_COPY) {
                 copy = 0;
-                output[outOffset + op++] = MAX_COPY - 1;
+                output.setByte(outOffset + op++, MAX_COPY - 1);
             }
         }
 
         /* if we have copied something, adjust the copy length */
         if (copy != 0) {
             //*(op-copy-1) = copy-1;
-            output[outOffset + op - copy - 1] = (byte) (copy - 1);
+            output.setByte(outOffset + op - copy - 1, (byte) (copy - 1));
         } else {
             op--;
         }
 
         if (level == LEVEL_2) {
             /* marker for fastlz2 */
-            output[outOffset] |= 1 << 5;
+            output.setByte(outOffset, output.getByte(outOffset) | 1 << 5);
         }
 
         return op;
@@ -422,10 +406,10 @@ final class FastLz {
      * Decompression is memory safe and guaranteed not to write the output buffer
      * more than what is specified in outLength.
      */
-    static int decompress(final byte[] input, final int inOffset, final int inLength,
-                          final byte[] output, final int outOffset, final int outLength) {
+    static int decompress(final ByteBuf input, final int inOffset, final int inLength,
+                          final ByteBuf output, final int outOffset, final int outLength) {
         //int level = ((*(const flzuint8*)input) >> 5) + 1;
-        final int level = (input[inOffset] >> 5) + 1;
+        final int level = (input.getByte(inOffset) >> 5) + 1;
         if (level != LEVEL_1 && level != LEVEL_2) {
             throw new DecompressionException(String.format(
                     "invalid level: %d (expected: %d or %d)", level, LEVEL_1, LEVEL_2
@@ -437,7 +421,7 @@ final class FastLz {
         // flzuint8* op = (flzuint8*) output;
         int op = 0;
         // flzuint32 ctrl = (*ip++) & 31;
-        long ctrl = input[inOffset + ip++] & 31;
+        long ctrl = input.getByte(inOffset + ip++) & 31;
 
         int loop = 1;
         do {
@@ -457,27 +441,27 @@ final class FastLz {
                 if (len == 6) {
                     if (level == LEVEL_1) {
                         // len += *ip++;
-                        len += input[inOffset + ip++] & 0xFF;
+                        len += input.getUnsignedByte(inOffset + ip++);
                     } else {
                         do {
-                            code = input[inOffset + ip++] & 0xFF;
+                            code = input.getUnsignedByte(inOffset + ip++);
                             len += code;
                         } while (code == 255);
                     }
                 }
                 if (level == LEVEL_1) {
                     //  ref -= *ip++;
-                    ref -= input[inOffset + ip++] & 0xFF;
+                    ref -= input.getUnsignedByte(inOffset + ip++);
                 } else {
-                    code = input[inOffset + ip++] & 0xFF;
+                    code = input.getUnsignedByte(inOffset + ip++);
                     ref -= code;
 
                     /* match from 16-bit distance */
                     // if(FASTLZ_UNEXPECT_CONDITIONAL(code==255))
                     // if(FASTLZ_EXPECT_CONDITIONAL(ofs==(31 << 8)))
                     if (code == 255 && ofs == 31 << 8) {
-                        ofs = (input[inOffset + ip++] & 0xFF) << 8;
-                        ofs += input[inOffset + ip++] & 0xFF;
+                        ofs = input.getUnsignedByte(inOffset + ip++) << 8;
+                        ofs += input.getUnsignedByte(inOffset + ip++);
 
                         ref = (int) (op - ofs - MAX_DISTANCE);
                     }
@@ -496,7 +480,7 @@ final class FastLz {
                 }
 
                 if (ip < inLength) {
-                    ctrl = input[inOffset + ip++] & 0xFF;
+                    ctrl = input.getUnsignedByte(inOffset + ip++);
                 } else {
                     loop = 0;
                 }
@@ -504,12 +488,12 @@ final class FastLz {
                 if (ref == op) {
                     /* optimize copy for a run */
                     // flzuint8 b = ref[-1];
-                    byte b = output[outOffset + ref - 1];
-                    output[outOffset + op++] = b;
-                    output[outOffset + op++] = b;
-                    output[outOffset + op++] = b;
+                    byte b = output.getByte(outOffset + ref - 1);
+                    output.setByte(outOffset + op++, b);
+                    output.setByte(outOffset + op++, b);
+                    output.setByte(outOffset + op++, b);
                     while (len != 0) {
-                        output[outOffset + op++] = b;
+                        output.setByte(outOffset + op++, b);
                         --len;
                     }
                 } else {
@@ -517,12 +501,12 @@ final class FastLz {
                     ref--;
 
                     // *op++ = *ref++;
-                    output[outOffset + op++] = output[outOffset + ref++];
-                    output[outOffset + op++] = output[outOffset + ref++];
-                    output[outOffset + op++] = output[outOffset + ref++];
+                    output.setByte(outOffset + op++, output.getByte(outOffset + ref++));
+                    output.setByte(outOffset + op++, output.getByte(outOffset + ref++));
+                    output.setByte(outOffset + op++, output.getByte(outOffset + ref++));
 
                     while (len != 0) {
-                        output[outOffset + op++] = output[outOffset + ref++];
+                        output.setByte(outOffset + op++, output.getByte(outOffset + ref++));
                         --len;
                     }
                 }
@@ -537,17 +521,17 @@ final class FastLz {
                 }
 
                 //*op++ = *ip++;
-                output[outOffset + op++] = input[inOffset + ip++];
+                output.setByte(outOffset + op++, input.getByte(inOffset + ip++));
 
                 for (--ctrl; ctrl != 0; ctrl--) {
                     // *op++ = *ip++;
-                    output[outOffset + op++] = input[inOffset + ip++];
+                    output.setByte(outOffset + op++, input.getByte(inOffset + ip++));
                 }
 
                 loop = ip < inLength ? 1 : 0;
                 if (loop != 0) {
                     //  ctrl = *ip++;
-                    ctrl = input[inOffset + ip++] & 0xFF;
+                    ctrl = input.getUnsignedByte(inOffset + ip++);
                 }
             }
 
@@ -558,18 +542,18 @@ final class FastLz {
         return op;
     }
 
-    private static int hashFunction(byte[] p, int offset) {
+    private static int hashFunction(ByteBuf p, int offset) {
         int v = readU16(p, offset);
         v ^= readU16(p, offset + 1) ^ v >> 16 - HASH_LOG;
         v &= HASH_MASK;
         return v;
     }
 
-    private static int readU16(byte[] data, int offset) {
-        if (offset + 1 >= data.length) {
-            return data[offset] & 0xff;
+    private static int readU16(ByteBuf data, int offset) {
+        if (offset + 1 >= data.readableBytes()) {
+            return data.getUnsignedByte(offset);
         }
-        return  (data[offset + 1] & 0xff) << 8 | data[offset] & 0xff;
+        return data.getUnsignedByte(offset + 1) << 8 | data.getUnsignedByte(offset);
     }
 
     private FastLz() { }

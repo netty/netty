@@ -49,8 +49,15 @@ public final class HttpUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     public static boolean isOriginForm(URI uri) {
-        return uri.getScheme() == null && uri.getSchemeSpecificPart() == null &&
-               uri.getHost() == null && uri.getAuthority() == null;
+        return isOriginForm(uri.toString());
+    }
+
+    /**
+     * Determine if a string uri is in origin-form according to
+     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     */
+    public static boolean isOriginForm(String uri) {
+        return uri.startsWith("/");
     }
 
     /**
@@ -58,10 +65,15 @@ public final class HttpUtil {
      * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     public static boolean isAsteriskForm(URI uri) {
-        return "*".equals(uri.getPath()) &&
-                uri.getScheme() == null && uri.getSchemeSpecificPart() == null &&
-                uri.getHost() == null && uri.getAuthority() == null && uri.getQuery() == null &&
-                uri.getFragment() == null;
+        return isAsteriskForm(uri.toString());
+    }
+
+    /**
+     * Determine if a string uri is in asterisk-form according to
+     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     */
+    public static boolean isAsteriskForm(String uri) {
+        return "*".equals(uri);
     }
 
     /**
@@ -196,8 +208,9 @@ public final class HttpUtil {
      * Get an {@code int} representation of {@link #getContentLength(HttpMessage, long)}.
      *
      * @return the content length or {@code defaultValue} if this message does
-     *         not have the {@code "Content-Length"} header or its value is not
-     *         a number. Not to exceed the boundaries of integer.
+     *         not have the {@code "Content-Length"} header.
+     *
+     * @throws NumberFormatException if the {@code "Content-Length"} header does not parse as an int
      */
     public static int getContentLength(HttpMessage message, int defaultValue) {
         return (int) Math.min(Integer.MAX_VALUE, getContentLength(message, (long) defaultValue));

@@ -24,7 +24,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static io.netty.handler.codec.stomp.StompTestConstants.*;
+import java.nio.charset.StandardCharsets;
+
+import static io.netty.handler.codec.stomp.StompTestConstants.SEND_FRAME_UTF8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -97,6 +99,65 @@ public class StompSubframeEncoderTest {
         assertNotNull(stompBuffer);
         assertNull(channel.readOutbound());
         assertEquals("CONNECTED\nversion:1.2\n\n\0", stompBuffer.toString(CharsetUtil.UTF_8));
+        assertTrue(stompBuffer.release());
+    }
+
+    @Test
+    void testEscapeStompHeaders() {
+        StompFrame messageFrame = new DefaultStompFrame(StompCommand.MESSAGE);
+        messageFrame.headers()
+                  .add(StompHeaders.MESSAGE_ID, "100")
+                  .add(StompHeaders.SUBSCRIPTION, "1")
+                  .add(StompHeaders.DESTINATION, "/queue/a:")
+                  .add("header\\\r\n:Name", "header\\\r\n:Value")
+                  .add("header_\\_\r_\n_:_Name", "header_\\_\r_\n_:_Value")
+                  .add("headerName:", ":headerValue");
+
+        assertTrue(channel.writeOutbound(messageFrame));
+
+        ByteBuf stompBuffer = channel.readOutbound();
+        assertNotNull(stompBuffer);
+        assertNull(channel.readOutbound());
+
+        assertEquals(StompTestConstants.ESCAPED_MESSAGE_FRAME, stompBuffer.toString(StandardCharsets.UTF_8));
+        assertTrue(stompBuffer.release());
+    }
+
+    @Test
+    void testNotEscapeStompHeadersForConnectCommand() {
+        String expectedStompFrame = "CONNECT\n"
+                + "colonHeaderName-::colonHeaderValue-:\n"
+                + '\n' + '\0';
+        StompFrame connectFrame = new DefaultStompFrame(StompCommand.CONNECT);
+        connectFrame.headers()
+                  .add("colonHeaderName-:", "colonHeaderValue-:");
+
+        assertTrue(channel.writeOutbound(connectFrame));
+
+        ByteBuf stompBuffer = channel.readOutbound();
+        assertNotNull(stompBuffer);
+        assertNull(channel.readOutbound());
+
+        assertEquals(expectedStompFrame, stompBuffer.toString(StandardCharsets.UTF_8));
+        assertTrue(stompBuffer.release());
+    }
+
+    @Test
+    void testNotEscapeStompHeadersForConnectedCommand() {
+        String expectedStompFrame = "CONNECTED\n"
+                                    + "colonHeaderName-::colonHeaderValue-:\n"
+                                    + '\n' + '\0';
+        StompFrame connectedFrame = new DefaultStompFrame(StompCommand.CONNECTED);
+        connectedFrame.headers()
+                    .add("colonHeaderName-:", "colonHeaderValue-:");
+
+        assertTrue(channel.writeOutbound(connectedFrame));
+
+        ByteBuf stompBuffer = channel.readOutbound();
+        assertNotNull(stompBuffer);
+        assertNull(channel.readOutbound());
+
+        assertEquals(expectedStompFrame, stompBuffer.toString(StandardCharsets.UTF_8));
         assertTrue(stompBuffer.release());
     }
 }

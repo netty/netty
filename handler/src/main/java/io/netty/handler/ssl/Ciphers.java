@@ -15,10 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.ObjectUtil;
-
-import java.util.Arrays;
-
 /**
  * Cipher suites
  */

@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.67.Final-SNAPSHOT</version>
+    <version>4.1.97.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-example</artifactId>
@@ -30,7 +30,8 @@
   <name>Netty/Example</name>
 
   <properties>
-    <skipJapicmp>true</skipJapicmp>
+    <japicmp.skip>true</japicmp.skip>
+    <javaModuleName>io.netty.example</javaModuleName>
   </properties>
   <dependencies>
     <dependency>
@@ -158,7 +159,58 @@
       <artifactId>logback-classic</artifactId>
       <scope>runtime</scope>
     </dependency>
-    
+
+    <!-- brotli4j is needed for content compression -->
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>brotli4j</artifactId>
+      <version>${brotli4j.version}</version>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-linux-x86_64</artifactId>
+      <version>${brotli4j.version}</version>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-linux-aarch64</artifactId>
+      <version>${brotli4j.version}</version>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-linux-armv7</artifactId>
+      <version>${brotli4j.version}</version>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-osx-x86_64</artifactId>
+      <version>${brotli4j.version}</version>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-osx-aarch64</artifactId>
+      <version>${brotli4j.version}</version>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-windows-x86_64</artifactId>
+      <version>${brotli4j.version}</version>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+
     <!-- Needed for OCSP -->
     <dependency>
       <groupId>org.bouncycastle</groupId>

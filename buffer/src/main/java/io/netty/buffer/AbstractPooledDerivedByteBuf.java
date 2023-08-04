@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.internal.ObjectPool.Handle;
 
 import java.nio.ByteBuffer;
@@ -26,7 +27,7 @@ import java.nio.ByteOrder;
  */
 abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByteBuf {
 
-    private final Handle<AbstractPooledDerivedByteBuf> recyclerHandle;
+    private final EnhancedHandle<AbstractPooledDerivedByteBuf> recyclerHandle;
     private AbstractByteBuf rootParent;
     /**
      * Deallocations of a pooled derived buffer should always propagate through the entire chain of derived buffers.
@@ -39,7 +40,7 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     @SuppressWarnings("unchecked")
     AbstractPooledDerivedByteBuf(Handle<? extends AbstractPooledDerivedByteBuf> recyclerHandle) {
         super(0);
-        this.recyclerHandle = (Handle<AbstractPooledDerivedByteBuf>) recyclerHandle;
+        this.recyclerHandle = (EnhancedHandle<AbstractPooledDerivedByteBuf>) recyclerHandle;
     }
 
     // Called from within SimpleLeakAwareByteBuf and AdvancedLeakAwareByteBuf.
@@ -82,7 +83,7 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
         // otherwise it is possible that the same AbstractPooledDerivedByteBuf is again obtained and init(...) is
         // called before we actually have a chance to call release(). This leads to call release() on the wrong parent.
         ByteBuf parent = this.parent;
-        recyclerHandle.recycle(this);
+        recyclerHandle.unguardedRecycle(this);
         parent.release();
     }
 

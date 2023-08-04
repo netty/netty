@@ -32,7 +32,18 @@ import java.io.StreamCorruptedException;
  * compatible with the standard {@link ObjectOutputStream}.  Please use
  * {@link ObjectEncoder} or {@link ObjectEncoderOutputStream} to ensure the
  * interoperability with this decoder.
+ * <p>
+ * <strong>Security:</strong> serialization can be a security liability,
+ * and should not be used without defining a list of classes that are
+ * allowed to be desirialized. Such a list can be specified with the
+ * <tt>jdk.serialFilter</tt> system property, for instance.
+ * See the <a href="https://docs.oracle.com/en/java/javase/17/core/serialization-filtering1.html">
+ * serialization filtering</a> article for more information.
+ *
+ * @deprecated This class has been deprecated with no replacement,
+ * because serialization can be a security liability
  */
+@Deprecated
 public class ObjectDecoder extends LengthFieldBasedFrameDecoder {
 
     private final ClassResolver classResolver;

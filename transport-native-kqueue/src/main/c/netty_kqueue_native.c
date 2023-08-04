@@ -24,6 +24,7 @@
 #include <time.h>
 #include <sys/event.h>
 #include <sys/socket.h>
+#include <sys/sysctl.h>
 #include <sys/time.h>
 
 #include "netty_kqueue_bsdsocket.h"
@@ -60,6 +61,12 @@
 #ifndef NOTE_DISCONNECTED
 #define NOTE_DISCONNECTED 0x00001000
 #endif /* NOTE_DISCONNECTED */
+#ifndef CONNECT_RESUME_ON_READ_WRITE
+#define CONNECT_RESUME_ON_READ_WRITE 0x1
+#endif /* CONNECT_RESUME_ON_READ_WRITE */
+#ifndef CONNECT_DATA_IDEMPOTENT
+#define CONNECT_DATA_IDEMPOTENT 0x2
+#endif /* CONNECT_DATA_IDEMPOTENT */
 #else
 #ifndef EVFILT_SOCK
 #define EVFILT_SOCK 0 // Disabled
@@ -73,6 +80,12 @@
 #ifndef NOTE_DISCONNECTED
 #define NOTE_DISCONNECTED 0
 #endif /* NOTE_DISCONNECTED */
+#ifndef CONNECT_RESUME_ON_READ_WRITE
+#define CONNECT_RESUME_ON_READ_WRITE 0
+#endif /* CONNECT_RESUME_ON_READ_WRITE */
+#ifndef CONNECT_DATA_IDEMPOTENT
+#define CONNECT_DATA_IDEMPOTENT 0
+#endif /* CONNECT_DATA_IDEMPOTENT */
 #endif /* __APPLE__ */
 
 static clockid_t waitClockId = 0; // initialized by netty_unix_util_initialize_wait_clock
@@ -247,6 +260,70 @@ static jshort netty_kqueue_native_noteDisconnected(JNIEnv* env, jclass clazz) {
    return NOTE_DISCONNECTED;
 }
 
+static jint netty_kqueue_bsdsocket_connectResumeOnReadWrite(JNIEnv *env, jclass clazz) {
+    return CONNECT_RESUME_ON_READ_WRITE;
+}
+
+static jint netty_kqueue_bsdsocket_connectDataIdempotent(JNIEnv *env, jclass clazz) {
+    return CONNECT_DATA_IDEMPOTENT;
+}
+
+static jint netty_kqueue_bsdsocket_fastOpenClient(JNIEnv *env, jclass clazz) {
+#ifdef __APPLE__
+    unsigned int value = 0;
+    size_t len = sizeof(value);
+    if (sysctlbyname("net.inet.tcp.fastopen", &value, &len, NULL, 0) != 0) {
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
+    }
+    if ((value & 2) == 2) {
+        return 1;
+    }
+    return 0;
+#else
+    unsigned int value = 0;
+    size_t len = sizeof(value);
+    if (sysctlbyname("net.inet.tcp.fastopen.client_enable", &value, &len, NULL, 0) != 0) {
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
+    }
+    if (value) {
+        return 1;
+    }
+    return 0;
+#endif // __APPLE__
+}
+
+static jint netty_kqueue_bsdsocket_fastOpenServer(JNIEnv *env, jclass clazz) {
+#ifdef __APPLE__
+    unsigned int value = 0;
+    size_t len = sizeof(value);
+    if (sysctlbyname("net.inet.tcp.fastopen", &value, &len, NULL, 0) != 0) {
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
+    }
+    if ((value & 1) == 1) {
+        return 1;
+    }
+    return 0;
+#else
+    unsigned int value = 0;
+    size_t len = sizeof(value);
+    if (sysctlbyname("net.inet.tcp.fastopen.server_enable", &value, &len, NULL, 0) != 0) {
+        int err = errno;
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "sysctlbyname failed", err);
+        return -err;
+    }
+    if (value) {
+        return 1;
+    }
+    return 0;
+#endif // __APPLE__
+}
+
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "evfiltRead", "()S", (void *) netty_kqueue_native_evfiltRead },
@@ -262,7 +339,11 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "evError", "()S", (void *) netty_kqueue_native_evError },
   { "noteReadClosed", "()S", (void *) netty_kqueue_native_noteReadClosed },
   { "noteConnReset", "()S", (void *) netty_kqueue_native_noteConnReset },
-  { "noteDisconnected", "()S", (void *) netty_kqueue_native_noteDisconnected }
+  { "noteDisconnected", "()S", (void *) netty_kqueue_native_noteDisconnected },
+  { "connectResumeOnReadWrite", "()I", (void *) netty_kqueue_bsdsocket_connectResumeOnReadWrite },
+  { "connectDataIdempotent", "()I", (void *) netty_kqueue_bsdsocket_connectDataIdempotent },
+  { "fastOpenClient", "()I", (void *) netty_kqueue_bsdsocket_fastOpenClient },
+  { "fastOpenServer", "()I", (void *) netty_kqueue_bsdsocket_fastOpenServer }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
@@ -323,9 +404,7 @@ static jint netty_kqueue_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefi
         goto error;
     }
 
-    if (packagePrefix != NULL) {
-        staticPackagePrefix = strdup(packagePrefix);
-    }
+    staticPackagePrefix = packagePrefix;
     return NETTY_JNI_UTIL_JNI_VERSION;
 error:
    if (staticallyRegistered == 1) {

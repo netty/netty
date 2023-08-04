@@ -17,7 +17,7 @@ name: Build project
 
 on:
   push:
-    branches: [ "4.1"]
+    branches: [ "main"]
 
   schedule:
     - cron: '30 1 * * 1'  # At 01:30 on Monday, every Monday.
@@ -27,6 +27,9 @@ on:
 
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -40,11 +43,11 @@ jobs:
 
     name: ${{ matrix.setup }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
@@ -70,8 +73,17 @@ jobs:
       - name: Checking for test failures
         run: ./.github/scripts/check_build_result.sh build.output
 
-      - uses: actions/upload-artifact@v2
+      - name: Checking bom dependency versions
+        run: ./.github/scripts/check_bom_dependencies.sh
+
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
+
+      - uses: actions/upload-artifact@v3
         if: ${{ failure() }}
         with:
           name: target
-          path: "**/target/"
+          path: |
+            **/target/surefire-reports/
+            **/hs_err*.log

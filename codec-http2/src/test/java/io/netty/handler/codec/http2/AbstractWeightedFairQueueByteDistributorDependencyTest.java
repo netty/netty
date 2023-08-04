@@ -24,7 +24,7 @@ import org.mockito.stubbing.Answer;
 abstract class AbstractWeightedFairQueueByteDistributorDependencyTest {
     Http2Connection connection;
     WeightedFairQueueByteDistributor distributor;
-    private IntObjectMap<TestStreamByteDistributorStreamState> stateMap =
+    private final IntObjectMap<TestStreamByteDistributorStreamState> stateMap =
             new IntObjectHashMap<TestStreamByteDistributorStreamState>();
 
     @Mock

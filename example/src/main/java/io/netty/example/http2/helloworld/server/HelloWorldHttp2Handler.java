@@ -42,7 +42,8 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
  */
 public final class HelloWorldHttp2Handler extends Http2ConnectionHandler implements Http2FrameListener {
 
-    static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(copiedBuffer("Hello World", CharsetUtil.UTF_8));
+    static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(
+            copiedBuffer("Hello World", CharsetUtil.UTF_8)).asReadOnly();
 
     HelloWorldHttp2Handler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                            Http2Settings initialSettings) {

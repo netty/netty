@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
-import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -290,7 +289,7 @@ public class HttpObjectAggregatorTest {
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
 
-        assertThrows(TooLongFrameException.class, new Executable() {
+        assertThrows(TooLongHttpContentException.class, new Executable() {
             @Override
             public void execute() {
                 embedder.writeInbound(chunk2);

@@ -36,9 +36,8 @@ final class CompressionUtil {
         }
     }
 
-    static ByteBuffer safeNioBuffer(ByteBuf buffer) {
-        return buffer.nioBufferCount() == 1 ? buffer.internalNioBuffer(buffer.readerIndex(), buffer.readableBytes())
-                : buffer.nioBuffer();
+    static ByteBuffer safeReadableNioBuffer(ByteBuf buffer) {
+        return safeNioBuffer(buffer, buffer.readerIndex(), buffer.readableBytes());
     }
 
     static ByteBuffer safeNioBuffer(ByteBuf buffer, int index, int length) {

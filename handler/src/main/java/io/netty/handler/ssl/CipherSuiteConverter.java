@@ -17,6 +17,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -34,7 +35,8 @@ import static java.util.Collections.singletonMap;
  *
  * @see <a href="https://en.wikipedia.org/wiki/Cipher_suite">Wikipedia page about cipher suite</a>
  */
-final class CipherSuiteConverter {
+@UnstableApi
+public final class CipherSuiteConverter {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CipherSuiteConverter.class);
 
@@ -150,7 +152,7 @@ final class CipherSuiteConverter {
      *
      * @return {@code null} if the conversion has failed
      */
-    static String toOpenSsl(String javaCipherSuite, boolean boringSSL) {
+    public static String toOpenSsl(String javaCipherSuite, boolean boringSSL) {
         String converted = j2o.get(javaCipherSuite);
         if (converted != null) {
             return converted;
@@ -279,7 +281,7 @@ final class CipherSuiteConverter {
      * @param protocol The cryptographic protocol (i.e. SSL, TLS, ...).
      * @return The translated cipher suite name according to java conventions. This will not be {@code null}.
      */
-    static String toJava(String openSslCipherSuite, String protocol) {
+    public static String toJava(String openSslCipherSuite, String protocol) {
         Map<String, String> p2j = o2j.get(openSslCipherSuite);
         if (p2j == null) {
             p2j = cacheFromOpenSsl(openSslCipherSuite);

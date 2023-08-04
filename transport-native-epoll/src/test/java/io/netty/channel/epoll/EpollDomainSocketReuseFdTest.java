@@ -26,7 +26,7 @@ import java.util.List;
 public class EpollDomainSocketReuseFdTest extends AbstractSocketReuseFdTest {
     @Override
     protected SocketAddress newSocketAddress() {
-        return EpollSocketTestPermutation.newSocketAddress();
+        return EpollSocketTestPermutation.newDomainSocketAddress();
     }
 
     @Override

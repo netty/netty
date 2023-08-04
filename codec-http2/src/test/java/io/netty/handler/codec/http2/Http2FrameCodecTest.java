@@ -120,7 +120,7 @@ public class Http2FrameCodecTest {
     }
 
     private void setUp(Http2FrameCodecBuilder frameCodecBuilder, Http2Settings initialRemoteSettings) throws Exception {
-        /**
+        /*
          * Some tests call this method twice. Once with JUnit's @Before and once directly to pass special settings.
          * This call ensures that in case of two consecutive calls to setUp(), the previous channel is shutdown and
          * ByteBufs are released correctly.
@@ -220,7 +220,7 @@ public class Http2FrameCodecTest {
         Http2Connection conn = new DefaultHttp2Connection(true);
         Http2ConnectionEncoder enc = new DefaultHttp2ConnectionEncoder(conn, new DefaultHttp2FrameWriter());
         Http2ConnectionDecoder dec = new DefaultHttp2ConnectionDecoder(conn, enc, new DefaultHttp2FrameReader());
-        Http2FrameCodec codec = new Http2FrameCodec(enc, dec, new Http2Settings(), false);
+        Http2FrameCodec codec = new Http2FrameCodec(enc, dec, new Http2Settings(), false, true);
         EmbeddedChannel em = new EmbeddedChannel(codec);
 
         // We call #consumeBytes on a stream id which has not been seen yet to emulate the case

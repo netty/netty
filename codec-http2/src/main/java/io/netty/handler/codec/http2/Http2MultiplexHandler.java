@@ -25,15 +25,21 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
-import javax.net.ssl.SSLException;
 import java.util.ArrayDeque;
 import java.util.Queue;
+import javax.net.ssl.SSLException;
 
+import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR;
+import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR;
+import static io.netty.handler.codec.http2.AbstractHttp2StreamChannel.SSL_CLOSE_COMPLETION_EVENT_VISITOR;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
@@ -256,6 +262,13 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             }
             return;
         }
+        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+            forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR);
+        } else if (evt == ChannelOutputShutdownEvent.INSTANCE) {
+            forEachActiveStream(CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR);
+        } else if (evt == SslCloseCompletionEvent.SUCCESS) {
+            forEachActiveStream(SSL_CLOSE_COMPLETION_EVENT_VISITOR);
+        }
         ctx.fireUserEventTriggered(evt);
     }
 
@@ -274,22 +287,34 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             try {
                 childChannel.pipeline().fireExceptionCaught(cause.getCause());
             } finally {
-                childChannel.unsafe().closeForcibly();
+                // Close with the correct error that causes this stream exception.
+                // See https://github.com/netty/netty/issues/13235#issuecomment-1441994672
+                childChannel.closeWithError(exception.error());
             }
             return;
         }
+        if (cause instanceof Http2MultiplexActiveStreamsException) {
+            // Unwrap the cause that was used to create it and fire it for all the active streams.
+            fireExceptionCaughtForActiveStream(cause.getCause());
+            return;
+        }
+
         if (cause.getCause() instanceof SSLException) {
-            forEachActiveStream(new Http2FrameStreamVisitor() {
-                @Override
-                public boolean visit(Http2FrameStream stream) {
-                    AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
-                            ((DefaultHttp2FrameStream) stream).attachment;
-                    childChannel.pipeline().fireExceptionCaught(cause);
-                    return true;
-                }
-            });
+            fireExceptionCaughtForActiveStream(cause);
         }
         ctx.fireExceptionCaught(cause);
+    }
+
+    private void fireExceptionCaughtForActiveStream(final Throwable cause) throws Http2Exception {
+        forEachActiveStream(new Http2FrameStreamVisitor() {
+            @Override
+            public boolean visit(Http2FrameStream stream) {
+                AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                        ((DefaultHttp2FrameStream) stream).attachment;
+                childChannel.pipeline().fireExceptionCaught(cause);
+                return true;
+            }
+        });
     }
 
     private static boolean isServer(ChannelHandlerContext ctx) {

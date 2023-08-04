@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.CharsetUtil;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIMatcher;
@@ -54,13 +55,22 @@ final class Java8SslUtils {
         sslParameters.setServerNames(getSniHostNames(names));
     }
 
+    static boolean isValidHostNameForSNI(String hostname) {
+        try {
+            new SNIHostName(hostname);
+            return true;
+        } catch (IllegalArgumentException illegal) {
+            return false;
+        }
+    }
+
     static List getSniHostNames(List<String> names) {
         if (names == null || names.isEmpty()) {
             return Collections.emptyList();
         }
         List<SNIServerName> sniServerNames = new ArrayList<SNIServerName>(names.size());
         for (String name: names) {
-            sniServerNames.add(new SNIHostName(name));
+            sniServerNames.add(new SNIHostName(name.getBytes(CharsetUtil.UTF_8)));
         }
         return sniServerNames;
     }

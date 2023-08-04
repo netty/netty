@@ -22,8 +22,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -156,7 +154,7 @@ public abstract class AbstractIntegrationTest {
     protected void testIdentity(final byte[] data, boolean heapBuffer) {
         initChannels();
         final ByteBuf in = heapBuffer? Unpooled.wrappedBuffer(data) :
-                Unpooled.directBuffer(data.length).setBytes(0, data);
+                Unpooled.directBuffer(data.length).writeBytes(data);
         final CompositeByteBuf compressed = Unpooled.compositeBuffer();
         final CompositeByteBuf decompressed = Unpooled.compositeBuffer();
 

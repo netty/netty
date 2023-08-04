@@ -38,7 +38,8 @@ import static io.netty.util.internal.StringUtil.unescapeCsvFields;
  */
 public class CombinedHttpHeaders extends DefaultHttpHeaders {
     public CombinedHttpHeaders(boolean validate) {
-        super(new CombinedHttpHeadersImpl(CASE_INSENSITIVE_HASHER, valueConverter(validate), nameValidator(validate)));
+        super(new CombinedHttpHeadersImpl(CASE_INSENSITIVE_HASHER, valueConverter(), nameValidator(validate),
+                valueValidator(validate)));
     }
 
     @Override
@@ -59,8 +60,15 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
             if (objectEscaper == null) {
                 objectEscaper = new CsvValueEscaper<Object>() {
                     @Override
-                    public CharSequence escape(Object value) {
-                        return StringUtil.escapeCsv(valueConverter().convertObject(value), true);
+                    public CharSequence escape(CharSequence name, Object value) {
+                        CharSequence converted;
+                        try {
+                            converted = valueConverter().convertObject(value);
+                        } catch (IllegalArgumentException e) {
+                            throw new IllegalArgumentException(
+                                    "Failed to convert object value for header '" + name + '\'', e);
+                        }
+                        return StringUtil.escapeCsv(converted, true);
                     }
                 };
             }
@@ -71,7 +79,7 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
             if (charSequenceEscaper == null) {
                 charSequenceEscaper = new CsvValueEscaper<CharSequence>() {
                     @Override
-                    public CharSequence escape(CharSequence value) {
+                    public CharSequence escape(CharSequence name, CharSequence value) {
                         return StringUtil.escapeCsv(value, true);
                     }
                 };
@@ -80,9 +88,10 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
         }
 
         CombinedHttpHeadersImpl(HashingStrategy<CharSequence> nameHashingStrategy,
-                ValueConverter<CharSequence> valueConverter,
-                io.netty.handler.codec.DefaultHeaders.NameValidator<CharSequence> nameValidator) {
-            super(nameHashingStrategy, valueConverter, nameValidator);
+                                ValueConverter<CharSequence> valueConverter,
+                                NameValidator<CharSequence> nameValidator,
+                                ValueValidator<CharSequence> valueValidator) {
+            super(nameHashingStrategy, valueConverter, nameValidator, 16, valueValidator);
         }
 
         @Override
@@ -156,61 +165,61 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, CharSequence value) {
-            return addEscapedValue(name, charSequenceEscaper().escape(value));
+            return addEscapedValue(name, charSequenceEscaper().escape(name, value));
         }
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, CharSequence... values) {
-            return addEscapedValue(name, commaSeparate(charSequenceEscaper(), values));
+            return addEscapedValue(name, commaSeparate(name, charSequenceEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl add(CharSequence name, Iterable<? extends CharSequence> values) {
-            return addEscapedValue(name, commaSeparate(charSequenceEscaper(), values));
+            return addEscapedValue(name, commaSeparate(name, charSequenceEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Object value) {
-            return addEscapedValue(name, commaSeparate(objectEscaper(), value));
+            return addEscapedValue(name, commaSeparate(name, objectEscaper(), value));
         }
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Iterable<?> values) {
-            return addEscapedValue(name, commaSeparate(objectEscaper(), values));
+            return addEscapedValue(name, commaSeparate(name, objectEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl addObject(CharSequence name, Object... values) {
-            return addEscapedValue(name, commaSeparate(objectEscaper(), values));
+            return addEscapedValue(name, commaSeparate(name, objectEscaper(), values));
         }
 
         @Override
         public CombinedHttpHeadersImpl set(CharSequence name, CharSequence... values) {
-            super.set(name, commaSeparate(charSequenceEscaper(), values));
+            set(name, commaSeparate(name, charSequenceEscaper(), values));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl set(CharSequence name, Iterable<? extends CharSequence> values) {
-            super.set(name, commaSeparate(charSequenceEscaper(), values));
+            set(name, commaSeparate(name, charSequenceEscaper(), values));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Object value) {
-            super.set(name, commaSeparate(objectEscaper(), value));
+            set(name, commaSeparate(name, objectEscaper(), value));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Object... values) {
-            super.set(name, commaSeparate(objectEscaper(), values));
+            set(name, commaSeparate(name, objectEscaper(), values));
             return this;
         }
 
         @Override
         public CombinedHttpHeadersImpl setObject(CharSequence name, Iterable<?> values) {
-            super.set(name, commaSeparate(objectEscaper(), values));
+            set(name, commaSeparate(name, objectEscaper(), values));
             return this;
         }
 
@@ -219,28 +228,29 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
         }
 
         private CombinedHttpHeadersImpl addEscapedValue(CharSequence name, CharSequence escapedValue) {
-            CharSequence currentValue = super.get(name);
+            CharSequence currentValue = get(name);
             if (currentValue == null || cannotBeCombined(name)) {
                 super.add(name, escapedValue);
             } else {
-                super.set(name, commaSeparateEscapedValues(currentValue, escapedValue));
+                set(name, commaSeparateEscapedValues(currentValue, escapedValue));
             }
             return this;
         }
 
-        private static <T> CharSequence commaSeparate(CsvValueEscaper<T> escaper, T... values) {
+        private static <T> CharSequence commaSeparate(CharSequence name, CsvValueEscaper<T> escaper, T... values) {
             StringBuilder sb = new StringBuilder(values.length * VALUE_LENGTH_ESTIMATE);
             if (values.length > 0) {
                 int end = values.length - 1;
                 for (int i = 0; i < end; i++) {
-                    sb.append(escaper.escape(values[i])).append(COMMA);
+                    sb.append(escaper.escape(name, values[i])).append(COMMA);
                 }
-                sb.append(escaper.escape(values[end]));
+                sb.append(escaper.escape(name, values[end]));
             }
             return sb;
         }
 
-        private static <T> CharSequence commaSeparate(CsvValueEscaper<T> escaper, Iterable<? extends T> values) {
+        private static <T> CharSequence commaSeparate(CharSequence name, CsvValueEscaper<T> escaper,
+                                                      Iterable<? extends T> values) {
             @SuppressWarnings("rawtypes")
             final StringBuilder sb = values instanceof Collection
                     ? new StringBuilder(((Collection) values).size() * VALUE_LENGTH_ESTIMATE) : new StringBuilder();
@@ -248,10 +258,10 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
             if (iterator.hasNext()) {
                 T next = iterator.next();
                 while (iterator.hasNext()) {
-                    sb.append(escaper.escape(next)).append(COMMA);
+                    sb.append(escaper.escape(name, next)).append(COMMA);
                     next = iterator.next();
                 }
-                sb.append(escaper.escape(next));
+                sb.append(escaper.escape(name, next));
             }
             return sb;
         }
@@ -272,9 +282,10 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
             /**
              * Appends the value to the specified {@link StringBuilder}, escaping if necessary.
              *
+             * @param name the name of the header for the value being escaped
              * @param value the value to be appended, escaped if necessary
              */
-            CharSequence escape(T value);
+            CharSequence escape(CharSequence name, T value);
         }
     }
 }

@@ -24,6 +24,8 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+  
+permissions: read-all
 
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
@@ -43,11 +45,11 @@ jobs:
 
     name: stage-snapshot-${{ matrix.setup }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
@@ -75,27 +77,28 @@ jobs:
         run: docker-compose ${{ matrix.docker-compose-run }}
 
       - name: Upload local staging directory
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.setup }}-local-staging
           path: ~/local-staging
           if-no-files-found: error
 
   deploy-staged-snapshots:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     # Wait until we have staged everything
     needs: stage-snapshot
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-version: 8
+          distribution: 'zulu'
+          java-version: '8'
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-deploy-staged-snapshots-${{ hashFiles('**/pom.xml') }}
@@ -104,20 +107,20 @@ jobs:
             ${{ runner.os }}-maven-
 
       # Setup some env to re-use later.
-      - name: Prepare enviroment variables
+      - name: Prepare environment variables
         run: |
           echo "LOCAL_STAGING_DIR=$HOME/local-staging" >> $GITHUB_ENV
 
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups. There is currently no way to pull this out of the config.
       - name: Download linux-aarch64 staging directory
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: linux-aarch64-local-staging
           path: ~/linux-aarch64-local-staging
 
       - name: Download linux-x86_64-java8 staging directory
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: linux-x86_64-java8-local-staging
           path: ~/linux-x86_64-java8-local-staging

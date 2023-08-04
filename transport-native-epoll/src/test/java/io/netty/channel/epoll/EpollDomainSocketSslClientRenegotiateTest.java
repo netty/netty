@@ -31,6 +31,6 @@ public class EpollDomainSocketSslClientRenegotiateTest extends SocketSslClientRe
 
     @Override
     protected SocketAddress newSocketAddress() {
-        return EpollSocketTestPermutation.newSocketAddress();
+        return EpollSocketTestPermutation.newDomainSocketAddress();
     }
 }

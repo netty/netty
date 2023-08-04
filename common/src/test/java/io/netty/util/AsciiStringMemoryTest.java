@@ -36,7 +36,7 @@ public class AsciiStringMemoryTest {
     private int length = 100;
     private AsciiString aAsciiString;
     private AsciiString bAsciiString;
-    private Random r = new Random();
+    private final Random r = new Random();
 
     @BeforeEach
     public void setup() {

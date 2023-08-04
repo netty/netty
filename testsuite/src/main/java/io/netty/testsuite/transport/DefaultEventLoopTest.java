@@ -19,10 +19,37 @@ import io.netty.channel.Channel;
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DefaultEventLoopTest extends AbstractSingleThreadEventLoopTest {
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testChannelsIteratorNotSupported() throws Exception {
+        EventLoopGroup group = newEventLoopGroup();
+        final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
+        try {
+            final Channel ch = newChannel();
+            loop.register(ch).syncUninterruptibly();
+
+            assertThrows(UnsupportedOperationException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    loop.registeredChannelsIterator();
+                }
+            });
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
 
     @Override
     protected EventLoopGroup newEventLoopGroup() {

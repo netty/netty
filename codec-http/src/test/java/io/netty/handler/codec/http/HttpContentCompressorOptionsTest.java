@@ -16,7 +16,11 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.StandardCompressionOptions;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -26,11 +30,21 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@EnabledIf("isBrotiAvailable")
 class HttpContentCompressorOptionsTest {
+
+    static boolean isBrotiAvailable() {
+        return Brotli.isAvailable();
+    }
 
     @Test
     void testGetBrTargetContentEncoding() {
-        HttpContentCompressor compressor = new HttpContentCompressor();
+        HttpContentCompressor compressor = new HttpContentCompressor(
+            StandardCompressionOptions.gzip(),
+            StandardCompressionOptions.deflate(),
+            StandardCompressionOptions.brotli(),
+            StandardCompressionOptions.zstd()
+        );
 
         String[] tests = {
                 // Accept-Encoding -> Content-Encoding
@@ -52,7 +66,12 @@ class HttpContentCompressorOptionsTest {
 
     @Test
     void testGetZstdTargetContentEncoding() {
-        HttpContentCompressor compressor = new HttpContentCompressor();
+        HttpContentCompressor compressor = new HttpContentCompressor(
+            StandardCompressionOptions.gzip(),
+            StandardCompressionOptions.deflate(),
+            StandardCompressionOptions.brotli(),
+            StandardCompressionOptions.zstd()
+        );
 
         String[] tests = {
                 // Accept-Encoding -> Content-Encoding

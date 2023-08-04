@@ -12,7 +12,6 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
@@ -39,6 +38,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -210,7 +211,7 @@ public class Http2ConnectionHandlerTest {
         when(ctx.voidPromise()).thenReturn(voidPromise);
         when(ctx.write(any())).thenReturn(future);
         when(ctx.executor()).thenReturn(executor);
-        doAnswer(new Answer() {
+        doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock in) throws Throwable {
                 Object msg = in.getArgument(0);
@@ -220,10 +221,15 @@ public class Http2ConnectionHandlerTest {
         }).when(ctx).fireChannelRead(any());
     }
 
-    private Http2ConnectionHandler newHandler() throws Exception {
-        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder().codec(decoder, encoder).build();
+    private Http2ConnectionHandler newHandler(boolean flushPreface) throws Exception {
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder().codec(decoder, encoder)
+                .flushPreface(flushPreface).build();
         handler.handlerAdded(ctx);
         return handler;
+    }
+
+    private Http2ConnectionHandler newHandler() throws Exception {
+        return newHandler(true);
     }
 
     @AfterEach
@@ -257,21 +263,23 @@ public class Http2ConnectionHandlerTest {
         assertEquals(Http2Error.INTERNAL_ERROR, e.error());
     }
 
-    @Test
-    public void clientShouldveSentPrefaceAndSettingsFrameWhenUserEventIsTriggered() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void clientShouldveSentPrefaceAndSettingsFrameWhenUserEventIsTriggered(boolean flushPreface)
+            throws Exception {
         when(connection.isServer()).thenReturn(false);
         when(channel.isActive()).thenReturn(false);
-        handler = newHandler();
+        handler = newHandler(flushPreface);
         when(channel.isActive()).thenReturn(true);
 
         final Http2ConnectionPrefaceAndSettingsFrameWrittenEvent evt =
                 Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE;
 
         final AtomicBoolean verified = new AtomicBoolean(false);
-        final Answer verifier = new Answer() {
+        final Answer<Object> verifier = new Answer<Object>() {
             @Override
             public Object answer(final InvocationOnMock in) throws Throwable {
-                assertTrue(in.getArgument(0).equals(evt));  // sanity check...
+                assertEquals(in.getArgument(0), evt);  // sanity check...
                 verify(ctx).write(eq(connectionPrefaceBuf()));
                 verify(encoder).writeSettings(eq(ctx), any(Http2Settings.class), any(ChannelPromise.class));
                 verified.set(true);
@@ -282,6 +290,11 @@ public class Http2ConnectionHandlerTest {
         doAnswer(verifier).when(ctx).fireUserEventTriggered(evt);
 
         handler.channelActive(ctx);
+        if (flushPreface) {
+            verify(ctx, times(1)).flush();
+        } else {
+            verify(ctx, never()).flush();
+        }
         assertTrue(verified.get());
     }
 
@@ -514,7 +527,7 @@ public class Http2ConnectionHandlerTest {
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
-            eq(Http2Error.PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
+            eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
         handler.exceptionCaught(ctx, e);
 
         verify(remote).createStream(STREAM_ID, true);
@@ -696,7 +709,7 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void canCloseStreamWithVoidPromise() throws Exception {
         handler = newHandler();
-        handler.closeStream(stream, ctx.voidPromise());
+        handler.closeStream(stream, ctx.voidPromise().setSuccess());
         verify(stream, times(1)).close();
         verifyNoMoreInteractions(stream);
     }

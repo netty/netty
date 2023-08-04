@@ -93,6 +93,11 @@ public final class HttpToHttp2ConnectionHandlerBuilder extends
         return super.decoupleCloseAndGoAway(decoupleCloseAndGoAway);
     }
 
+    @Override
+    public HttpToHttp2ConnectionHandlerBuilder flushPreface(boolean flushPreface) {
+        return super.flushPreface(flushPreface);
+    }
+
     /**
      * Add {@code scheme} in {@link Http2Headers} if not already present.
      *
@@ -113,6 +118,6 @@ public final class HttpToHttp2ConnectionHandlerBuilder extends
     protected HttpToHttp2ConnectionHandler build(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                                  Http2Settings initialSettings) {
         return new HttpToHttp2ConnectionHandler(decoder, encoder, initialSettings, isValidateHeaders(),
-                decoupleCloseAndGoAway(), httpScheme);
+                decoupleCloseAndGoAway(), flushPreface(), httpScheme);
     }
 }

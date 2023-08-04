@@ -323,7 +323,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         // Make sure the CONNECTION header is present.
         List<String> connectionHeaderValues = request.headers().getAll(HttpHeaderNames.CONNECTION);
 
-        if (connectionHeaderValues == null) {
+        if (connectionHeaderValues == null || connectionHeaderValues.isEmpty()) {
             return false;
         }
 
