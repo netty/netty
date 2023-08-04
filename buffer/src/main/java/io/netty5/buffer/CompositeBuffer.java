@@ -118,6 +118,18 @@ public interface CompositeBuffer extends Buffer {
     }
 
     /**
+     * Create an empty composite buffer, that has no components. The buffer can be extended with components using either
+     * {@link #ensureWritable(int)} or {@link #extendWith(Send)}.
+     *
+     * @param allocator The allocator for the composite buffer. This allocator will be used e.g. to service
+     * {@link #ensureWritable(int)} calls.
+     * @return A composite buffer that has no components, and has a capacity of zero.
+     */
+    static CompositeBuffer composeReadOnly(BufferAllocator allocator) {
+        return DefaultCompositeBuffer.composeReadOnly(allocator);
+    }
+
+    /**
      * Check if the given buffer is a composite buffer or not.
      * @param composite The buffer to check.
      * @return {@code true} if the given buffer was created with {@link BufferAllocator#compose()},

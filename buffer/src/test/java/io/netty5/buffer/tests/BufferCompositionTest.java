@@ -270,7 +270,7 @@ public class BufferCompositionTest extends BufferTestSupport {
     @Test
     public void emptyCompositeBufferMustAllowExtendingWithReadOnlyBuffer() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled()) {
-            try (CompositeBuffer composite = allocator.compose()) {
+            try (CompositeBuffer composite = allocator.composeReadOnly()) {
                 try (Buffer b = allocator.allocate(8).makeReadOnly()) {
                     composite.extendWith(b.send());
                     assertTrue(composite.readOnly());
@@ -447,7 +447,7 @@ public class BufferCompositionTest extends BufferTestSupport {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer a = allocator.allocate(4).makeReadOnly();
              Buffer b = allocator.allocate(4).makeReadOnly();
-             Buffer composite = allocator.compose(asList(a.send(), b.send()))) {
+             Buffer composite = allocator.composeReadOnly(asList(a.send(), b.send()))) {
             assertTrue(composite.readOnly());
             verifyWriteInaccessible(composite, BufferReadOnlyException.class);
         }
@@ -492,12 +492,13 @@ public class BufferCompositionTest extends BufferTestSupport {
     }
 
     @Test
-    public void compositeReadOnlyBufferCannotBeExtendedWithWritableBuffer() {
+    public void compositeReadOnlyBufferCanBeExtendedWithWritableBuffer() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
-             CompositeBuffer composite = allocator.compose(allocator.allocate(8).makeReadOnly().send())) {
+             CompositeBuffer composite = allocator.composeReadOnly(allocator.allocate(8).makeReadOnly().send())) {
             try (Buffer b = allocator.allocate(8)) {
-                assertThrows(IllegalArgumentException.class, () -> composite.extendWith(b.send()));
+                composite.extendWith(b.send());
             }
+            assertThat(composite.readOnly()).isTrue();
         }
     }
 
