@@ -55,7 +55,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
     }
 
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
-                                               boolean strict) {
+                    boolean strict) {
         super(listener);
         this.connection = connection;
         this.strict = strict;
@@ -145,14 +145,14 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-                              boolean endStream) throws Http2Exception {
+                    boolean endStream) throws Http2Exception {
         initDecompressor(ctx, streamId, headers, endStream);
         listener.onHeadersRead(ctx, streamId, headers, padding, endStream);
     }
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
-                              short weight, boolean exclusive, int padding, boolean endStream) throws Http2Exception {
+                    short weight, boolean exclusive, int padding, boolean endStream) throws Http2Exception {
         initDecompressor(ctx, streamId, headers, endStream);
         listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endStream);
     }
@@ -180,7 +180,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new BrotliDecoder());
+              ctx.channel().config(), new BrotliDecoder());
         }
         // 'identity' or unsupported
         return null;
@@ -195,7 +195,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * @throws Http2Exception if the {@code contentEncoding} is not supported and warrants an exception
      */
     protected CharSequence getTargetContentEncoding(@SuppressWarnings("UnusedParameters") CharSequence contentEncoding)
-            throws Http2Exception {
+                    throws Http2Exception {
         return IDENTITY;
     }
 
@@ -329,7 +329,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
         @Override
         public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
-                                               boolean endOfStream) throws Http2Exception {
+                boolean endOfStream) throws Http2Exception {
             flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
         }
 
