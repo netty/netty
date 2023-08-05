@@ -102,9 +102,10 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         }
     }
 
-    private boolean consumeAndDecompress(ChannelHandlerContext ctx, int decompressedSize, ByteBuf in, List<Object> out) throws IOException {
+    private boolean consumeAndDecompress(ChannelHandlerContext ctx, int decompressedSize,
+                                         ByteBuf in, List<Object> out) throws IOException {
         // close streams before read if state is NEED_MORE_DATA
-        if(currentState==State.NEED_MORE_DATA){
+        if (currentState == State.NEED_MORE_DATA) {
             closeAllStreams();
         }
         is = new ByteBufInputStream(in, false);
@@ -122,7 +123,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
             in.readerIndex(0);
             if (currentState == State.DECOMPRESS_DATA) {
                 if (buffer == null) {
-                    buffer = ctx.alloc().buffer((int)ZstdInputStream.recommendedDOutSize());
+                    buffer = ctx.alloc().buffer((int) ZstdInputStream.recommendedDOutSize());
                 }
                 buffer.writeBytes(in.retain());
                 currentState = State.NEED_MORE_DATA;
