@@ -314,12 +314,31 @@ final class PoolChunk<T> implements PoolChunkMetric {
     boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolThreadCache cache) {
         final long handle;
         if (sizeIdx <= arena.smallMaxSizeIdx) {
+            final PoolSubpage<T> nextSub;
             // small
-            handle = allocateSubpage(sizeIdx);
-            if (handle < 0) {
-                return false;
+            // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
+            // This is need as we may add it back and so alter the linked-list structure.
+            PoolSubpage<T> head = arena.findSubpagePoolHead(sizeIdx);
+            head.lock();
+            try {
+                nextSub = head.next;
+                if (nextSub != head) {
+                    assert nextSub.doNotDestroy && nextSub.elemSize == arena.sizeIdx2size(sizeIdx) : "doNotDestroy=" +
+                            nextSub.doNotDestroy + ", elemSize=" + nextSub.elemSize + ", sizeIdx=" + sizeIdx;
+                    handle = nextSub.allocate();
+                    assert handle >= 0;
+                    assert isSubpage(handle);
+                    nextSub.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache);
+                    return true;
+                }
+                handle = allocateSubpage(sizeIdx, head);
+                if (handle < 0) {
+                    return false;
+                }
+                assert isSubpage(handle);
+            } finally {
+                head.unlock();
             }
-            assert isSubpage(handle);
         } else {
             // normal
             // runSize must be multiple of pageSize
@@ -432,38 +451,31 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     /**
      * Create / initialize a new PoolSubpage of normCapacity. Any PoolSubpage created / initialized here is added to
-     * subpage pool in the PoolArena that owns this PoolChunk
+     * subpage pool in the PoolArena that owns this PoolChunk.
      *
      * @param sizeIdx sizeIdx of normalized size
+     * @param head head of subpages
      *
      * @return index in memoryMap
      */
-    private long allocateSubpage(int sizeIdx) {
-        // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
-        // This is need as we may add it back and so alter the linked-list structure.
-        PoolSubpage<T> head = arena.findSubpagePoolHead(sizeIdx);
-        head.lock();
-        try {
-            //allocate a new run
-            int runSize = calculateRunSize(sizeIdx);
-            //runSize must be multiples of pageSize
-            long runHandle = allocateRun(runSize);
-            if (runHandle < 0) {
-                return -1;
-            }
-
-            int runOffset = runOffset(runHandle);
-            assert subpages[runOffset] == null;
-            int elemSize = arena.sizeIdx2size(sizeIdx);
-
-            PoolSubpage<T> subpage = new PoolSubpage<T>(head, this, pageShifts, runOffset,
-                               runSize(pageShifts, runHandle), elemSize);
-
-            subpages[runOffset] = subpage;
-            return subpage.allocate();
-        } finally {
-            head.unlock();
+    private long allocateSubpage(int sizeIdx, PoolSubpage<T> head) {
+        //allocate a new run
+        int runSize = calculateRunSize(sizeIdx);
+        //runSize must be multiples of pageSize
+        long runHandle = allocateRun(runSize);
+        if (runHandle < 0) {
+            return -1;
         }
+
+        int runOffset = runOffset(runHandle);
+        assert subpages[runOffset] == null;
+        int elemSize = arena.sizeIdx2size(sizeIdx);
+
+        PoolSubpage<T> subpage = new PoolSubpage<T>(head, this, pageShifts, runOffset,
+                runSize(pageShifts, runHandle), elemSize);
+
+        subpages[runOffset] = subpage;
+        return subpage.allocate();
     }
 
     /**
