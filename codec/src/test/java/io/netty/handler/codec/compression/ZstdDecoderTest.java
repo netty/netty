@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Netty Project
+ * Copyright 2023 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.compression;
 
+import com.github.luben.zstd.Zstd;
 import com.github.luben.zstd.ZstdOutputStream;
 import io.netty.channel.embedded.EmbeddedChannel;
 import java.io.ByteArrayOutputStream;
@@ -31,11 +32,6 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
 
     @Override
     protected byte[] compress(byte[] data) throws Exception {
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        ZstdOutputStream zstdOs = new ZstdOutputStream(os);
-        zstdOs.write(data);
-        zstdOs.close();
-
-        return os.toByteArray();
+        return Zstd.compress(data);
     }
 }

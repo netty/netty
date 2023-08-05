@@ -136,11 +136,9 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- Test dependency for Bzip2 compression codec -->
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
-      <scope>test</scope>
     </dependency>
 
     <!-- Automatic native-image reflection metadata generation for handlers dependencies -->

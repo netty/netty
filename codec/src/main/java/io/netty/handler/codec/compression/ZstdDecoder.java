@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 The Netty Project
+ * Copyright 2023 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,29 +16,30 @@
 package io.netty.handler.codec.compression;
 
 import com.github.luben.zstd.Zstd;
-import com.github.luben.zstd.ZstdException;
+import com.github.luben.zstd.ZstdInputStream;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
-
+import org.apache.commons.compress.utils.IOUtils;
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_MAX_BLOCK_SIZE;
-import static io.netty.handler.codec.compression.ZstdConstants.MAX_DECOMPRESS_SIZE;
 
 /**
- * Decompresses a {@link ByteBuf} using the Zstandard algorithm.
+ * Decompresses a compressed block {@link ByteBuf} using the Zstandard algorithm.
  * See <a href="https://facebook.github.io/zstd">Zstandard</a>.
  */
 public final class ZstdDecoder extends ByteToMessageDecoder {
 
-     private final int maxBlockSize;
-     private ByteBuf buffer;
+    private final int maxBlockSize;
+    private ByteBuf buffer;
 
     /**
      * Creates a new Zstd decoder.
@@ -47,18 +48,18 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
      * will be used. If you want to specify MAX_BLOCK_SIZE yourself,
      * please use {@link ZstdDecoder(int)} constructor
      */
-     public ZstdDecoder() {
-         this(DEFAULT_MAX_BLOCK_SIZE);
-     }
+    public ZstdDecoder() {
+        this(DEFAULT_MAX_BLOCK_SIZE);
+    }
 
     /**
      * Creates a new Zstd decoder.
      *  @param  maxBlockSize
      *            specifies the max block size
      */
-     public ZstdDecoder(int maxBlockSize) {
-         this.maxBlockSize = ObjectUtil.checkPositive(maxBlockSize, "maxBlockSize");
-     }
+    public ZstdDecoder(int maxBlockSize) {
+        this.maxBlockSize = ObjectUtil.checkPositive(maxBlockSize, "maxBlockSize");
+    }
 
     /**
      * Current state of stream.
@@ -71,6 +72,9 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     }
 
     private volatile State currentState = State.DECOMPRESS_DATA;
+    private InputStream is;
+    private ZstdInputStream zstdIs;
+    private ByteArrayOutputStream bos;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -98,8 +102,40 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         }
     }
 
-    private void decompressData(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
-        ByteBuf uncompressed = null;
+    private boolean consumeAndDecompress(ChannelHandlerContext ctx, int decompressedSize, ByteBuf in, List<Object> out) throws IOException {
+        // close streams before read if state is NEED_MORE_DATA
+        if(currentState==State.NEED_MORE_DATA){
+            closeAllStreams();
+        }
+        is = new ByteBufInputStream(in, false);
+        zstdIs = new ZstdInputStream(is);
+        // setContinuous to true so that ZstdInputStream.read() will return -1 when decompression is not completed
+        zstdIs.setContinuous(true);
+        bos = new ByteArrayOutputStream();
+        IOUtils.copy(zstdIs, bos);
+        byte[] decompressed = bos.toByteArray();
+        int decompressedLength = decompressed.length;
+        // Check the decompression status since we use ZstdInputStream as an indicator
+        // to determine whether the decompression is completed
+        // TODO: Use Zstd to check the compressed data when zstd library support this
+        if (decompressedLength == 0 || (decompressedSize > 0 && decompressedSize != decompressedLength)) {
+            in.readerIndex(0);
+            if (currentState == State.DECOMPRESS_DATA) {
+                if (buffer == null) {
+                    buffer = ctx.alloc().buffer((int)ZstdInputStream.recommendedDOutSize());
+                }
+                buffer.writeBytes(in.retain());
+                currentState = State.NEED_MORE_DATA;
+            }
+            return false;
+        }
+        ByteBuf byteBuf = ctx.alloc().buffer(decompressedLength);
+        byteBuf.writeBytes(decompressed, 0, decompressedLength);
+        out.add(byteBuf);
+        return true;
+    }
+
+    private void decompressData(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws IOException {
         final int compressedLength = in.readableBytes();
         if (compressedLength > maxBlockSize) {
             in.skipBytes(compressedLength);
@@ -107,54 +143,55 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         }
         try {
             final ByteBuffer src =  CompressionUtil.safeNioBuffer(in, in.readerIndex(), compressedLength);
-            int bufferSize = compressedLength << 2;
-            if (in.isDirect()) {
-                int decompressedSize = (int) Zstd.decompressedSize(src);
-                // ZstdOutputStream compressed data using Zstd.decompressedSize() will return 0,
-                // so compressedLength can only be used to determine the size of the allocated memory
-                if (decompressedSize > 0) {
-                    bufferSize = decompressedSize < MAX_DECOMPRESS_SIZE ?
-                            decompressedSize : decompressedSize << 6;
-                }
-                uncompressed = ctx.alloc().directBuffer(bufferSize);
-                final ByteBuffer dst = CompressionUtil.safeNioBuffer(uncompressed, 0,
-                        bufferSize);
-                int srcSize = Zstd.decompress(dst, src);
-                // Update the writerIndex now to reflect what we decompressed.
-                uncompressed.writerIndex(uncompressed.writerIndex() + srcSize);
-            } else {
-                byte[] srcBytes = ByteBufUtil.getBytes(in);
-                int decompressedSize = (int) Zstd.decompressedSize(srcBytes);
-                if (decompressedSize > 0) {
-                    bufferSize = decompressedSize;
-                }
-                byte[] dstBytes = PlatformDependent.allocateUninitializedArray(bufferSize);
-                int srcSize = (int) Zstd.decompress(dstBytes, srcBytes);
-                uncompressed = Unpooled.wrappedBuffer(dstBytes);
-                uncompressed.writerIndex(srcSize);
+            int decompressedSize = (int) Zstd.decompressedSize(src);
+            boolean completed = consumeAndDecompress(ctx, decompressedSize, in, out);
+
+            if (!completed) {
+                return;
             }
 
-            // Skip inbound bytes after we processed them.
-            in.skipBytes(compressedLength);
-
-            out.add(uncompressed);
             if (buffer != null) {
                 buffer.clear();
             }
-            uncompressed = null;
             currentState = State.FINISHED;
-        } catch (ZstdException e) {
-            if (currentState == State.DECOMPRESS_DATA) {
-                buffer = ctx.alloc().buffer(compressedLength);
-                buffer.writeBytes(in.retain());
-                currentState = State.NEED_MORE_DATA;
-            }
         } catch (Exception e) {
             throw new DecompressionException(e);
         } finally {
-            if (uncompressed != null) {
-                uncompressed.release();
+            closeAllStreams();
+        }
+    }
+
+    private void closeAllStreams() throws IOException {
+        if (zstdIs != null) {
+            zstdIs.close();
+        } else {
+            is.close();
+        }
+
+        if (bos != null) {
+            bos.close();
+        }
+    }
+
+    @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        try {
+            if (buffer != null) {
+                buffer.clear();
             }
+        } finally {
+            super.handlerRemoved0(ctx);
+        }
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        try {
+            if (buffer != null) {
+                buffer.clear();
+            }
+        } finally {
+            super.channelInactive(ctx);
         }
     }
 

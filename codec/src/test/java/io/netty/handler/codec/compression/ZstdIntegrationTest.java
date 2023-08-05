@@ -17,11 +17,15 @@ package io.netty.handler.codec.compression;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 
+import static io.netty.handler.codec.compression.ZstdConstants.MAX_BLOCK_SIZE;
+
 public class ZstdIntegrationTest extends AbstractIntegrationTest {
+
+    private static final int BLOCK_SIZE = 1 << 20;
 
     @Override
     protected EmbeddedChannel createEncoder() {
-        return new EmbeddedChannel(new ZstdEncoder());
+        return new EmbeddedChannel(new ZstdEncoder(BLOCK_SIZE, MAX_BLOCK_SIZE));
     }
 
     @Override
