@@ -132,7 +132,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
             }
             return false;
         }
-        ByteBuf uncompressed = ctx.alloc().buffer(decompressedLength);
+        uncompressed = ctx.alloc().buffer(decompressedLength);
         uncompressed.writeBytes(decompressed, 0, decompressedLength);
         out.add(uncompressed);
         return true;
