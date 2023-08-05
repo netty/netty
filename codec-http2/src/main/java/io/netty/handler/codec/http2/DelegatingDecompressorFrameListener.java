@@ -19,23 +19,21 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.util.internal.UnstableApi;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.compression.ZstdDecoder;
+import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
-import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http.HttpHeaderValues.BR;
 import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
-import static io.netty.handler.codec.http.HttpHeaderValues.BR;
-import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
+import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -57,7 +55,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
     }
 
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
-                    boolean strict) {
+                                               boolean strict) {
         super(listener);
         this.connection = connection;
         this.strict = strict;
@@ -147,14 +145,14 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-                    boolean endStream) throws Http2Exception {
+                              boolean endStream) throws Http2Exception {
         initDecompressor(ctx, streamId, headers, endStream);
         listener.onHeadersRead(ctx, streamId, headers, padding, endStream);
     }
 
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int streamDependency,
-                    short weight, boolean exclusive, int padding, boolean endStream) throws Http2Exception {
+                              short weight, boolean exclusive, int padding, boolean endStream) throws Http2Exception {
         initDecompressor(ctx, streamId, headers, endStream);
         listener.onHeadersRead(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endStream);
     }
@@ -182,11 +180,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-              ctx.channel().config(), new BrotliDecoder());
-        }
-        if (ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new ZstdDecoder());
+                    ctx.channel().config(), new BrotliDecoder());
         }
         // 'identity' or unsupported
         return null;
@@ -201,7 +195,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
      * @throws Http2Exception if the {@code contentEncoding} is not supported and warrants an exception
      */
     protected CharSequence getTargetContentEncoding(@SuppressWarnings("UnusedParameters") CharSequence contentEncoding)
-                    throws Http2Exception {
+            throws Http2Exception {
         return IDENTITY;
     }
 
@@ -335,7 +329,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
         @Override
         public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
-                boolean endOfStream) throws Http2Exception {
+                                               boolean endOfStream) throws Http2Exception {
             flowController.receiveFlowControlledFrame(stream, data, padding, endOfStream);
         }
 
