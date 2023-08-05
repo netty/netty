@@ -75,7 +75,6 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     private InputStream is;
     private ZstdInputStream zstdIs;
     private ByteArrayOutputStream bos;
-    private ByteBuf uncompressed;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -132,7 +131,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
             }
             return false;
         }
-        uncompressed = ctx.alloc().buffer(decompressedLength);
+        ByteBuf uncompressed = ctx.alloc().buffer(decompressedLength);
         uncompressed.writeBytes(decompressed, 0, decompressedLength);
         out.add(uncompressed);
         return true;
@@ -160,9 +159,6 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         } catch (Exception e) {
             throw new DecompressionException(e);
         } finally {
-            if (uncompressed != null) {
-                uncompressed.release();
-            }
             closeAllStreams();
         }
     }
