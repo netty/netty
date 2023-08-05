@@ -75,6 +75,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     private InputStream is;
     private ZstdInputStream zstdIs;
     private ByteArrayOutputStream bos;
+    private ByteBuf uncompressed;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -127,14 +128,13 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                     buffer = ctx.alloc().buffer((int) ZstdInputStream.recommendedDOutSize());
                 }
                 buffer.writeBytes(in.retain());
-                in.release();
                 currentState = State.NEED_MORE_DATA;
             }
             return false;
         }
-        ByteBuf byteBuf = ctx.alloc().buffer(decompressedLength);
-        byteBuf.writeBytes(decompressed, 0, decompressedLength);
-        out.add(byteBuf);
+        ByteBuf uncompressed = ctx.alloc().buffer(decompressedLength);
+        uncompressed.writeBytes(decompressed, 0, decompressedLength);
+        out.add(uncompressed);
         return true;
     }
 
@@ -154,12 +154,15 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
             }
 
             if (buffer != null) {
-                buffer.clear();
+                buffer.release();
             }
             currentState = State.FINISHED;
         } catch (Exception e) {
             throw new DecompressionException(e);
         } finally {
+            if (uncompressed != null) {
+                uncompressed.release();
+            }
             closeAllStreams();
         }
     }
