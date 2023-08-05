@@ -108,6 +108,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         if (currentState == State.NEED_MORE_DATA) {
             closeAllStreams();
         }
+        // Bytebuf cannot release here because ByteToMessageDecoder will release it
         is = new ByteBufInputStream(in, false);
         zstdIs = new ZstdInputStream(is);
         // setContinuous to true so that ZstdInputStream.read() will return -1 when decompression is not completed
@@ -126,6 +127,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                     buffer = ctx.alloc().buffer((int) ZstdInputStream.recommendedDOutSize());
                 }
                 buffer.writeBytes(in.retain());
+                in.release();
                 currentState = State.NEED_MORE_DATA;
             }
             return false;
