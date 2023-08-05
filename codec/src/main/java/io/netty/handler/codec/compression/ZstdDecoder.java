@@ -86,7 +86,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                         decompressData(ctx, in, out);
                         break;
                     case NEED_MORE_DATA:
-                        buffer.writeBytes(in.retain());
+                        buffer.writeBytes(in);
                         decompressData(ctx, buffer, out);
                         break;
                     case FINISHED:
@@ -127,7 +127,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                 if (buffer == null) {
                     buffer = ctx.alloc().buffer((int) ZstdInputStream.recommendedDOutSize());
                 }
-                buffer.writeBytes(in.retain());
+                buffer.writeBytes(in);
                 currentState = State.NEED_MORE_DATA;
             }
             return false;
