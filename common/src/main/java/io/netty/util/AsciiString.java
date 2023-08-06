@@ -941,27 +941,12 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return a new string containing the lowercase characters equivalent to the characters in this string.
      */
     public AsciiString toLowerCase() {
-        boolean lowercased = true;
-        int i, j;
-        final int len = length() + arrayOffset();
-        for (i = arrayOffset(); i < len; ++i) {
-            byte b = value[i];
-            if (b >= 'A' && b <= 'Z') {
-                lowercased = false;
-                break;
-            }
-        }
-
-        // Check if this string does not contain any uppercase characters.
-        if (lowercased) {
+        if (!AsciiStringUtil.containsUpperCase(value, offset,offset + length)) {
             return this;
         }
 
         final byte[] newValue = PlatformDependent.allocateUninitializedArray(length());
-        for (i = 0, j = arrayOffset(); i < newValue.length; ++i, ++j) {
-            newValue[i] = toLowerCase(value[j]);
-        }
-
+        AsciiStringUtil.toLowerCase(value, offset, newValue, 0, length());
         return new AsciiString(newValue, false);
     }
 
@@ -971,27 +956,11 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return a new string containing the uppercase characters equivalent to the characters in this string.
      */
     public AsciiString toUpperCase() {
-        boolean uppercased = true;
-        int i, j;
-        final int len = length() + arrayOffset();
-        for (i = arrayOffset(); i < len; ++i) {
-            byte b = value[i];
-            if (b >= 'a' && b <= 'z') {
-                uppercased = false;
-                break;
-            }
-        }
-
-        // Check if this string does not contain any lowercase characters.
-        if (uppercased) {
+        if (!AsciiStringUtil.containsLowerCase(value, offset, offset + length)) {
             return this;
         }
-
         final byte[] newValue = PlatformDependent.allocateUninitializedArray(length());
-        for (i = 0, j = arrayOffset(); i < newValue.length; ++i, ++j) {
-            newValue[i] = toUpperCase(value[j]);
-        }
-
+        AsciiStringUtil.toUpperCase(value, offset, newValue, 0, length());
         return new AsciiString(newValue, false);
     }
 

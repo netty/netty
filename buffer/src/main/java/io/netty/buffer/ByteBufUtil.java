@@ -16,7 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.AsciiString;
-import io.netty.util.AsciiStringUtil.SWARByteSearch;
+import io.netty.util.AsciiStringUtil.SWARByteUtil;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
@@ -590,11 +590,11 @@ public final class ByteBufUtil {
         final ByteOrder nativeOrder = ByteOrder.nativeOrder();
         final boolean isNative = nativeOrder == buffer.order();
         final boolean useLE = nativeOrder == ByteOrder.LITTLE_ENDIAN;
-        final long pattern = SWARByteSearch.compilePattern(value);
+        final long pattern = SWARByteUtil.compilePattern(value);
         for (int i = 0; i < longCount; i++) {
             // use the faster available getLong
             final long word = useLE? buffer._getLongLE(offset) : buffer._getLong(offset);
-            int index = SWARByteSearch.firstAnyPattern(word, pattern, isNative);
+            int index = SWARByteUtil.firstAnyPattern(word, pattern, isNative);
             if (index < Long.BYTES) {
                 return offset + index;
             }
