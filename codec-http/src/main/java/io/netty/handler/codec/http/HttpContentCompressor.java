@@ -465,7 +465,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
      * Compression Encoder Factory for create {@link SnappyFrameEncoder}
      * used to compress http content for snappy content encoding
      */
-    private final class SnappyEncoderFactory implements CompressionEncoderFactory {
+    private static final class SnappyEncoderFactory implements CompressionEncoderFactory {
 
         @Override
         public MessageToByteEncoder<ByteBuf> createEncoder() {
