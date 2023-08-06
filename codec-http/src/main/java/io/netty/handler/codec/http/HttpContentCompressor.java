@@ -198,7 +198,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
                     deflateOptions = (DeflateOptions) compressionOption;
                 } else if (compressionOption instanceof ZstdOptions) {
                     zstdOptions = (ZstdOptions) compressionOption;
-                } else if(compressionOption instanceof  SnappyOptions) {
+                } else if (compressionOption instanceof SnappyOptions) {
                     snappyOptions = (SnappyOptions) compressionOption;
                 } else {
                     throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
