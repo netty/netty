@@ -22,7 +22,21 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.handler.codec.compression.*;
+import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.BrotliEncoder;
+import io.netty.handler.codec.compression.BrotliOptions;
+import io.netty.handler.codec.compression.CompressionOptions;
+import io.netty.handler.codec.compression.DeflateOptions;
+import io.netty.handler.codec.compression.GzipOptions;
+import io.netty.handler.codec.compression.StandardCompressionOptions;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
+import io.netty.handler.codec.compression.ZlibEncoder;
+import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.compression.Zstd;
+import io.netty.handler.codec.compression.ZstdEncoder;
+import io.netty.handler.codec.compression.ZstdOptions;
+import io.netty.handler.codec.compression.SnappyFrameEncoder;
+import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.util.internal.ObjectUtil;
 
 /**

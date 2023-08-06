@@ -21,14 +21,33 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.compression.*;
+import io.netty.handler.codec.compression.BrotliEncoder;
+import io.netty.handler.codec.compression.ZlibCodecFactory;
+import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.compression.Brotli;
+import io.netty.handler.codec.compression.BrotliOptions;
+import io.netty.handler.codec.compression.CompressionOptions;
+import io.netty.handler.codec.compression.DeflateOptions;
+import io.netty.handler.codec.compression.GzipOptions;
+import io.netty.handler.codec.compression.StandardCompressionOptions;
+import io.netty.handler.codec.compression.ZstdEncoder;
+import io.netty.handler.codec.compression.ZstdOptions;
+import io.netty.handler.codec.compression.SnappyFrameEncoder;
+import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaderValues.*;
+import static io.netty.handler.codec.http.HttpHeaderValues.BR;
+import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
+import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
+import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
+import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
+import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
+import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
+import static io.netty.handler.codec.http.HttpHeaderValues.SNAPPY;
 
 /**
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
