@@ -21,30 +21,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.compression.BrotliEncoder;
-import io.netty.handler.codec.compression.ZlibCodecFactory;
-import io.netty.handler.codec.compression.ZlibWrapper;
-import io.netty.handler.codec.compression.Brotli;
-import io.netty.handler.codec.compression.BrotliOptions;
-import io.netty.handler.codec.compression.CompressionOptions;
-import io.netty.handler.codec.compression.DeflateOptions;
-import io.netty.handler.codec.compression.GzipOptions;
-import io.netty.handler.codec.compression.StandardCompressionOptions;
-import io.netty.handler.codec.compression.ZstdEncoder;
-import io.netty.handler.codec.compression.ZstdOptions;
+import io.netty.handler.codec.compression.*;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
-import static io.netty.handler.codec.http.HttpHeaderValues.BR;
-import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
-import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
-import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
-import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
-import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
-import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
+import static io.netty.handler.codec.http.HttpHeaderValues.*;
 
 /**
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
@@ -68,6 +52,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     private GzipOptions gzipCompressionOptions;
     private DeflateOptions deflateOptions;
     private ZstdOptions zstdOptions;
+    private SnappyOptions snappyOptions;
 
     /**
      * Create a new {@link CompressorHttp2ConnectionEncoder} instance
@@ -137,6 +122,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 deflateOptions = (DeflateOptions) compressionOptions;
             } else if (compressionOptions instanceof ZstdOptions) {
                 zstdOptions = (ZstdOptions) compressionOptions;
+            } else if (compressionOptions instanceof SnappyOptions) {
+                snappyOptions = (SnappyOptions) compressionOptions;
             } else {
                 throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
                         ": " + compressionOptions);
@@ -282,6 +269,10 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
                     ctx.channel().config(), new ZstdEncoder(zstdOptions.compressionLevel(),
                     zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
+        }
+        if (snappyOptions != null && SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
+            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                    ctx.channel().config(), new SnappyFrameEncoder());
         }
         // 'identity' or unsupported
         return null;
