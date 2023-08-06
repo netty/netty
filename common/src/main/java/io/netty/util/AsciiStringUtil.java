@@ -98,7 +98,6 @@ public final class AsciiStringUtil {
         return unrolledFirstIndexOf(bytes, fromIndex, toIndex - fromIndex, value);
     }
 
-
     public static final class SWARByteUtil {
         static final long UPPER_CASE_PATTERN = compilePattern((byte) 'A');
         static final long UPPER_CASE_RANGE_PATTERN = compileRangePattern((byte) 'A', (byte) 'Z');
@@ -121,7 +120,6 @@ public final class AsciiStringUtil {
             long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + rangePattern;
             return ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
         }
-
 
         public static int firstAnyPattern(long word, long pattern, boolean leading) {
             long input = word ^ pattern;
@@ -157,7 +155,7 @@ public final class AsciiStringUtil {
 
     static byte toUpperCase(byte value) {
         if (isLowerCase(value)) {
-            return (byte)(value & ~32);
+            return (byte) (value & ~32);
         }
         return value;
     }
@@ -168,7 +166,6 @@ public final class AsciiStringUtil {
         }
         return value;
     }
-
 
     static boolean containsUpperCase(byte[] bytes, int fromIndex, int toIndex) {
         if (!PlatformDependent.isUnaligned()) {
@@ -231,7 +228,6 @@ public final class AsciiStringUtil {
         return false;
     }
 
-
     static void toLowerCase(byte[] src, int srcPos, byte[] dest, int destPos, int length) {
         if (!PlatformDependent.isUnaligned()) {
             for (int i = 0; i < length; ++i) {
@@ -275,8 +271,6 @@ public final class AsciiStringUtil {
             dest[destPos++] = toUpperCase(src[srcPos++]);
         }
     }
-
-
 
     private AsciiStringUtil() {
     }
