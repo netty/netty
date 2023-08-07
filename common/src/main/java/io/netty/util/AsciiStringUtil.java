@@ -69,7 +69,7 @@ public final class AsciiStringUtil {
         return -1;
     }
 
-    public static int firstIndexOf(byte[] bytes, int fromIndex, int toIndex, byte value) {
+    static int firstIndexOf(byte[] bytes, int fromIndex, int toIndex, byte value) {
         if (!PlatformDependent.isUnaligned()) {
             for (int idx = fromIndex; idx < toIndex; ++idx) {
                 if (bytes[idx] == value) {
@@ -120,17 +120,11 @@ public final class AsciiStringUtil {
     }
 
     static byte toUpperCase(byte value) {
-        if (isLowerCase(value)) {
-            return (byte) (value & ~32);
-        }
-        return value;
+        return isLowerCase(value)? (byte) (value & ~32) : value;
     }
 
     static byte toLowerCase(byte value) {
-        if (isUpperCase(value)) {
-            return (byte) (value | 32);
-        }
-        return value;
+        return isUpperCase(value)? (byte) (value | 32) : value;
     }
 
     static boolean containsUpperCase(byte[] bytes, int fromIndex, int toIndex) {

@@ -1797,7 +1797,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
     }
 
     public static boolean isUpperCase(byte value) {
-        return value >= 'A' && value <= 'Z';
+        return AsciiStringUtil.isUpperCase(value);
     }
 
     public static boolean isUpperCase(char value) {
