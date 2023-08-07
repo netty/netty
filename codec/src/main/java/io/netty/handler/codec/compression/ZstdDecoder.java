@@ -120,7 +120,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
             in.readerIndex(0);
             if (currentState == State.DECOMPRESS_DATA) {
                 if (buffer == null) {
-                    buffer = ctx.alloc().buffer((int) ZstdInputStream.recommendedDOutSize());
+                    buffer = ctx.alloc().buffer(new Long(ZstdInputStream.recommendedDOutSize()).intValue());
                 }
                 buffer.writeBytes(in);
                 currentState = State.NEED_MORE_DATA;
