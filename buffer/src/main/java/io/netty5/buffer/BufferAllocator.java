@@ -174,49 +174,6 @@ public interface BufferAllocator extends SafeCloseable {
     }
 
     /**
-     * Compose the send of a buffer and present them as a single buffer.
-     * <p>
-     * When a composite buffer is closed, all of its constituent component buffers are closed as well.
-     * <p>
-     * See the class documentation for more information on how buffers compose, and what is required of the given
-     * buffers for composition to be allowed.
-     *
-     * @param send The sent buffer to compose into a single buffer view.
-     * @return A buffer composed of, and backed by, the given buffers.
-     * @throws IllegalStateException if one of the sends have already been received. The remaining buffers and sends
-     * will be closed and discarded, respectively.
-     */
-    default CompositeBuffer composeReadOnly(Send<Buffer> send) {
-        return DefaultCompositeBuffer.composeReadOnly(this, Collections.singleton(send));
-    }
-
-    /**
-     * Compose the given sequence of sends of buffers and present them as a single buffer.
-     * <p>
-     * When a composite buffer is closed, all of its constituent component buffers are closed as well.
-     * <p>
-     * See the class documentation for more information on how buffers compose, and what is required of the given
-     * buffers for composition to be allowed.
-     *
-     * @param sends The sent buffers to compose into a single buffer view.
-     * @return A buffer composed of, and backed by, the given buffers.
-     * @throws IllegalStateException if one of the sends have already been received. The remaining buffers and sends
-     * will be closed and discarded, respectively.
-     */
-    default CompositeBuffer composeReadOnly(Iterable<Send<Buffer>> sends) {
-        return DefaultCompositeBuffer.composeReadOnly(this, sends);
-    }
-
-    /**
-     * Create an empty composite buffer, that has no components. The buffer can be extended with components using either
-     * {@link CompositeBuffer#ensureWritable(int)} or {@link CompositeBuffer#extendWith(Send)}.
-     * @return A composite buffer that has no components, and has a capacity of zero.
-     */
-    default CompositeBuffer composeReadOnly() {
-        return DefaultCompositeBuffer.composeReadOnly(this);
-    }
-
-    /**
      * Create a supplier of "constant" {@linkplain Buffer Buffers} from this allocator, that all have the given
      * byte contents. The buffer has the same capacity as the byte array length, and its write offset is placed at the
      * end, and its read offset is at the beginning, such that the entire buffer contents are readable.
