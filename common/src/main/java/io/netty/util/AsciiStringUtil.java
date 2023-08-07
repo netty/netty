@@ -98,40 +98,6 @@ public final class AsciiStringUtil {
         return unrolledFirstIndexOf(bytes, fromIndex, toIndex - fromIndex, value);
     }
 
-    public static final class SWARByteUtil {
-        static final long UPPER_CASE_PATTERN = compilePattern((byte) 'A');
-        static final long UPPER_CASE_RANGE_PATTERN = compileRangePattern((byte) 'A', (byte) 'Z');
-
-        static final long LOWER_CASE_PATTERN = compilePattern((byte) 'a');
-        static final long LOWER_CASE_RANGE_PATTERN = compileRangePattern((byte) 'a', (byte) 'z');
-
-        public static long compilePattern(byte byteToFind) {
-            return (byteToFind & 0xFFL) * 0x101010101010101L;
-        }
-
-        private static long compileRangePattern(byte low, byte high) {
-            assert low <= high && high - low <= 128;
-            return (0x7F7F - high + low & 0xFFL) * 0x101010101010101L;
-        }
-
-        private static long applyPatternRange(long word, long lowPattern, long rangePattern) {
-            long input = (word | 0x8080808080808080L) - lowPattern;
-            input = ~((word | 0x7F7F7F7F7F7F7F7FL) ^ input);
-            long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + rangePattern;
-            return ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
-        }
-
-        public static int firstAnyPattern(long word, long pattern, boolean leading) {
-            long input = word ^ pattern;
-            long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
-            tmp = ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
-            final int binaryPosition = leading? Long.numberOfLeadingZeros(tmp) : Long.numberOfTrailingZeros(tmp);
-            return binaryPosition >>> 3;
-        }
-
-        private SWARByteUtil() {
-        }
-    }
 
     static boolean isLowerCase(byte value) {
         return value >= 'a' && value <= 'z';
@@ -269,6 +235,69 @@ public final class AsciiStringUtil {
         final int byteCount = length & 7;
         for (int i = 0; i < byteCount; ++i) {
             dest[destPos++] = toUpperCase(src[srcPos++]);
+        }
+    }
+
+    static boolean equalsIgnoreCases(byte[] lhs, int lhsPos, byte[] rhs, int rhsPos, int length) {
+        if (lhs == rhs && lhsPos == rhsPos && lhs.length >= lhsPos + length) {
+            return true;
+        }
+
+        int longCount = length >>> 3;
+        if (longCount > 0) {
+            for (int i = 0; i < longCount; ++i) {
+                final long lWord = PlatformDependent.getLong(lhs, lhsPos);
+                final long rWord = PlatformDependent.getLong(rhs, rhsPos);
+                if (toLowerCase(lWord) != toLowerCase(rWord)) {
+                    return false;
+                }
+                lhsPos += Long.BYTES;
+                rhsPos += Long.BYTES;
+            }
+        }
+        int byteCount = length & 7;
+        if (byteCount > 0) {
+            for (int i = 0; i < byteCount; ++i) {
+                if (toLowerCase(lhs[lhsPos++]) != toLowerCase(rhs[rhsPos++])) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    public static final class SWARByteUtil {
+        static final long UPPER_CASE_PATTERN = compilePattern((byte) 'A');
+        static final long UPPER_CASE_RANGE_PATTERN = compileRangePattern((byte) 'A', (byte) 'Z');
+
+        static final long LOWER_CASE_PATTERN = compilePattern((byte) 'a');
+        static final long LOWER_CASE_RANGE_PATTERN = compileRangePattern((byte) 'a', (byte) 'z');
+
+        public static long compilePattern(byte byteToFind) {
+            return (byteToFind & 0xFFL) * 0x101010101010101L;
+        }
+
+        private static long compileRangePattern(byte low, byte high) {
+            assert low <= high && high - low <= 128;
+            return (0x7F7F - high + low & 0xFFL) * 0x101010101010101L;
+        }
+
+        private static long applyPatternRange(long word, long lowPattern, long rangePattern) {
+            long input = (word | 0x8080808080808080L) - lowPattern;
+            input = ~((word | 0x7F7F7F7F7F7F7F7FL) ^ input);
+            long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + rangePattern;
+            return ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
+        }
+
+        public static int firstAnyPattern(long word, long pattern, boolean leading) {
+            long input = word ^ pattern;
+            long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
+            tmp = ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
+            final int binaryPosition = leading? Long.numberOfLeadingZeros(tmp) : Long.numberOfTrailingZeros(tmp);
+            return binaryPosition >>> 3;
+        }
+
+        private SWARByteUtil() {
         }
     }
 
