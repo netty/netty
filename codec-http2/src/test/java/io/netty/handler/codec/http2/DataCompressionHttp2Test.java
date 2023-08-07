@@ -341,7 +341,7 @@ public class DataCompressionHttp2Test {
     @Test
     public void snappyEncodingSingleEmptyMessage() throws Exception {
         final String text = "";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes());
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.US_ASCII));
         bootstrapEnv(data.readableBytes());
         try {
             final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
@@ -365,7 +365,7 @@ public class DataCompressionHttp2Test {
     @Test
     public void snappyEncodingSingleMessage() throws Exception {
         final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
-        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.UTF_8.name()));
+        final ByteBuf data = Unpooled.copiedBuffer(text.getBytes(CharsetUtil.US_ASCII));
         bootstrapEnv(data.readableBytes());
         try {
             final Http2Headers headers = new DefaultHttp2Headers().method(POST).path(PATH)
