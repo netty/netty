@@ -104,10 +104,6 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
 
     private boolean consumeAndDecompress(ChannelHandlerContext ctx, int decompressedSize,
                                          ByteBuf in, List<Object> out) throws IOException {
-        // close streams before read if state is NEED_MORE_DATA
-        if (currentState == State.NEED_MORE_DATA) {
-            closeAllStreams();
-        }
         // Bytebuf cannot release here because ByteToMessageDecoder will release it
         is = new ByteBufInputStream(in, false);
         zstdIs = new ZstdInputStream(is);
@@ -145,7 +141,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         }
         try {
             final ByteBuffer src =  CompressionUtil.safeNioBuffer(in, in.readerIndex(), compressedLength);
-            int decompressedSize = (int) Zstd.decompressedSize(src);
+            int decompressedSize = new Long(Zstd.decompressedSize(src)).intValue();
             boolean completed = consumeAndDecompress(ctx, decompressedSize, in, out);
 
             if (!completed) {
@@ -172,28 +168,6 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
 
         if (bos != null) {
             bos.close();
-        }
-    }
-
-    @Override
-    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        try {
-            if (buffer != null) {
-                buffer.clear();
-            }
-        } finally {
-            super.handlerRemoved0(ctx);
-        }
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        try {
-            if (buffer != null) {
-                buffer.clear();
-            }
-        } finally {
-            super.channelInactive(ctx);
         }
     }
 
