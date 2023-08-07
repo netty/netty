@@ -120,7 +120,9 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
             in.readerIndex(0);
             if (currentState == State.DECOMPRESS_DATA) {
                 if (buffer == null) {
-                    buffer = ctx.alloc().buffer(new Long(ZstdInputStream.recommendedDOutSize()).intValue());
+                    long recommendedOutSize =  ZstdInputStream.recommendedDOutSize();
+                    ObjectUtil.checkInRange(recommendedOutSize, 0L, Integer.MAX_VALUE, "recommendedOutSize");
+                    buffer = ctx.alloc().buffer((int) recommendedOutSize);
                 }
                 buffer.writeBytes(in);
                 currentState = State.NEED_MORE_DATA;
@@ -141,8 +143,9 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         }
         try {
             final ByteBuffer src =  CompressionUtil.safeNioBuffer(in, in.readerIndex(), compressedLength);
-            int decompressedSize = new Long(Zstd.decompressedSize(src)).intValue();
-            boolean completed = consumeAndDecompress(ctx, decompressedSize, in, out);
+            long decompressedSize = Zstd.decompressedSize(src);
+            ObjectUtil.checkInRange(decompressedSize, 0L, Integer.MAX_VALUE, "decompressedSize");
+            boolean completed = consumeAndDecompress(ctx, (int) decompressedSize, in, out);
 
             if (!completed) {
                 return;
