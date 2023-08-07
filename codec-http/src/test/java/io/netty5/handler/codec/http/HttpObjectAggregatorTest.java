@@ -674,4 +674,29 @@ public class HttpObjectAggregatorTest {
           channel.close();
         }
     }
+
+    @Test
+    public void testAggregateReadOnly() {
+        HttpObjectAggregator<?> aggr = new HttpObjectAggregator<DefaultHttpContent>(1024 * 1024);
+        EmbeddedChannel embedder = new EmbeddedChannel(aggr);
+
+        HttpRequest message = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost");
+        HttpContent<?> chunk1 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII));
+        HttpContent<?> chunk2 = new DefaultHttpContent(preferredAllocator().copyOf("test", US_ASCII).makeReadOnly());
+        HttpContent<?> chunk3 = new DefaultLastHttpContent(preferredAllocator().allocate(0));
+        int expectedContentLength = chunk1.payload().readableBytes() + chunk2.payload().readableBytes();
+        assertFalse(embedder.writeInbound(message));
+        assertFalse(embedder.writeInbound(chunk1));
+        assertFalse(embedder.writeInbound(chunk2));
+
+        // this should trigger a channelRead event so return true
+        assertTrue(embedder.writeInbound(chunk3));
+        assertTrue(embedder.finish());
+        FullHttpRequest aggregatedMessage = embedder.readInbound();
+        assertNotNull(aggregatedMessage);
+        assertTrue(aggregatedMessage.isAccessible());
+        assertTrue(aggregatedMessage.payload().readOnly());
+        checkContentBuffer(aggregatedMessage);
+        assertNull(embedder.readInbound());
+    }
 }
