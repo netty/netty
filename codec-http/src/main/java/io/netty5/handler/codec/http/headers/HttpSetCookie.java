@@ -123,6 +123,13 @@ public interface HttpSetCookie extends HttpCookiePair {
     boolean isHttpOnly();
 
     /**
+     * Get the encoded value of this {@link HttpSetCookie} for the {@code Set-Cookie} HTTP header.
+     *
+     * @return the encoded value of this {@link HttpSetCookie}.
+     */
+    CharSequence encodedSetCookie();
+
+    /**
      * Represents
      * <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05#section-4.1.1">samesite-value</a>
      * for the

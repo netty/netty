@@ -32,6 +32,8 @@ package io.netty5.handler.codec.http.headers;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.Test;
 
+import java.util.Iterator;
+
 import static io.netty5.handler.codec.http.headers.HttpHeaders.newHeaders;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -139,5 +141,16 @@ class DefaultHttpCookiePairTest {
         Exception e = assertThrows(IllegalArgumentException.class, () -> headers.getCookies().forEach(c -> { }));
         assertThat(e).hasMessageContaining("no cookie value found after")
                 .hasMessageContaining("no previous cookie");
+    }
+
+    @Test
+    void setCookieAsCookie() {
+        final HttpHeaders headers = newHeaders();
+        // HttpSetCookie also implements HttpCookiePair
+        headers.addCookie(new DefaultHttpSetCookie("k", "v", false, true, true));
+        Iterator<HttpCookiePair> itr = headers.getCookiesIterator();
+        assertThat(itr.hasNext()).isTrue();
+        assertThat(itr.next()).isEqualTo(new DefaultHttpCookiePair("k", "v"));
+        assertThat(itr.hasNext()).isFalse();
     }
 }
