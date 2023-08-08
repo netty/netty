@@ -98,7 +98,6 @@ public final class AsciiStringUtil {
         return unrolledFirstIndexOf(bytes, fromIndex, toIndex - fromIndex, value);
     }
 
-
     static boolean isLowerCase(byte value) {
         return value >= 'a' && value <= 'z';
     }
