@@ -48,6 +48,7 @@ import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.AlgorithmParameters;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyException;
@@ -102,6 +103,8 @@ public abstract class SslContext {
 
     private final boolean startTls;
     private final AttributeMap attributes = new DefaultAttributeMap();
+    private static final String OID_PKCS5_PBES2 = "1.2.840.113549.1.5.13";
+    private static final String PBES2 = "PBES2";
 
     /**
      * Returns the default server-side implementation provider currently in use.
@@ -1081,14 +1084,36 @@ public abstract class SslContext {
         }
 
         EncryptedPrivateKeyInfo encryptedPrivateKeyInfo = new EncryptedPrivateKeyInfo(key);
-        SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(encryptedPrivateKeyInfo.getAlgName());
+        String pbeAlgorithm = getPBEAlgorithm(encryptedPrivateKeyInfo);
+        SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(pbeAlgorithm);
         PBEKeySpec pbeKeySpec = new PBEKeySpec(password);
         SecretKey pbeKey = keyFactory.generateSecret(pbeKeySpec);
 
-        Cipher cipher = Cipher.getInstance(encryptedPrivateKeyInfo.getAlgName());
+        Cipher cipher = Cipher.getInstance(pbeAlgorithm);
         cipher.init(Cipher.DECRYPT_MODE, pbeKey, encryptedPrivateKeyInfo.getAlgParameters());
 
         return encryptedPrivateKeyInfo.getKeySpec(cipher);
+    }
+
+    private static String getPBEAlgorithm(EncryptedPrivateKeyInfo encryptedPrivateKeyInfo) {
+        AlgorithmParameters parameters = encryptedPrivateKeyInfo.getAlgParameters();
+        String algName = encryptedPrivateKeyInfo.getAlgName();
+        // Java 8 ~ 16 returns OID_PKCS5_PBES2
+        // Java 17+ returns PBES2
+        if (parameters != null && (OID_PKCS5_PBES2.equals(algName) || PBES2.equals(algName))) {
+            /*
+             * This should be "PBEWith<prf>And<encryption>".
+             * Relying on the toString() implementation is potentially
+             * fragile but acceptable in this case since the JRE depends on
+             * the toString() implementation as well.
+             * In the future, if necessary, we can parse the value of
+             * parameters.getEncoded() but the associated complexity and
+             * unlikeliness of the JRE implementation changing means that
+             * Tomcat will use to toString() approach for now.
+             */
+            return parameters.toString();
+        }
+        return encryptedPrivateKeyInfo.getAlgName();
     }
 
     /**
