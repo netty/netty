@@ -57,8 +57,8 @@ public abstract class AbstractMicrobenchmarkBase {
             "-Dio.netty5.buffer.lifecycleTracingEnabled=false",
             // Enable Unsafe-based buffer implementation:
 //            "-Dio.netty5.tryReflectionSetAccessible=true",
-//            "--add-opens","java.base/java.nio=ALL-UNNAMED",
-//            "--add-opens","java.base/jdk.internal.misc=ALL-UNNAMED",
+//            "--add-opens", "java.base/java.nio=ALL-UNNAMED",
+//            "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
 //            "-Dio.netty5.buffer.api.MemoryManager=Unsafe"
     };
 

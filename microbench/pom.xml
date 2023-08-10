@@ -198,6 +198,11 @@
       <artifactId>jctools-core</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>
