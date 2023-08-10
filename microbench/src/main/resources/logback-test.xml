@@ -15,7 +15,5 @@
   ~ under the License.
   -->
 <configuration>
-    <root>
-        <level value="INFO" />
-    </root>
+    <root level="INFO" />
 </configuration>
