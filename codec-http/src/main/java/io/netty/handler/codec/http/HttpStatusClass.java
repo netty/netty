@@ -56,22 +56,20 @@ public enum HttpStatusClass {
      * Returns the class of the specified HTTP status code.
      */
     public static HttpStatusClass valueOf(int code) {
-        if (INFORMATIONAL.contains(code)) {
-            return INFORMATIONAL;
+        switch (code / 100) {
+            // 1xx
+            case 1: return INFORMATIONAL;
+            // 2xx
+            case 2: return SUCCESS;
+            // 3xx
+            case 3: return REDIRECTION;
+            // 4xx
+            case 4: return CLIENT_ERROR;
+            // 5xx
+            case 5: return SERVER_ERROR;
+            // others
+            default: return UNKNOWN;
         }
-        if (SUCCESS.contains(code)) {
-            return SUCCESS;
-        }
-        if (REDIRECTION.contains(code)) {
-            return REDIRECTION;
-        }
-        if (CLIENT_ERROR.contains(code)) {
-            return CLIENT_ERROR;
-        }
-        if (SERVER_ERROR.contains(code)) {
-            return SERVER_ERROR;
-        }
-        return UNKNOWN;
     }
 
     /**
