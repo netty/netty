@@ -204,6 +204,44 @@ public class HpackEncoderTest {
         }
     }
 
+    @Test
+    public void testSanitization() throws Http2Exception {
+        int smallHeaderValueSize = 10;
+        int mediumHeaderValueSize = 300;
+        int largeHeaderValueSize = 2000;
+        verifyHeaderValueSanitization(smallHeaderValueSize);
+        verifyHeaderValueSanitization(mediumHeaderValueSize);
+        verifyHeaderValueSanitization(largeHeaderValueSize);
+    }
+
+    private void verifyHeaderValueSanitization(int headerValueSize) throws Http2Exception {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < headerValueSize; i++) {
+            sb.append((char) i); // Use the index as the code point value of the character.
+        }
+        String headerValue = sb.toString();
+        String headerKey = "some-key";
+        Http2Headers toBeEncodedHeaders = new DefaultHttp2Headers().add(headerKey, headerValue);
+
+        hpackEncoder.encodeHeaders(0, buf, toBeEncodedHeaders, Http2HeadersEncoder.NEVER_SENSITIVE);
+        DefaultHttp2Headers decodedHeaders = new DefaultHttp2Headers();
+        hpackDecoder.decode(0, buf, decodedHeaders, true);
+        buf.clear();
+
+        CharSequence decodedHeaderValue = decodedHeaders.get(headerKey);
+        System.out.println(decodedHeaderValue);
+        for (int i = 0; i < headerValueSize; i++) {
+            char c = decodedHeaderValue.charAt(i);
+            if (i > 255) {
+                // All characters outside the range should be sanitized.
+                Assertions.assertEquals('?', c, "Should be sanitized.");
+            } else {
+                char expectedChar = (char) i;
+                Assertions.assertEquals(expectedChar, c, "Should not be sanitized.");
+            }
+        }
+    }
+
     private void setMaxTableSize(int maxHeaderTableSize) throws Http2Exception {
         hpackEncoder.setMaxHeaderTableSize(buf, maxHeaderTableSize);
         hpackDecoder.setMaxHeaderTableSize(maxHeaderTableSize);
