@@ -12,10 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.microbenchmark.common;
+package io.netty.util;
 
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.AsciiString;
 import io.netty.util.internal.SuppressJava6Requirement;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
@@ -38,9 +37,9 @@ import java.util.concurrent.TimeUnit;
 @Warmup(iterations = 5, time = 1)
 @Measurement(iterations = 8, time = 1)
 @State(Scope.Benchmark)
-public class AsciiStringCaseConversionBenchmark extends AbstractMicrobenchmark {
+public class AsciiStringUtilCaseConversionBenchmark extends AbstractMicrobenchmark {
 
-    @Param({ "7", "16", "23", "32", "63" })
+    @Param({ "7", "16", "23", "32" })
     int size;
     @Param({ "11" })
     int logPermutations;
@@ -48,8 +47,8 @@ public class AsciiStringCaseConversionBenchmark extends AbstractMicrobenchmark {
     @Param({ "1" })
     int seed;
 
-    int permutations; // uniquenessness
-    AsciiString[] upperCaseData;
+    int permutations;
+    byte[][] upperCaseData;
     private int i;
 
     @Param({ "true", "false" })
@@ -61,9 +60,9 @@ public class AsciiStringCaseConversionBenchmark extends AbstractMicrobenchmark {
         System.setProperty("io.netty.noUnsafe", Boolean.valueOf(noUnsafe).toString());
         SplittableRandom random = new SplittableRandom(seed);
         permutations = 1 << logPermutations;
-        upperCaseData = new AsciiString[permutations];
+        upperCaseData = new byte[permutations][size];
         for (int i = 0; i < permutations; ++i) {
-            final int foundIndex = random.nextInt(Math.max(0, Math.min(size - 8, size >> 1)), size);
+            final int foundIndex = random.nextInt(Math.max(0, size - 8), size);
             byte[] byteArray = new byte[size];
             int j = 0;
             for (; j < size; j++) {
@@ -71,24 +70,31 @@ public class AsciiStringCaseConversionBenchmark extends AbstractMicrobenchmark {
                 // turn any found value into something different
                 if (j < foundIndex) {
                     if (value >= 'A' && value <= 'Z') {
-                        value = Character.toLowerCase(value);
+                        value |= 32;
                     }
                 }
                 if (j == foundIndex) {
-                    value = 'G';
+                    value = 'N';
                 }
                 byteArray[j] = (byte) value;
             }
-            upperCaseData[i] = new AsciiString(byteArray);
+            upperCaseData[i] = byteArray;
         }
     }
 
-    private AsciiString getData() {
+    private byte[] getData() {
         return upperCaseData[i++ & permutations - 1];
     }
 
     @Benchmark
-    public AsciiString toLowerCase() {
-        return getData().toLowerCase();
+    public byte[] toLowerCase() {
+        byte[] ret = new byte[size];
+        AsciiStringUtil.toLowerCase(getData(), 0, ret, 0, size);
+        return ret;
+    }
+
+    @Benchmark
+    public boolean containsUpperCase() {
+        return AsciiStringUtil.containsUpperCase(getData(), 0, size);
     }
 }

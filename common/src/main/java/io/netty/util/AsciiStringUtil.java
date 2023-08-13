@@ -105,14 +105,26 @@ public final class AsciiStringUtil {
     }
 
     private static long toLowerCase(long word) {
-        long mask = SWARByteUtil.applyPatternRange(word, SWARByteUtil.UPPER_CASE_PATTERN,
-                                                   SWARByteUtil.UPPER_CASE_RANGE_PATTERN);
+        final long mask = SWARByteUtil.applyPatternRange(word, SWARByteUtil.UPPER_CASE_PATTERN,
+                                                         SWARByteUtil.UPPER_CASE_RANGE_PATTERN);
+        return word | mask >>> 2;
+    }
+
+    private static int toLowerCase(int word) {
+        final int mask = SWARByteUtil.applyPatternRange(word, (int) SWARByteUtil.UPPER_CASE_PATTERN,
+                                                        (int) SWARByteUtil.UPPER_CASE_RANGE_PATTERN);
         return word | mask >>> 2;
     }
 
     private static long toUpperCase(long word) {
-        long mask = SWARByteUtil.applyPatternRange(word, SWARByteUtil.LOWER_CASE_PATTERN,
-                                                   SWARByteUtil.LOWER_CASE_RANGE_PATTERN);
+        final long mask = SWARByteUtil.applyPatternRange(word, SWARByteUtil.LOWER_CASE_PATTERN,
+                                                         SWARByteUtil.LOWER_CASE_RANGE_PATTERN);
+        return word & ~(mask >>> 2);
+    }
+
+    private static int toUpperCase(int word) {
+        final int mask = SWARByteUtil.applyPatternRange(word, (int) SWARByteUtil.LOWER_CASE_PATTERN,
+                                                        (int) SWARByteUtil.LOWER_CASE_RANGE_PATTERN);
         return word & ~(mask >>> 2);
     }
 
@@ -145,12 +157,31 @@ public final class AsciiStringUtil {
             }
             fromIndex += Long.BYTES;
         }
+        final int byteCount = length & 7;
+        return unrolledConstainsUpperCase(bytes, fromIndex, byteCount);
+    }
 
-        for (; fromIndex < toIndex; ++fromIndex) {
-            byte value = bytes[fromIndex];
-            if (isUpperCase(value)) {
+    private static boolean unrolledConstainsUpperCase(byte[] bytes, int fromIndex, int length) {
+        if ((length & 4) != 0) {
+            final int word = PlatformDependent.getInt(bytes, fromIndex);
+            final int mask = SWARByteUtil.applyPatternRange(word, (int) SWARByteUtil.UPPER_CASE_PATTERN,
+                                                            (int) SWARByteUtil.UPPER_CASE_RANGE_PATTERN);
+            if (mask != 0) {
                 return true;
             }
+            fromIndex += Integer.BYTES;
+        }
+        if ((length & 2) != 0) {
+            if (isUpperCase(bytes[fromIndex])) {
+                return true;
+            }
+            if (isUpperCase(bytes[fromIndex + 1])) {
+                return true;
+            }
+            fromIndex += 2;
+        }
+        if ((length & 1) != 0) {
+            return isUpperCase(bytes[fromIndex]);
         }
         return false;
     }
@@ -176,11 +207,30 @@ public final class AsciiStringUtil {
             }
             fromIndex += Long.BYTES;
         }
+        return unrolledContainsLowerCase(bytes, fromIndex, length & 7);
+    }
 
-        for (; fromIndex < toIndex; ++fromIndex) {
+    private static boolean unrolledContainsLowerCase(byte[] bytes, int fromIndex, int length) {
+        if ((length & 4) != 0) {
+            final int word = PlatformDependent.getInt(bytes, fromIndex);
+            final int mask = SWARByteUtil.applyPatternRange(word, (int) SWARByteUtil.LOWER_CASE_PATTERN,
+                                                            (int) SWARByteUtil.LOWER_CASE_RANGE_PATTERN);
+            if (mask != 0) {
+                return true;
+            }
+            fromIndex += Integer.BYTES;
+        }
+        if ((length & 2) != 0) {
             if (isLowerCase(bytes[fromIndex])) {
                 return true;
             }
+            if (isLowerCase(bytes[fromIndex + 1])) {
+                return true;
+            }
+            fromIndex += 2;
+        }
+        if ((length & 1) != 0) {
+            return isLowerCase(bytes[fromIndex]);
         }
         return false;
     }
@@ -200,10 +250,27 @@ public final class AsciiStringUtil {
             srcPos += Long.BYTES;
             destPos += Long.BYTES;
         }
+        unrollToLowerCase(src, srcPos, dest, destPos, length & 7);
+    }
 
-        final int byteCount = length & 7;
-        for (int i = 0; i < byteCount; ++i) {
-            dest[destPos++] = toLowerCase(src[srcPos++]);
+    private static void unrollToLowerCase(byte[] src, int srcPos, byte[] dest, int destPos, int length) {
+        if ((length & 4) != 0) {
+            final int word = PlatformDependent.getInt(src, srcPos);
+            PlatformDependent.putInt(dest, destPos, toLowerCase(word));
+            srcPos += Integer.BYTES;
+            destPos += Integer.BYTES;
+        }
+        if ((length & 2) != 0) {
+            PlatformDependent.putByte(dest, destPos,
+                                      toLowerCase(PlatformDependent.getByte(src, srcPos)));
+            PlatformDependent.putByte(dest, destPos + 1,
+                                      toLowerCase(PlatformDependent.getByte(src, srcPos + 1)));
+            srcPos += 2;
+            destPos += 2;
+        }
+        if ((length & 1) != 0) {
+            PlatformDependent.putByte(dest, destPos,
+                                      toLowerCase(PlatformDependent.getByte(src, srcPos)));
         }
     }
 
@@ -224,8 +291,27 @@ public final class AsciiStringUtil {
         }
 
         final int byteCount = length & 7;
-        for (int i = 0; i < byteCount; ++i) {
-            dest[destPos++] = toUpperCase(src[srcPos++]);
+        unrolltoUpperCase(src, srcPos, dest, destPos, byteCount);
+    }
+
+    private static void unrolltoUpperCase(byte[] src, int srcPos, byte[] dest, int destPos, int length) {
+        if ((length & 4) != 0) {
+            final int word = PlatformDependent.getInt(src, srcPos);
+            PlatformDependent.putInt(dest, destPos, toUpperCase(word));
+            srcPos += Integer.BYTES;
+            destPos += Integer.BYTES;
+        }
+        if ((length & 2) != 0) {
+            PlatformDependent.putByte(dest, destPos,
+                                      toUpperCase(PlatformDependent.getByte(src, srcPos)));
+            PlatformDependent.putByte(dest, destPos + 1,
+                                      toUpperCase(PlatformDependent.getByte(src, srcPos + 1)));
+            srcPos += 2;
+            destPos += 2;
+        }
+        if ((length & 1) != 0) {
+            PlatformDependent.putByte(dest, destPos,
+                                      toUpperCase(PlatformDependent.getByte(src, srcPos)));
         }
     }
 
@@ -247,12 +333,34 @@ public final class AsciiStringUtil {
             }
         }
         int byteCount = length & 7;
-        if (byteCount > 0) {
-            for (int i = 0; i < byteCount; ++i) {
-                if (toLowerCase(lhs[lhsPos++]) != toLowerCase(rhs[rhsPos++])) {
-                    return false;
-                }
+        return unrollEqualsIgnoreCase(lhs, lhsPos, rhs, rhsPos, byteCount);
+    }
+
+    private static boolean unrollEqualsIgnoreCase(byte[] lhs, int lhsPos, byte[] rhs, int rhsPos, int length) {
+        if ((length & 4) != 0) {
+            final int lWord = PlatformDependent.getInt(lhs, lhsPos);
+            final int rWord = PlatformDependent.getInt(rhs, rhsPos);
+            if (toLowerCase(lWord) != toLowerCase(rWord)) {
+                return false;
             }
+            lhsPos += Integer.BYTES;
+            rhsPos += Integer.BYTES;
+        }
+        if ((length & 2) != 0) {
+            if (toLowerCase(PlatformDependent.getByte(lhs, lhsPos)) !=
+                toLowerCase(PlatformDependent.getByte(rhs, rhsPos))) {
+                return false;
+            }
+            if (toLowerCase(PlatformDependent.getByte(lhs, lhsPos + 1)) !=
+                toLowerCase(PlatformDependent.getByte(rhs, rhsPos + 1))) {
+                return false;
+            }
+            lhsPos += 2;
+            rhsPos += 2;
+        }
+        if ((length & 1) != 0) {
+            return toLowerCase(PlatformDependent.getByte(lhs, lhsPos)) ==
+                   toLowerCase(PlatformDependent.getByte(rhs, rhsPos));
         }
         return true;
     }
@@ -278,6 +386,13 @@ public final class AsciiStringUtil {
             input = ~((word | 0x7F7F7F7F7F7F7F7FL) ^ input);
             long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + rangePattern;
             return ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
+        }
+
+        private static int applyPatternRange(int word, int lowPattern, int rangePattern) {
+            int input = (word | 0x80808080) - lowPattern;
+            input = ~((word | 0x7F7F7F7F) ^ input);
+            int tmp = (input & 0x7F7F7F7F) + rangePattern;
+            return ~(tmp | input | 0x7F7F7F7F);
         }
 
         private static long applyPattern(long word, long pattern) {
