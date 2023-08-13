@@ -40,9 +40,9 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 8, time = 1)
 @State(Scope.Benchmark)
 public class AsciiStringIndexOfBenchmark extends AbstractMicrobenchmark {
-    public static Object blackhole;
 
-    @Param({ "7", "11", "23", "32" })
+    public static Object blackhole;
+    @Param({ "7", "16", "23", "32" })
     int size;
     @Param({ "11" })
     int logPermutations;
@@ -85,6 +85,7 @@ public class AsciiStringIndexOfBenchmark extends AbstractMicrobenchmark {
             final int foundIndex = random.nextInt(Math.max(0, size - 8), size);
             byteArray[foundIndex] = needleByte;
             data[i] = new AsciiString(byteArray);
+            blackhole = data[i].toString(); // cache
         }
     }
 
@@ -95,5 +96,10 @@ public class AsciiStringIndexOfBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public int indexOf() {
         return getData().indexOf((char) needleByte, 0);
+    }
+
+    @Benchmark
+    public int stringIndexOf() {
+        return getData().toString().indexOf((char) needleByte);
     }
 }
