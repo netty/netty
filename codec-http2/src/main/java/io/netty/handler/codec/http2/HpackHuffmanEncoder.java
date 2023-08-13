@@ -87,7 +87,7 @@ final class HpackHuffmanEncoder {
         int n = 0;
 
         for (int i = 0; i < data.length(); i++) {
-            int b = sanitizeChar(data.charAt(i));
+            int b = AsciiString.c2b(data.charAt(i)) & 0xFF;
             int code = codes[b];
             int nbits = lengths[b];
 
@@ -133,21 +133,9 @@ final class HpackHuffmanEncoder {
     private int getEncodedLengthSlowPath(CharSequence data) {
         long len = 0;
         for (int i = 0; i < data.length(); i++) {
-            len += lengths[sanitizeChar(data.charAt(i))];
+            len += lengths[AsciiString.c2b(data.charAt(i)) & 0xFF];
         }
         return (int) (len + 7 >> 3);
-    }
-
-    /**
-     * Sanitize a character in a way that is similar to what {@link AsciiString#c2b} does. The difference is that it
-     * does not cast the sanitized character to a {@code byte}, instead it simply returns the sanitized character as a
-     * {@code char}.
-     *
-     * @param c input character to sanitize.
-     * @return '?' if the character is sanitized or the same input character is returned.
-     */
-    private char sanitizeChar(char c) {
-        return (c > 255) ? '?' : c; // 255 is max character value.
     }
 
     private final class EncodeProcessor implements ByteProcessor {
