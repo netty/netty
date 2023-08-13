@@ -298,17 +298,8 @@ public final class AsciiStringUtil {
             return binaryPosition >>> 3;
         }
 
-        public static int firstAnyPatternInt(int word, int pattern, boolean leading) {
-            int input = word ^ pattern;
-            int tmp = (input & 0x7F7F7F7F) + 0x7F7F7F7F;
-            tmp = ~(tmp | input | 0x7F7F7F7F);
-            final int binaryPosition = leading? Integer.numberOfLeadingZeros(tmp) : Integer.numberOfTrailingZeros(tmp);
-            return binaryPosition >>> 3;
-        }
-
         private SWARByteUtil() {
         }
-
     }
 
     private AsciiStringUtil() {
