@@ -21,6 +21,10 @@ import io.netty.util.internal.PlatformDependent;
  */
 public final class AsciiStringUtil {
 
+    /**
+     * Returns index of the first occurrence of the specified byte in the specified array.
+     * this method utilizes SWAR technique to accelerate indexOf operation.
+     */
     static int firstIndexOf(byte[] bytes, int fromIndex, int toIndex, byte value) {
         if (!PlatformDependent.isUnaligned()) {
             return linearFirstIndexOf(bytes, fromIndex, toIndex, value);
@@ -96,63 +100,50 @@ public final class AsciiStringUtil {
         return -1;
     }
 
+    /**
+     * Returns true if given byte is ascii lower case alphabet character. false otherwise.
+     */
     static boolean isLowerCase(byte value) {
         return value >= 'a' && value <= 'z';
     }
 
+    /**
+     * Returns true if given byte is ascii upper case alphabet character. false otherwise.
+     */
     static boolean isUpperCase(byte value) {
         return value >= 'A' && value <= 'Z';
     }
 
-    private static long toLowerCase(long word) {
-        final long mask = SWARByteUtil.applyPatternRange(word, SWARByteUtil.UPPER_CASE_PATTERN,
-                                                         SWARByteUtil.UPPER_CASE_RANGE_PATTERN);
-        return word | mask >>> 2;
-    }
-
-    private static int toLowerCase(int word) {
-        final int mask = SWARByteUtil.applyPatternRange(word, (int) SWARByteUtil.UPPER_CASE_PATTERN,
-                                                        (int) SWARByteUtil.UPPER_CASE_RANGE_PATTERN);
-        return word | mask >>> 2;
-    }
-
-    private static long toUpperCase(long word) {
-        final long mask = SWARByteUtil.applyPatternRange(word, SWARByteUtil.LOWER_CASE_PATTERN,
-                                                         SWARByteUtil.LOWER_CASE_RANGE_PATTERN);
-        return word & ~(mask >>> 2);
-    }
-
-    private static int toUpperCase(int word) {
-        final int mask = SWARByteUtil.applyPatternRange(word, (int) SWARByteUtil.LOWER_CASE_PATTERN,
-                                                        (int) SWARByteUtil.LOWER_CASE_RANGE_PATTERN);
-        return word & ~(mask >>> 2);
-    }
-
+    /**
+     * If the character is lowercase - converts the character to uppercase,
+     * otherwise returns the character as it is. Only for ASCII characters.
+     */
     static byte toUpperCase(byte value) {
         return isLowerCase(value)? (byte) (value & ~32) : value;
     }
 
+    /**
+     * If the character is uppercase - converts the character to lowercase,
+     * otherwise returns the character as it is. Only for ASCII characters.
+     */
     static byte toLowerCase(byte value) {
         return isUpperCase(value)? (byte) (value | 32) : value;
     }
 
+    /**
+     * Returns true if the given byte array contains at least one upper case character. false otherwise.
+     * This method utilizes SWAR technique to accelerate containsUpperCase operation.
+     */
     static boolean containsUpperCase(byte[] bytes, int fromIndex, int toIndex) {
         if (!PlatformDependent.isUnaligned()) {
-            for (int idx = fromIndex; idx < toIndex; ++idx) {
-                if (isUpperCase(bytes[idx])) {
-                    return true;
-                }
-            }
-            return false;
+            return linearContainsUpperCase(bytes, fromIndex, toIndex);
         }
 
         final int length = toIndex - fromIndex;
         final int longCount = length >>> 3;
         for (int i = 0; i < longCount; ++i) {
             final long word = PlatformDependent.getLong(bytes, fromIndex);
-            final long mask = SWARByteUtil.applyPatternRange(word, SWARByteUtil.UPPER_CASE_PATTERN,
-                                                             SWARByteUtil.UPPER_CASE_RANGE_PATTERN);
-            if (mask != 0) {
+            if (SWARByteUtil.containsUpperCase(word)) {
                 return true;
             }
             fromIndex += Long.BYTES;
@@ -161,48 +152,52 @@ public final class AsciiStringUtil {
         return unrolledConstainsUpperCase(bytes, fromIndex, byteCount);
     }
 
+    private static boolean linearContainsUpperCase(byte[] bytes, int fromIndex, int toIndex) {
+        for (int idx = fromIndex; idx < toIndex; ++idx) {
+            if (isUpperCase(bytes[idx])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean unrolledConstainsUpperCase(byte[] bytes, int fromIndex, int length) {
         if ((length & 4) != 0) {
             final int word = PlatformDependent.getInt(bytes, fromIndex);
-            final int mask = SWARByteUtil.applyPatternRange(word, (int) SWARByteUtil.UPPER_CASE_PATTERN,
-                                                            (int) SWARByteUtil.UPPER_CASE_RANGE_PATTERN);
-            if (mask != 0) {
+            if (SWARByteUtil.containsUpperCase(word)) {
                 return true;
             }
             fromIndex += Integer.BYTES;
         }
         if ((length & 2) != 0) {
-            if (isUpperCase(bytes[fromIndex])) {
+            if (isUpperCase(PlatformDependent.getByte(bytes, fromIndex))) {
                 return true;
             }
-            if (isUpperCase(bytes[fromIndex + 1])) {
+            if (isUpperCase(PlatformDependent.getByte(bytes, fromIndex + 1))) {
                 return true;
             }
             fromIndex += 2;
         }
         if ((length & 1) != 0) {
-            return isUpperCase(bytes[fromIndex]);
+            return isUpperCase(PlatformDependent.getByte(bytes, fromIndex));
         }
         return false;
     }
 
+    /**
+     * Returns true if the given byte array contains at least one lower case character. false otherwise.
+     * This method utilizes SWAR technique to accelerate containsLowerCase operation.
+     */
     static boolean containsLowerCase(byte[] bytes, int fromIndex, int toIndex) {
         if (!PlatformDependent.isUnaligned()) {
-            for (int idx = fromIndex; idx < toIndex; ++idx) {
-                if (isLowerCase(bytes[idx])) {
-                    return true;
-                }
-            }
-            return false;
+            return linearContainsLowerCase(bytes, fromIndex, toIndex);
         }
 
         final int length = toIndex - fromIndex;
         final int longCount = length >>> 3;
         for (int i = 0; i < longCount; ++i) {
             final long word = PlatformDependent.getLong(bytes, fromIndex);
-            final long mask = SWARByteUtil.applyPatternRange(word, SWARByteUtil.LOWER_CASE_PATTERN,
-                                                             SWARByteUtil.LOWER_CASE_RANGE_PATTERN);
-            if (mask != 0) {
+            if (SWARByteUtil.containsLowerCase(word)) {
                 return true;
             }
             fromIndex += Long.BYTES;
@@ -210,53 +205,69 @@ public final class AsciiStringUtil {
         return unrolledContainsLowerCase(bytes, fromIndex, length & 7);
     }
 
+    private static boolean linearContainsLowerCase(byte[] bytes, int fromIndex, int toIndex) {
+        for (int idx = fromIndex; idx < toIndex; ++idx) {
+            if (isLowerCase(bytes[idx])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean unrolledContainsLowerCase(byte[] bytes, int fromIndex, int length) {
         if ((length & 4) != 0) {
             final int word = PlatformDependent.getInt(bytes, fromIndex);
-            final int mask = SWARByteUtil.applyPatternRange(word, (int) SWARByteUtil.LOWER_CASE_PATTERN,
-                                                            (int) SWARByteUtil.LOWER_CASE_RANGE_PATTERN);
-            if (mask != 0) {
+            if (SWARByteUtil.containsLowerCase(word)) {
                 return true;
             }
             fromIndex += Integer.BYTES;
         }
         if ((length & 2) != 0) {
-            if (isLowerCase(bytes[fromIndex])) {
+            if (isLowerCase(PlatformDependent.getByte(bytes, fromIndex))) {
                 return true;
             }
-            if (isLowerCase(bytes[fromIndex + 1])) {
+            if (isLowerCase(PlatformDependent.getByte(bytes, fromIndex + 1))) {
                 return true;
             }
             fromIndex += 2;
         }
         if ((length & 1) != 0) {
-            return isLowerCase(bytes[fromIndex]);
+            return isLowerCase(PlatformDependent.getByte(bytes, fromIndex));
         }
         return false;
     }
 
+    /*
+     * Copies source byte array to a destination byte array, converting the characters to their
+     * corresponding lowercase. Only for ASCII characters.
+     */
+
     static void toLowerCase(byte[] src, int srcPos, byte[] dest, int destPos, int length) {
         if (!PlatformDependent.isUnaligned()) {
-            for (int i = 0; i < length; ++i) {
-                dest[destPos++] = toLowerCase(src[srcPos++]);
-            }
+            linearToLowerCase(src, srcPos, dest, destPos, length);
             return;
         }
 
         final int longCount = length >>> 3;
         for (int i = 0; i < longCount; ++i) {
             final long word = PlatformDependent.getLong(src, srcPos);
-            PlatformDependent.putLong(dest, destPos, toLowerCase(word));
+            PlatformDependent.putLong(dest, destPos, SWARByteUtil.toLowerCase(word));
             srcPos += Long.BYTES;
             destPos += Long.BYTES;
         }
         unrollToLowerCase(src, srcPos, dest, destPos, length & 7);
     }
 
+    private static void linearToLowerCase(byte[] src, int srcPos, byte[] dest, int destPos, int length) {
+        for (int i = 0; i < length; ++i) {
+            dest[destPos++] = toLowerCase(src[srcPos++]);
+        }
+    }
+
     private static void unrollToLowerCase(byte[] src, int srcPos, byte[] dest, int destPos, int length) {
         if ((length & 4) != 0) {
             final int word = PlatformDependent.getInt(src, srcPos);
-            PlatformDependent.putInt(dest, destPos, toLowerCase(word));
+            PlatformDependent.putInt(dest, destPos, SWARByteUtil.toLowerCase(word));
             srcPos += Integer.BYTES;
             destPos += Integer.BYTES;
         }
@@ -274,18 +285,20 @@ public final class AsciiStringUtil {
         }
     }
 
+    /*
+     * Copies source byte array to a destination byte array, converting the characters to their
+     * corresponding uppercase. Only for ASCII characters.
+     */
     static void toUpperCase(byte[] src, int srcPos, byte[] dest, int destPos, int length) {
         if (!PlatformDependent.isUnaligned()) {
-            for (int i = 0; i < length; ++i) {
-                dest[destPos++] = toUpperCase(src[srcPos++]);
-            }
+            linearToUpperCase(src, srcPos, dest, destPos, length);
             return;
         }
 
         final int longCount = length >>> 3;
         for (int i = 0; i < longCount; ++i) {
             final long word = PlatformDependent.getLong(src, srcPos);
-            PlatformDependent.putLong(dest, destPos, toUpperCase(word));
+            PlatformDependent.putLong(dest, destPos, SWARByteUtil.toUpperCase(word));
             srcPos += Long.BYTES;
             destPos += Long.BYTES;
         }
@@ -294,10 +307,16 @@ public final class AsciiStringUtil {
         unrolltoUpperCase(src, srcPos, dest, destPos, byteCount);
     }
 
+    private static void linearToUpperCase(byte[] src, int srcPos, byte[] dest, int destPos, int length) {
+        for (int i = 0; i < length; ++i) {
+            dest[destPos++] = toUpperCase(src[srcPos++]);
+        }
+    }
+
     private static void unrolltoUpperCase(byte[] src, int srcPos, byte[] dest, int destPos, int length) {
         if ((length & 4) != 0) {
             final int word = PlatformDependent.getInt(src, srcPos);
-            PlatformDependent.putInt(dest, destPos, toUpperCase(word));
+            PlatformDependent.putInt(dest, destPos, SWARByteUtil.toUpperCase(word));
             srcPos += Integer.BYTES;
             destPos += Integer.BYTES;
         }
@@ -315,24 +334,29 @@ public final class AsciiStringUtil {
         }
     }
 
+    /**
+     * Compares a portion of two source byte arrays for equality while ignoring case. This method compares the
+     * characters in a case-insensitive manner and returns true if the specified portions of the arrays are equal,
+     * false otherwise.
+     */
     static boolean equalsIgnoreCases(byte[] lhs, int lhsPos, byte[] rhs, int rhsPos, int length) {
         if (lhs == rhs && lhsPos == rhsPos && lhs.length >= lhsPos + length) {
             return true;
         }
 
-        int longCount = length >>> 3;
+        final int longCount = length >>> 3;
         if (longCount > 0) {
             for (int i = 0; i < longCount; ++i) {
                 final long lWord = PlatformDependent.getLong(lhs, lhsPos);
                 final long rWord = PlatformDependent.getLong(rhs, rhsPos);
-                if (toLowerCase(lWord) != toLowerCase(rWord)) {
+                if (SWARByteUtil.toLowerCase(lWord) != SWARByteUtil.toLowerCase(rWord)) {
                     return false;
                 }
                 lhsPos += Long.BYTES;
                 rhsPos += Long.BYTES;
             }
         }
-        int byteCount = length & 7;
+        final int byteCount = length & 7;
         return unrollEqualsIgnoreCase(lhs, lhsPos, rhs, rhsPos, byteCount);
     }
 
@@ -340,7 +364,7 @@ public final class AsciiStringUtil {
         if ((length & 4) != 0) {
             final int lWord = PlatformDependent.getInt(lhs, lhsPos);
             final int rWord = PlatformDependent.getInt(rhs, rhsPos);
-            if (toLowerCase(lWord) != toLowerCase(rWord)) {
+            if (SWARByteUtil.toLowerCase(lWord) != SWARByteUtil.toLowerCase(rWord)) {
                 return false;
             }
             lhsPos += Integer.BYTES;
@@ -366,33 +390,8 @@ public final class AsciiStringUtil {
     }
 
     public static final class SWARByteUtil {
-        static final long UPPER_CASE_PATTERN = compilePattern((byte) 'A');
-        static final long UPPER_CASE_RANGE_PATTERN = compileRangePattern((byte) 'A', (byte) 'Z');
-
-        static final long LOWER_CASE_PATTERN = compilePattern((byte) 'a');
-        static final long LOWER_CASE_RANGE_PATTERN = compileRangePattern((byte) 'a', (byte) 'z');
-
         public static long compilePattern(byte byteToFind) {
             return (byteToFind & 0xFFL) * 0x101010101010101L;
-        }
-
-        private static long compileRangePattern(byte low, byte high) {
-            assert low <= high && high - low <= 128;
-            return (0x7F7F - high + low & 0xFFL) * 0x101010101010101L;
-        }
-
-        private static long applyPatternRange(long word, long lowPattern, long rangePattern) {
-            long input = (word | 0x8080808080808080L) - lowPattern;
-            input = ~((word | 0x7F7F7F7F7F7F7F7FL) ^ input);
-            long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + rangePattern;
-            return ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
-        }
-
-        private static int applyPatternRange(int word, int lowPattern, int rangePattern) {
-            int input = (word | 0x80808080) - lowPattern;
-            input = ~((word | 0x7F7F7F7F) ^ input);
-            int tmp = (input & 0x7F7F7F7F) + rangePattern;
-            return ~(tmp | input | 0x7F7F7F7F);
         }
 
         private static long applyPattern(long word, long pattern) {
@@ -411,6 +410,83 @@ public final class AsciiStringUtil {
             tmp = ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
             final int binaryPosition = leading? Long.numberOfLeadingZeros(tmp) : Long.numberOfTrailingZeros(tmp);
             return binaryPosition >>> 3;
+        }
+
+        private static long applyUpperCasePattern(long word) {
+            long rotated = word & 0x7F7F7F7F7F7F7F7FL;
+            rotated += 0x2525252525252525L;
+            rotated &= 0x7F7F7F7F7F7F7F7FL;
+            rotated += 0x1A1A1A1A1A1A1A1AL;
+            rotated &= ~word;
+            rotated &= 0x8080808080808080L;
+            return rotated;
+        }
+
+
+        private static int applyUpperCasePattern(int word) {
+            int rotated = word & 0x7F7F7F7F;
+            rotated += 0x25252525;
+            rotated &= 0x7F7F7F7F;
+            rotated += 0x1A1A1A1A;
+            rotated &= ~word;
+            rotated &= 0x80808080;
+            return rotated;
+        }
+
+        private static long applyLowerCasePattern(long word) {
+            long rotated = word & 0x7F7F7F7F7F7F7F7FL;
+            rotated += 0x0505050505050505L;
+            rotated &= 0x7F7F7F7F7F7F7F7FL;
+            rotated += 0x1A1A1A1A1A1A1A1AL;
+            rotated &= ~word;
+            rotated &= 0x8080808080808080L;
+            return rotated;
+        }
+
+        private static int applyLowerCasePattern(int word) {
+            int rotated = word & 0x7F7F7F7F;
+            rotated += 0x05050505;
+            rotated &= 0x7F7F7F7F;
+            rotated += 0x1A1A1A1A;
+            rotated &= ~word;
+            rotated &= 0x80808080;
+            return rotated;
+        }
+
+        static boolean containsUpperCase(long word) {
+            return applyUpperCasePattern(word) != 0;
+        }
+
+        static boolean containsUpperCase(int word) {
+            return applyUpperCasePattern(word) != 0;
+        }
+
+        static boolean containsLowerCase(long word) {
+            return applyLowerCasePattern(word) != 0;
+        }
+
+        static boolean containsLowerCase(int word) {
+            return applyLowerCasePattern(word) != 0;
+        }
+
+        static long toLowerCase(long word) {
+            final long mask = applyUpperCasePattern(word) >>> 2;
+            return word | mask;
+        }
+
+        static int toLowerCase(int word) {
+            final int mask = applyUpperCasePattern(word) >>> 2;
+            return word | mask;
+        }
+
+        static long toUpperCase(long word) {
+            final long mask = applyLowerCasePattern(word) >>> 2;
+            return word & ~mask;
+        }
+
+        static int toUpperCase(int word) {
+            final int mask = applyLowerCasePattern(word) >>> 2;
+            return word & ~mask;
         }
 
         private SWARByteUtil() {
