@@ -344,6 +344,10 @@ public final class AsciiStringUtil {
             return true;
         }
 
+        if (!PlatformDependent.isUnaligned()) {
+            return linearEqualsIgnoreCase(lhs, lhsPos, rhs, rhsPos, length);
+        }
+
         final int longCount = length >>> 3;
         if (longCount > 0) {
             for (int i = 0; i < longCount; ++i) {
@@ -358,6 +362,15 @@ public final class AsciiStringUtil {
         }
         final int byteCount = length & 7;
         return unrollEqualsIgnoreCase(lhs, lhsPos, rhs, rhsPos, byteCount);
+    }
+
+    private static boolean linearEqualsIgnoreCase(byte[] lhs, int lhsPos, byte[] rhs, int rhsPos, int length) {
+        for (int i = 0; i < length; ++i) {
+            if (toLowerCase(lhs[lhsPos + i]) != toLowerCase(rhs[rhsPos + i])) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean unrollEqualsIgnoreCase(byte[] lhs, int lhsPos, byte[] rhs, int rhsPos, int length) {
