@@ -12,10 +12,9 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package io.netty.microbenchmark.common;
+package io.netty.util;
 
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.AsciiString;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -44,7 +43,7 @@ public class AsciiStringIndexOfBenchmark extends AbstractMicrobenchmark {
     public static Object blackhole;
     @Param({ "7", "16", "23", "32" })
     int size;
-    @Param({ "11" })
+    @Param({ "4", "11" })
     int logPermutations;
 
     @Param({ "1" })

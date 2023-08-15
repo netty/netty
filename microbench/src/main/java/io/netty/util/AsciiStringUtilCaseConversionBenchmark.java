@@ -41,7 +41,7 @@ public class AsciiStringUtilCaseConversionBenchmark extends AbstractMicrobenchma
 
     @Param({ "7", "16", "23", "32" })
     int size;
-    @Param({ "11" })
+    @Param({ "4", "11" })
     int logPermutations;
 
     @Param({ "1" })
@@ -49,6 +49,8 @@ public class AsciiStringUtilCaseConversionBenchmark extends AbstractMicrobenchma
 
     int permutations;
     byte[][] upperCaseData;
+
+    byte[] ret;
     private int i;
 
     @Param({ "true", "false" })
@@ -60,6 +62,7 @@ public class AsciiStringUtilCaseConversionBenchmark extends AbstractMicrobenchma
         System.setProperty("io.netty.noUnsafe", Boolean.valueOf(noUnsafe).toString());
         SplittableRandom random = new SplittableRandom(seed);
         permutations = 1 << logPermutations;
+        ret = new byte[size];
         upperCaseData = new byte[permutations][size];
         for (int i = 0; i < permutations; ++i) {
             final int foundIndex = random.nextInt(Math.max(0, size - 8), size);
@@ -88,7 +91,6 @@ public class AsciiStringUtilCaseConversionBenchmark extends AbstractMicrobenchma
 
     @Benchmark
     public byte[] toLowerCase() {
-        byte[] ret = new byte[size];
         AsciiStringUtil.toLowerCase(getData(), 0, ret, 0, size);
         return ret;
     }
