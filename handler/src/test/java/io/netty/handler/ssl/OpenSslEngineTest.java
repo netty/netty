@@ -433,7 +433,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine clientEngine = null;
         try {
             clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-            int value = ((ReferenceCountedOpenSslEngine) clientEngine).calculateMaxLengthForWrap(MAX_VALUE, 1);
+            int value = ((ReferenceCountedOpenSslEngine) clientEngine).calculateOutboundBufferLength(MAX_VALUE, 1);
             assertTrue(value > 0);
         } finally {
             cleanupClientSslEngine(clientEngine);
@@ -452,7 +452,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine clientEngine = null;
         try {
             clientEngine = clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT);
-            assertTrue(((ReferenceCountedOpenSslEngine) clientEngine).calculateMaxLengthForWrap(0, 1) > 0);
+            assertTrue(((ReferenceCountedOpenSslEngine) clientEngine).calculateOutboundBufferLength(0, 1) > 0);
         } finally {
             cleanupClientSslEngine(clientEngine);
         }
