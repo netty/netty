@@ -422,7 +422,6 @@ public final class AsciiStringUtil {
             return rotated;
         }
 
-
         private static int applyUpperCasePattern(int word) {
             int rotated = word & 0x7F7F7F7F;
             rotated += 0x25252525;

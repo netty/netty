@@ -31,7 +31,6 @@ class AsciiStringUtilTest {
             assertEquals(expected, actual);
         }
 
-
         // test 4 bytes
         for (int i = 0; i < eAsciiTable.length; i += 4) {
             final int word = getInt(eAsciiTable, i);
@@ -113,7 +112,6 @@ class AsciiStringUtilTest {
         assert idx >= 0 && idx < 8;
         return (byte) (word >>> (7 - idx) * 8 & 0xff);
     }
-
 
     private static byte getByte(int word, int idx) {
         assert idx >= 0 && idx < 4;
