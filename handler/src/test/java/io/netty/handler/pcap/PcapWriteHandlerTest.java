@@ -29,9 +29,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.embedded.CustomChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramChannel;
@@ -42,7 +42,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Promise;
@@ -528,7 +527,7 @@ public class PcapWriteHandlerTest {
         private DatagramChannelConfig config;
 
         EmbeddedDatagramChannel(InetSocketAddress local, InetSocketAddress remote) {
-            super(new CustomChannelId(1), false);
+            super(DefaultChannelId.newInstance(), false);
             this.local = local;
             this.remote = remote;
         }

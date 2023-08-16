@@ -36,7 +36,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -554,10 +556,10 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         InetSocketAddress local = (InetSocketAddress) ch.localAddress();
         if (remote != null && local.getAddress().isAnyLocalAddress()) {
             if (local.getAddress() instanceof Inet4Address && remote.getAddress() instanceof Inet6Address) {
-                return new InetSocketAddress("::", local.getPort());
+                return new InetSocketAddress(WildcardAddressHolder.wildcard6, local.getPort());
             }
             if (local.getAddress() instanceof Inet6Address && remote.getAddress() instanceof Inet4Address) {
-                return new InetSocketAddress("0.0.0.0", local.getPort());
+                return new InetSocketAddress(WildcardAddressHolder.wildcard4, local.getPort());
             }
         }
         return local;
@@ -839,6 +841,21 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         public PcapWriteHandler build(OutputStream outputStream) {
             checkNotNull(outputStream, "outputStream");
             return new PcapWriteHandler(this, outputStream);
+        }
+    }
+
+    private static final class WildcardAddressHolder {
+        static final InetAddress wildcard4; // 0.0.0.0
+        static final InetAddress wildcard6; // ::
+
+        static {
+            try {
+                wildcard4 = InetAddress.getByAddress(new byte[4]);
+                wildcard6 = InetAddress.getByAddress(new byte[16]);
+            } catch (UnknownHostException e) {
+                // would only happen if the byte array was of incorrect size
+                throw new AssertionError(e);
+            }
         }
     }
 }

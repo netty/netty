@@ -24,7 +24,7 @@ public class CustomChannelId implements ChannelId {
 
     private final int id;
 
-    public CustomChannelId(int id) {
+    CustomChannelId(int id) {
         this.id = id;
     }
 
