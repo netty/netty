@@ -236,6 +236,11 @@ public class HttpHeaderValidationUtilTest {
         assertEquals(0, validateValidHeaderValue(asCharSequence(value)));
     }
 
+    @Test
+    void decodingInvalidHeaderValuesMustFailIfFirstCharIsIllegalAsciiString() {
+        assertEquals(0, validateValidHeaderValue("" + (char) (0xFF + 1)));
+    }
+
     public static List<AsciiString> legalFirstChar() {
         List<AsciiString> list = new ArrayList<AsciiString>();
 
@@ -285,6 +290,11 @@ public class HttpHeaderValidationUtilTest {
     @MethodSource("illegalNotFirstChar")
     void decodingInvalidHeaderValuesMustFailIfNotFirstCharIsIllegalCharSequence(AsciiString value) {
         assertEquals(1, validateValidHeaderValue(asCharSequence(value)));
+    }
+
+    @Test
+    void decodingInvalidHeaderValuesMustFailIfNotFirstCharIsIllegalCharSequence() {
+        assertEquals(1, validateValidHeaderValue("a" + (char) (0xFF + 1)));
     }
 
     public static List<AsciiString> legalNotFirstChar() {

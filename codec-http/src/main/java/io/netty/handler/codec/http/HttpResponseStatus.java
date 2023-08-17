@@ -527,7 +527,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     private final int code;
     private final AsciiString codeAsText;
-    private HttpStatusClass codeClass;
+    private final HttpStatusClass codeClass;
 
     private final String reasonPhrase;
     private final byte[] bytes;
@@ -562,6 +562,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         }
 
         this.code = code;
+        this.codeClass = HttpStatusClass.valueOf(code);
         String codeString = Integer.toString(code);
         codeAsText = new AsciiString(codeString);
         this.reasonPhrase = reasonPhrase;
@@ -597,11 +598,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      * Returns the class of this {@link HttpResponseStatus}
      */
     public HttpStatusClass codeClass() {
-        HttpStatusClass type = this.codeClass;
-        if (type == null) {
-            this.codeClass = type = HttpStatusClass.valueOf(code);
-        }
-        return type;
+        return this.codeClass;
     }
 
     @Override
