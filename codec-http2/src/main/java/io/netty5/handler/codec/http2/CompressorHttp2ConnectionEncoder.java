@@ -30,6 +30,8 @@ import io.netty5.handler.codec.compression.ZlibCompressor;
 import io.netty5.handler.codec.compression.ZlibWrapper;
 import io.netty5.handler.codec.compression.ZstdCompressor;
 import io.netty5.handler.codec.compression.ZstdOptions;
+import io.netty5.handler.codec.compression.SnappyCompressor;
+import io.netty5.handler.codec.compression.SnappyOptions;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
@@ -43,10 +45,12 @@ import static io.netty5.handler.codec.http.HttpHeaderValues.BR;
 import static io.netty5.handler.codec.http.HttpHeaderValues.DEFLATE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty5.handler.codec.http.HttpHeaderValues.IDENTITY;
+import static io.netty5.handler.codec.http.HttpHeaderValues.SNAPPY;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty5.handler.codec.http.HttpHeaderValues.ZSTD;
 import static java.util.Objects.requireNonNull;
+
 
 /**
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
@@ -62,6 +66,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     private GzipOptions gzipCompressionOptions;
     private DeflateOptions deflateOptions;
     private ZstdOptions zstdOptions;
+    private SnappyOptions snappyOptions;
 
     /**
      * Create a new {@link CompressorHttp2ConnectionEncoder} instance
@@ -96,6 +101,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 deflateOptions = (DeflateOptions) compressionOptions;
             } else if (compressionOptions instanceof ZstdOptions) {
                 zstdOptions = (ZstdOptions) compressionOptions;
+            } else if (compressionOptions instanceof SnappyOptions) {
+                snappyOptions = (SnappyOptions) compressionOptions;
             } else {
                 throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
                         ": " + compressionOptions);
@@ -240,6 +247,9 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (zstdOptions != null && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
             return ZstdCompressor.newFactory(zstdOptions.compressionLevel(),
                     zstdOptions.blockSize(), zstdOptions.maxEncodeSize()).get();
+        }
+        if (snappyOptions != null && SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
+            return SnappyCompressor.newFactory().get();
         }
         // 'identity' or unsupported
         return null;

@@ -270,6 +270,40 @@ public class DataCompressionHttp2Test {
     }
 
     @Test
+    public void snappyEncodingSingleEmptyMessage() throws Exception {
+        final String text = "";
+        final Buffer data = bb(text);
+        bootstrapEnv(data.readableBytes());
+        final Http2Headers headers = Http2Headers.newHeaders().method(POST).path(PATH)
+                .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.SNAPPY);
+
+        runInChannel(clientChannel, () -> {
+            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+            clientEncoder.writeData(ctxClient(), 3, data, 0, true);
+            clientHandler.flush(ctxClient());
+        });
+        awaitServer();
+        assertEquals(text, serverOut.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void snappyEncodingSingleMessage() throws Exception {
+        final String text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccc";
+        final Buffer data = bb(text);
+        bootstrapEnv(data.readableBytes());
+        final Http2Headers headers = Http2Headers.newHeaders().method(POST).path(PATH)
+                .set(HttpHeaderNames.CONTENT_ENCODING, HttpHeaderValues.SNAPPY);
+
+        runInChannel(clientChannel, () -> {
+            clientEncoder.writeHeaders(ctxClient(), 3, headers, 0, false);
+            clientEncoder.writeData(ctxClient(), 3, data, 0, true);
+            clientHandler.flush(ctxClient());
+        });
+        awaitServer();
+        assertEquals(text, serverOut.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
     public void deflateEncodingWriteLargeMessage() throws Exception {
         final int BUFFER_SIZE = 1 << 12;
         final byte[] bytes = new byte[BUFFER_SIZE];

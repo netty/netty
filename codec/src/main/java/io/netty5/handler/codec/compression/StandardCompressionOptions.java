@@ -68,6 +68,14 @@ public final class StandardCompressionOptions {
         return new ZstdOptions(compressionLevel, blockSize, maxEncodeSize);
     }
 
+    /**
+     * Create a new {@link SnappyOptions}
+     *
+     */
+    public static SnappyOptions snappy() {
+        return new SnappyOptions();
+    }
+
      /**
      * Default implementation of {@link GzipOptions} with
      * {@code compressionLevel()} set to 6, {@code windowBits()} set to 15 and {@code memLevel()} set to 8.

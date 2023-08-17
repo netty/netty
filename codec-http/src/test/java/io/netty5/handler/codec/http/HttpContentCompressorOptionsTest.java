@@ -39,7 +39,8 @@ class HttpContentCompressorOptionsTest {
             StandardCompressionOptions.gzip(),
             StandardCompressionOptions.deflate(),
             StandardCompressionOptions.brotli(),
-            StandardCompressionOptions.zstd()
+            StandardCompressionOptions.zstd(),
+            StandardCompressionOptions.snappy()
         );
 
         String[] tests = {
@@ -66,7 +67,8 @@ class HttpContentCompressorOptionsTest {
             StandardCompressionOptions.gzip(),
             StandardCompressionOptions.deflate(),
             StandardCompressionOptions.brotli(),
-            StandardCompressionOptions.zstd()
+            StandardCompressionOptions.zstd(),
+            StandardCompressionOptions.snappy()
         );
 
         String[] tests = {
@@ -77,6 +79,33 @@ class HttpContentCompressorOptionsTest {
                 "compress, zstd;q=0.5", "zstd",
                 "zstd; q=0.5, identity", "zstd",
                 "zstd; q=0, deflate", "zstd",
+        };
+        for (int i = 0; i < tests.length; i += 2) {
+            String acceptEncoding = tests[i];
+            String contentEncoding = tests[i + 1];
+            String targetEncoding = compressor.determineEncoding(acceptEncoding);
+            assertEquals(contentEncoding, targetEncoding);
+        }
+    }
+
+    @Test
+    void testGetSnappyTargetContentEncoding() {
+        HttpContentCompressor compressor = new HttpContentCompressor(
+                StandardCompressionOptions.gzip(),
+                StandardCompressionOptions.deflate(),
+                StandardCompressionOptions.brotli(),
+                StandardCompressionOptions.zstd(),
+                StandardCompressionOptions.snappy()
+        );
+
+        String[] tests = {
+                // Accept-Encoding -> Content-Encoding
+                "", null,
+                "*;q=0.0", null,
+                "snappy", "snappy",
+                "compress, snappy;q=0.5", "snappy",
+                "snappy; q=0.5, identity", "snappy",
+                "snappy; q=0, deflate", "snappy",
         };
         for (int i = 0; i < tests.length; i += 2) {
             String acceptEncoding = tests[i];
@@ -119,7 +148,7 @@ class HttpContentCompressorOptionsTest {
     private static FullHttpRequest newRequest() {
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/",
                                                          preferredAllocator().allocate(0));
-        req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "br, zstd, gzip, deflate");
+        req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "br, zstd, snappy, gzip, deflate");
         return req;
     }
 }
