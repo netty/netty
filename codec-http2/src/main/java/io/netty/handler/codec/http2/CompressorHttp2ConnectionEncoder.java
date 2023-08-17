@@ -89,7 +89,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                     StandardCompressionOptions.gzip(),
                     StandardCompressionOptions.deflate() };
         }
-        return new CompressionOptions[] { StandardCompressionOptions.snappy(), StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate() };
+        return new CompressionOptions[] { StandardCompressionOptions.snappy(),
+                StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate() };
     }
 
     /**
