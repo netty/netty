@@ -705,8 +705,22 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * This method is intentionally not synchronized, only use if you know you are in the EventLoop
      * thread and visibility on {@link #maxWrapBufferSize} and {@link #maxWrapOverhead} is achieved
      * via other synchronized blocks.
+     * <br>
+     * Calculates the max size of a single wrap operation for the given plaintextLength and
+     * numComponents.
      */
-    final int calculateOutboundBufferLength(int plaintextLength, int numComponents) {
+    final int calculateMaxLengthForWrap(int plaintextLength, int numComponents) {
+        return (int) min(maxWrapBufferSize, plaintextLength + (long) maxWrapOverhead * numComponents);
+    }
+
+    /**
+     * This method is intentionally not synchronized, only use if you know you are in the EventLoop
+     * thread and visibility on {@link #maxWrapOverhead} is achieved via other synchronized blocks.
+     * <br>
+     * Calculates the size of the out net buf to create for the given plaintextLength and numComponents.
+     * This is not related to the max size per wrap, as we can wrap chunks at a time into one out net buf.
+     */
+    final int calculateOutNetBufSize(int plaintextLength, int numComponents) {
         return (int) min(MAX_VALUE, plaintextLength + (long) maxWrapOverhead * numComponents);
     }
 

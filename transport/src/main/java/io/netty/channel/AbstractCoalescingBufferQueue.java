@@ -160,8 +160,9 @@ public abstract class AbstractCoalescingBufferQueue {
                 }
 
                 entryBuffer = (ByteBuf) entry;
+                int bufferBytes = entryBuffer.readableBytes();
 
-                if (entryBuffer.readableBytes() > bytes) {
+                if (bufferBytes > bytes) {
                     // Add the buffer back to the queue as we can't consume all of it.
                     bufAndListenerPairs.addFirst(entryBuffer);
                     if (bytes > 0) {
@@ -175,10 +176,10 @@ public abstract class AbstractCoalescingBufferQueue {
                     break;
                 }
 
-                bytes -= entryBuffer.readableBytes();
+                bytes -= bufferBytes;
                 if (toReturn == null) {
                     // if there are no more bytes in the queue after this, there's no reason to compose
-                    toReturn = entryBuffer.readableBytes() == readableBytes
+                    toReturn = bufferBytes == readableBytes
                             ? entryBuffer
                             : composeFirst(alloc, entryBuffer);
                 } else {

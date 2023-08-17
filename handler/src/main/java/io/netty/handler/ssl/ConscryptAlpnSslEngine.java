@@ -86,8 +86,20 @@ abstract class ConscryptAlpnSslEngine extends JdkSslEngine {
     final int calculateOutNetBufSize(int plaintextBytes, int numBuffers) {
         // Assuming a max of one frame per component in a composite buffer.
         long maxOverhead = (long) Conscrypt.maxSealOverhead(getWrappedEngine()) * numBuffers;
-        // TODO(nmittler): update this to use MAX_ENCRYPTED_PACKET_LENGTH instead of Integer.MAX_VALUE
         return (int) min(Integer.MAX_VALUE, plaintextBytes + maxOverhead);
+    }
+
+    /**
+     * Calculate the space necessary in an out buffer to hold the max size that the given
+     * plaintextBytes and numBuffers can produce when encrypted. Assumes as a worst case
+     * that there is one TLS record per buffer.
+     * @param plaintextBytes the number of plaintext bytes to be wrapped.
+     * @param numBuffers the number of buffers that the plaintext bytes are spread across.
+     * @return the maximum size of the encrypted output buffer required for the wrap operation.
+     */
+    final int calculateRequiredOutBufSpace(int plaintextBytes, int numBuffers) {
+        long maxOverhead = (long) Conscrypt.maxSealOverhead(getWrappedEngine()) * numBuffers;
+        return (int) min(Conscrypt.maxEncryptedPacketLength(), plaintextBytes + maxOverhead);
     }
 
     final SSLEngineResult unwrap(ByteBuffer[] srcs, ByteBuffer[] dests) throws SSLException {
