@@ -196,6 +196,48 @@ public class HpackEncoderTest {
         }
     }
 
+    @Test
+    public void testSanitization() throws Http2Exception {
+        final int headerValueSize = 300;
+        StringBuilder actualHeaderValueBuilder = new StringBuilder();
+        StringBuilder expectedHeaderValueBuilder = new StringBuilder();
+
+        for (int i = 0; i < headerValueSize; i++) {
+            actualHeaderValueBuilder.append((char) i); // Use the index as the code point value of the character.
+            if (i <= 255) {
+                expectedHeaderValueBuilder.append((char) i);
+            } else {
+                expectedHeaderValueBuilder.append('?'); // Expect this character to be sanitized.
+            }
+        }
+        String actualHeaderValue = actualHeaderValueBuilder.toString();
+        String expectedHeaderValue = expectedHeaderValueBuilder.toString();
+        HpackEncoder encoderWithHuffmanEncoding =
+                new HpackEncoder(false, 64, 0); // Low Huffman code threshold.
+        HpackEncoder encoderWithoutHuffmanEncoding =
+                new HpackEncoder(false, 64, Integer.MAX_VALUE); // High Huffman code threshold.
+
+        // Expect the same decoded header value regardless of whether Huffman encoding is enabled or not.
+        verifyHeaderValueSanitization(encoderWithHuffmanEncoding, actualHeaderValue, expectedHeaderValue);
+        verifyHeaderValueSanitization(encoderWithoutHuffmanEncoding, actualHeaderValue, expectedHeaderValue);
+    }
+
+    private void verifyHeaderValueSanitization(
+            HpackEncoder encoder,
+            String actualHeaderValue,
+            String expectedHeaderValue
+    ) throws Http2Exception {
+
+        String headerKey = "some-key";
+        Http2Headers toBeEncodedHeaders = Http2Headers.newHeaders(false).add(headerKey, actualHeaderValue);
+        encoder.encodeHeaders(0, buf, toBeEncodedHeaders, Http2HeadersEncoder.NEVER_SENSITIVE);
+        Http2Headers decodedHeaders = Http2Headers.newHeaders(false);
+        hpackDecoder.decode(0, buf, decodedHeaders, true);
+        buf.resetOffsets();
+        String decodedHeaderValue = decodedHeaders.get(headerKey).toString();
+        Assertions.assertEquals(expectedHeaderValue, decodedHeaderValue);
+    }
+
     private void setMaxTableSize(int maxHeaderTableSize) throws Http2Exception {
         hpackEncoder.setMaxHeaderTableSize(buf, maxHeaderTableSize);
         hpackDecoder.setMaxHeaderTableSize(maxHeaderTableSize);
