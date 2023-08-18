@@ -32,26 +32,26 @@ public final class MqttReasonCodes {
         NOT_AUTHORIZED((byte) 0x87), //sent by: server
         SERVER_BUSY((byte) 0x89), //sent by: server
         SERVER_SHUTTING_DOWN((byte) 0x8B), //sent by: server
-	    KEEP_ALIVE_TIMEOUT((byte)0x8D), //sent by: Server
-	    SESSION_TAKEN_OVER((byte)0x8E), //sent by: Server
-	    TOPIC_FILTER_INVALID((byte)0x8F), //sent by: Server
-	    TOPIC_NAME_INVALID((byte)0x90), //sent by: Client or Server
-	    RECEIVE_MAXIMUM_EXCEEDED((byte)0x93), //sent by: Client or Server
-	    TOPIC_ALIAS_INVALID((byte)0x94), //sent by: Client or Server
-	    PACKET_TOO_LARGE((byte)0x95), //sent by: Client or Server
-	    MESSAGE_RATE_TOO_HIGH((byte)0x96), //sent by: Client or Server
-	    QUOTA_EXCEEDED((byte)0x97), //sent by: Client or Server
-	    ADMINISTRATIVE_ACTION((byte)0x98), //sent by: Client or Server
-	    PAYLOAD_FORMAT_INVALID((byte)0x99), //sent by: Client or Server
-	    RETAIN_NOT_SUPPORTED((byte)0x9A), //sent by: Server
-	    QOS_NOT_SUPPORTED((byte)0x9B), //sent by: Server
-	    USE_ANOTHER_SERVER((byte)0x9C), //sent by: Server
-	    SERVER_MOVED((byte)0x9D), //sent by: Server
-	    SHARED_SUBSCRIPTIONS_NOT_SUPPORTED((byte)0x9E), //sent by: Server
-	    CONNECTION_RATE_EXCEEDED((byte)0x9F), //sent by: Server
-	    MAXIMUM_CONNECT_TIME((byte)0xA0), //sent by: Server
-	    SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED((byte)0xA1), //sent by: Server
-	    WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED((byte)0xA2); //sent by: Server
+	    KEEP_ALIVE_TIMEOUT((byte) 0x8D), //sent by: Server
+	    SESSION_TAKEN_OVER((byte) 0x8E), //sent by: Server
+	    TOPIC_FILTER_INVALID((byte) 0x8F), //sent by: Server
+	    TOPIC_NAME_INVALID((byte) 0x90), //sent by: Client or Server
+	    RECEIVE_MAXIMUM_EXCEEDED((byte) 0x93), //sent by: Client or Server
+	    TOPIC_ALIAS_INVALID((byte) 0x94), //sent by: Client or Server
+	    PACKET_TOO_LARGE((byte) 0x95), //sent by: Client or Server
+	    MESSAGE_RATE_TOO_HIGH((byte) 0x96), //sent by: Client or Server
+	    QUOTA_EXCEEDED((byte) 0x97), //sent by: Client or Server
+	    ADMINISTRATIVE_ACTION((byte) 0x98), //sent by: Client or Server
+	    PAYLOAD_FORMAT_INVALID((byte) 0x99), //sent by: Client or Server
+	    RETAIN_NOT_SUPPORTED((byte) 0x9A), //sent by: Server
+	    QOS_NOT_SUPPORTED((byte) 0x9B), //sent by: Server
+	    USE_ANOTHER_SERVER((byte) 0x9C), //sent by: Server
+	    SERVER_MOVED((byte) 0x9D), //sent by: Server
+	    SHARED_SUBSCRIPTIONS_NOT_SUPPORTED((byte) 0x9E), //sent by: Server
+	    CONNECTION_RATE_EXCEEDED((byte) 0x9F), //sent by: Server
+	    MAXIMUM_CONNECT_TIME((byte) 0xA0), //sent by: Server
+	    SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED((byte) 0xA1), //sent by: Server
+	    WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED((byte) 0xA2); //sent by: Server
 
         protected static final Disconnect[] VALUES;
 
