@@ -20,6 +20,7 @@ import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.compression.Brotli;
 import io.netty5.handler.codec.compression.BrotliDecompressor;
 import io.netty5.handler.codec.compression.Decompressor;
+import io.netty5.handler.codec.compression.SnappyDecompressor;
 import io.netty5.handler.codec.compression.ZlibDecompressor;
 import io.netty5.handler.codec.compression.ZlibWrapper;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
@@ -31,6 +32,7 @@ import static io.netty5.handler.codec.http.HttpHeaderValues.BR;
 import static io.netty5.handler.codec.http.HttpHeaderValues.DEFLATE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty5.handler.codec.http.HttpHeaderValues.IDENTITY;
+import static io.netty5.handler.codec.http.HttpHeaderValues.SNAPPY;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty5.handler.codec.http2.Http2Error.INTERNAL_ERROR;
@@ -171,6 +173,9 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return BrotliDecompressor.newFactory().get();
+        }
+        if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
+            return SnappyDecompressor.newFactory().get();
         }
         // 'identity' or unsupported
         return null;
