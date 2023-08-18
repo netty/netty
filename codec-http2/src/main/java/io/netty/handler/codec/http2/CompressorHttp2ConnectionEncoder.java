@@ -85,10 +85,12 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (Brotli.isAvailable()) {
             return new CompressionOptions[] {
                     StandardCompressionOptions.brotli(),
+                    StandardCompressionOptions.snappy(),
                     StandardCompressionOptions.gzip(),
                     StandardCompressionOptions.deflate() };
         }
-        return new CompressionOptions[] { StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate() };
+        return new CompressionOptions[] { StandardCompressionOptions.snappy(),
+                StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate() };
     }
 
     /**
