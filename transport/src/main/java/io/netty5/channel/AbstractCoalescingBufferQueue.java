@@ -158,22 +158,33 @@ public abstract class AbstractCoalescingBufferQueue {
                     aggregatePromise.asFuture().addListener((FutureListener<Void>) entry);
                     continue;
                 }
+
                 entryBuffer = (Buffer) entry;
-                if (entryBuffer.readableBytes() > bytes) {
+                int bufferBytes = entryBuffer.readableBytes();
+
+                if (bufferBytes > bytes) {
                     // Add the buffer back to the queue as we can't consume all of it.
                     bufAndListenerPairs.addFirst(entryBuffer);
                     if (bytes > 0) {
                         // Take a slice of what we can consume and retain it.
                         entryBuffer = entryBuffer.readSplit(bytes);
-                        toReturn = toReturn == null ? composeFirst(alloc, entryBuffer)
+                        // we end here, so if this is the only buffer to return, skip composing
+                        toReturn = toReturn == null ? entryBuffer
                                                     : compose(alloc, toReturn, entryBuffer);
                         bytes = 0;
                     }
                     break;
                 }
-                bytes -= entryBuffer.readableBytes();
-                toReturn = toReturn == null ? composeFirst(alloc, entryBuffer)
-                                            : compose(alloc, toReturn, entryBuffer);
+
+                bytes -= bufferBytes;
+                if (toReturn == null) {
+                    // if there are no more bytes in the queue after this, there's no reason to compose
+                    toReturn = bufferBytes == readableBytes
+                            ? entryBuffer
+                            : composeFirst(alloc, entryBuffer);
+                } else {
+                    toReturn = compose(alloc, toReturn, entryBuffer);
+                }
                 entryBuffer = null;
             }
         } catch (Throwable cause) {

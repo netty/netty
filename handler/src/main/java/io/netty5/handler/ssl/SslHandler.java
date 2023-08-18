@@ -197,11 +197,17 @@ public class SslHandler extends ByteToMessageDecoder {
             Buffer allocateWrapBuffer(SslHandler handler, BufferAllocator allocator,
                                       int pendingBytes, int numComponents) {
                 ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) handler.engine;
-                int maxWrapLength = engine.calculateMaxLengthForWrap(pendingBytes, numComponents);
+                int maxWrapLength = engine.calculateOutNetBufSize(pendingBytes, numComponents);
                 if (allocator.getAllocationType() != StandardAllocationTypes.OFF_HEAP) {
                     allocator = DefaultBufferAllocators.offHeapAllocator();
                 }
                 return allocator.allocate(maxWrapLength);
+            }
+
+            @Override
+            int calculateRequiredOutBufSpace(SslHandler handler, int pendingBytes, int numComponents) {
+                return ((ReferenceCountedOpenSslEngine) handler.engine)
+                        .calculateMaxLengthForWrap(pendingBytes, numComponents);
             }
 
             @Override
@@ -228,6 +234,12 @@ public class SslHandler extends ByteToMessageDecoder {
             }
 
             @Override
+            int calculateRequiredOutBufSpace(SslHandler handler, int pendingBytes, int numComponents) {
+                return ((ConscryptAlpnSslEngine) handler.engine)
+                        .calculateRequiredOutBufSpace(pendingBytes, numComponents);
+            }
+
+            @Override
             int calculatePendingData(SslHandler handler, int guess) {
                 return guess;
             }
@@ -241,16 +253,23 @@ public class SslHandler extends ByteToMessageDecoder {
             @Override
             Buffer allocateWrapBuffer(SslHandler handler, BufferAllocator allocator,
                                        int pendingBytes, int numComponents) {
-                // As for the JDK SSLEngine we always need to allocate buffers of the size required by the SSLEngine
+                // For JDK we don't have a good source for the max wrap overhead. We need at least one packet buffer
+                // size, but may be able to fit more in based on the total requested.
+                if (allocator.getAllocationType() == StandardAllocationTypes.OFF_HEAP) {
+                    allocator = DefaultBufferAllocators.onHeapAllocator();
+                }
+                return allocator.allocate(Math.max(pendingBytes, handler.engine.getSession().getPacketBufferSize()));
+            }
+
+            @Override
+            int calculateRequiredOutBufSpace(SslHandler handler, int pendingBytes, int numComponents) {
+                // As for the JDK SSLEngine we always need to operate on buffer space required by the SSLEngine
                 // (normally ~16KB). This is required even if the amount of data to encrypt is very small. Use heap
                 // buffers to reduce the native memory usage.
                 //
                 // Beside this the JDK SSLEngine also (as of today) will do an extra heap to direct buffer copy
                 // if a direct buffer is used as its internals operate on byte[].
-                if (allocator.getAllocationType() == StandardAllocationTypes.OFF_HEAP) {
-                    allocator = DefaultBufferAllocators.onHeapAllocator();
-                }
-                return allocator.allocate(handler.engine.getSession().getPacketBufferSize());
+                return handler.engine.getSession().getPacketBufferSize();
             }
 
             @Override
@@ -280,6 +299,8 @@ public class SslHandler extends ByteToMessageDecoder {
 
         abstract Buffer allocateWrapBuffer(SslHandler handler, BufferAllocator allocator,
                                             int pendingBytes, int numComponents);
+
+        abstract int calculateRequiredOutBufSpace(SslHandler handler, int pendingBytes, int numComponents);
 
         // BEGIN Platform-dependent flags
 
@@ -703,11 +724,31 @@ public class SslHandler extends ByteToMessageDecoder {
                     break;
                 }
 
-                if (out == null) {
-                    out = allocateOutNetBuf(ctx, buf.readableBytes(), buf.countReadableComponents());
+                SSLEngineResult result;
+
+                if (buf.readableBytes() > MAX_PLAINTEXT_LENGTH) {
+                    // If we pulled a buffer larger than the supported packet size, we can slice it up and iteratively,
+                    // encrypting multiple packets into a single larger buffer. This substantially saves on allocations
+                    // for large responses. Here we estimate how large of a buffer we need. If we overestimate a bit,
+                    // that's fine. If we underestimate, we'll simply re-enqueue the remaining buffer and get it on the
+                    // next outer loop.
+                    int readableBytes = buf.readableBytes();
+                    int numPackets = readableBytes / MAX_PLAINTEXT_LENGTH;
+                    if (readableBytes % MAX_PLAINTEXT_LENGTH != 0) {
+                        numPackets += 1;
+                    }
+
+                    if (out == null) {
+                        out = allocateOutNetBuf(ctx, readableBytes, buf.countReadableComponents() + numPackets);
+                    }
+                    result = wrapMultiple(engine, buf, out);
+                } else {
+                    if (out == null) {
+                        out = allocateOutNetBuf(ctx, buf.readableBytes(), buf.countReadableComponents());
+                    }
+                    result = wrap(engine, buf, out);
                 }
 
-                SSLEngineResult result = wrap(engine, buf, out);
                 if (buf.readableBytes() > 0) {
                     pendingUnencryptedWrites.addFirst(buf, promise);
                     // When we add the buffer/promise pair back we need to be sure we don't complete the promise
@@ -879,6 +920,49 @@ public class SslHandler extends ByteToMessageDecoder {
             }
         }
         return false;
+    }
+
+    private SSLEngineResult wrapMultiple(SSLEngine engine, Buffer in, Buffer out)
+        throws SSLException {
+        SSLEngineResult result = null;
+
+        do {
+            int nextSliceSize = Math.min(MAX_PLAINTEXT_LENGTH, in.readableBytes());
+            // This call over-estimates, because we are slicing and not every nioBuffer will be part of
+            // every slice. We could improve the estimate by having an nioBufferCount(offset, length).
+            int nextOutSize = engineType.calculateRequiredOutBufSpace(
+                    this, nextSliceSize, in.countReadableComponents());
+
+            if (out.writableBytes() < nextOutSize) {
+                if (result != null) {
+                    // We underestimated the space needed to encrypt the entire in buf. Break out, and
+                    // upstream will re-enqueue the buffer for later.
+                    break;
+                }
+                // This shouldn't happen, as the out buf was properly sized for at least packetLength
+                // prior to calling wrap.
+                out.ensureWritable(nextOutSize);
+            }
+
+            try (Buffer wrapBuf = in.readSplit(nextSliceSize)) {
+                result = wrap(engine, wrapBuf, out);
+
+                if (result.getStatus() == Status.CLOSED) {
+                    // If the engine gets closed, we can exit out early. Otherwise, we'll do a full handling of
+                    // possible results once finished.
+                    break;
+                }
+
+                if (wrapBuf.readableBytes() > 0) {
+                    // There may be some left-over, in which case we can just pick it up next loop, so reset the
+                    // original reader index so its included again in the next slice.
+                    in.readerOffset(in.readerOffset() - wrapBuf.readableBytes());
+                }
+            }
+
+        } while (in.readableBytes() > 0);
+
+        return result;
     }
 
     private SSLEngineResult wrap(SSLEngine engine, Buffer in, Buffer out)
