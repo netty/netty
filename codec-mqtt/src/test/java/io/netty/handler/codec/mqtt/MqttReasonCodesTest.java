@@ -18,13 +18,14 @@ package io.netty.handler.codec.mqtt;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.Disconnect;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class MqttReasonCodesTest {
 
     @Test
     public void givenADisconnectReasonCodeTheCorrectEnumerationValueIsReturned() {
-        assertEquals(MqttReasonCodes.Disconnect.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED, MqttReasonCodes.Disconnect.valueOf((byte) 0xA2),
+        assertEquals(Disconnect.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED, Disconnect.valueOf((byte) 0xA2),
                 "0xA2 must match 'wildcard subscriptions not supported'");
     }
 }
