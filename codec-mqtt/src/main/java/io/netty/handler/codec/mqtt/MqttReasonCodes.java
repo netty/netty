@@ -16,6 +16,9 @@
 
 package io.netty.handler.codec.mqtt;
 
+/**
+ * Provides a set of enumeration that exposes standard MQTT 5 reason codes used by various messages.
+ * */
 public final class MqttReasonCodes {
 
     /**
@@ -30,9 +33,9 @@ public final class MqttReasonCodes {
     }
 
     /**
-     * Return Code of MQTT Disconnect message.
+     * Reason codes for MQTT Disconnect message.
      */
-   enum Disconnect {
+    enum Disconnect {
         NORMAL_DISCONNECT((byte) 0x00), //sent by: client or server
         DISCONNECT_WITH_WILL_MESSAGE((byte) 0x04), //sent by: client
         UNSPECIFIED_ERROR((byte) 0x80), //sent by: client or server
@@ -90,6 +93,9 @@ public final class MqttReasonCodes {
         }
     }
 
+    /**
+     * Reason codes for MQTT Auth message.
+     */
     enum Auth {
         SUCCESS((byte) 0x00), //sent by: Server
         CONTINUE_AUTHENTICATION((byte) 0x18), //sent by: Client or Server
@@ -122,6 +128,9 @@ public final class MqttReasonCodes {
         }
     }
 
+    /**
+     * Reason codes for MQTT PubAck message.
+     */
     enum PubAck {
         SUCCESS((byte) 0x00),
         NO_MATCHING_SUBSCRIBERS((byte) 0x10),
@@ -160,6 +169,9 @@ public final class MqttReasonCodes {
         }
     }
 
+    /**
+     * Reason codes for MQTT PubRec message.
+     */
     enum PubRec {
         SUCCESS((byte) 0x00),
         NO_MATCHING_SUBSCRIBERS((byte) 0x10),
@@ -199,6 +211,9 @@ public final class MqttReasonCodes {
 
     }
 
+    /**
+     * Reason codes for MQTT PubRel message.
+     */
     enum PubRel {
         SUCCESS((byte) 0x00),
         PACKET_IDENTIFIER_NOT_FOUND((byte) 0x92);
@@ -230,6 +245,9 @@ public final class MqttReasonCodes {
         }
     }
 
+    /**
+     * Reason codes for MQTT PubComp message.
+     */
     enum PubComp {
         SUCCESS((byte) 0x00),
         PACKET_IDENTIFIER_NOT_FOUND((byte) 0x92);
@@ -261,6 +279,9 @@ public final class MqttReasonCodes {
         }
     }
 
+    /**
+     * Reason codes for MQTT SubAck message.
+     */
     enum SubAck {
         GRANTED_QOS_0((byte) 0x00),
         GRANTED_QOS_1((byte) 0x01),
@@ -302,6 +323,9 @@ public final class MqttReasonCodes {
         }
     }
 
+    /**
+     * Reason codes for MQTT UnsubAck message.
+     */
     enum UnsubAck {
         SUCCESS((byte) 0x00),
         NO_SUBSCRIPTION_EXISTED((byte) 0x11),
