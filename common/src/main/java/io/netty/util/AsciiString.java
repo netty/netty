@@ -723,6 +723,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         }
 
         final byte chAsByte = c2b0(ch);
+        final int offset = this.offset;
         final int fromIndex = start + offset;
         final int toIndex = offset + length;
         final int index = AsciiStringUtil.firstIndexOf(value, fromIndex, toIndex, chAsByte);
@@ -924,8 +925,8 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return this;
         }
 
-        final byte[] newValue = PlatformDependent.allocateUninitializedArray(length());
-        AsciiStringUtil.toLowerCase(value, offset, newValue, 0, length());
+        final byte[] newValue = PlatformDependent.allocateUninitializedArray(length);
+        AsciiStringUtil.toLowerCase(value, offset, newValue, 0, length);
         return new AsciiString(newValue, false);
     }
 
@@ -938,8 +939,8 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (!AsciiStringUtil.containsLowerCase(value, offset, offset + length)) {
             return this;
         }
-        final byte[] newValue = PlatformDependent.allocateUninitializedArray(length());
-        AsciiStringUtil.toUpperCase(value, offset, newValue, 0, length());
+        final byte[] newValue = PlatformDependent.allocateUninitializedArray(length);
+        AsciiStringUtil.toUpperCase(value, offset, newValue, 0, length);
         return new AsciiString(newValue, false);
     }
 
