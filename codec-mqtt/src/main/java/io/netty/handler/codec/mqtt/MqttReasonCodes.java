@@ -6,23 +6,17 @@ public final class MqttReasonCodes {
      * @return the corresponding enum value to the hex value.
      * */
     private static <E> E valueOfHelper(byte b, E[] values) {
-        final int unsignedByte = b & 0xFF;
-        E reasonCode = null;
         try {
-            reasonCode = values[unsignedByte];
-        } catch (ArrayIndexOutOfBoundsException ignored) {
-            // no op
+            return values[b & 0xFF];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            throw new IllegalArgumentException("unknown reason code: " + b);
         }
-        if (reasonCode == null) {
-            throw new IllegalArgumentException("unknown reason code: " + unsignedByte);
-        }
-        return reasonCode;
     }
 
     /**
      * Return Code of MQTT Disconnect message.
      */
-    public enum Disconnect {
+   enum Disconnect {
         NORMAL_DISCONNECT((byte) 0x00), //sent by: client or server
         DISCONNECT_WITH_WILL_MESSAGE((byte) 0x04), //sent by: client
         UNSPECIFIED_ERROR((byte) 0x80), //sent by: client or server
