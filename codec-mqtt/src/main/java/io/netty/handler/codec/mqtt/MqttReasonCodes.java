@@ -84,10 +84,17 @@ public final class MqttReasonCodes {
             this.byteValue = byteValue;
         }
 
+        /**
+         * @return the value number corresponding to the constant.
+         * */
         public byte byteValue() {
             return byteValue;
         }
 
+        /**
+         * @param b the number to decode.
+         * @return the enum value corresponding to the number.
+         * */
         public static Disconnect valueOf(byte b) {
             return valueOfHelper(b, VALUES);
         }
@@ -119,10 +126,17 @@ public final class MqttReasonCodes {
             this.byteValue = byteValue;
         }
 
+        /**
+         * @return the value number corresponding to the constant.
+         * */
         public byte byteValue() {
             return byteValue;
         }
 
+        /**
+         * @param b the number to decode.
+         * @return the enum value corresponding to the number.
+         * */
         public static Auth valueOf(byte b) {
             return valueOfHelper(b, VALUES);
         }
@@ -160,10 +174,17 @@ public final class MqttReasonCodes {
             this.byteValue = byteValue;
         }
 
+        /**
+         * @return the value number corresponding to the constant.
+         * */
         public byte byteValue() {
             return byteValue;
         }
 
+        /**
+         * @param b the number to decode.
+         * @return the enum value corresponding to the number.
+         * */
         public static PubAck valueOf(byte b) {
             return valueOfHelper(b, VALUES);
         }
@@ -201,10 +222,17 @@ public final class MqttReasonCodes {
             this.byteValue = byteValue;
         }
 
+        /**
+         * @return the value number corresponding to the constant.
+         * */
         public byte byteValue() {
             return byteValue;
         }
 
+        /**
+         * @param b the number to decode.
+         * @return the enum value corresponding to the number.
+         * */
         public static PubRec valueOf(byte b) {
             return valueOfHelper(b, VALUES);
         }
@@ -236,10 +264,17 @@ public final class MqttReasonCodes {
             this.byteValue = byteValue;
         }
 
+        /**
+         * @return the value number corresponding to the constant.
+         * */
         public byte byteValue() {
             return byteValue;
         }
 
+        /**
+         * @param b the number to decode.
+         * @return the enum value corresponding to the number.
+         * */
         public static PubRel valueOf(byte b) {
             return valueOfHelper(b, VALUES);
         }
@@ -270,10 +305,17 @@ public final class MqttReasonCodes {
             this.byteValue = byteValue;
         }
 
+        /**
+         * @return the value number corresponding to the constant.
+         * */
         public byte byteValue() {
             return byteValue;
         }
 
+        /**
+         * @param b the number to decode.
+         * @return the enum value corresponding to the number.
+         * */
         public static PubComp valueOf(byte b) {
             return valueOfHelper(b, VALUES);
         }
@@ -314,10 +356,17 @@ public final class MqttReasonCodes {
             this.byteValue = byteValue;
         }
 
+        /**
+         * @return the value number corresponding to the constant.
+         * */
         public byte byteValue() {
             return byteValue;
         }
 
+        /**
+         * @param b the number to decode.
+         * @return the enum value corresponding to the number.
+         * */
         public static SubAck valueOf(byte b) {
             return valueOfHelper(b, VALUES);
         }
@@ -353,10 +402,17 @@ public final class MqttReasonCodes {
             this.byteValue = byteValue;
         }
 
+        /**
+         * @return the value number corresponding to the constant.
+         * */
         public byte byteValue() {
             return byteValue;
         }
 
+        /**
+         * @param b the number to decode.
+         * @return the enum value corresponding to the number.
+         * */
         public static UnsubAck valueOf(byte b) {
             return valueOfHelper(b, VALUES);
         }
