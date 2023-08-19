@@ -41,16 +41,19 @@ public class AsciiStringUtilCaseConversionBenchmark extends AbstractMicrobenchma
 
     @Param({ "7", "16", "23", "32" })
     int size;
+
     @Param({ "4", "11" })
     int logPermutations;
 
-    @Param({ "1" })
+    @Param({ "0" })
     int seed;
 
     int permutations;
+
     byte[][] upperCaseData;
 
     byte[] ret;
+
     private int i;
 
     @Param({ "true", "false" })
