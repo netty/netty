@@ -1143,12 +1143,19 @@ public abstract class SslContext {
                                                                 NoSuchPaddingException, InvalidKeySpecException,
                                                                 InvalidAlgorithmParameterException,
                                                                 KeyException, IOException {
+        return toPrivateKey(keyFile, keyPassword, true);
+    }
+
+    static PrivateKey toPrivateKey(File keyFile, String keyPassword, boolean tryBouncyCastle)
+            throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException,
+            InvalidAlgorithmParameterException,
+            KeyException, IOException {
         if (keyFile == null) {
             return null;
         }
 
         // try BC first, if this fail fallback to original key extraction process
-        if (BouncyCastlePemReader.isAvailable()) {
+        if (tryBouncyCastle && BouncyCastlePemReader.isAvailable()) {
             PrivateKey pk = BouncyCastlePemReader.getPrivateKey(keyFile, keyPassword);
             if (pk != null) {
                 return pk;

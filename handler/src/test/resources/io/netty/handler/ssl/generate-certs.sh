@@ -71,8 +71,15 @@ openssl gendsa -out dsa_pkcs1_unencrypted.key dsaparam.pem
 openssl gendsa -des3 -out dsa_pkcs1_des3_encrypted.key -passout pass:example dsaparam.pem
 openssl gendsa -aes128 -out dsa_pkcs1_aes_encrypted.key -passout pass:example dsaparam.pem
 
+# PBES2
+openssl genrsa -out rsa_pbes2.key
+openssl req -new -subj "/CN=NettyTest" -key rsa_pbes2.key -out rsa_pbes2.csr
+openssl x509 -req -days 36500 -in rsa_pbes2.csr -signkey rsa_pbes2.key -out rsa_pbes2.crt
+openssl pkcs8 -topk8 -inform PEM -in rsa_pbes2.key -outform pem -out rsa_pbes2_enc_pkcs8.key -v2 aes-256-cbc -passin pass:12345678 -passout pass:12345678
+
 # Clean up intermediate files
 rm intermediate.csr
 rm mutual_auth_ca.key mutual_auth_invalid_client.key mutual_auth_client.key mutual_auth_server.key mutual_auth_invalid_intermediate_ca.key mutual_auth_intermediate_ca.key
 rm mutual_auth_invalid_client.pem mutual_auth_client.pem mutual_auth_server.pem mutual_auth_client_cert_chain.pem mutual_auth_invalid_intermediate_ca.pem mutual_auth_intermediate_ca.pem mutual_auth_invalid_client_cert_chain.pem
 rm dsaparam.pem
+rm rsa_pbes2.crt rsa_pbes2.csr rsa_pbes2.key
