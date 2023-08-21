@@ -1101,7 +1101,8 @@ public abstract class SslContext {
         String algName = encryptedPrivateKeyInfo.getAlgName();
         // Java 8 ~ 16 returns OID_PKCS5_PBES2
         // Java 17+ returns PBES2
-        if (PlatformDependent.javaVersion() >= 8 && parameters != null && (OID_PKCS5_PBES2.equals(algName) || PBES2.equals(algName))) {
+        if (PlatformDependent.javaVersion() >= 8 && parameters != null &&
+                (OID_PKCS5_PBES2.equals(algName) || PBES2.equals(algName))) {
             /*
              * This should be "PBEWith<prf>And<encryption>".
              * Relying on the toString() implementation is potentially
