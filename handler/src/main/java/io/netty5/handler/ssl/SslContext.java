@@ -27,8 +27,6 @@ import io.netty5.util.AttributeMap;
 import io.netty5.util.DefaultAttributeMap;
 import io.netty5.util.internal.EmptyArrays;
 
-
-
 import javax.crypto.Cipher;
 import javax.crypto.EncryptedPrivateKeyInfo;
 import javax.crypto.NoSuchPaddingException;
@@ -48,6 +46,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.security.AlgorithmParameters;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyException;
@@ -103,6 +102,8 @@ public abstract class SslContext {
 
     private final boolean startTls;
     private final AttributeMap attributes = new DefaultAttributeMap();
+    private static final String OID_PKCS5_PBES2 = "1.2.840.113549.1.5.13";
+    private static final String PBES2 = "PBES2";
 
     /**
      * Returns the default server-side implementation provider currently in use.
@@ -1094,14 +1095,37 @@ public abstract class SslContext {
         }
 
         EncryptedPrivateKeyInfo encryptedPrivateKeyInfo = new EncryptedPrivateKeyInfo(key);
-        SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(encryptedPrivateKeyInfo.getAlgName());
+        String pbeAlgorithm = getPBEAlgorithm(encryptedPrivateKeyInfo);
+        SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(pbeAlgorithm);
         PBEKeySpec pbeKeySpec = new PBEKeySpec(password);
         SecretKey pbeKey = keyFactory.generateSecret(pbeKeySpec);
 
-        Cipher cipher = Cipher.getInstance(encryptedPrivateKeyInfo.getAlgName());
+        Cipher cipher = Cipher.getInstance(pbeAlgorithm);
         cipher.init(Cipher.DECRYPT_MODE, pbeKey, encryptedPrivateKeyInfo.getAlgParameters());
 
         return encryptedPrivateKeyInfo.getKeySpec(cipher);
+    }
+
+    private static String getPBEAlgorithm(EncryptedPrivateKeyInfo encryptedPrivateKeyInfo) {
+        AlgorithmParameters parameters = encryptedPrivateKeyInfo.getAlgParameters();
+        String algName = encryptedPrivateKeyInfo.getAlgName();
+        // Java 8 ~ 16 returns OID_PKCS5_PBES2
+        // Java 17+ returns PBES2
+        if (parameters != null &&
+                (OID_PKCS5_PBES2.equals(algName) || PBES2.equals(algName))) {
+            /*
+             * This should be "PBEWith<prf>And<encryption>".
+             * Relying on the toString() implementation is potentially
+             * fragile but acceptable in this case since the JRE depends on
+             * the toString() implementation as well.
+             * In the future, if necessary, we can parse the value of
+             * parameters.getEncoded() but the associated complexity and
+             * unlikeliness of the JRE implementation changing means that
+             * Tomcat will use to toString() approach for now.
+             */
+            return parameters.toString();
+        }
+        return encryptedPrivateKeyInfo.getAlgName();
     }
 
     /**
@@ -1131,12 +1155,19 @@ public abstract class SslContext {
                                                                 NoSuchPaddingException, InvalidKeySpecException,
                                                                 InvalidAlgorithmParameterException,
                                                                 KeyException, IOException {
+        return toPrivateKey(keyFile, keyPassword, true);
+    }
+
+    static PrivateKey toPrivateKey(File keyFile, String keyPassword, boolean tryBouncyCastle)
+            throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeySpecException,
+            InvalidAlgorithmParameterException,
+            KeyException, IOException {
         if (keyFile == null) {
             return null;
         }
 
         // try BC first, if this fail fallback to original key extraction process
-        if (BouncyCastlePemReader.isAvailable()) {
+        if (tryBouncyCastle && BouncyCastlePemReader.isAvailable()) {
             PrivateKey pk = BouncyCastlePemReader.getPrivateKey(keyFile, keyPassword);
             if (pk != null) {
                 return pk;
