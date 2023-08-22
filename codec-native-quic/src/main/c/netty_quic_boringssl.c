@@ -598,6 +598,11 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
     SSL_set_ex_data(ssl, sslTaskIdx, NULL);
     netty_boringssl_ssl_task_free(e, ssl_task);
 
+    if (pkey == NULL && cchain == NULL) {
+        // No key material found.
+        return 1;
+    }
+
     int numCerts = sk_CRYPTO_BUFFER_num(cchain);
     if (numCerts == 0) {
         goto done;
