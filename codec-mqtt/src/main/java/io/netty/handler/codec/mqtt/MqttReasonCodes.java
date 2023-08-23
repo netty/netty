@@ -70,7 +70,7 @@ public final class MqttReasonCodes {
 
         static {
             Disconnect[] values = values();
-            VALUES = new Disconnect[28];
+            VALUES = new Disconnect[163];
             for (Disconnect code : values) {
                 final int unsignedByte = code.byteValue & 0xFF;
                 // Suppress a warning about out of bounds access since the enum contains only correct values
@@ -112,7 +112,7 @@ public final class MqttReasonCodes {
 
         static {
             Auth[] values = values();
-            VALUES = new Auth[3];
+            VALUES = new Auth[26];
             for (Auth code : values) {
                 final int unsignedByte = code.byteValue & 0xFF;
                 // Suppress a warning about out of bounds access since the enum contains only correct values
@@ -160,7 +160,7 @@ public final class MqttReasonCodes {
 
         static {
             PubAck[] values = values();
-            VALUES = new PubAck[9];
+            VALUES = new PubAck[154];
             for (PubAck code : values) {
                 final int unsignedByte = code.byteValue & 0xFF;
                 // Suppress a warning about out of bounds access since the enum contains only correct values
@@ -208,7 +208,7 @@ public final class MqttReasonCodes {
 
         static {
             PubRec[] values = values();
-            VALUES = new PubRec[9];
+            VALUES = new PubRec[154];
             for (PubRec code : values) {
                 final int unsignedByte = code.byteValue & 0xFF;
                 // Suppress a warning about out of bounds access since the enum contains only correct values
@@ -249,7 +249,7 @@ public final class MqttReasonCodes {
 
         static {
             PubRel[] values = values();
-            VALUES = new PubRel[2];
+            VALUES = new PubRel[147];
             for (PubRel code : values) {
                 final int unsignedByte = code.byteValue & 0xFF;
                 // Suppress a warning about out of bounds access since the enum contains only correct values
@@ -290,7 +290,7 @@ public final class MqttReasonCodes {
 
         static {
             PubComp[] values = values();
-            VALUES = new PubComp[2];
+            VALUES = new PubComp[147];
             for (PubComp code : values) {
                 final int unsignedByte = code.byteValue & 0xFF;
                 // Suppress a warning about out of bounds access since the enum contains only correct values
@@ -341,7 +341,7 @@ public final class MqttReasonCodes {
 
         static {
             SubAck[] values = values();
-            VALUES = new SubAck[12];
+            VALUES = new SubAck[163];
             for (SubAck code : values) {
                 final int unsignedByte = code.byteValue & 0xFF;
                 // Suppress a warning about out of bounds access since the enum contains only correct values
@@ -387,7 +387,7 @@ public final class MqttReasonCodes {
 
         static {
             UnsubAck[] values = values();
-            VALUES = new UnsubAck[7];
+            VALUES = new UnsubAck[146];
             for (UnsubAck code : values) {
                 final int unsignedByte = code.byteValue & 0xFF;
                 // Suppress a warning about out of bounds access since the enum contains only correct values

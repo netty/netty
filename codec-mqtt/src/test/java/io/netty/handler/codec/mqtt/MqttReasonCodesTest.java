@@ -18,8 +18,20 @@ package io.netty.handler.codec.mqtt;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 import static io.netty.handler.codec.mqtt.MqttReasonCodes.Disconnect;
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.Auth;
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.PubAck;
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.PubRec;
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.PubRel;
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.PubComp;
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.SubAck;
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.UnsubAck;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+// ./mvnw -B -ntp --file pom.xml verify -pl codec-mqtt
 
 class MqttReasonCodesTest {
 
@@ -27,5 +39,69 @@ class MqttReasonCodesTest {
     public void givenADisconnectReasonCodeTheCorrectEnumerationValueIsReturned() {
         assertEquals(Disconnect.WILDCARD_SUBSCRIPTIONS_NOT_SUPPORTED, Disconnect.valueOf((byte) 0xA2),
                 "0xA2 must match 'wildcard subscriptions not supported'");
+    }
+
+    @Test
+    public void testDisconnectReasonCodesCorrectlyMapToConstant() {
+        for (Disconnect reasonCode : Disconnect.values()) {
+            assertEquals(reasonCode, Disconnect.valueOf((byte) (reasonCode.byteValue() & 0xFF)),
+                    "Disconnect hex doesn't match the proper constant");
+        }
+    }
+
+    @Test
+    public void testAuthReasonCodesCorrectlyMapToConstant() {
+        for (Auth reasonCode : Auth.values()) {
+            assertEquals(reasonCode, Auth.valueOf((byte) (reasonCode.byteValue() & 0xFF)),
+                    "Auth hex doesn't match the proper constant");
+        }
+    }
+
+    @Test
+    public void testPubAckReasonCodesCorrectlyMapToConstant() {
+        for (PubAck reasonCode : PubAck.values()) {
+            assertEquals(reasonCode, PubAck.valueOf((byte) (reasonCode.byteValue() & 0xFF)),
+                    "PubAck hex doesn't match the proper constant");
+        }
+    }
+
+    @Test
+    public void testPubRecReasonCodesCorrectlyMapToConstant() {
+        for (PubRec reasonCode : PubRec.values()) {
+            assertEquals(reasonCode, PubRec.valueOf((byte) (reasonCode.byteValue() & 0xFF)),
+                    "PubRec hex doesn't match the proper constant");
+        }
+    }
+
+    @Test
+    public void testPubRelReasonCodesCorrectlyMapToConstant() {
+        for (PubRel reasonCode : PubRel.values()) {
+            assertEquals(reasonCode, PubRel.valueOf((byte) (reasonCode.byteValue() & 0xFF)),
+                    "PubRel hex doesn't match the proper constant");
+        }
+    }
+
+    @Test
+    public void testPubCompReasonCodesCorrectlyMapToConstant() {
+        for (PubComp reasonCode : PubComp.values()) {
+            assertEquals(reasonCode, PubComp.valueOf((byte) (reasonCode.byteValue() & 0xFF)),
+                    "PubComp hex doesn't match the proper constant");
+        }
+    }
+
+    @Test
+    public void testSubAckReasonCodesCorrectlyMapToConstant() {
+        for (SubAck reasonCode : SubAck.values()) {
+            assertEquals(reasonCode, SubAck.valueOf((byte) (reasonCode.byteValue() & 0xFF)),
+                    "SubAck hex doesn't match the proper constant");
+        }
+    }
+
+    @Test
+    public void testUnsubAckReasonCodesCorrectlyMapToConstant() {
+        for (UnsubAck reasonCode : UnsubAck.values()) {
+            assertEquals(reasonCode, UnsubAck.valueOf((byte) (reasonCode.byteValue() & 0xFF)),
+                    "UnsubAck hex doesn't match the proper constant");
+        }
     }
 }
