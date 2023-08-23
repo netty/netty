@@ -21,6 +21,9 @@ package io.netty.handler.codec.mqtt;
  * */
 public final class MqttReasonCodes {
 
+    private MqttReasonCodes() {
+    }
+
     /**
      * @return the corresponding enum value to the hex value.
      * */
