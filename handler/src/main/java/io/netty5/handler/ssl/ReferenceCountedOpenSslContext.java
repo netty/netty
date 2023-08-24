@@ -114,10 +114,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     static final boolean SERVER_ENABLE_SESSION_CACHE =
             SystemPropertyUtil.getBoolean("io.netty5.handler.ssl.openssl.sessionCacheServer", true);
-    // session caching is disabled by default on the client side due a JDK bug:
-    // https://mail.openjdk.java.net/pipermail/security-dev/2021-March/024758.html
     static final boolean CLIENT_ENABLE_SESSION_CACHE =
-            SystemPropertyUtil.getBoolean("io.netty5.handler.ssl.openssl.sessionCacheClient", false);
+            SystemPropertyUtil.getBoolean("io.netty5.handler.ssl.openssl.sessionCacheClient", true);
 
     /**
      * The OpenSSL SSL_CTX object.
