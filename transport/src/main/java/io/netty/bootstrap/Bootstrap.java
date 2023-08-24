@@ -23,9 +23,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolver;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.NameResolver;
-import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.internal.ObjectUtil;
@@ -35,6 +35,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Collection;
 
 /**
  * A {@link Bootstrap} that makes it easy to bootstrap a {@link Channel} to use
@@ -70,9 +71,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
      *
      * @see io.netty.resolver.DefaultAddressResolverGroup
      */
-    @SuppressWarnings("unchecked")
     public Bootstrap resolver(AddressResolverGroup<?> resolver) {
-        this.externalResolver = resolver == null ? null : new ExternalAddressResolver(resolver);
+        externalResolver = resolver == null ? null : new ExternalAddressResolver(resolver);
         disableResolver = false;
         return this;
     }
@@ -277,6 +277,12 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
+        Collection<ChannelInitializerExtension> extensions = getInitializerExtensions();
+        if (!extensions.isEmpty()) {
+            for (ChannelInitializerExtension extension : extensions) {
+                extension.postInitializeClientChannel(channel);
+            }
+        }
     }
 
     @Override

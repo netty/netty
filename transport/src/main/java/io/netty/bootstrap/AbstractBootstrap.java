@@ -37,9 +37,12 @@ import io.netty.util.internal.logging.InternalLogger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -65,6 +68,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     // purposes.
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
+    private volatile boolean disableExtensions;
     private volatile ChannelHandler handler;
 
     AbstractBootstrap() {
@@ -80,6 +84,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             options.putAll(bootstrap.options);
         }
         attrs.putAll(bootstrap.attrs);
+        disableExtensions = bootstrap.disableExtensions;
     }
 
     /**
@@ -135,6 +140,17 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     @SuppressWarnings({ "unchecked", "deprecation" })
     public B channelFactory(io.netty.channel.ChannelFactory<? extends C> channelFactory) {
         return channelFactory((ChannelFactory<C>) channelFactory);
+    }
+
+    /**
+     * Disable calling out to any {@link ChannelInitializerExtension}s for the channels created by this bootstrap.
+     * <p>
+     * Channel initializer extensions are loaded and installed by default, but can be selectively disabled per bootstrap
+     * by calling this method.
+     */
+    public B disableChannelInitializerExtensions() {
+        disableExtensions = true;
+        return self();
     }
 
     /**
@@ -342,6 +358,33 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     abstract void init(Channel channel) throws Exception;
+
+    Collection<ChannelInitializerExtension> getInitializerExtensions() {
+        if (disableExtensions) {
+            return ChannelInitializerExtensions.empty().extensions();
+        }
+        List<ChannelInitializerExtension> extensions = ChannelInitializerExtensions.getExtensions().extensions();
+        if (extensions.isEmpty()) {
+            return extensions;
+        }
+
+        ChannelInitializerExtension.ApplicableInfo info =
+                new ChannelInitializerExtension.ApplicableInfo(getClass());
+        List<ChannelInitializerExtension> filteredExtensions = null;
+        for (int i = 0, len = extensions.size(); i < len; i++) {
+            ChannelInitializerExtension extension = extensions.get(i);
+            boolean applicable = extension.isApplicable(info);
+            if (filteredExtensions == null && !applicable) {
+                filteredExtensions = new ArrayList<ChannelInitializerExtension>();
+                for (int j = 0; j < i; j++) {
+                    filteredExtensions.add(extensions.get(j));
+                }
+            } else if (filteredExtensions != null && applicable) {
+                filteredExtensions.add(extension);
+            }
+        }
+        return filteredExtensions != null ? filteredExtensions : extensions;
+    }
 
     private static void doBind0(
             final ChannelFuture regFuture, final Channel channel,

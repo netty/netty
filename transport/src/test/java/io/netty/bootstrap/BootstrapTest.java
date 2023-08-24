@@ -35,9 +35,9 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.resolver.AbstractAddressResolver;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.AbstractAddressResolver;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
@@ -467,6 +467,58 @@ public class BootstrapTest {
         // Check the order is the same as what we defined before.
         assertSame(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, options.take());
         assertSame(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, options.take());
+    }
+
+    @Test
+    void mustCallInitializerExtensionsByDefault() throws Exception {
+        final Bootstrap cb = new Bootstrap();
+        cb.group(groupA);
+        cb.handler(dummyHandler);
+        cb.channel(LocalChannel.class);
+
+        StubChannelInitializerExtension.clearThreadLocals();
+
+        ChannelFuture future = cb.register();
+        future.sync();
+        final Channel expectedChannel = future.channel();
+
+        assertSame(expectedChannel, StubChannelInitializerExtension.lastSeenClientChannel.get());
+        assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
+        assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
+    }
+
+    @Test
+    void mustNotCallInitializerExtensionsNotApplicable() throws Exception {
+        final Bootstrap cb = new Bootstrap();
+        cb.group(groupA);
+        cb.handler(dummyHandler);
+        cb.channel(LocalChannel.class);
+
+        StubChannelInitializerExtension.clearThreadLocals();
+        StubChannelInitializerExtension.isApplicable.set(Boolean.FALSE);
+
+        cb.register().sync();
+
+        assertNull(StubChannelInitializerExtension.lastSeenClientChannel.get());
+        assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
+        assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
+    }
+
+    @Test
+    void mustNotCallInitializerExtensionsWhenDisabled() throws Exception {
+        final Bootstrap cb = new Bootstrap();
+        cb.group(groupA);
+        cb.handler(dummyHandler);
+        cb.channel(LocalChannel.class);
+        cb.disableChannelInitializerExtensions();
+
+        StubChannelInitializerExtension.clearThreadLocals();
+
+        cb.register().sync();
+
+        assertNull(StubChannelInitializerExtension.lastSeenClientChannel.get());
+        assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
+        assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
     }
 
     private static final class DelayedEventLoopGroup extends DefaultEventLoop {
