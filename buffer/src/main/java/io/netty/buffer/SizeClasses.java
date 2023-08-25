@@ -329,7 +329,7 @@ abstract class SizeClasses implements SizeClassesMetric {
             return size2idxTab[size - 1 >> LOG2_QUANTUM];
         }
 
-        int x = log2((size << 1) - 1);
+        int x = 32 - Integer.numberOfLeadingZeros(size - 1);
         int shift = x < LOG2_SIZE_CLASS_GROUP + LOG2_QUANTUM + 1
                 ? 0 : x - (LOG2_SIZE_CLASS_GROUP + LOG2_QUANTUM);
 
@@ -359,7 +359,7 @@ abstract class SizeClasses implements SizeClassesMetric {
             return nPSizes;
         }
 
-        int x = log2((pageSize << 1) - 1);
+        int x = 32 - Integer.numberOfLeadingZeros(pageSize - 1);
 
         int shift = x < LOG2_SIZE_CLASS_GROUP + pageShifts
                 ? 0 : x - (LOG2_SIZE_CLASS_GROUP + pageShifts);
@@ -404,7 +404,7 @@ abstract class SizeClasses implements SizeClassesMetric {
     }
 
     private static int normalizeSizeCompute(int size) {
-        int x = log2((size << 1) - 1);
+        int x = 32 - Integer.numberOfLeadingZeros(size - 1);
         int log2Delta = x < LOG2_SIZE_CLASS_GROUP + LOG2_QUANTUM + 1
                 ? LOG2_QUANTUM : x - LOG2_SIZE_CLASS_GROUP - 1;
         int delta = 1 << log2Delta;
