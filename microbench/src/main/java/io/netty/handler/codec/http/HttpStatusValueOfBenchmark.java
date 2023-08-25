@@ -144,7 +144,7 @@ public class HttpStatusValueOfBenchmark extends AbstractMicrobenchmark {
             }
         }
 
-        for (int i = (totalCount - 1); i < setUpData.length; i++) {
+        for (int i = totalCount - 1; i < setUpData.length; i++) {
             // Generate remaining elements from scope 1xx to 5xx
             int code = random.nextInt(100, 600);
             setUpData[i] = code;
@@ -167,7 +167,7 @@ public class HttpStatusValueOfBenchmark extends AbstractMicrobenchmark {
 //        printCodePercentage(desc, setUpData.length, c1x, c2x, c3x, c4x, c5x, c6x, c7x);
     }
 
-    private void validateRatios(BigDecimal[] bdArray ) {
+    private void validateRatios(BigDecimal[] bdArray) {
         BigDecimal bdSum = new BigDecimal("0.00");
         for (BigDecimal bdParam : bdArray) {
             if (bdParam.compareTo(bdZero) < 0) {
@@ -183,9 +183,10 @@ public class HttpStatusValueOfBenchmark extends AbstractMicrobenchmark {
         }
     }
 
-    private void printCodePercentage(String desc, int length, double c1x, double c2x, double c3x, double c4x, double c5x, double c6x, double c7x) {
+    private void printCodePercentage(String desc, int length, double c1x, double c2x, double c3x, double c4x,
+                                     double c5x, double c6x, double c7x) {
         System.out.println("\n" + desc + "===>"
-                +"INFORMATIONAL:" + df.format(c1x / length)
+                + "INFORMATIONAL:" + df.format(c1x / length)
                 + ", SUCCESS:" + df.format(c2x / length)
                 + ", REDIRECTION:" + df.format(c3x / length)
                 + ", CLIENT_ERROR:" + df.format(c4x / length)
