@@ -31,7 +31,7 @@ import io.netty.channel.ServerChannel;
  * unless the extensions are explicitly disabled on the given bootstrap instance with a call to
  * {@link AbstractBootstrap#disableChannelInitializerExtensions()}.
  */
-public interface ChannelInitializerExtension {
+public abstract class ChannelInitializerExtension {
     /**
      * Inspect the information in the given {@link ApplicableInfo} object, and determine if this extension is applicable
      * for the given context.
@@ -44,7 +44,7 @@ public interface ChannelInitializerExtension {
      * @return {@code true} if this extension is interested in getting called in the given context,
      * otherwise {@code false}.
      */
-    boolean isApplicable(ApplicableInfo info);
+    public abstract boolean isApplicable(ApplicableInfo info);
 
     /**
      * Get the "priority" of this extension. If multiple extensions are
@@ -59,7 +59,9 @@ public interface ChannelInitializerExtension {
      *
      * @return The priority.
      */
-    double priority();
+    public double priority() {
+        return 0;
+    }
 
     /**
      * Called by {@link Bootstrap} after the initialization of the given client channel.
@@ -69,7 +71,7 @@ public interface ChannelInitializerExtension {
      *
      * @param channel The channel that was initialized.
      */
-    void postInitializeClientChannel(Channel channel);
+    public abstract void postInitializeClientChannel(Channel channel);
 
     /**
      * Called by {@link ServerBootstrap} after the initialization of the given server listener channel.
@@ -81,7 +83,7 @@ public interface ChannelInitializerExtension {
      *
      * @param channel The channel that was initialized.
      */
-    void postInitializeServerListenerChannel(ServerChannel channel);
+    public abstract void postInitializeServerListenerChannel(ServerChannel channel);
 
     /**
      * Called by {@link ServerBootstrap} after the initialization of the given child channel.
@@ -92,7 +94,7 @@ public interface ChannelInitializerExtension {
      *
      * @param channel The channel that was initialized.
      */
-    void postInitializeServerChildChannel(Channel channel);
+    public abstract void postInitializeServerChildChannel(Channel channel);
 
     /**
      * Provides information about the context where an extension might be used.
@@ -101,7 +103,7 @@ public interface ChannelInitializerExtension {
      * This class is a parameter-object, and is {@code final} so that additional information can be made available in
      * the future, without breaking backwards compatibility.
      */
-    final class ApplicableInfo {
+    public static final class ApplicableInfo {
         private final Class<?> bootstrapClass;
 
         ApplicableInfo(Class<?> bootstrapClass) {

@@ -19,7 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ServerChannel;
 import io.netty.util.concurrent.FastThreadLocal;
 
-public class StubChannelInitializerExtension implements ChannelInitializerExtension {
+public class StubChannelInitializerExtension extends ChannelInitializerExtension {
     static final FastThreadLocal<Boolean> isApplicable = new FastThreadLocal<Boolean>() {
         @Override
         protected Boolean initialValue() throws Exception {
