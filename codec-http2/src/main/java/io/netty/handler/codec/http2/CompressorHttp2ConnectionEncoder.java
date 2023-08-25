@@ -32,6 +32,8 @@ import io.netty.handler.codec.compression.GzipOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZstdEncoder;
 import io.netty.handler.codec.compression.ZstdOptions;
+import io.netty.handler.codec.compression.SnappyFrameEncoder;
+import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
@@ -45,6 +47,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
+import static io.netty.handler.codec.http.HttpHeaderValues.SNAPPY;
 
 /**
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
@@ -68,6 +71,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     private GzipOptions gzipCompressionOptions;
     private DeflateOptions deflateOptions;
     private ZstdOptions zstdOptions;
+    private SnappyOptions snappyOptions;
 
     /**
      * Create a new {@link CompressorHttp2ConnectionEncoder} instance
@@ -81,10 +85,12 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (Brotli.isAvailable()) {
             return new CompressionOptions[] {
                     StandardCompressionOptions.brotli(),
+                    StandardCompressionOptions.snappy(),
                     StandardCompressionOptions.gzip(),
                     StandardCompressionOptions.deflate() };
         }
-        return new CompressionOptions[] { StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate() };
+        return new CompressionOptions[] { StandardCompressionOptions.snappy(),
+                StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate() };
     }
 
     /**
@@ -137,6 +143,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 deflateOptions = (DeflateOptions) compressionOptions;
             } else if (compressionOptions instanceof ZstdOptions) {
                 zstdOptions = (ZstdOptions) compressionOptions;
+            } else if (compressionOptions instanceof SnappyOptions) {
+                snappyOptions = (SnappyOptions) compressionOptions;
             } else {
                 throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
                         ": " + compressionOptions);
@@ -282,6 +290,10 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
                     ctx.channel().config(), new ZstdEncoder(zstdOptions.compressionLevel(),
                     zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
+        }
+        if (snappyOptions != null && SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
+            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                    ctx.channel().config(), new SnappyFrameEncoder());
         }
         // 'identity' or unsupported
         return null;

@@ -602,6 +602,43 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
+    /**
+     * <a href="https://datatracker.ietf.org/doc/html/rfc9112#name-field-syntax">RFC 9112</a> define the header field
+     * syntax thusly, where the field value is bracketed by optional whitespace:
+     * <pre>
+     *     field-line   = field-name ":" OWS field-value OWS
+     * </pre>
+     * Meanwhile, <a href="https://datatracker.ietf.org/doc/html/rfc9110#name-whitespace">RFC 9110</a> says that
+     * "optional whitespace" (OWS) is defined as "zero or more linear whitespace octets".
+     * And a "linear whitespace octet" is defined in the ABNF as either a space or a tab character.
+     */
+    @Test
+    void headerValuesMayBeBracketedByZeroOrMoreWhitespace() throws Exception {
+        String requestStr = "GET / HTTP/1.1\r\n" +
+                "Host:example.com\r\n" + // zero whitespace
+                "X-0-Header:  x0\r\n" + // two whitespace
+                "X-1-Header:\tx1\r\n" + // tab whitespace
+                "X-2-Header: \t x2\r\n" + // mixed whitespace
+                "X-3-Header:x3\t \r\n" + // whitespace after the value
+                "\r\n";
+        HttpRequestDecoder decoder = new HttpRequestDecoder();
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        HttpHeaders headers = request.headers();
+        assertEquals("example.com", headers.get("Host"));
+        assertEquals("x0", headers.get("X-0-Header"));
+        assertEquals("x1", headers.get("X-1-Header"));
+        assertEquals("x2", headers.get("X-2-Header"));
+        assertEquals("x3", headers.get("X-3-Header"));
+        LastHttpContent last = channel.readInbound();
+        assertEquals(LastHttpContent.EMPTY_LAST_CONTENT, last);
+        last.release();
+        assertFalse(channel.finish());
+    }
+
     private static void testInvalidHeaders0(String requestStr) {
         testInvalidHeaders0(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII));
     }

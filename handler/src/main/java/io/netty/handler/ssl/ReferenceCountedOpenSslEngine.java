@@ -67,10 +67,12 @@ import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.OpenSsl.memoryAddress;
 import static io.netty.handler.ssl.SslUtils.SSL_RECORD_HEADER_LENGTH;
+import static io.netty.util.internal.EmptyArrays.EMPTY_STRINGS;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullArrayParam;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static java.lang.Integer.MAX_VALUE;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_TASK;
@@ -273,11 +275,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     synchronized (ReferenceCountedOpenSslEngine.this) {
                         if (peerSupportedSignatureAlgorithms == null) {
                             if (isDestroyed()) {
-                                peerSupportedSignatureAlgorithms = EmptyArrays.EMPTY_STRINGS;
+                                peerSupportedSignatureAlgorithms = EMPTY_STRINGS;
                             } else {
                                 String[] algs = SSL.getSigAlgs(ssl);
                                 if (algs == null) {
-                                    peerSupportedSignatureAlgorithms = EmptyArrays.EMPTY_STRINGS;
+                                    peerSupportedSignatureAlgorithms = EMPTY_STRINGS;
                                 } else {
                                     Set<String> algorithmList = new LinkedHashSet<String>(algs.length);
                                     for (String alg: algs) {
@@ -287,7 +289,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                             algorithmList.add(converted);
                                         }
                                     }
-                                    peerSupportedSignatureAlgorithms = algorithmList.toArray(new String[0]);
+                                    peerSupportedSignatureAlgorithms = algorithmList.toArray(EMPTY_STRINGS);
                                 }
                             }
                         }
@@ -410,7 +412,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     final synchronized String[] authMethods() {
         if (isDestroyed()) {
-            return EmptyArrays.EMPTY_STRINGS;
+            return EMPTY_STRINGS;
         }
         return SSL.authenticationMethods(ssl);
     }
@@ -703,9 +705,23 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * This method is intentionally not synchronized, only use if you know you are in the EventLoop
      * thread and visibility on {@link #maxWrapBufferSize} and {@link #maxWrapOverhead} is achieved
      * via other synchronized blocks.
+     * <br>
+     * Calculates the max size of a single wrap operation for the given plaintextLength and
+     * numComponents.
      */
     final int calculateMaxLengthForWrap(int plaintextLength, int numComponents) {
         return (int) min(maxWrapBufferSize, plaintextLength + (long) maxWrapOverhead * numComponents);
+    }
+
+    /**
+     * This method is intentionally not synchronized, only use if you know you are in the EventLoop
+     * thread and visibility on {@link #maxWrapOverhead} is achieved via other synchronized blocks.
+     * <br>
+     * Calculates the size of the out net buf to create for the given plaintextLength and numComponents.
+     * This is not related to the max size per wrap, as we can wrap chunks at a time into one out net buf.
+     */
+    final int calculateOutNetBufSize(int plaintextLength, int numComponents) {
+        return (int) min(MAX_VALUE, plaintextLength + (long) maxWrapOverhead * numComponents);
     }
 
     final synchronized int sslPending() {
@@ -1619,7 +1635,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getSupportedCipherSuites() {
-        return OpenSsl.AVAILABLE_CIPHER_SUITES.toArray(new String[0]);
+        return OpenSsl.AVAILABLE_CIPHER_SUITES.toArray(EMPTY_STRINGS);
     }
 
     @Override
@@ -1635,15 +1651,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     extraCiphers = OpenSsl.EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
                     tls13Enabled = true;
                 } else {
-                    extraCiphers = EmptyArrays.EMPTY_STRINGS;
+                    extraCiphers = EMPTY_STRINGS;
                     tls13Enabled = false;
                 }
             } else {
-                return EmptyArrays.EMPTY_STRINGS;
+                return EMPTY_STRINGS;
             }
         }
         if (enabled == null) {
-            return EmptyArrays.EMPTY_STRINGS;
+            return EMPTY_STRINGS;
         } else {
             Set<String> enabledSet = new LinkedHashSet<String>(enabled.length + extraCiphers.length);
             synchronized (this) {
@@ -1657,7 +1673,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
                 Collections.addAll(enabledSet, extraCiphers);
             }
-            return enabledSet.toArray(new String[0]);
+            return enabledSet.toArray(EMPTY_STRINGS);
         }
     }
 
@@ -1706,7 +1722,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                     // Update the protocols but not cache the value. We only cache when we call it from the user
                     // code or when we construct the engine.
-                    setEnabledProtocols0(protocols.toArray(EmptyArrays.EMPTY_STRINGS), false);
+                    setEnabledProtocols0(protocols.toArray(EMPTY_STRINGS), false);
                 } catch (Exception e) {
                     throw new IllegalStateException("failed to enable cipher suites: " + cipherSuiteSpec, e);
                 }
@@ -1718,7 +1734,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getSupportedProtocols() {
-        return OpenSsl.SUPPORTED_PROTOCOLS_SET.toArray(new String[0]);
+        return OpenSsl.SUPPORTED_PROTOCOLS_SET.toArray(EMPTY_STRINGS);
     }
 
     @Override
@@ -1732,7 +1748,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             if (!isDestroyed()) {
                 opts = SSL.getOptions(ssl);
             } else {
-                return enabled.toArray(new String[0]);
+                return enabled.toArray(EMPTY_STRINGS);
             }
         }
         if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1, SslProtocols.TLS_v1)) {
@@ -1753,7 +1769,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv3, SslProtocols.SSL_v3)) {
             enabled.add(SslProtocols.SSL_v3);
         }
-        return enabled.toArray(new String[0]);
+        return enabled.toArray(EMPTY_STRINGS);
     }
 
     private static boolean isProtocolEnabled(int opts, int disableMask, String protocolString) {
@@ -2487,9 +2503,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             synchronized (this) {
                 Map<String, Object> values = this.values;
                 if (values == null || values.isEmpty()) {
-                    return EmptyArrays.EMPTY_STRINGS;
+                    return EMPTY_STRINGS;
                 }
-                return values.keySet().toArray(new String[0]);
+                return values.keySet().toArray(EMPTY_STRINGS);
             }
         }
 

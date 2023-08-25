@@ -869,7 +869,7 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     @Override
     public ByteBuf retainedSlice(int index, int length) {
         checkIndex(index, length);
-        return buffer.slice(index, length);
+        return buffer.retainedSlice(index, length);
     }
 
     @Override

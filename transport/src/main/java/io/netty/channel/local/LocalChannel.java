@@ -315,7 +315,7 @@ public class LocalChannel extends AbstractChannel {
         }
 
         final InternalThreadLocalMap threadLocals = InternalThreadLocalMap.get();
-        final Integer stackDepth = threadLocals.localChannelReaderStackDepth();
+        final int stackDepth = threadLocals.localChannelReaderStackDepth();
         if (stackDepth < MAX_READER_STACK_DEPTH) {
             threadLocals.setLocalChannelReaderStackDepth(stackDepth + 1);
             try {

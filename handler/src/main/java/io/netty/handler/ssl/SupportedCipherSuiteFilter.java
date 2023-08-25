@@ -15,6 +15,7 @@
  */
 package io.netty.handler.ssl;
 
+import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
 
 import javax.net.ssl.SSLEngine;
@@ -51,7 +52,7 @@ public final class SupportedCipherSuiteFilter implements CipherSuiteFilter {
                 newCiphers.add(c);
             }
         }
-        return newCiphers.toArray(new String[0]);
+        return newCiphers.toArray(EmptyArrays.EMPTY_STRINGS);
     }
 
 }
