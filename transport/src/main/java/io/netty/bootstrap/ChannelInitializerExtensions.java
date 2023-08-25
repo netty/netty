@@ -16,6 +16,8 @@
 package io.netty.bootstrap;
 
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,6 +29,7 @@ import java.util.ServiceLoader;
  * The configurable facade that decides what {@link ChannelInitializerExtension}s to load and where to find them.
  */
 abstract class ChannelInitializerExtensions {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializerExtensions.class);
     private static volatile ChannelInitializerExtensions implementation;
 
     private ChannelInitializerExtensions() {
@@ -55,6 +58,7 @@ abstract class ChannelInitializerExtensions {
                     return impl;
                 }
                 String extensionProp = SystemPropertyUtil.get("io.netty.bootstrap.extensions");
+                logger.debug("-Dio.netty.bootstrap.extensions: {}", extensionProp);
                 if ("serviceload".equalsIgnoreCase(extensionProp)) {
                     impl = new ServiceLoadingExtensions();
                 } else {
@@ -87,6 +91,7 @@ abstract class ChannelInitializerExtensions {
             ServiceLoader<ChannelInitializerExtension> loader = ServiceLoader.load(ChannelInitializerExtension.class);
             ArrayList<ChannelInitializerExtension> extensions = new ArrayList<ChannelInitializerExtension>();
             for (ChannelInitializerExtension extension : loader) {
+                logger.debug("Loaded extension: {}", extension.getClass());
                 extensions.add(extension);
             }
             if (!extensions.isEmpty()) {
