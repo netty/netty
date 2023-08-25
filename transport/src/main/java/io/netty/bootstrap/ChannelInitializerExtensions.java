@@ -55,10 +55,10 @@ abstract class ChannelInitializerExtensions {
                     return impl;
                 }
                 String extensionProp = SystemPropertyUtil.get("io.netty.bootstrap.extensions");
-                if ("empty".equalsIgnoreCase(extensionProp) || "false".equalsIgnoreCase(extensionProp)) {
-                    impl = empty();
-                } else {
+                if ("serviceload".equalsIgnoreCase(extensionProp)) {
                     impl = new ServiceLoadingExtensions();
+                } else {
+                    impl = empty();
                 }
                 implementation = impl;
             }
