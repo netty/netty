@@ -16,6 +16,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ServerChannel;
 import io.netty.util.concurrent.FastThreadLocal;
 
 public class StubChannelInitializerExtension implements ChannelInitializerExtension {
@@ -52,7 +53,7 @@ public class StubChannelInitializerExtension implements ChannelInitializerExtens
     }
 
     @Override
-    public void postInitializeServerListenerChannel(Channel channel) {
+    public void postInitializeServerListenerChannel(ServerChannel channel) {
         lastSeenListenerChannel.set(channel);
     }
 

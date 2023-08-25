@@ -16,6 +16,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ServerChannel;
 
 /**
  * A channel initializer extension make it possible to enforce rules and apply modifications across multiple,
@@ -80,7 +81,7 @@ public interface ChannelInitializerExtension {
      *
      * @param channel The channel that was initialized.
      */
-    void postInitializeServerListenerChannel(Channel channel);
+    void postInitializeServerListenerChannel(ServerChannel channel);
 
     /**
      * Called by {@link ServerBootstrap} after the initialization of the given child channel.

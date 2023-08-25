@@ -160,9 +160,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 });
             }
         });
-        if (!extensions.isEmpty()) {
+        if (!extensions.isEmpty() && channel instanceof ServerChannel) {
             for (ChannelInitializerExtension extension : extensions) {
-                extension.postInitializeServerListenerChannel(channel);
+                extension.postInitializeServerListenerChannel((ServerChannel) channel);
             }
         }
     }
