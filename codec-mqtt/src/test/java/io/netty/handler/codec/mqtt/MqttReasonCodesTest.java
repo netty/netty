@@ -31,7 +31,6 @@ import static io.netty.handler.codec.mqtt.MqttReasonCodes.SubAck;
 import static io.netty.handler.codec.mqtt.MqttReasonCodes.UnsubAck;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-// ./mvnw -B -ntp --file pom.xml verify -pl codec-mqtt
 
 class MqttReasonCodesTest {
 
