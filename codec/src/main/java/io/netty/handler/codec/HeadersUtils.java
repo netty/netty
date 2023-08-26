@@ -17,7 +17,6 @@ package io.netty.handler.codec;
 
 import java.util.AbstractCollection;
 import java.util.AbstractList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
