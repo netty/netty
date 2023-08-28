@@ -27,7 +27,12 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.MultithreadEventLoopGroup;
+import io.netty5.channel.ServerChannel;
 import io.netty5.channel.SimpleChannelInboundHandler;
+import io.netty5.channel.local.LocalAddress;
+import io.netty5.channel.local.LocalChannel;
+import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
@@ -57,6 +62,7 @@ import io.netty5.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
+import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
@@ -73,6 +79,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLException;
 import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
@@ -115,7 +122,7 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
     private Bootstrap cb;
 
     public enum Transport {
-        nio, epoll, kqueue, io_uring
+        local, nio, epoll, kqueue, io_uring
     }
 
     @Setup(Level.Trial)
@@ -133,7 +140,9 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
                 .channel(serverChannelClass())
                 .childHandler(new Http2ServerInitializer(configureServerSsl()));
 
-        serverChannel = sb.bind(0).asStage().get();
+        SocketAddress anyAddress = transport == Transport.local?
+                new LocalAddress(Http2ThroughputBenchmark.class) : new InetSocketAddress(NetUtil.LOCALHOST, 0);
+        serverChannel = sb.bind(anyAddress).asStage().get();
         serverAddress = serverChannel.localAddress();
         logger.debug("Server channel: {}", serverChannel);
 
@@ -144,7 +153,6 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
         cb.channel(clientChannelClass());
         cb.option(ChannelOption.SO_KEEPALIVE, true);
         cb.option(ChannelOption.BUFFER_ALLOCATOR, allocator);
-        cb.remoteAddress(serverAddress);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
@@ -165,7 +173,7 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
         });
 
         // Start the client.
-        clientChannel = cb.connect().asStage().get();
+        clientChannel = cb.connect(serverAddress).asStage().get();
         logger.debug("Client channel: {}",  clientChannel);
         clientResponse = new Semaphore(0);
         streamFrameResponseHandler = new Http2ClientStreamFrameResponseHandler(clientResponse);
@@ -220,6 +228,7 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
     private IoHandlerFactory getHandlerFactory() throws Exception {
         Class<?> factoryClass;
         switch (transport) {
+            case local: return LocalHandler.newFactory();
             case nio: return NioHandler.newFactory();
             case epoll: factoryClass = Class.forName("io.netty5.channel.epoll.EpollHandler"); break;
             case kqueue: factoryClass = Class.forName("io.netty5.channel.kqueue.KQueueHandler"); break;
@@ -231,8 +240,9 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
     }
 
     @SuppressWarnings("unchecked")
-    private Class<? extends ServerSocketChannel> serverChannelClass() throws ClassNotFoundException {
+    private Class<? extends ServerChannel> serverChannelClass() throws ClassNotFoundException {
         switch (transport) {
+            case local: return LocalServerChannel.class;
             case nio: return NioServerSocketChannel.class;
             case epoll: return (Class<? extends ServerSocketChannel>) Class.forName(
                     "io.netty5.channel.epoll.EpollServerSocketChannel");
@@ -245,8 +255,9 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
     }
 
     @SuppressWarnings("unchecked")
-    private Class<? extends SocketChannel> clientChannelClass() throws ClassNotFoundException {
+    private Class<? extends Channel> clientChannelClass() throws ClassNotFoundException {
         switch (transport) {
+            case local: return LocalChannel.class;
             case nio: return NioSocketChannel.class;
             case epoll: return (Class<? extends SocketChannel>) Class.forName(
                     "io.netty5.channel.epoll.EpollSocketChannel");
@@ -280,7 +291,7 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
         return null;
     }
 
-    static class Http2ServerInitializer extends ChannelInitializer<SocketChannel> {
+    static class Http2ServerInitializer extends ChannelInitializer<Channel> {
         private final SslContext sslCtx;
 
         Http2ServerInitializer(SslContext sslCtx) {
@@ -288,18 +299,18 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
-        public void initChannel(SocketChannel ch) {
+        public void initChannel(Channel ch) {
             if (sslCtx != null) {
                 configureSsl(ch);
             }
             configureClearText(ch);
         }
 
-        private void configureSsl(SocketChannel ch) {
+        private void configureSsl(Channel ch) {
             ch.pipeline().addLast(sslCtx.newHandler(ch.bufferAllocator()));
         }
 
-        private static void configureClearText(SocketChannel ch) {
+        private static void configureClearText(Channel ch) {
             final ChannelPipeline p = ch.pipeline();
             p.addLast(new HelloWorldHttp2HandlerBuilder().build());
         }
