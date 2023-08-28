@@ -103,7 +103,7 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
     @Param({"true", "false"})
     public boolean ssl;
 
-    @Param("nio")
+    @Param("local")
     public Transport transport;
 
     @Param({"adaptive", "pooled"})
