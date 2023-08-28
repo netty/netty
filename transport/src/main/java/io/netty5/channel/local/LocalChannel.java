@@ -214,6 +214,30 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     @Override
     protected boolean doReadNow(ReadSink readSink) {
         Object received = inboundBuffer.poll();
+        if (received instanceof Buffer) {
+            Buffer msg = (Buffer) received;
+            Buffer buffer = readSink.allocateBuffer();
+            if (buffer != null) {
+                if (buffer.writableBytes() >= msg.readableBytes()) {
+                    buffer.writeBytes(msg);
+                    msg.close();
+                } else {
+                    readSink.processRead(buffer.capacity(), msg.capacity(), msg);
+                    buffer.close();
+                    return false;
+                }
+                Object peeked;
+                while ((peeked = inboundBuffer.peek()) instanceof Buffer &&
+                        (msg = (Buffer) peeked).readableBytes() <= buffer.writableBytes()) {
+                    inboundBuffer.poll();
+                    buffer.writeBytes(msg);
+                    msg.close();
+                }
+
+                readSink.processRead(buffer.capacity(), buffer.readableBytes(), buffer);
+                return false;
+            }
+        }
         readSink.processRead(0, 0, received);
         return false;
     }
