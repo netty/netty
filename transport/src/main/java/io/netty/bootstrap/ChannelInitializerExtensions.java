@@ -20,6 +20,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -36,18 +37,9 @@ abstract class ChannelInitializerExtensions {
     }
 
     /**
-     * Get the implementation where we have no extensions.
-     */
-    static ChannelInitializerExtensions empty() {
-        return EmptyExtensions.EMPTY;
-    }
-
-    /**
-     * Get the configuration extensions, which may be the same as {@link #empty()} if the
-     * {@code io.netty.bootstrap.extensions} system property is {@code empty} or {@code false}.
-     * <p>
-     * By default, we pick an implementation that finds extensions through
-     * {@linkplain ServiceLoader#load(Class) service loading}.
+     * Get the configuration extensions, which is a no-op implementation by default,
+     * or a service-loading implementation if the {@code io.netty.bootstrap.extensions} system property is
+     * {@code serviceload}.
      */
     static ChannelInitializerExtensions getExtensions() {
         ChannelInitializerExtensions impl = implementation;
@@ -62,7 +54,7 @@ abstract class ChannelInitializerExtensions {
                 if ("serviceload".equalsIgnoreCase(extensionProp)) {
                     impl = new ServiceLoadingExtensions();
                 } else {
-                    impl = empty();
+                    impl = EmptyExtensions.EMPTY;
                 }
                 implementation = impl;
             }
@@ -71,15 +63,25 @@ abstract class ChannelInitializerExtensions {
     }
 
     /**
+     * @return {@code true} if there are no extensions, otherwise {@code false}.
+     */
+    abstract boolean isEmpty();
+
+    /**
      * Get the list of available extensions. The list is unmodifiable.
      */
-    abstract List<ChannelInitializerExtension> extensions();
+    abstract Collection<ChannelInitializerExtension> extensions(ChannelInitializerExtension.ApplicableInfo info);
 
     private static final class EmptyExtensions extends ChannelInitializerExtensions {
         private static final EmptyExtensions EMPTY = new EmptyExtensions();
 
         @Override
-        List<ChannelInitializerExtension> extensions() {
+        boolean isEmpty() {
+            return true;
+        }
+
+        @Override
+        Collection<ChannelInitializerExtension> extensions(ChannelInitializerExtension.ApplicableInfo info) {
             return Collections.emptyList();
         }
     }
@@ -108,8 +110,26 @@ abstract class ChannelInitializerExtensions {
         }
 
         @Override
-        List<ChannelInitializerExtension> extensions() {
-            return extensionList;
+        boolean isEmpty() {
+            return extensionList.isEmpty();
+        }
+
+        @Override
+        Collection<ChannelInitializerExtension> extensions(final ChannelInitializerExtension.ApplicableInfo info) {
+            List<ChannelInitializerExtension> filteredExtensions = null;
+            for (int i = 0, len = extensionList.size(); i < len; i++) {
+                ChannelInitializerExtension extension = extensionList.get(i);
+                boolean applicable = extension.isApplicable(info);
+                if (filteredExtensions == null && !applicable) {
+                    filteredExtensions = new ArrayList<ChannelInitializerExtension>();
+                    for (int j = 0; j < i; j++) {
+                        filteredExtensions.add(extensionList.get(j));
+                    }
+                } else if (filteredExtensions != null && applicable) {
+                    filteredExtensions.add(extension);
+                }
+            }
+            return filteredExtensions != null ? filteredExtensions : extensionList;
         }
     }
 }
