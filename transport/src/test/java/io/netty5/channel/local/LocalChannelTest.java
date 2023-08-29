@@ -499,6 +499,8 @@ public class LocalChannelTest {
         final CountDownLatch messageLatch = new CountDownLatch(2);
         final Buffer data = allocator.apply(1024);
         final Buffer data2 = allocator.apply(512);
+        data.writeInt(Integer.BYTES).writeInt(2);
+        data2.writeInt(Integer.BYTES).writeInt(1);
 
         cb.group(group1)
           .channel(LocalChannel.class)
@@ -509,10 +511,18 @@ public class LocalChannelTest {
           .childHandler(new ChannelHandler() {
               @Override
               public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                  final long count = messageLatch.getCount();
-                  if (msg instanceof Buffer && data.equals(msg) && count == 2 || data2.equals(msg) && count == 1) {
-                      ((Buffer) msg).close();
-                      messageLatch.countDown();
+                  if (msg instanceof Buffer) {
+                      try (Buffer buf = (Buffer) msg) {
+                          while (buf.readableBytes() > 0) {
+                              int size = buf.readInt();
+                              try (Buffer split = buf.readSplit(size)) {
+                                  int value = split.readInt();
+                                  if (value == messageLatch.getCount()) {
+                                      messageLatch.countDown();
+                                  }
+                              }
+                          }
+                      }
                   } else {
                       ctx.fireChannelRead(msg);
                   }
@@ -531,8 +541,7 @@ public class LocalChannelTest {
             final Channel ccCpy = cc;
             // Make sure a write operation is executed in the eventloop
             cc.pipeline().lastContext().executor().execute(() -> {
-                ccCpy.writeAndFlush(data).addListener(future ->
-                                                              ccCpy.writeAndFlush(data2));
+                ccCpy.writeAndFlush(data).addListener(future -> ccCpy.writeAndFlush(data2));
             });
 
             assertTrue(messageLatch.await(5, SECONDS));
