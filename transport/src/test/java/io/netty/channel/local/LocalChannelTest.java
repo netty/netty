@@ -431,7 +431,7 @@ public class LocalChannelTest {
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             if (data.equals(msg)) {
                                 messageLatch.countDown();
-                                ctx.writeAndFlush(data);
+                                ctx.writeAndFlush(data.retainedDuplicate());
                                 ctx.close();
                             } else {
                                 super.channelRead(ctx, msg);
@@ -469,8 +469,10 @@ public class LocalChannelTest {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
-        final ByteBuf data = Unpooled.wrappedBuffer(new byte[1024]);
-        final ByteBuf data2 = Unpooled.wrappedBuffer(new byte[512]);
+        final ByteBuf data = Unpooled.buffer();
+        final ByteBuf data2 = Unpooled.buffer();
+        data.writeInt(Integer.BYTES).writeInt(2);
+        data2.writeInt(Integer.BYTES).writeInt(1);
 
         try {
             cb.group(group1)
@@ -482,10 +484,20 @@ public class LocalChannelTest {
             .childHandler(new ChannelInboundHandlerAdapter() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                    final long count = messageLatch.getCount();
-                    if ((data.equals(msg) && count == 2) || (data2.equals(msg) && count == 1)) {
-                        ReferenceCountUtil.safeRelease(msg);
-                        messageLatch.countDown();
+                    if (msg instanceof ByteBuf) {
+                        ByteBuf buf = (ByteBuf) msg;
+                        while (buf.isReadable()) {
+                            int size = buf.readInt();
+                            ByteBuf slice = buf.readRetainedSlice(size);
+                            try {
+                                if (slice.readInt() == messageLatch.getCount()) {
+                                    messageLatch.countDown();
+                                }
+                            } finally {
+                                slice.release();
+                            }
+                        }
+                        buf.release();
                     } else {
                         super.channelRead(ctx, msg);
                     }
