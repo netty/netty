@@ -32,8 +32,6 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
