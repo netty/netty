@@ -246,13 +246,14 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         }
     }
 
-    private void offerToQueue(Buffer buffer) {
+    private boolean offerToQueue(Buffer buffer) {
         if (!centralQueue.offer(buffer)) {
-            buffer.close();
+            return false;
         }
         if (closed) {
             drainCloseCentralQueue();
         }
+        return true;
     }
 
     @SuppressWarnings("checkstyle:finalclass") // Checkstyle mistakenly believes this class should be final.
@@ -405,7 +406,11 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                     curr.close();
                     current = buffer;
                 } else if (!(boolean) NEXT_IN_LINE.compareAndSet(this, null, buffer)) {
-                    parent.offerToQueue(buffer);
+                    if (!parent.offerToQueue(buffer)) {
+                        // Next-in-line is occupied AND the central queue is full.
+                        // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+                        buffer.close();
+                    }
                 }
             }
             return result;
@@ -471,7 +476,10 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
                 Buffer buffer = manager.recoverMemory(
                         parent.allocatorControl, memory, CleanerDrop.wrap(ArcDrop.wrap(this), manager));
                 if (!mag.trySetNextInLine(buffer)) {
-                    parent.offerToQueue(buffer);
+                    if (!parent.offerToQueue(buffer)) {
+                        // The central queue is full. Drop the memory with the original Drop instance.
+                        drop.drop(obj);
+                    }
                 }
             }
         }
