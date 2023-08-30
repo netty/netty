@@ -22,7 +22,7 @@ import io.netty5.buffer.BufferClosedException;
 import io.netty5.buffer.CompositeBuffer;
 import io.netty5.buffer.MemoryManager;
 import io.netty5.buffer.SensitiveBufferAllocator;
-import io.netty5.buffer.adapt.AdaptablePoolingAllocator;
+import io.netty5.buffer.adapt.AdaptivePoolingAllocator;
 import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.buffer.pool.PooledBufferAllocator;
 import io.netty5.buffer.tests.Fixture.Properties;
@@ -152,8 +152,8 @@ public abstract class BufferTestSupport {
                                 PooledBufferAllocator.defaultMaxOrder(), PooledBufferAllocator.defaultSmallCacheSize(),
                                 PooledBufferAllocator.defaultNormalCacheSize(), true, 64),
                         POOLED, DIRECT),
-                new Fixture("adaptiveHeap", () -> new AdaptablePoolingAllocator(false), POOLED, HEAP),
-                new Fixture("adaptiveDirect", () -> new AdaptablePoolingAllocator(true), POOLED, DIRECT)
+                new Fixture("adaptiveHeap", () -> new AdaptivePoolingAllocator(false), POOLED, HEAP),
+                new Fixture("adaptiveDirect", () -> new AdaptivePoolingAllocator(true), POOLED, DIRECT)
         );
     }
 

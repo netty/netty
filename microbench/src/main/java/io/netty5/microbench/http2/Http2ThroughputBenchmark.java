@@ -18,7 +18,7 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
-import io.netty5.buffer.adapt.AdaptablePoolingAllocator;
+import io.netty5.buffer.adapt.AdaptivePoolingAllocator;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
@@ -98,7 +98,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
     private static final Logger logger = LoggerFactory.getLogger(Http2ThroughputBenchmark.class);
     private static final BufferAllocator pooled = BufferAllocator.offHeapPooled();
-    private static final BufferAllocator adaptive = new AdaptablePoolingAllocator(true);
+    private static final BufferAllocator adaptive = new AdaptivePoolingAllocator(true);
 
     @Param({"true", "false"})
     public boolean ssl;
