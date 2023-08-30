@@ -39,12 +39,17 @@ public abstract class ChannelInitializerExtension {
      * If the extension is not applicable, then it won't be called.
      * <p>
      * This method may be called multiple times with different parameters for different contexts.
+     * <p>
+     * Override this method to apply your own logic to this decision.
+     * The default implementation just returns {@code true}.
      *
      * @param info An object carrying information about the context of where and how this extension would be used.
      * @return {@code true} if this extension is interested in getting called in the given context,
      * otherwise {@code false}.
      */
-    public abstract boolean isApplicable(ApplicableInfo info);
+    public boolean isApplicable(ApplicableInfo info) {
+        return true;
+    }
 
     /**
      * Get the "priority" of this extension. If multiple extensions are
@@ -56,6 +61,13 @@ public abstract class ChannelInitializerExtension {
      * <p>
      * Extensions with lower priority will get called first, while extensions with greater priority may be able to
      * observe the effects of extensions with lesser priority.
+     * <p>
+     * Note that if multiple extensions have the same priority, then their relative order will be unpredictable.
+     * As such, implementations should always take into consideration that other extensions might be called before
+     * or after them.
+     * <p>
+     * Override this method to specify your own priority.
+     * The default implementation just returns {@code 0}.
      *
      * @return The priority.
      */
@@ -68,10 +80,14 @@ public abstract class ChannelInitializerExtension {
      * <p>
      * The method is allowed to modify the handlers in the pipeline, the channel attributes, or the channel options.
      * The method must refrain from doing any I/O, or from closing the channel.
+     * <p>
+     * Override this method to add your own callback logic.
+     * The default implementation does nothing.
      *
      * @param channel The channel that was initialized.
      */
-    public abstract void postInitializeClientChannel(Channel channel);
+    public void postInitializeClientChannel(Channel channel) {
+    }
 
     /**
      * Called by {@link ServerBootstrap} after the initialization of the given server listener channel.
@@ -80,10 +96,14 @@ public abstract class ChannelInitializerExtension {
      * <p>
      * The method is allowed to modify the handlers in the pipeline, the channel attributes, or the channel options.
      * The method must refrain from doing any I/O, or from closing the channel.
+     * <p>
+     * Override this method to add your own callback logic.
+     * The default implementation does nothing.
      *
      * @param channel The channel that was initialized.
      */
-    public abstract void postInitializeServerListenerChannel(ServerChannel channel);
+    public void postInitializeServerListenerChannel(ServerChannel channel) {
+    }
 
     /**
      * Called by {@link ServerBootstrap} after the initialization of the given child channel.
@@ -91,10 +111,14 @@ public abstract class ChannelInitializerExtension {
      * <p>
      * The method is allowed to modify the handlers in the pipeline, the channel attributes, or the channel options.
      * The method must refrain from doing any I/O, or from closing the channel.
+     * <p>
+     * Override this method to add your own callback logic.
+     * The default implementation does nothing.
      *
      * @param channel The channel that was initialized.
      */
-    public abstract void postInitializeServerChildChannel(Channel channel);
+    public void postInitializeServerChildChannel(Channel channel) {
+    }
 
     /**
      * Provides information about the context where an extension might be used.
