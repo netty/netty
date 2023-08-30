@@ -159,7 +159,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
             final ByteBuffer src =  CompressionUtil.safeNioBuffer(in, in.readerIndex(), compressedLength);
             long decompressedSize = Zstd.decompressedSize(src);
             if (decompressedSize < Integer.MIN_VALUE || decompressedSize > Integer.MAX_VALUE) {
-                throw new CorruptedFrameException("Invalid decompressedSize");
+                throw new CorruptedFrameException("Invalid decompressedSize: " + decompressedSize);
             }
             boolean completed = consumeAndDecompress(ctx, (int) decompressedSize, in, out);
 
