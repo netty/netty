@@ -26,6 +26,13 @@ jobs:
   prepare-release:
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - uses: actions/checkout@v3
         with:
           ref: main
@@ -86,6 +93,13 @@ jobs:
     name: stage-release-${{ matrix.setup }}
 
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - name: Download release-workspace
         uses: actions/download-artifact@v3
         with:
@@ -270,6 +284,13 @@ jobs:
     # Wait until we have staged everything
     needs: [stage-release-linux, stage-release-windows-x86_64]
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - name: Download release-workspace
         uses: actions/download-artifact@v3
         with:

@@ -32,6 +32,13 @@ jobs:
   install-jars-linux-aarch64:
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - uses: actions/checkout@v3
 
       # Caching of maven dependencies
@@ -70,6 +77,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ install-jars-linux-aarch64 ]
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - uses: actions/checkout@v3
 
       - name: Download the maven repository
