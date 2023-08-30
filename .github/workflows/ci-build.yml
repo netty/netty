@@ -43,6 +43,13 @@ jobs:
 
     name: ${{ matrix.setup }}
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - uses: actions/checkout@v3
 
       # Cache .m2/repository
