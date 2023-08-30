@@ -45,6 +45,7 @@ jobs:
 
       # Cache .m2/repository
       - uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: deploy-cache-m2-repository-${{ hashFiles('**/pom.xml') }}
@@ -52,7 +53,7 @@ jobs:
             deploy-cache-m2-repository-
 
       # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.11
+      - uses: jpribyl/action-docker-layer-caching@v0.1.1
         continue-on-error: true
         with:
           key: docker-cache-deploy-{hash}

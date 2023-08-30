@@ -65,6 +65,7 @@ jobs:
 
       # Cache .m2/repository
       - uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: release-cache-m2-repository-${{ hashFiles('**/pom.xml') }}
