@@ -21,6 +21,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.incubator.codec.quic.QuicException;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -32,6 +33,7 @@ public abstract class Http3RequestStreamInboundHandler extends ChannelInboundHan
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(Http3RequestStreamInboundHandler.class);
     private static final Http3DataFrame EMPTY = new DefaultHttp3DataFrame(Unpooled.EMPTY_BUFFER);
+    private Object bufferedMessage;
     private boolean lastFrameDetected;
     private boolean firstFrameReceived;
 
@@ -46,21 +48,48 @@ public abstract class Http3RequestStreamInboundHandler extends ChannelInboundHan
     @Override
     public final void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         firstFrameReceived = true;
-        boolean inputShutdown = ((QuicStreamChannel) ctx.channel()).isInputShutdown();
+        handleBufferedMessage(ctx, false);
+        bufferedMessage = msg;
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        // Once we receive a channelReadComplete we know that we handled all the data that was contained in a
+        // stream frame. At this point we should check if the input was closed and so if this received frame
+        // will be the last on the stream.
+        handleBufferedMessage(ctx, ((QuicStreamChannel) ctx.channel()).isInputShutdown());
+
+        super.channelReadComplete(ctx);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        if (bufferedMessage != null) {
+            ReferenceCountUtil.release(bufferedMessage);
+            bufferedMessage = null;
+        }
+    }
+
+    private void handleBufferedMessage(ChannelHandlerContext ctx, boolean noMoreInput) throws Exception {
+        Object msg = bufferedMessage;
+        if (msg == null) {
+            return;
+        }
+        bufferedMessage = null;
         if (msg instanceof Http3UnknownFrame) {
             channelRead(ctx, (Http3UnknownFrame) msg);
-            if (inputShutdown) {
+            if (noMoreInput) {
                 notifyLast(ctx);
             }
         } else {
-            if (inputShutdown) {
+            if (noMoreInput) {
                 lastFrameDetected = true;
             }
             if (msg instanceof Http3HeadersFrame) {
-                channelRead(ctx, (Http3HeadersFrame) msg, inputShutdown);
+                channelRead(ctx, (Http3HeadersFrame) msg, noMoreInput);
             }
             if (msg instanceof Http3DataFrame) {
-                channelRead(ctx, (Http3DataFrame) msg, inputShutdown);
+                channelRead(ctx, (Http3DataFrame) msg, noMoreInput);
             }
         }
     }
