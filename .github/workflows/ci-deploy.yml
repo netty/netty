@@ -50,6 +50,7 @@ jobs:
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
@@ -58,7 +59,7 @@ jobs:
             ${{ runner.os }}-maven-
 
       # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.11
+      - uses: jpribyl/action-docker-layer-caching@v0.1.1
         env:
           docker-cache-name: staging-${{ matrix.setup }}-cache-docker
         continue-on-error: true
@@ -99,6 +100,7 @@ jobs:
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-deploy-staged-snapshots-${{ hashFiles('**/pom.xml') }}

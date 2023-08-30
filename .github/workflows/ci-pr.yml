@@ -42,6 +42,7 @@ jobs:
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-verify-pr-${{ hashFiles('**/pom.xml') }}
@@ -74,6 +75,7 @@ jobs:
       # Cache .m2/repository
       # Caching of maven dependencies
       - uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: pr-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -116,6 +118,7 @@ jobs:
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-build-pr-aarch64-${{ hashFiles('**/pom.xml') }}
@@ -182,6 +185,7 @@ jobs:
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
@@ -190,7 +194,7 @@ jobs:
             ${{ runner.os }}-maven-
 
       # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.11
+      - uses: jpribyl/action-docker-layer-caching@v0.1.1
         continue-on-error: true
         with:
           key: build-docker-cache-${{ matrix.setup }}-{hash}
