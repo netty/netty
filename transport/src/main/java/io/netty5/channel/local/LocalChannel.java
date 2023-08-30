@@ -214,7 +214,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     @Override
     protected boolean doReadNow(ReadSink readSink) {
         Object received = inboundBuffer.poll();
-        if (received instanceof Buffer) {
+        if (received instanceof Buffer && inboundBuffer.peek() instanceof Buffer) {
             Buffer msg = (Buffer) received;
             Buffer buffer = readSink.allocateBuffer();
             if (buffer != null) {
@@ -411,7 +411,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         if (state != State.BOUND) {
             // Not bound yet and no localAddress specified - get one.
             if (localAddress == null) {
-                localAddress = new LocalAddress(LocalChannel.this);
+                localAddress = new LocalAddress(this);
             }
         }
 
@@ -432,13 +432,13 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         }
 
         LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
-        peer = serverChannel.serve(LocalChannel.this);
+        peer = serverChannel.serve(this);
         return false;
     }
 
     @Override
     protected boolean doFinishConnect(LocalAddress requestedRemoteAddress) throws Exception {
-        final LocalChannel peer = LocalChannel.this.peer;
+        final LocalChannel peer = this.peer;
         if (peer == null) {
             return false;
         }
