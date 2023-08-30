@@ -297,7 +297,7 @@ public class LocalChannel extends AbstractChannel {
             if (received == null) {
                 break;
             }
-            if (received instanceof ByteBuf) {
+            if (received instanceof ByteBuf && inboundBuffer.peek() instanceof ByteBuf) {
                 ByteBuf msg = (ByteBuf) received;
                 ByteBuf output = handle.allocate(alloc());
                 if (msg.readableBytes() < output.writableBytes()) {
