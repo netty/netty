@@ -68,7 +68,7 @@ import static java.util.Objects.requireNonNull;
  * magazine, to be shared with other magazines.
  * The {@link #createSharedChunkQueue()} method can be overridden to customize this queue.
  */
-public class AdaptablePoolingAllocator implements BufferAllocator {
+public class AdaptivePoolingAllocator implements BufferAllocator {
     private static final int RETIRE_CAPACITY = 4 * 1024;
     private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
@@ -101,11 +101,11 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
     private volatile Magazine[] magazines;
     private volatile boolean closed;
 
-    public AdaptablePoolingAllocator(boolean direct) {
+    public AdaptivePoolingAllocator(boolean direct) {
         this(MemoryManager.instance(), direct);
     }
 
-    public AdaptablePoolingAllocator(MemoryManager manager, boolean direct) {
+    public AdaptivePoolingAllocator(MemoryManager manager, boolean direct) {
         allocationType = direct ? StandardAllocationTypes.OFF_HEAP : StandardAllocationTypes.ON_HEAP;
         this.manager = manager;
         centralQueue = requireNonNull(createSharedChunkQueue());
@@ -267,7 +267,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 8 buckets.
         private static final int HISTO_MAX_BUCKET_MASK = HISTO_BUCKET_COUNT - 1;
 
-        protected final AdaptablePoolingAllocator parent;
+        protected final AdaptivePoolingAllocator parent;
         private final short[][] histos = {
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
@@ -281,7 +281,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         private volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
         protected volatile int localPrefChunkSize = MIN_CHUNK_SIZE;
 
-        private AllocationStatistics(AdaptablePoolingAllocator parent) {
+        private AllocationStatistics(AdaptivePoolingAllocator parent) {
             this.parent = parent;
         }
 
@@ -367,7 +367,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         @SuppressWarnings("unused") // updated via VarHandle
         private volatile Buffer nextInLine;
 
-        Magazine(AdaptablePoolingAllocator parent) {
+        Magazine(AdaptivePoolingAllocator parent) {
             super(parent);
         }
 
@@ -464,7 +464,7 @@ public class AdaptablePoolingAllocator implements BufferAllocator {
         @Override
         public void drop(Buffer obj) {
             Magazine mag = magazine;
-            AdaptablePoolingAllocator parent = mag.parent;
+            AdaptivePoolingAllocator parent = mag.parent;
             MemoryManager manager = parent.manager;
             int chunkSize = mag.preferredChunkSize();
             int memSize = manager.sizeOf(memory);

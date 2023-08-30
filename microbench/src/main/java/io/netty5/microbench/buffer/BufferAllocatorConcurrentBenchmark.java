@@ -16,7 +16,7 @@
 package io.netty5.microbench.buffer;
 
 import io.netty5.buffer.BufferAllocator;
-import io.netty5.buffer.adapt.AdaptablePoolingAllocator;
+import io.netty5.buffer.adapt.AdaptivePoolingAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
@@ -34,7 +34,7 @@ public class BufferAllocatorConcurrentBenchmark extends AbstractMicrobenchmark {
 
     private static final BufferAllocator unpooledAllocator = BufferAllocator.offHeapUnpooled();
     private static final BufferAllocator pooledAllocator = BufferAllocator.offHeapPooled();
-    private static final BufferAllocator adaptiveAllocator = new AdaptablePoolingAllocator(true);
+    private static final BufferAllocator adaptiveAllocator = new AdaptivePoolingAllocator(true);
 
     @Param({ "00064"/*, "00256", "01024", "04096"*/ })
     public int size;

@@ -18,7 +18,7 @@ package io.netty5.microbench.buffer;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.MemoryManager;
-import io.netty5.buffer.adapt.AdaptablePoolingAllocator;
+import io.netty5.buffer.adapt.AdaptivePoolingAllocator;
 import io.netty5.buffer.pool.PooledBufferAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -42,7 +42,7 @@ public class BufferAllocatorBenchmark extends AbstractMicrobenchmark {
     private static final BufferAllocator unpooledAllocator = BufferAllocator.offHeapUnpooled();
     private static final BufferAllocator pooledAllocator = new PooledBufferAllocator(
             MemoryManager.instance(), true, 4, 8192, 9, 0, 0, true, 0); // Disable thread-local cache
-    private static final BufferAllocator adaptiveAllocator = new AdaptablePoolingAllocator(true);
+    private static final BufferAllocator adaptiveAllocator = new AdaptivePoolingAllocator(true);
 
     private static final int MAX_LIVE_BUFFERS = 8192;
     private static final Random rand = new Random();

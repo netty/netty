@@ -14,7 +14,7 @@
  */
 package io.netty5.buffer;
 
-import io.netty5.buffer.adapt.AdaptablePoolingAllocator;
+import io.netty5.buffer.adapt.AdaptivePoolingAllocator;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import org.slf4j.Logger;
@@ -56,8 +56,8 @@ public final class DefaultBufferAllocators {
             onHeap = BufferAllocator.onHeapPooled();
             offHeap = BufferAllocator.offHeapPooled();
         } else if ("adaptive".equals(allocType)) {
-            onHeap = new AdaptablePoolingAllocator(false);
-            offHeap = new AdaptablePoolingAllocator(true);
+            onHeap = new AdaptivePoolingAllocator(false);
+            offHeap = new AdaptivePoolingAllocator(true);
         } else {
             onHeap = BufferAllocator.onHeapPooled();
             offHeap = BufferAllocator.offHeapPooled();
