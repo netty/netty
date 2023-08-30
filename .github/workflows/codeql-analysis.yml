@@ -46,6 +46,7 @@ jobs:
 
     # Caching of maven dependencies
     - uses: actions/cache@v3
+      continue-on-error: true
       with:
         path: ~/.m2/repository
         key: analyze-${{ matrix.language }}-maven-cache-${{ hashFiles('**/pom.xml') }}

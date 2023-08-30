@@ -36,6 +36,7 @@ jobs:
 
       # Caching of maven dependencies
       - uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: sinstall-jars-linux-aarch64-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -43,7 +44,7 @@ jobs:
             install-jars-linux-aarch64-maven-cache-
 
       # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.11
+      - uses: jpribyl/action-docker-layer-caching@v0.1.1
         continue-on-error: true
         with:
           key: pr-linux-x86_64-docker-cache-{hash}

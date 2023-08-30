@@ -47,6 +47,7 @@ jobs:
 
       # Caching of maven dependencies
       - uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: stage-snapshot-${{ matrix.setup }}-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -63,7 +64,7 @@ jobs:
             }]
 
       # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.11
+      - uses: jpribyl/action-docker-layer-caching@v0.1.1
         env:
           docker-cache-name: staging-${{ matrix.setup }}-cache-docker
         continue-on-error: true
@@ -127,6 +128,7 @@ jobs:
 
       # Caching of maven dependencies
       - uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: stage-snapshot-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -167,6 +169,7 @@ jobs:
 
       # Caching of maven dependencies
       - uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: deploy-staged-snapshots-maven-cache-${{ hashFiles('**/pom.xml') }}
