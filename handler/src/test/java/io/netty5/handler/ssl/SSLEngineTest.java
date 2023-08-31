@@ -4078,6 +4078,7 @@ public abstract class SSLEngineTest {
                 SslUtils.arrayContains(serverProtocols, SslProtocols.TLS_v1_3));
     }
 
+    // IMPORTANT: If this test fails, try rerunning the 'generate-certificate.sh' script.
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testRSASSAPSS(SSLEngineTestParam param) throws Exception {
