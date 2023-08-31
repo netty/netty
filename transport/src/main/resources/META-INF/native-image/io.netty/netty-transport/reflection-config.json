@@ -29,5 +29,21 @@
                 "parameterTypes": []
             }
         ]
+    },
+    {
+        "name": "java.nio.channels.spi.SelectorProvider",
+        "condition": {
+            "typeReachable": "java.nio.channels.spi.SelectorProvider"
+        },
+        "methods": [
+            {
+                "name": "openSocketChannel",
+                "parameterTypes": ["java.net.ProtocolFamily"]
+            },
+            {
+                "name": "openServerSocketChannel",
+                "parameterTypes": ["java.net.ProtocolFamily"]
+            }
+        ]
     }
 ]
