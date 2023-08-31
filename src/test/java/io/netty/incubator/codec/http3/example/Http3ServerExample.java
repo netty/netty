@@ -80,31 +80,26 @@ public final class Http3ServerExample {
                                         ch.pipeline().addLast(new Http3RequestStreamInboundHandler() {
 
                                             @Override
-                                            protected void channelRead(ChannelHandlerContext ctx,
-                                                                       Http3HeadersFrame frame, boolean isLast) {
-                                                if (isLast) {
-                                                    writeResponse(ctx);
-                                                }
+                                            protected void channelRead(
+                                                    ChannelHandlerContext ctx, Http3HeadersFrame frame) {
                                                 ReferenceCountUtil.release(frame);
                                             }
 
                                             @Override
-                                            protected void channelRead(ChannelHandlerContext ctx,
-                                                                       Http3DataFrame frame, boolean isLast) {
-                                                if (isLast) {
-                                                    writeResponse(ctx);
-                                                }
+                                            protected void channelRead(
+                                                    ChannelHandlerContext ctx, Http3DataFrame frame) {
                                                 ReferenceCountUtil.release(frame);
                                             }
 
-                                            private void writeResponse(ChannelHandlerContext ctx) {
+                                            @Override
+                                            protected void channelInputClosed(ChannelHandlerContext ctx) {
                                                 Http3HeadersFrame headersFrame = new DefaultHttp3HeadersFrame();
                                                 headersFrame.headers().status("404");
                                                 headersFrame.headers().add("server", "netty");
                                                 headersFrame.headers().addInt("content-length", CONTENT.length);
                                                 ctx.write(headersFrame);
                                                 ctx.writeAndFlush(new DefaultHttp3DataFrame(
-                                                        Unpooled.wrappedBuffer(CONTENT)))
+                                                                Unpooled.wrappedBuffer(CONTENT)))
                                                         .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
                                             }
                                         });

@@ -30,51 +30,40 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class Http3RequestStreamInboundHandlerTest {
 
     @Test
-    public void testDetectLastViaIsShutdown() {
-        EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(new TestHttp3RequestStreamInboundHandler());
-        assertTrue(channel.writeInbound(new DefaultHttp3HeadersFrame()));
-        assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer())));
-        channel.shutdownInput();
-        assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer())));
-        assertFrame(channel, false);
-        assertFrame(channel, false);
-        assertFrame(channel, true);
-        assertFalse(channel.finish());
-    }
-
-    @Test
     public void testDetectLastViaUserEvent() {
         EmbeddedQuicStreamChannel channel = new EmbeddedQuicStreamChannel(new TestHttp3RequestStreamInboundHandler());
         assertTrue(channel.writeInbound(new DefaultHttp3HeadersFrame()));
         assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer())));
         assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer())));
         channel.pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-        assertFrame(channel, false);
-        assertFrame(channel, false);
-        assertFrame(channel, false);
-        assertFrame(channel, true);
+        assertFrame(channel);
+        assertFrame(channel);
+        assertFrame(channel);
+        assertEquals(true, channel.readInbound());
         assertFalse(channel.finish());
     }
 
-    private void assertFrame(EmbeddedChannel channel, boolean isLast) {
+    private void assertFrame(EmbeddedChannel channel) {
         Http3Frame frame = channel.readInbound();
         assertNotNull(frame);
         ReferenceCountUtil.release(frame);
-        assertEquals(isLast, channel.readInbound());
     }
 
     private static final class TestHttp3RequestStreamInboundHandler extends Http3RequestStreamInboundHandler {
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame, boolean isLast) {
+        public void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame) {
             ctx.fireChannelRead(frame);
-            ctx.fireChannelRead(isLast);
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame, boolean isLast) {
+        public void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame) {
             ctx.fireChannelRead(frame);
-            ctx.fireChannelRead(isLast);
+        }
+
+        @Override
+        protected void channelInputClosed(ChannelHandlerContext ctx) {
+            ctx.fireChannelRead(true);
         }
     }
 }

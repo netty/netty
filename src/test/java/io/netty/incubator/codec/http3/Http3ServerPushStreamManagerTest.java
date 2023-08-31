@@ -55,13 +55,18 @@ public class Http3ServerPushStreamManagerTest {
     public void setUp() throws Exception {
         connectionHandler = new Http3ServerConnectionHandler(new Http3RequestStreamInboundHandler() {
             @Override
-            protected void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame, boolean isLast) {
+            protected void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame) {
                 ReferenceCountUtil.release(frame);
             }
 
             @Override
-            protected void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame, boolean isLast) {
+            protected void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame) {
                 ReferenceCountUtil.release(frame);
+            }
+
+            @Override
+            protected void channelInputClosed(ChannelHandlerContext ctx) {
+                // NOOP
             }
         }, null, null, null, true);
         channel = new EmbeddedQuicChannel(true, connectionHandler);

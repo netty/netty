@@ -27,7 +27,6 @@ import io.netty.incubator.codec.http3.Http3;
 import io.netty.incubator.codec.http3.Http3ClientConnectionHandler;
 import io.netty.incubator.codec.http3.Http3DataFrame;
 import io.netty.incubator.codec.http3.Http3HeadersFrame;
-import io.netty.incubator.codec.http3.Http3RequestStreamFrame;
 import io.netty.incubator.codec.http3.Http3RequestStreamInboundHandler;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicSslContext;
@@ -72,24 +71,19 @@ public final class Http3ClientExample {
             QuicStreamChannel streamChannel = Http3.newRequestStream(quicChannel,
                     new Http3RequestStreamInboundHandler() {
                         @Override
-                        protected void channelRead(ChannelHandlerContext ctx,
-                                                   Http3HeadersFrame frame, boolean isLast) {
-                            releaseFrameAndCloseIfLast(ctx, frame, isLast);
+                        protected void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame) {
+                            ReferenceCountUtil.release(frame);
                         }
 
                         @Override
-                        protected void channelRead(ChannelHandlerContext ctx,
-                                                   Http3DataFrame frame, boolean isLast) {
+                        protected void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame) {
                             System.err.print(frame.content().toString(CharsetUtil.US_ASCII));
-                            releaseFrameAndCloseIfLast(ctx, frame, isLast);
+                            ReferenceCountUtil.release(frame);
                         }
 
-                        private void releaseFrameAndCloseIfLast(ChannelHandlerContext ctx,
-                                                                Http3RequestStreamFrame frame, boolean isLast) {
-                            ReferenceCountUtil.release(frame);
-                            if (isLast) {
-                                ctx.close();
-                            }
+                        @Override
+                        protected void channelInputClosed(ChannelHandlerContext ctx) {
+                            ctx.close();
                         }
                     }).sync().getNow();
 

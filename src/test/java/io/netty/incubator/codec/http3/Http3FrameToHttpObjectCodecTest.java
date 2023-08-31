@@ -307,31 +307,6 @@ public class Http3FrameToHttpObjectCodecTest {
     }
 
     @Test
-    public void testDowngradeFullHeaders() {
-        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
-        Http3Headers headers = new DefaultHttp3Headers();
-        headers.path("/");
-        headers.method("GET");
-
-        assertTrue(ch.writeInboundWithFin(new DefaultHttp3HeadersFrame(headers)));
-
-        FullHttpRequest request = ch.readInbound();
-        try {
-            assertThat(request.uri(), is("/"));
-            assertThat(request.method(), is(HttpMethod.GET));
-            assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
-            assertThat(request.content().readableBytes(), is(0));
-            assertTrue(request.trailingHeaders().isEmpty());
-            assertFalse(HttpUtil.isTransferEncodingChunked(request));
-        } finally {
-            request.release();
-        }
-
-        assertThat(ch.readInbound(), is(nullValue()));
-        assertFalse(ch.finish());
-    }
-
-    @Test
     public void testDowngradeTrailers() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(true));
         Http3Headers headers = new DefaultHttp3Headers();
@@ -376,12 +351,19 @@ public class Http3FrameToHttpObjectCodecTest {
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeInboundWithFin(new DefaultHttp3DataFrame(hello)));
 
-        LastHttpContent content = ch.readInbound();
+        HttpContent content = ch.readInbound();
         try {
             assertThat(content.content().toString(CharsetUtil.UTF_8), is("hello world"));
-            assertTrue(content.trailingHeaders().isEmpty());
         } finally {
             content.release();
+        }
+
+        LastHttpContent last = ch.readInbound();
+        try {
+            assertFalse(last.content().isReadable());
+            assertTrue(last.trailingHeaders().isEmpty());
+        } finally {
+            last.release();
         }
 
         assertThat(ch.readInbound(), is(nullValue()));
@@ -883,34 +865,6 @@ data.release();
     }
 
     @Test
-    public void testDecodeFullResponseHeaders() {
-        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        Http3Headers headers = new DefaultHttp3Headers();
-        headers.scheme(HttpScheme.HTTP.name());
-        headers.status(HttpResponseStatus.OK.codeAsText());
-
-        Http3HeadersFrame frame = new DefaultHttp3HeadersFrame(headers);
-
-        assertTrue(ch.writeInboundWithFin(frame));
-
-        FullHttpResponse response = ch.readInbound();
-        try {
-            assertThat(response.status(), is(HttpResponseStatus.OK));
-            assertThat(response.protocolVersion(), is(HttpVersion.HTTP_1_1));
-            assertThat(response.content().readableBytes(), is(0));
-            assertTrue(response.trailingHeaders().isEmpty());
-            assertFalse(HttpUtil.isTransferEncodingChunked(response));
-            assertEquals(0,
-                    (int) response.headers().getInt(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text()));
-        } finally {
-            response.release();
-        }
-
-        assertThat(ch.readInbound(), is(nullValue()));
-        assertFalse(ch.finish());
-    }
-
-    @Test
     public void testDecodeResponseTrailersAsClient() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
         Http3Headers headers = new DefaultHttp3Headers();
@@ -954,12 +908,19 @@ data.release();
         ByteBuf hello = Unpooled.copiedBuffer("hello world", CharsetUtil.UTF_8);
         assertTrue(ch.writeInboundWithFin(new DefaultHttp3DataFrame(hello)));
 
-        LastHttpContent content = ch.readInbound();
+        HttpContent content = ch.readInbound();
         try {
             assertThat(content.content().toString(CharsetUtil.UTF_8), is("hello world"));
-            assertTrue(content.trailingHeaders().isEmpty());
         } finally {
             content.release();
+        }
+
+        LastHttpContent last = ch.readInbound();
+        try {
+            assertFalse(last.content().isReadable());
+            assertTrue(last.trailingHeaders().isEmpty());
+        } finally {
+            last.release();
         }
 
         assertThat(ch.readInbound(), is(nullValue()));
@@ -1074,10 +1035,13 @@ data.release();
 
             HttpResponse respHeaders = (HttpResponse) received.poll(20, TimeUnit.SECONDS);
             assertThat(respHeaders.status(), is(HttpResponseStatus.OK));
-            assertThat(respHeaders, not(instanceOf(LastHttpContent.class))); // this assertion failed before this PR
-            LastHttpContent respBody = (LastHttpContent) received.poll(20, TimeUnit.SECONDS);
+            assertThat(respHeaders, not(instanceOf(LastHttpContent.class)));
+            HttpContent respBody = (HttpContent) received.poll(20, TimeUnit.SECONDS);
             assertThat(respBody.content().toString(CharsetUtil.UTF_8), is("foo"));
             respBody.release();
+
+            LastHttpContent last = (LastHttpContent) received.poll(20, TimeUnit.SECONDS);
+            last.release();
         } finally {
             group.shutdownGracefully();
         }

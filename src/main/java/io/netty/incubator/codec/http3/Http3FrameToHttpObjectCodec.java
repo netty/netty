@@ -18,7 +18,6 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
@@ -60,6 +59,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
 
     private final boolean isServer;
     private final boolean validateHeaders;
+    private boolean inboundTranslationInProgress;
 
     public Http3FrameToHttpObjectCodec(final boolean isServer,
                                        final boolean validateHeaders) {
@@ -72,7 +72,12 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
     }
 
     @Override
-    protected void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame, boolean isLast) throws Exception {
+    public boolean isSharable() {
+        return false;
+    }
+
+    @Override
+    protected void channelRead(ChannelHandlerContext ctx, Http3HeadersFrame frame) throws Exception {
         Http3Headers headers = frame.headers();
         long id = ((QuicStreamChannel) ctx.channel()).streamId();
 
@@ -86,31 +91,33 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             return;
         }
 
-        if (isLast) {
-            if (headers.method() == null && status == null) {
-                LastHttpContent last = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
-                HttpConversionUtil.addHttp3ToHttpHeaders(id, headers, last.trailingHeaders(),
-                        HttpVersion.HTTP_1_1, true, true);
-                ctx.fireChannelRead(last);
-            } else {
-                FullHttpMessage full = newFullMessage(id, headers, ctx.alloc());
-                ctx.fireChannelRead(full);
-            }
+        if (headers.method() == null && status == null) {
+            // Must be trailers!
+            LastHttpContent last = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
+            HttpConversionUtil.addHttp3ToHttpHeaders(id, headers, last.trailingHeaders(),
+                    HttpVersion.HTTP_1_1, true, true);
+            inboundTranslationInProgress = false;
+            ctx.fireChannelRead(last);
         } else {
             HttpMessage req = newMessage(id, headers);
             if (!HttpUtil.isContentLengthSet(req)) {
                 req.headers().add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
             }
+            inboundTranslationInProgress = true;
             ctx.fireChannelRead(req);
         }
     }
 
     @Override
-    protected void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame, boolean isLast) throws Exception {
-        if (isLast) {
-            ctx.fireChannelRead(new DefaultLastHttpContent(frame.content()));
-        } else {
-            ctx.fireChannelRead(new DefaultHttpContent(frame.content()));
+    protected void channelRead(ChannelHandlerContext ctx, Http3DataFrame frame) throws Exception {
+        inboundTranslationInProgress = true;
+        ctx.fireChannelRead(new DefaultHttpContent(frame.content()));
+    }
+
+    @Override
+    protected void channelInputClosed(ChannelHandlerContext ctx) throws Exception {
+        if (inboundTranslationInProgress) {
+            ctx.fireChannelRead(LastHttpContent.EMPTY_LAST_CONTENT);
         }
     }
 
