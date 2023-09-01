@@ -1713,7 +1713,8 @@ public class SslHandlerTest {
         testSslCompletionEvents(SslProvider.OPENSSL, SslProtocols.TLS_v1_3, false);
     }
 
-    private void testSslCompletionEvents(SslProvider provider, String protocol, boolean clientClose) throws Exception {
+    private void testSslCompletionEvents(SslProvider provider, final String protocol, boolean clientClose)
+            throws Exception {
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .protocols(protocol)
