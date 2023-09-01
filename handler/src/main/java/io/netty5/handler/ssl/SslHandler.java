@@ -43,7 +43,6 @@ import io.netty5.util.concurrent.ImmediateExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SilentDispose;
-import io.netty5.util.internal.ThrowableUtil;
 import io.netty5.util.internal.UnstableApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -774,16 +773,21 @@ public class SslHandler extends ByteToMessageDecoder {
                 // else out is not readable we can re-use it and so save an extra allocation
 
                 if (result.getStatus() == Status.CLOSED) {
-                    // Make a best effort to preserve any exception that way previously encountered from the handshake
-                    // or the transport, else fallback to a general error.
-                    Throwable exception = handshakePromise.isDone() ? handshakePromise.cause() : null;
-                    if (exception == null) {
-                        exception = sslClosePromise.isDone() ? sslClosePromise.cause() : null;
+                    // First check if there is any write left that needs to be failed, if there is none we don't need
+                    // to create a new exception or obtain an existing one.
+                    if (!pendingUnencryptedWrites.isEmpty()) {
+                        // Make a best effort to preserve any exception that way previously encountered from the
+                        // handshake or the transport, else fallback to a general error.
+                        Throwable exception = handshakePromise.isDone() ? handshakePromise.cause() : null;
                         if (exception == null) {
-                            exception = new SslClosedEngineException("SSLEngine closed already");
+                            exception = sslClosePromise.isDone() ? sslClosePromise.cause() : null;
+                            if (exception == null) {
+                                exception = new SslClosedEngineException("SSLEngine closed already");
+                            }
                         }
+                        pendingUnencryptedWrites.releaseAndFailAll(ctx, exception);
                     }
-                    pendingUnencryptedWrites.releaseAndFailAll(ctx, exception);
+
                     return;
                 } else {
                     switch (result.getHandshakeStatus()) {

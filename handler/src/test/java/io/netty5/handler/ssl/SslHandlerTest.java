@@ -1715,11 +1715,18 @@ public class SslHandlerTest {
 
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
 
-        final LinkedBlockingQueue<SslHandshakeCompletionEvent> serverCompletionEvents =
+        final LinkedBlockingQueue<SslHandshakeCompletionEvent> serverHandshakeCompletionEvents =
                 new LinkedBlockingQueue<SslHandshakeCompletionEvent>();
 
-        final LinkedBlockingQueue<SslHandshakeCompletionEvent> clientCompletionEvents =
+        final LinkedBlockingQueue<SslHandshakeCompletionEvent> clientHandshakeCompletionEvents =
                 new LinkedBlockingQueue<SslHandshakeCompletionEvent>();
+
+        final LinkedBlockingQueue<SslCloseCompletionEvent> serverCloseCompletionEvents =
+                new LinkedBlockingQueue<>();
+
+        final LinkedBlockingQueue<SslCloseCompletionEvent> clientCloseCompletionEvents =
+                new LinkedBlockingQueue<>();
+
         try (AutoCloseable ignore1 = autoClosing(sslClientCtx);
              AutoCloseable ignore2 = autoClosing(sslServerCtx)) {
             try {
@@ -1730,7 +1737,8 @@ public class SslHandlerTest {
                             @Override
                             protected void initChannel(Channel ch) throws Exception {
                                 ch.pipeline().addLast(sslServerCtx.newHandler(offHeapAllocator()));
-                                ch.pipeline().addLast(new SslHandshakeCompletionEventHandler(serverCompletionEvents));
+                                ch.pipeline().addLast(new SslCompletionEventHandler(
+                                        serverHandshakeCompletionEvents, serverCloseCompletionEvents));
                             }
                         })
                         .bind(new InetSocketAddress(0)).asStage().get();
@@ -1743,7 +1751,8 @@ public class SslHandlerTest {
                             protected void initChannel(Channel ch) {
                                 ch.pipeline().addLast(sslClientCtx.newHandler(
                                         offHeapAllocator(), "netty.io", 9999));
-                                ch.pipeline().addLast(new SslHandshakeCompletionEventHandler(clientCompletionEvents));
+                                ch.pipeline().addLast(new SslCompletionEventHandler(
+                                        clientHandshakeCompletionEvents, clientCloseCompletionEvents));
                             }
                         })
                         .remoteAddress(sc.localAddress());
@@ -1754,36 +1763,53 @@ public class SslHandlerTest {
                 // We expect 4 events as we have 2 connections and for each connection there should be one event
                 // on the server-side and one on the client-side.
                 for (int i = 0; i < 2; i++) {
-                    SslHandshakeCompletionEvent event = clientCompletionEvents.take();
+                    SslHandshakeCompletionEvent event = clientHandshakeCompletionEvents.take();
                     assertTrue(event.isSuccess());
                 }
                 for (int i = 0; i < 2; i++) {
-                    SslHandshakeCompletionEvent event = serverCompletionEvents.take();
+                    SslHandshakeCompletionEvent event = serverHandshakeCompletionEvents.take();
                     assertTrue(event.isSuccess());
                 }
 
                 cc1.close().asStage().sync();
                 cc2.close().asStage().sync();
+
+                // We expect 4 events as we have 2 connections and for each connection there should be one event
+                // on the server-side and one on the client-side.
+                for (int i = 0; i < 2; i++) {
+                    SslCloseCompletionEvent event = clientCloseCompletionEvents.take();
+                    assertNotNull(event);
+                }
+                for (int i = 0; i < 2; i++) {
+                    SslCloseCompletionEvent event = serverCloseCompletionEvents.take();
+                    assertNotNull(event);
+                }
+
                 sc.close().asStage().sync();
-                assertEquals(0, clientCompletionEvents.size());
-                assertEquals(0, serverCompletionEvents.size());
+                assertEquals(0, clientHandshakeCompletionEvents.size());
+                assertEquals(0, serverHandshakeCompletionEvents.size());
             } finally {
                 group.shutdownGracefully();
             }
         }
     }
 
-    private static class SslHandshakeCompletionEventHandler implements ChannelHandler {
-        private final Queue<SslHandshakeCompletionEvent> completionEvents;
+    private static class SslCompletionEventHandler implements ChannelHandler {
+        private final Queue<SslHandshakeCompletionEvent> handshakeCompletionEvents;
+        private final Queue<SslCloseCompletionEvent> closeCompletionEvents;
 
-        SslHandshakeCompletionEventHandler(Queue<SslHandshakeCompletionEvent> completionEvents) {
-            this.completionEvents = completionEvents;
+        SslCompletionEventHandler(Queue<SslHandshakeCompletionEvent> handshakeCompletionEvents,
+                                  Queue<SslCloseCompletionEvent> closeCompletionEvents) {
+            this.handshakeCompletionEvents = handshakeCompletionEvents;
+            this.closeCompletionEvents = closeCompletionEvents;
         }
 
         @Override
         public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) {
             if (evt instanceof SslHandshakeCompletionEvent) {
-                completionEvents.add((SslHandshakeCompletionEvent) evt);
+                handshakeCompletionEvents.add((SslHandshakeCompletionEvent) evt);
+            } else if (evt instanceof SslCloseCompletionEvent) {
+                closeCompletionEvents.add((SslCloseCompletionEvent) evt);
             }
         }
     }
