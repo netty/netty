@@ -32,6 +32,13 @@ jobs:
   verify-pr:
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - uses: actions/checkout@v3
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -42,6 +49,7 @@ jobs:
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-verify-pr-${{ hashFiles('**/pom.xml') }}
@@ -74,6 +82,7 @@ jobs:
       # Cache .m2/repository
       # Caching of maven dependencies
       - uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: pr-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -111,11 +120,19 @@ jobs:
       packages: write  # for uraimo/run-on-arch-action to cache docker images
     needs: verify-pr
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - uses: actions/checkout@v3
 
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-build-pr-aarch64-${{ hashFiles('**/pom.xml') }}
@@ -177,11 +194,19 @@ jobs:
     name: ${{ matrix.setup }} build
     needs: verify-pr
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - uses: actions/checkout@v3
 
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
@@ -190,7 +215,7 @@ jobs:
             ${{ runner.os }}-maven-
 
       # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.11
+      - uses: jpribyl/action-docker-layer-caching@v0.1.1
         continue-on-error: true
         with:
           key: build-docker-cache-${{ matrix.setup }}-{hash}

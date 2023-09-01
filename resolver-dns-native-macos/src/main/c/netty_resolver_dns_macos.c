@@ -154,6 +154,7 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
 static void netty_resolver_dns_native_macos_JNI_OnUnLoad(JNIEnv* env) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, byteArrayClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS(env, dnsResolverClass);
     netty_jni_util_unregister_natives(env, staticPackagePrefix, STREAM_CLASSNAME);
 
     if (staticPackagePrefix != NULL) {

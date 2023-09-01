@@ -205,7 +205,10 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
                 //
                 // A race condition will not arise because one flush call to encoder will result
                 // in only 1 call at `write(ByteBuffer)`.
-                brotliEncoderChannel.write(msg.nioBuffer());
+                ByteBuffer nioBuffer = CompressionUtil.safeReadableNioBuffer(msg);
+                int position = nioBuffer.position();
+                brotliEncoderChannel.write(nioBuffer);
+                msg.skipBytes(nioBuffer.position() - position);
                 brotliEncoderChannel.flush();
             } catch (Exception e) {
                 ReferenceCountUtil.release(msg);

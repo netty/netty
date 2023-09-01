@@ -22,28 +22,26 @@ import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponse;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 
 final class TcpDnsQueryContext extends DnsQueryContext {
 
-    private final Channel channel;
-
-    TcpDnsQueryContext(DnsNameResolver parent, Channel channel, InetSocketAddress nameServerAddr, DnsQuestion question,
-                       DnsRecord[] additionals, Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
-        super(parent, nameServerAddr, question, additionals, promise);
-        this.channel = channel;
+    TcpDnsQueryContext(Channel channel, Future<? extends Channel> channelReadyFuture,
+                       InetSocketAddress nameServerAddr,
+                       DnsQueryContextManager queryContextManager,
+                       int maxPayLoadSize, boolean recursionDesired,
+                       DnsQuestion question, DnsRecord[] additionals,
+                       Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
+        super(channel, channelReadyFuture, nameServerAddr, queryContextManager, maxPayLoadSize, recursionDesired,
+                question, additionals, promise);
     }
 
     @Override
-    protected DnsQuery newQuery(int id) {
+    protected DnsQuery newQuery(int id, InetSocketAddress nameServerAddr) {
         return new DefaultDnsQuery(id);
-    }
-
-    @Override
-    protected Channel channel() {
-        return channel;
     }
 
     @Override

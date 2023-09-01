@@ -20,6 +20,7 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.Recycler.EnhancedHandle;
+import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectPool;
@@ -690,6 +691,24 @@ public final class ByteBufUtil {
     public static ByteBuf writeMediumBE(ByteBuf buf, int mediumValue) {
         return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeMedium(mediumValue) :
                 buf.writeMedium(swapMedium(mediumValue));
+    }
+
+    /**
+     * Reads a big-endian unsigned 16-bit short integer from the buffer.
+     */
+    @SuppressWarnings("deprecation")
+    public static int readUnsignedShortBE(ByteBuf buf) {
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.readUnsignedShort() :
+                swapShort((short) buf.readUnsignedShort()) & 0xFFFF;
+    }
+
+    /**
+     * Reads a big-endian 32-bit integer from the buffer.
+     */
+    @SuppressWarnings("deprecation")
+    public static int readIntBE(ByteBuf buf) {
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.readInt() :
+                swapInt(buf.readInt());
     }
 
     /**
@@ -1918,6 +1937,15 @@ public final class ByteBufUtil {
             out.write(in, inOffset, len);
             outLen -= len;
         } while (outLen > 0);
+    }
+
+    /**
+     * Set {@link AbstractByteBuf#leakDetector}'s {@link ResourceLeakDetector.LeakListener}.
+     *
+     * @param leakListener If leakListener is not null, it will be notified once a ByteBuf leak is detected.
+     */
+    public static void setLeakListener(ResourceLeakDetector.LeakListener leakListener) {
+        AbstractByteBuf.leakDetector.setLeakListener(leakListener);
     }
 
     private ByteBufUtil() { }

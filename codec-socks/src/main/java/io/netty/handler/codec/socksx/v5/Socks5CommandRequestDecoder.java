@@ -17,6 +17,7 @@
 package io.netty.handler.codec.socksx.v5;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
@@ -69,7 +70,7 @@ public class Socks5CommandRequestDecoder extends ReplayingDecoder<State> {
                 in.skipBytes(1); // RSV
                 final Socks5AddressType dstAddrType = Socks5AddressType.valueOf(in.readByte());
                 final String dstAddr = addressDecoder.decodeAddress(dstAddrType, in);
-                final int dstPort = in.readUnsignedShort();
+                final int dstPort = ByteBufUtil.readUnsignedShortBE(in);
 
                 out.add(new DefaultSocks5CommandRequest(type, dstAddrType, dstAddr, dstPort));
                 checkpoint(State.SUCCESS);

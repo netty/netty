@@ -151,13 +151,13 @@ public final class HttpHeaderValidationUtil {
         //  See: https://datatracker.ietf.org/doc/html/rfc7230#section-3.2
         //  And: https://datatracker.ietf.org/doc/html/rfc5234#appendix-B.1
         int b = value.charAt(0);
-        if (b < 0x21 || b == 0x7F) {
+        if (b < 0x21 || b == 0x7F || 0xFF < b) {
             return 0;
         }
         int length = value.length();
         for (int i = 1; i < length; i++) {
             b = value.charAt(i);
-            if (b < 0x20 && b != 0x09 || b == 0x7F) {
+            if (b < 0x20 && b != 0x09 || b == 0x7F || 0xFF < b) {
                 return i;
             }
         }

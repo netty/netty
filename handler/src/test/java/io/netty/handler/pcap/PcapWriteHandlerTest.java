@@ -28,11 +28,16 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.DefaultDatagramChannelConfig;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -42,6 +47,11 @@ import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Promise;
 
 import java.io.OutputStream;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketAddress;
+import java.net.SocketException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
@@ -88,13 +98,15 @@ public class PcapWriteHandlerTest {
         ChannelFuture channelFutureServer = server.bind(serverAddr).sync();
         assertTrue(channelFutureServer.isSuccess());
 
+        CloseDetectingByteBufOutputStream outputStream = new CloseDetectingByteBufOutputStream(byteBuf);
+
         // We'll bootstrap a UDP Client for sending UDP Packets to UDP Server.
         Bootstrap client = new Bootstrap()
                 .group(eventLoopGroup)
                 .channel(NioDatagramChannel.class)
                 .handler(PcapWriteHandler.builder()
                         .sharedOutputStream(sharedOutputStream)
-                        .build(new ByteBufOutputStream(byteBuf)));
+                        .build(outputStream));
 
         ChannelFuture channelFutureClient =
                 client.connect(channelFutureServer.channel().localAddress(), clientAddr).sync();
@@ -109,6 +121,10 @@ public class PcapWriteHandlerTest {
                 (InetSocketAddress) clientChannel.remoteAddress(),
                 (InetSocketAddress) clientChannel.localAddress()
         );
+
+        // If sharedOutputStream is true, we don't close the outputStream.
+        // If sharedOutputStream is false, we close the outputStream.
+        assertEquals(!sharedOutputStream, outputStream.closeCalled());
     }
 
     @Test
@@ -131,6 +147,29 @@ public class PcapWriteHandlerTest {
 
         // Verify the capture data
         verifyUdpCapture(true, pcapBuffer, serverAddr, clientAddr);
+
+        assertFalse(embeddedChannel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void udpMixedAddress() throws SocketException {
+        final ByteBuf pcapBuffer = Unpooled.buffer();
+        final ByteBuf payload = Unpooled.wrappedBuffer("Meow".getBytes());
+
+        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+        // for ipv6 ::, it's allowed to connect to ipv4 on some systems
+        InetSocketAddress clientAddr = new InetSocketAddress("::", 3456);
+
+        // We fake a client
+        EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                .build(new ByteBufOutputStream(pcapBuffer)));
+
+        assertTrue(embeddedChannel.writeOutbound(payload));
+        assertEquals(payload, embeddedChannel.readOutbound());
+
+        // Verify the capture data
+        verifyUdpCapture(true, pcapBuffer, serverAddr, new InetSocketAddress("0.0.0.0", 3456));
 
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }
@@ -480,5 +519,162 @@ public class PcapWriteHandlerTest {
         assertTrue(ethernetPacket.release());
         assertTrue(ipv4Packet.release());
         assertTrue(udpPacket.release());
+    }
+
+    private static class EmbeddedDatagramChannel extends EmbeddedChannel implements DatagramChannel {
+        private final InetSocketAddress local;
+        private final InetSocketAddress remote;
+        private DatagramChannelConfig config;
+
+        EmbeddedDatagramChannel(InetSocketAddress local, InetSocketAddress remote) {
+            super(DefaultChannelId.newInstance(), false);
+            this.local = local;
+            this.remote = remote;
+        }
+
+        @Override
+        public boolean isConnected() {
+            return true;
+        }
+
+        @Override
+        public DatagramChannelConfig config() {
+            if (config == null) {
+                // ick! config() is called by the super constructor, so we need to do this.
+                try {
+                    config = new DefaultDatagramChannelConfig(this, new DatagramSocket());
+                } catch (SocketException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return config;
+        }
+
+        @Override
+        public InetSocketAddress localAddress() {
+            return (InetSocketAddress) super.localAddress();
+        }
+
+        @Override
+        public InetSocketAddress remoteAddress() {
+            return (InetSocketAddress) super.remoteAddress();
+        }
+
+        @Override
+        protected SocketAddress localAddress0() {
+            return local;
+        }
+
+        @Override
+        protected SocketAddress remoteAddress0() {
+            return remote;
+        }
+
+        @Override
+        public ChannelFuture joinGroup(InetAddress multicastAddress) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise future) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture joinGroup(
+                InetSocketAddress multicastAddress,
+                NetworkInterface networkInterface,
+                ChannelPromise future) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture joinGroup(
+                InetAddress multicastAddress,
+                NetworkInterface networkInterface,
+                InetAddress source) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture joinGroup(
+                InetAddress multicastAddress,
+                NetworkInterface networkInterface,
+                InetAddress source,
+                ChannelPromise future) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture leaveGroup(InetAddress multicastAddress) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise future) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture leaveGroup(
+                InetSocketAddress multicastAddress,
+                NetworkInterface networkInterface,
+                ChannelPromise future) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture leaveGroup(
+                InetAddress multicastAddress,
+                NetworkInterface networkInterface,
+                InetAddress source) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture leaveGroup(
+                InetAddress multicastAddress,
+                NetworkInterface networkInterface,
+                InetAddress source,
+                ChannelPromise future) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture block(
+                InetAddress multicastAddress,
+                NetworkInterface networkInterface,
+                InetAddress sourceToBlock) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture block(
+                InetAddress multicastAddress,
+                NetworkInterface networkInterface,
+                InetAddress sourceToBlock,
+                ChannelPromise future) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise future) {
+            throw new UnsupportedOperationException();
+        }
     }
 }

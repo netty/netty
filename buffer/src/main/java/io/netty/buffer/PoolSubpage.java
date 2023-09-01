@@ -22,7 +22,6 @@ import static io.netty.buffer.PoolChunk.RUN_OFFSET_SHIFT;
 import static io.netty.buffer.PoolChunk.SIZE_SHIFT;
 import static io.netty.buffer.PoolChunk.IS_USED_SHIFT;
 import static io.netty.buffer.PoolChunk.IS_SUBPAGE_SHIFT;
-import static io.netty.buffer.SizeClasses.LOG2_QUANTUM;
 
 final class PoolSubpage<T> implements PoolSubpageMetric {
 
@@ -32,17 +31,17 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     private final int runOffset;
     private final int runSize;
     private final long[] bitmap;
+    private final int bitmapLength;
+    private final int maxNumElems;
 
     PoolSubpage<T> prev;
     PoolSubpage<T> next;
 
     boolean doNotDestroy;
-    private int maxNumElems;
-    private int bitmapLength;
     private int nextAvail;
     private int numAvail;
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock;
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
@@ -50,11 +49,14 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     /** Special constructor that creates a linked list head */
     PoolSubpage() {
         chunk = null;
+        lock = new ReentrantLock();
         pageShifts = -1;
         runOffset = -1;
         elemSize = -1;
         runSize = -1;
         bitmap = null;
+        bitmapLength = -1;
+        maxNumElems = 0;
     }
 
     PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int pageShifts, int runOffset, int runSize, int elemSize) {
@@ -63,17 +65,19 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         this.runOffset = runOffset;
         this.runSize = runSize;
         this.elemSize = elemSize;
-        bitmap = new long[runSize >>> 6 + LOG2_QUANTUM]; // runSize / 64 / QUANTUM
 
         doNotDestroy = true;
-        if (elemSize != 0) {
-            maxNumElems = numAvail = runSize / elemSize;
-            nextAvail = 0;
-            bitmapLength = maxNumElems >>> 6;
-            if ((maxNumElems & 63) != 0) {
-                bitmapLength ++;
-            }
+
+        maxNumElems = numAvail = runSize / elemSize;
+        int bitmapLength = maxNumElems >>> 6;
+        if ((maxNumElems & 63) != 0) {
+            bitmapLength ++;
         }
+        this.bitmapLength = bitmapLength;
+        bitmap = new long[bitmapLength];
+        nextAvail = 0;
+
+        lock = null;
         addToPool(head);
     }
 
@@ -109,9 +113,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
      *         {@code false} if this subpage is not used by its chunk and thus it's OK to be released.
      */
     boolean free(PoolSubpage<T> head, int bitmapIdx) {
-        if (elemSize == 0) {
-            return true;
-        }
         int q = bitmapIdx >>> 6;
         int r = bitmapIdx & 63;
         assert (bitmap[q] >>> r & 1) != 0;
@@ -176,8 +177,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     }
 
     private int findNextAvail() {
-        final long[] bitmap = this.bitmap;
-        final int bitmapLength = this.bitmapLength;
         for (int i = 0; i < bitmapLength; i ++) {
             long bits = bitmap[i];
             if (~bits != 0) {
@@ -188,9 +187,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     }
 
     private int findNextAvail0(int i, long bits) {
-        final int maxNumElems = this.maxNumElems;
         final int baseVal = i << 6;
-
         for (int j = 0; j < 64; j ++) {
             if ((bits & 1) == 0) {
                 int val = baseVal | j;
@@ -216,54 +213,32 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     @Override
     public String toString() {
-        final boolean doNotDestroy;
-        final int maxNumElems;
         final int numAvail;
-        final int elemSize;
         if (chunk == null) {
             // This is the head so there is no need to synchronize at all as these never change.
-            doNotDestroy = true;
-            maxNumElems = 0;
             numAvail = 0;
-            elemSize = -1;
         } else {
+            final boolean doNotDestroy;
             chunk.arena.lock();
             try {
-                if (!this.doNotDestroy) {
-                    doNotDestroy = false;
-                    // Not used for creating the String.
-                    maxNumElems = numAvail = elemSize = -1;
-                } else {
-                    doNotDestroy = true;
-                    maxNumElems = this.maxNumElems;
-                    numAvail = this.numAvail;
-                    elemSize = this.elemSize;
-                }
+                doNotDestroy = this.doNotDestroy;
+                numAvail = this.numAvail;
             } finally {
                 chunk.arena.unlock();
             }
+            if (!doNotDestroy) {
+                // Not used for creating the String.
+                return "(" + runOffset + ": not in use)";
+            }
         }
 
-        if (!doNotDestroy) {
-            return "(" + runOffset + ": not in use)";
-        }
-
-        return "(" + runOffset + ": " + (maxNumElems - numAvail) + '/' + maxNumElems +
-                ", offset: " + runOffset + ", length: " + runSize + ", elemSize: " + elemSize + ')';
+        return "(" + this.runOffset + ": " + (this.maxNumElems - numAvail) + '/' + this.maxNumElems +
+                ", offset: " + this.runOffset + ", length: " + this.runSize + ", elemSize: " + this.elemSize + ')';
     }
 
     @Override
     public int maxNumElements() {
-        if (chunk == null) {
-            // It's the head.
-            return 0;
-        }
-        chunk.arena.lock();
-        try {
-            return maxNumElems;
-        } finally {
-            chunk.arena.unlock();
-        }
+        return maxNumElems;
     }
 
     @Override
@@ -283,17 +258,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     @Override
     public int elementSize() {
-        if (chunk == null) {
-            // It's the head.
-            return -1;
-        }
-
-        chunk.arena.lock();
-        try {
-            return elemSize;
-        } finally {
-            chunk.arena.unlock();
-        }
+        return elemSize;
     }
 
     @Override

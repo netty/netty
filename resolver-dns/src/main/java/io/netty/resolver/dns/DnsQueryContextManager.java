@@ -35,91 +35,72 @@ final class DnsQueryContextManager {
      * A map whose key is the DNS server address and value is the map of the DNS query ID and its corresponding
      * {@link DnsQueryContext}.
      */
-    final Map<InetSocketAddress, IntObjectMap<DnsQueryContext>> map =
-            new HashMap<InetSocketAddress, IntObjectMap<DnsQueryContext>>();
+    private final Map<InetSocketAddress, DnsQueryContextMap> map =
+            new HashMap<InetSocketAddress, DnsQueryContextMap>();
 
-    int add(DnsQueryContext qCtx) {
-        final IntObjectMap<DnsQueryContext> contexts = getOrCreateContextMap(qCtx.nameServerAddr());
-
-        int id = PlatformDependent.threadLocalRandom().nextInt(65536 - 1) + 1;
-        final int maxTries = 65535 << 1;
-        int tries = 0;
-
-        synchronized (contexts) {
-            for (;;) {
-                if (!contexts.containsKey(id)) {
-                    contexts.put(id, qCtx);
-                    return id;
-                }
-
-                id = id + 1 & 0xFFFF;
-
-                if (++tries >= maxTries) {
-                    throw new IllegalStateException("query ID space exhausted: " + qCtx.question());
-                }
-            }
-        }
+    int add(InetSocketAddress nameServerAddr, DnsQueryContext qCtx) {
+        final DnsQueryContextMap contexts = getOrCreateContextMap(nameServerAddr);
+        return contexts.add(qCtx);
     }
 
     DnsQueryContext get(InetSocketAddress nameServerAddr, int id) {
-        final IntObjectMap<DnsQueryContext> contexts = getContextMap(nameServerAddr);
-        final DnsQueryContext qCtx;
-        if (contexts != null) {
-            synchronized (contexts) {
-                qCtx = contexts.get(id);
-            }
-        } else {
-            qCtx = null;
-        }
-
-        return qCtx;
-    }
-
-    DnsQueryContext remove(InetSocketAddress nameServerAddr, int id) {
-        final IntObjectMap<DnsQueryContext> contexts = getContextMap(nameServerAddr);
+        final DnsQueryContextMap contexts = getContextMap(nameServerAddr);
         if (contexts == null) {
             return null;
         }
-
-        synchronized (contexts) {
-            return  contexts.remove(id);
-        }
+        return contexts.get(id);
     }
 
-    private IntObjectMap<DnsQueryContext> getContextMap(InetSocketAddress nameServerAddr) {
+    DnsQueryContext remove(InetSocketAddress nameServerAddr, int id) {
+        final DnsQueryContextMap contexts = getContextMap(nameServerAddr);
+        if (contexts == null) {
+            return null;
+        }
+        return contexts.remove(id);
+    }
+
+    private DnsQueryContextMap getContextMap(InetSocketAddress nameServerAddr) {
         synchronized (map) {
             return map.get(nameServerAddr);
         }
     }
 
-    private IntObjectMap<DnsQueryContext> getOrCreateContextMap(InetSocketAddress nameServerAddr) {
+    private DnsQueryContextMap getOrCreateContextMap(InetSocketAddress nameServerAddr) {
         synchronized (map) {
-            final IntObjectMap<DnsQueryContext> contexts = map.get(nameServerAddr);
+            final DnsQueryContextMap contexts = map.get(nameServerAddr);
             if (contexts != null) {
                 return contexts;
             }
 
-            final IntObjectMap<DnsQueryContext> newContexts = new IntObjectHashMap<DnsQueryContext>();
+            final DnsQueryContextMap newContexts = new DnsQueryContextMap();
             final InetAddress a = nameServerAddr.getAddress();
             final int port = nameServerAddr.getPort();
-            map.put(nameServerAddr, newContexts);
+            DnsQueryContextMap old = map.put(nameServerAddr, newContexts);
+            // Assert that we didn't replace an existing mapping.
+            assert old == null : "DnsQueryContextMap already exists for " + nameServerAddr;
 
+            InetSocketAddress extraAddress = null;
             if (a instanceof Inet4Address) {
                 // Also add the mapping for the IPv4-compatible IPv6 address.
                 final Inet4Address a4 = (Inet4Address) a;
                 if (a4.isLoopbackAddress()) {
-                    map.put(new InetSocketAddress(NetUtil.LOCALHOST6, port), newContexts);
+                    extraAddress = new InetSocketAddress(NetUtil.LOCALHOST6, port);
                 } else {
-                    map.put(new InetSocketAddress(toCompactAddress(a4), port), newContexts);
+                    extraAddress = new InetSocketAddress(toCompactAddress(a4), port);
                 }
             } else if (a instanceof Inet6Address) {
                 // Also add the mapping for the IPv4 address if this IPv6 address is compatible.
                 final Inet6Address a6 = (Inet6Address) a;
                 if (a6.isLoopbackAddress()) {
-                    map.put(new InetSocketAddress(NetUtil.LOCALHOST4, port), newContexts);
+                    extraAddress = new InetSocketAddress(NetUtil.LOCALHOST4, port);
                 } else if (a6.isIPv4CompatibleAddress()) {
-                    map.put(new InetSocketAddress(toIPv4Address(a6), port), newContexts);
+                    extraAddress = new InetSocketAddress(toIPv4Address(a6), port);
                 }
+            }
+            if (extraAddress != null) {
+                old = map.put(extraAddress, newContexts);
+                // Assert that we didn't replace an existing mapping.
+                assert old == null : "DnsQueryContextMap already exists for " + extraAddress;
             }
 
             return newContexts;
@@ -137,12 +118,50 @@ final class DnsQueryContextManager {
     }
 
     private static Inet4Address toIPv4Address(Inet6Address a6) {
+        assert a6.isIPv4CompatibleAddress();
+
         byte[] b6 = a6.getAddress();
         byte[] b4 = { b6[12], b6[13], b6[14], b6[15] };
         try {
             return (Inet4Address) InetAddress.getByAddress(b4);
         } catch (UnknownHostException e) {
             throw new Error(e);
+        }
+    }
+
+    private static final class DnsQueryContextMap {
+        private static final int MAX_ID = 65535;
+        private static final int MAX_TRIES = MAX_ID << 1;
+
+        // We increment on every usage so start with -1, this will ensure we start with 0 as first id.
+        private final IntObjectMap<DnsQueryContext> map = new IntObjectHashMap<DnsQueryContext>();
+
+        synchronized int add(DnsQueryContext ctx) {
+            int tries = 0;
+            int id = PlatformDependent.threadLocalRandom().nextInt(MAX_ID - 1) + 1;
+            for (;;) {
+                // Let's directly use put as its very unlikely that we still have the id in use.
+                DnsQueryContext oldCtx = map.put(id, ctx);
+                if (oldCtx == null) {
+                    return id;
+                }
+                // Restore the mapping to the old context.
+                map.put(id, oldCtx);
+
+                id = id + 1 & 0xFFFF;
+                if (++tries >= MAX_TRIES) {
+                    throw new IllegalStateException(
+                            "query ID space exhausted after " + MAX_TRIES + ": " + ctx.question());
+                }
+            }
+        }
+
+        synchronized DnsQueryContext get(int id) {
+            return map.get(id);
+        }
+
+        synchronized DnsQueryContext remove(int id) {
+            return map.remove(id);
         }
     }
 }

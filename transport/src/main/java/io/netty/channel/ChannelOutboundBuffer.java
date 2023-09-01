@@ -21,7 +21,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.DefaultProgressivePromise;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectPool;
@@ -47,7 +46,6 @@ import static java.lang.Math.min;
  * <p>
  * All methods must be called by a transport implementation from an I/O thread, except the following ones:
  * <ul>
- * <li>{@link #size()} and {@link #isEmpty()}</li>
  * <li>{@link #isWritable()}</li>
  * <li>{@link #getUserDefinedWritability(int)} and {@link #setUserDefinedWritability(int, boolean)}</li>
  * </ul>

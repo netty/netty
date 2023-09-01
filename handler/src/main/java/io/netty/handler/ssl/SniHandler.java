@@ -56,10 +56,12 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      * maintained by {@link Mapping}
      *
      * @param mapping the mapping of domain name to {@link SslContext}
+     * @param maxClientHelloLength the maximum length of the client hello message
      * @param handshakeTimeoutMillis the handshake timeout in milliseconds
      */
-    public SniHandler(Mapping<? super String, ? extends SslContext> mapping, long handshakeTimeoutMillis) {
-        this(new AsyncMappingAdapter(mapping), handshakeTimeoutMillis);
+    public SniHandler(Mapping<? super String, ? extends SslContext> mapping,
+                      int maxClientHelloLength, long handshakeTimeoutMillis) {
+        this(new AsyncMappingAdapter(mapping), maxClientHelloLength, handshakeTimeoutMillis);
     }
 
     /**
@@ -80,7 +82,33 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      */
     @SuppressWarnings("unchecked")
     public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping) {
-        this(mapping, 0L);
+        this(mapping, 0, 0L);
+    }
+
+    /**
+     * Creates a SNI detection handler with configured {@link SslContext}
+     * maintained by {@link AsyncMapping}
+     *
+     * @param mapping the mapping of domain name to {@link SslContext}
+     * @param maxClientHelloLength the maximum length of the client hello message
+     * @param handshakeTimeoutMillis the handshake timeout in milliseconds
+     */
+    @SuppressWarnings("unchecked")
+    public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping,
+                      int maxClientHelloLength, long handshakeTimeoutMillis) {
+        super(maxClientHelloLength, handshakeTimeoutMillis);
+        this.mapping = (AsyncMapping<String, SslContext>) ObjectUtil.checkNotNull(mapping, "mapping");
+    }
+
+    /**
+     * Creates a SNI detection handler with configured {@link SslContext}
+     * maintained by {@link Mapping}
+     *
+     * @param mapping the mapping of domain name to {@link SslContext}
+     * @param handshakeTimeoutMillis the handshake timeout in milliseconds
+     */
+    public SniHandler(Mapping<? super String, ? extends SslContext> mapping, long handshakeTimeoutMillis) {
+        this(new AsyncMappingAdapter(mapping), handshakeTimeoutMillis);
     }
 
     /**
@@ -90,10 +118,8 @@ public class SniHandler extends AbstractSniHandler<SslContext> {
      * @param mapping the mapping of domain name to {@link SslContext}
      * @param handshakeTimeoutMillis the handshake timeout in milliseconds
      */
-    @SuppressWarnings("unchecked")
     public SniHandler(AsyncMapping<? super String, ? extends SslContext> mapping, long handshakeTimeoutMillis) {
-        super(handshakeTimeoutMillis);
-        this.mapping = (AsyncMapping<String, SslContext>) ObjectUtil.checkNotNull(mapping, "mapping");
+        this(mapping, 0, handshakeTimeoutMillis);
     }
 
     /**

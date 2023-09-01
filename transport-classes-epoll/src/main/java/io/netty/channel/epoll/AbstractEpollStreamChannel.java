@@ -96,7 +96,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         flags |= Native.EPOLLRDHUP;
     }
 
-    AbstractEpollStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
+    protected AbstractEpollStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
         super(parent, fd, remote);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;

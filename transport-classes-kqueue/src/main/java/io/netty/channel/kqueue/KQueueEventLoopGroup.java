@@ -32,6 +32,9 @@ import java.util.concurrent.ThreadFactory;
 
 @UnstableApi
 public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
+
+    // This does not use static by design to ensure the class can be loaded and only do the check when its actually
+    // instanced.
     {
         // Ensure JNI is initialized by the time this class is loaded by this time!
         KQueue.ensureAvailability();

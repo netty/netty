@@ -38,6 +38,7 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.AbstractAddressResolver;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
@@ -69,6 +70,8 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -300,6 +303,24 @@ public class BootstrapTest {
     }
 
     @Test
+    void testResolverDefault() throws Exception {
+        Bootstrap bootstrap = new Bootstrap();
+
+        assertTrue(bootstrap.config().toString().contains("resolver:"));
+        assertNotNull(bootstrap.config().resolver());
+        assertEquals(DefaultAddressResolverGroup.class, bootstrap.config().resolver().getClass());
+    }
+
+    @Test
+    void testResolverDisabled() throws Exception {
+        Bootstrap bootstrap = new Bootstrap();
+        bootstrap.disableResolver();
+
+        assertFalse(bootstrap.config().toString().contains("resolver:"));
+        assertNull(bootstrap.config().resolver());
+    }
+
+    @Test
     public void testAsyncResolutionSuccess() throws Exception {
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.group(groupA);
@@ -311,6 +332,10 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
+
+        assertTrue(bootstrapA.config().toString().contains("resolver:"));
+        assertThat(bootstrapA.resolver(), is(instanceOf(TestAddressResolverGroup.class)));
+
         SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
 
         // Connect to the server using the asynchronous resolver.

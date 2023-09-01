@@ -61,28 +61,28 @@ public final class StringUtil {
         // if a char type is used as an index.
         HEX2B = new byte[Character.MAX_VALUE + 1];
         Arrays.fill(HEX2B, (byte) -1);
-        HEX2B['0'] = (byte) 0;
-        HEX2B['1'] = (byte) 1;
-        HEX2B['2'] = (byte) 2;
-        HEX2B['3'] = (byte) 3;
-        HEX2B['4'] = (byte) 4;
-        HEX2B['5'] = (byte) 5;
-        HEX2B['6'] = (byte) 6;
-        HEX2B['7'] = (byte) 7;
-        HEX2B['8'] = (byte) 8;
-        HEX2B['9'] = (byte) 9;
-        HEX2B['A'] = (byte) 10;
-        HEX2B['B'] = (byte) 11;
-        HEX2B['C'] = (byte) 12;
-        HEX2B['D'] = (byte) 13;
-        HEX2B['E'] = (byte) 14;
-        HEX2B['F'] = (byte) 15;
-        HEX2B['a'] = (byte) 10;
-        HEX2B['b'] = (byte) 11;
-        HEX2B['c'] = (byte) 12;
-        HEX2B['d'] = (byte) 13;
-        HEX2B['e'] = (byte) 14;
-        HEX2B['f'] = (byte) 15;
+        HEX2B['0'] = 0;
+        HEX2B['1'] = 1;
+        HEX2B['2'] = 2;
+        HEX2B['3'] = 3;
+        HEX2B['4'] = 4;
+        HEX2B['5'] = 5;
+        HEX2B['6'] = 6;
+        HEX2B['7'] = 7;
+        HEX2B['8'] = 8;
+        HEX2B['9'] = 9;
+        HEX2B['A'] = 10;
+        HEX2B['B'] = 11;
+        HEX2B['C'] = 12;
+        HEX2B['D'] = 13;
+        HEX2B['E'] = 14;
+        HEX2B['F'] = 15;
+        HEX2B['a'] = 10;
+        HEX2B['b'] = 11;
+        HEX2B['c'] = 12;
+        HEX2B['d'] = 13;
+        HEX2B['e'] = 14;
+        HEX2B['f'] = 15;
     }
 
     private StringUtil() {

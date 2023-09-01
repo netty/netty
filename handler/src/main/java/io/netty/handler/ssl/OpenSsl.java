@@ -73,6 +73,8 @@ public final class OpenSsl {
     static final String EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING;
     static final String[] NAMED_GROUPS;
 
+    static final boolean JAVAX_CERTIFICATE_CREATION_SUPPORTED;
+
     // Use default that is supported in java 11 and earlier and also in OpenSSL / BoringSSL.
     // See https://github.com/netty/netty-tcnative/issues/567
     // See https://www.java.com/en/configure_crypto.html for ordering
@@ -442,6 +444,18 @@ public final class OpenSsl {
                 logger.debug("Supported protocols (OpenSSL): {} ", SUPPORTED_PROTOCOLS_SET);
                 logger.debug("Default cipher suites (OpenSSL): {}", DEFAULT_CIPHERS);
             }
+
+            // Check if we can create a javax.security.cert.X509Certificate from our cert. This might fail on
+            // JDK17 and above. In this case we will later throw an UnsupportedOperationException if someone
+            // tries to access these via SSLSession. See https://github.com/netty/netty/issues/13560.
+            boolean javaxCertificateCreationSupported;
+            try {
+                javax.security.cert.X509Certificate.getInstance(CERT.getBytes(CharsetUtil.US_ASCII));
+                javaxCertificateCreationSupported = true;
+            } catch (javax.security.cert.CertificateException ex) {
+                javaxCertificateCreationSupported = false;
+            }
+            JAVAX_CERTIFICATE_CREATION_SUPPORTED = javaxCertificateCreationSupported;
         } else {
             DEFAULT_CIPHERS = Collections.emptyList();
             AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.emptySet();
@@ -456,6 +470,7 @@ public final class OpenSsl {
             EXTRA_SUPPORTED_TLS_1_3_CIPHERS = EmptyArrays.EMPTY_STRINGS;
             EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING = StringUtil.EMPTY_STRING;
             NAMED_GROUPS = DEFAULT_NAMED_GROUPS;
+            JAVAX_CERTIFICATE_CREATION_SUPPORTED = false;
         }
     }
 
@@ -708,7 +723,7 @@ public final class OpenSsl {
         libNames.add(staticLibName);
 
         NativeLibraryLoader.loadFirstAvailable(PlatformDependent.getClassLoader(SSLContext.class),
-            libNames.toArray(new String[0]));
+            libNames.toArray(EmptyArrays.EMPTY_STRINGS));
     }
 
     private static boolean initializeTcNative(String engine) throws Exception {
@@ -766,7 +781,7 @@ public final class OpenSsl {
                 protocols.add(proto);
             }
         }
-        return protocols.toArray(new String[0]);
+        return protocols.toArray(EmptyArrays.EMPTY_STRINGS);
     }
 
     static boolean isBoringSSL() {

@@ -17,6 +17,7 @@ package io.netty.handler.pcap;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -35,7 +36,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -215,11 +218,11 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 if (ctx.channel().parent() instanceof ServerSocketChannel) {
                     isServerPipeline = true;
                     initiatorAddr = (InetSocketAddress) ctx.channel().remoteAddress();
-                    handlerAddr = (InetSocketAddress) ctx.channel().localAddress();
+                    handlerAddr = getLocalAddress(ctx.channel(), initiatorAddr);
                 } else {
                     isServerPipeline = false;
-                    initiatorAddr = (InetSocketAddress) ctx.channel().localAddress();
                     handlerAddr = (InetSocketAddress) ctx.channel().remoteAddress();
+                    initiatorAddr = getLocalAddress(ctx.channel(), handlerAddr);
                 }
             } else if (ctx.channel() instanceof DatagramChannel) {
                 channelType = ChannelType.UDP;
@@ -229,8 +232,8 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 // If `DatagramChannel` is connected then we can get
                 // `localAddress` and `remoteAddress` from Channel.
                 if (datagramChannel.isConnected()) {
-                    initiatorAddr = (InetSocketAddress) ctx.channel().localAddress();
                     handlerAddr = (InetSocketAddress) ctx.channel().remoteAddress();
+                    initiatorAddr = getLocalAddress(ctx.channel(), handlerAddr);
                 }
             }
         }
@@ -461,7 +464,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 // If `datagramPacket.sender()` is `null` then DatagramPacket is initialized
                 // `sender` (local) address. In this case, we'll get source address from Channel.
                 if (srcAddr == null) {
-                    srcAddr = (InetSocketAddress) ctx.channel().localAddress();
+                    srcAddr = getLocalAddress(ctx.channel(), dstAddr);
                 }
 
                 logger.debug("Writing UDP Data of {} Bytes, Src Addr {}, Dst Addr {}",
@@ -538,6 +541,28 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             ethernetBuf.release();
             pcap.release();
         }
+    }
+
+    /**
+     * Get the local address of a channel. If the address is a wildcard address ({@code 0.0.0.0} or {@code ::}), and
+     * the address family does not match that of the {@code remote}, return the wildcard address of the {@code remote}'s
+     * family instead.
+     *
+     * @param ch     The channel to get the local address from
+     * @param remote The remote address
+     * @return The fixed local address
+     */
+    private static InetSocketAddress getLocalAddress(Channel ch, InetSocketAddress remote) {
+        InetSocketAddress local = (InetSocketAddress) ch.localAddress();
+        if (remote != null && local.getAddress().isAnyLocalAddress()) {
+            if (local.getAddress() instanceof Inet4Address && remote.getAddress() instanceof Inet6Address) {
+                return new InetSocketAddress(WildcardAddressHolder.wildcard6, local.getPort());
+            }
+            if (local.getAddress() instanceof Inet6Address && remote.getAddress() instanceof Inet4Address) {
+                return new InetSocketAddress(WildcardAddressHolder.wildcard4, local.getPort());
+            }
+        }
+        return local;
     }
 
     @Override
@@ -700,8 +725,8 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         if (state.get() == State.CLOSED) {
             logger.debug("PcapWriterHandler is already closed");
         } else {
-            markClosed();
             pCapWriter.close();
+            markClosed();
             logger.debug("PcapWriterHandler is now closed");
         }
     }
@@ -816,6 +841,21 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         public PcapWriteHandler build(OutputStream outputStream) {
             checkNotNull(outputStream, "outputStream");
             return new PcapWriteHandler(this, outputStream);
+        }
+    }
+
+    private static final class WildcardAddressHolder {
+        static final InetAddress wildcard4; // 0.0.0.0
+        static final InetAddress wildcard6; // ::
+
+        static {
+            try {
+                wildcard4 = InetAddress.getByAddress(new byte[4]);
+                wildcard6 = InetAddress.getByAddress(new byte[16]);
+            } catch (UnknownHostException e) {
+                // would only happen if the byte array was of incorrect size
+                throw new AssertionError(e);
+            }
         }
     }
 }

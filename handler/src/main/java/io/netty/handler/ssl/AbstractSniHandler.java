@@ -126,14 +126,23 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     private String hostname;
 
     /**
-     * @param handshakeTimeoutMillis the handshake timeout in milliseconds
+     * @param handshakeTimeoutMillis    the handshake timeout in milliseconds
      */
     protected AbstractSniHandler(long handshakeTimeoutMillis) {
+        this(0, handshakeTimeoutMillis);
+    }
+
+    /**
+     * @paramm maxClientHelloLength     the maximum length of the client hello message.
+     * @param handshakeTimeoutMillis    the handshake timeout in milliseconds
+     */
+    protected AbstractSniHandler(int maxClientHelloLength, long handshakeTimeoutMillis) {
+        super(maxClientHelloLength);
         this.handshakeTimeoutMillis = checkPositiveOrZero(handshakeTimeoutMillis, "handshakeTimeoutMillis");
     }
 
     public AbstractSniHandler() {
-        this(0L);
+        this(0, 0L);
     }
 
     @Override

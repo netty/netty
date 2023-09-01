@@ -3252,7 +3252,14 @@ public class DnsNameResolverTest {
         DnsNameResolver resolver = null;
         try {
             DnsNameResolverBuilder builder = newResolver();
-
+            final DatagramChannel datagramChannel = new NioDatagramChannel();
+            ChannelFactory<DatagramChannel> channelFactory = new ChannelFactory<DatagramChannel>() {
+                @Override
+                public DatagramChannel newChannel() {
+                    return datagramChannel;
+                }
+            };
+            builder.channelFactory(channelFactory);
             if (tcpFallback) {
                 dnsServer2.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
 
@@ -3267,7 +3274,7 @@ public class DnsNameResolverTest {
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
             resolver = builder.build();
             if (truncatedBecauseOfMtu) {
-                resolver.ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+                datagramChannel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         if (msg instanceof DatagramPacket) {
