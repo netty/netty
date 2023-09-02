@@ -343,6 +343,13 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.netty.handler.codec.OctetCountingFrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.OctetCountingFrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.netty.handler.codec.protobuf.ProtobufDecoder",
     "condition": {
       "typeReachable": "io.netty.handler.codec.protobuf.ProtobufDecoder"
