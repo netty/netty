@@ -367,9 +367,7 @@ done:
     netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     free(nettyClassName);
 
-    if (peerCredentialsClass != NULL) {
-        (*env)->DeleteLocalRef(env, peerCredentialsClass);
-    }
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, peerCredentialsClass);
 
     return ret;
 }
