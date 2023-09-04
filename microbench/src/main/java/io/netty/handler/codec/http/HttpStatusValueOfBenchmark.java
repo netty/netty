@@ -26,7 +26,9 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.profile.*;
+import org.openjdk.jmh.profile.LinuxPerfNormProfiler;
+import org.openjdk.jmh.profile.ProfilerException;
+import org.openjdk.jmh.profile.ProfilerFactory;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.ProfilerConfig;
 import java.text.DecimalFormat;
@@ -183,7 +185,7 @@ public class HttpStatusValueOfBenchmark extends AbstractMicrobenchmark {
     }
 
     private static final class CircularLink {
-        private CircularLink next = null;
+        private CircularLink next;
         private int value;
     }
 
