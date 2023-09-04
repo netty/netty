@@ -258,9 +258,7 @@ static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass cla
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, peerCredentialsClass, peerCredentialsClassWeak, error);
 
     jobject creds = (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, pid, credentials.cr_uid, gids);
-    if (peerCredentialsClass != NULL) {
-        (*env)->DeleteLocalRef(env, peerCredentialsClass);
-    }
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, peerCredentialsClass);
     return creds;
  error:
     return NULL;
