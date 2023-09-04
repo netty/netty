@@ -1679,30 +1679,35 @@ public class SslHandlerTest {
     }
 
     @Test
-    public void testHandshakeEventsTls12JDK() throws Exception {
-        testHandshakeEvents(SslProvider.JDK, SslProtocols.TLS_v1_2);
+    public void testSslCompletionEventsTls12JDK() throws Exception {
+        testSslCompletionEvents(SslProvider.JDK, SslProtocols.TLS_v1_2, true);
+        testSslCompletionEvents(SslProvider.JDK, SslProtocols.TLS_v1_2, false);
     }
 
     @Test
-    public void testHandshakeEventsTls12Openssl() throws Exception {
+    public void testSslCompletionEventsTls12Openssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testHandshakeEvents(SslProvider.OPENSSL, SslProtocols.TLS_v1_2);
+        testSslCompletionEvents(SslProvider.OPENSSL, SslProtocols.TLS_v1_2, true);
+        testSslCompletionEvents(SslProvider.OPENSSL, SslProtocols.TLS_v1_2, false);
     }
 
     @Test
-    public void testHandshakeEventsTls13JDK() throws Exception {
+    public void testSslCompletionEventsTls13JDK() throws Exception {
         assumeTrue(SslProvider.isTlsv13Supported(SslProvider.JDK));
-        testHandshakeEvents(SslProvider.JDK, SslProtocols.TLS_v1_3);
+        testSslCompletionEvents(SslProvider.JDK, SslProtocols.TLS_v1_3, true);
+        testSslCompletionEvents(SslProvider.JDK, SslProtocols.TLS_v1_3, false);
     }
 
     @Test
-    public void testHandshakeEventsTls13Openssl() throws Exception {
+    public void testSslCompletionEventsTls13Openssl() throws Exception {
         OpenSsl.ensureAvailability();
         assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
-        testHandshakeEvents(SslProvider.OPENSSL, SslProtocols.TLS_v1_3);
+        testSslCompletionEvents(SslProvider.OPENSSL, SslProtocols.TLS_v1_3, true);
+        testSslCompletionEvents(SslProvider.OPENSSL, SslProtocols.TLS_v1_3, false);
     }
 
-    private static void testHandshakeEvents(SslProvider provider, String protocol) throws Exception {
+    private static void testSslCompletionEvents(SslProvider provider, final String protocol, boolean clientClose)
+            throws Exception {
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .protocols(protocol)
@@ -1715,6 +1720,9 @@ public class SslHandlerTest {
 
         EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
 
+        final LinkedBlockingQueue<Channel> acceptedChannels =
+                new LinkedBlockingQueue<Channel>();
+
         final LinkedBlockingQueue<SslHandshakeCompletionEvent> serverHandshakeCompletionEvents =
                 new LinkedBlockingQueue<SslHandshakeCompletionEvent>();
 
@@ -1725,72 +1733,121 @@ public class SslHandlerTest {
                 new LinkedBlockingQueue<>();
 
         final LinkedBlockingQueue<SslCloseCompletionEvent> clientCloseCompletionEvents =
-                new LinkedBlockingQueue<>();
 
+                new LinkedBlockingQueue<>();
         try (AutoCloseable ignore1 = autoClosing(sslClientCtx);
              AutoCloseable ignore2 = autoClosing(sslServerCtx)) {
-            try {
-                Channel sc = new ServerBootstrap()
-                        .group(group)
-                        .channel(NioServerSocketChannel.class)
-                        .childHandler(new ChannelInitializer<Channel>() {
-                            @Override
-                            protected void initChannel(Channel ch) throws Exception {
-                                ch.pipeline().addLast(sslServerCtx.newHandler(offHeapAllocator()));
-                                ch.pipeline().addLast(new SslCompletionEventHandler(
-                                        serverHandshakeCompletionEvents, serverCloseCompletionEvents));
+            Channel sc = new ServerBootstrap()
+                    .group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            acceptedChannels.add(ch);
+                            SslHandler handler = sslServerCtx.newHandler(ch.bufferAllocator());
+                            if (!SslProtocols.TLS_v1_3.equals(protocol)) {
+                                handler.setCloseNotifyReadTimeout(5, TimeUnit.SECONDS);
                             }
-                        })
-                        .bind(new InetSocketAddress(0)).asStage().get();
+                            ch.pipeline().addLast(handler);
+                            ch.pipeline().addLast(new SslCompletionEventHandler(
+                                    serverHandshakeCompletionEvents, serverCloseCompletionEvents));
+                        }
+                    })
+                    .bind(new InetSocketAddress(0)).asStage().get();
 
-                Bootstrap bs = new Bootstrap()
-                        .group(group)
-                        .channel(NioSocketChannel.class)
-                        .handler(new ChannelInitializer<Channel>() {
-                            @Override
-                            protected void initChannel(Channel ch) {
-                                ch.pipeline().addLast(sslClientCtx.newHandler(
-                                        offHeapAllocator(), "netty.io", 9999));
-                                ch.pipeline().addLast(new SslCompletionEventHandler(
-                                        clientHandshakeCompletionEvents, clientCloseCompletionEvents));
+            Bootstrap bs = new Bootstrap()
+                    .group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            SslHandler handler = sslClientCtx.newHandler(
+                                    ch.bufferAllocator(), "netty.io", 9999);
+                            if (!SslProtocols.TLS_v1_3.equals(protocol)) {
+                                handler.setCloseNotifyReadTimeout(5, TimeUnit.SECONDS);
                             }
-                        })
-                        .remoteAddress(sc.localAddress());
+                            ch.pipeline().addLast(handler);
+                            ch.pipeline().addLast(
+                                    new SslCompletionEventHandler(
+                                            clientHandshakeCompletionEvents, clientCloseCompletionEvents));
+                        }
+                    })
+                    .remoteAddress(sc.localAddress());
 
-                Channel cc1 = bs.connect().asStage().get();
-                Channel cc2 = bs.connect().asStage().get();
+            Channel cc1 = bs.connect().asStage().get();
+            Channel cc2 = bs.connect().asStage().get();
 
-                // We expect 4 events as we have 2 connections and for each connection there should be one event
-                // on the server-side and one on the client-side.
-                for (int i = 0; i < 2; i++) {
-                    SslHandshakeCompletionEvent event = clientHandshakeCompletionEvents.take();
-                    assertTrue(event.isSuccess());
-                }
-                for (int i = 0; i < 2; i++) {
-                    SslHandshakeCompletionEvent event = serverHandshakeCompletionEvents.take();
-                    assertTrue(event.isSuccess());
-                }
+            // We expect 4 events as we have 2 connections and for each connection there should be one event
+            // on the server-side and one on the client-side.
+            for (int i = 0; i < 2; i++) {
+                SslHandshakeCompletionEvent event = clientHandshakeCompletionEvents.take();
+                assertTrue(event.isSuccess());
+            }
+            for (int i = 0; i < 2; i++) {
+                SslHandshakeCompletionEvent event = serverHandshakeCompletionEvents.take();
+                assertTrue(event.isSuccess());
+            }
 
+            assertEquals(0, clientCloseCompletionEvents.size());
+            assertEquals(0, serverCloseCompletionEvents.size());
+
+            if (clientClose) {
                 cc1.close().asStage().sync();
                 cc2.close().asStage().sync();
 
-                // We expect 4 events as we have 2 connections and for each connection there should be one event
-                // on the server-side and one on the client-side.
-                for (int i = 0; i < 2; i++) {
-                    SslCloseCompletionEvent event = clientCloseCompletionEvents.take();
-                    assertNotNull(event);
-                }
-                for (int i = 0; i < 2; i++) {
-                    SslCloseCompletionEvent event = serverCloseCompletionEvents.take();
-                    assertNotNull(event);
-                }
+                acceptedChannels.take().closeFuture().asStage().sync();
+                acceptedChannels.take().closeFuture().asStage().sync();
+            } else {
+                acceptedChannels.take().close().asStage().sync();
+                acceptedChannels.take().close().asStage().sync();
 
-                sc.close().asStage().sync();
-                assertEquals(0, clientHandshakeCompletionEvents.size());
-                assertEquals(0, serverHandshakeCompletionEvents.size());
-            } finally {
-                group.shutdownGracefully();
+                cc1.closeFuture().asStage().sync();
+                cc2.closeFuture().asStage().sync();
             }
+
+            // We expect 4 events as we have 2 connections and for each connection there should be one event
+            // on the server-side and one on the client-side.
+            for (int i = 0; i < 2; i++) {
+                SslCloseCompletionEvent event = clientCloseCompletionEvents.take();
+                if (clientClose) {
+                    // When we use TLSv1.3 the remote peer is not required to send a close_notify as response.
+                    // See:
+                    //  - https://datatracker.ietf.org/doc/html/rfc8446#section-6.1
+                    //  - https://bugs.openjdk.org/browse/JDK-8208526
+                    if (SslProtocols.TLS_v1_3.equals(protocol)) {
+                        assertNotNull(event);
+                    } else {
+                        assertTrue(event.isSuccess());
+                    }
+                } else {
+                    assertTrue(event.isSuccess());
+                }
+            }
+            for (int i = 0; i < 2; i++) {
+                SslCloseCompletionEvent event = serverCloseCompletionEvents.take();
+
+                if (clientClose) {
+                    assertTrue(event.isSuccess());
+                } else {
+                    // When we use TLSv1.3 the remote peer is not required to send a close_notify as response.
+                    // See:
+                    //  - https://datatracker.ietf.org/doc/html/rfc8446#section-6.1
+                    //  - https://bugs.openjdk.org/browse/JDK-8208526
+                    if (SslProtocols.TLS_v1_3.equals(protocol)) {
+                        assertNotNull(event);
+                    } else {
+                        assertTrue(event.isSuccess());
+                    }
+                }
+            }
+
+            sc.close().asStage().sync();
+            assertEquals(0, clientHandshakeCompletionEvents.size());
+            assertEquals(0, serverHandshakeCompletionEvents.size());
+            assertEquals(0, clientCloseCompletionEvents.size());
+            assertEquals(0, serverCloseCompletionEvents.size());
+        } finally {
+            group.shutdownGracefully();
         }
     }
 
