@@ -706,6 +706,7 @@ static jobject netty_epoll_linuxsocket_getPeerCredentials(JNIEnv *env, jclass cl
      if (peerCredentialsClass != NULL) {
          (*env)->DeleteLocalRef(env, peerCredentialsClass);
      }
+     return creds;
  error:
      return NULL;
 }
