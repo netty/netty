@@ -128,9 +128,8 @@ static jobject createDatagramSocketAddress(JNIEnv* env, const struct sockaddr_st
         goto done;
     }
 done:
-    if (datagramSocketAddressClass != NULL) {
-        (*env)->DeleteLocalRef(env, datagramSocketAddressClass);
-    }
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, datagramSocketAddressClass);
+
     return obj;
 }
 
@@ -153,9 +152,8 @@ static jobject createDomainDatagramSocketAddress(JNIEnv* env, const struct socka
         return NULL;
     }
 done:
-    if (domainDatagramSocketAddressClass != NULL) {
-        (*env)->DeleteLocalRef(env, domainDatagramSocketAddressClass);
-    }
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, domainDatagramSocketAddressClass);
+
     return obj;
 }
 
@@ -1372,13 +1370,9 @@ done:
     free(nettyClassName);
     free(mem);
 
-    if (datagramSocketAddressClass != NULL) {
-        (*env)->DeleteLocalRef(env, datagramSocketAddressClass);
-    }
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, datagramSocketAddressClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, domainDatagramSocketAddressClass);
 
-    if (domainDatagramSocketAddressClass != NULL) {
-        (*env)->DeleteLocalRef(env, domainDatagramSocketAddressClass);
-    }
     return ret;
 }
 

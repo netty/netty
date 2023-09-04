@@ -112,9 +112,8 @@ void netty_unix_errors_throwChannelExceptionErrorNo(JNIEnv* env, char* message, 
 
     (*env)->ThrowNew(env, channelExceptionClass, allocatedMessage);
 done:
-    if (channelExceptionClass != NULL) {
-        (*env)->DeleteLocalRef(env, channelExceptionClass);
-    }
+
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, channelExceptionClass);
     free(allocatedMessage);
 }
 
@@ -259,17 +258,13 @@ jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_LOAD_CLASS(env, portUnreachableExceptionClass, "java/net/PortUnreachableException", error);
 
 
-    if (channelExceptionClass != NULL) {
-        (*env)->DeleteLocalRef(env, channelExceptionClass);
-    }
-
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, channelExceptionClass);
     return NETTY_JNI_UTIL_JNI_VERSION;
 error:
     free(nettyClassName);
 
-    if (channelExceptionClass != NULL) {
-        (*env)->DeleteLocalRef(env, channelExceptionClass);
-    }
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, channelExceptionClass);
+
     return JNI_ERR;
 }
 

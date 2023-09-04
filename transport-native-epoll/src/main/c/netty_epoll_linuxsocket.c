@@ -703,9 +703,8 @@ static jobject netty_epoll_linuxsocket_getPeerCredentials(JNIEnv *env, jclass cl
      NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, peerCredentialsClass, peerCredentialsClassWeak, error);
 
      jobject creds = (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, credentials.pid, credentials.uid, gids);
-     if (peerCredentialsClass != NULL) {
-         (*env)->DeleteLocalRef(env, peerCredentialsClass);
-     }
+
+     NETTY_JNI_UTIL_DELETE_LOCAL(env, peerCredentialsClass);
      return creds;
  error:
      return NULL;
@@ -899,9 +898,8 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
 done:
     netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     free(nettyClassName);
-    if (peerCredentialsClass != NULL) {
-        (*env)->DeleteLocalRef(env, peerCredentialsClass);
-    }
+
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, peerCredentialsClass);
     return ret;
 }
 

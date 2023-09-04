@@ -129,15 +129,13 @@ static jobjectArray netty_resolver_dns_macos_resolvers(JNIEnv* env, jclass clazz
     }
 
     dns_configuration_free(config);
-    (*env)->DeleteLocalRef(env, dnsResolverClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, dnsResolverClass);
     return array;
 error:
     if (config != NULL) {
         dns_configuration_free(config);
     }
-    if (dnsResolverClass != NULL) {
-        (*env)->DeleteLocalRef(env, dnsResolverClass);
-    }
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, dnsResolverClass);
     return NULL;
 }
 
@@ -212,9 +210,9 @@ done:
     }
     netty_jni_util_free_dynamic_methods_table(dynamicMethods, 0, 1);
     free(nettyClassName);
-    if (dnsResolverClass != NULL) {
-        (*env)->DeleteLocalRef(env, dnsResolverClass);
-    }
+
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, dnsResolverClass);
+
     return ret;
 }
 
