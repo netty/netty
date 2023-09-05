@@ -110,7 +110,7 @@ public final class QuicHeaderParser implements AutoCloseable {
                 Quiche.readerMemoryAddress(packet), packet.readableBytes(),
                 localConnectionIdLength,
                 Quiche.memoryAddress(versionBuffer, 0, versionBuffer.capacity()),
-                Quiche.memoryAddress(typeBuffer, 0, versionBuffer.capacity()),
+                Quiche.memoryAddress(typeBuffer, 0, typeBuffer.capacity()),
                 Quiche.memoryAddress(scidBuffer, 0, scidBuffer.capacity()),
                 Quiche.memoryAddress(scidLenBuffer, 0, scidLenBuffer.capacity()),
                 Quiche.memoryAddress(dcidBuffer, 0, dcidBuffer.capacity()),
