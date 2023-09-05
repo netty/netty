@@ -504,23 +504,6 @@ public class BootstrapTest {
         assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
     }
 
-    @Test
-    void mustNotCallInitializerExtensionsWhenDisabled() throws Exception {
-        final Bootstrap cb = new Bootstrap();
-        cb.group(groupA);
-        cb.handler(dummyHandler);
-        cb.channel(LocalChannel.class);
-        cb.disableChannelInitializerExtensions();
-
-        StubChannelInitializerExtension.clearThreadLocals();
-
-        cb.register().sync();
-
-        assertNull(StubChannelInitializerExtension.lastSeenClientChannel.get());
-        assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
-        assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
-    }
-
     private static final class DelayedEventLoopGroup extends DefaultEventLoop {
         @Override
         public ChannelFuture register(final Channel channel, final ChannelPromise promise) {

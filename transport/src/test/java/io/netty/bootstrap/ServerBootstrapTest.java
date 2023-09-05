@@ -277,40 +277,4 @@ public class ServerBootstrapTest {
         clientChannel.close().syncUninterruptibly();
         group.shutdownGracefully();
     }
-
-    @Test
-    void mustNotCallInitializerExtensionsWhenDisabled() throws Exception {
-        LocalAddress addr = new LocalAddress(ServerBootstrapTest.class);
-        LocalEventLoopGroup group = new LocalEventLoopGroup(1);
-        final ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group);
-        sb.handler(new ChannelInboundHandlerAdapter());
-        sb.channel(LocalServerChannel.class);
-        sb.childHandler(new ChannelInboundHandlerAdapter());
-        sb.disableChannelInitializerExtensions();
-
-        StubChannelInitializerExtension.clearThreadLocals();
-        group.submit(new Runnable() {
-            @Override
-            public void run() {
-                StubChannelInitializerExtension.clearThreadLocals();
-            }
-        }).sync();
-
-        Channel serverChannel = sb.bind(addr).syncUninterruptibly().channel();
-
-        Bootstrap cb = new Bootstrap();
-        cb.group(group)
-                .channel(LocalChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
-        Channel clientChannel = cb.connect(addr).syncUninterruptibly().channel();
-
-        assertSame(clientChannel, StubChannelInitializerExtension.lastSeenClientChannel.get());
-        assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
-        assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
-
-        serverChannel.close().syncUninterruptibly();
-        clientChannel.close().syncUninterruptibly();
-        group.shutdownGracefully();
-    }
 }

@@ -66,7 +66,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     // purposes.
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
-    private volatile boolean disableExtensions;
     private volatile ChannelHandler handler;
 
     AbstractBootstrap() {
@@ -82,7 +81,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             options.putAll(bootstrap.options);
         }
         attrs.putAll(bootstrap.attrs);
-        disableExtensions = bootstrap.disableExtensions;
     }
 
     /**
@@ -138,17 +136,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     @SuppressWarnings({ "unchecked", "deprecation" })
     public B channelFactory(io.netty.channel.ChannelFactory<? extends C> channelFactory) {
         return channelFactory((ChannelFactory<C>) channelFactory);
-    }
-
-    /**
-     * Disable calling out to any {@link ChannelInitializerExtension}s for the channels created by this bootstrap.
-     * <p>
-     * Channel initializer extensions are loaded and installed by default, but can be selectively disabled per bootstrap
-     * by calling this method.
-     */
-    public B disableChannelInitializerExtensions() {
-        disableExtensions = true;
-        return self();
     }
 
     /**
@@ -358,8 +345,8 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     abstract void init(Channel channel) throws Exception;
 
     Collection<ChannelInitializerExtension> getInitializerExtensions() {
-        ChannelInitializerExtensions extensions;
-        if (disableExtensions || (extensions = ChannelInitializerExtensions.getExtensions()).isEmpty()) {
+        ChannelInitializerExtensions extensions = ChannelInitializerExtensions.getExtensions();
+        if (extensions.isEmpty()) {
             // Skip building ApplicableInfo.
             return Collections.emptyList();
         }

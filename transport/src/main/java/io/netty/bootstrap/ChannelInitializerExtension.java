@@ -27,9 +27,7 @@ import io.netty.channel.ServerChannel;
  * such as 3rd-party libraries.
  * <p>
  * All channel initializer extensions that are available on the classpath will be
- * {@linkplain java.util.ServiceLoader#load(Class) service-loaded} and used by all {@link AbstractBootstrap} subclasses,
- * unless the extensions are explicitly disabled on the given bootstrap instance with a call to
- * {@link AbstractBootstrap#disableChannelInitializerExtensions()}.
+ * {@linkplain java.util.ServiceLoader#load(Class) service-loaded} and used by all {@link AbstractBootstrap} subclasses.
  */
 public abstract class ChannelInitializerExtension {
     /**
