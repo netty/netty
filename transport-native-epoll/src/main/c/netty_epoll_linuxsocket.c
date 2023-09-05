@@ -63,7 +63,7 @@
 #define UDP_GRO 104
 #endif
 
-static jclass peerCredentialsClass = NULL;
+static jweak peerCredentialsClassWeak = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
 
 static jfieldID fileChannelFieldId = NULL;
@@ -693,12 +693,21 @@ static jint netty_epoll_linuxsocket_getTcpNotSentLowAt(JNIEnv* env, jclass clazz
 
 static jobject netty_epoll_linuxsocket_getPeerCredentials(JNIEnv *env, jclass clazz, jint fd) {
      struct ucred credentials;
+     jclass peerCredentialsClass = NULL;
      if(netty_unix_socket_getOption(env,fd, SOL_SOCKET, SO_PEERCRED, &credentials, sizeof (credentials)) == -1) {
          return NULL;
      }
      jintArray gids = (*env)->NewIntArray(env, 1);
      (*env)->SetIntArrayRegion(env, gids, 0, 1, (jint*) &credentials.gid);
-     return (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, credentials.pid, credentials.uid, gids);
+
+     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, peerCredentialsClass, peerCredentialsClassWeak, error);
+
+     jobject creds = (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, credentials.pid, credentials.uid, gids);
+
+     NETTY_JNI_UTIL_DELETE_LOCAL(env, peerCredentialsClass);
+     return creds;
+ error:
+     return NULL;
 }
 
 static jint netty_epoll_linuxsocket_isUdpGro(JNIEnv* env, jclass clazz, jint fd) {
@@ -845,6 +854,7 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
     jclass fileRegionCls = NULL;
     jclass fileChannelCls = NULL;
     jclass fileDescriptorCls = NULL;
+    jclass peerCredentialsClass = NULL;
     // Register the methods which are not referenced by static member variables
     JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
     if (dynamicMethods == NULL) {
@@ -859,6 +869,10 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
     }
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/PeerCredentials", nettyClassName, done);
+
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, peerCredentialsClassWeak, nettyClassName, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, peerCredentialsClass, peerCredentialsClassWeak, done);
+
     NETTY_JNI_UTIL_LOAD_CLASS(env, peerCredentialsClass, nettyClassName, done);
     netty_jni_util_free_dynamic_name(&nettyClassName);
 
@@ -885,11 +899,12 @@ done:
     netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     free(nettyClassName);
 
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, peerCredentialsClass);
     return ret;
 }
 
 void netty_epoll_linuxsocket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, peerCredentialsClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, peerCredentialsClassWeak);
 
     netty_jni_util_unregister_natives(env, packagePrefix, LINUXSOCKET_CLASSNAME);
 }
