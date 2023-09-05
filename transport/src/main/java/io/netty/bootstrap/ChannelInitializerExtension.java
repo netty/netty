@@ -28,6 +28,10 @@ import io.netty.channel.ServerChannel;
  * <p>
  * All channel initializer extensions that are available on the classpath will be
  * {@linkplain java.util.ServiceLoader#load(Class) service-loaded} and used by all {@link AbstractBootstrap} subclasses.
+ * <p>
+ * Note that this feature will not work for Netty uses that are shaded <em>and relocated</em> into other libraries.
+ * The classes in a relocated Netty library are technically distinct and incompatible types. This means the
+ * service-loader in non-relocated Netty will not see types from a relocated Netty, and vice versa.
  */
 public abstract class ChannelInitializerExtension {
     /**
