@@ -47,7 +47,7 @@
 #define QUICHE_CLASSNAME "io/netty/incubator/codec/quic/Quiche"
 #define LIBRARYNAME "netty_quiche"
 
-static jclass    quiche_logger_class = NULL;
+static jweak    quiche_logger_class_weak = NULL;
 static jmethodID quiche_logger_class_log = NULL;
 static jobject   quiche_logger = NULL;
 static JavaVM     *global_vm = NULL;
@@ -927,6 +927,7 @@ static jint netty_quiche_JNI_OnLoad(JNIEnv* env, char const* packagePrefix) {
     int nativeRegistered = 0;
     int boringsslLoaded = 0;
 
+    jclass quiche_logger_class = NULL;
     char* name = NULL;
 
     // We must register the statically referenced methods first!
@@ -963,7 +964,8 @@ static jint netty_quiche_JNI_OnLoad(JNIEnv* env, char const* packagePrefix) {
     NETTY_JNI_UTIL_LOAD_CLASS(env, object_class, "java/lang/Object", done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/QuicheLogger", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, quiche_logger_class, name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, quiche_logger_class_weak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, quiche_logger_class, quiche_logger_class_weak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, quiche_logger_class, quiche_logger_class_log, "log", "(Ljava/lang/String;)V", done);
     // Initialize this module
 
@@ -988,20 +990,21 @@ done:
             netty_boringssl_JNI_OnUnload(env, packagePrefix);
         }
 
-        NETTY_JNI_UTIL_UNLOAD_CLASS(env, quiche_logger_class);
+        NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, quiche_logger_class_weak);
         NETTY_JNI_UTIL_UNLOAD_CLASS(env, integer_class);
         NETTY_JNI_UTIL_UNLOAD_CLASS(env, boolean_class);
         NETTY_JNI_UTIL_UNLOAD_CLASS(env, object_class);
 
         netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     }
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, quiche_logger_class);
     return ret;
 }
 
 static void netty_quiche_JNI_OnUnload(JNIEnv* env) {
     netty_boringssl_JNI_OnUnload(env, staticPackagePrefix);
 
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, quiche_logger_class);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, quiche_logger_class_weak);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, integer_class);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, boolean_class);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, object_class);

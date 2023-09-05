@@ -34,38 +34,38 @@
 
 #define ERR_LEN 256
 
-static jclass sslTaskClass = NULL;
+static jweak sslTaskClassWeak = NULL;
 static jmethodID sslTaskDestroyMethod = NULL;
 static jfieldID sslTaskReturnValue = NULL;
 static jfieldID sslTaskComplete = NULL;
 
-static jclass sslPrivateKeyMethodTaskClass = NULL;
+static jweak sslPrivateKeyMethodTaskClassWeak = NULL;
 static jfieldID sslPrivateKeyMethodTaskResultBytesField = NULL;
 
-static jclass sslPrivateKeyMethodSignTaskClass = NULL;
+static jweak sslPrivateKeyMethodSignTaskClassWeak = NULL;
 static jmethodID sslPrivateKeyMethodSignTaskInitMethod = NULL;
 
-static jclass sslPrivateKeyMethodDecryptTaskClass = NULL;
+static jweak sslPrivateKeyMethodDecryptTaskClassWeak = NULL;
 static jmethodID sslPrivateKeyMethodDecryptTaskInitMethod = NULL;
 
-static jclass verifyTaskClass = NULL;
+static jweak verifyTaskClassWeak = NULL;
 static jmethodID verifyTaskClassInitMethod = NULL;
 
-static jclass certificateTaskClass = NULL;
+static jweak certificateTaskClassWeak = NULL;
 static jmethodID certificateTaskClassInitMethod = NULL;
 static jfieldID certificateTaskClassChainField;
 static jfieldID certificateTaskClassKeyField;
 
-static jclass handshakeCompleteCallbackClass = NULL;
+static jweak handshakeCompleteCallbackClassWeak = NULL;
 static jmethodID handshakeCompleteCallbackMethod = NULL;
 
-static jclass servernameCallbackClass = NULL;
+static jweak servernameCallbackClassWeak = NULL;
 static jmethodID servernameCallbackMethod = NULL;
 
-static jclass keylogCallbackClass = NULL;
+static jweak keylogCallbackClassWeak = NULL;
 static jmethodID keylogCallbackMethod = NULL;
 
-static jclass sessionCallbackClass = NULL;
+static jweak sessionCallbackClassWeak = NULL;
 static jmethodID sessionCallbackMethod = NULL;
 
 static jclass byteArrayClass = NULL;
@@ -293,6 +293,7 @@ enum ssl_verify_result_t quic_SSL_cert_custom_verify(SSL* ssl, uint8_t *out_aler
     enum ssl_verify_result_t ret = ssl_verify_invalid;
     jint result = X509_V_ERR_UNSPECIFIED;
     JNIEnv *e = NULL;
+    jclass verifyTaskClass = NULL;
 
     SSL_CTX* ctx = SSL_get_SSL_CTX(ssl);
     if (ctx == NULL) {
@@ -353,6 +354,7 @@ enum ssl_verify_result_t quic_SSL_cert_custom_verify(SSL* ssl, uint8_t *out_aler
         goto complete;
     }
 
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(e, verifyTaskClass, verifyTaskClassWeak, complete);
     jobject task = (*e)->NewObject(e, verifyTaskClass, verifyTaskClassInitMethod, (jlong) ssl, array, authMethodString, verifyCallback);
 
     ssl_task = netty_boringssl_ssl_task_new(e, task);
@@ -374,6 +376,7 @@ complete:
             *out_alert = SSL_alert_from_verify_result(result);
         }
     }
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, verifyTaskClass);
     return ret;
 }
 
@@ -395,6 +398,7 @@ static jbyteArray keyTypes(JNIEnv* e, SSL* ssl) {
 
 static enum ssl_private_key_result_t netty_boringssl_private_key_sign_java(SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out, uint16_t signature_algorithm, const uint8_t *in, size_t in_len) {
     enum ssl_private_key_result_t ret = ssl_private_key_failure;
+    jclass sslPrivateKeyMethodSignTaskClass = NULL;
     jbyteArray inputArray = NULL;
     JNIEnv *e = NULL;
 
@@ -414,6 +418,8 @@ static enum ssl_private_key_result_t netty_boringssl_private_key_sign_java(SSL *
 
     // Lets create the BoringSSLPrivateKeyMethodSignTask and store it on the SSL object. We then later retrieve it via
     // BoringSSL.SSL_getTask(ssl) and run it.
+
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(e, sslPrivateKeyMethodSignTaskClass, sslPrivateKeyMethodSignTaskClassWeak, complete);
     jobject task = (*e)->NewObject(e, sslPrivateKeyMethodSignTaskClass, sslPrivateKeyMethodSignTaskInitMethod, (jlong) ssl,
                     signature_algorithm, inputArray, ssl_private_key_method);
 
@@ -425,14 +431,14 @@ static enum ssl_private_key_result_t netty_boringssl_private_key_sign_java(SSL *
     ret = ssl_private_key_retry;
 complete:
     // Free up any allocated memory and return.
-    if (inputArray != NULL) {
-        (*e)->DeleteLocalRef(e, inputArray);
-    }
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, inputArray);
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, sslPrivateKeyMethodSignTaskClass);
     return ret;
 }
 
 static enum ssl_private_key_result_t netty_boringssl_private_key_decrypt_java(SSL *ssl, uint8_t *out, size_t *out_len, size_t max_out, const uint8_t *in, size_t in_len) {
     enum ssl_private_key_result_t ret = ssl_private_key_failure;
+    jclass sslPrivateKeyMethodDecryptTaskClass = NULL;
     jbyteArray inArray = NULL;
     JNIEnv *e = NULL;
 
@@ -452,6 +458,7 @@ static enum ssl_private_key_result_t netty_boringssl_private_key_decrypt_java(SS
 
     // Lets create the SSLPrivateKeyMethodDecryptTask and store it on the SSL object. We then later retrieve it via
     // BoringSSL.SSL_getTask(ssl) and run it.
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(e, sslPrivateKeyMethodDecryptTaskClass, sslPrivateKeyMethodDecryptTaskClassWeak, complete);
     jobject task = (*e)->NewObject(e, sslPrivateKeyMethodDecryptTaskClass, sslPrivateKeyMethodDecryptTaskInitMethod,
                 (jlong) ssl, inArray, ssl_private_key_method);
 
@@ -463,9 +470,8 @@ static enum ssl_private_key_result_t netty_boringssl_private_key_decrypt_java(SS
     ret = ssl_private_key_retry;
 complete:
     // Delete the local reference as this is executed by a callback.
-    if (inArray != NULL) {
-        (*e)->DeleteLocalRef(e, inArray);
-    }
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, inArray);
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, sslPrivateKeyMethodDecryptTaskClass);
     return ret;
 }
 
@@ -523,6 +529,7 @@ const SSL_PRIVATE_KEY_METHOD netty_boringssl_private_key_method = {
 
 // See https://www.openssl.org/docs/man1.0.2/man3/SSL_set_cert_cb.html for return values.
 static int quic_certificate_cb(SSL* ssl, void* arg) {
+    jclass certificateTaskClass = NULL;
     JNIEnv *e = NULL;
     if (quic_get_java_env(&e) != JNI_OK) {
         return 0;
@@ -563,6 +570,7 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
 
         // Lets create the CertificateCallbackTask and store it on the SSL object. We then later retrieve it via
         // SSL.getTask(ssl) and run it.
+        NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(e, certificateTaskClass, certificateTaskClassWeak, done);
         jobject task = (*e)->NewObject(e, certificateTaskClass, certificateTaskClassInitMethod, (jlong) ssl, types, issuers, authMethods, arg);
 
         if ((ssl_task = netty_boringssl_ssl_task_new(e, task)) == NULL) {
@@ -632,6 +640,8 @@ done:
     if (cchain != NULL) {
         sk_CRYPTO_BUFFER_pop_free((STACK_OF(CRYPTO_BUFFER) *) cchain, CRYPTO_BUFFER_free);
     }
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, certificateTaskClass);
+
     return ret;
 }
 
@@ -1323,16 +1333,16 @@ static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(
 static void unload_all_classes(JNIEnv* env) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, byteArrayClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, sslTaskClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, sslPrivateKeyMethodTaskClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, sslPrivateKeyMethodSignTaskClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, sslPrivateKeyMethodDecryptTaskClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, certificateTaskClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, verifyTaskClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, handshakeCompleteCallbackClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, servernameCallbackClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, keylogCallbackClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, sessionCallbackClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, sslTaskClassWeak);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, sslPrivateKeyMethodTaskClassWeak);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, sslPrivateKeyMethodSignTaskClassWeak);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, sslPrivateKeyMethodDecryptTaskClassWeak);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, certificateTaskClassWeak);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, verifyTaskClassWeak);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, handshakeCompleteCallbackClassWeak);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, servernameCallbackClassWeak);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, keylogCallbackClassWeak);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, sessionCallbackClassWeak);
 }
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
@@ -1343,6 +1353,17 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     int nativeRegistered = 0;
     char* name = NULL;
     char* combinedName = NULL;
+
+    jclass sslTaskClass = NULL;
+    jclass sslPrivateKeyMethodTaskClass = NULL;
+    jclass sslPrivateKeyMethodSignTaskClass = NULL;
+    jclass sslPrivateKeyMethodDecryptTaskClass = NULL;
+    jclass certificateTaskClass = NULL;
+    jclass verifyTaskClass = NULL;
+    jclass handshakeCompleteCallbackClass = NULL;
+    jclass servernameCallbackClass = NULL;
+    jclass keylogCallbackClass = NULL;
+    jclass sessionCallbackClass = NULL;
 
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
@@ -1368,19 +1389,23 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_LOAD_CLASS(env, stringClass, "java/lang/String", done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLTask", name, done);
+
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sslTaskClassWeak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sslTaskClass, sslTaskClassWeak, done);
+
     NETTY_JNI_UTIL_LOAD_CLASS(env, sslTaskClass, name, done);
     NETTY_JNI_UTIL_GET_FIELD(env, sslTaskClass, sslTaskReturnValue, "returnValue", "I", done);
     NETTY_JNI_UTIL_GET_FIELD(env, sslTaskClass, sslTaskComplete, "complete", "Z", done);
     NETTY_JNI_UTIL_GET_METHOD(env, sslTaskClass, sslTaskDestroyMethod, "destroy", "()V", done);
 
-
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLPrivateKeyMethodTask", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, sslPrivateKeyMethodTaskClass, name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sslPrivateKeyMethodTaskClassWeak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sslPrivateKeyMethodTaskClass, sslPrivateKeyMethodTaskClassWeak, done);
     NETTY_JNI_UTIL_GET_FIELD(env, sslPrivateKeyMethodTaskClass, sslPrivateKeyMethodTaskResultBytesField, "resultBytes", "[B", done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLPrivateKeyMethodSignTask", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, sslPrivateKeyMethodSignTaskClass, name, done);
-
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sslPrivateKeyMethodSignTaskClassWeak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sslPrivateKeyMethodSignTaskClass, sslPrivateKeyMethodSignTaskClassWeak, done);
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLPrivateKeyMethod;)V", name, done);
     NETTY_JNI_UTIL_PREPEND("(JI[BL", name, combinedName, done);
     free(name);
@@ -1388,10 +1413,9 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     combinedName = NULL;
     NETTY_JNI_UTIL_GET_METHOD(env, sslPrivateKeyMethodSignTaskClass, sslPrivateKeyMethodSignTaskInitMethod, "<init>", name, done);
 
-
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLPrivateKeyMethodDecryptTask", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, sslPrivateKeyMethodDecryptTaskClass, name, done);
-
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sslPrivateKeyMethodDecryptTaskClassWeak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sslPrivateKeyMethodDecryptTaskClass, sslPrivateKeyMethodDecryptTaskClassWeak, done);
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLPrivateKeyMethod;)V", name, done);
     NETTY_JNI_UTIL_PREPEND("(J[BL", name, combinedName, done);
     free(name);
@@ -1400,7 +1424,8 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_GET_METHOD(env, sslPrivateKeyMethodDecryptTaskClass, sslPrivateKeyMethodDecryptTaskInitMethod, "<init>", name, done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateCallbackTask", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, certificateTaskClass, name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, certificateTaskClassWeak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, certificateTaskClass, certificateTaskClassWeak, done);
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateCallback;)V", name, done);
     NETTY_JNI_UTIL_PREPEND("(J[B[[B[Ljava/lang/String;L", name, combinedName, done);
     free(name);
@@ -1411,7 +1436,8 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_GET_FIELD(env, certificateTaskClass, certificateTaskClassKeyField, "key", "J", done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateVerifyCallbackTask", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, verifyTaskClass, name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, verifyTaskClassWeak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, verifyTaskClass, verifyTaskClassWeak, done);
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateVerifyCallback;)V", name, done);
     NETTY_JNI_UTIL_PREPEND("(J[[BLjava/lang/String;L", name, combinedName, done);
     free(name);
@@ -1420,19 +1446,23 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_GET_METHOD(env, verifyTaskClass, verifyTaskClassInitMethod, "<init>", name, done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLHandshakeCompleteCallback", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, handshakeCompleteCallbackClass, name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, handshakeCompleteCallbackClassWeak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, handshakeCompleteCallbackClass, handshakeCompleteCallbackClassWeak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, handshakeCompleteCallbackClass, handshakeCompleteCallbackMethod, "handshakeComplete", "(J[BLjava/lang/String;Ljava/lang/String;[B[[BJJ[BZ)V", done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLTlsextServernameCallback", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, servernameCallbackClass, name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, servernameCallbackClassWeak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, servernameCallbackClass, servernameCallbackClassWeak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, servernameCallbackClass, servernameCallbackMethod, "selectCtx", "(JLjava/lang/String;)J", done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLKeylogCallback", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, keylogCallbackClass, name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, keylogCallbackClassWeak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, keylogCallbackClass, keylogCallbackClassWeak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, keylogCallbackClass, keylogCallbackMethod, "logKey", "(JLjava/lang/String;)V", done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLSessionCallback", name, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, sessionCallbackClass, name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sessionCallbackClassWeak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sessionCallbackClass, sessionCallbackClassWeak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, sessionCallbackClass, sessionCallbackMethod, "newSession", "(JJJ[BZ[B)V", done);
 
     verifyCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
@@ -1458,6 +1488,18 @@ done:
 
         unload_all_classes(env);
     }
+
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, sslTaskClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, sslPrivateKeyMethodTaskClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, sslPrivateKeyMethodSignTaskClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, sslPrivateKeyMethodDecryptTaskClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, certificateTaskClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, verifyTaskClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, handshakeCompleteCallbackClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, servernameCallbackClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, keylogCallbackClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, sessionCallbackClass);
+
     return ret;
 }
 

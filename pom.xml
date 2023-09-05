@@ -76,7 +76,7 @@
     <packaging.type>jar</packaging.type>
     <netty.version>4.1.97.Final</netty.version>
     <netty.build.version>31</netty.build.version>
-    <netty.jni-util.version>0.0.7.Final</netty.jni-util.version>
+    <netty.jni-util.version>0.0.9.Final</netty.jni-util.version>
     <junit.version>5.9.0</junit.version>
     <native.maven.plugin.version>0.9.22</native.maven.plugin.version>
     <test.argLine>-D_</test.argLine>
