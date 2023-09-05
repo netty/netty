@@ -288,6 +288,7 @@
         <!-- https://developer.android.com/ndk/guides/other_build_systems -->
         <jniLibName>netty_quiche</jniLibName>
         <jni.classifier>${platform}</jni.classifier>
+        <javaModuleNameClassifier>android</javaModuleNameClassifier>
         <cflags>-std=c99 -Werror -fno-omit-frame-pointer -fvisibility=hidden -Wunused -Wno-unused-value -O3 -I${quicheHomeIncludeDir} -I${boringsslHomeIncludeDir}</cflags>
         <ldflags>-L${quicheHomeBuildDir} -lquiche -L${boringsslHomeBuildDir} -lssl -lcrypto</ldflags>
         <bundleNativeCode>META-INF/native/${jniLibName}.dll;osname=android;processor=${androidAbi}</bundleNativeCode>
