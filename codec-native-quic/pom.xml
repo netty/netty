@@ -47,7 +47,7 @@
     <boringsslRepository>https://boringssl.googlesource.com/boringssl</boringsslRepository>
     <!-- Lets use what we use in netty-tcnative-boringssl-static -->
     <boringsslBranch>chromium-stable</boringsslBranch>
-    <boringsslCommitSha>ca1690e221677cea3fb946f324eb89d846ec53f2</boringsslCommitSha>
+    <boringsslCommitSha>dd5219451c3ce26221762a15d867edf43b463bb2</boringsslCommitSha>
 
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
@@ -116,9 +116,9 @@
         <!-- On *nix, add ASM flags to disable executable stack -->
         <cmakeAsmFlags>-Wa,--noexecstack -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
         <extraCflags>-mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
-        <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer</cmakeCFlags>
         <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
-        <cmakeCxxFlags>${extraCxxflags} -O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC -Wno-error=range-loop-analysis</cmakeCxxFlags>
+        <cmakeCxxFlags>${extraCxxflags} -O3 -fno-omit-frame-pointer -Wno-error=range-loop-analysis</cmakeCxxFlags>
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
@@ -139,9 +139,9 @@
         <!-- On *nix, add ASM flags to disable executable stack -->
         <cmakeAsmFlags>-Wa,--noexecstack -target arm64-apple-macos11</cmakeAsmFlags>
         <extraCmakeFlags>-DCMAKE_SYSTEM_PROCESSOR=arm64 -DCMAKE_OSX_ARCHITECTURES=arm64</extraCmakeFlags>
-        <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer  -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer</cmakeCFlags>
         <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
-        <cmakeCxxFlags>${extraCxxflags} -O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC -Wno-error=range-loop-analysis</cmakeCxxFlags>
+        <cmakeCxxFlags>${extraCxxflags} -O3 -fno-omit-frame-pointer -Wno-error=range-loop-analysis</cmakeCxxFlags>
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
@@ -169,9 +169,9 @@
         <!-- On *nix, add ASM flags to disable executable stack -->
         <cmakeAsmFlags>-Wa,--noexecstack -target x86_64-apple-macos10.12 -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
         <extraCmakeFlags>-DCMAKE_SYSTEM_PROCESSOR=x86_64 -DCMAKE_OSX_ARCHITECTURES=x86_64</extraCmakeFlags>
-        <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer  -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer</cmakeCFlags>
         <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
-        <cmakeCxxFlags>${extraCxxflags} -O3 -fno-omit-frame-pointer -DOPENSSL_C11_ATOMIC -Wno-error=range-loop-analysis</cmakeCxxFlags>
+        <cmakeCxxFlags>${extraCxxflags} -O3 -fno-omit-frame-pointer -Wno-error=range-loop-analysis</cmakeCxxFlags>
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
@@ -202,9 +202,9 @@
         <extraCxxflags>-O3 -fno-omit-frame-pointer</extraCxxflags>
         <!-- On *nix, add ASM flags to disable executable stack -->
         <cmakeAsmFlags>-Wa,--noexecstack</cmakeAsmFlags>
-        <cmakeCFlags>${extraCflags} -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <cmakeCFlags>${extraCflags}</cmakeCFlags>
         <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
-        <cmakeCxxFlags>${extraCxxflags} -DOPENSSL_C11_ATOMIC -Wno-error=maybe-uninitialized -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS</cmakeCxxFlags>
+        <cmakeCxxFlags>${extraCxxflags} -Wno-error=maybe-uninitialized -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS</cmakeCxxFlags>
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
@@ -278,9 +278,9 @@
         <extraCxxflags>-O3 -fno-omit-frame-pointer</extraCxxflags>
         <!-- On *nix, add ASM flags to disable executable stack -->
         <cmakeAsmFlags>-Wa,--noexecstack</cmakeAsmFlags>
-        <cmakeCFlags>${extraCflags} -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <cmakeCFlags>${extraCflags}</cmakeCFlags>
         <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
-        <cmakeCxxFlags>${extraCxxflags} -DOPENSSL_C11_ATOMIC -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS</cmakeCxxFlags>
+        <cmakeCxxFlags>${extraCxxflags} -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS</cmakeCxxFlags>
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
@@ -461,9 +461,9 @@
         <extraCxxflags>-O3 -fno-omit-frame-pointer</extraCxxflags>
         <!-- On *nix, add ASM flags to disable executable stack -->
         <cmakeAsmFlags>-Wa,--noexecstack</cmakeAsmFlags>
-        <cmakeCFlags>${extraCflags} -DOPENSSL_C11_ATOMIC</cmakeCFlags>
+        <cmakeCFlags>${extraCflags}</cmakeCFlags>
         <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
-        <cmakeCxxFlags>${extraCxxflags} -DOPENSSL_C11_ATOMIC -Wno-error=maybe-uninitialized -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS</cmakeCxxFlags>
+        <cmakeCxxFlags>${extraCxxflags} -Wno-error=maybe-uninitialized -Wno-error=shadow -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS</cmakeCxxFlags>
         <libssl>libssl.a</libssl>
         <libcrypto>libcrypto.a</libcrypto>
         <libquiche>libquiche.a</libquiche>
