@@ -33,6 +33,9 @@ jobs:
           - setup: linux-x86_64-java8
             docker-compose-build: "-f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml build"
             docker-compose-run: "-f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml run build-leak"
+          - setup: linux-x86_64-java8-no-unsafe
+            docker-compose-build: "-f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml build"
+            docker-compose-run: "-f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml run build-no-unsafe"
           - setup: linux-x86_64-java17
             docker-compose-build: "-f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.117.yaml build"
             docker-compose-run: "-f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.117.yaml run build-leak"

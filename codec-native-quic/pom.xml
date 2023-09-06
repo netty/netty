@@ -491,6 +491,14 @@
       </properties>
     </profile>
 
+    <!-- Build with unsafe disabled which also means the memory address cant be accessed-->
+    <profile>
+      <id>noUnsafe</id>
+      <properties>
+        <test.argLine>-Dio.netty.noUnsafe=true</test.argLine>
+      </properties>
+    </profile>
+
     <!-- Profile related to native-image -->
     <!-- ./mvnw -Pnative-image-agent -pl codec-native-quic test -->
     <profile>

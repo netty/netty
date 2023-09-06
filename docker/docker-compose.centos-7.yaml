@@ -31,6 +31,10 @@ services:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pleak clean package"
 
+  build-no-unsafe:
+    <<: *common
+    command: /bin/bash -cl "./mvnw -B -ntp -PnoUnsafe clean package"
+
   build-clean:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp clean package"
