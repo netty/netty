@@ -27,7 +27,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2HeadersEncoder.Configuration {
     private final HpackEncoder hpackEncoder;
     private final SensitivityDetector sensitivityDetector;
-    private final ByteBuf tableSizeChangeOutput = Unpooled.buffer();
+    private ByteBuf tableSizeChangeOutput;
 
     public DefaultHttp2HeadersEncoder() {
         this(NEVER_SENSITIVE);
@@ -66,7 +66,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
         try {
             // If there was a change in the table size, serialize the output from the hpackEncoder
             // resulting from that change.
-            if (tableSizeChangeOutput.isReadable()) {
+            if (tableSizeChangeOutput != null && tableSizeChangeOutput.isReadable()) {
                 buffer.writeBytes(tableSizeChangeOutput);
                 tableSizeChangeOutput.clear();
             }
@@ -81,6 +81,9 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
 
     @Override
     public void maxHeaderTableSize(long max) throws Http2Exception {
+        if (tableSizeChangeOutput == null) {
+            tableSizeChangeOutput = Unpooled.buffer();
+        }
         hpackEncoder.setMaxHeaderTableSize(tableSizeChangeOutput, max);
     }
 
