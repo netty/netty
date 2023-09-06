@@ -470,7 +470,7 @@ public class BootstrapTest {
     }
 
     @Test
-    void mustCallInitializerExtensionsByDefault() throws Exception {
+    void mustCallInitializerExtensions() throws Exception {
         final Bootstrap cb = new Bootstrap();
         cb.group(groupA);
         cb.handler(dummyHandler);
@@ -483,23 +483,6 @@ public class BootstrapTest {
         final Channel expectedChannel = future.channel();
 
         assertSame(expectedChannel, StubChannelInitializerExtension.lastSeenClientChannel.get());
-        assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
-        assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
-    }
-
-    @Test
-    void mustNotCallInitializerExtensionsNotApplicable() throws Exception {
-        final Bootstrap cb = new Bootstrap();
-        cb.group(groupA);
-        cb.handler(dummyHandler);
-        cb.channel(LocalChannel.class);
-
-        StubChannelInitializerExtension.clearThreadLocals();
-        StubChannelInitializerExtension.isApplicable.set(Boolean.FALSE);
-
-        cb.register().sync();
-
-        assertNull(StubChannelInitializerExtension.lastSeenClientChannel.get());
         assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
         assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
     }

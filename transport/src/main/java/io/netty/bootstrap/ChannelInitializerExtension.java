@@ -26,6 +26,10 @@ import io.netty.channel.ServerChannel;
  * without making changes to such uses that are otherwise outside the purview of the application code,
  * such as 3rd-party libraries.
  * <p>
+ * Channel initializer extensions are <em>not</em> enabled by default, because of their power to influence Netty
+ * pipelines across libraries, frameworks, and use-cases.
+ * Extensions must be explicitly enabled by setting the {@link #EXTENSIONS_SYSTEM_PROPERTY} to {@code serviceload}.
+ * <p>
  * All channel initializer extensions that are available on the classpath will be
  * {@linkplain java.util.ServiceLoader#load(Class) service-loaded} and used by all {@link AbstractBootstrap} subclasses.
  * <p>
@@ -35,27 +39,21 @@ import io.netty.channel.ServerChannel;
  */
 public abstract class ChannelInitializerExtension {
     /**
-     * Inspect the information in the given {@link ApplicableInfo} object, and determine if this extension is applicable
-     * for the given context.
+     * The name of the system property that control initializer extensions.
      * <p>
-     * If the extension is not applicable, then it won't be called.
+     * These extensions can potentially be a security liability, so they are disabled by default.
      * <p>
-     * This method may be called multiple times with different parameters for different contexts.
+     * To enable the extensions, application operators can explicitly opt in by setting this system property to the
+     * value {@code serviceload}. This will enable all the extensions that are available through the service loader
+     * mechanism.
      * <p>
-     * Override this method to apply your own logic to this decision.
-     * The default implementation just returns {@code true}.
-     *
-     * @param info An object carrying information about the context of where and how this extension would be used.
-     * @return {@code true} if this extension is interested in getting called in the given context,
-     * otherwise {@code false}.
+     * To load and log (at INFO level) all available extensions without actually running them, set this system property
+     * to the value {@code log}.
      */
-    public boolean isApplicable(ApplicableInfo info) {
-        return true;
-    }
+    public static final String EXTENSIONS_SYSTEM_PROPERTY = "io.netty.bootstrap.extensions";
 
     /**
-     * Get the "priority" of this extension. If multiple extensions are
-     * {@linkplain #isApplicable(ApplicableInfo) applicable} to a given context, then they will be called in their
+     * Get the "priority" of this extension. If multiple extensions are avilable, then they will be called in their
      * priority order, from lowest to highest.
      * <p>
      * Implementers are encouraged to pick a number between {@code -100.0} and {@code 100.0}, where extensions that have
@@ -120,28 +118,5 @@ public abstract class ChannelInitializerExtension {
      * @param channel The channel that was initialized.
      */
     public void postInitializeServerChildChannel(Channel channel) {
-    }
-
-    /**
-     * Provides information about the context where an extension might be used.
-     * Extensions are given instances of this class through the {@link #isApplicable(ApplicableInfo)} method.
-     * <p>
-     * This class is a parameter-object, and is {@code final} so that additional information can be made available in
-     * the future, without breaking backwards compatibility.
-     */
-    public static final class ApplicableInfo {
-        private final Class<?> bootstrapClass;
-
-        ApplicableInfo(Class<?> bootstrapClass) {
-            this.bootstrapClass = bootstrapClass;
-        }
-
-        /**
-         * Get the concrete {@link AbstractBootstrap} subclass that is interested in using this extension.
-         */
-        @SuppressWarnings("unchecked")
-        public <C extends Channel, B extends AbstractBootstrap<B, C>> Class<? extends B> getBootstrapClass() {
-            return (Class<? extends B>) bootstrapClass;
-        }
     }
 }

@@ -20,12 +20,6 @@ import io.netty.channel.ServerChannel;
 import io.netty.util.concurrent.FastThreadLocal;
 
 public class StubChannelInitializerExtension extends ChannelInitializerExtension {
-    static final FastThreadLocal<Boolean> isApplicable = new FastThreadLocal<Boolean>() {
-        @Override
-        protected Boolean initialValue() throws Exception {
-            return Boolean.TRUE;
-        }
-    };
     static final FastThreadLocal<Channel> lastSeenClientChannel = new FastThreadLocal<Channel>();
     static final FastThreadLocal<Channel> lastSeenListenerChannel = new FastThreadLocal<Channel>();
     static final FastThreadLocal<Channel> lastSeenChildChannel = new FastThreadLocal<Channel>();
@@ -34,17 +28,6 @@ public class StubChannelInitializerExtension extends ChannelInitializerExtension
         lastSeenChildChannel.remove();
         lastSeenClientChannel.remove();
         lastSeenListenerChannel.remove();
-        isApplicable.set(Boolean.TRUE);
-    }
-
-    @Override
-    public boolean isApplicable(ApplicableInfo info) {
-        return isApplicable.get();
-    }
-
-    @Override
-    public double priority() {
-        return 0;
     }
 
     @Override

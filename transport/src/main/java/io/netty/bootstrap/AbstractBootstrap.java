@@ -345,15 +345,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     abstract void init(Channel channel) throws Exception;
 
     Collection<ChannelInitializerExtension> getInitializerExtensions() {
-        ChannelInitializerExtensions extensions = ChannelInitializerExtensions.getExtensions();
-        if (extensions.isEmpty()) {
-            // Skip building ApplicableInfo.
-            return Collections.emptyList();
-        }
-
-        ChannelInitializerExtension.ApplicableInfo info =
-                new ChannelInitializerExtension.ApplicableInfo(getClass());
-        return extensions.extensions(info);
+        return ChannelInitializerExtensions.getExtensions().extensions();
     }
 
     private static void doBind0(

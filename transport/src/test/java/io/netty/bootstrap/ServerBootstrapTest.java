@@ -183,7 +183,7 @@ public class ServerBootstrapTest {
     }
 
     @Test
-    void mustCallInitializerExtensionsByDefault() throws Exception {
+    void mustCallInitializerExtensions() throws Exception {
         LocalAddress addr = new LocalAddress(ServerBootstrapTest.class);
         final AtomicReference<Channel> expectedServerChannel = new AtomicReference<Channel>();
         final AtomicReference<Channel> expectedChildChannel = new AtomicReference<Channel>();
@@ -235,43 +235,6 @@ public class ServerBootstrapTest {
         }).sync();
         assertSame(expectedServerChannel.get(), StubChannelInitializerExtension.lastSeenListenerChannel.get());
         assertSame(serverChannel, StubChannelInitializerExtension.lastSeenListenerChannel.get());
-
-        serverChannel.close().syncUninterruptibly();
-        clientChannel.close().syncUninterruptibly();
-        group.shutdownGracefully();
-    }
-
-    @Test
-    void mustNotCallInitializerExtensionsNotApplicable() throws Exception {
-        LocalAddress addr = new LocalAddress(ServerBootstrapTest.class);
-        LocalEventLoopGroup group = new LocalEventLoopGroup(1);
-        final ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group);
-        sb.handler(new ChannelInboundHandlerAdapter());
-        sb.channel(LocalServerChannel.class);
-        sb.childHandler(new ChannelInboundHandlerAdapter());
-
-        StubChannelInitializerExtension.clearThreadLocals();
-        StubChannelInitializerExtension.isApplicable.set(Boolean.FALSE);
-        group.submit(new Runnable() {
-            @Override
-            public void run() {
-                StubChannelInitializerExtension.clearThreadLocals();
-                StubChannelInitializerExtension.isApplicable.set(Boolean.FALSE);
-            }
-        }).sync();
-
-        Channel serverChannel = sb.bind(addr).syncUninterruptibly().channel();
-
-        Bootstrap cb = new Bootstrap();
-        cb.group(group)
-                .channel(LocalChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
-        Channel clientChannel = cb.connect(addr).syncUninterruptibly().channel();
-
-        assertNull(StubChannelInitializerExtension.lastSeenClientChannel.get());
-        assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
-        assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
 
         serverChannel.close().syncUninterruptibly();
         clientChannel.close().syncUninterruptibly();
