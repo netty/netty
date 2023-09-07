@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -144,19 +145,26 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private final boolean allowPartialChunks;
     protected final boolean validateHeaders;
     private final boolean allowDuplicateContentLengths;
-    private final ByteBuf parserScratchBuffer;
     private final HeaderParser headerParser;
     private final LineParser lineParser;
-
+    private final AtomicBoolean resetRequested = new AtomicBoolean();
+    private final int initialBufferSize;
+    private ByteBuf parserScratchBuffer;
     private HttpMessage message;
     private long chunkSize;
     private long contentLength = Long.MIN_VALUE;
-    private final AtomicBoolean resetRequested = new AtomicBoolean();
 
     // These will be updated by splitHeader(...)
     private AsciiString name;
     private String value;
     private LastHttpContent trailer;
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        // We depend on the fact that this buffer is a heap buffer.
+        parserScratchBuffer = ctx.alloc().heapBuffer(initialBufferSize);
+        super.handlerAdded(ctx);
+    }
 
     @Override
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
@@ -247,9 +255,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         checkPositive(maxHeaderSize, "maxHeaderSize");
         checkPositive(maxChunkSize, "maxChunkSize");
 
-        parserScratchBuffer = Unpooled.buffer(initialBufferSize);
-        lineParser = new LineParser(parserScratchBuffer, maxInitialLineLength);
-        headerParser = new HeaderParser(parserScratchBuffer, maxHeaderSize);
+        this.initialBufferSize = checkPositiveOrZero(initialBufferSize, "initialBufferSize");
+        lineParser = new LineParser(maxInitialLineLength);
+        headerParser = new HeaderParser(maxHeaderSize);
         this.maxChunkSize = maxChunkSize;
         this.chunkedSupported = chunkedSupported;
         this.validateHeaders = validateHeaders;
@@ -1027,13 +1035,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return ch == ' ' || ch == 0x09;
     }
 
-    private static class HeaderParser {
-        protected final ByteBuf seq;
+    private class HeaderParser {
         protected final int maxLength;
         int size;
 
-        HeaderParser(ByteBuf seq, int maxLength) {
-            this.seq = seq;
+        HeaderParser(int maxLength) {
             this.maxLength = maxLength;
         }
 
@@ -1068,19 +1074,19 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
             final int newSize = endOfSeqIncluded - readerIndex;
             if (newSize == 0) {
-                seq.clear();
+                parserScratchBuffer.clear();
                 buffer.readerIndex(indexOfLf + 1);
-                return seq;
+                return parserScratchBuffer;
             }
             int size = this.size + newSize;
             if (size > maxLength) {
                 throw newException(maxLength);
             }
             this.size = size;
-            seq.clear();
-            seq.writeBytes(buffer, readerIndex, newSize);
+            parserScratchBuffer.clear();
+            parserScratchBuffer.writeBytes(buffer, readerIndex, newSize);
             buffer.readerIndex(indexOfLf + 1);
-            return seq;
+            return parserScratchBuffer;
         }
 
         public void reset() {
@@ -1094,8 +1100,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private final class LineParser extends HeaderParser {
 
-        LineParser(ByteBuf seq, int maxLength) {
-            super(seq, maxLength);
+        LineParser(int maxLength) {
+            super(maxLength);
         }
 
         @Override
