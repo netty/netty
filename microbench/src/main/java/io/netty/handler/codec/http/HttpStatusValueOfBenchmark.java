@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Netty Project
+ * Copyright 2023 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -47,39 +47,35 @@ public class HttpStatusValueOfBenchmark extends AbstractMicrobenchmark {
     private int size;
     private static final SplittableRandom random = new SplittableRandom();
     private static final DecimalFormat df = new DecimalFormat("##.##%");
-    private CircularLink head;
-    private static final CircularLink polluteDistributeHead;
-    private static final Map<Integer, CircularLink> sizeMap = new HashMap<Integer, CircularLink>();
+    private int[] benchmarkData;
+    private static final int[] polluteData;
+    private static final Map<Integer, int[]> sizeMap = new HashMap<Integer, int[]>();
 
     static {
-        sizeMap.put(1300, initCircularLink(1300));
-        sizeMap.put(2600, initCircularLink(2600));
-        sizeMap.put(5300, initCircularLink(5300));
-        sizeMap.put(11000, initCircularLink(11000));
-        sizeMap.put(23000, initCircularLink(23000));
-        polluteDistributeHead = initCircularLink(16000);
-        fillPolluteDistributeData(16000, polluteDistributeHead);
+        sizeMap.put(1300, new int[1300]);
+        sizeMap.put(2600, new int[2600]);
+        sizeMap.put(5300, new int[5300]);
+        sizeMap.put(11000, new int[11000]);
+        sizeMap.put(23000, new int[23000]);
+        polluteData = new int[16000];
+        fillPolluteData(polluteData);
     }
 
     @Setup(Level.Invocation)
     public void setup(Blackhole bh) {
         // Pollute the branch predictor.
-        CircularLink cl = polluteDistributeHead;
-        do {
-            bh.consume(HttpStatusClass.valueOf(cl.value));
-        } while ((cl = cl.next) != polluteDistributeHead);
-
-        head = sizeMap.get(size);
-        // Fill benchmark data.
-        fillBenchMarkData(size, head);
+        for (int code : polluteData) {
+            bh.consume(HttpStatusClass.valueOf(code));
+        }
+        benchmarkData = sizeMap.get(size);
+        fillBenchMarkData(benchmarkData);
     }
 
     @Benchmark
     public void valueOf(Blackhole bh) {
-        CircularLink cl = head;
-        do {
-            bh.consume(HttpStatusClass.valueOf(cl.value));
-        } while ((cl = cl.next) != head);
+        for (int code : benchmarkData) {
+            bh.consume(HttpStatusClass.valueOf(code));
+        }
     }
 
     public HttpStatusValueOfBenchmark() {
@@ -87,106 +83,88 @@ public class HttpStatusValueOfBenchmark extends AbstractMicrobenchmark {
         super(true);
     }
 
-    private static void fillBenchMarkData(int size, CircularLink head) {
+    private static void fillBenchMarkData(int[] benchMarkData) {
         double c1x = 0, c2x = 0, c3x = 0, c4x = 0, c5x = 0, c6x = 0;
-        CircularLink cl = head;
-        do {
+        for (int i = 0; i < benchMarkData.length;) {
             // [0, 100)
             int code = random.nextInt(0, 100);
             // 38%
             if (code < 38) {
-                cl.value = random.nextInt(100, 200);
+                benchMarkData[i++] = random.nextInt(100, 200);
                 ++c1x;
                 continue;
             }
             // 30%
             if (code < 68) {
-                cl.value = random.nextInt(200, 300);
+                benchMarkData[i++] = random.nextInt(200, 300);
                 ++c2x;
                 continue;
             }
             // 15%
             if (code < 83) {
-                cl.value = random.nextInt(300, 400);
+                benchMarkData[i++] = random.nextInt(300, 400);
                 ++c3x;
                 continue;
             }
             // 10%
             if (code < 93) {
-                cl.value = random.nextInt(400, 500);
+                benchMarkData[i++] = random.nextInt(400, 500);
                 ++c4x;
                 continue;
             }
             // 5%
             if (code < 98) {
-                cl.value = random.nextInt(500, 600);
+                benchMarkData[i++] = random.nextInt(500, 600);
                 ++c5x;
                 continue;
             }
             // 2%
-            cl.value = random.nextInt(-50, 50);
+            benchMarkData[i++] = random.nextInt(-50, 50);
             ++c6x;
-        } while (head != (cl = cl.next));
-//        printCodePercentage("initBenchMarkData", size, c1x, c2x, c3x, c4x, c5x, c6x);
+        }
+//        printCodePercentage("fillBenchMarkData", benchMarkData.length, c1x, c2x, c3x, c4x, c5x, c6x);
     }
 
-    private static void fillPolluteDistributeData(int size, CircularLink head) {
+    private static void fillPolluteData(int[] polluteData) {
         double c1x = 0, c2x = 0, c3x = 0, c4x = 0, c5x = 0, c6x = 0;
-        CircularLink cl = head;
-        do {
+        for (int i = 0; i < polluteData.length;) {
             // [0, 96)
             int code = random.nextInt(0, 96);
             // (100/6) %
             if (code < 16) {
-                cl.value = random.nextInt(100, 200);
+                polluteData[i++] = random.nextInt(100, 200);
                 ++c1x;
                 continue;
             }
             // (100/6) %
             if (code < 32) {
-                cl.value = random.nextInt(200, 300);
+                polluteData[i++] = random.nextInt(200, 300);
                 ++c2x;
                 continue;
             }
             // (100/6) %
             if (code < 48) {
-                cl.value = random.nextInt(300, 400);
+                polluteData[i++] = random.nextInt(300, 400);
                 ++c3x;
                 continue;
             }
             // (100/6) %
             if (code < 64) {
-                cl.value = random.nextInt(400, 500);
+                polluteData[i++] = random.nextInt(400, 500);
                 ++c4x;
                 continue;
             }
             // (100/6) %
             if (code < 80) {
-                cl.value = random.nextInt(500, 600);
+                polluteData[i++] = random.nextInt(500, 600);
                 ++c5x;
                 continue;
             }
             // (100/6) %
-            cl.value = random.nextInt(-50, 50);
+            polluteData[i++] = random.nextInt(-50, 50);
             ++c6x;
-        } while (head != (cl = cl.next));
-//        printCodePercentage("fillEqualDistributeData", size, c1x, c2x, c3x, c4x, c5x, c6x);
-    }
-
-    private static CircularLink initCircularLink(int size) {
-        CircularLink cl = new CircularLink();
-        CircularLink head = cl;
-        for (int i = 0 ; i < size - 1; i++) {
-            cl.next = new CircularLink();
-            cl = cl.next;
         }
-        cl.next = head;
-        return head;
-    }
-
-    private static final class CircularLink {
-        private CircularLink next;
-        private int value;
+//        printCodePercentage("fillPolluteData", polluteData.length, c1x, c2x, c3x, c4x, c5x, c6x);
     }
 
     @Override
