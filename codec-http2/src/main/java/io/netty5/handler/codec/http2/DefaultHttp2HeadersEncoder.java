@@ -29,7 +29,7 @@ import static java.util.Objects.requireNonNull;
 public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2HeadersEncoder.Configuration {
     private final HpackEncoder hpackEncoder;
     private final SensitivityDetector sensitivityDetector;
-    private final Buffer tableSizeChangeOutput = BufferAllocator.onHeapUnpooled().allocate(256);
+    private Buffer tableSizeChangeOutput;
 
     public DefaultHttp2HeadersEncoder() {
         this(NEVER_SENSITIVE);
@@ -69,7 +69,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
         try {
             // If there was a change in the table size, serialize the output from the hpackEncoder
             // resulting from that change.
-            if (tableSizeChangeOutput.readableBytes() > 0) {
+            if (tableSizeChangeOutput != null && tableSizeChangeOutput.readableBytes() > 0) {
                 buffer.writeBytes(tableSizeChangeOutput);
                 tableSizeChangeOutput.resetOffsets();
             }
@@ -84,6 +84,9 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
 
     @Override
     public void maxHeaderTableSize(long max) throws Http2Exception {
+        if (tableSizeChangeOutput == null) {
+            tableSizeChangeOutput =  BufferAllocator.onHeapUnpooled().allocate(256);
+        }
         hpackEncoder.setMaxHeaderTableSize(tableSizeChangeOutput, max);
     }
 
