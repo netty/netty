@@ -68,7 +68,15 @@ public enum HttpStatusClass {
         if (UNKNOWN.contains(code)) {
             return UNKNOWN;
         }
-        return statusArray[code / 100];
+        return statusArray[fast_div100(code)];
+    }
+
+    /**
+     * @param dividend Must >= 0
+     * @return dividend/100
+     */
+    private static int fast_div100(int dividend) {
+        return (int) ((dividend * 1374389535L) >> 37);
     }
 
     /**
