@@ -28,7 +28,7 @@ import io.netty.channel.ServerChannel;
  * <p>
  * Channel initializer extensions are <em>not</em> enabled by default, because of their power to influence Netty
  * pipelines across libraries, frameworks, and use-cases.
- * Extensions must be explicitly enabled by setting the {@link #EXTENSIONS_SYSTEM_PROPERTY} to {@code serviceload}.
+ * Extensions must be explicitly enabled by setting the {@value #EXTENSIONS_SYSTEM_PROPERTY} to {@code serviceload}.
  * <p>
  * All channel initializer extensions that are available on the classpath will be
  * {@linkplain java.util.ServiceLoader#load(Class) service-loaded} and used by all {@link AbstractBootstrap} subclasses.
