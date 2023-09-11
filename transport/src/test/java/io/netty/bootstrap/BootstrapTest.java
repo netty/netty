@@ -485,6 +485,7 @@ public class BootstrapTest {
         assertSame(expectedChannel, StubChannelInitializerExtension.lastSeenClientChannel.get());
         assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
         assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
+        expectedChannel.close().sync();
     }
 
     private static final class DelayedEventLoopGroup extends DefaultEventLoop {
