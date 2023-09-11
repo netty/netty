@@ -308,7 +308,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     /**
      * Reset the read timeout. As this handler is not thread-safe, this method <b>must</b> be called on the event loop.
      */
-    public final void resetReadTimeout() {
+    public void resetReadTimeout() {
         if (readerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
             lastReadTime = ticksInNanos();
             reading = false;
@@ -318,7 +318,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     /**
      * Reset the write timeout. As this handler is not thread-safe, this method <b>must</b> be called on the event loop.
      */
-    public final void resetWriteTimeout() {
+    public void resetWriteTimeout() {
         if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
             lastWriteTime = ticksInNanos();
         }
