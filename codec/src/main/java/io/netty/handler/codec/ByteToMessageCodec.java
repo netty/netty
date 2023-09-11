@@ -63,6 +63,13 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
     }
 
     /**
+     * see {@link #ByteToMessageCodec(TypeParameterMatcher, boolean)} with {@code true} as boolean value.
+     */
+    protected ByteToMessageCodec(TypeParameterMatcher matcher) {
+        this(matcher, true);
+    }
+
+    /**
      * Create a new instance which will try to detect the types to match out of the type parameter of the class.
      *
      * @param preferDirect          {@code true} if a direct {@link ByteBuf} should be tried to be used as target for
@@ -84,8 +91,20 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
      *                              {@link ByteBuf}, which is backed by an byte array.
      */
     protected ByteToMessageCodec(Class<? extends I> outboundMessageType, boolean preferDirect) {
+        this(TypeParameterMatcher.get(outboundMessageType), preferDirect);
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param outboundMsgMatcher    The matcher of messages that are compatible with I
+     * @param preferDirect          {@code true} if a direct {@link ByteBuf} should be tried to be used as target for
+     *                              the encoded messages. If {@code false} is used it will allocate a heap
+     *                              {@link ByteBuf}, which is backed by an byte array.
+     */
+    protected ByteToMessageCodec(TypeParameterMatcher outboundMsgMatcher, boolean preferDirect) {
         ensureNotSharable();
-        outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
+        this.outboundMsgMatcher = outboundMsgMatcher;
         encoder = new Encoder(preferDirect);
     }
 

@@ -66,7 +66,16 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
      * @param inboundMessageType    The type of messages to match and so decode
      */
     protected MessageToMessageDecoder(Class<? extends I> inboundMessageType) {
-        matcher = TypeParameterMatcher.get(inboundMessageType);
+        this(TypeParameterMatcher.get(inboundMessageType));
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param matcher    The matcher of messages to decode that are compatible with I
+     */
+    protected MessageToMessageDecoder(TypeParameterMatcher matcher) {
+        this.matcher = matcher;
     }
 
     /**

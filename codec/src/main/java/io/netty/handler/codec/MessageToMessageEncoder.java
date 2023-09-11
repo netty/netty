@@ -71,6 +71,15 @@ public abstract class MessageToMessageEncoder<I> extends ChannelOutboundHandlerA
     }
 
     /**
+     * Create a new instance
+     *
+     * @param matcher    The matcher of messages to encode that are compatible with I
+     */
+    protected MessageToMessageEncoder(TypeParameterMatcher matcher) {
+        this.matcher = matcher;
+    }
+
+    /**
      * Returns {@code true} if the given message should be handled. If {@code false} it will be passed to the next
      * {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
      */

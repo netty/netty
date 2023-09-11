@@ -51,8 +51,17 @@ public abstract class AbstractAddressResolver<T extends SocketAddress> implement
      * @param addressType the type of the {@link SocketAddress} supported by this resolver
      */
     protected AbstractAddressResolver(EventExecutor executor, Class<? extends T> addressType) {
+        this(executor, TypeParameterMatcher.get(addressType));
+    }
+
+    /**
+     * @param executor the {@link EventExecutor} which is used to notify the listeners of the {@link Future} returned
+     *                 by {@link #resolve(SocketAddress)}
+     * @param matcher  The matcher of messages that are compatible with T
+     */
+    protected AbstractAddressResolver(EventExecutor executor, TypeParameterMatcher matcher) {
         this.executor = checkNotNull(executor, "executor");
-        this.matcher = TypeParameterMatcher.get(addressType);
+        this.matcher = matcher;
     }
 
     /**

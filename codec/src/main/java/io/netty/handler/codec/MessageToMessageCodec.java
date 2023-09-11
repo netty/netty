@@ -102,8 +102,18 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
      */
     protected MessageToMessageCodec(
             Class<? extends INBOUND_IN> inboundMessageType, Class<? extends OUTBOUND_IN> outboundMessageType) {
-        inboundMsgMatcher = TypeParameterMatcher.get(inboundMessageType);
-        outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
+        this(TypeParameterMatcher.get(inboundMessageType), TypeParameterMatcher.get(outboundMessageType));
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param inboundMsgMatcher    The matcher of messages to decode that are compatible with INBOUND_IN
+     * @param outboundMsgMatcher   The matcher of messages to encode that are compatible with OUTBOUND_IN
+     */
+    protected MessageToMessageCodec(TypeParameterMatcher inboundMsgMatcher, TypeParameterMatcher outboundMsgMatcher) {
+        this.inboundMsgMatcher = inboundMsgMatcher;
+        this.outboundMsgMatcher = outboundMsgMatcher;
     }
 
     @Override

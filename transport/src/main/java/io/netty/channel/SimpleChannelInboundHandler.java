@@ -70,6 +70,13 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
     }
 
     /**
+     * see {@link #SimpleChannelInboundHandler(TypeParameterMatcher, boolean)} with {@code true} as boolean value.
+     */
+    protected SimpleChannelInboundHandler(TypeParameterMatcher matcher) {
+        this(matcher, true);
+    }
+
+    /**
      * Create a new instance
      *
      * @param inboundMessageType    The type of messages to match
@@ -77,7 +84,18 @@ public abstract class SimpleChannelInboundHandler<I> extends ChannelInboundHandl
      *                              {@link ReferenceCountUtil#release(Object)}.
      */
     protected SimpleChannelInboundHandler(Class<? extends I> inboundMessageType, boolean autoRelease) {
-        matcher = TypeParameterMatcher.get(inboundMessageType);
+        this(TypeParameterMatcher.get(inboundMessageType), autoRelease);
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param matcher               The matcher of messages that are compatible with I
+     * @param autoRelease           {@code true} if handled messages should be released automatically by passing them to
+     *                              {@link ReferenceCountUtil#release(Object)}.
+     */
+    protected SimpleChannelInboundHandler(TypeParameterMatcher matcher, boolean autoRelease) {
+        this.matcher = matcher;
         this.autoRelease = autoRelease;
     }
 
