@@ -21,10 +21,11 @@ import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OperationsPerInvocation;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
-import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.profile.LinuxPerfNormProfiler;
 import org.openjdk.jmh.profile.ProfilerException;
@@ -32,48 +33,86 @@ import org.openjdk.jmh.profile.ProfilerFactory;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.ProfilerConfig;
 import java.text.DecimalFormat;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
 
 @BenchmarkMode(Mode.Throughput)
 @Warmup(iterations = 10, time = 1)
 @Measurement(iterations = 10, time = 1)
-@OutputTimeUnit(TimeUnit.MILLISECONDS)
+@OutputTimeUnit(TimeUnit.MICROSECONDS)
 @SuppressJava6Requirement(reason = "suppress")
 public class HttpStatusValueOfBenchmark extends AbstractMicrobenchmark {
-    @Param({"1300", "2600", "5300", "11000", "23000"})
-    private int size;
     private static final SplittableRandom random = new SplittableRandom();
     private static final DecimalFormat df = new DecimalFormat("##.##%");
-    private int[] benchmarkData;
-    private static final int[] polluteData;
-    private static final Map<Integer, int[]> sizeMap = new HashMap<Integer, int[]>();
-
-    static {
-        sizeMap.put(1300, new int[1300]);
-        sizeMap.put(2600, new int[2600]);
-        sizeMap.put(5300, new int[5300]);
-        sizeMap.put(11000, new int[11000]);
-        sizeMap.put(23000, new int[23000]);
-        polluteData = new int[16000];
-        fillPolluteData(polluteData);
-    }
+    private static final int[] data_1300 = new int[1300];
+    private static final int[] data_2600 = new int[2600];
+    private static final int[] data_5300 = new int[5300];
+    private static final int[] data_11000 = new int[11000];
+    private static final int[] data_23000 = new int[23000];
+    private static final boolean ENABLE_POLLUTE = false;
 
     @Setup(Level.Invocation)
-    public void setup(Blackhole bh) {
-        // Pollute the branch predictor.
-        for (int code : polluteData) {
-            bh.consume(HttpStatusClass.valueOf(code));
+    public void setup(Blackhole bh, BenchmarkParams benchmarkParams) {
+        switch (benchmarkParams.getOpsPerInvocation()) {
+            case 1300 :
+                polluteBranchIfEnabled(bh, data_1300);
+                fillBenchMarkData(data_1300);
+                break;
+            case 2600 :
+                polluteBranchIfEnabled(bh, data_2600);
+                fillBenchMarkData(data_2600);
+                break;
+            case 5300 :
+                polluteBranchIfEnabled(bh, data_5300);
+                fillBenchMarkData(data_5300);
+                break;
+            case 11000 :
+                polluteBranchIfEnabled(bh, data_11000);
+                fillBenchMarkData(data_11000);
+                break;
+            case 23000 :
+                polluteBranchIfEnabled(bh, data_23000);
+                fillBenchMarkData(data_23000);
+                break;
         }
-        benchmarkData = sizeMap.get(size);
-        fillBenchMarkData(benchmarkData);
     }
 
     @Benchmark
-    public void valueOf(Blackhole bh) {
-        for (int code : benchmarkData) {
+    @OperationsPerInvocation(1300)
+    public void valueOf_1300(Blackhole bh) {
+        for (int code : data_1300) {
+            bh.consume(HttpStatusClass.valueOf(code));
+        }
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(2600)
+    public void valueOf_2600(Blackhole bh) {
+        for (int code : data_2600) {
+            bh.consume(HttpStatusClass.valueOf(code));
+        }
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(5300)
+    public void valueOf_5300(Blackhole bh) {
+        for (int code : data_5300) {
+            bh.consume(HttpStatusClass.valueOf(code));
+        }
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(11000)
+    public void valueOf_11000(Blackhole bh) {
+        for (int code : data_11000) {
+            bh.consume(HttpStatusClass.valueOf(code));
+        }
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(23000)
+    public void valueOf_23000(Blackhole bh) {
+        for (int code : data_23000) {
             bh.consume(HttpStatusClass.valueOf(code));
         }
     }
@@ -81,6 +120,15 @@ public class HttpStatusValueOfBenchmark extends AbstractMicrobenchmark {
     public HttpStatusValueOfBenchmark() {
         // disable assertion
         super(true);
+    }
+
+    private static void polluteBranchIfEnabled(Blackhole bh, int[] polluteData) {
+        if (ENABLE_POLLUTE) {
+            fillPolluteData(polluteData);
+            for (int code : polluteData) {
+                bh.consume(HttpStatusClass.valueOf(code));
+            }
+        }
     }
 
     private static void fillBenchMarkData(int[] benchMarkData) {
