@@ -67,6 +67,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
     private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
     private volatile ChannelHandler handler;
+    private volatile ClassLoader extensionsClassLoader;
 
     AbstractBootstrap() {
         // Disallow extending from a different package.
@@ -81,6 +82,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             options.putAll(bootstrap.options);
         }
         attrs.putAll(bootstrap.attrs);
+        extensionsClassLoader = bootstrap.extensionsClassLoader;
     }
 
     /**
@@ -194,6 +196,19 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         } else {
             attrs.put(key, value);
         }
+        return self();
+    }
+
+    /**
+     * Load {@link ChannelInitializerExtension}s using the given class loader.
+     * <p>
+     * By default, the extensions will be loaded by the same class loader that loaded this bootstrap class.
+     *
+     * @param classLoader The class loader to use for loading {@link ChannelInitializerExtension}s.
+     * @return This bootstrap.
+     */
+    public B extensionsClassLoader(ClassLoader classLoader) {
+        extensionsClassLoader = classLoader;
         return self();
     }
 
@@ -345,7 +360,11 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     abstract void init(Channel channel) throws Exception;
 
     Collection<ChannelInitializerExtension> getInitializerExtensions() {
-        return ChannelInitializerExtensions.getExtensions().extensions();
+        ClassLoader loader = extensionsClassLoader;
+        if (loader == null) {
+            loader = getClass().getClassLoader();
+        }
+        return ChannelInitializerExtensions.getExtensions().extensions(loader);
     }
 
     private static void doBind0(

@@ -20,6 +20,7 @@ import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -51,66 +52,83 @@ abstract class ChannelInitializerExtensions {
                 }
                 String extensionProp = SystemPropertyUtil.get(ChannelInitializerExtension.EXTENSIONS_SYSTEM_PROPERTY);
                 logger.debug("-Dio.netty.bootstrap.extensions: {}", extensionProp);
-                final Collection<ChannelInitializerExtension> extensions;
                 if ("serviceload".equalsIgnoreCase(extensionProp)) {
-                    extensions = serviceLoadExtensions(InternalLogLevel.DEBUG);
+                    impl = new ServiceLoadingExtensions(InternalLogLevel.DEBUG, true);
                 } else if ("log".equalsIgnoreCase(extensionProp)) {
-                    serviceLoadExtensions(InternalLogLevel.INFO);
-                    extensions = Collections.emptyList();
+                    impl = new ServiceLoadingExtensions(InternalLogLevel.INFO, false);
                 } else {
-                    extensions = Collections.emptyList();
+                    impl = new EmptyExtensions();
                 }
-                implementation = impl = new LoadedExtensions(extensions);
+                implementation = impl;
             }
         }
         return impl;
     }
 
-    private static Collection<ChannelInitializerExtension> serviceLoadExtensions(InternalLogLevel logLevel) {
-        ServiceLoader<ChannelInitializerExtension> loader = ServiceLoader.load(ChannelInitializerExtension.class);
-        ArrayList<ChannelInitializerExtension> extensions = new ArrayList<ChannelInitializerExtension>();
-        for (ChannelInitializerExtension extension : loader) {
-            logger.log(logLevel, "Loaded extension: {}", extension.getClass());
-            extensions.add(extension);
-        }
-        if (!extensions.isEmpty()) {
-            Collections.sort(extensions, new Comparator<ChannelInitializerExtension>() {
-                @Override
-                public int compare(ChannelInitializerExtension a, ChannelInitializerExtension b) {
-                    return Double.compare(a.priority(), b.priority());
-                }
-            });
-            return Collections.unmodifiableList(extensions);
-        }
-        return Collections.emptyList();
-    }
-
-    /**
-     * @return {@code true} if there are no extensions, otherwise {@code false}.
-     */
-    abstract boolean isEmpty();
-
     /**
      * Get the list of available extensions. The list is unmodifiable.
      */
-    abstract Collection<ChannelInitializerExtension> extensions();
+    abstract Collection<ChannelInitializerExtension> extensions(ClassLoader cl);
 
-    private static final class LoadedExtensions extends ChannelInitializerExtensions {
-        private final Collection<ChannelInitializerExtension> extensions;
-
-        private LoadedExtensions(Collection<ChannelInitializerExtension> extensions) {
-            this.extensions = extensions;
-        }
-
+    private static final class EmptyExtensions extends ChannelInitializerExtensions {
         @Override
-        boolean isEmpty() {
-            return extensions.isEmpty();
+        Collection<ChannelInitializerExtension> extensions(ClassLoader cl) {
+            return Collections.emptyList();
+        }
+    }
+
+    private static final class ServiceLoadingExtensions extends ChannelInitializerExtensions {
+        private final InternalLogLevel logLevel;
+        private final boolean loadAndCache;
+
+        private WeakReference<ClassLoader> classLoader;
+        private Collection<ChannelInitializerExtension> extensions;
+
+        ServiceLoadingExtensions(InternalLogLevel logLevel, boolean loadAndCache) {
+            this.logLevel = logLevel;
+            this.loadAndCache = loadAndCache;
         }
 
         @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
         @Override
-        Collection<ChannelInitializerExtension> extensions() {
+        synchronized Collection<ChannelInitializerExtension> extensions(ClassLoader cl) {
+            ClassLoader context = Thread.currentThread().getContextClassLoader();
+            ClassLoader configured = classLoader == null ? null : classLoader.get();
+            if (configured == null || configured != cl && configured != context) {
+                Collection<ChannelInitializerExtension> loaded = serviceLoadExtensions(logLevel, cl);
+                if (loaded.isEmpty()) {
+                    // If we found no extensions, then try the context-specific class loader as well.
+                    // Frameworks like https://aries.apache.org/modules/spi-fly.html use the context class loader.
+                    cl = context;
+                    loaded = serviceLoadExtensions(logLevel, cl);
+                }
+                classLoader = new WeakReference<ClassLoader>(cl);
+                extensions = loadAndCache ? loaded : Collections.<ChannelInitializerExtension>emptyList();
+            }
             return extensions;
+        }
+
+        private static Collection<ChannelInitializerExtension> serviceLoadExtensions(
+                InternalLogLevel logLevel, ClassLoader cl) {
+            ArrayList<ChannelInitializerExtension> extensions = new ArrayList<ChannelInitializerExtension>();
+
+            ServiceLoader<ChannelInitializerExtension> loader = ServiceLoader.load(
+                    ChannelInitializerExtension.class, cl);
+            for (ChannelInitializerExtension extension : loader) {
+                logger.log(logLevel, "Loaded extension: {}", extension.getClass());
+                extensions.add(extension);
+            }
+
+            if (!extensions.isEmpty()) {
+                Collections.sort(extensions, new Comparator<ChannelInitializerExtension>() {
+                    @Override
+                    public int compare(ChannelInitializerExtension a, ChannelInitializerExtension b) {
+                        return Double.compare(a.priority(), b.priority());
+                    }
+                });
+                return Collections.unmodifiableList(extensions);
+            }
+            return Collections.emptyList();
         }
     }
 }
