@@ -25,6 +25,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.List;
+import java.util.Map.Entry;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
@@ -399,6 +400,15 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     } catch (IllegalArgumentException e) {
                         throw streamError(stream.id(), PROTOCOL_ERROR, e,
                                 "Multiple content-length headers received");
+                    }
+                }
+            } else {
+                // Need to check trailers don't contain pseudo headers. According to RFC
+                // "Pseudo-header fields MUST NOT appear in trailers"
+                for (Entry<CharSequence, CharSequence> entry : headers) {
+                    if (entry.getKey().charAt(0) == ':') {
+                        throw streamError(stream.id(), PROTOCOL_ERROR,
+                                "Found invalid Pseudo-Header in trailers");
                     }
                 }
             }
