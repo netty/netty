@@ -24,6 +24,7 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -403,12 +404,15 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     }
                 }
             } else {
-                // Need to check trailers don't contain pseudo headers. According to RFC
-                // "Pseudo-header fields MUST NOT appear in trailers"
-                for (CharSequence name : headers.names()) {
-                    if (Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(name)) {
-                        throw streamError(stream.id(), PROTOCOL_ERROR,
-                                "Found invalid Pseudo-Header in trailers");
+                // Need to check trailers don't contain pseudo headers. According to RFC 9113
+                // Trailers MUST NOT include pseudo-header fields (Section 8.3).
+                if (!headers.isEmpty()) {
+                    for (Iterator<Entry<CharSequence, CharSequence>> iterator =
+                        headers.iterator(); iterator.hasNext();) {
+                        if (Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(iterator.next().getKey())) {
+                            throw streamError(stream.id(), PROTOCOL_ERROR,
+                                    "Found invalid Pseudo-Header in trailers");
+                        }
                     }
                 }
             }

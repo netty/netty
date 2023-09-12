@@ -1276,7 +1276,7 @@ public class Http2ConnectionRoundtripTest {
 
     private static Http2Headers dummyTrailers() {
         return new DefaultHttp2Headers(false)
-        .add(randomString(), randomString());
+        .add("header-" + randomString(), randomString());
     }
 
     private static void mockFlowControl(Http2FrameListener listener) throws Http2Exception {
