@@ -405,8 +405,8 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             } else {
                 // Need to check trailers don't contain pseudo headers. According to RFC
                 // "Pseudo-header fields MUST NOT appear in trailers"
-                for (Entry<CharSequence, CharSequence> entry : headers) {
-                    if (entry.getKey().charAt(0) == ':') {
+                for (CharSequence name : headers.names()) {
+                    if (Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(name)) {
                         throw streamError(stream.id(), PROTOCOL_ERROR,
                                 "Found invalid Pseudo-Header in trailers");
                     }
