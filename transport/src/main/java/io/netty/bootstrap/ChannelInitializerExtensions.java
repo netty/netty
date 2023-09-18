@@ -92,16 +92,9 @@ abstract class ChannelInitializerExtensions {
         @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
         @Override
         synchronized Collection<ChannelInitializerExtension> extensions(ClassLoader cl) {
-            ClassLoader context = Thread.currentThread().getContextClassLoader();
             ClassLoader configured = classLoader == null ? null : classLoader.get();
-            if (configured == null || configured != cl && configured != context) {
+            if (configured == null || configured != cl) {
                 Collection<ChannelInitializerExtension> loaded = serviceLoadExtensions(logLevel, cl);
-                if (loaded.isEmpty()) {
-                    // If we found no extensions, then try the context-specific class loader as well.
-                    // Frameworks like https://aries.apache.org/modules/spi-fly.html use the context class loader.
-                    cl = context;
-                    loaded = serviceLoadExtensions(logLevel, cl);
-                }
                 classLoader = new WeakReference<ClassLoader>(cl);
                 extensions = loadAndCache ? loaded : Collections.<ChannelInitializerExtension>emptyList();
             }
