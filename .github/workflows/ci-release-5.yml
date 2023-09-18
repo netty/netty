@@ -117,15 +117,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
-      # Enable caching of Docker layers
-      - uses: jpribyl/action-docker-layer-caching@v0.1.1
-        continue-on-error: true
-        with:
-          key: ${{ runner.os }}-staging-docker-cache-${{ matrix.setup }}-{hash}
-          restore-keys: |
-            ${{ runner.os }}-staging-docker-cache-${{ matrix.setup }}-
-            ${{ runner.os }}-staging-docker-cache-
-
       - uses: s4u/maven-settings-action@v2.2.0
         with:
           servers: |
