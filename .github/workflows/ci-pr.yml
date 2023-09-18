@@ -32,13 +32,6 @@ jobs:
   verify-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
       - uses: actions/checkout@v3
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -120,13 +113,6 @@ jobs:
       packages: write  # for uraimo/run-on-arch-action to cache docker images
     needs: verify-pr
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
       - uses: actions/checkout@v3
 
       # Cache .m2/repository
@@ -194,13 +180,6 @@ jobs:
     name: ${{ matrix.setup }} build
     needs: verify-pr
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
       - uses: actions/checkout@v3
 
       # Cache .m2/repository
