@@ -33,25 +33,62 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
      */
     private int hash;
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, and URI.
+     */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
-        this(httpVersion, method, uri, Unpooled.buffer(0));
+        this(httpVersion, method, uri, Unpooled.buffer(0),
+                HttpHeadersBuilder.DEFAULT, HttpHeadersBuilder.DEFAULT_TRAILER);
     }
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, and contents.
+     */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
-        this(httpVersion, method, uri, content, true);
+        this(httpVersion, method, uri, content,
+                HttpHeadersBuilder.DEFAULT, HttpHeadersBuilder.DEFAULT_TRAILER);
     }
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, and optional validation.
+     * @deprecated Use the {@link #DefaultFullHttpRequest(HttpVersion, HttpMethod, String, ByteBuf,
+     * HttpHeadersFactory, HttpHeadersFactory)} constructor instead.
+     */
+    @Deprecated
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
-        this(httpVersion, method, uri, Unpooled.buffer(0), validateHeaders);
+        this(httpVersion, method, uri, Unpooled.buffer(0),
+                HttpHeaders.DEFAULT_HEADER_FACTORY.withValidation(validateHeaders),
+                HttpHeaders.DEFAULT_TRAILER_FACTORY.withValidation(validateHeaders));
     }
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, contents, and optional validation.
+     * @deprecated Use the {@link #DefaultFullHttpRequest(HttpVersion, HttpMethod, String, ByteBuf,
+     * HttpHeadersFactory, HttpHeadersFactory)} constructor instead.
+     */
+    @Deprecated
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
                                   ByteBuf content, boolean validateHeaders) {
-        super(httpVersion, method, uri, validateHeaders);
-        this.content = checkNotNull(content, "content");
-        trailingHeader = new DefaultHttpHeaders(validateHeaders);
+        this(httpVersion, method, uri, content,
+                HttpHeaders.DEFAULT_HEADER_FACTORY.withValidation(validateHeaders),
+                HttpHeaders.DEFAULT_TRAILER_FACTORY.withValidation(validateHeaders));
     }
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, contents,
+     * and factories for creating headers and trailers.
+     * <p>
+     * The recommended default header factory is {@link HttpHeaders#DEFAULT_HEADER_FACTORY},
+     * and the recommended default trailer factory is {@link HttpHeaders#DEFAULT_TRAILER_FACTORY}.
+     */
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
+            ByteBuf content, HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
+        this(httpVersion, method, uri, content, headersFactory.createHeaders(), trailersFactory.createHeaders());
+    }
+
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, contents, and header and trailer objects.
+     */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
             ByteBuf content, HttpHeaders headers, HttpHeaders trailingHeader) {
         super(httpVersion, method, uri, headers);

@@ -233,8 +233,10 @@ public class HttpRequestResponseBenchmark extends AbstractMicrobenchmark {
             private void writeResponse(ChannelHandlerContext ctx, ByteBuf buf, CharSequence contentType,
                                        CharSequence contentLength) {
                 // Build the response object.
-                FullHttpResponse response =
-                        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf, false);
+                FullHttpResponse response = new DefaultFullHttpResponse(
+                        HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf,
+                        HttpHeaders.DEFAULT_HEADER_FACTORY.withValidation(false),
+                        HttpHeaders.DEFAULT_TRAILER_FACTORY.withValidation(false));
                 HttpHeaders headers = response.headers();
                 headers.set(CONTENT_TYPE_ENTITY, contentType);
                 headers.set(SERVER_ENTITY, SERVER_NAME);

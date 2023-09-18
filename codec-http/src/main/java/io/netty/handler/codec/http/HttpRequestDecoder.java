@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.AsciiString;
 
@@ -74,6 +75,18 @@ import io.netty.util.AsciiString;
  *     the readable bytes are greater or equal to the chunk size.</td>
  * </tr>
  * </table>
+ *
+ * <h3>Header Validation</h3>
+ *
+ * It is recommended to always enable header validation.
+ * <p>
+ * Without header validation, your system can become vulnerable to
+ * <a href="https://cwe.mitre.org/data/definitions/113.html">
+ *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+ * </a>.
+ * <p>
+ * This recommendation stands even when both peers in the HTTP exchange are trusted,
+ * as it helps with defence-in-depth.
  */
 public class HttpRequestDecoder extends HttpObjectDecoder {
 
@@ -118,14 +131,27 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
      */
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize));
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpRequestDecoder(HttpDecoderConfig)} constructor,
+     * to always have header validation enabled.
+     */
+    @Deprecated
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
         super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED, validateHeaders);
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpRequestDecoder(HttpDecoderConfig)} constructor,
+     * to always have header validation enabled.
+     */
+    @Deprecated
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
             int initialBufferSize) {
@@ -133,6 +159,11 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
               initialBufferSize);
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpRequestDecoder(HttpDecoderConfig)} constructor,
+     * to always have header validation enabled.
+     */
+    @Deprecated
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
             int initialBufferSize, boolean allowDuplicateContentLengths) {
@@ -140,6 +171,11 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
               initialBufferSize, allowDuplicateContentLengths);
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpRequestDecoder(HttpDecoderConfig)} constructor,
+     * to always have header validation enabled.
+     */
+    @Deprecated
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
             int initialBufferSize, boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
@@ -147,11 +183,18 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
               initialBufferSize, allowDuplicateContentLengths, allowPartialChunks);
     }
 
+    /**
+     * Creates a new instance with the specified configuration.
+     */
+    public HttpRequestDecoder(HttpDecoderConfig config) {
+        super(config);
+    }
+
     @Override
     protected HttpMessage createMessage(String[] initialLine) throws Exception {
         return new DefaultHttpRequest(
                 HttpVersion.valueOf(initialLine[2]),
-                HttpMethod.valueOf(initialLine[0]), initialLine[1], validateHeaders);
+                HttpMethod.valueOf(initialLine[0]), initialLine[1], headersFactory);
     }
 
     @Override
@@ -294,7 +337,8 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
 
     @Override
     protected HttpMessage createInvalidMessage() {
-        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request", validateHeaders);
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request",
+                Unpooled.buffer(0), headersFactory, trailersFactory);
     }
 
     @Override

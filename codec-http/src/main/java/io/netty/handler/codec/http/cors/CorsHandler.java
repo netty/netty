@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.cors;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -96,7 +97,12 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) {
-        final HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), OK, true, true);
+        final HttpResponse response = new DefaultFullHttpResponse(
+                request.protocolVersion(),
+                OK,
+                Unpooled.buffer(0),
+                HttpHeaders.DEFAULT_HEADER_FACTORY.withCombiningHeaders(true),
+                HttpHeaders.DEFAULT_TRAILER_FACTORY.withCombiningHeaders(true));
         if (setOrigin(response)) {
             setAllowMethods(response);
             setAllowHeaders(response);

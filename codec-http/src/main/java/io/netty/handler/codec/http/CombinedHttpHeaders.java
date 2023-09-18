@@ -16,6 +16,8 @@
 package io.netty.handler.codec.http;
 
 import io.netty.handler.codec.DefaultHeaders;
+import io.netty.handler.codec.DefaultHeaders.NameValidator;
+import io.netty.handler.codec.DefaultHeaders.ValueValidator;
 import io.netty.handler.codec.Headers;
 import io.netty.handler.codec.ValueConverter;
 import io.netty.util.HashingStrategy;
@@ -28,6 +30,7 @@ import java.util.Map;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.SET_COOKIE;
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.StringUtil.COMMA;
 import static io.netty.util.internal.StringUtil.unescapeCsvFields;
 
@@ -37,9 +40,26 @@ import static io.netty.util.internal.StringUtil.unescapeCsvFields;
  * Please refer to section <a href="https://tools.ietf.org/html/rfc7230#section-3.2.2">RFC 7230, 3.2.2</a>.
  */
 public class CombinedHttpHeaders extends DefaultHttpHeaders {
+    /**
+     * Create a combined HTTP header object, with optional validation.
+     *
+     * @param validate Should Netty validate header values to ensure they aren't malicious.
+     * @deprecated Prefer instead to configuring a {@link HttpHeadersFactory}
+     * by calling {@link HttpHeadersBuilder#withCombiningHeaders(boolean) withCombiningHeaders(true)}
+     * on {@link HttpHeaders#DEFAULT_HEADER_FACTORY}.
+     */
+    @Deprecated
     public CombinedHttpHeaders(boolean validate) {
         super(new CombinedHttpHeadersImpl(CASE_INSENSITIVE_HASHER, valueConverter(), nameValidator(validate),
                 valueValidator(validate)));
+    }
+
+    CombinedHttpHeaders(NameValidator<CharSequence> nameValidator, ValueValidator<CharSequence> valueValidator) {
+        super(new CombinedHttpHeadersImpl(
+                CASE_INSENSITIVE_HASHER,
+                valueConverter(),
+                checkNotNull(nameValidator, "nameValidator"),
+                checkNotNull(valueValidator, "valueValidator")));
     }
 
     @Override
