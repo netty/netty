@@ -106,6 +106,8 @@ public final class DnsNameResolverBuilder {
 
     /**
      * Sets the {@link ChannelFactory} that will create a {@link DatagramChannel}.
+     * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
+     * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
      *
      * @param channelFactory the {@link ChannelFactory}
      * @return {@code this}
@@ -118,6 +120,8 @@ public final class DnsNameResolverBuilder {
     /**
      * Sets the {@link ChannelFactory} as a {@link ReflectiveChannelFactory} of this type.
      * Use as an alternative to {@link #channelFactory(ChannelFactory)}.
+     * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
+     * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
      *
      * @param channelType the type
      * @return {@code this}
@@ -130,8 +134,12 @@ public final class DnsNameResolverBuilder {
      * Sets the {@link ChannelFactory} that will create a {@link SocketChannel} for
      * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
      *
+     * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
+     * {@link ChannelFactory} for this method.
+     *
      * @param channelFactory the {@link ChannelFactory} or {@code null}
      *                       if <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should not be supported.
+     *                       By default, TCP fallback is not enabled.
      * @return {@code this}
      */
     public DnsNameResolverBuilder socketChannelFactory(ChannelFactory<? extends SocketChannel> channelFactory) {
@@ -144,8 +152,11 @@ public final class DnsNameResolverBuilder {
      * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
      * Use as an alternative to {@link #socketChannelFactory(ChannelFactory)}.
      *
+     * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
+     * {@code channelType} for this method.
+     *
      * @param channelType the type or {@code null} if <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a>
-     *                    should not be supported.
+     *                    should not be supported. By default, TCP fallback is not enabled.
      * @return {@code this}
      */
     public DnsNameResolverBuilder socketChannelType(Class<? extends SocketChannel> channelType) {
