@@ -43,14 +43,6 @@ jobs:
           restore-keys: |
             install-jars-linux-aarch64-maven-cache-
 
-      # Enable caching of Docker layers
-      - uses: jpribyl/action-docker-layer-caching@v0.1.1
-        continue-on-error: true
-        with:
-          key: pr-linux-x86_64-docker-cache-{hash}
-          restore-keys: |
-            pr-linux-x86_64-docker-cache-
-
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-7-cross.yaml build
 
@@ -97,6 +89,7 @@ jobs:
           install: |
             apt-get update -q -y
             apt-get install -q -y openjdk-11-jdk
+            apt-get clean -q -y
 
           # Check if we can load the native code on aarch64
           run: |

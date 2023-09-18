@@ -65,5 +65,10 @@ RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
     rm -rf $HOME/.sdkman/archives/* && \
     rm -rf $HOME/.sdkman/tmp/*"
 
+# Cleanup
+RUN rm -rf $SOURCE_DIR
+RUN yum clean all && \
+    rm -rf /var/cache/yum
+
 # Prepare our own build
 ENV PATH /root/.sdkman/candidates/maven/current:$PATH

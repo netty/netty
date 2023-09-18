@@ -44,14 +44,6 @@ jobs:
           restore-keys: |
             build-linux-x86_64-maven-cache-
 
-      # Enable caching of Docker layers
-      - uses: jpribyl/action-docker-layer-caching@v0.1.1
-        continue-on-error: true
-        with:
-          key: build-linux-x86_64-docker-cache-{hash}
-          restore-keys: |
-            build-linux-x86_64-docker-cache-
-
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml build
 
@@ -83,14 +75,6 @@ jobs:
           key: build-linux-aarch64-maven-cache-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             build-linux-aarch64-maven-cache-
-
-      # Enable caching of Docker layers
-      - uses: jpribyl/action-docker-layer-caching@v0.1.1
-        continue-on-error: true
-        with:
-          key: build-linux-aarch64-docker-cache-{hash}
-          restore-keys: |
-            build-linux-aarch64-docker-cache-
 
       - name: Build docker image
         run: docker-compose -f docker/docker-compose.centos-7-cross.yaml build
