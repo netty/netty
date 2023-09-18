@@ -280,7 +280,11 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         Collection<ChannelInitializerExtension> extensions = getInitializerExtensions();
         if (!extensions.isEmpty()) {
             for (ChannelInitializerExtension extension : extensions) {
-                extension.postInitializeClientChannel(channel);
+                try {
+                    extension.postInitializeClientChannel(channel);
+                } catch (Exception e) {
+                    logger.warn("Exception thrown from postInitializeClientChannel", e);
+                }
             }
         }
     }

@@ -161,8 +161,13 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             }
         });
         if (!extensions.isEmpty() && channel instanceof ServerChannel) {
+            ServerChannel serverChannel = (ServerChannel) channel;
             for (ChannelInitializerExtension extension : extensions) {
-                extension.postInitializeServerListenerChannel((ServerChannel) channel);
+                try {
+                    extension.postInitializeServerListenerChannel(serverChannel);
+                } catch (Exception e) {
+                    logger.warn("Exception thrown from postInitializeServerListenerChannel", e);
+                }
             }
         }
     }
@@ -224,7 +229,11 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
             if (!extensions.isEmpty()) {
                 for (ChannelInitializerExtension extension : extensions) {
-                    extension.postInitializeServerChildChannel(child);
+                    try {
+                        extension.postInitializeServerChildChannel(child);
+                    } catch (Exception e) {
+                        logger.warn("Exception thrown from postInitializeServerChildChannel", e);
+                    }
                 }
             }
 
