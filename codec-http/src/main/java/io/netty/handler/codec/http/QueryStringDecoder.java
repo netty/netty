@@ -234,7 +234,7 @@ public class QueryStringDecoder {
             for (Entry<String, List<String>> param : params.entrySet()) {
                 final List<String> values = param.getValue();
                 for (int i = 0; i < values.size(); i++) {
-                    collector.accept(param.getKey(), values.get(i), accumulator);
+                    collector.collect(param.getKey(), values.get(i), accumulator);
                 }
             }
         } else {
@@ -416,7 +416,7 @@ public class QueryStringDecoder {
         }
     }
 
-    private static int indexOf(String s, int from, int to, int ch) {
+    private static int indexOf(CharSequence s, int from, int to, int ch) {
         for (int i = from; i < to; i++) {
             if (s.charAt(i) == ch) {
                 return i;
@@ -425,7 +425,7 @@ public class QueryStringDecoder {
         return -1;
     }
 
-    private static int skipIf(String s, int from, int to, int ch) {
+    private static int skipIf(CharSequence s, int from, int to, int ch) {
         for (int i = from; i < to; i++) {
             if (s.charAt(i) != ch) {
                 return i;
@@ -437,7 +437,7 @@ public class QueryStringDecoder {
     private static final ParameterCollector<Map<String, List<String>>> MAP_PARAMETER_COLLECTOR =
             new ParameterCollector<Map<String, List<String>>>() {
                 @Override
-                public void accept(String name, String value, Map<String, List<String>> accumulator) {
+                public void collect(String name, String value, Map<String, List<String>> accumulator) {
                     List<String> values = accumulator.get(name);
                     if (values == null) {
                         values = new ArrayList<String>(1);
@@ -448,7 +448,7 @@ public class QueryStringDecoder {
             };
 
     /**
-     * @return {@link ParameterCollector} which behave as its {@link ParameterCollector#accept} is defined as:
+     * @return {@link ParameterCollector} which behave as its {@link ParameterCollector#collect} is defined as:
      *
      * <pre>
      * {@code
@@ -470,7 +470,7 @@ public class QueryStringDecoder {
 
     /**
      * This interface is used to accumulate Query decoded parameters.<br>
-     * The {@link #accept} method receive the query parameters in the same order are
+     * The {@link #collect} method receive the query parameters in the same order are
      * decoded from the provided {@code uri}
      * <p>
      * eg "a=1&b=2&c=3"
@@ -480,11 +480,11 @@ public class QueryStringDecoder {
      * <p>
      * to be called.
      * <p>
-     * Order of calling {@link #accept} is an implementation details users shouldn't rely on, anyway,
+     * Order of calling {@link #collect} is an implementation details users shouldn't rely on, anyway,
      * and just store/report/filter them assuming random ordering, instead.
      */
     public interface ParameterCollector<C> {
-        void accept(String name, String value, C accumulator);
+        void collect(String name, String value, C accumulator);
     }
 
     private static <C> void addParam(String s, int nameStart, int valueStart, int valueEnd,
@@ -497,7 +497,7 @@ public class QueryStringDecoder {
         }
         String name = decodeComponent(s, nameStart, valueStart - 1, charset, false);
         String value = decodeComponent(s, valueStart, valueEnd, charset, false);
-        collector.accept(name, value, accumulator);
+        collector.collect(name, value, accumulator);
     }
 
     /**
@@ -557,8 +557,8 @@ public class QueryStringDecoder {
         return decodeEscapedComponent(s, from, toExcluded, charset, isPath, firstEscaped, len);
     }
 
-    private static int getFirstEscaped(String s, int from, int toExcluded, boolean isPath) {
-        int cutOff = !isPath? '+' : '%';
+    private static int getFirstEscaped(CharSequence s, int from, int toExcluded, boolean isPath) {
+        int cutOff = isPath? '%' : '+';
         for (int i = from; i < toExcluded; i++) {
             int c = s.charAt(i);
             if (c <= cutOff) {
@@ -602,7 +602,7 @@ public class QueryStringDecoder {
         return strBuf.toString();
     }
 
-    private static int findPathEndIndex(String uri) {
+    private static int findPathEndIndex(CharSequence uri) {
         int len = uri.length();
         for (int i = 0; i < len; i++) {
             char c = uri.charAt(i);

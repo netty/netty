@@ -50,7 +50,7 @@ public class QueryStringDecoderBenchmark extends AbstractMicrobenchmark {
     private String nonStandardDecodingUri;
     private static final ParameterCollector<Blackhole> BH_COLLECTOR = new ParameterCollector<Blackhole>() {
         @Override
-        public void accept(String name, String value, Blackhole accumulator) {
+        public void collect(String name, String value, Blackhole accumulator) {
             accumulator.consume(name);
             accumulator.consume(value);
         }
