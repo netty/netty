@@ -193,15 +193,6 @@ jobs:
             ${{ runner.os }}-maven-${{ matrix.setup }}-
             ${{ runner.os }}-maven-
 
-      # Enable caching of Docker layers
-      - uses: jpribyl/action-docker-layer-caching@v0.1.1
-        continue-on-error: true
-        with:
-          key: build-docker-cache-${{ matrix.setup }}-{hash}
-          restore-keys: |
-            build-docker-cache-${{ matrix.setup }}-
-            build-docker-cache-
-
       - name: Build docker image
         run: docker-compose ${{ matrix.docker-compose-build }}
 
