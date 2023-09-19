@@ -112,6 +112,8 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
 
     @Override
     public void close() {
-        tableSizeChangeOutput.close();
+        if (tableSizeChangeOutput != null) {
+            tableSizeChangeOutput.close();
+        }
     }
 }
