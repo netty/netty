@@ -41,21 +41,6 @@ import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
  * Default implementation of {@link HttpHeaders}.
  */
 public class DefaultHttpHeaders extends HttpHeaders {
-    static final NameValidator<CharSequence> HttpNameValidator = new NameValidator<CharSequence>() {
-        @Override
-        public void validateName(CharSequence name) {
-            if (name == null || name.length() == 0) {
-                throw new IllegalArgumentException("empty headers are not allowed [" + name + ']');
-            }
-            int index = HttpHeaderValidationUtil.validateToken(name);
-            if (index != -1) {
-                throw new IllegalArgumentException("a header name can only contain \"token\" characters, " +
-                        "but found invalid character 0x" + Integer.toHexString(name.charAt(index)) +
-                        " at index " + index + " of header '" + name + "'.");
-            }
-        }
-    };
-
     private final DefaultHeaders<CharSequence, CharSequence, ?> headers;
 
     /**
@@ -405,15 +390,12 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return HeaderValueConverter.INSTANCE;
     }
 
-    @SuppressWarnings("unchecked")
     static ValueValidator<CharSequence> valueValidator(boolean validate) {
-        return validate ? HeaderValueValidator.INSTANCE :
-                (ValueValidator<CharSequence>) ValueValidator.NO_VALIDATION;
+        return validate ? HttpHeadersBuilder.DEFAULT_VALUE_VALIDATOR : HttpHeadersBuilder.NO_VALUE_VALIDATOR;
     }
 
-    @SuppressWarnings("unchecked")
     static NameValidator<CharSequence> nameValidator(boolean validate) {
-        return validate ? HttpNameValidator : NameValidator.NOT_NULL;
+        return validate ? HttpHeadersBuilder.DEFAULT_NAME_VALIDATOR : HttpHeadersBuilder.NO_NAME_VALIDATOR;
     }
 
     private static class HeaderValueConverter extends CharSequenceValueConverter {
@@ -431,19 +413,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
                 return DateFormatter.format(((Calendar) value).getTime());
             }
             return value.toString();
-        }
-    }
-
-    private static final class HeaderValueValidator implements ValueValidator<CharSequence> {
-        static final HeaderValueValidator INSTANCE = new HeaderValueValidator();
-
-        @Override
-        public void validate(CharSequence value) {
-            int index = HttpHeaderValidationUtil.validateValidHeaderValue(value);
-            if (index != -1) {
-                throw new IllegalArgumentException("a header value contains prohibited character 0x" +
-                        Integer.toHexString(value.charAt(index)) + " at index " + index + '.');
-            }
         }
     }
 }

@@ -46,16 +46,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>> {
     /**
-     * @deprecated Use {@link EmptyHttpHeaders#INSTANCE}.
-     * <p>
-     * The instance is instantiated here to break the cyclic static initialization between {@link EmptyHttpHeaders} and
-     * {@link HttpHeaders}. The issue is that if someone accesses {@link EmptyHttpHeaders#INSTANCE} before
-     * {@link HttpHeaders#EMPTY_HEADERS} then {@link HttpHeaders#EMPTY_HEADERS} will be {@code null}.
-     */
-    @Deprecated
-    public static final HttpHeaders EMPTY_HEADERS = EmptyHttpHeaders.instance();
-
-    /**
      * Default implementation of {@link HttpHeadersFactory}, that creates an {@link HttpHeaders} instance that has the
      * recommended header validation enabled.
      */
@@ -66,6 +56,16 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
      * validation enabled that is recommended for trailers.
      */
     public static final HttpHeadersBuilder DEFAULT_TRAILER_FACTORY = HttpHeadersBuilder.DEFAULT_TRAILER;
+
+    /**
+     * @deprecated Use {@link EmptyHttpHeaders#INSTANCE}.
+     * <p>
+     * The instance is instantiated here to break the cyclic static initialization between {@link EmptyHttpHeaders} and
+     * {@link HttpHeaders}. The issue is that if someone accesses {@link EmptyHttpHeaders#INSTANCE} before
+     * {@link HttpHeaders#EMPTY_HEADERS} then {@link HttpHeaders#EMPTY_HEADERS} will be {@code null}.
+     */
+    @Deprecated
+    public static final HttpHeaders EMPTY_HEADERS = EmptyHttpHeaders.instance();
 
     /**
      * @deprecated Use {@link HttpHeaderNames} instead.

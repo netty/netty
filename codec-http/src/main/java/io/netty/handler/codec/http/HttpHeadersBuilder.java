@@ -28,27 +28,47 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public class HttpHeadersBuilder implements HttpHeadersFactory {
 
-    private static final NameValidator<CharSequence> DEFAULT_NAME_VALIDATOR =
-            DefaultHttpHeaders.nameValidator(true);
-    private static final ValueValidator<CharSequence> DEFAULT_VALUE_VALIDATOR =
-            DefaultHttpHeaders.valueValidator(true);
-    private static final NameValidator<CharSequence> DEFAULT_TRAILER_NAME_VALIDATOR =
-            new NameValidator<CharSequence>() {
-                @Override
-                public void validateName(CharSequence name) {
-                    DefaultHttpHeaders.HttpNameValidator.validateName(name);
-                    if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
-                            || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
-                            || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
-                        throw new IllegalArgumentException("prohibited trailing header: " + name);
-                    }
-                }
-            };
+    static final NameValidator<CharSequence> DEFAULT_NAME_VALIDATOR = new NameValidator<CharSequence>() {
+        @Override
+        public void validateName(CharSequence name) {
+            if (name == null || name.length() == 0) {
+                throw new IllegalArgumentException("empty headers are not allowed [" + name + ']');
+            }
+            int index = HttpHeaderValidationUtil.validateToken(name);
+            if (index != -1) {
+                throw new IllegalArgumentException("a header name can only contain \"token\" characters, " +
+                        "but found invalid character 0x" + Integer.toHexString(name.charAt(index)) +
+                        " at index " + index + " of header '" + name + "'.");
+            }
+        }
+    };
+    static final ValueValidator<CharSequence> DEFAULT_VALUE_VALIDATOR = new ValueValidator<CharSequence>() {
+        @Override
+        public void validate(CharSequence value) {
+            int index = HttpHeaderValidationUtil.validateValidHeaderValue(value);
+            if (index != -1) {
+                throw new IllegalArgumentException("a header value contains prohibited character 0x" +
+                        Integer.toHexString(value.charAt(index)) + " at index " + index + '.');
+            }
+        }
+    };
+    static final NameValidator<CharSequence> DEFAULT_TRAILER_NAME_VALIDATOR = new NameValidator<CharSequence>() {
+        @Override
+        public void validateName(CharSequence name) {
+            DEFAULT_NAME_VALIDATOR.validateName(name);
+            if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
+                    || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
+                    || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
+                throw new IllegalArgumentException("prohibited trailing header: " + name);
+            }
+        }
+    };
 
-    private static final NameValidator<CharSequence> NO_NAME_VALIDATOR =
-            DefaultHttpHeaders.nameValidator(false);
-    private static final ValueValidator<CharSequence> NO_VALUE_VALIDATOR =
-            DefaultHttpHeaders.valueValidator(false);
+    @SuppressWarnings("unchecked")
+    static final NameValidator<CharSequence> NO_NAME_VALIDATOR = NameValidator.NOT_NULL;
+    @SuppressWarnings("unchecked")
+    static final ValueValidator<CharSequence> NO_VALUE_VALIDATOR =
+            (ValueValidator<CharSequence>) ValueValidator.NO_VALIDATION;
 
     static final HttpHeadersBuilder DEFAULT = new HttpHeadersBuilder();
     static final HttpHeadersBuilder DEFAULT_TRAILER =
