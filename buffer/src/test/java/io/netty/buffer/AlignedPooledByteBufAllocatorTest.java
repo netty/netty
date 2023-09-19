@@ -17,6 +17,9 @@ package io.netty.buffer;
 
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -62,5 +65,63 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
         assertEquals(18, b.capacity());
         assertTrue(a.release());
         assertTrue(b.release());
+    }
+    @Test
+    public void testDirectSubpageReleaseLock() throws Exception {
+        int initialCapacity = 0;
+        int directMemoryCacheAlignment = 32;
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(
+                true,
+                0,
+                1,
+                PooledByteBufAllocator.defaultPageSize(),
+                PooledByteBufAllocator.defaultMaxOrder(),
+                0,
+                0,
+                false,
+                directMemoryCacheAlignment);
+
+        final PooledByteBuf<?> byteBuf = pooledByteBuf(allocator.directBuffer(initialCapacity, 16));
+        byteBuf.chunk.arena.smallSubpages();
+        Field smallSubpagesField = Class.forName("io.netty.buffer.PoolArena")
+                .getDeclaredField("smallSubpagePools");
+        smallSubpagesField.setAccessible(true);
+        // Get the smallSubpagePools[] array in arena.
+        @SuppressWarnings("unchecked")
+        PoolSubpage<byte[]>[] smallSubpagePools = (PoolSubpage<byte[]>[]) smallSubpagesField.get(byteBuf.chunk.arena);
+        PoolSubpage<byte[]> head = null;
+        for (PoolSubpage<byte[]> subpage : smallSubpagePools) {
+            if (subpage.next != subpage) {
+                // Find the head subpage which the byteBuf belongs to.
+                head = subpage;
+                break;
+            }
+        }
+        assertNotNull(head);
+        Thread t1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // Because the head subpage was already locked in the main thread, so this should hang and wait.
+                byteBuf.release();
+            }
+        });
+        t1.setDaemon(true);
+        // Intentionally lock the head subpage in main thread.
+        head.lock();
+        try {
+            t1.start();
+            // Wait max 3 seconds.
+            t1.join(1000 * 3);
+            assertTrue(t1.isAlive(), "The t1 thread should still alive and wait for the head lock.");
+        } finally {
+            head.unlock();
+        }
+    }
+    private static PooledByteBuf<?> pooledByteBuf(ByteBuf buffer) {
+        // might need to unwrap if swapped (LE) and/or leak-aware-wrapped
+        while (!(buffer instanceof PooledByteBuf)) {
+            buffer = buffer.unwrap();
+        }
+        return (PooledByteBuf<?>) buffer;
     }
 }

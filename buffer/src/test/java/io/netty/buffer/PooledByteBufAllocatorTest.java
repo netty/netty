@@ -39,6 +39,7 @@ import org.junit.jupiter.api.Timeout;
 
 import static io.netty.buffer.PoolChunk.runOffset;
 import static io.netty.buffer.PoolChunk.runPages;
+import static io.netty.buffer.PoolChunk.RUN_OFFSET_SHIFT;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -27,12 +27,13 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     final PoolChunk<T> chunk;
     final int elemSize;
-    private final int pageShifts;
+    private final byte pageShifts;
     private final int runOffset;
     private final int runSize;
     private final long[] bitmap;
     private final int bitmapLength;
     private final int maxNumElems;
+    final int headIndex;
 
     PoolSubpage<T> prev;
     PoolSubpage<T> next;
@@ -47,7 +48,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
     /** Special constructor that creates a linked list head */
-    PoolSubpage() {
+    PoolSubpage(int headIndex) {
         chunk = null;
         lock = new ReentrantLock();
         pageShifts = -1;
@@ -57,9 +58,11 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         bitmap = null;
         bitmapLength = -1;
         maxNumElems = 0;
+        this.headIndex = headIndex;
     }
 
-    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int pageShifts, int runOffset, int runSize, int elemSize) {
+    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, byte pageShifts, int runOffset, int runSize, int elemSize) {
+        this.headIndex = head.headIndex;
         this.chunk = chunk;
         this.pageShifts = pageShifts;
         this.runOffset = runOffset;
@@ -219,12 +222,12 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             numAvail = 0;
         } else {
             final boolean doNotDestroy;
-            chunk.arena.lock();
+            chunk.arena.findSubpagePoolHead(headIndex).lock();
             try {
                 doNotDestroy = this.doNotDestroy;
                 numAvail = this.numAvail;
             } finally {
-                chunk.arena.unlock();
+                chunk.arena.findSubpagePoolHead(headIndex).unlock();
             }
             if (!doNotDestroy) {
                 // Not used for creating the String.
@@ -247,12 +250,11 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             // It's the head.
             return 0;
         }
-
-        chunk.arena.lock();
+        chunk.arena.findSubpagePoolHead(headIndex).lock();
         try {
             return numAvail;
         } finally {
-            chunk.arena.unlock();
+            chunk.arena.findSubpagePoolHead(headIndex).unlock();
         }
     }
 
@@ -264,6 +266,19 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     @Override
     public int pageSize() {
         return 1 << pageShifts;
+    }
+
+    boolean doNotDestroy() {
+        if (chunk == null) {
+            // It's the head.
+            return true;
+        }
+        chunk.arena.findSubpagePoolHead(headIndex).lock();
+        try {
+            return doNotDestroy;
+        } finally {
+            chunk.arena.findSubpagePoolHead(headIndex).unlock();
+        }
     }
 
     void destroy() {

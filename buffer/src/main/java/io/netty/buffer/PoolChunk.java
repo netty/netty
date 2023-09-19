@@ -172,7 +172,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     private final LongCounter pinnedBytes = PlatformDependent.newLongCounter();
 
     private final int pageSize;
-    private final int pageShifts;
+    private final byte pageShifts;
     private final int chunkSize;
 
     // Use as cache for ByteBuffer created from the memory. These are just duplicates and so are only a container
@@ -192,7 +192,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
     @SuppressWarnings("unchecked")
-    PoolChunk(PoolArena<T> arena, Object base, T memory, int pageSize, int pageShifts, int chunkSize, int maxPageIdx) {
+    PoolChunk(PoolArena<T> arena, Object base, T memory, int pageSize, byte pageShifts, int chunkSize, int maxPageIdx) {
         unpooled = false;
         this.arena = arena;
         this.base = base;
@@ -487,17 +487,15 @@ final class PoolChunk<T> implements PoolChunkMetric {
      */
     void free(long handle, int normCapacity, ByteBuffer nioBuffer) {
         if (isSubpage(handle)) {
-            int sizeIdx = arena.size2SizeIdx(normCapacity);
-            PoolSubpage<T> head = arena.findSubpagePoolHead(sizeIdx);
-
             int sIdx = runOffset(handle);
             PoolSubpage<T> subpage = subpages[sIdx];
-
+            assert subpage != null;
+            PoolSubpage<T> head = subpage.chunk.arena.findSubpagePoolHead(subpage.headIndex);
             // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
             // This is need as we may add it back and so alter the linked-list structure.
             head.lock();
             try {
-                assert subpage != null && subpage.doNotDestroy;
+                assert subpage.doNotDestroy;
                 if (subpage.free(head, bitmapIdx(handle))) {
                     //the subpage is still used, do not free it
                     return;
@@ -610,7 +608,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         int bitmapIdx = bitmapIdx(handle);
 
         PoolSubpage<T> s = subpages[runOffset];
-        assert s.doNotDestroy;
+        assert s.doNotDestroy();
         assert reqCapacity <= s.elemSize : reqCapacity + "<=" + s.elemSize;
 
         int offset = (runOffset << pageShifts) + bitmapIdx * s.elemSize;
@@ -684,7 +682,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         return (int) (handle >> RUN_OFFSET_SHIFT);
     }
 
-    static int runSize(int pageShifts, long handle) {
+    static int runSize(byte pageShifts, long handle) {
         return runPages(handle) << pageShifts;
     }
 
