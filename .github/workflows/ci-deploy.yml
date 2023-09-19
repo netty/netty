@@ -57,16 +57,6 @@ jobs:
             ${{ runner.os }}-maven-${{ matrix.setup }}-
             ${{ runner.os }}-maven-
 
-      # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.11
-        env:
-          docker-cache-name: staging-${{ matrix.setup }}-cache-docker
-        continue-on-error: true
-        with:
-          key: ${{ runner.os }}-staging-${{ env.docker-cache-name }}-{hash}
-          restore-keys: |
-            ${{ runner.os }}-staging-${{ env.docker-cache-name }}-
-
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
 
