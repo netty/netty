@@ -217,7 +217,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                             // address is used with a scope that represent a network interface that does not exists
                             // on the host.
                             if (!addr.isUnresolved()) {
-                                addresses.add(SocketUtils.socketAddress(maybeIP, port));
+                                addresses.add(addr);
                             }
                         } else if (line.startsWith(DOMAIN_ROW_LABEL)) {
                             int i = indexOfNonWhiteSpace(line, DOMAIN_ROW_LABEL.length());
