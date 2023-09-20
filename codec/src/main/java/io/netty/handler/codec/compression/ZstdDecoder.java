@@ -16,7 +16,6 @@
 package io.netty.handler.codec.compression;
 
 import com.github.luben.zstd.Zstd;
-import com.github.luben.zstd.ZstdInputStream;
 import com.github.luben.zstd.ZstdInputStreamNoFinalizer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
@@ -41,13 +40,11 @@ import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_MAX_BLOCK
  */
 public final class ZstdDecoder extends ByteToMessageDecoder {
 
-    private static final long RECOMMENDED_OUT_SIZE =  ZstdInputStream.recommendedDOutSize();
     private static final int COPY_BUF_SIZE = 8024;
     private final int maxBlockSize;
     private InputStream is;
     private ZstdInputStreamNoFinalizer zstdIs;
     private ByteArrayOutputStream bos;
-    private ByteBuf buffer;
     private volatile State currentState = State.DECOMPRESS_DATA;
 
     /**
@@ -83,14 +80,11 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         try {
-            while (in.isReadable()) {
+            if (in.isReadable()) {
                 switch (currentState) {
                     case DECOMPRESS_DATA:
-                        decompressData(ctx, in, out);
-                        break;
                     case NEED_MORE_DATA:
-                        buffer.writeBytes(in);
-                        decompressData(ctx, buffer, out);
+                        decompressData(ctx, in, out);
                         break;
                     case FINISHED:
                     case CORRUPTED:
@@ -108,7 +102,8 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
 
     private boolean consumeAndDecompress(ChannelHandlerContext ctx, int decompressedSize,
                                          ByteBuf in, List<Object> out) throws IOException {
-        int readerIndex = in.readerIndex();
+        in.markReaderIndex();
+        in.markWriterIndex();
         // Bytebuf cannot release here because ByteToMessageDecoder will release it
         is = new ByteBufInputStream(in, false);
         zstdIs = new ZstdInputStreamNoFinalizer(is);
@@ -123,15 +118,9 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         // to determine whether the decompression is completed
         // TODO: Use Zstd to check the compressed data when zstd library support this
         if (decompressedLength == 0 || (decompressedSize > 0 && decompressedSize != decompressedLength)) {
-            in.readerIndex(readerIndex);
+            in.resetReaderIndex();
+            in.resetWriterIndex();
             if (currentState == State.DECOMPRESS_DATA) {
-                if (buffer == null) {
-                    if (RECOMMENDED_OUT_SIZE < Integer.MIN_VALUE || RECOMMENDED_OUT_SIZE > Integer.MAX_VALUE) {
-                        throw new IllegalStateException("Invalid recommendedOutSize");
-                    }
-                    buffer = ctx.alloc().buffer((int) RECOMMENDED_OUT_SIZE);
-                }
-                buffer.writeBytes(in);
                 currentState = State.NEED_MORE_DATA;
             }
             return false;
@@ -167,10 +156,6 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                 return;
             }
 
-            if (buffer != null) {
-                buffer.release();
-                buffer = null;
-            }
             currentState = State.FINISHED;
         } catch (Exception e) {
             throw new DecompressionException(e);
