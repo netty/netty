@@ -96,7 +96,7 @@ abstract class SizeClasses implements SizeClassesMetric {
     private static final byte no = 0, yes = 1;
 
     protected final int pageSize;
-    protected final byte pageShifts;
+    protected final int pageShifts;
     protected final int chunkSize;
     protected final int directMemoryCacheAlignment;
 
@@ -115,7 +115,7 @@ abstract class SizeClasses implements SizeClassesMetric {
     // spacing is 1 << LOG2_QUANTUM, so the size of array is lookupMaxClass >> LOG2_QUANTUM
     private final int[] size2idxTab;
 
-    protected SizeClasses(int pageSize, byte pageShifts, int chunkSize, int directMemoryCacheAlignment) {
+    protected SizeClasses(int pageSize, int pageShifts, int chunkSize, int directMemoryCacheAlignment) {
         int group = log2(chunkSize) - LOG2_QUANTUM - LOG2_SIZE_CLASS_GROUP + 1;
 
         //generate size classes
@@ -187,7 +187,7 @@ abstract class SizeClasses implements SizeClassesMetric {
     }
 
     //calculate size class
-    private static short[] newSizeClass(int index, int log2Group, int log2Delta, int nDelta, byte pageShifts) {
+    private static short[] newSizeClass(int index, int log2Group, int log2Delta, int nDelta, int pageShifts) {
         short isMultiPageSize;
         if (log2Delta >= pageShifts) {
             isMultiPageSize = yes;

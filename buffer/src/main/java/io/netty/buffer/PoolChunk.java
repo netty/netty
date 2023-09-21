@@ -172,7 +172,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     private final LongCounter pinnedBytes = PlatformDependent.newLongCounter();
 
     private final int pageSize;
-    private final byte pageShifts;
+    private final int pageShifts;
     private final int chunkSize;
 
     // Use as cache for ByteBuffer created from the memory. These are just duplicates and so are only a container
@@ -192,7 +192,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
     @SuppressWarnings("unchecked")
-    PoolChunk(PoolArena<T> arena, Object base, T memory, int pageSize, byte pageShifts, int chunkSize, int maxPageIdx) {
+    PoolChunk(PoolArena<T> arena, Object base, T memory, int pageSize, int pageShifts, int chunkSize, int maxPageIdx) {
         unpooled = false;
         this.arena = arena;
         this.base = base;
@@ -608,7 +608,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         int bitmapIdx = bitmapIdx(handle);
 
         PoolSubpage<T> s = subpages[runOffset];
-        assert s.doNotDestroy();
+        assert s.isDoNotDestroy();
         assert reqCapacity <= s.elemSize : reqCapacity + "<=" + s.elemSize;
 
         int offset = (runOffset << pageShifts) + bitmapIdx * s.elemSize;
@@ -682,7 +682,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         return (int) (handle >> RUN_OFFSET_SHIFT);
     }
 
-    static int runSize(byte pageShifts, long handle) {
+    static int runSize(int pageShifts, long handle) {
         return runPages(handle) << pageShifts;
     }
 

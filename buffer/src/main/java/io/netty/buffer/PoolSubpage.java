@@ -27,7 +27,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     final PoolChunk<T> chunk;
     final int elemSize;
-    private final byte pageShifts;
+    private final int pageShifts;
     private final int runOffset;
     private final int runSize;
     private final long[] bitmap;
@@ -61,7 +61,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         this.headIndex = headIndex;
     }
 
-    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, byte pageShifts, int runOffset, int runSize, int elemSize) {
+    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int pageShifts, int runOffset, int runSize, int elemSize) {
         this.headIndex = head.headIndex;
         this.chunk = chunk;
         this.pageShifts = pageShifts;
@@ -268,7 +268,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         return 1 << pageShifts;
     }
 
-    boolean doNotDestroy() {
+    boolean isDoNotDestroy() {
         if (chunk == null) {
             // It's the head.
             return true;

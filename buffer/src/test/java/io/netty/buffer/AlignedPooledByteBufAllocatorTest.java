@@ -82,13 +82,9 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
                 directMemoryCacheAlignment);
 
         final PooledByteBuf<?> byteBuf = pooledByteBuf(allocator.directBuffer(initialCapacity, 16));
-        byteBuf.chunk.arena.smallSubpages();
-        Field smallSubpagesField = Class.forName("io.netty.buffer.PoolArena")
-                .getDeclaredField("smallSubpagePools");
-        smallSubpagesField.setAccessible(true);
         // Get the smallSubpagePools[] array in arena.
         @SuppressWarnings("unchecked")
-        PoolSubpage<byte[]>[] smallSubpagePools = (PoolSubpage<byte[]>[]) smallSubpagesField.get(byteBuf.chunk.arena);
+        PoolSubpage<byte[]>[] smallSubpagePools = (PoolSubpage<byte[]>[]) byteBuf.chunk.arena.smallSubpagePools;
         PoolSubpage<byte[]> head = null;
         for (PoolSubpage<byte[]> subpage : smallSubpagePools) {
             if (subpage.next != subpage) {
