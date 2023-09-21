@@ -295,7 +295,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                     + directMemoryCacheAlignment + " (expected: power of two)");
         }
 
-        int pageShifts = validateAndCalculatePageShifts(pageSize, directMemoryCacheAlignment);
+        byte pageShifts = validateAndCalculatePageShifts(pageSize, directMemoryCacheAlignment);
 
         if (nHeapArena > 0) {
             heapArenas = newArenaArray(nHeapArena);
@@ -334,7 +334,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         return new PoolArena[size];
     }
 
-    private static int validateAndCalculatePageShifts(int pageSize, int alignment) {
+    private static byte validateAndCalculatePageShifts(int pageSize, int alignment) {
         if (pageSize < MIN_PAGE_SIZE) {
             throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: " + MIN_PAGE_SIZE + ')');
         }
@@ -349,7 +349,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         }
 
         // Logarithm base 2. At this point we know that pageSize is a power of two.
-        return Integer.SIZE - 1 - Integer.numberOfLeadingZeros(pageSize);
+        return (byte) (Integer.SIZE - 1 - Integer.numberOfLeadingZeros(pageSize));
     }
 
     private static int validateAndCalculateChunkSize(int pageSize, int maxOrder) {

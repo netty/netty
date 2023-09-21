@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class PoolArenaTest {
 
     private static final int PAGE_SIZE = 8192;
-    private static final int PAGE_SHIFTS = 11;
+    private static final byte PAGE_SHIFTS = 11;
     //chunkSize = pageSize * (2 ^ pageShifts)
     private static final int CHUNK_SIZE = 16777216;
 
@@ -66,7 +66,7 @@ public class PoolArenaTest {
 
     @Test
     public void testPages2PageIdx() {
-        int pageShifts = PAGE_SHIFTS;
+        byte pageShifts = PAGE_SHIFTS;
 
         PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
 

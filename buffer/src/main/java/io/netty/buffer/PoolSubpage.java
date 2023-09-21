@@ -27,7 +27,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     final PoolChunk<T> chunk;
     final int elemSize;
-    private final int pageShifts;
+    private final byte pageShifts;
     private final int runOffset;
     private final int runSize;
     private final long[] bitmap;
@@ -59,7 +59,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         maxNumElems = 0;
     }
 
-    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int pageShifts, int runOffset, int runSize, int elemSize) {
+    PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, byte pageShifts, int runOffset, int runSize, int elemSize) {
         this.chunk = chunk;
         this.pageShifts = pageShifts;
         this.runOffset = runOffset;
