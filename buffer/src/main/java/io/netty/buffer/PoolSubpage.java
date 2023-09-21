@@ -23,7 +23,7 @@ import static io.netty.buffer.PoolChunk.SIZE_SHIFT;
 import static io.netty.buffer.PoolChunk.IS_USED_SHIFT;
 import static io.netty.buffer.PoolChunk.IS_SUBPAGE_SHIFT;
 
-final class PoolSubpage<T> implements PoolSubpageMetric {
+final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper<T> {
 
     final PoolChunk<T> chunk;
     final int elemSize;
@@ -278,5 +278,15 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     void unlock() {
         lock.unlock();
+    }
+
+    @Override
+    public PoolSubpage<T> getPoolSubpage() {
+        return this;
+    }
+
+    @Override
+    public PoolChunk<T> getPoolChunk() {
+        return this.chunk;
     }
 }

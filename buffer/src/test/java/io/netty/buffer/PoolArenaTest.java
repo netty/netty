@@ -152,7 +152,7 @@ public class PoolArenaTest {
         // This causes the internal reused ByteBuffer duplicate limit to be set to 128
         pooledDst.writeBytes(ByteBuffer.allocate(128));
         // Ensure internal ByteBuffer duplicate limit is properly reset (used in memoryCopy non-Unsafe case)
-        pooledDst.chunk.arena.memoryCopy(pooledSrc.memory, 0, pooledDst, 512);
+        pooledDst.chunkOrSub.getPoolChunk().arena.memoryCopy(pooledSrc.memory, 0, pooledDst, 512);
 
         src.release();
         dst.release();

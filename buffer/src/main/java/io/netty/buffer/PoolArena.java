@@ -168,7 +168,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
                         s.doNotDestroy + ", elemSize=" + s.elemSize + ", sizeIdx=" + sizeIdx;
                 long handle = s.allocate();
                 assert handle >= 0;
-                s.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache);
+                s.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache, s);
             }
         } finally {
             head.unlock();
@@ -229,7 +229,8 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         allocationsHuge.increment();
     }
 
-    void free(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity, PoolThreadCache cache) {
+    void free(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity, PoolThreadCache cache,
+              PoolSubpage<T> subpage) {
         chunk.decrementPinnedMemory(normCapacity);
         if (chunk.unpooled) {
             int size = chunk.chunkSize();
@@ -238,12 +239,12 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
             deallocationsHuge.increment();
         } else {
             SizeClass sizeClass = sizeClass(handle);
-            if (cache != null && cache.add(this, chunk, nioBuffer, handle, normCapacity, sizeClass)) {
+            if (cache != null && cache.add(this, chunk, nioBuffer, handle, normCapacity, sizeClass, subpage)) {
                 // cached so not free it.
                 return;
             }
 
-            freeChunk(chunk, handle, normCapacity, sizeClass, nioBuffer, false);
+            freeChunk(chunk, handle, normCapacity, sizeClass, nioBuffer, false, subpage);
         }
     }
 
@@ -252,7 +253,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
     }
 
     void freeChunk(PoolChunk<T> chunk, long handle, int normCapacity, SizeClass sizeClass, ByteBuffer nioBuffer,
-                   boolean finalizer) {
+                   boolean finalizer, PoolSubpage<T> subpage) {
         final boolean destroyChunk;
         lock();
         try {
@@ -270,7 +271,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
                         throw new Error();
                 }
             }
-            destroyChunk = !chunk.parent.free(chunk, handle, normCapacity, nioBuffer);
+            destroyChunk = !chunk.parent.free(chunk, handle, normCapacity, nioBuffer, subpage);
         } finally {
             unlock();
         }
@@ -289,6 +290,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
 
         final int oldCapacity;
         final PoolChunk<T> oldChunk;
+        final PoolSubpage<T> oldSubpage;
         final ByteBuffer oldNioBuffer;
         final long oldHandle;
         final T oldMemory;
@@ -311,7 +313,8 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
                 return;
             }
 
-            oldChunk = buf.chunk;
+            oldChunk = buf.chunkOrSub.getPoolChunk();
+            oldSubpage = buf.chunkOrSub.getPoolSubpage();
             oldNioBuffer = buf.tmpNioBuf;
             oldHandle = buf.handle;
             oldMemory = buf.memory;
@@ -330,7 +333,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
             bytesToCopy = newCapacity;
         }
         memoryCopy(oldMemory, oldOffset, buf, bytesToCopy);
-        free(oldChunk, oldNioBuffer, oldHandle, oldMaxLength, oldCache);
+        free(oldChunk, oldNioBuffer, oldHandle, oldMaxLength, oldCache, oldSubpage);
     }
 
     @Override

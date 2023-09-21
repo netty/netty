@@ -31,7 +31,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
     private final EnhancedHandle<PooledByteBuf<T>> recyclerHandle;
 
-    protected PoolChunk<T> chunk;
+    protected PoolChunkSubPageWrapper<T> chunkOrSub;
     protected long handle;
     protected T memory;
     protected int offset;
@@ -47,24 +47,24 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         this.recyclerHandle = (EnhancedHandle<PooledByteBuf<T>>) recyclerHandle;
     }
 
-    void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
+    void init(PoolChunkSubPageWrapper<T> chunkOrSub, ByteBuffer nioBuffer,
               long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
-        init0(chunk, nioBuffer, handle, offset, length, maxLength, cache);
+        init0(chunkOrSub, nioBuffer, handle, offset, length, maxLength, cache);
     }
 
     void initUnpooled(PoolChunk<T> chunk, int length) {
         init0(chunk, null, 0, 0, length, length, null);
     }
 
-    private void init0(PoolChunk<T> chunk, ByteBuffer nioBuffer,
+    private void init0(PoolChunkSubPageWrapper<T> chunkOrSub, ByteBuffer nioBuffer,
                        long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
         assert handle >= 0;
-        assert chunk != null;
+        assert chunkOrSub != null;
+        this.chunkOrSub = chunkOrSub;
+        PoolChunk<T> chunk = chunkOrSub.getPoolChunk();
         assert !PoolChunk.isSubpage(handle) || chunk.arena.size2SizeIdx(maxLength) <= chunk.arena.smallMaxSizeIdx:
                 "Allocated small sub-page handle for a buffer size that isn't \"small.\"";
-
         chunk.incrementPinnedMemory(maxLength);
-        this.chunk = chunk;
         memory = chunk.memory;
         tmpNioBuf = nioBuffer;
         allocator = chunk.arena.parent;
@@ -102,6 +102,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             return this;
         }
         checkNewCapacity(newCapacity);
+        PoolChunk<T> chunk = chunkOrSub.getPoolChunk();
         if (!chunk.unpooled) {
             // If the request capacity does not require reallocation, just update the length of the memory.
             if (newCapacity > length) {
@@ -172,7 +173,8 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
-            chunk.arena.free(chunk, tmpNioBuf, handle, maxLength, cache);
+            PoolChunk<T> chunk = chunkOrSub.getPoolChunk();
+            chunk.arena.free(chunk, tmpNioBuf, handle, maxLength, cache, chunkOrSub.getPoolSubpage());
             tmpNioBuf = null;
             chunk = null;
             cache = null;

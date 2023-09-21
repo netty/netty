@@ -116,8 +116,8 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
         return false;
     }
 
-    boolean free(PoolChunk<T> chunk, long handle, int normCapacity, ByteBuffer nioBuffer) {
-        chunk.free(handle, normCapacity, nioBuffer);
+    boolean free(PoolChunk<T> chunk, long handle, int normCapacity, ByteBuffer nioBuffer, PoolSubpage<T> subpage) {
+        chunk.free(handle, normCapacity, nioBuffer, subpage);
         if (chunk.freeBytes > freeMaxThreshold) {
             remove(chunk);
             // Move the PoolChunk down the PoolChunkList linked-list.

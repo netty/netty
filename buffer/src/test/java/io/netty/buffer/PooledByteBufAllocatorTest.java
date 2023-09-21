@@ -688,7 +688,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         for (int i = 0; i < length; i++) {
             byteBufs[i] = allocator.heapBuffer(elemSize, elemSize);
         }
-        PoolChunk<Object> chunk = unwrapIfNeeded(byteBufs[0]).chunk;
+        PoolChunk<Object> chunk = unwrapIfNeeded(byteBufs[0]).chunkOrSub.getPoolChunk();
 
         int beforeFreeBytes = chunk.freeBytes();
         for (int i = 0; i < length; i++) {

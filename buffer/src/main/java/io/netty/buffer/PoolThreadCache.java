@@ -182,7 +182,7 @@ final class PoolThreadCache {
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     boolean add(PoolArena<?> area, PoolChunk chunk, ByteBuffer nioBuffer,
-                long handle, int normCapacity, SizeClass sizeClass) {
+                long handle, int normCapacity, SizeClass sizeClass, PoolSubpage subpage) {
         int sizeIdx = area.size2SizeIdx(normCapacity);
         MemoryRegionCache<?> cache = cache(area, sizeIdx, sizeClass);
         if (cache == null) {
@@ -191,7 +191,7 @@ final class PoolThreadCache {
         if (freed.get()) {
             return false;
         }
-        return cache.add(chunk, nioBuffer, handle, normCapacity);
+        return cache.add(chunk, nioBuffer, handle, normCapacity, subpage);
     }
 
     private MemoryRegionCache<?> cache(PoolArena<?> area, int sizeIdx, SizeClass sizeClass) {
@@ -323,8 +323,8 @@ final class PoolThreadCache {
         @Override
         protected void initBuf(
                 PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, PooledByteBuf<T> buf, int reqCapacity,
-                PoolThreadCache threadCache) {
-            chunk.initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache);
+                PoolThreadCache threadCache, PoolSubpage<T> subpage) {
+            chunk.initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache, subpage);
         }
     }
 
@@ -339,8 +339,8 @@ final class PoolThreadCache {
         @Override
         protected void initBuf(
                 PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, PooledByteBuf<T> buf, int reqCapacity,
-                PoolThreadCache threadCache) {
-            chunk.initBuf(buf, nioBuffer, handle, reqCapacity, threadCache);
+                PoolThreadCache threadCache, PoolSubpage<T> subpage) {
+            chunk.initBuf(buf, nioBuffer, handle, reqCapacity, threadCache, subpage);
         }
     }
 
@@ -360,14 +360,16 @@ final class PoolThreadCache {
          * Init the {@link PooledByteBuf} using the provided chunk and handle with the capacity restrictions.
          */
         protected abstract void initBuf(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle,
-                                        PooledByteBuf<T> buf, int reqCapacity, PoolThreadCache threadCache);
+                                        PooledByteBuf<T> buf, int reqCapacity, PoolThreadCache threadCache,
+                                        PoolSubpage<T> subpage);
 
         /**
          * Add to cache if not already full.
          */
         @SuppressWarnings("unchecked")
-        public final boolean add(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity) {
-            Entry<T> entry = newEntry(chunk, nioBuffer, handle, normCapacity);
+        public final boolean add(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity,
+                                 PoolSubpage<T> subpage) {
+            Entry<T> entry = newEntry(chunk, nioBuffer, handle, normCapacity, subpage);
             boolean queued = queue.offer(entry);
             if (!queued) {
                 // If it was not possible to cache the chunk, immediately recycle the entry
@@ -385,7 +387,7 @@ final class PoolThreadCache {
             if (entry == null) {
                 return false;
             }
-            initBuf(entry.chunk, entry.nioBuffer, entry.handle, buf, reqCapacity, threadCache);
+            initBuf(entry.chunk, entry.nioBuffer, entry.handle, buf, reqCapacity, threadCache, entry.subpage);
             entry.unguardedRecycle();
 
             // allocations is not thread-safe which is fine as this is only called from the same thread all time.
@@ -441,12 +443,13 @@ final class PoolThreadCache {
                 entry.recycle();
             }
 
-            chunk.arena.freeChunk(chunk, handle, normCapacity, sizeClass, nioBuffer, finalizer);
+            chunk.arena.freeChunk(chunk, handle, normCapacity, sizeClass, nioBuffer, finalizer, entry.subpage);
         }
 
         static final class Entry<T> {
             final EnhancedHandle<Entry<?>> recyclerHandle;
             PoolChunk<T> chunk;
+            PoolSubpage<T> subpage;
             ByteBuffer nioBuffer;
             long handle = -1;
             int normCapacity;
@@ -471,9 +474,11 @@ final class PoolThreadCache {
         }
 
         @SuppressWarnings("rawtypes")
-        private static Entry newEntry(PoolChunk<?> chunk, ByteBuffer nioBuffer, long handle, int normCapacity) {
+        private static Entry newEntry(PoolChunk<?> chunk, ByteBuffer nioBuffer, long handle, int normCapacity,
+                                      PoolSubpage<?> subpage) {
             Entry entry = RECYCLER.get();
             entry.chunk = chunk;
+            entry.subpage = subpage;
             entry.nioBuffer = nioBuffer;
             entry.handle = handle;
             entry.normCapacity = normCapacity;
