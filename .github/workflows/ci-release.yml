@@ -117,7 +117,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
-      - uses: s4u/maven-settings-action@v2.2.0
+      - uses: s4u/maven-settings-action@v2.8.0
         with:
           servers: |
             [{
@@ -216,7 +216,7 @@ jobs:
         working-directory: ./prepare-release-workspace/
         run: bash ./.github/scripts/merge_local_staging.sh /home/runner/local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-x86_64-java8-local-staging/staging
 
-      - uses: s4u/maven-settings-action@v2.2.0
+      - uses: s4u/maven-settings-action@v2.8.0
         with:
           servers: |
             [{
