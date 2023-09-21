@@ -318,7 +318,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             // small
             // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
             // This is need as we may add it back and so alter the linked-list structure.
-            PoolSubpage<T> head = arena.findSubpagePoolHead(sizeIdx);
+            PoolSubpage<T> head = arena.smallSubpagePools[sizeIdx];
             head.lock();
             try {
                 nextSub = head.next;
@@ -490,7 +490,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
             int sIdx = runOffset(handle);
             PoolSubpage<T> subpage = subpages[sIdx];
             assert subpage != null;
-            PoolSubpage<T> head = subpage.chunk.arena.findSubpagePoolHead(subpage.headIndex);
+            PoolSubpage<T> head = subpage.chunk.arena.smallSubpagePools[subpage.headIndex];
             // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
             // This is need as we may add it back and so alter the linked-list structure.
             head.lock();
