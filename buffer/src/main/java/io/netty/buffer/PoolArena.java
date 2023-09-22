@@ -114,7 +114,6 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         PoolSubpage<T> head = new PoolSubpage<T>();
         head.prev = head;
         head.next = head;
-        head.tail = head;
         return head;
     }
 

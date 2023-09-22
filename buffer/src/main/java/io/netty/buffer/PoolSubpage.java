@@ -36,7 +36,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
 
     PoolSubpage<T> prev;
     PoolSubpage<T> next;
-    PoolSubpage<T> tail;
 
     boolean doNotDestroy;
     private int nextAvail;
@@ -92,7 +91,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         final int bitmapIdx = getNextAvail();
         assert this.prev.chunk == null;
         if (bitmapIdx < 0) {
-            moveToPoolTail(this.prev); // Subpage appear to be in an invalid state. Remove to prevent repeated errors.
+            moveToTail(this.prev); // Subpage appear to be in an invalid state. Remove to prevent repeated errors.
             throw new AssertionError("No next available bitmap index found (bitmapIdx = " + bitmapIdx + "), " +
                     "even though there are supposed to be (numAvail = " + numAvail + ") " +
                     "out of (maxNumElems = " + maxNumElems + ") available indexes.");
@@ -102,7 +101,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         assert (bitmap[q] >>> r & 1) == 0;
         bitmap[q] |= 1L << r;
         if (-- numAvail == 0) {
-            moveToPoolTail(this.prev);
+            moveToTail(this.prev);
         }
         return toHandle(bitmapIdx);
     }
@@ -120,7 +119,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         setNextAvail(bitmapIdx);
 
         if (numAvail ++ == 0) {
-            moveToPoolFront(head);
+            moveToFirst(head);
             /* When maxNumElems == 1, the maximum numAvail is also 1.
              * Each of these PoolSubpages will go in here when they do free operation.
              * If they return true directly from here, then the rest of the code will be unreachable
@@ -150,39 +149,43 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         next = head.next;
         next.prev = this;
         head.next = this;
-        head.tail = head.tail == head ? this : head.tail;
+        // Make the subpage link as a ring.
+        head.prev = head.prev == head ? this : head.prev;
     }
 
-    private void moveToPoolTail(PoolSubpage<T> head) {
-        if (this == head.tail) {
+    private void moveToTail(PoolSubpage<T> head) {
+        // If already on tail.
+        if (next == head) {
             return;
         }
-        assert head == prev && next != null;
+        // Assert current is on head.next.
+        assert head.next == this && next != null;
         prev.next = next;
         next.prev = prev;
-        prev = head.tail;
-        next = head.tail.next;
-        head.tail.next = this;
-        head.tail = this;
+        // 'head.pre' is the tail.
+        prev = head.prev;
+        next = head;
+        head.prev.next = this;
+        head.prev = this;
     }
 
-    private void moveToPoolFront(PoolSubpage<T> head) {
-        if (prev == head) {
+    private void moveToFirst(PoolSubpage<T> head) {
+        // If already on first.
+        if (head.next == this) {
             return;
         }
         assert prev != null && next != null;
-        head.tail = head.tail == this ? prev : head.tail;
         prev.next = next;
         next.prev = prev;
         prev = head;
         next = head.next;
-        next.prev = this;
+        head.next.prev = this;
         head.next = this;
     }
 
     private void removeFromPool(PoolSubpage<T> head) {
+        // Assert current subpage is not the only one in the pool.
         assert prev != null && next != null;
-        head.tail = head.tail == this ? prev : head.tail;
         prev.next = next;
         next.prev = prev;
         next = null;
