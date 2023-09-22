@@ -176,7 +176,6 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             PoolChunk<T> chunk = chunkOrSub.getPoolChunk();
             chunk.arena.free(chunk, tmpNioBuf, handle, maxLength, cache, chunkOrSub.getPoolSubpage());
             tmpNioBuf = null;
-            chunk = null;
             cache = null;
             this.recyclerHandle.unguardedRecycle(this);
         }

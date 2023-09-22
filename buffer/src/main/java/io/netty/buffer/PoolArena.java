@@ -114,6 +114,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         PoolSubpage<T> head = new PoolSubpage<T>();
         head.prev = head;
         head.next = head;
+        head.tail = head;
         return head;
     }
 
@@ -162,7 +163,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         head.lock();
         try {
             final PoolSubpage<T> s = head.next;
-            needsNormalAllocation = s == head;
+            needsNormalAllocation = s == head || s.numAvailable() <= 0;
             if (!needsNormalAllocation) {
                 assert s.doNotDestroy && s.elemSize == sizeIdx2size(sizeIdx) : "doNotDestroy=" +
                         s.doNotDestroy + ", elemSize=" + s.elemSize + ", sizeIdx=" + sizeIdx;

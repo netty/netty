@@ -36,6 +36,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
 
     PoolSubpage<T> prev;
     PoolSubpage<T> next;
+    PoolSubpage<T> tail;
 
     boolean doNotDestroy;
     private int nextAvail;
@@ -88,10 +89,10 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         if (numAvail == 0 || !doNotDestroy) {
             return -1;
         }
-
         final int bitmapIdx = getNextAvail();
+        assert this.prev.chunk == null;
         if (bitmapIdx < 0) {
-            removeFromPool(); // Subpage appear to be in an invalid state. Remove to prevent repeated errors.
+            moveToPoolTail(this.prev); // Subpage appear to be in an invalid state. Remove to prevent repeated errors.
             throw new AssertionError("No next available bitmap index found (bitmapIdx = " + bitmapIdx + "), " +
                     "even though there are supposed to be (numAvail = " + numAvail + ") " +
                     "out of (maxNumElems = " + maxNumElems + ") available indexes.");
@@ -100,11 +101,9 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         int r = bitmapIdx & 63;
         assert (bitmap[q] >>> r & 1) == 0;
         bitmap[q] |= 1L << r;
-
         if (-- numAvail == 0) {
-            removeFromPool();
+            moveToPoolTail(this.prev);
         }
-
         return toHandle(bitmapIdx);
     }
 
@@ -121,7 +120,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         setNextAvail(bitmapIdx);
 
         if (numAvail ++ == 0) {
-            addToPool(head);
+            moveToPoolFront(head);
             /* When maxNumElems == 1, the maximum numAvail is also 1.
              * Each of these PoolSubpages will go in here when they do free operation.
              * If they return true directly from here, then the rest of the code will be unreachable
@@ -130,7 +129,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
                 return true;
             }
         }
-
         if (numAvail != maxNumElems) {
             return true;
         } else {
@@ -139,10 +137,9 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
                 // Do not remove if this subpage is the only one left in the pool.
                 return true;
             }
-
             // Remove this subpage from the pool if there are other subpages left in the pool.
             doNotDestroy = false;
-            removeFromPool();
+            removeFromPool(head);
             return false;
         }
     }
@@ -153,10 +150,39 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         next = head.next;
         next.prev = this;
         head.next = this;
+        head.tail = head.tail == head ? this : head.tail;
     }
 
-    private void removeFromPool() {
+    private void moveToPoolTail(PoolSubpage<T> head) {
+        if (this == head.tail) {
+            return;
+        }
+        assert head == prev && next != null;
+        prev.next = next;
+        next.prev = prev;
+        prev = head.tail;
+        next = head.tail.next;
+        head.tail.next = this;
+        head.tail = this;
+    }
+
+    private void moveToPoolFront(PoolSubpage<T> head) {
+        if (prev == head) {
+            return;
+        }
         assert prev != null && next != null;
+        head.tail = head.tail == this ? prev : head.tail;
+        prev.next = next;
+        next.prev = prev;
+        prev = head;
+        next = head.next;
+        next.prev = this;
+        head.next = this;
+    }
+
+    private void removeFromPool(PoolSubpage<T> head) {
+        assert prev != null && next != null;
+        head.tail = head.tail == this ? prev : head.tail;
         prev.next = next;
         next.prev = prev;
         next = null;
