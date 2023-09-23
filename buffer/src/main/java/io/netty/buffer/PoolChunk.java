@@ -690,9 +690,9 @@ final class PoolChunk<T> implements PoolChunkMetric, PoolChunkSubPageWrapper<T> 
 
     @Override
     public PoolSubpage<T> getPoolSubpage() {
-        // PoolChunk VS PoolSubpage is 1 on N.
+        // PoolChunk on PoolSubpage is 1 on N.
         // Can not determine which PoolSubpage instance should be returned.
-        // So return null
+        // So return null.
         return null;
     }
 
