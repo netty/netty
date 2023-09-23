@@ -222,12 +222,13 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             numAvail = 0;
         } else {
             final boolean doNotDestroy;
-            chunk.arena.smallSubpagePools[headIndex].lock();
+            PoolSubpage<T> head = chunk.arena.smallSubpagePools[headIndex];
+            head.lock();
             try {
                 doNotDestroy = this.doNotDestroy;
                 numAvail = this.numAvail;
             } finally {
-                chunk.arena.smallSubpagePools[headIndex].unlock();
+                head.unlock();
             }
             if (!doNotDestroy) {
                 // Not used for creating the String.
@@ -250,11 +251,12 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             // It's the head.
             return 0;
         }
-        chunk.arena.smallSubpagePools[headIndex].lock();
+        PoolSubpage<T> head = chunk.arena.smallSubpagePools[headIndex];
+        head.lock();
         try {
             return numAvail;
         } finally {
-            chunk.arena.smallSubpagePools[headIndex].unlock();
+            head.unlock();
         }
     }
 
@@ -273,11 +275,12 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             // It's the head.
             return true;
         }
-        chunk.arena.smallSubpagePools[headIndex].lock();
+        PoolSubpage<T> head = chunk.arena.smallSubpagePools[headIndex];
+        head.lock();
         try {
             return doNotDestroy;
         } finally {
-            chunk.arena.smallSubpagePools[headIndex].unlock();
+            head.unlock();
         }
     }
 

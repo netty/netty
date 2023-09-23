@@ -17,8 +17,6 @@ package io.netty.buffer;
 
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
-
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -113,6 +111,7 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
             head.unlock();
         }
     }
+
     private static PooledByteBuf<?> pooledByteBuf(ByteBuf buffer) {
         // might need to unwrap if swapped (LE) and/or leak-aware-wrapped
         while (!(buffer instanceof PooledByteBuf)) {
