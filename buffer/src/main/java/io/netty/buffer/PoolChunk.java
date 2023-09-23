@@ -133,7 +133,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * 4) save the merged run
  *
  */
-final class PoolChunk<T> implements PoolChunkMetric, PoolChunkSubPageWrapper {
+final class PoolChunk<T> implements PoolChunkMetric, PoolChunkSubPageWrapper<T> {
     private static final int SIZE_BIT_LENGTH = 15;
     private static final int INUSED_BIT_LENGTH = 1;
     private static final int SUBPAGE_BIT_LENGTH = 1;
