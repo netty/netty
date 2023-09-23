@@ -149,8 +149,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         next = head.next;
         next.prev = this;
         head.next = this;
-        // Make the subpage link as a ring.
-        head.prev = head.prev == head ? this : head.prev;
     }
 
     private void moveToTail(PoolSubpage<T> head) {
@@ -171,7 +169,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
 
     private void moveToFirst(PoolSubpage<T> head) {
         // If already on first.
-        if (head.next == this) {
+        if (prev == head) {
             return;
         }
         assert prev != null && next != null;
