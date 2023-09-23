@@ -89,13 +89,19 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
      * Returns the bitmap index of the subpage allocation.
      */
     long allocate() {
+        // If this subpage is full, or it has been marked as invalid('doNotDestroy' is false).
         if (numAvail == 0 || !doNotDestroy) {
             return -1;
         }
         final int bitmapIdx = getNextAvail();
+        // Assert this subpage is the first one of the link(head.next).
         assert this.prev.chunk == null;
         if (bitmapIdx < 0) {
-            moveToTail(this.prev); // Subpage appear to be in an invalid state. Remove to prevent repeated errors.
+            // Subpage appear to be in an invalid state.
+            // Mark the 'doNotDestroy' as false to prohibit subsequent allocation from this subpage.
+            doNotDestroy = false;
+            // Move this subpage to tail.
+            moveToTail(this.prev);
             throw new AssertionError("No next available bitmap index found (bitmapIdx = " + bitmapIdx + "), " +
                     "even though there are supposed to be (numAvail = " + numAvail + ") " +
                     "out of (maxNumElems = " + maxNumElems + ") available indexes.");
@@ -104,7 +110,8 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         int r = bitmapIdx & 63;
         assert (bitmap[q] >>> r & 1) == 0;
         bitmap[q] |= 1L << r;
-        if (-- numAvail == 0) {
+        // If this subpage becomes full.
+        if (--numAvail == 0) {
             moveToTail(this.prev);
         }
         return toHandle(bitmapIdx);
@@ -112,7 +119,8 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
 
     /**
      * @return {@code true} if this subpage is in use.
-     *         {@code false} if this subpage is not used by its chunk and thus it's OK to be released.
+     *         {@code false} if this subpage is not used by its chunk, thus it is removed from pool,
+     *                       and it will be GCed.
      */
     boolean free(PoolSubpage<T> head, int bitmapIdx) {
         int q = bitmapIdx >>> 6;
@@ -122,30 +130,30 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
 
         setNextAvail(bitmapIdx);
 
-        if (numAvail ++ == 0) {
-            moveToFirst(head);
-            /* When maxNumElems == 1, the maximum numAvail is also 1.
-             * Each of these PoolSubpages will go in here when they do free operation.
-             * If they return true directly from here, then the rest of the code will be unreachable
-             * and they will not actually be recycled. So return true only on maxNumElems > 1. */
-            if (maxNumElems > 1) {
+        numAvail ++;
+        // If this subpage's status is valid('doNotDestroy' is true).
+        if (doNotDestroy) {
+            // If this subpage changed from full to non-full('numAvail' is 1),
+            // and it is not empty: maxNumElems > numAvail.
+            if (1 == numAvail && maxNumElems > numAvail) {
+                moveToFirst(head);
                 return true;
             }
         }
-        if (numAvail != maxNumElems) {
-            return true;
-        } else {
-            // Subpage not in use (numAvail == maxNumElems)
-            if (prev == next) {
-                // Do not remove if this subpage is the only one left in the pool.
+        // If this subpage becomes empty.
+        if (numAvail == maxNumElems) {
+            // If this subpage's status is valid('doNotDestroy' is true),
+            // and it's the only one left in the pool,
+            if (doNotDestroy && prev == next) {
+                // Do not remove this subpage from the pool.
                 return true;
             }
+            // Remove this subpage from the pool.
             doNotDestroy = false;
-            // Remove this subpage from the pool if there are other subpages left in the pool.
-            // This subpage will be GC-ed, and we should not use it anymore.
             removeFromPool();
             return false;
         }
+        return true;
     }
 
     private void addToPool(PoolSubpage<T> head) {
@@ -187,8 +195,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
     }
 
     private void removeFromPool() {
-        // Assert current subpage is not the only one in the pool.
-        assert prev != null && next != null;
         prev.next = next;
         next.prev = prev;
         next = null;

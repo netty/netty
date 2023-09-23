@@ -316,8 +316,8 @@ final class PoolChunk<T> implements PoolChunkMetric, PoolChunkSubPageWrapper<T> 
             head.lock();
             try {
                 nextSub = head.next;
-                if (nextSub != head && nextSub.numAvailable() > 0) {
-                    assert nextSub.doNotDestroy && nextSub.elemSize == arena.sizeIdx2size(sizeIdx) : "doNotDestroy=" +
+                if (nextSub != head && nextSub.numAvailable() > 0 && nextSub.doNotDestroy) {
+                    assert nextSub.elemSize == arena.sizeIdx2size(sizeIdx) : "doNotDestroy=" +
                             nextSub.doNotDestroy + ", elemSize=" + nextSub.elemSize + ", sizeIdx=" + sizeIdx;
                     handle = nextSub.allocate();
                     assert handle >= 0;
