@@ -312,7 +312,7 @@ final class PoolChunk<T> implements PoolChunkMetric, PoolChunkSubPageWrapper<T> 
             // small
             // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
             // This is need as we may add it back and so alter the linked-list structure.
-            PoolSubpage<T> head = arena.findSubpagePoolHead(sizeIdx);
+            PoolSubpage<T> head = arena.smallSubpagePools[sizeIdx];
             head.lock();
             try {
                 nextSub = head.next;
@@ -475,13 +475,13 @@ final class PoolChunk<T> implements PoolChunkMetric, PoolChunkSubPageWrapper<T> 
      */
     void free(long handle, int normCapacity, ByteBuffer nioBuffer, PoolSubpage<T> subpage) {
         if (isSubpage(handle)) {
-            int sizeIdx = arena.size2SizeIdx(normCapacity);
-            PoolSubpage<T> head = arena.findSubpagePoolHead(sizeIdx);
+            assert subpage != null;
+            PoolSubpage<T> head = arena.smallSubpagePools[subpage.headIndex];
             // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
             // This is need as we may add it back and so alter the linked-list structure.
             head.lock();
             try {
-                assert subpage != null && subpage.doNotDestroy;
+                assert subpage.doNotDestroy;
                 if (subpage.free(head, bitmapIdx(handle))) {
                     // the subpage is still used
                     return;
@@ -590,7 +590,7 @@ final class PoolChunk<T> implements PoolChunkMetric, PoolChunkSubPageWrapper<T> 
                             PoolThreadCache threadCache, PoolSubpage<T> s) {
         int runOffset = runOffset(handle);
         int bitmapIdx = bitmapIdx(handle);
-        assert s.doNotDestroy;
+        assert s.isDoNotDestroy();
         assert reqCapacity <= s.elemSize : reqCapacity + "<=" + s.elemSize;
 
         int offset = (runOffset << pageShifts) + bitmapIdx * s.elemSize;

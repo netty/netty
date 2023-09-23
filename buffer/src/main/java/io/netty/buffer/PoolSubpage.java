@@ -43,11 +43,13 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
 
     private final ReentrantLock lock;
 
+    final int headIndex;
+
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
     /** Special constructor that creates a linked list head */
-    PoolSubpage() {
+    PoolSubpage(int headIndex) {
         chunk = null;
         lock = new ReentrantLock();
         pageShifts = -1;
@@ -57,6 +59,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         bitmap = null;
         bitmapLength = -1;
         maxNumElems = 0;
+        this.headIndex = headIndex;
     }
 
     PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int pageShifts, int runOffset, int runSize, int elemSize) {
@@ -65,6 +68,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         this.runOffset = runOffset;
         this.runSize = runSize;
         this.elemSize = elemSize;
+        this.headIndex = head.headIndex;
 
         doNotDestroy = true;
 
@@ -247,12 +251,12 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
             numAvail = 0;
         } else {
             final boolean doNotDestroy;
-            chunk.arena.lock();
+            chunk.arena.smallSubpagePools[headIndex].lock();
             try {
                 doNotDestroy = this.doNotDestroy;
                 numAvail = this.numAvail;
             } finally {
-                chunk.arena.unlock();
+                chunk.arena.smallSubpagePools[headIndex].unlock();
             }
             if (!doNotDestroy) {
                 // Not used for creating the String.
@@ -276,11 +280,11 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
             return 0;
         }
 
-        chunk.arena.lock();
+        chunk.arena.smallSubpagePools[headIndex].lock();
         try {
             return numAvail;
         } finally {
-            chunk.arena.unlock();
+            chunk.arena.smallSubpagePools[headIndex].unlock();
         }
     }
 
@@ -292,6 +296,19 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
     @Override
     public int pageSize() {
         return 1 << pageShifts;
+    }
+
+    boolean isDoNotDestroy() {
+        if (chunk == null) {
+            // It's the head.
+            return true;
+        }
+        chunk.arena.smallSubpagePools[headIndex].lock();
+        try {
+            return doNotDestroy;
+        } finally {
+            chunk.arena.smallSubpagePools[headIndex].unlock();
+        }
     }
 
     void destroy() {

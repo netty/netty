@@ -42,7 +42,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
 
     final int numSmallSubpagePools;
     final int directMemoryCacheAlignment;
-    private final PoolSubpage<T>[] smallSubpagePools;
+    final PoolSubpage<T>[] smallSubpagePools;
 
     private final PoolChunkList<T> q050;
     private final PoolChunkList<T> q025;
@@ -83,7 +83,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         numSmallSubpagePools = nSubpages;
         smallSubpagePools = newSubpagePoolArray(numSmallSubpagePools);
         for (int i = 0; i < smallSubpagePools.length; i ++) {
-            smallSubpagePools[i] = newSubpagePoolHead();
+            smallSubpagePools[i] = newSubpagePoolHead(i);
         }
 
         q100 = new PoolChunkList<T>(this, null, 100, Integer.MAX_VALUE, chunkSize);
@@ -110,8 +110,8 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         chunkListMetrics = Collections.unmodifiableList(metrics);
     }
 
-    private PoolSubpage<T> newSubpagePoolHead() {
-        PoolSubpage<T> head = new PoolSubpage<T>();
+    private PoolSubpage<T> newSubpagePoolHead(int index) {
+        PoolSubpage<T> head = new PoolSubpage<T>(index);
         head.prev = head;
         head.next = head;
         return head;
@@ -157,7 +157,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
          * Synchronize on the head. This is needed as {@link PoolChunk#allocateSubpage(int)} and
          * {@link PoolChunk#free(long)} may modify the doubly linked list as well.
          */
-        final PoolSubpage<T> head = findSubpagePoolHead(sizeIdx);
+        final PoolSubpage<T> head = smallSubpagePools[sizeIdx];
         final boolean needsNormalAllocation;
         head.lock();
         try {
@@ -279,10 +279,6 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
             // destroyChunk not need to be called while holding the synchronized lock.
             destroyChunk(chunk);
         }
-    }
-
-    PoolSubpage<T> findSubpagePoolHead(int sizeIdx) {
-        return smallSubpagePools[sizeIdx];
     }
 
     void reallocate(PooledByteBuf<T> buf, int newCapacity) {
