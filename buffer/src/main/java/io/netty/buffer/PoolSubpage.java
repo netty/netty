@@ -101,6 +101,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
             // Mark the 'doNotDestroy' as false to prohibit subsequent allocation from this subpage.
             doNotDestroy = false;
             // Move this subpage to tail.
+            // We do not remove this subpage from pool, because it may still have other elements in use.
             moveToTail(this.prev);
             throw new AssertionError("No next available bitmap index found (bitmapIdx = " + bitmapIdx + "), " +
                     "even though there are supposed to be (numAvail = " + numAvail + ") " +
