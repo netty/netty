@@ -320,7 +320,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         }
     }
 
-    boolean isAllocatable() {
+    boolean isPoolAllocatable() {
         final PoolSubpage<T> head;
         if (chunk == null) {
             // It's the head.
