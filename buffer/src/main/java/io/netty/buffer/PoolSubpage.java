@@ -136,9 +136,10 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
                 // Do not remove if this subpage is the only one left in the pool.
                 return true;
             }
-            // Remove this subpage from the pool if there are other subpages left in the pool.
             doNotDestroy = false;
-            removeFromPool(head);
+            // Remove this subpage from the pool if there are other subpages left in the pool.
+            // This subpage will be GC-ed, and we should not use it anymore.
+            removeFromPool();
             return false;
         }
     }
@@ -181,7 +182,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         head.next = this;
     }
 
-    private void removeFromPool(PoolSubpage<T> head) {
+    private void removeFromPool() {
         // Assert current subpage is not the only one in the pool.
         assert prev != null && next != null;
         prev.next = next;
