@@ -322,12 +322,10 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
 
     /**
      * The head subpage's lock must be held by current thread before call this method.
-     * @return true if the first subpage of the pool is not null, and 'numAvail' > 0, and 'doNotDestroy' is true.
-     *         otherwise return false.
      */
     boolean isPoolAllocatable(PoolSubpage<T> head) {
         assert head.lock.isHeldByCurrentThread();
-        return head.next != null && head.next.numAvail > 0 && head.next.doNotDestroy;
+        return head.next != head && head.next.numAvail > 0 && head.next.doNotDestroy;
     }
 
     void destroy() {
