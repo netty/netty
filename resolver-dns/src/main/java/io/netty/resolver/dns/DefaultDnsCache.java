@@ -84,7 +84,7 @@ public class DefaultDnsCache implements DnsCache {
             throw new IllegalArgumentException(
                     "minTtl: " + minTtl + ", maxTtl: " + maxTtl + " (expected: 0 <= minTtl <= maxTtl)");
         }
-        this.negativeTtl = checkPositiveOrZero(negativeTtl, "negativeTtl");
+        this.negativeTtl = Math.min(Cache.MAX_SUPPORTED_TTL_SECS, checkPositiveOrZero(negativeTtl, "negativeTtl"));
     }
 
     /**
