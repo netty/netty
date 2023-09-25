@@ -7,8 +7,7 @@
     },
     {
       "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},
-      "pattern":"\\QMETA-INF/native/libnetty_quiche_osx_aarch_64.jnilib\\E",
-      "//note": "Apple M1 is still not supported https://github.com/oracle/graal/issues/2666"
+      "pattern":"\\QMETA-INF/native/libnetty_quiche_osx_aarch_64.jnilib\\E"
     },
     {
       "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},
