@@ -873,7 +873,6 @@ jint netty_epoll_linuxsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) 
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, peerCredentialsClassWeak, nettyClassName, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, peerCredentialsClass, peerCredentialsClassWeak, done);
 
-    NETTY_JNI_UTIL_LOAD_CLASS(env, peerCredentialsClass, nettyClassName, done);
     netty_jni_util_free_dynamic_name(&nettyClassName);
 
     NETTY_JNI_UTIL_GET_METHOD(env, peerCredentialsClass, peerCredentialsMethodId, "<init>", "(II[I)V", done);
