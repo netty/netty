@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty-codec-quic-centos7:centos-7-21
+    build:
+      args:
+        java_version : "21-zulu"
+
+  build:
+    image: netty-codec-quic-centos7:centos-7-21
+
+  build-leak:
+    image: netty-codec-quic-centos7:centos-7-21
+
+  build-no-unsafe:
+    image: netty-codec-quic-centos7:centos-7-21
+
+  build-clean:
+    image: netty-codec-quic-centos7:centos-7-21
+
+  deploy:
+    image: netty-codec-quic-centos7:centos-7-21
+
+  deploy-clean:
+    image: netty-codec-quic-centos7:centos-7-21
+
+  stage-snapshot:
+    image: netty-codec-quic-centos7:centos-7-21
+
+  stage-release:
+    image: netty-codec-quic-centos7:centos-7-21
+
+  shell:
+    image: netty-codec-quic-centos7:centos-7-21
