@@ -1394,7 +1394,6 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sslTaskClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sslTaskClass, sslTaskClassWeak, done);
 
-    NETTY_JNI_UTIL_LOAD_CLASS(env, sslTaskClass, name, done);
     NETTY_JNI_UTIL_GET_FIELD(env, sslTaskClass, sslTaskReturnValue, "returnValue", "I", done);
     NETTY_JNI_UTIL_GET_FIELD(env, sslTaskClass, sslTaskComplete, "complete", "Z", done);
     NETTY_JNI_UTIL_GET_METHOD(env, sslTaskClass, sslTaskDestroyMethod, "destroy", "()V", done);
