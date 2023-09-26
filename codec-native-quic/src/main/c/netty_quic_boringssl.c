@@ -356,6 +356,7 @@ enum ssl_verify_result_t quic_SSL_cert_custom_verify(SSL* ssl, uint8_t *out_aler
 
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(e, verifyTaskClass, verifyTaskClassWeak, complete);
     jobject task = (*e)->NewObject(e, verifyTaskClass, verifyTaskClassInitMethod, (jlong) ssl, array, authMethodString, verifyCallback);
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, verifyTaskClass);
 
     ssl_task = netty_boringssl_ssl_task_new(e, task);
     if (ssl_task == NULL) {
@@ -376,7 +377,6 @@ complete:
             *out_alert = SSL_alert_from_verify_result(result);
         }
     }
-    NETTY_JNI_UTIL_DELETE_LOCAL(e, verifyTaskClass);
     return ret;
 }
 
@@ -422,6 +422,7 @@ static enum ssl_private_key_result_t netty_boringssl_private_key_sign_java(SSL *
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(e, sslPrivateKeyMethodSignTaskClass, sslPrivateKeyMethodSignTaskClassWeak, complete);
     jobject task = (*e)->NewObject(e, sslPrivateKeyMethodSignTaskClass, sslPrivateKeyMethodSignTaskInitMethod, (jlong) ssl,
                     signature_algorithm, inputArray, ssl_private_key_method);
+    NETTY_JNI_UTIL_DELETE_LOCAL(e, sslPrivateKeyMethodSignTaskClass);
 
     netty_boringssl_ssl_task_t* ssl_task = netty_boringssl_ssl_task_new(e, task);
     if (ssl_task == NULL) {
@@ -432,7 +433,6 @@ static enum ssl_private_key_result_t netty_boringssl_private_key_sign_java(SSL *
 complete:
     // Free up any allocated memory and return.
     NETTY_JNI_UTIL_DELETE_LOCAL(e, inputArray);
-    NETTY_JNI_UTIL_DELETE_LOCAL(e, sslPrivateKeyMethodSignTaskClass);
     return ret;
 }
 
@@ -572,6 +572,7 @@ static int quic_certificate_cb(SSL* ssl, void* arg) {
         // SSL.getTask(ssl) and run it.
         NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(e, certificateTaskClass, certificateTaskClassWeak, done);
         jobject task = (*e)->NewObject(e, certificateTaskClass, certificateTaskClassInitMethod, (jlong) ssl, types, issuers, authMethods, arg);
+        NETTY_JNI_UTIL_DELETE_LOCAL(e, certificateTaskClass);
 
         if ((ssl_task = netty_boringssl_ssl_task_new(e, task)) == NULL) {
             return 0;
