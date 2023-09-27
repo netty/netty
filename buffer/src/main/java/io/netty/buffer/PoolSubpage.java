@@ -135,17 +135,19 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         // If this subpage's state is valid('doNotDestroy' is true).
         if (doNotDestroy) {
             // If this subpage changed from full to non-full('numAvail' is 1),
-            // and it is not empty: maxNumElems > numAvail.
-            if (1 == numAvail && maxNumElems > numAvail) {
+            if (1 == numAvail) {
                 moveToFirst(head);
+            }
+            // If it is not empty: maxNumElems > numAvail.
+            if (maxNumElems > numAvail) {
                 return true;
             }
         }
         // If this subpage becomes empty.
         if (numAvail == maxNumElems) {
             // If this subpage's state is valid('doNotDestroy' is true),
-            // and it's the only one left in the pool.
-            if (doNotDestroy && prev == next) {
+            // and if the next subpage is not allocatable.
+            if (doNotDestroy && !next.isAllocatable()) {
                 // Do not remove this subpage from the pool.
                 return true;
             }
@@ -323,9 +325,14 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
     /**
      * The head subpage's lock must be held by current thread before call this method.
      */
-    boolean isPoolAllocatable(PoolSubpage<T> head) {
+    boolean isAllocatable() {
+        if (chunk == null) {
+            // It's the head.
+            return false;
+        }
+        PoolSubpage<T> head = chunk.arena.smallSubpagePools[headIndex];
         assert head.lock.isHeldByCurrentThread();
-        return head.next != head && head.next.numAvail > 0 && head.next.doNotDestroy;
+        return numAvail > 0 && doNotDestroy;
     }
 
     void destroy() {

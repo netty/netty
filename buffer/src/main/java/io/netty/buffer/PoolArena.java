@@ -161,7 +161,7 @@ abstract class PoolArena<T> extends SizeClasses implements PoolArenaMetric {
         final boolean needsNormalAllocation;
         head.lock();
         try {
-            needsNormalAllocation = !head.isPoolAllocatable(head);
+            needsNormalAllocation = !head.next.isAllocatable();
             if (!needsNormalAllocation) {
                 final PoolSubpage<T> s = head.next;
                 assert s.elemSize == sizeIdx2size(sizeIdx) : "doNotDestroy=" +
