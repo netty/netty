@@ -330,8 +330,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
             // It's the head.
             return false;
         }
-        PoolSubpage<T> head = chunk.arena.smallSubpagePools[headIndex];
-        assert head.lock.isHeldByCurrentThread();
+        assert chunk.arena.smallSubpagePools[headIndex].lock.isHeldByCurrentThread();
         return numAvail > 0 && doNotDestroy;
     }
 
