@@ -132,16 +132,17 @@ final class PoolSubpage<T> implements PoolSubpageMetric, PoolChunkSubPageWrapper
         setNextAvail(bitmapIdx);
 
         numAvail ++;
-        // If this subpage's state is valid('doNotDestroy' is true).
-        if (doNotDestroy) {
-            // If this subpage changed from full to non-full('numAvail' is 1),
-            if (1 == numAvail) {
+        // If this subpage's state is valid('doNotDestroy' is true),
+        // and this subpage changed from full to non-full('numAvail' is 1),
+        if (doNotDestroy && numAvail == 1) {
+            if (maxNumElems > 1 || !head.next.isAllocatable()) {
                 moveToFirst(head);
-            }
-            // If it is not empty: maxNumElems > numAvail.
-            if (maxNumElems > numAvail) {
                 return true;
             }
+            // Remove this subpage from the pool.
+            doNotDestroy = false;
+            removeFromPool();
+            return false;
         }
         // If this subpage becomes empty.
         if (numAvail == maxNumElems) {
