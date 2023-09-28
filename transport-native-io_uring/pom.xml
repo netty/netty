@@ -43,6 +43,8 @@
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <extraConfigureArg />
     <extraConfigureArg2 />
+    <!-- Always check JNI during test run so we catch bugs that could cause crashes -->
+    <argLine.jni>-Xcheck:jni</argLine.jni>
     <test.argLine>-D_</test.argLine>
   </properties>
 

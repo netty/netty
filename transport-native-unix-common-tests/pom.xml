@@ -31,6 +31,8 @@
 
   <properties>
     <javaModuleName>io.netty5.transport_native_unix_common_tests</javaModuleName>
+    <!-- Always check JNI during test run so we catch bugs that could cause crashes -->
+    <argLine.jni>-Xcheck:jni</argLine.jni>
   </properties>
 
   <dependencies>

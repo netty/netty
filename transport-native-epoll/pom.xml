@@ -29,6 +29,8 @@
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
     <javaModuleName>io.netty5.transport.epoll.${javaModuleNameClassifier}</javaModuleName>
+    <!-- Always check JNI during test run so we catch bugs that could cause crashes -->
+    <argLine.jni>-Xcheck:jni</argLine.jni>
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
