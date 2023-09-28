@@ -1200,7 +1200,10 @@ public final class PlatformDependent {
      * @return The estimated max direct memory, in bytes.
      */
     public static long estimateMaxDirectMemory() {
-        long maxDirectMemory = 0;
+        long maxDirectMemory = PlatformDependent0.bitsMaxDirectMemory();
+        if (maxDirectMemory > 0) {
+            return maxDirectMemory;
+        }
 
         ClassLoader systemClassLoader = null;
         try {
