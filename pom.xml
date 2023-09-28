@@ -631,6 +631,7 @@
       -dsa -da -ea:io.netty...
       -XX:+HeapDumpOnOutOfMemoryError
     </argLine.common>
+    <argLine.jni>-D</argLine.jni>
     <!-- Default to ALPN. See forcenpn profile to force NPN -->
     <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}=${jetty.alpnAgent.option}</argLine.alpnAgent>
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
@@ -1559,7 +1560,7 @@
             <nativeImage.handlerMetadataGroupId>${project.groupId}</nativeImage.handlerMetadataGroupId>
             <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
-          <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}</argLine>
+          <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties}</argLine>
           <properties>
             <property>
               <name>listener</name>
