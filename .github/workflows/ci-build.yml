@@ -115,7 +115,7 @@ jobs:
           override: true
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.0.2
+        uses: microsoft/setup-msbuild@v1.3.1
 
       - name: Configuring Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
@@ -123,7 +123,7 @@ jobs:
           arch: x86_amd64
 
       - name: Install tools
-        uses: crazy-max/ghaction-chocolatey@v1
+        uses: crazy-max/ghaction-chocolatey@v3
         with:
           args: install ninja nasm
 
