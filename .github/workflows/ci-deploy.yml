@@ -54,7 +54,7 @@ jobs:
           restore-keys: |
             stage-snapshot-${{ matrix.setup }}-maven-cache-
 
-      - uses: s4u/maven-settings-action@v2.2.8
+      - uses: s4u/maven-settings-action@v2.8.0
         with:
           servers: |
             [{
