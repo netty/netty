@@ -109,13 +109,10 @@ jobs:
           distribution: zulu
           java-version: 8
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install stable rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          target: x86_64-pc-windows-msvc
-          override: true
+          targets: x86_64-pc-windows-msvc
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3.1
