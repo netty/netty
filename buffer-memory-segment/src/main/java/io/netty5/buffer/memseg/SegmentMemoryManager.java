@@ -39,9 +39,9 @@ public class SegmentMemoryManager implements MemoryManager {
 
     private static Buffer createNativeBuffer(
             long size, Function<Drop<Buffer>, Drop<Buffer>> adaptor, AllocatorControl control) {
-        Arena arena = Arena.openShared();
+        Arena arena = Arena.ofShared();
         InternalBufferUtils.MEM_USAGE_NATIVE.add(size);
-        var segment = MemorySegment.allocateNative(size, arena.scope());
+        var segment = arena.allocate(size);
         var drop = adaptor.apply(drop(arena, size));
         return createBuffer(segment, drop, control);
     }
