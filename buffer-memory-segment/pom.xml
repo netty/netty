@@ -33,9 +33,9 @@
   <properties>
     <javaModuleName>io.netty5.buffer.memseg</javaModuleName>
     <!-- Java version for bytecode compatibility. -->
-    <java.compatibility>20</java.compatibility>
+    <java.compatibility>21</java.compatibility>
     <!-- Java version actually used to perform the build; compiling and testing. -->
-    <java.version>20</java.version>
+    <java.version>21</java.version>
     <surefire.version>3.0.0-M5</surefire.version>
     <jmh.version>1.33</jmh.version>
   </properties>
