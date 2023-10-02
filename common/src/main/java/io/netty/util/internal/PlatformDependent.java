@@ -80,9 +80,7 @@ public final class PlatformDependent {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PlatformDependent.class);
 
-    private static final Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN = Pattern.compile(
-            "\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
-
+    private static Pattern MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN;
     private static final boolean MAYBE_SUPER_USER;
 
     private static final boolean CAN_ENABLE_TCP_NODELAY_BY_DEFAULT = !isAndroid();
@@ -1190,6 +1188,16 @@ public final class PlatformDependent {
         return vmName.equals("IKVM.NET");
     }
 
+    private static Pattern getMaxDirectMemorySizeArgPattern() {
+        // Pattern's is immutable so it's always safe published
+        Pattern pattern = MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN;
+        if (pattern == null) {
+            pattern = Pattern.compile("\\s*-XX:MaxDirectMemorySize\\s*=\\s*([0-9]+)\\s*([kKmMgG]?)\\s*$");
+            MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN =  pattern;
+        }
+        return pattern;
+    }
+
     /**
      * Compute an estimate of the maximum amount of direct memory available to this JVM.
      * <p>
@@ -1200,7 +1208,10 @@ public final class PlatformDependent {
      * @return The estimated max direct memory, in bytes.
      */
     public static long estimateMaxDirectMemory() {
-        long maxDirectMemory = 0;
+        long maxDirectMemory = PlatformDependent0.bitsMaxDirectMemory();
+        if (maxDirectMemory > 0) {
+            return maxDirectMemory;
+        }
 
         ClassLoader systemClassLoader = null;
         try {
@@ -1239,8 +1250,11 @@ public final class PlatformDependent {
 
             @SuppressWarnings("unchecked")
             List<String> vmArgs = (List<String>) runtimeClass.getDeclaredMethod("getInputArguments").invoke(runtime);
+
+            Pattern maxDirectMemorySizeArgPattern = getMaxDirectMemorySizeArgPattern();
+
             for (int i = vmArgs.size() - 1; i >= 0; i --) {
-                Matcher m = MAX_DIRECT_MEMORY_SIZE_ARG_PATTERN.matcher(vmArgs.get(i));
+                Matcher m = maxDirectMemorySizeArgPattern.matcher(vmArgs.get(i));
                 if (!m.matches()) {
                     continue;
                 }
