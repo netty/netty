@@ -126,7 +126,7 @@ jobs:
             ${{ runner.os }}-maven-build-pr-aarch64-
             ${{ runner.os }}-maven-
 
-      - uses: uraimo/run-on-arch-action@v2.5.0
+      - uses: uraimo/run-on-arch-action@v2.5.1
         name: Run commands
         id: runcmd
         with:
