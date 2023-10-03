@@ -42,7 +42,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     private int nextAvail;
     private int numAvail;
 
-    private final ReentrantLock lock;
+    final ReentrantLock lock;
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;

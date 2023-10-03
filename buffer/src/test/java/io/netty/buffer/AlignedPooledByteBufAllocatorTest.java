@@ -17,6 +17,8 @@ package io.netty.buffer;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.TimeUnit;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -65,7 +67,7 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
         assertTrue(b.release());
     }
     @Test
-    public void testDirectSubpageReleaseLock() throws Exception {
+    public void testDirectSubpageReleaseLock() {
         int initialCapacity = 0;
         int directMemoryCacheAlignment = 32;
         PooledByteBufAllocator allocator = new PooledByteBufAllocator(
@@ -104,9 +106,14 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
         head.lock();
         try {
             t1.start();
-            // Wait max 3 seconds.
-            t1.join(1000 * 3);
-            assertTrue(t1.isAlive(), "The t1 thread should still alive and wait for the head lock.");
+            long start = System.nanoTime();
+            while (!head.lock.hasQueuedThread(t1)) {
+                if ((System.nanoTime() - start) > TimeUnit.SECONDS.toNanos(3)) {
+                    break;
+                }
+            }
+            assertTrue(head.lock.hasQueuedThread(t1),
+                    "The t1 thread should still be waiting for the head lock.");
         } finally {
             head.unlock();
         }
