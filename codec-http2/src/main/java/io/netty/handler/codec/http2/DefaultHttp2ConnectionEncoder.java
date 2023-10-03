@@ -160,6 +160,34 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         return isInformational;
     }
 
+    /**
+     * According to RFC 9113, "Pseudo-header fields defined for requests MUST NOT appear in responses;
+     * pseudo-header fields defined for responses MUST NOT appear in requests."
+     * @return {@code true} if validation completed successfully, {@code false} if not
+     */
+    private boolean validatePseudoHeaders(Http2Headers headers) {
+        System.out.println("We got here!");
+        new Exception().printStackTrace();
+        boolean isResponseHeaders = connection.isServer();
+        for (CharSequence name : headers.names()) {
+            if (Http2Headers.PseudoHeaderName.isPseudoHeader(name) &&
+                ((isResponseHeaders && Http2Headers.PseudoHeaderName.getPseudoHeader(name).isRequestOnly()) ||
+                (!isResponseHeaders && !Http2Headers.PseudoHeaderName.getPseudoHeader(name).isRequestOnly()))) {
+                System.out.println("Returning false because is response? " + isResponseHeaders);
+                System.out.println("Name of header: " + name);
+                System.out.println("Is PseudoHeader? " + Http2Headers.PseudoHeaderName.isPseudoHeader(name));
+                if (Http2Headers.PseudoHeaderName.getPseudoHeader(name) != null) {
+                    System.out.println("Is PseudoHeader request only? "
+                    + Http2Headers.PseudoHeaderName.getPseudoHeader(name).isRequestOnly());
+                } else {
+                    System.out.println("Found null PseudoHeader!? " + name);
+                }
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     public ChannelFuture writeHeaders(final ChannelHandlerContext ctx, final int streamId,
             final Http2Headers headers, final int streamDependency, final short weight,
@@ -219,6 +247,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                         throw new IllegalStateException("Stream " + stream.id() + " in unexpected state " +
                                                         stream.state());
                 }
+            }
+
+            if (!validatePseudoHeaders(headers)) {
+                promise.tryFailure(new IllegalArgumentException("Invalid Pseudo-Header found in response for: " +
+                                                                streamId));
+                return promise;
             }
 
             // Trailing headers must go through flow control if there are other frames queued in flow control

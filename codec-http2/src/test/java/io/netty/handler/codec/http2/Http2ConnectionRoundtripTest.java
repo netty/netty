@@ -148,13 +148,14 @@ public class Http2ConnectionRoundtripTest {
     @Test
     public void inflightFrameAfterStreamResetShouldNotMakeConnectionUnusable() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
+        final Http2Headers responseHeaders = dummyOKResponseHeaders();
         doAnswer(new Answer<Void>() {
             @Override
             public Void answer(InvocationOnMock invocationOnMock) throws Throwable {
                 ChannelHandlerContext ctx = invocationOnMock.getArgument(0);
                 http2Server.encoder().writeHeaders(ctx,
                         (Integer) invocationOnMock.getArgument(1),
-                        (Http2Headers) invocationOnMock.getArgument(2),
+                        responseHeaders,
                         0,
                         false,
                         ctx.newPromise());
@@ -1270,6 +1271,11 @@ public class Http2ConnectionRoundtripTest {
         return new DefaultHttp2Headers(false).method(new AsciiString("GET")).scheme(new AsciiString("https"))
         .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
         .add(randomString(), randomString());
+    }
+
+    private static Http2Headers dummyOKResponseHeaders() {
+        return new DefaultHttp2Headers(false).status(new AsciiString("200"))
+        .add("response-" + randomString(), randomString());
     }
 
     private static void mockFlowControl(Http2FrameListener listener) throws Http2Exception {
