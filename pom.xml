@@ -221,9 +221,6 @@
       <activation>
         <jdk>20</jdk>
       </activation>
-      <modules>
-        <module>buffer-memory-segment</module>
-      </modules>
       <properties>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
