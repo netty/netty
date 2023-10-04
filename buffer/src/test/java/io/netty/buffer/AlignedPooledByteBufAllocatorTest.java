@@ -66,6 +66,7 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
         assertTrue(a.release());
         assertTrue(b.release());
     }
+
     @Test
     public void testDirectSubpageReleaseLock() {
         int initialCapacity = 0;
