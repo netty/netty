@@ -18,6 +18,8 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -26,6 +28,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.NoSuchAlgorithmException;
 
+import static io.netty.handler.ssl.SslUtils.DTLS_1_0;
+import static io.netty.handler.ssl.SslUtils.DTLS_1_2;
+import static io.netty.handler.ssl.SslUtils.DTLS_1_3;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -98,6 +103,45 @@ public class SslUtilsTest {
 
         int packetLength = getEncryptedPacketLength(new ByteBuffer[] { buf.nioBuffer() }, 0);
         assertEquals(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH, packetLength);
+        buf.release();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {DTLS_1_0, DTLS_1_2, DTLS_1_3}) // six numbers
+    public void shouldGetPacketLengthOfDtlsProtocolFromByteBuf(int dtlsVersion) {
+        int bodyLength = 65;
+        ByteBuf buf = Unpooled.buffer()
+                .writeByte(SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
+                .writeShort(dtlsVersion)
+                .writeShort(0) // epoch
+                .writeBytes(new byte[6]) // sequence number
+                .writeShort(bodyLength);
+
+        int packetLength = getEncryptedPacketLength(buf, 0);
+        assertEquals(bodyLength + SslUtils.DTLS_RECORD_HEADER_LENGTH, packetLength);
+        buf.release();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {DTLS_1_0, DTLS_1_2, DTLS_1_3}) // six numbers
+    public void shouldGetPacketLengthOfMultipleDtlsFromByteBuf(int dtlsVersion) {
+        int bodyLength = 65;
+        ByteBuf buf = Unpooled.buffer()
+                .writeByte(SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
+                .writeShort(dtlsVersion)
+                .writeShort(0) // epoch
+                .writeBytes(new byte[6]) // sequence number
+                .writeShort(bodyLength)
+                .writeBytes(new byte[65])
+                .writeByte(SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
+                .writeShort(dtlsVersion)
+                .writeShort(0) // epoch
+                .writeBytes(new byte[6]) // sequence number
+                .writeShort(bodyLength)
+                .writeBytes(new byte[65]);
+
+        int packetLength = getEncryptedPacketLength(buf, 0);
+        assertEquals((bodyLength + SslUtils.DTLS_RECORD_HEADER_LENGTH) * 2, packetLength);
         buf.release();
     }
 

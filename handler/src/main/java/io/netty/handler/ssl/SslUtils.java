@@ -56,6 +56,11 @@ final class SslUtils {
                           "TLS_AES_128_GCM_SHA256", "TLS_AES_128_CCM_8_SHA256",
                           "TLS_AES_128_CCM_SHA256")));
 
+    static final short DTLS_1_0 = (short) 0xFEFF;
+    static final short DTLS_1_2 = (short) 0xFEFD;
+    static final short DTLS_1_3 = (short) 0xFEFC;
+    static final short DTLS_RECORD_HEADER_LENGTH = 13;
+
     /**
      * GMSSL Protocol Version
      */
@@ -293,6 +298,7 @@ final class SslUtils {
         if (tls) {
             // SSLv3 or TLS or GMSSLv1.0 or GMSSLv1.1 - Check ProtocolVersion
             int majorVersion = buffer.getUnsignedByte(offset + 1);
+            int version = buffer.getShort(offset + 1);
             if (majorVersion == 3 || buffer.getShort(offset + 1) == GMSSL_PROTOCOL_VERSION) {
                 // SSLv3 or TLS or GMSSLv1.0 or GMSSLv1.1
                 packetLength = unsignedShortBE(buffer, offset + 3) + SSL_RECORD_HEADER_LENGTH;
@@ -300,6 +306,9 @@ final class SslUtils {
                     // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
                 }
+            } else if (version == DTLS_1_0 || version == DTLS_1_2 || version == DTLS_1_3) {
+                // length is the last 2 bytes in the 13 byte header. 13 - 2 = 11
+                packetLength = unsignedShortBE(buffer, offset + 11) + DTLS_RECORD_HEADER_LENGTH;
             } else {
                 // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                 tls = false;
