@@ -985,6 +985,7 @@ public class HttpContentCompressorTest {
         assertTrue(ch.writeOutbound(DefaultLastHttpContent.EMPTY_LAST_CONTENT));
 
         ch.checkException();
+        ch.finishAndReleaseAll();
     }
 
     private static FullHttpRequest newRequest() {
