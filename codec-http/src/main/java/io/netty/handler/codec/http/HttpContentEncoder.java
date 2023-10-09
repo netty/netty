@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
@@ -208,6 +209,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 ensureContent(msg);
                 if (encodeContent((HttpContent) msg, out)) {
                     state = State.AWAIT_HEADERS;
+                } else if (out.isEmpty()) {
+                    // MessageToMessageCodec needs at least one output message
+                    out.add(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
                 }
                 break;
             }
