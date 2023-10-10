@@ -108,6 +108,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private boolean autoAckPingFrame = true;
     private int maxQueuedControlFrames = Http2CodecUtil.DEFAULT_MAX_QUEUED_CONTROL_FRAMES;
     private int maxConsecutiveEmptyFrames = 2;
+    private int maxRstFramesPerWindow = 200;
+    private int secondsPerWindow = 30;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -409,7 +411,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Returns the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed before
-     * the connection is closed. This allows to protected against the remote peer flooding us with such frames and
+     * the connection is closed. This allows to protect against the remote peer flooding us with such frames and
      * so use up a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
      *
      * {@code 0} means no protection is in place.
@@ -420,7 +422,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Sets the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed before
-     * the connection is closed. This allows to protected against the remote peer flooding us with such frames and
+     * the connection is closed. This allows to protect against the remote peer flooding us with such frames and
      * so use up a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
      *
      * {@code 0} means no protection should be applied.
@@ -429,6 +431,21 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         enforceNonCodecConstraints("maxConsecutiveEmptyFrames");
         this.maxConsecutiveEmptyFrames = checkPositiveOrZero(
                 maxConsecutiveEmptyFrames, "maxConsecutiveEmptyFrames");
+        return self();
+    }
+
+    /**
+     * Sets the maximum number RST frames that are allowed per window before
+     * the connection is closed. This allows to protect against the remote peer flooding us with such frames and
+     * so use up a lot of CPU.
+     *
+     * {@code 0} for any of the parameters means no protection should be applied.
+     */
+    protected B decoderEnforceMaxRstFramesPerWindow(int maxRstFramesPerWindow, int secondsPerWindow) {
+        enforceNonCodecConstraints("decoderEnforceMaxRstFramesPerWindow");
+        this.maxRstFramesPerWindow = checkPositiveOrZero(
+                maxRstFramesPerWindow, "maxRstFramesPerWindow");
+        this.secondsPerWindow = checkPositiveOrZero(secondsPerWindow, "secondsPerWindow");
         return self();
     }
 
@@ -572,6 +589,9 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         int maxConsecutiveEmptyDataFrames = decoderEnforceMaxConsecutiveEmptyDataFrames();
         if (maxConsecutiveEmptyDataFrames > 0) {
             decoder = new Http2EmptyDataFrameConnectionDecoder(decoder, maxConsecutiveEmptyDataFrames);
+        }
+        if (maxRstFramesPerWindow > 0 && secondsPerWindow > 0) {
+            decoder = new Http2MaxRstFrameDecoder(decoder, maxRstFramesPerWindow, secondsPerWindow);
         }
         final T handler;
         try {

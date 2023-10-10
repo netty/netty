@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 The Netty Project
+ * Copyright 2023 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -14,15 +14,15 @@
  */
 package io.netty5.handler.codec.http2;
 
-public class Http2EmptyDataFrameConnectionDecoderTest extends AbstractDecoratingHttp2ConnectionDecoderTest {
+public class Http2MaxRstFrameConnectionDecoderTest extends AbstractDecoratingHttp2ConnectionDecoderTest {
 
     @Override
     protected DecoratingHttp2ConnectionDecoder newDecoder(Http2ConnectionDecoder decoder) {
-        return new Http2EmptyDataFrameConnectionDecoder(decoder, 2);
+        return new Http2MaxRstFrameDecoder(decoder, 200, 30);
     }
 
     @Override
     protected Class<? extends Http2FrameListener> delegatingFrameListenerType() {
-        return Http2EmptyDataFrameListener.class;
+        return Http2MaxRstFrameListener.class;
     }
 }
