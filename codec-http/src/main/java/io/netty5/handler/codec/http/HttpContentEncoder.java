@@ -220,6 +220,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     ensureContent(msg);
                     if (encodeContent(ctx, (HttpContent<?>) msg, out)) {
                         state = State.AWAIT_HEADERS;
+                    } else if (out.isEmpty()) {
+                        // MessageToMessageCodec needs at least one output message
+                        out.add(new DefaultHttpContent(ctx.bufferAllocator().allocate(0)));
                     }
                     break;
                 }
