@@ -299,7 +299,7 @@ final class SslUtils {
             // SSLv3 or TLS or GMSSLv1.0 or GMSSLv1.1 - Check ProtocolVersion
             int majorVersion = buffer.getUnsignedByte(offset + 1);
             int version = buffer.getShort(offset + 1);
-            if (majorVersion == 3 || buffer.getShort(offset + 1) == GMSSL_PROTOCOL_VERSION) {
+            if (majorVersion == 3 || version == GMSSL_PROTOCOL_VERSION) {
                 // SSLv3 or TLS or GMSSLv1.0 or GMSSLv1.1
                 packetLength = unsignedShortBE(buffer, offset + 3) + SSL_RECORD_HEADER_LENGTH;
                 if (packetLength <= SSL_RECORD_HEADER_LENGTH) {
