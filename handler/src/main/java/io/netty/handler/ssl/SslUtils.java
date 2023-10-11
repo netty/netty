@@ -307,6 +307,9 @@ final class SslUtils {
                     tls = false;
                 }
             } else if (version == DTLS_1_0 || version == DTLS_1_2 || version == DTLS_1_3) {
+                if (buffer.readableBytes() < offset + DTLS_RECORD_HEADER_LENGTH) {
+                    return NOT_ENOUGH_DATA;
+                }
                 // length is the last 2 bytes in the 13 byte header. 13 - 2 = 11
                 packetLength = unsignedShortBE(buffer, offset + 11) + DTLS_RECORD_HEADER_LENGTH;
             } else {

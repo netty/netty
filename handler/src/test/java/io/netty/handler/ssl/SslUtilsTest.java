@@ -31,6 +31,7 @@ import java.security.NoSuchAlgorithmException;
 import static io.netty.handler.ssl.SslUtils.DTLS_1_0;
 import static io.netty.handler.ssl.SslUtils.DTLS_1_2;
 import static io.netty.handler.ssl.SslUtils.DTLS_1_3;
+import static io.netty.handler.ssl.SslUtils.NOT_ENOUGH_DATA;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -108,7 +109,7 @@ public class SslUtilsTest {
 
     @ParameterizedTest
     @ValueSource(ints = {DTLS_1_0, DTLS_1_2, DTLS_1_3}) // six numbers
-    public void shouldGetPacketLengthOfDtlsProtocolFromByteBuf(int dtlsVersion) {
+    public void shouldGetPacketLengthOfDtlsRecordFromByteBuf(int dtlsVersion) {
         int bodyLength = 65;
         ByteBuf buf = Unpooled.buffer()
                 .writeByte(SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
@@ -118,13 +119,14 @@ public class SslUtilsTest {
                 .writeShort(bodyLength);
 
         int packetLength = getEncryptedPacketLength(buf, 0);
-        assertEquals(bodyLength + SslUtils.DTLS_RECORD_HEADER_LENGTH, packetLength);
+        // bodyLength + DTLS_RECORD_HEADER_LENGTH = 65 + 13 = 78
+        assertEquals(78, packetLength);
         buf.release();
     }
 
     @ParameterizedTest
     @ValueSource(ints = {DTLS_1_0, DTLS_1_2, DTLS_1_3}) // six numbers
-    public void shouldGetPacketLengthOfMultipleDtlsFromByteBuf(int dtlsVersion) {
+    public void shouldGetPacketLengthOfFirstDtlsRecordFromByteBuf(int dtlsVersion) {
         int bodyLength = 65;
         ByteBuf buf = Unpooled.buffer()
                 .writeByte(SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
@@ -141,7 +143,23 @@ public class SslUtilsTest {
                 .writeBytes(new byte[65]);
 
         int packetLength = getEncryptedPacketLength(buf, 0);
-        assertEquals((bodyLength + SslUtils.DTLS_RECORD_HEADER_LENGTH) * 2, packetLength);
+        assertEquals(78, packetLength);
+        buf.release();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {DTLS_1_0, DTLS_1_2, DTLS_1_3}) // six numbers
+    public void shouldSupportIncompletePackets(int dtlsVersion) {
+        ByteBuf buf = Unpooled.buffer()
+                .writeByte(SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
+                .writeShort(dtlsVersion)
+                .writeShort(0) // epoch
+                .writeBytes(new byte[6]) // sequence number
+                .writeByte(0);
+                // Left off the last byte of the length on purpose
+
+        int packetLength = getEncryptedPacketLength(buf, 0);
+        assertEquals(NOT_ENOUGH_DATA, packetLength);
         buf.release();
     }
 
