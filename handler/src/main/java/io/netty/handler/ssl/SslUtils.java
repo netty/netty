@@ -265,17 +265,12 @@ final class SslUtils {
      * the readerIndex of the given {@link ByteBuf}.
      *
      * @param   buffer
-     *                  The {@link ByteBuf} to read from. Be aware that it must have at least
-     *                  {@link #SSL_RECORD_HEADER_LENGTH} bytes to read,
-     *                  otherwise it will throw an {@link IllegalArgumentException}.
+     *                  The {@link ByteBuf} to read from.
      * @return length
      *                  The length of the encrypted packet that is included in the buffer or
      *                  {@link #SslUtils#NOT_ENOUGH_DATA} if not enough data is present in the
      *                  {@link ByteBuf}. This will return {@link SslUtils#NOT_ENCRYPTED} if
      *                  the given {@link ByteBuf} is not encrypted at all.
-     * @throws IllegalArgumentException
-     *                  Is thrown if the given {@link ByteBuf} has not at least {@link #SSL_RECORD_HEADER_LENGTH}
-     *                  bytes to read.
      */
     static int getEncryptedPacketLength(ByteBuf buffer, int offset) {
         int packetLength = 0;
@@ -310,8 +305,9 @@ final class SslUtils {
                 if (buffer.readableBytes() < offset + DTLS_RECORD_HEADER_LENGTH) {
                     return NOT_ENOUGH_DATA;
                 }
-                // length is the last 2 bytes in the 13 byte header. 13 - 2 = 11
-                packetLength = unsignedShortBE(buffer, offset + 11) + DTLS_RECORD_HEADER_LENGTH;
+                // length is the last 2 bytes in the 13 byte header.
+                packetLength = unsignedShortBE(buffer, offset + DTLS_RECORD_HEADER_LENGTH - 2) +
+                        DTLS_RECORD_HEADER_LENGTH;
             } else {
                 // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                 tls = false;
