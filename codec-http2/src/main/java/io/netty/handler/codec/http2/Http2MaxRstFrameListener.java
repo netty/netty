@@ -24,6 +24,9 @@ import java.util.concurrent.TimeUnit;
 
 final class Http2MaxRstFrameListener extends Http2FrameListenerDecorator {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2MaxRstFrameListener.class);
+    private static final Http2Exception RST_FRAME_RATE_EXCEEDED = Http2Exception.newStatic(Http2Error.ENHANCE_YOUR_CALM,
+            "Maximum number of RST frames reached",
+            Http2Exception.ShutdownHint.HARD_SHUTDOWN, Http2MaxRstFrameListener.class, "onRstStreamRead(..)");
 
     private final long nanosPerWindow;
     private final int maxRstFramesPerWindow;
@@ -45,12 +48,11 @@ final class Http2MaxRstFrameListener extends Http2FrameListenerDecorator {
         } else {
             receivedRstInWindow++;
             if (receivedRstInWindow > maxRstFramesPerWindow) {
-                Http2Exception exception = Http2Exception.connectionError(Http2Error.ENHANCE_YOUR_CALM,
-                        "Maximum number of RST frames reached");
                 logger.debug("{} Maximum number {} of RST frames reached within {} seconds, " +
                                 "closing connection with {} error", ctx.channel(), maxRstFramesPerWindow,
-                        TimeUnit.NANOSECONDS.toSeconds(nanosPerWindow), exception.error(), exception);
-                throw exception;
+                        TimeUnit.NANOSECONDS.toSeconds(nanosPerWindow), RST_FRAME_RATE_EXCEEDED.error(),
+                        RST_FRAME_RATE_EXCEEDED);
+                throw RST_FRAME_RATE_EXCEEDED;
             }
         }
         super.onRstStreamRead(ctx, streamId, errorCode);
