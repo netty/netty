@@ -307,7 +307,7 @@ final class QpackDecoder {
         } else {
             final int idx = decodePrefixedIntegerAsInt(in, 6);
             assert idx >= 0;
-            field = dynamicTable.getEntryRelativeEncodedField(base - idx);
+            field = dynamicTable.getEntryRelativeEncodedField(base - idx - 1);
         }
         sink.accept(field.name, field.value);
     }
@@ -349,7 +349,7 @@ final class QpackDecoder {
         } else {
             final int idx = decodePrefixedIntegerAsInt(in, 4);
             assert idx >= 0;
-            name = dynamicTable.getEntryRelativeEncodedField(base - idx).name;
+            name = dynamicTable.getEntryRelativeEncodedField(base - idx - 1).name;
         }
         final CharSequence value = decodeHuffmanEncodedLiteral(in, 7);
         sink.accept(name, value);

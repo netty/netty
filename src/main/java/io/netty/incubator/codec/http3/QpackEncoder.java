@@ -393,7 +393,7 @@ final class QpackEncoder {
         // +---+---+---+---+---+---+---+---+
         // | 1 | T |      Index (6+)       |
         // +---+---+-----------------------+
-        encodePrefixedInteger(out, (byte) 0b1000_0000, 6, base - index);
+        encodePrefixedInteger(out, (byte) 0b1000_0000, 6, base - index - 1);
     }
 
     private void encodePostBaseIndexed(ByteBuf out, int base, int index) {
@@ -431,7 +431,7 @@ final class QpackEncoder {
         //   |  Value String (Length bytes)  |
         //   +-------------------------------+
         // TODO: Force N = 0 till we support sensitivity detector
-        encodePrefixedInteger(out, (byte) 0b0101_0000, 4, base - nameIndex);
+        encodePrefixedInteger(out, (byte) 0b0101_0000, 4, base - nameIndex - 1);
         encodeStringLiteral(out, value);
     }
 
