@@ -332,12 +332,13 @@ public class QpackDecoderHandlerTest {
     }
 
     private void verifyRequiredInsertCount(int insertCount) {
-        assertThat("Unexpected dynamic table insert count.", dynamicTable.requiredInsertCount(),
+        assertThat("Unexpected dynamic table insert count.",
+                dynamicTable.encodedRequiredInsertCount(dynamicTable.insertCount()),
                 is(insertCount == 0 ? 0 : insertCount % maxEntries + 1));
     }
 
     private void verifyKnownReceivedCount(int receivedCount) {
-        assertThat("Unexpected dynamic table known received count.", dynamicTable.knownReceivedCount(),
+        assertThat("Unexpected dynamic table known received count.", dynamicTable.encodedKnownReceivedCount(),
                 is(receivedCount == 0 ? 0 : receivedCount % maxEntries + 1));
     }
 }

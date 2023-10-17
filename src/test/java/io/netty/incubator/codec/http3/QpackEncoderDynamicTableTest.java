@@ -23,6 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class QpackEncoderDynamicTableTest {
@@ -83,9 +84,11 @@ public class QpackEncoderDynamicTableTest {
         QpackEncoderDynamicTable table = newDynamicTable(128);
 
         final int idx1 = addValidateAndAckHeader(table, emptyHeader);
+        assertEquals(0, idx1);
         assertThat("Unexpected entry index.", getEntryIndex(table, emptyHeader), is(idx1));
 
         final int idx2 = addValidateAndAckHeader(table, fooBarHeader);
+        assertEquals(1, idx2);
         assertThat("Unexpected entry index.", getEntryIndex(table, fooBarHeader), is(idx2));
 
         assertThat("Unexpected entry index.", getEntryIndex(table, emptyHeader), is(idx1));
@@ -160,7 +163,7 @@ public class QpackEncoderDynamicTableTest {
         table.addReferenceToEntry(fooBarHeader.name, fooBarHeader.value, idx);
         table.acknowledgeInsertCount(idx);
 
-        assertThat("Unexpected known received count.", table.knownReceivedCount(), is(2));
+        assertThat("Unexpected known received count.", table.encodedKnownReceivedCount(), is(2));
     }
 
     @Test
@@ -174,10 +177,10 @@ public class QpackEncoderDynamicTableTest {
         table.addReferenceToEntry(fooBarHeader.name, fooBarHeader.value, idx2);
 
         table.acknowledgeInsertCount(idx2);
-        assertThat("Unexpected known received count.", table.knownReceivedCount(), is(3));
+        assertThat("Unexpected known received count.", table.encodedKnownReceivedCount(), is(3));
 
         table.acknowledgeInsertCount(idx1);
-        assertThat("Unexpected known received count.", table.knownReceivedCount(), is(3)); // already acked
+        assertThat("Unexpected known received count.", table.encodedKnownReceivedCount(), is(3)); // already acked
     }
 
     @Test
@@ -248,7 +251,8 @@ public class QpackEncoderDynamicTableTest {
     }
 
     private void verifyInsertCount(QpackEncoderDynamicTable table) {
-        assertThat("Unexpected required insert count.", table.requiredInsertCount(), is(expectedInsertCount()));
+        assertThat("Unexpected required insert count.",
+                table.encodedRequiredInsertCount(table.insertCount()), is(expectedInsertCount()));
     }
 
     private int expectedInsertCount() {

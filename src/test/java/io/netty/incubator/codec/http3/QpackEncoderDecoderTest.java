@@ -499,12 +499,13 @@ public class QpackEncoderDecoderTest {
     }
 
     private void verifyRequiredInsertCount(int insertCount) {
-        assertThat("Unexpected dynamic table insert count.", encDynamicTable.requiredInsertCount(),
+        assertThat("Unexpected dynamic table insert count.",
+                encDynamicTable.encodedRequiredInsertCount(encDynamicTable.insertCount()),
                 is(insertCount == 0 ? 0 : insertCount % (2 * maxEntries) + 1));
     }
 
     private void verifyKnownReceivedCount(int receivedCount) {
-        assertThat("Unexpected dynamic table known received count.", encDynamicTable.knownReceivedCount(),
+        assertThat("Unexpected dynamic table known received count.", encDynamicTable.encodedKnownReceivedCount(),
                 is(receivedCount == 0 ? 0 : receivedCount % (2 * maxEntries) + 1));
     }
 

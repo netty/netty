@@ -120,11 +120,21 @@ final class QpackEncoderDynamicTable {
         // than the length of this array, and we want the mask to be > 0.
         fields = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
         hashMask = (byte) (fields.length - 1);
-        head = new HeaderEntry(-1, EMPTY_STRING, EMPTY_STRING, 0, null);
+        // Start with index -1 so the first added header will have the index of 0.
+        // See https://www.rfc-editor.org/rfc/rfc9204.html#name-absolute-indexing
+        head = new HeaderEntry(-1, EMPTY_STRING, EMPTY_STRING, -1, null);
         this.expectedFreeCapacityPercentage = expectedFreeCapacityPercentage;
         resetIndicesToHead();
     }
 
+    /**
+     * Add a name - value pair to the dynamic table and returns the index.
+     *
+     * @param name          the name.
+     * @param value         the value.
+     * @param headerSize    the size of the header.
+     * @return              the absolute index or {@code -1) if it could not be added.
+     */
     int add(CharSequence name, CharSequence value, long headerSize) {
         if (capacity - size < headerSize) {
             return -1;
@@ -149,15 +159,15 @@ final class QpackEncoderDynamicTable {
     }
 
     /**
-     * Callback when a header block which had a {@link #requiredInsertCount()} greater than {@code 0} is
+     * Callback when a header block which had a {@link #insertCount()}} greater than {@code 0} is
      * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-section-acknowledgment">acknowledged</a>
      * by the decoder.
      *
-     * @param entryIndex For the entry corresponding to the {@link #requiredInsertCount()}.
+     * @param entryIndex For the entry corresponding to the {@link #insertCount()}.
      * @throws QpackException If the count is invalid.
      */
     void acknowledgeInsertCount(int entryIndex) throws QpackException {
-        if (entryIndex <= 0) {
+        if (entryIndex < 0) {
             throw INVALID_REQUIRED_INSERT_COUNT_INCREMENT;
         }
         for (HeaderEntry e = head.next; e != null; e = e.next) {
@@ -206,30 +216,42 @@ final class QpackEncoderDynamicTable {
         throw INVALID_KNOW_RECEIVED_COUNT_INCREMENT;
     }
 
-    int requiredInsertCount() {
-        return requiredInsertCount(insertCount());
-    }
-
+    /**
+     * Returns the number of entries inserted to this dynamic table.
+     *
+     * @return number the added entries.
+     */
     int insertCount() {
-        return tail.index;
+        return tail.index + 1;
     }
 
-    int requiredInsertCount(int entryIndex) {
+    /**
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-required-insert-count">
+     *     Encodes the required insert count.</a>
+     * @param reqInsertCount    the required insert count.
+     * @return                  the encoded count.
+     */
+    int encodedRequiredInsertCount(int reqInsertCount) {
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-required-insert-count
         // if ReqInsertCount == 0:
         //      EncInsertCount = 0
         // else:
         //      EncInsertCount = (ReqInsertCount mod (2 * MaxEntries)) + 1
         //
-        return entryIndex == 0 ? 0 : entryIndex % toIntExact(2 * floorDiv(capacity, 32)) + 1;
+        return reqInsertCount == 0 ? 0 : reqInsertCount % toIntExact(2 * floorDiv(capacity, 32)) + 1;
     }
 
     // Visible for tests
-    int knownReceivedCount() {
+    int encodedKnownReceivedCount() {
         // https://www.rfc-editor.org/rfc/rfc9204.html#name-known-received-count
-        return requiredInsertCount(knownReceived.index);
+        return encodedRequiredInsertCount(knownReceived.index + 1);
     }
 
+    /**
+     * Set the maximum capacity of the dynamic table. This can only be set once.
+     * @param capacity          the capacity
+     * @throws QpackException   if capacity was set before.
+     */
     void maxTableCapacity(long capacity) throws QpackException {
         validateCapacity(capacity);
         if (this.capacity >= 0) {
@@ -303,7 +325,7 @@ final class QpackEncoderDynamicTable {
             for (HeaderEntry e = fields[i]; e != null; e = e.nextSibling) {
                 if (e.hash == h && idx == e.index) {
                     e.refCount++;
-                    return requiredInsertCount(e.index);
+                    return e.index + 1;
                 }
             }
         }

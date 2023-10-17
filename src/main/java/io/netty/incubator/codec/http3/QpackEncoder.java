@@ -91,7 +91,7 @@ final class QpackEncoder {
             // +---+---------------------------+
             // | S |      Delta Base (7+)      |
             // +---+---------------------------+
-            encodePrefixedInteger(out, (byte) 0b0, 8, requiredInsertCount);
+            encodePrefixedInteger(out, (byte) 0b0, 8, dynamicTable.encodedRequiredInsertCount(requiredInsertCount));
             if (base >= requiredInsertCount) {
                 encodePrefixedInteger(out, (byte) 0b0, 7, base - requiredInsertCount);
             } else {
@@ -140,7 +140,7 @@ final class QpackEncoder {
         if (tracker.isEmpty()) {
             streamTrackers.remove(streamId);
         }
-        if (nextCount > 0) {
+        if (nextCount >= 0) {
             dynamicTable.acknowledgeInsertCount(nextCount);
         }
     }
@@ -156,7 +156,7 @@ final class QpackEncoder {
         final StreamTracker tracker = streamTrackers.remove(streamId);
         if (tracker != null) {
             int nextCount;
-            while ((nextCount = tracker.takeNextInsertCount()) > 0) {
+            while ((nextCount = tracker.takeNextInsertCount()) >= 0) {
                 dynamicTable.acknowledgeInsertCount(nextCount);
             }
         }
