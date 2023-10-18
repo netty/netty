@@ -64,7 +64,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2SettingsReceivedConsumer settingsReceivedConsumer;
     private final boolean autoAckPing;
     private final Http2Connection.PropertyKey contentLengthKey;
-    private boolean validateHeaders;
+    private final boolean validateHeaders;
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
@@ -209,10 +209,6 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     @Override
     public void close() {
         frameReader.close();
-    }
-
-    public void validateHeaders(boolean validateHeaders) {
-        this.validateHeaders = checkNotNull(validateHeaders, "validateHeaders");
     }
 
     /**
