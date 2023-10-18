@@ -26,6 +26,8 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -575,6 +577,22 @@ public class DefaultHttp2ConnectionDecoderTest {
                 decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
             }
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {":scheme", ":custom-pseudo-header"})
+    public void trailersWithPseudoHeadersThrows(CharSequence pseudoHeader) throws Exception {
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+
+        final Http2Headers trailers = new DefaultHttp2Headers(false);
+        trailers.add(pseudoHeader, "something");
+        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode().onHeadersRead(ctx, STREAM_ID, trailers, 0, true);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, ex.error());
     }
 
     @Test
