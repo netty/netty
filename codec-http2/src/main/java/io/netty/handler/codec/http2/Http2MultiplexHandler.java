@@ -91,11 +91,12 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  *
  * <h3>Closing a {@link Http2StreamChannel}</h3>
  *
- * Once you close a {@link Http2StreamChannel} a {@link Http2ResetFrame} will be send to the remote peer with
+ * Once you close a {@link Http2StreamChannel} a {@link Http2ResetFrame} will be sent to the remote peer with
  * {@link Http2Error#CANCEL} if needed. If you want to close the stream with another {@link Http2Error} (due
  * errors / limits) you should propagate a {@link Http2FrameStreamException} through the {@link ChannelPipeline}.
  * Once it reaches the end of the {@link ChannelPipeline} it will automatically close the {@link Http2StreamChannel}
- * and send a {@link Http2ResetFrame} with the unwrapped {@link Http2Error} set.
+ * and send a {@link Http2ResetFrame} with the unwrapped {@link Http2Error} set. Another possibility is to just
+ * directly write a {@link Http2ResetFrame} to the {@link Http2StreamChannel}l.
  */
 @UnstableApi
 public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
