@@ -225,6 +225,22 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             protected void decrementPendingOutboundBytes(long size) {
                 AbstractHttp2StreamChannel.this.decrementPendingOutboundBytes(size, true);
             }
+
+            @Override
+            protected void onUnhandledInboundException(Throwable cause) {
+                // Ensure we use the correct Http2Error to close the channel.
+                if (cause instanceof Http2FrameStreamException) {
+                    closeWithError(((Http2FrameStreamException) cause).error());
+                    return;
+                } else {
+                    Http2Exception exception = Http2CodecUtil.getEmbeddedHttp2Exception(cause);
+                    if (exception != null) {
+                        closeWithError(exception.error());
+                        return;
+                    }
+                }
+                super.onUnhandledInboundException(cause);
+            }
         };
 
         closePromise = pipeline.newPromise();

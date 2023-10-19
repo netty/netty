@@ -364,6 +364,17 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
+    public void streamExceptionCauseRstStreamWithProtocolError() {
+        request.addLong(HttpHeaderNames.CONTENT_LENGTH, 10);
+        Http2StreamChannel channel = newInboundStream(3, false, new ChannelInboundHandlerAdapter());
+        channel.pipeline().fireExceptionCaught(new Http2FrameStreamException(channel.stream(),
+                Http2Error.PROTOCOL_ERROR, new IllegalArgumentException()));
+        assertFalse(channel.isActive());
+        verify(frameWriter).writeRstStream(eqCodecCtx(), eq(3),
+                eq(Http2Error.PROTOCOL_ERROR.code()), anyChannelPromise());
+    }
+
+    @Test
     public void contentLengthNotMatchRstStreamWithProtocolError() {
         final LastInboundHandler inboundHandler = new LastInboundHandler();
         request.addLong(HttpHeaderNames.CONTENT_LENGTH, 10);
