@@ -1242,5 +1242,21 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         protected boolean isTransportSupportingDisconnect() {
             return false;
         }
+
+        @Override
+        protected void onUnhandledInboundException(Throwable cause) {
+            // Ensure we use the correct Http2Error to close the channel.
+            if (cause instanceof Http2FrameStreamException) {
+                ((DefaultHttp2StreamChannel) channel()).closeWithError(((Http2FrameStreamException) cause).error());
+                return;
+            } else {
+                Http2Exception exception = Http2CodecUtil.getEmbeddedHttp2Exception(cause);
+                if (exception != null) {
+                    ((DefaultHttp2StreamChannel) channel()).closeWithError(exception.error());
+                    return;
+                }
+            }
+            super.onUnhandledInboundException(cause);
+        }
     }
 }

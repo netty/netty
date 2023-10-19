@@ -15,6 +15,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.Buffer;
+import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.Channel;
@@ -385,6 +386,17 @@ public class Http2MultiplexTest {
         assertEquals(headersFrame, inboundHandler.readInbound());
         assertNull(inboundHandler.readInbound());
         assertFalse(channel.isActive());
+    }
+
+    @Test
+    public void streamExceptionCauseRstStreamWithProtocolError() throws Exception {
+        request.add(HttpHeaderNames.CONTENT_LENGTH, "10");
+        Http2StreamChannel channel = newInboundStream(3, false, new ChannelHandlerAdapter() { });
+        channel.pipeline().fireChannelExceptionCaught(new Http2FrameStreamException(channel.stream(),
+                Http2Error.PROTOCOL_ERROR, new IllegalArgumentException()));
+        assertFalse(channel.isActive());
+        verify(frameWriter).writeRstStream(any(ChannelHandlerContext.class), eq(3),
+                eq(Http2Error.PROTOCOL_ERROR.code()));
     }
 
     @Test
