@@ -73,6 +73,7 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSession;
 
 import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
+import static io.netty.handler.ssl.SslUtils.NOT_ENOUGH_DATA;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -1318,6 +1319,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 setHandshakeFailure(ctx, e);
 
                 throw e;
+            }
+            if (packetLength == NOT_ENOUGH_DATA) {
+                return;
             }
             assert packetLength > 0;
             if (packetLength > readableBytes) {
