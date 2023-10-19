@@ -64,6 +64,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import static io.netty5.handler.ssl.SslUtils.NOT_ENOUGH_DATA;
 import static io.netty5.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.SilentDispose.autoClosing;
@@ -1153,6 +1154,9 @@ public class SslHandler extends ByteToMessageDecoder {
                 setHandshakeFailure(ctx, e);
 
                 throw e;
+            }
+            if (packetLength == NOT_ENOUGH_DATA) {
+                return;
             }
             assert packetLength > 0;
             if (packetLength > readableBytes) {

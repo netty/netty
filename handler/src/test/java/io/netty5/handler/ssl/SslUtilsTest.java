@@ -17,6 +17,8 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.Buffer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -26,6 +28,10 @@ import java.security.NoSuchAlgorithmException;
 
 import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static io.netty5.handler.ssl.SslUtils.getEncryptedPacketLength;
+import static io.netty5.handler.ssl.SslUtils.DTLS_1_0;
+import static io.netty5.handler.ssl.SslUtils.DTLS_1_2;
+import static io.netty5.handler.ssl.SslUtils.DTLS_1_3;
+import static io.netty5.handler.ssl.SslUtils.NOT_ENOUGH_DATA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -98,6 +104,60 @@ public class SslUtilsTest {
                 int packetLength = getEncryptedPacketLength(new ByteBuffer[]{ component.readableBuffer() }, 0);
                 assertEquals(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH, packetLength);
             }
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(shorts = {DTLS_1_0, DTLS_1_2, DTLS_1_3}) // six numbers
+    public void shouldGetPacketLengthOfDtlsRecordFromByteBuf(short dtlsVersion) {
+        short bodyLength = 65;
+        try (Buffer buf = offHeapAllocator().allocate(bodyLength + SslUtils.DTLS_RECORD_HEADER_LENGTH)
+                .writeByte((byte) SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
+                .writeShort(dtlsVersion)
+                .writeShort((short) 0) // epoch
+                .writeBytes(new byte[6]) // sequence number
+                .writeShort(bodyLength)) {
+
+            int packetLength = getEncryptedPacketLength(buf, 0);
+            // bodyLength + DTLS_RECORD_HEADER_LENGTH = 65 + 13 = 78
+            assertEquals(78, packetLength);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(shorts = {DTLS_1_0, DTLS_1_2, DTLS_1_3}) // six numbers
+    public void shouldGetPacketLengthOfFirstDtlsRecordFromByteBuf(short dtlsVersion) {
+        short bodyLength = 65;
+        try (Buffer buf = offHeapAllocator().allocate(bodyLength + SslUtils.DTLS_RECORD_HEADER_LENGTH)
+                .writeByte((byte) SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
+                .writeShort(dtlsVersion)
+                .writeShort((short) 0) // epoch
+                .writeBytes(new byte[6]) // sequence number
+                .writeShort(bodyLength)
+                .writeBytes(new byte[65])
+                .writeByte((byte) SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
+                .writeShort(dtlsVersion)
+                .writeShort((short) 0) // epoch
+                .writeBytes(new byte[6]) // sequence number
+                .writeShort(bodyLength)
+                .writeBytes(new byte[65])) {
+            int packetLength = getEncryptedPacketLength(buf, 0);
+            assertEquals(78, packetLength);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(shorts = {DTLS_1_0, DTLS_1_2, DTLS_1_3}) // six numbers
+    public void shouldSupportIncompletePackets(short dtlsVersion) {
+        // Left off the last byte of the length on purpose
+        try (Buffer buf = offHeapAllocator().allocate(SslUtils.DTLS_RECORD_HEADER_LENGTH)
+                .writeByte((byte) SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
+                .writeShort(dtlsVersion)
+                .writeShort((short) 0) // epoch
+                .writeBytes(new byte[6]) // sequence number
+                .writeByte((byte) 0)) {
+            int packetLength = getEncryptedPacketLength(buf, 0);
+            assertEquals(NOT_ENOUGH_DATA, packetLength);
         }
     }
 
