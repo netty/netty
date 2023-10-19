@@ -1029,6 +1029,7 @@ public class Http2ConnectionRoundtripTest {
     @Test
     public void flowControlProperlyChunksLargeMessage() throws Exception {
         final Http2Headers headers = dummyHeaders();
+        final Http2Headers trailers = dummyTrailers();
 
         // Create a large message to send.
         final int length = 10485760; // 10MB
@@ -1061,7 +1062,7 @@ public class Http2ConnectionRoundtripTest {
                     http2Client.encoder().writeData(ctx(), 3, data.retainedDuplicate(), 0, false, newPromise());
 
                     // Write trailers.
-                    http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, (short) 16, false, 0,
+                    http2Client.encoder().writeHeaders(ctx(), 3, trailers, 0, (short) 16, false, 0,
                             true, newPromise());
                     http2Client.flush(ctx());
                 }
@@ -1074,7 +1075,7 @@ public class Http2ConnectionRoundtripTest {
             // Verify that headers and trailers were received.
             verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(headers), eq(0),
                     eq((short) 16), eq(false), eq(0), eq(false));
-            verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(headers), eq(0),
+            verify(serverListener).onHeadersRead(any(ChannelHandlerContext.class), eq(3), eq(trailers), eq(0),
                     eq((short) 16), eq(false), eq(0), eq(true));
 
             // Verify we received all the bytes.
@@ -1093,6 +1094,7 @@ public class Http2ConnectionRoundtripTest {
     @Test
     public void stressTest() throws Exception {
         final Http2Headers headers = dummyHeaders();
+        final Http2Headers trailers = dummyTrailers();
         int length = 10;
         final ByteBuf data = randomBytes(length);
         final String dataAsHex = ByteBufUtil.hexDump(data);
@@ -1147,7 +1149,7 @@ public class Http2ConnectionRoundtripTest {
                         http2Client.encoder().writeData(ctx(), streamId, data.retainedSlice(), 0,
                                                         false, newPromise());
                         // Write trailers.
-                        http2Client.encoder().writeHeaders(ctx(), streamId, headers, 0, (short) 16,
+                        http2Client.encoder().writeHeaders(ctx(), streamId, trailers, 0, (short) 16,
                                 false, 0, true, newPromise());
                         http2Client.flush(ctx());
                     }
@@ -1159,7 +1161,7 @@ public class Http2ConnectionRoundtripTest {
             verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
                     eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(false));
             verify(serverListener, times(numStreams)).onHeadersRead(any(ChannelHandlerContext.class), anyInt(),
-                    eq(headers), eq(0), eq((short) 16), eq(false), eq(0), eq(true));
+                    eq(trailers), eq(0), eq((short) 16), eq(false), eq(0), eq(true));
             verify(serverListener, times(numStreams)).onPingRead(any(ChannelHandlerContext.class),
                     any(long.class));
             verify(serverListener, never()).onDataRead(any(ChannelHandlerContext.class),
@@ -1270,6 +1272,11 @@ public class Http2ConnectionRoundtripTest {
         return new DefaultHttp2Headers(false).method(new AsciiString("GET")).scheme(new AsciiString("https"))
         .authority(new AsciiString("example.org")).path(new AsciiString("/some/path/resource2"))
         .add(randomString(), randomString());
+    }
+
+    private static Http2Headers dummyTrailers() {
+        return new DefaultHttp2Headers(false)
+        .add("header-" + randomString(), randomString());
     }
 
     private static void mockFlowControl(Http2FrameListener listener) throws Http2Exception {
