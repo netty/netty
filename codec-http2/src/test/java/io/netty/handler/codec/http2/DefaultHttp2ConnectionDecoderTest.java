@@ -50,6 +50,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 
@@ -581,7 +582,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @ParameterizedTest
     @ValueSource(strings = {":scheme", ":custom-pseudo-header"})
-    public void trailersWithPseudoHeadersThrows(CharSequence pseudoHeader) throws Exception {
+    public void trailersWithPseudoHeadersThrows(String pseudoHeader) throws Exception {
         decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
 
         final Http2Headers trailers = new DefaultHttp2Headers(false);
@@ -593,6 +594,7 @@ public class DefaultHttp2ConnectionDecoderTest {
             }
         });
         assertEquals(PROTOCOL_ERROR, ex.error());
+        assertThat(ex.getMessage(), containsString(pseudoHeader));
     }
 
     @Test

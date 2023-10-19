@@ -421,9 +421,10 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 // Trailers MUST NOT include pseudo-header fields (Section 8.3).
                 for (Iterator<Entry<CharSequence, CharSequence>> iterator =
                     headers.iterator(); iterator.hasNext();) {
-                    if (Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(iterator.next().getKey())) {
+                    CharSequence name = iterator.next().getKey();
+                    if (Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(name)) {
                         throw streamError(stream.id(), PROTOCOL_ERROR,
-                                "Found invalid Pseudo-Header in trailers");
+                                "Found invalid Pseudo-Header in trailers: %s", name);
                     }
                 }
             }
