@@ -581,7 +581,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         }
 
         DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
-                promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame());
+            promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame(), isValidateHeaders());
         return buildFromCodec(decoder, encoder);
     }
 

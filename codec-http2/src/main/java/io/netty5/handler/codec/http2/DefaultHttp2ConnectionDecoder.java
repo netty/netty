@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
+import java.util.Map.Entry;
 
 import static io.netty5.handler.codec.http.HttpStatusClass.INFORMATIONAL;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
@@ -63,6 +64,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2SettingsReceivedConsumer settingsReceivedConsumer;
     private final boolean autoAckPing;
     private final Http2Connection.PropertyKey contentLengthKey;
+    private final boolean validateHeaders;
 
     public DefaultHttp2ConnectionDecoder(Http2Connection connection,
                                          Http2ConnectionEncoder encoder,
@@ -97,6 +99,16 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         this(connection, encoder, frameReader, requestVerifier, autoAckSettings, true);
     }
 
+    @Deprecated
+    public DefaultHttp2ConnectionDecoder(Http2Connection connection,
+                                         Http2ConnectionEncoder encoder,
+                                         Http2FrameReader frameReader,
+                                         Http2PromisedRequestVerifier requestVerifier,
+                                         boolean autoAckSettings,
+                                         boolean autoAckPing) {
+        this(connection, encoder, frameReader, requestVerifier, autoAckSettings, true, true);
+    }
+
     /**
      * Create a new instance.
      * @param connection The {@link Http2Connection} associated with this decoder.
@@ -117,7 +129,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                                          Http2FrameReader frameReader,
                                          Http2PromisedRequestVerifier requestVerifier,
                                          boolean autoAckSettings,
-                                         boolean autoAckPing) {
+                                         boolean autoAckPing,
+                                         boolean validateHeaders) {
+        this.validateHeaders = validateHeaders;
         this.autoAckPing = autoAckPing;
         if (autoAckSettings) {
             settingsReceivedConsumer = null;
@@ -397,6 +411,17 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     } catch (IllegalArgumentException e) {
                         throw streamError(stream.id(), PROTOCOL_ERROR, e,
                                 "Multiple content-length headers received");
+                    }
+                }
+            } else if (validateHeaders && !headers.isEmpty()) {
+                // Need to check trailers don't contain pseudo headers. According to RFC 9113
+                // Trailers MUST NOT include pseudo-header fields (Section 8.3).
+                for (Iterator<Entry<CharSequence, CharSequence>> iterator =
+                    headers.iterator(); iterator.hasNext();) {
+                    CharSequence name = iterator.next().getKey();
+                    if (Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(name)) {
+                        throw streamError(stream.id(), PROTOCOL_ERROR,
+                                "Found invalid Pseudo-Header in trailers: %s", name);
                     }
                 }
             }

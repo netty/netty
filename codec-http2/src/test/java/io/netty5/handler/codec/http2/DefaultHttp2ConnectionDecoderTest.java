@@ -20,12 +20,14 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpResponseStatus;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
-import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -45,6 +47,10 @@ import static io.netty5.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -485,6 +491,23 @@ public class DefaultHttp2ConnectionDecoderTest {
         assertThrows(Http2Exception.class, () -> {
             decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.emptyHeaders(), 0, false);
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {":scheme", ":custom-pseudo-header"})
+    public void trailersWithPseudoHeadersThrows(String pseudoHeader) throws Exception {
+        decode().onHeadersRead(ctx, STREAM_ID, Http2Headers.newHeaders(), 0, false);
+
+        final Http2Headers trailers = Http2Headers.newHeaders(false);
+        trailers.add(pseudoHeader, "something");
+        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode().onHeadersRead(ctx, STREAM_ID, trailers, 0, true);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, ex.error());
+        assertThat(ex.getMessage(), containsString(pseudoHeader));
     }
 
     @Test
