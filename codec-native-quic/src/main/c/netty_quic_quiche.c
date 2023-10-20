@@ -495,10 +495,10 @@ static jboolean netty_quiche_conn_is_timed_out(JNIEnv* env, jclass clazz, jlong 
 
 static jlongArray netty_quiche_conn_stats(JNIEnv* env, jclass clazz, jlong conn) {
     // See https://github.com/cloudflare/quiche/blob/master/quiche/include/quiche.h#L467
-    quiche_stats stats = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,true,0,0};
+    quiche_stats stats = {0,0,0,0,0,0,0,0,0};
     quiche_conn_stats((quiche_conn *) conn, &stats);
 
-    jlongArray statsArray = (*env)->NewLongArray(env, 22);
+    jlongArray statsArray = (*env)->NewLongArray(env, 9);
     if (statsArray == NULL) {
         // This will put an OOME on the stack
         return NULL;
@@ -512,22 +512,9 @@ static jlongArray netty_quiche_conn_stats(JNIEnv* env, jclass clazz, jlong conn)
         (jlong)stats.recv_bytes,
         (jlong)stats.lost_bytes,
         (jlong)stats.stream_retrans_bytes,
-        (jlong)stats.paths_count,
-        (jlong)stats.peer_max_idle_timeout,
-        (jlong)stats.peer_max_udp_payload_size,
-        (jlong)stats.peer_initial_max_data,
-        (jlong)stats.peer_initial_max_stream_data_bidi_local,
-        (jlong)stats.peer_initial_max_stream_data_bidi_remote,
-        (jlong)stats.peer_initial_max_stream_data_uni,
-        (jlong)stats.peer_initial_max_streams_bidi,
-        (jlong)stats.peer_initial_max_streams_uni,
-        (jlong)stats.peer_ack_delay_exponent,
-        (jlong)stats.peer_max_ack_delay,
-        stats.peer_disable_active_migration ? 1 : 0,
-        (jlong)stats.peer_active_conn_id_limit,
-        (jlong)stats.peer_max_datagram_frame_size,
+        (jlong)stats.paths_count
     };
-    (*env)->SetLongArrayRegion(env, statsArray, 0, 22, statsArrayElements);
+    (*env)->SetLongArrayRegion(env, statsArray, 0, 9, statsArrayElements);
     return statsArray;
 }
 

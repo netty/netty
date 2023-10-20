@@ -16,7 +16,8 @@
 package io.netty.incubator.codec.quic;
 
 /**
- * Statistics about the {@code QUIC} connection.
+ * Statistics about the {@code QUIC} connection. If unknown by the implementation it might return {@code -1} values
+ * for the various methods. 
  */
 public interface QuicConnectionStats {
     /**
@@ -63,69 +64,4 @@ public interface QuicConnectionStats {
      * @return   The number of known paths for the connection.
      */
     long pathsCount();
-
-    /**
-     * @return   The maximum idle timeout.
-     */
-    long peerMaxIdleTimeout();
-
-    /**
-     * @return   The maximum UDP payload size.
-     */
-    long peerMaxUdpPayloadSize();
-
-    /**
-     * @return   The initial flow control maximum data for the connection.
-     */
-    long peerInitialMaxData();
-
-    /**
-     * @return   The initial flow control maximum data for local bidirectional streams.
-     */
-    long peerInitialMaxStreamDataBidiLocal();
-
-    /**
-     * @return   The initial flow control maximum data for remote bidirectional streams.
-     */
-    long peerInitialMaxStreamDataBidiRemote();
-
-    /**
-     * @return   The initial flow control maximum data for unidirectional streams.
-     */
-    long peerInitialMaxStreamDataUni();
-
-    /**
-     * @return   The initial maximum bidirectional streams.
-     */
-    long peerInitialMaxStreamsBidi();
-
-    /**
-     * @return   The initial maximum unidirectional streams.
-     */
-    long peerInitialMaxStreamsUni();
-
-    /**
-     * @return   The ACK delay exponent.
-     */
-    long peerAckDelayExponent();
-
-    /**
-     * @return   The max ACK delay.
-     */
-    long peerMaxAckDelay();
-
-    /**
-     * @return    Whether active migration is disabled.
-     */
-    boolean peerDisableActiveMigration();
-
-    /**
-     * @return    The active connection ID limit.
-     */
-    long peerActiveConnIdLimit();
-
-    /**
-     * @return    DATAGRAM frame extension parameter, if any.
-     */
-    long peerMaxDatagramFrameSize();
 }

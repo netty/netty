@@ -70,71 +70,6 @@ final class QuicheQuicConnectionStats implements QuicConnectionStats {
         return values[8];
     }
 
-    @Override
-    public long peerMaxIdleTimeout() {
-        return values[9];
-    }
-
-    @Override
-    public long peerMaxUdpPayloadSize() {
-        return values[10];
-    }
-
-    @Override
-    public long peerInitialMaxData() {
-        return values[11];
-    }
-
-    @Override
-    public long peerInitialMaxStreamDataBidiLocal() {
-        return values[12];
-    }
-
-    @Override
-    public long peerInitialMaxStreamDataBidiRemote() {
-        return values[13];
-    }
-
-    @Override
-    public long peerInitialMaxStreamDataUni() {
-        return values[14];
-    }
-
-    @Override
-    public long peerInitialMaxStreamsBidi() {
-        return values[15];
-    }
-
-    @Override
-    public long peerInitialMaxStreamsUni() {
-        return values[16];
-    }
-
-    @Override
-    public long peerAckDelayExponent() {
-        return values[17];
-    }
-
-    @Override
-    public long peerMaxAckDelay() {
-        return values[18];
-    }
-
-    @Override
-    public boolean peerDisableActiveMigration() {
-        return values[19] == 1;
-    }
-
-    @Override
-    public long peerActiveConnIdLimit() {
-        return values[20];
-    }
-
-    @Override
-    public long peerMaxDatagramFrameSize() {
-        return values[21];
-    }
-
     /**
      * Returns the {@link String} representation of stats.
      */
@@ -150,19 +85,6 @@ final class QuicheQuicConnectionStats implements QuicConnectionStats {
                 ", lostBytes=" + lostBytes() +
                 ", streamRetransBytes=" + streamRetransBytes() +
                 ", pathsCount=" + pathsCount() +
-                ", peerMaxIdleTimeout=" + peerMaxIdleTimeout() +
-                ", peerMaxUdpPayloadSize=" + peerMaxUdpPayloadSize() +
-                ", peerInitialMaxData=" + peerInitialMaxData() +
-                ", peerInitialMaxStreamDataBidiLocal=" + peerInitialMaxStreamDataBidiLocal() +
-                ", peerInitialMaxStreamDataBidiRemote=" + peerInitialMaxStreamDataBidiRemote() +
-                ", peerInitialMaxStreamDataUni=" + peerInitialMaxStreamDataUni() +
-                ", peerInitialMaxStreamsBidi=" + peerInitialMaxStreamsBidi() +
-                ", peerInitialMaxStreamsUni=" + peerInitialMaxStreamsUni() +
-                ", peerAckDelayExponent=" + peerAckDelayExponent() +
-                ", peerMaxAckDelay=" + peerMaxAckDelay() +
-                ", peerDisableActiveMigration=" + peerDisableActiveMigration() +
-                ", peerActiveConnIdLimit=" + peerActiveConnIdLimit() +
-                ", peerMaxDatagramFrameSize=" + peerMaxDatagramFrameSize() +
                 "]";
     }
 
