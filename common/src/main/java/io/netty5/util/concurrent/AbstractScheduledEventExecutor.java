@@ -16,13 +16,14 @@
 package io.netty5.util.concurrent;
 
 import io.netty5.util.internal.DefaultPriorityQueue;
-import io.netty5.util.internal.PriorityQueue;
 import io.netty5.util.internal.PriorityQueueNode;
+import io.netty5.util.internal.ScheduledTaskQueue;
 
 import java.util.Comparator;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.Executors.callable;
@@ -37,9 +38,15 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     private static final RunnableScheduledFutureNode<?>[]
             EMPTY_RUNNABLE_SCHEDULED_FUTURE_NODES = new RunnableScheduledFutureNode<?>[0];
 
-    private PriorityQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue;
+    private ScheduledTaskQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue;
+    private Supplier<ScheduledTaskQueue<RunnableScheduledFutureNode<?>>> scheduledTaskQueueSupplier;
 
     protected AbstractScheduledEventExecutor() {
+    }
+
+    protected AbstractScheduledEventExecutor(
+            Supplier<ScheduledTaskQueue<RunnableScheduledFutureNode<?>>> scheduledTaskQueueSupplier) {
+        this.scheduledTaskQueueSupplier = requireNonNull(scheduledTaskQueueSupplier, "scheduledTaskQueueSupplier");
     }
 
     /**
@@ -55,7 +62,10 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         return deadlineNanos < 0 ? Long.MAX_VALUE : deadlineNanos;
     }
 
-    PriorityQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue() {
+    ScheduledTaskQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue() {
+        if (scheduledTaskQueue == null && scheduledTaskQueueSupplier != null) {
+            scheduledTaskQueue = scheduledTaskQueueSupplier.get();
+        }
         if (scheduledTaskQueue == null) {
             scheduledTaskQueue = new DefaultPriorityQueue<>(
                     SCHEDULED_FUTURE_TASK_COMPARATOR,
@@ -76,7 +86,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      */
     protected final void cancelScheduledTasks() {
         assert inEventLoop();
-        PriorityQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
+        ScheduledTaskQueue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = this.scheduledTaskQueue;
         if (isNullOrEmpty(scheduledTaskQueue)) {
             return;
         }
