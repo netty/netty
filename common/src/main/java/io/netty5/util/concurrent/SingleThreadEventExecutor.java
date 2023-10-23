@@ -237,7 +237,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
                     // scheduled tasks are never executed if there is always one task in the taskQueue.
                     // This is for example true for the read task of OIO Transport
                     // See https://github.com/netty/netty/issues/1614
-                    fetchFromScheduledTaskQueue();
+                    fetchFromTaskScheduler();
                     task = taskQueue.poll();
                 }
 
@@ -248,12 +248,12 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
         }
     }
 
-    private boolean fetchFromScheduledTaskQueue() {
+    private boolean fetchFromTaskScheduler() {
         long nanoTime = ticker().nanoTime();
         RunnableScheduledFuture<?> scheduledTask  = pollScheduledTask(nanoTime);
         while (scheduledTask != null) {
             if (!taskQueue.offer(scheduledTask)) {
-                // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
+                // No space left in the task queue add it back to the task scheduler so we pick it up again.
                 schedule(scheduledTask);
                 return false;
             }
@@ -314,7 +314,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
     private boolean runAllTasks() {
         boolean fetchedAll;
         do {
-            fetchedAll = fetchFromScheduledTaskQueue();
+            fetchedAll = fetchFromTaskScheduler();
             Runnable task = pollTask();
             if (task == null) {
                 return false;
@@ -349,7 +349,7 @@ public class SingleThreadEventExecutor extends AbstractScheduledEventExecutor im
         boolean fetchedAll;
         int processedTasks = 0;
         do {
-            fetchedAll = fetchFromScheduledTaskQueue();
+            fetchedAll = fetchFromTaskScheduler();
             for (; processedTasks < maxTasks; processedTasks++) {
                 Runnable task = pollTask();
                 if (task == null) {

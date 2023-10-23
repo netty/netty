@@ -29,8 +29,8 @@ import static java.util.Objects.requireNonNull;
  * {@link PriorityQueueNode} for the purpose of maintaining the index in the priority queue.
  * @param <T> The object that is maintained in the queue.
  */
-public final class DefaultPriorityQueue<T extends PriorityQueueNode>
-        extends AbstractQueue<T> implements PriorityQueue<T>, ScheduledTaskQueue<T> {
+public final class DefaultPriorityQueue<T extends PriorityQueueNode> extends AbstractQueue<T>
+                                                                     implements PriorityQueue<T> {
     private static final PriorityQueueNode[] EMPTY_ARRAY = new PriorityQueueNode[0];
     private final Comparator<T> comparator;
     private T[] queue;

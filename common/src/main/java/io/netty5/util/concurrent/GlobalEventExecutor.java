@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -91,7 +90,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                 deadlineNanos(ticker().nanoTime(), SCHEDULE_QUIET_PERIOD_INTERVAL),
                 -SCHEDULE_QUIET_PERIOD_INTERVAL);
 
-        scheduledTaskQueue().add(quietPeriodTask);
+        taskScheduler().schedule(quietPeriodTask);
     }
 
     /**
@@ -127,7 +126,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                     // scheduled tasks are never executed if there is always one task in the taskQueue.
                     // This is for example true for the read task of OIO Transport
                     // See https://github.com/netty/netty/issues/1614
-                    fetchFromScheduledTaskQueue();
+                    fetchFromTaskScheduler();
                     task = taskQueue.poll();
                 }
 
@@ -138,7 +137,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
         }
     }
 
-    private void fetchFromScheduledTaskQueue() {
+    private void fetchFromTaskScheduler() {
         long nanoTime = ticker().nanoTime();
         Runnable scheduledTask = pollScheduledTask(nanoTime);
         while (scheduledTask != null) {
@@ -265,16 +264,16 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                     }
                 }
 
-                Queue<RunnableScheduledFutureNode<?>> scheduledTaskQueue = scheduledTaskQueue();
+                TaskScheduler taskScheduler = taskScheduler();
                 // Terminate if there is no task in the queue (except the noop task).
-                if (taskQueue.isEmpty() && scheduledTaskQueue.size() <= 1) {
+                if (taskQueue.isEmpty() && taskScheduler.size() <= 1) {
                     // Mark the current thread as stopped.
                     // The following CAS must always success and must be uncontended,
                     // because only one thread should be running at the same time.
                     boolean stopped = started.compareAndSet(true, false);
                     assert stopped;
 
-                    // Do not check scheduledTaskQueue because it is not thread-safe and can only be mutated from a
+                    // Do not check task scheduler because it is not thread-safe and can only be mutated from a
                     // TaskRunner actively running tasks.
                     if (taskQueue.isEmpty()) {
                         // A) No new task was added and thus there's nothing to handle
