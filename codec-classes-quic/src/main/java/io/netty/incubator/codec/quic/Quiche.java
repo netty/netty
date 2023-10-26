@@ -458,6 +458,13 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://github.com/cloudflare/quiche/blob/master/quiche/include/quiche.h#L567C65-L567C88">
+     *     quiche_conn_stats</a>.
+     */
+    static native long[] quiche_conn_peer_transport_params(long connAddr);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L288">quiche_conn_timeout_as_nanos</a>.
      */
     static native long quiche_conn_timeout_as_nanos(long connAddr);

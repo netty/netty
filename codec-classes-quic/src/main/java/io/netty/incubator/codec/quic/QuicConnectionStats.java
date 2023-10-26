@@ -17,7 +17,7 @@ package io.netty.incubator.codec.quic;
 
 /**
  * Statistics about the {@code QUIC} connection. If unknown by the implementation it might return {@code -1} values
- * for the various methods. 
+ * for the various methods.
  */
 public interface QuicConnectionStats {
     /**

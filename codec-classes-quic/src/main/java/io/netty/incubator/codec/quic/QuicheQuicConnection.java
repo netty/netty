@@ -155,6 +155,20 @@ final class QuicheQuicConnection {
         return id == null ? null : new QuicConnectionAddress(id);
     }
 
+    QuicheQuicTransportParameters peerParameters() {
+        final long[] ret;
+        synchronized (this) {
+            if (connection == -1) {
+                return null;
+            }
+            ret = Quiche.quiche_conn_peer_transport_params(connection);
+        }
+        if (ret == null) {
+            return null;
+        }
+        return new QuicheQuicTransportParameters(ret);
+    }
+
     QuicheQuicSslEngine engine() {
         return engine;
     }

@@ -518,6 +518,38 @@ static jlongArray netty_quiche_conn_stats(JNIEnv* env, jclass clazz, jlong conn)
     return statsArray;
 }
 
+static jlongArray netty_quiche_conn_peer_transport_params(JNIEnv* env, jclass clazz, jlong conn) {
+    // See https://github.com/cloudflare/quiche/blob/master/quiche/include/quiche.h#L563
+    quiche_transport_params params = {0,0,0,0,0,0,0,0,0,0,false,0,0};
+    if (!quiche_conn_peer_transport_params((quiche_conn *) conn, &params)) {
+        return NULL;
+    }
+
+    jlongArray paramsArray = (*env)->NewLongArray(env, 13);
+    if (paramsArray == NULL) {
+        // This will put an OOME on the stack
+        return NULL;
+    }
+    jlong paramsArrayElements[] = {
+        (jlong)params.peer_max_idle_timeout,
+        (jlong)params.peer_max_udp_payload_size,
+        (jlong)params.peer_initial_max_data,
+        (jlong)params.peer_initial_max_stream_data_bidi_local,
+        (jlong)params.peer_initial_max_stream_data_bidi_remote,
+        (jlong)params.peer_initial_max_stream_data_uni,
+        (jlong)params.peer_initial_max_streams_bidi,
+        (jlong)params.peer_initial_max_streams_uni,
+        (jlong)params.peer_ack_delay_exponent,
+        (jlong)params.peer_disable_active_migration ? 1: 0,
+        (jlong)params.peer_active_conn_id_limit,
+        (jlong)params.peer_max_datagram_frame_size
+    };
+    (*env)->SetLongArrayRegion(env, paramsArray, 0, 13, paramsArrayElements);
+    return paramsArray;
+}
+
+
+
 static jlong netty_quiche_conn_timeout_as_nanos(JNIEnv* env, jclass clazz, jlong conn) {
     return quiche_conn_timeout_as_nanos((quiche_conn *) conn);
 }
@@ -839,6 +871,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_is_closed", "(J)Z", (void *) netty_quiche_conn_is_closed },
   { "quiche_conn_is_timed_out", "(J)Z", (void *) netty_quiche_conn_is_timed_out },
   { "quiche_conn_stats", "(J)[J", (void *) netty_quiche_conn_stats },
+  { "quiche_conn_peer_transport_params", "(J)[J", (void *) netty_quiche_conn_peer_transport_params },
   { "quiche_conn_timeout_as_nanos", "(J)J", (void *) netty_quiche_conn_timeout_as_nanos },
   { "quiche_conn_on_timeout", "(J)V", (void *) netty_quiche_conn_on_timeout },
   { "quiche_conn_readable", "(J)J", (void *) netty_quiche_conn_readable },

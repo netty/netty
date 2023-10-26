@@ -1840,4 +1840,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         promise.setSuccess(connStats);
         return connStats;
     }
+
+    @Override
+    public QuicTransportParameters peerTransportParameters() {
+        return connection.peerParameters();
+    }
 }

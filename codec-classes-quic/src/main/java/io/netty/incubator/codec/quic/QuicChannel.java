@@ -173,6 +173,13 @@ public interface QuicChannel extends Channel {
     boolean isTimedOut();
 
     /**
+     * Returns the {@link QuicTransportParameters} of the peer once received, or {@code null} if not known yet.
+     *
+     * @return peerTransportParams.
+     */
+    QuicTransportParameters peerTransportParameters();
+
+    /**
      * Creates a stream that is using this {@link QuicChannel} and notifies the {@link Future} once done.
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
