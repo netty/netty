@@ -104,10 +104,16 @@ jobs:
             **/target/surefire-reports/
             **/hs_err*.log
 
-  build-pr-aarch64:
-    name: linux-aarch64-verify-native
+  build-pr-cross:
     # The host should always be Linux
     runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        include:
+          - arch: aarch64
+          - arch: riscv64
+
+    name: linux-${{ matrix.arch }}-verify-native
     permissions:
       contents: read  # for actions/checkout to fetch code
       packages: write  # for uraimo/run-on-arch-action to cache docker images
@@ -121,16 +127,16 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-build-pr-aarch64-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-build-pr-${{ matrix.arch }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-build-pr-aarch64-
+            ${{ runner.os }}-maven-build-pr-${{ matrix.arch }}-
             ${{ runner.os }}-maven-
 
       - uses: uraimo/run-on-arch-action@v2.5.1
         name: Run commands
         id: runcmd
         with:
-          arch: aarch64
+          arch: ${{ matrix.arch }}
           distro: ubuntu20.04
 
           # Not required, but speeds up builds by storing container images in
@@ -147,7 +153,7 @@ jobs:
             apt-get install -q -y openjdk-11-jdk autoconf automake libtool make tar maven git
 
           # Compile native code and the modules it depend on and run NativeLoadingTest. This is enough to ensure
-          # we can load the native module on aarch64
+          # we can load the native module on ${{ matrix.arch }}
           #
           # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |

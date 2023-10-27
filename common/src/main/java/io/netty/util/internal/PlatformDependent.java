@@ -1564,6 +1564,9 @@ public final class PlatformDependent {
         if ("aarch64".equals(value)) {
             return "aarch_64";
         }
+        if ("riscv64".equals(value)) {
+            return "riscv_64";
+        }
         if (value.matches("^(ppc|ppc32)$")) {
             return "ppc_32";
         }
