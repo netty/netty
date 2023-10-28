@@ -606,7 +606,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
             maxRstFrames = maxRstFramesPerWindow;
         }
         if (maxRstFrames > 0 && secondsPerWindow > 0) {
-            decoder = new Http2MaxRstFrameDecoder(decoder, maxRstFramesPerWindow, secondsPerWindow);
+            decoder = new Http2MaxRstFrameDecoder(decoder, maxRstFrames, secondsPerWindow);
         }
         final T handler;
         try {
