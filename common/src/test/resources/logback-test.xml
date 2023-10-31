@@ -8,4 +8,9 @@
   <root level="${logLevel:-info}">
     <appender-ref ref="STDOUT" />
   </root>
+
+
+  // Disable logging for apacheds to reduce noise.
+  <logger name="org.apache.directory" level="OFF"/>
+  <logger name="org.apache.mina" level="OFF"/>
 </configuration>
