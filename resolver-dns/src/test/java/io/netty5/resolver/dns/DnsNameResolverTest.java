@@ -130,6 +130,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -3926,4 +3927,72 @@ public class DnsNameResolverTest {
             }
         }
     }
+
+    @Test
+    public void testCnameWithAAndAdditionalsAndAuthorities() throws Exception {
+        final String hostname = "test.netty.io";
+        final String cname = "cname.netty.io";
+
+        final List<String> nameServers = new ArrayList<String>();
+
+        for (int i = 0; i < 13; i++) {
+            nameServers.add("ns" + i + ".foo.bar");
+        }
+
+        TestDnsServer server = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
+                ResourceRecordModifier rm = new ResourceRecordModifier();
+                rm.setDnsClass(RecordClass.IN);
+                rm.setDnsName(hostname);
+                rm.setDnsTtl(10000);
+                rm.setDnsType(RecordType.CNAME);
+                rm.put(DnsAttribute.DOMAIN_NAME, cname);
+
+                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>();
+                records.add(rm.getEntry());
+                records.add(newARecord(cname, "10.0.0.2"));
+                return records;
+            }
+        }) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                for (QuestionRecord record: message.getQuestionRecords()) {
+                    if (record.getDomainName().equals(hostname)) {
+                        // Let's add some extra records.
+                        message.getAuthorityRecords().clear();
+                        message.getAdditionalRecords().clear();
+
+                        for (String nameserver: nameServers) {
+                            message.getAuthorityRecords().add(TestDnsServer.newNsRecord(".", nameserver));
+                            message.getAdditionalRecords().add(newAddressRecord(nameserver, RecordType.A, "10.0.0.1"));
+                            message.getAdditionalRecords().add(newAddressRecord(nameserver, RecordType.AAAA, "::1"));
+                        }
+
+                        return message;
+                    }
+                }
+                return message;
+            }
+        };
+        server.start();
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+
+        final DnsNameResolver resolver = newResolver()
+                .eventLoop(group.next())
+                .channelType(NioDatagramChannel.class)
+                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                .nameServerProvider(new SingletonDnsServerAddressStreamProvider(server.localAddress()))
+                .searchDomains(Arrays.asList("k8se-apps.svc.cluster.local, svc.cluster.local, cluster.local"))
+                .build();
+        try {
+            InetAddress address = resolver.resolve(hostname).asStage().get();
+            assertArrayEquals(new byte[] { 10, 0, 0, 2 }, address.getAddress());
+        } finally {
+            resolver.close();
+            group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
+            server.stop();
+        }
+    }
+
 }
