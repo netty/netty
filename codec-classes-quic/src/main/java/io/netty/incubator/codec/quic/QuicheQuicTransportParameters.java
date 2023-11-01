@@ -15,6 +15,8 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.util.internal.StringUtil;
+
 final class QuicheQuicTransportParameters implements QuicTransportParameters {
     private final long[] values;
 
@@ -85,5 +87,24 @@ final class QuicheQuicTransportParameters implements QuicTransportParameters {
     @Override
     public long maxDatagramFrameSize() {
         return values[12];
+    }
+
+    @Override
+    public String toString() {
+        return StringUtil.simpleClassName(this) + "[" +
+                "maxIdleTimeout=" + maxIdleTimeout() +
+                ", maxUdpPayloadSize=" + maxUdpPayloadSize() +
+                ", initialMaxData=" + initialMaxData() +
+                ", initialMaxStreamDataBidiLocal=" + initialMaxStreamDataBidiLocal() +
+                ", initialMaxStreamDataBidiRemote=" + initialMaxStreamDataBidiRemote() +
+                ", initialMaxStreamDataUni=" + initialMaxStreamDataUni() +
+                ", initialMaxStreamsBidi=" + initialMaxStreamsBidi() +
+                ", initialMaxStreamsUni=" + initialMaxStreamsUni() +
+                ", ackDelayExponent=" + ackDelayExponent() +
+                ", maxAckDelay=" + maxAckDelay() +
+                ", disableActiveMigration=" + disableActiveMigration() +
+                ", activeConnIdLimit=" + activeConnIdLimit() +
+                ", maxDatagramFrameSize=" + maxDatagramFrameSize() +
+                "]";
     }
 }
