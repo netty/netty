@@ -865,6 +865,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     try {
                         while (!finReceived && continueReading) {
                             byteBuf = allocHandle.allocate(allocator);
+                            allocHandle.attemptedBytesRead(byteBuf.writableBytes());
                             switch (parent.streamRecv(streamId(), byteBuf)) {
                                 case DONE:
                                     // Nothing left to read;

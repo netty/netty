@@ -1603,6 +1603,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     }
 
                     ByteBuf datagramBuffer = alloc().directBuffer(len);
+                    recvHandle.attemptedBytesRead(datagramBuffer.writableBytes());
                     int writerIndex = datagramBuffer.writerIndex();
                     long memoryAddress = Quiche.writerMemoryAddress(datagramBuffer);
 
