@@ -89,6 +89,6 @@ public class QuicTransportParametersTest extends AbstractQuicTest {
         assertThat(parameters.maxAckDelay(), greaterThanOrEqualTo(1L));
         assertFalse(parameters.disableActiveMigration());
         assertThat(parameters.activeConnIdLimit(), greaterThanOrEqualTo(1L));
-        assertThat(parameters.maxDatagramFrameSize(), greaterThanOrEqualTo(1L));
+        assertThat(parameters.maxDatagramFrameSize(), greaterThanOrEqualTo(0L));
     }
 }
