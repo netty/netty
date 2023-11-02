@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Collection;
 
 import static java.util.Objects.requireNonNull;
 
@@ -73,9 +74,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
      *
      * @see DefaultAddressResolverGroup
      */
-    @SuppressWarnings("unchecked")
     public Bootstrap resolver(AddressResolverGroup<?> resolver) {
-        this.externalResolver = resolver == null ? null : new ExternalAddressResolver(resolver);
+        externalResolver = resolver == null ? null : new ExternalAddressResolver(resolver);
         disableResolver = false;
         return this;
     }
@@ -299,6 +299,17 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel, ChannelFact
         setAttributes(channel, newAttributesArray());
 
         p.addLast(config.handler());
+
+        Collection<ChannelInitializerExtension> extensions = getInitializerExtensions();
+        if (!extensions.isEmpty()) {
+            for (ChannelInitializerExtension extension : extensions) {
+                try {
+                    extension.postInitializeClientChannel(channel);
+                } catch (Exception e) {
+                    logger.warn("Exception thrown from postInitializeClientChannel", e);
+                }
+            }
+        }
 
         return channel.executor().newSucceededFuture(channel);
     }

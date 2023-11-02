@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ServerBootstrapTest {
@@ -176,5 +177,60 @@ public class ServerBootstrapTest {
         clientChannel.close().asStage().sync();
         group.shutdownGracefully();
         assertTrue(requestServed.get());
+    }
+
+    @Test
+    void mustCallInitializerExtensions() throws Exception {
+        LocalAddress addr = new LocalAddress(ServerBootstrapTest.class);
+        final AtomicReference<Channel> expectedServerChannel = new AtomicReference<Channel>();
+        final AtomicReference<Channel> expectedChildChannel = new AtomicReference<Channel>();
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        final ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group);
+        sb.channel(LocalServerChannel.class);
+        sb.handler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                expectedServerChannel.set(ch);
+            }
+        });
+        sb.childHandler(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) throws Exception {
+                expectedChildChannel.set(ch);
+            }
+        });
+
+        StubChannelInitializerExtension.clearThreadLocals();
+        group.submit(() -> StubChannelInitializerExtension.clearThreadLocals()).asStage().sync();
+
+        Channel serverChannel = sb.bind(addr).asStage().get();
+
+        group.submit(() -> {
+            assertNull(StubChannelInitializerExtension.lastSeenClientChannel.get());
+            assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
+            assertSame(expectedServerChannel.get(), StubChannelInitializerExtension.lastSeenListenerChannel.get());
+            assertSame(serverChannel, StubChannelInitializerExtension.lastSeenListenerChannel.get());
+            return null;
+        }).asStage().sync();
+
+        Bootstrap cb = new Bootstrap();
+        cb.group(group)
+                .channel(LocalChannel.class)
+                .handler(new ChannelHandler() { });
+        Channel clientChannel = cb.connect(addr).asStage().get();
+
+        group.submit(() -> {
+            assertSame(clientChannel, StubChannelInitializerExtension.lastSeenClientChannel.get());
+            assertSame(expectedChildChannel.get(), StubChannelInitializerExtension.lastSeenChildChannel.get());
+            assertSame(expectedServerChannel.get(), StubChannelInitializerExtension.lastSeenListenerChannel.get());
+            assertSame(serverChannel, StubChannelInitializerExtension.lastSeenListenerChannel.get());
+            return null;
+        }).asStage().sync();
+
+        serverChannel.close().asStage().sync();
+        clientChannel.close().asStage().sync();
+        group.shutdownGracefully();
+        group.terminationFuture().asStage().sync();
     }
 }

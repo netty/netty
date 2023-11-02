@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -62,6 +63,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
     private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<>();
 
     private volatile ChannelHandler handler;
+    private volatile ClassLoader extensionsClassLoader;
 
     AbstractBootstrap() {
         // Disallow extending from a different package.
@@ -75,6 +77,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             options.putAll(bootstrap.options);
         }
         attrs.putAll(bootstrap.attrs);
+        extensionsClassLoader = bootstrap.extensionsClassLoader;
     }
 
     /**
@@ -151,6 +154,19 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
         } else {
             attrs.put(key, value);
         }
+        return self();
+    }
+
+    /**
+     * Load {@link ChannelInitializerExtension}s using the given class loader.
+     * <p>
+     * By default, the extensions will be loaded by the same class loader that loaded this bootstrap class.
+     *
+     * @param classLoader The class loader to use for loading {@link ChannelInitializerExtension}s.
+     * @return This bootstrap.
+     */
+    public B extensionsClassLoader(ClassLoader classLoader) {
+        extensionsClassLoader = classLoader;
         return self();
     }
 
@@ -302,6 +318,14 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
     abstract C newChannel(EventLoop loop) throws Exception;
 
     abstract Future<Channel> init(Channel channel);
+
+    Collection<ChannelInitializerExtension> getInitializerExtensions() {
+        ClassLoader loader = extensionsClassLoader;
+        if (loader == null) {
+            loader = getClass().getClassLoader();
+        }
+        return ChannelInitializerExtensions.getExtensions().extensions(loader);
+    }
 
     private static void doBind0(
             final Future<Channel> regFuture, final Channel channel,

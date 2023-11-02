@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty5.bootstrap;
 
 import io.netty5.channel.Channel;
@@ -365,6 +364,30 @@ public class BootstrapTest {
         // Should fail with the RuntimeException.
         assertTrue(connectFuture.asStage().await(10000, TimeUnit.MILLISECONDS));
         assertSame(connectFuture.cause(), exception);
+    }
+
+    @Test
+    void mustCallInitializerExtensions() throws Exception {
+        // Separate group for thread-local test isolation.
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        final Bootstrap cb = new Bootstrap();
+        cb.group(group);
+        cb.handler(dummyHandler);
+        cb.channel(LocalChannel.class);
+
+        Future<Channel> future = cb.register();
+        final Channel expectedChannel = future.asStage().get();
+
+        group.submit(() -> {
+            assertSame(expectedChannel, StubChannelInitializerExtension.lastSeenClientChannel.get());
+            assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
+            assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
+            return null;
+        }).asStage().sync();
+
+        expectedChannel.close().asStage().sync();
+        group.shutdownGracefully();
+        group.terminationFuture().asStage().sync();
     }
 
     private static final class LateRegisterHandler implements ChannelHandler {

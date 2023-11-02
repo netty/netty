@@ -46,6 +46,7 @@ import io.netty5.resolver.HostsFileEntries;
 import io.netty5.resolver.HostsFileEntriesResolver;
 import io.netty5.resolver.InetNameResolver;
 import io.netty5.resolver.ResolvedAddressTypes;
+import io.netty5.util.AttributeKey;
 import io.netty5.util.NetUtil;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.Resource;
@@ -91,6 +92,11 @@ import static java.util.Objects.requireNonNull;
  * A DNS-based {@link InetNameResolver}.
  */
 public class DnsNameResolver extends InetNameResolver {
+    /**
+     * An attribute used to mark all channels created by the {@link DnsNameResolver}.
+     */
+    public static final AttributeKey<Boolean> DNS_PIPELINE_ATTRIBUTE =
+            AttributeKey.newInstance("io.netty5.resolver.dns.pipeline");
 
     private static final Logger logger = LoggerFactory.getLogger(DnsNameResolver.class);
     private static final String LOCALHOST = "localhost";
@@ -431,6 +437,7 @@ public class DnsNameResolver extends InetNameResolver {
             socketBootstrap.option(ChannelOption.SO_REUSEADDR, true)
                     .group(executor())
                     .channelFactory(socketChannelFactory)
+                    .attr(DNS_PIPELINE_ATTRIBUTE, Boolean.TRUE)
                     .handler(TCP_ENCODER);
         }
         switch (this.resolvedAddressTypes) {
@@ -474,9 +481,10 @@ public class DnsNameResolver extends InetNameResolver {
         } else {
             inflightLookups = null;
         }
-        Bootstrap b = new Bootstrap();
-        b.group(executor());
-        b.channelFactory(channelFactory);
+        Bootstrap b = new Bootstrap()
+                .group(executor())
+                .channelFactory(channelFactory)
+                .attr(DNS_PIPELINE_ATTRIBUTE, Boolean.TRUE);
         channelReadyPromise = executor().newPromise();
         final DnsResponseHandler responseHandler = new DnsResponseHandler(channelReadyPromise);
         b.handler(new ChannelInitializer<DatagramChannel>() {

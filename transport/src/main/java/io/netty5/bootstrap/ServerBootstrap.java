@@ -32,6 +32,7 @@ import io.netty5.util.concurrent.Promise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -172,6 +173,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         final ChannelHandler currentChildHandler = childHandler;
         final Entry<ChannelOption<?>, Object>[] currentChildOptions = newOptionsArray(childOptions);
         final Entry<AttributeKey<?>, Object>[] currentChildAttrs = newAttributesArray(childAttrs);
+        final Collection<ChannelInitializerExtension> extensions = getInitializerExtensions();
 
         p.addLast(new ChannelInitializer<>() {
             @Override
@@ -184,11 +186,22 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
                 ch.executor().execute(() -> {
                     pipeline.addLast(new ServerBootstrapAcceptor(
-                            ch, currentChildHandler, currentChildOptions, currentChildAttrs));
+                            ch, currentChildHandler, currentChildOptions, currentChildAttrs,
+                            extensions));
                     promise.setSuccess(ch);
                 });
             }
         });
+        if (!extensions.isEmpty() && channel instanceof ServerChannel) {
+            ServerChannel serverChannel = (ServerChannel) channel;
+            for (ChannelInitializerExtension extension : extensions) {
+                try {
+                    extension.postInitializeServerListenerChannel(serverChannel);
+                } catch (Exception e) {
+                    logger.warn("Exception thrown from postInitializeServerListenerChannel", e);
+                }
+            }
+        }
         return promise.asFuture();
     }
 
@@ -219,13 +232,16 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         private final Entry<ChannelOption<?>, Object>[] childOptions;
         private final Entry<AttributeKey<?>, Object>[] childAttrs;
         private final Runnable enableAutoReadTask;
+        private final Collection<ChannelInitializerExtension> extensions;
 
         ServerBootstrapAcceptor(
                 final Channel channel, ChannelHandler childHandler,
-                Entry<ChannelOption<?>, Object>[] childOptions, Entry<AttributeKey<?>, Object>[] childAttrs) {
+                Entry<ChannelOption<?>, Object>[] childOptions, Entry<AttributeKey<?>, Object>[] childAttrs,
+                Collection<ChannelInitializerExtension> extensions) {
             this.childHandler = childHandler;
             this.childOptions = childOptions;
             this.childAttrs = childAttrs;
+            this.extensions = extensions;
 
             // Task which is scheduled to re-enable auto-read.
             // It's important to create this Runnable before we try to submit it as otherwise the URLClassLoader may
@@ -259,6 +275,16 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
                 setAttributes(child, childAttrs);
 
                 child.pipeline().addLast(childHandler);
+
+                if (!extensions.isEmpty()) {
+                    for (ChannelInitializerExtension extension : extensions) {
+                        try {
+                            extension.postInitializeServerChildChannel(child);
+                        } catch (Exception e) {
+                            logger.warn("Exception thrown from postInitializeServerChildChannel", e);
+                        }
+                    }
+                }
 
                 child.register().addListener(future -> {
                     if (future.isFailed()) {
