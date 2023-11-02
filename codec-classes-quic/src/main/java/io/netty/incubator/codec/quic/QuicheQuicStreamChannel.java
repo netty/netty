@@ -49,7 +49,7 @@ import java.util.concurrent.RejectedExecutionException;
  * {@link QuicStreamChannel} implementation that uses <a href="https://github.com/cloudflare/quiche">quiche</a>.
  */
 final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicStreamChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicStreamChannel.class);
     private final QuicheQuicChannel parent;
     private final ChannelId id;

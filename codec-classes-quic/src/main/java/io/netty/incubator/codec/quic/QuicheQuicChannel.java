@@ -114,7 +114,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     };
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private final long[] readableStreams = new long[128];
     private final long[] writableStreams = new long[128];
 
