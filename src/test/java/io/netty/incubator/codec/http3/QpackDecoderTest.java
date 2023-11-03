@@ -26,7 +26,6 @@ import java.util.Collection;
 import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.incubator.codec.http3.QpackDecoderStateSyncStrategy.ackEachInsert;
 import static io.netty.incubator.codec.http3.QpackUtil.MAX_UNSIGNED_INT;
-import static java.lang.Math.floorDiv;
 import static java.lang.Math.toIntExact;
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -116,16 +115,17 @@ public class QpackDecoderTest {
     }
 
     private void setup(long capacity) throws QpackException {
+        long maxTableCapacity = MAX_UNSIGNED_INT;
         inserted = 0;
-        this.maxEntries = toIntExact(floorDiv(capacity, 32));
+        this.maxEntries = toIntExact(QpackUtil.maxEntries(maxTableCapacity));
         final DefaultHttp3SettingsFrame settings = new DefaultHttp3SettingsFrame();
-        settings.put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, MAX_UNSIGNED_INT);
+        settings.put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
         table = new QpackDecoderDynamicTable();
         EmbeddedQuicChannel parent = new EmbeddedQuicChannel(true);
         attributes = new QpackAttributes(parent, false);
         decoderStream = new EmbeddedQuicStreamChannel();
         attributes.decoderStream(decoderStream);
-        decoder = new QpackDecoder(settings, table, ackEachInsert());
+        decoder = new QpackDecoder(maxTableCapacity, 0, table, ackEachInsert());
         decoder.setDynamicTableCapacity(capacity);
     }
 

@@ -21,6 +21,7 @@ import io.netty.util.internal.ConstantTimeUtils;
 import io.netty.util.internal.PlatformDependent;
 
 import static io.netty.util.internal.ObjectUtil.checkInRange;
+import static java.lang.Math.floorDiv;
 
 final class QpackUtil {
     private static final QpackException PREFIXED_INTEGER_TOO_LONG =
@@ -153,6 +154,18 @@ final class QpackUtil {
      */
     static boolean equalsVariableTime(CharSequence s1, CharSequence s2) {
         return AsciiString.contentEquals(s1, s2);
+    }
+
+    /**
+     * Calculate the MaxEntries based on
+     * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#section-4.5.1.1">RFC9204 Section 4.5.1.1</a>.
+     *
+     * @param maxTableCapacity the maximum table capacity.
+     * @return maxEntries.
+     */
+    static long maxEntries(long maxTableCapacity) {
+        // MaxEntries = floor( MaxTableCapacity / 32 )
+        return floorDiv(maxTableCapacity, 32);
     }
 
     // Section 6.2. Literal Header Field Representation

@@ -27,15 +27,12 @@ import java.util.List;
 import java.util.function.BiConsumer;
 
 import static io.netty.incubator.codec.http3.Http3CodecUtils.closeOnFailure;
-import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
-import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.incubator.codec.http3.QpackDecoderStateSyncStrategy.ackEachInsert;
 import static io.netty.incubator.codec.http3.QpackUtil.decodePrefixedIntegerAsInt;
 import static io.netty.incubator.codec.http3.QpackUtil.encodePrefixedInteger;
 import static io.netty.incubator.codec.http3.QpackUtil.firstByteEquals;
 import static io.netty.incubator.codec.http3.QpackUtil.toIntOrThrow;
 import static java.lang.Math.floorDiv;
-import static java.lang.Math.toIntExact;
 
 final class QpackDecoder {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(QpackDecoder.class);
@@ -71,23 +68,29 @@ final class QpackDecoder {
      */
     private final IntObjectHashMap<List<Runnable>> blockedStreams;
 
-    private long maxEntries;
-    private long fullRange;
+    private final long maxEntries;
+    private final long fullRange;
     private int blockedStreamsCount;
     private long lastAckInsertCount;
 
-    QpackDecoder(Http3SettingsFrame localSettings) {
-        this(localSettings, new QpackDecoderDynamicTable(), ackEachInsert());
+    QpackDecoder(long maxTableCapacity, int maxBlockedStreams) {
+        this(maxTableCapacity, maxBlockedStreams, new QpackDecoderDynamicTable(), ackEachInsert());
     }
 
-    QpackDecoder(Http3SettingsFrame localSettings,
+    QpackDecoder(long maxTableCapacity, int maxBlockedStreams,
                  QpackDecoderDynamicTable dynamicTable, QpackDecoderStateSyncStrategy stateSyncStrategy) {
         huffmanDecoder = new QpackHuffmanDecoder();
-        maxTableCapacity = localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0);
-        maxBlockedStreams = toIntExact(localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 0));
+        this.maxTableCapacity = maxTableCapacity;
+        this.maxBlockedStreams = maxBlockedStreams;
         this.stateSyncStrategy = stateSyncStrategy;
         blockedStreams = new IntObjectHashMap<>(Math.min(16, maxBlockedStreams));
         this.dynamicTable = dynamicTable;
+        maxEntries = QpackUtil.maxEntries(maxTableCapacity);
+        try {
+            fullRange = toIntOrThrow(2 * maxEntries);
+        } catch (QpackException e) {
+            throw new IllegalArgumentException(e);
+        }
     }
 
     /**
@@ -162,8 +165,6 @@ final class QpackDecoder {
             throw DYNAMIC_TABLE_CAPACITY_EXCEEDS_MAX;
         }
         dynamicTable.setCapacity(capacity);
-        maxEntries = floorDiv(capacity, 32);
-        fullRange = toIntOrThrow(2 * maxEntries);
     }
 
     /**

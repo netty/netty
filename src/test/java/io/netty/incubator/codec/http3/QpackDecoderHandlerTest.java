@@ -26,7 +26,6 @@ import static io.netty.incubator.codec.http3.Http3.setQpackAttributes;
 import static io.netty.incubator.codec.http3.Http3ErrorCode.QPACK_DECODER_STREAM_ERROR;
 import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.incubator.codec.http3.QpackUtil.encodePrefixedInteger;
-import static java.lang.Math.floorDiv;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -307,19 +306,19 @@ public class QpackDecoderHandlerTest {
         }
     }
 
-    private void setup(long tableCapacity) throws Exception {
-        maxEntries = Math.toIntExact(floorDiv(tableCapacity, 32));
+    private void setup(long maxTableCapacity) throws Exception {
+        maxEntries = Math.toIntExact(QpackUtil.maxEntries(maxTableCapacity));
         parent = new EmbeddedQuicChannel(true);
         attributes = new QpackAttributes(parent, false);
         setQpackAttributes(parent, attributes);
         Http3SettingsFrame settings = new DefaultHttp3SettingsFrame();
-        settings.put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, tableCapacity);
-        QpackDecoder decoder = new QpackDecoder(settings);
+        settings.put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
+        QpackDecoder decoder = new QpackDecoder(maxTableCapacity, 0);
         encoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
-                new QpackEncoderHandler(tableCapacity, decoder)).get();
+                new QpackEncoderHandler(maxTableCapacity, decoder)).get();
         attributes.encoderStream(encoderStream);
         encoder = new QpackEncoder(dynamicTable);
-        encoder.configureDynamicTable(attributes, tableCapacity, 0);
+        encoder.configureDynamicTable(attributes, maxTableCapacity, 0);
         decoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
                 new QpackDecoderHandler(encoder)).get();
         attributes.decoderStream(decoderStream);

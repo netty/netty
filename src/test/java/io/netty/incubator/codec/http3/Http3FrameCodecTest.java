@@ -101,7 +101,7 @@ public class Http3FrameCodecTest {
         maxTableCapacity = 1024L;
         settings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
         settings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, (long) maxBlockedStreams);
-        decoder = new QpackDecoder(settings);
+        decoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);
         decoder.setDynamicTableCapacity(maxTableCapacity);
         qpackEncoderHandler = new QpackEncoderHandler(maxTableCapacity, decoder);
         encoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,

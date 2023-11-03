@@ -33,7 +33,6 @@ import static io.netty.buffer.UnpooledByteBufAllocator.DEFAULT;
 import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
 import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.incubator.codec.quic.QuicStreamType.UNIDIRECTIONAL;
-import static java.lang.Math.floorDiv;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
@@ -457,12 +456,12 @@ public class QpackEncoderDecoderTest {
         setup(dynamicTableSize, maxBlockedStreams, 10);
     }
 
-    private void setup(long dynamicTableSize, int maxBlockedStreams, int expectedTableFreePercentage) throws Exception {
+    private void setup(long maxTableCapacity, int maxBlockedStreams, int expectedTableFreePercentage) throws Exception {
         attributes = new QpackAttributes(parent, false);
         Http3.setQpackAttributes(parent, attributes);
-        maxEntries = Math.toIntExact(floorDiv(dynamicTableSize, 32));
+        maxEntries = Math.toIntExact(QpackUtil.maxEntries(maxTableCapacity));
         DefaultHttp3SettingsFrame localSettings = new DefaultHttp3SettingsFrame();
-        localSettings.put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, dynamicTableSize);
+        localSettings.put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
         localSettings.put(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, (long) maxBlockedStreams);
         if (maxBlockedStreams > 0) {
             // section acknowledgment will implicitly ack insert count.
@@ -471,19 +470,19 @@ public class QpackEncoderDecoderTest {
         when(syncStrategy.entryAdded(anyInt())).thenAnswer(__ -> stateSyncStrategyAckNextInsert);
         encDynamicTable = new QpackEncoderDynamicTable(16, expectedTableFreePercentage);
         decDynamicTable = new QpackDecoderDynamicTable();
-        decoder = new QpackDecoder(localSettings, decDynamicTable, syncStrategy);
+        decoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams, decDynamicTable, syncStrategy);
         encoder = new QpackEncoder(encDynamicTable);
         if (maxBlockedStreams > 0) {
             suspendedEncoderInstructions = new LinkedBlockingQueue<>();
         }
         EmbeddedQuicStreamChannel encoderStream = (EmbeddedQuicStreamChannel) parent.createStream(UNIDIRECTIONAL,
-                new ForwardWriteToReadOnOtherHandler(new QpackEncoderHandler(dynamicTableSize, decoder),
+                new ForwardWriteToReadOnOtherHandler(new QpackEncoderHandler(maxTableCapacity, decoder),
                         suspendedEncoderInstructions)).get();
         EmbeddedQuicStreamChannel decoderStream = (EmbeddedQuicStreamChannel) parent.createStream(UNIDIRECTIONAL,
                 new ForwardWriteToReadOnOtherHandler(new QpackDecoderHandler(encoder))).get();
         attributes.encoderStream(encoderStream);
         attributes.decoderStream(decoderStream);
-        encoder.configureDynamicTable(attributes, dynamicTableSize, maxBlockedStreams);
+        encoder.configureDynamicTable(attributes, maxTableCapacity, maxBlockedStreams);
     }
 
     private void addEncodeHeader(String namePrefix, String value, int times) {

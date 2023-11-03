@@ -23,7 +23,6 @@ import static io.netty.incubator.codec.http3.QpackUtil.MIN_HEADER_TABLE_SIZE;
 import static io.netty.incubator.codec.http3.QpackUtil.equalsVariableTime;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
-import static java.lang.Math.floorDiv;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.toIntExact;
@@ -68,9 +67,10 @@ final class QpackEncoderDynamicTable {
 
     /**
      * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-maximum-dynamic-table-capac">
-     *     Maximum capacity of the table</a>.
+     *     Maximum capacity of the table</a>. This is set once based on the
+     *     {@link Http3SettingsFrame#HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY} received by the remote peer.
      */
-    private long capacity = -1;
+    private long maxTableCapacity = -1;
 
     /*
      * The below indexes follow the suggested heuristics in Section 2.1.1.1 Avoiding Prohibited insertions
@@ -136,7 +136,7 @@ final class QpackEncoderDynamicTable {
      * @return              the absolute index or {@code -1) if it could not be added.
      */
     int add(CharSequence name, CharSequence value, long headerSize) {
-        if (capacity - size < headerSize) {
+        if (maxTableCapacity - size < headerSize) {
             return -1;
         }
 
@@ -238,7 +238,7 @@ final class QpackEncoderDynamicTable {
         // else:
         //      EncInsertCount = (ReqInsertCount mod (2 * MaxEntries)) + 1
         //
-        return reqInsertCount == 0 ? 0 : reqInsertCount % toIntExact(2 * floorDiv(capacity, 32)) + 1;
+        return reqInsertCount == 0 ? 0 : reqInsertCount % toIntExact(2 * QpackUtil.maxEntries(maxTableCapacity)) + 1;
     }
 
     // Visible for tests
@@ -254,10 +254,10 @@ final class QpackEncoderDynamicTable {
      */
     void maxTableCapacity(long capacity) throws QpackException {
         validateCapacity(capacity);
-        if (this.capacity >= 0) {
+        if (this.maxTableCapacity >= 0) {
             throw CAPACITY_ALREADY_SET;
         }
-        this.capacity = capacity;
+        this.maxTableCapacity = capacity;
     }
 
     /**
@@ -335,7 +335,7 @@ final class QpackEncoderDynamicTable {
     boolean requiresDuplication(int idx, long size) {
         assert head != tail;
 
-        if (this.size + size > capacity || head == drain) {
+        if (this.size + size > maxTableCapacity || head == drain) {
             return false;
         }
         return idx >= head.next.index && idx <= drain.index;
@@ -397,7 +397,7 @@ final class QpackEncoderDynamicTable {
     }
 
     private void ensureFreeCapacity() {
-        long maxDesiredSize = max(ENTRY_OVERHEAD, ((100 - expectedFreeCapacityPercentage) * capacity) / 100);
+        long maxDesiredSize = max(ENTRY_OVERHEAD, ((100 - expectedFreeCapacityPercentage) * maxTableCapacity) / 100);
         long cSize = size;
         HeaderEntry nDrain;
         for (nDrain = head; nDrain.next != null && cSize > maxDesiredSize; nDrain = nDrain.next) {

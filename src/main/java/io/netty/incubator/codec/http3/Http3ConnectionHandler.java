@@ -26,6 +26,9 @@ import io.netty.incubator.codec.quic.QuicStreamType;
 import java.util.function.LongFunction;
 
 import static io.netty.incubator.codec.http3.Http3RequestStreamCodecState.NO_STATE;
+import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
+import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
+import static java.lang.Math.toIntExact;
 
 /**
  * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> connections.
@@ -68,7 +71,9 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
             // Just use the maximum value we can represent via a Long.
             maxFieldSectionSize = Long.MAX_VALUE;
         }
-        qpackDecoder = new QpackDecoder(localSettings);
+        long maxTableCapacity = localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0);
+        int maxBlockedStreams = toIntExact(localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 0));
+        qpackDecoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);
         qpackEncoder = new QpackEncoder();
         codecFactory = Http3FrameCodec.newFactory(qpackDecoder, maxFieldSectionSize, qpackEncoder);
         remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(server, localSettings,

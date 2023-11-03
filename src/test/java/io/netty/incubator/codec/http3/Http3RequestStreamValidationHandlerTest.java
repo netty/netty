@@ -55,7 +55,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
 
     public Http3RequestStreamValidationHandlerTest() {
         super(true, true);
-        decoder = new QpackDecoder(new DefaultHttp3SettingsFrame());
+        decoder = new QpackDecoder(0, 0);
     }
 
     @Override
