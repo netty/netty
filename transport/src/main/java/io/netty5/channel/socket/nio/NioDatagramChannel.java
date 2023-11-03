@@ -393,7 +393,7 @@ public final class NioDatagramChannel
             }
             if (remoteAddress == null) {
                 readSink.processRead(attemptedBytesRead, 0, null);
-                return -1;
+                return 0;
             }
             data.skipWritableBytes(actualBytesRead);
             readSink.processRead(attemptedBytesRead, actualBytesRead,
