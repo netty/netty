@@ -33,7 +33,7 @@ diff -bur automake-1.16/bin/automake.in  automake-1.16.new/bin/automake.in
  use File::Spec;
 -use List::Util 'none';
 +use List::Util 'reduce';
-+sub none (&@) { my \\\$code=shift; reduce { \\\$a && !\\\$code->(local \\\$_ = \\\$b) } 1, @_; }
++sub none (&@) { my \$code=shift; reduce { \$a && !\$code->(local \$_ = \$b) } 1, @_; }
  use Carp;
  
  ## ----------------------- ##
