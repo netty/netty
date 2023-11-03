@@ -5,7 +5,7 @@ ENV GCC_VERSION $gcc_version
 ENV SOURCE_DIR /root/source
 
 # Install requirements
-RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools unzip zip
+RUN yum install -y curl tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools unzip zip
 
 # Install Java
 RUN yum install -y java-1.8.0-openjdk-devel
@@ -14,8 +14,8 @@ RUN mkdir -p $SOURCE_DIR
 WORKDIR $SOURCE_DIR
 
 # Install riscv64 gcc toolchain
-RUN wget https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/$GCC_VERSION/riscv64-glibc-ubuntu-20.04-gcc-nightly-$GCC_VERSION-nightly.tar.gz && \
-    tar xvf riscv64-glibc-ubuntu-20.04-gcc-nightly-$GCC_VERSION-nightly.tar.gz && mv riscv /opt/
+RUN curl -L https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/$GCC_VERSION/riscv64-glibc-ubuntu-20.04-gcc-nightly-$GCC_VERSION-nightly.tar.gz | \
+        tar xvzf - -C /opt
 ENV PATH="/opt/riscv/bin:${PATH}"
 
 ENV JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk/"
