@@ -1,30 +1,32 @@
-FROM centos:7.6.1810
+FROM ubuntu:20.04
 
-ARG gcc_version=2023.10.18
-ENV GCC_VERSION $gcc_version
 ENV SOURCE_DIR /root/source
 
+ENV DEBIAN_FRONTEND noninteractive
+
 # Install requirements
-RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools unzip zip python3 libmpc-devel mpfr-devel gmp-devel gawk bison flex texinfo patchutils gcc gcc-c++ zlib-devel expat-devel
-
-# Install Java
-RUN yum install -y java-1.8.0-openjdk-devel
-
-# Install newer GCC toolchain
-RUN yum install -y centos-release-scl && \
-    yum install -y devtoolset-11
+RUN apt-get update -qq \
+ && apt-get install -qq -y \
+        autoconf \
+        automake \
+        curl \
+        gcc-riscv64-linux-gnu \
+        git \
+        libaio-dev \
+        libc-dev \
+        libssl-dev \
+        libtool \
+        make \
+        openjdk-8-jdk-headless \
+        tar \
+        unzip \
+        zip \
+ && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p $SOURCE_DIR
 WORKDIR $SOURCE_DIR
 
-# Build riscv64 gcc toolchain
-ENV PATH="/opt/riscv:${PATH}"
-COPY ./docker/install-riscv64-toolchain.sh $SOURCE_DIR/install-riscv64-toolchain.sh
-RUN $SOURCE_DIR/install-riscv64-toolchain.sh
-
-ENV JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk/"
+ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"
 
 # Cleanup
 RUN rm -rf $SOURCE_DIR
-RUN yum clean all && \
-    rm -rf /var/cache/yum

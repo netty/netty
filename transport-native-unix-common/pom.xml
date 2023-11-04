@@ -458,8 +458,8 @@
         <!-- use riscv_64 as this is also what os.detected.arch will use on an riscv64 system -->
         <jni.classifier>${os.detected.name}-riscv_64</jni.classifier>
         <jni.platform>linux</jni.platform>
-        <exe.compiler>riscv64-unknown-linux-gnu-gcc</exe.compiler>
-        <exe.archiver>riscv64-unknown-linux-gnu-ar</exe.archiver>
+        <exe.compiler>riscv64-linux-gnu-gcc</exe.compiler>
+        <exe.archiver>riscv64-linux-gnu-ar</exe.archiver>
       </properties>
       <build>
         <plugins>

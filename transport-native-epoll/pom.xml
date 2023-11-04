@@ -412,14 +412,20 @@
                       <property>os.detected.classifier</property>
                       <regex>^linux-x86_64.*</regex>
                     </requireProperty>
+                    <!--
+                      The toolchains for RISC-V are much more recent than for x86_64, and are
+                      unavailable on CentOS. We are then falling back to a Debian-based distribution
+                      that has access to recent enough toolchains; Ubuntu 20.04 is available on
+                      RISC-V and still has GLIBC 2.31
+                    -->
                     <requireFilesContent>
                       <message>
-                        Cross compile and Release process must be performed on RHEL 7.6 or its derivatives.
+                        Cross compile and Release process must be performed on Debian Bullseye or derivative
                       </message>
                       <files>
-                        <file>/etc/redhat-release</file>
+                        <file>/etc/debian_version</file>
                       </files>
-                      <content>release 7.6</content>
+                      <content>bullseye/sid</content>
                     </requireFilesContent>
                   </rules>
                 </configuration>
@@ -469,7 +475,7 @@
                     <arg>${jni.compiler.args.cflags}</arg>
                     <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
                     <configureArg>--host=riscv64-linux-gnu</configureArg>
-                    <configureArg>CC=riscv64-unknown-linux-gnu-gcc</configureArg>
+                    <configureArg>CC=riscv64-linux-gnu-gcc</configureArg>
                   </configureArgs>
                 </configuration>
                 <goals>
