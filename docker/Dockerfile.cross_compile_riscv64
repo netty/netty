@@ -10,6 +10,7 @@ RUN apt-get update -qq \
         curl \
         gcc-riscv64-linux-gnu \
         git \
+        gpg \
         libaio-dev \
         libc-dev \
         libssl-dev \
