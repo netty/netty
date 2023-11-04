@@ -26,7 +26,7 @@ The default version of aarch64 gcc is `4.9-2016.02`. Update the parameter `gcc_v
 ## riscv64 cross compile for transport-native-epoll on X86_64
 
 ```
-docker-compose -f docker/docker-compose.centos-7.yaml run cross-compile-riscv64-build
+docker-compose -f docker/docker-compose.ubuntu-20.04.yaml run cross-compile-riscv64-build
 ```
 
 etc, etc
