@@ -1,7 +1,5 @@
 FROM ubuntu:20.04
 
-ENV SOURCE_DIR /root/source
-
 ENV DEBIAN_FRONTEND noninteractive
 
 # Install requirements
@@ -22,9 +20,6 @@ RUN apt-get update -qq \
         unzip \
         zip \
  && rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p $SOURCE_DIR
-WORKDIR $SOURCE_DIR
 
 ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"
 
