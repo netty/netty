@@ -1565,7 +1565,8 @@ public final class PlatformDependent {
             return "aarch_64";
         }
         if ("riscv64".equals(value)) {
-            return "riscv_64";
+            // os.detected.arch is riscv64 for RISC-V, no underscore
+            return "riscv64";
         }
         if (value.matches("^(ppc|ppc32)$")) {
             return "ppc_32";

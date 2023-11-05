@@ -373,9 +373,9 @@
     <profile>
       <id>linux-riscv64</id>
       <properties>
-        <!-- use riscv_64 as this is also what os.detected.arch will use on an riscv64 system -->
-        <jni.classifier>${os.detected.name}-riscv_64</jni.classifier>
-        <javaModuleNameClassifier>${os.detected.name}.riscv_64</javaModuleNameClassifier>
+        <!-- use riscv64 as this is also what os.detected.arch will use on an riscv64 system -->
+        <jni.classifier>${os.detected.name}-riscv64</jni.classifier>
+        <javaModuleNameClassifier>${os.detected.name}.riscv64</javaModuleNameClassifier>
       </properties>
       <build>
         <pluginManagement>
@@ -462,7 +462,7 @@
               <execution>
                 <id>build-native-lib</id>
                 <configuration>
-                  <name>netty_transport_native_epoll_riscv_64</name>
+                  <name>netty_transport_native_epoll_riscv64</name>
                   <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
                   <libDirectory>${project.build.outputDirectory}</libDirectory>
                   <!-- We use Maven's artifact classifier instead.
@@ -500,7 +500,7 @@
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_epoll_riscv_64.so; osname=Linux; processor=riscv64,*</Bundle-NativeCode>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_epoll_riscv64.so; osname=Linux; processor=riscv64,*</Bundle-NativeCode>
                       <Fragment-Host>io.netty.transport-classes-epoll</Fragment-Host>
                       <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
                     </manifestEntries>
