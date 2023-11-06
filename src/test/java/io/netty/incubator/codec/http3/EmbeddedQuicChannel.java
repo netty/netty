@@ -34,6 +34,7 @@ import io.netty.incubator.codec.quic.QuicChannelConfig;
 import io.netty.incubator.codec.quic.QuicConnectionStats;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
+import io.netty.incubator.codec.quic.QuicTransportParameters;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -148,6 +149,11 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
 
     public EmbeddedQuicStreamChannel localControlStream() {
         return (EmbeddedQuicStreamChannel) Http3.getLocalControlStream(this);
+    }
+
+    @Override
+    public QuicTransportParameters peerTransportParameters() {
+        return null;
     }
 
     Collection<Integer> closeErrorCodes() {
