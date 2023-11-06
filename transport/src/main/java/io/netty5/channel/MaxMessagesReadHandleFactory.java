@@ -24,7 +24,7 @@ public abstract class MaxMessagesReadHandleFactory implements ReadHandleFactory 
     private final int maxMessagesPerRead;
 
     protected MaxMessagesReadHandleFactory() {
-        this(1);
+        this(16);
     }
 
     protected MaxMessagesReadHandleFactory(int maxMessagesPerRead) {
