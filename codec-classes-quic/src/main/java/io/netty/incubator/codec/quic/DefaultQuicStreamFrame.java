@@ -17,7 +17,6 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
-import io.netty.util.internal.StringUtil;
 
 public final class DefaultQuicStreamFrame extends DefaultByteBufHolder implements QuicStreamFrame {
 
