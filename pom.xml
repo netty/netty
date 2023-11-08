@@ -1565,7 +1565,7 @@
             <nativeImage.handlerMetadataGroupId>${project.groupId}</nativeImage.handlerMetadataGroupId>
             <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
-          <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties}</argLine>
+          <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
           <properties>
             <property>
               <name>listener</name>

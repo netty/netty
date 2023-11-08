@@ -77,6 +77,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     private static final SensitivityDetector DEFAULT_HEADER_SENSITIVITY_DETECTOR = Http2HeadersEncoder.NEVER_SENSITIVE;
 
+    private static final int DEFAULT_MAX_RST_FRAMES_PER_CONNECTION_FOR_SERVER = 200;
+
     // The properties that can always be set.
     private Http2Settings initialSettings = Http2Settings.defaultSettings();
     private Http2FrameListener frameListener;
@@ -109,7 +111,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private boolean autoAckPingFrame = true;
     private int maxQueuedControlFrames = Http2CodecUtil.DEFAULT_MAX_QUEUED_CONTROL_FRAMES;
     private int maxConsecutiveEmptyFrames = 2;
-    private int maxRstFramesPerWindow = 200;
+    private Integer maxRstFramesPerWindow;
     private int secondsPerWindow = 30;
 
     /**
@@ -592,8 +594,19 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         if (maxConsecutiveEmptyDataFrames > 0) {
             decoder = new Http2EmptyDataFrameConnectionDecoder(decoder, maxConsecutiveEmptyDataFrames);
         }
-        if (maxRstFramesPerWindow > 0 && secondsPerWindow > 0) {
-            decoder = new Http2MaxRstFrameDecoder(decoder, maxRstFramesPerWindow, secondsPerWindow);
+        final int maxRstFrames;
+        if (maxRstFramesPerWindow == null) {
+            // Only enable by default on the server.
+            if (isServer()) {
+                maxRstFrames = DEFAULT_MAX_RST_FRAMES_PER_CONNECTION_FOR_SERVER;
+            } else {
+                maxRstFrames = 0;
+            }
+        } else {
+            maxRstFrames = maxRstFramesPerWindow;
+        }
+        if (maxRstFrames > 0 && secondsPerWindow > 0) {
+            decoder = new Http2MaxRstFrameDecoder(decoder, maxRstFrames, secondsPerWindow);
         }
         final T handler;
         try {

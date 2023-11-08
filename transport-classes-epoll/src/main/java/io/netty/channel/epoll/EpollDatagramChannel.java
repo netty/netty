@@ -54,7 +54,7 @@ import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
  * maximal performance.
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
             StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +

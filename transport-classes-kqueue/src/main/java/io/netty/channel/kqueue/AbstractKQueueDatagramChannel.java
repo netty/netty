@@ -23,7 +23,7 @@ import java.io.IOException;
 
 abstract class AbstractKQueueDatagramChannel extends AbstractKQueueChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
 
     AbstractKQueueDatagramChannel(Channel parent, BsdSocket fd, boolean active) {
         super(parent, fd, active);

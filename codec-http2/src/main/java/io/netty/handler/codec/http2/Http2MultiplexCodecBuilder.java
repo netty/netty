@@ -213,8 +213,8 @@ public class Http2MultiplexCodecBuilder
 
     @Override
     public Http2MultiplexCodecBuilder decoderEnforceMaxRstFramesPerWindow(
-            int maxConsecutiveEmptyFrames, int secondsPerWindow) {
-        return super.decoderEnforceMaxRstFramesPerWindow(maxConsecutiveEmptyFrames, secondsPerWindow);
+            int maxRstFramesPerWindow, int secondsPerWindow) {
+        return super.decoderEnforceMaxRstFramesPerWindow(maxRstFramesPerWindow, secondsPerWindow);
     }
 
     @Override
