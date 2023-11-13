@@ -265,7 +265,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             final boolean shouldIgnore;
             try {
-                shouldIgnore = shouldIgnoreHeadersOrDataFrame(ctx, streamId, stream, "DATA");
+                shouldIgnore = shouldIgnoreHeadersOrDataFrame(ctx, streamId, stream, endOfStream, "DATA");
             } catch (Http2Exception e) {
                 // Ignoring this frame. We still need to count the frame towards the connection flow control
                 // window, but we immediately mark all bytes as consumed.
@@ -283,7 +283,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 flowController.consumeBytes(stream, bytesToReturn);
 
                 // Verify that the stream may have existed after we apply flow control.
-                verifyStreamMayHaveExisted(streamId);
+                verifyStreamMayHaveExisted(streamId, endOfStream, "DATA");
 
                 // All bytes have been consumed.
                 return bytesToReturn;
@@ -366,7 +366,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 isTrailers = stream.isHeadersReceived();
             }
 
-            if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, stream, "HEADERS")) {
+            if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, stream, endOfStream, "HEADERS")) {
                 return;
             }
 
@@ -452,7 +452,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
-                verifyStreamMayHaveExisted(streamId);
+                verifyStreamMayHaveExisted(streamId, false, "RST_STREAM");
                 return;
             }
 
@@ -565,7 +565,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
             Http2Stream parentStream = connection.stream(streamId);
 
-            if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, parentStream, "PUSH_PROMISE")) {
+            if (shouldIgnoreHeadersOrDataFrame(ctx, streamId, parentStream, false, "PUSH_PROMISE")) {
                 return;
             }
 
@@ -615,7 +615,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
             Http2Stream stream = connection.stream(streamId);
             if (stream == null || stream.state() == CLOSED || streamCreatedAfterGoAwaySent(streamId)) {
                 // Ignore this frame.
-                verifyStreamMayHaveExisted(streamId);
+                verifyStreamMayHaveExisted(streamId, false, "WINDOW_UPDATE");
                 return;
             }
 
@@ -636,7 +636,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
          * {@code stream} (which may be {@code null}) associated with {@code streamId}.
          */
         private boolean shouldIgnoreHeadersOrDataFrame(ChannelHandlerContext ctx, int streamId, Http2Stream stream,
-                String frameName) throws Http2Exception {
+                boolean endOfStream, String frameName) throws Http2Exception {
             if (stream == null) {
                 if (streamCreatedAfterGoAwaySent(streamId)) {
                     logger.info("{} ignoring {} frame for stream {}. Stream sent after GOAWAY sent",
@@ -646,7 +646,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
 
                 // Make sure it's not an out-of-order frame, like a rogue DATA frame, for a stream that could
                 // never have existed.
-                verifyStreamMayHaveExisted(streamId);
+                verifyStreamMayHaveExisted(streamId, endOfStream, frameName);
 
                 // Its possible that this frame would result in stream ID out of order creation (PROTOCOL ERROR) and its
                 // also possible that this frame is received on a CLOSED stream (STREAM_CLOSED after a RST_STREAM is
@@ -690,9 +690,12 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                     streamId > remote.lastStreamKnownByPeer();
         }
 
-        private void verifyStreamMayHaveExisted(int streamId) throws Http2Exception {
+        private void verifyStreamMayHaveExisted(int streamId, boolean endOfStream, String frameName)
+                throws Http2Exception {
             if (!connection.streamMayHaveExisted(streamId)) {
-                throw connectionError(PROTOCOL_ERROR, "Stream %d does not exist", streamId);
+                throw connectionError(PROTOCOL_ERROR,
+                        "Stream %d does not exist for inbound frame %s, endOfStream = %b",
+                        streamId, frameName, endOfStream);
             }
         }
     }
