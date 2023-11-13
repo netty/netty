@@ -81,19 +81,24 @@ final class PemReader {
         Matcher m = CERT_HEADER.matcher(content);
         int start = 0;
         while (m.find(start)) {
+            // Here and below it's necessary to save the position as it is reset
+            // after calling usePattern() on Android due to a bug.
+            //
+            // See https://issuetracker.google.com/issues/293206296
+            start = m.end();
             m.usePattern(BODY);
-            if (!m.find()) {
+            if (!m.find(start)) {
                 break;
             }
 
             try (Buffer base64 = onHeapAllocator().copyOf(m.group(0), US_ASCII)) {
+                start = m.end();
                 m.usePattern(CERT_FOOTER);
-                if (!m.find()) {
+                if (!m.find(start)) {
                     // Certificate is incomplete.
                     break;
                 }
                 certs.add(Base64.decode(base64));
-
                 start = m.end();
                 m.usePattern(CERT_HEADER);
             }
@@ -127,19 +132,20 @@ final class PemReader {
         } catch (IOException e) {
             throw new KeyException("failed to read key input stream", e);
         }
-
+        int start = 0;
         Matcher m = KEY_HEADER.matcher(content);
-        if (!m.find()) {
+        if (!m.find(start)) {
             throw keyNotFoundException();
         }
+        start = m.end();
         m.usePattern(BODY);
-        if (!m.find()) {
+        if (!m.find(start)) {
             throw keyNotFoundException();
         }
 
         try (Buffer base64 = onHeapAllocator().copyOf(m.group(0), US_ASCII)) {
             m.usePattern(KEY_FOOTER);
-            if (!m.find()) {
+            if (!m.find(start)) {
                 // Key is incomplete.
                 throw keyNotFoundException();
             }
