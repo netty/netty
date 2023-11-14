@@ -38,4 +38,11 @@ public final class QuicDatagramExtensionEvent implements QuicExtensionEvent {
     public int maxLength() {
         return maxLength;
     }
+
+    @Override
+    public String toString() {
+        return "QuicDatagramExtensionEvent{" +
+                "maxLength=" + maxLength +
+                '}';
+    }
 }

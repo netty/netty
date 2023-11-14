@@ -47,4 +47,12 @@ public final class QuicConnectionEvent implements QuicEvent {
     public SocketAddress newAddress() {
         return newAddress;
     }
+
+    @Override
+    public String toString() {
+        return "QuicConnectionEvent{" +
+                "oldAddress=" + oldAddress +
+                ", newAddress=" + newAddress +
+                '}';
+    }
 }
