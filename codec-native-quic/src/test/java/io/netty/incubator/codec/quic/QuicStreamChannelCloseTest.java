@@ -17,10 +17,12 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.ReferenceCountUtil;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -28,8 +30,11 @@ import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class QuicStreamChannelCloseTest extends AbstractQuicTest {
 
@@ -156,6 +161,100 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
             QuicTestUtils.closeIfNotNull(server);
 
             shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testWriteToUnidirectionalAfterShutdownOutput(Executor executor) throws Throwable {
+        testWriteAfterClosedOrShutdown(executor, QuicStreamType.UNIDIRECTIONAL, true);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testWriteToBidirectionalAfterShutdownOutput(Executor executor) throws Throwable {
+        testWriteAfterClosedOrShutdown(executor, QuicStreamType.BIDIRECTIONAL, true);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testWriteToUnidirectionalAfterClose(Executor executor) throws Throwable {
+        testWriteAfterClosedOrShutdown(executor, QuicStreamType.UNIDIRECTIONAL, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testWriteToBidirectionalAfterClose(Executor executor) throws Throwable {
+        testWriteAfterClosedOrShutdown(executor, QuicStreamType.BIDIRECTIONAL, false);
+    }
+
+    private static void testWriteAfterClosedOrShutdown(Executor executor, QuicStreamType type,
+                                                         boolean halfClose) throws Throwable {
+        Channel server = null;
+        Channel channel = null;
+        try {
+            final Promise<Channel> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
+            server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(), new StreamHandler());
+            channel = QuicTestUtils.newClient(executor);
+
+            StreamCreationAndTearDownHandler creationHandler =
+                    new StreamCreationAndTearDownHandler(type, halfClose, streamPromise);
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(creationHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(server.localAddress())
+                    .connect()
+                    .get();
+
+            // ChannelOutputShutdownException should only be used when its a BIDIRECTIONAL channel and half-closure
+            // is used.
+            Class<? extends Throwable> causeClass =
+                    halfClose && type != QuicStreamType.UNIDIRECTIONAL ?
+                            ChannelOutputShutdownException.class : ClosedChannelException.class;
+            assertInstanceOf(causeClass, streamPromise.await().cause());
+            quicChannel.close().sync();
+
+            // Wait till the client was closed
+            quicChannel.closeFuture().sync();
+            creationHandler.assertState();
+        } finally {
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
+        }
+    }
+
+    private static final class StreamCreationAndTearDownHandler extends QuicChannelValidationHandler {
+        private final QuicStreamType type;
+        private final boolean halfClose;
+        private final Promise<Channel> streamPromise;
+
+        StreamCreationAndTearDownHandler(QuicStreamType type, boolean halfClose, Promise<Channel> streamPromise) {
+            this.type = type;
+            this.halfClose = halfClose;
+            this.streamPromise = streamPromise;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) {
+            QuicChannel channel = (QuicChannel) ctx.channel();
+            channel.createStream(type, new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx)  {
+                    final ChannelFuture future;
+                    if (halfClose) {
+                        future = ((QuicStreamChannel) ctx.channel()).shutdownOutput();
+                    } else {
+                        future = ctx.channel().close();
+                    }
+                    future.addListener(f -> {
+                        ctx.channel().writeAndFlush("Unsupported message").addListener(wf -> {
+                            streamPromise.setFailure(wf.cause());
+                        });
+                    });
+                }
+            });
         }
     }
 

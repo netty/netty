@@ -164,7 +164,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     private void shutdownOutput0(ChannelPromise promise) {
         assert eventLoop().inEventLoop();
         outputShutdown = true;
-        unsafe.write(QuicStreamFrame.EMPTY_FIN, promise);
+        unsafe.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, promise);
         unsafe.flush();
     }
 
@@ -231,7 +231,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         assert eventLoop().inEventLoop();
         inputShutdown = true;
         outputShutdown = true;
-        unsafe.write(QuicStreamFrame.EMPTY_FIN, unsafe.voidPromise());
+        unsafe.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, unsafe.voidPromise());
         unsafe.flush();
         parent().streamShutdown(streamId(), true, false, 0, promise);
         closeIfDone();
@@ -659,6 +659,24 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @Override
         public void write(Object msg, ChannelPromise promise) {
             assert eventLoop().inEventLoop();
+
+            // Check first if the Channel is in a state in which it will accept writes, if not fail everything
+            // with the right exception
+            if (!isOpen()) {
+                queueAndFailAll(msg, promise, new ClosedChannelException());
+            } else if (finSent) {
+                queueAndFailAll(msg, promise, new ChannelOutputShutdownException("Fin was sent already"));
+            } else {
+                writeWithoutCheckChannelState(msg, promise);
+            }
+        }
+
+        private void queueAndFailAll(Object msg, ChannelPromise promise, Throwable cause) {
+            queue.add(msg, promise);
+            queue.removeAndFailAll(cause);
+        }
+
+        void writeWithoutCheckChannelState(Object msg, ChannelPromise promise) {
             if (msg instanceof ByteBuf) {
                 ByteBuf buffer = (ByteBuf)  msg;
                 if (!buffer.isDirect()) {
@@ -680,17 +698,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 ReferenceCountUtil.release(msg);
                 promise.setFailure(new UnsupportedOperationException(
                         "unsupported message type: " + StringUtil.simpleClassName(msg)));
-                return;
-            }
-
-            if (!queue.isEmpty()) {
-                // Something is queued already.
-                queue.add(msg, promise);
-                if (finSent) {
-                    ChannelOutputShutdownException e = new ChannelOutputShutdownException(
-                            "Fin was sent already");
-                    queue.removeAndFail(e);
-                }
                 return;
             }
 
