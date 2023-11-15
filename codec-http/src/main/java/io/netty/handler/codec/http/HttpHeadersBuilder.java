@@ -240,7 +240,7 @@ public class HttpHeadersBuilder implements HttpHeadersFactory {
         if (notSubclassed()) {
             return validation ? DEFAULT : DEFAULT_NO_VALIDATION;
         }
-        return withNameValidation(false).withValueValidation(false);
+        return withNameValidation(validation).withValueValidation(validation);
     }
 
     /**
