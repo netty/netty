@@ -26,7 +26,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * <p>
  * The default builder you most likely want to start with is {@link HttpHeaders#DEFAULT_HEADER_FACTORY}.
  */
-public class HttpHeadersBuilder implements HttpHeadersFactory {
+public final class HttpHeadersBuilder implements HttpHeadersFactory {
 
     static final NameValidator<CharSequence> DEFAULT_NAME_VALIDATOR = new NameValidator<CharSequence>() {
         @Override
@@ -85,7 +85,7 @@ public class HttpHeadersBuilder implements HttpHeadersFactory {
     /**
      * Create a header builder with the default settings.
      */
-    protected HttpHeadersBuilder() {
+    private HttpHeadersBuilder() {
         this(DEFAULT_NAME_VALIDATOR, DEFAULT_VALUE_VALIDATOR, false);
     }
 
@@ -96,17 +96,13 @@ public class HttpHeadersBuilder implements HttpHeadersFactory {
      * @param valueValidator The value validator to use, not null.
      * @param combiningHeaders {@code true} if multi-valued headers should be combined into single lines.
      */
-    protected HttpHeadersBuilder(
+    private HttpHeadersBuilder(
             NameValidator<CharSequence> nameValidator,
             ValueValidator<CharSequence> valueValidator,
             boolean combiningHeaders) {
         this.nameValidator = checkNotNull(nameValidator, "nameValidator");
         this.valueValidator = checkNotNull(valueValidator, "valueValidator");
         this.combiningHeaders = combiningHeaders;
-    }
-
-    private boolean notSubclassed() {
-        return getClass() == HttpHeadersBuilder.class;
     }
 
     /**
@@ -118,7 +114,7 @@ public class HttpHeadersBuilder implements HttpHeadersFactory {
      * @param combiningHeaders {@code true} if multi-valued headers should be combined into single lines.
      * @return The new header builder instance.
      */
-    protected HttpHeadersBuilder with(
+    private static HttpHeadersBuilder with(
             NameValidator<CharSequence> nameValidator,
             ValueValidator<CharSequence> valueValidator,
             boolean combiningHeaders) {
@@ -171,7 +167,7 @@ public class HttpHeadersBuilder implements HttpHeadersFactory {
         if (nameValidator == checkNotNull(validator, "validator")) {
             return this;
         }
-        if (notSubclassed() && validator == DEFAULT_NAME_VALIDATOR && valueValidator == DEFAULT_VALUE_VALIDATOR) {
+        if (validator == DEFAULT_NAME_VALIDATOR && valueValidator == DEFAULT_VALUE_VALIDATOR) {
             return combiningHeaders ? DEFAULT_COMBINING : DEFAULT;
         }
         return with(validator, valueValidator, combiningHeaders);
@@ -215,7 +211,7 @@ public class HttpHeadersBuilder implements HttpHeadersFactory {
         if (valueValidator == checkNotNull(validator, "validator")) {
             return this;
         }
-        if (notSubclassed() && nameValidator == DEFAULT_NAME_VALIDATOR && validator == DEFAULT_VALUE_VALIDATOR) {
+        if (nameValidator == DEFAULT_NAME_VALIDATOR && validator == DEFAULT_VALUE_VALIDATOR) {
             return combiningHeaders ? DEFAULT_COMBINING : DEFAULT;
         }
         return with(nameValidator, validator, combiningHeaders);
@@ -237,9 +233,6 @@ public class HttpHeadersBuilder implements HttpHeadersFactory {
      * @return The new builder.
      */
     public HttpHeadersBuilder withValidation(boolean validation) {
-        if (notSubclassed()) {
-            return validation ? DEFAULT : DEFAULT_NO_VALIDATION;
-        }
         return withNameValidation(validation).withValueValidation(validation);
     }
 
