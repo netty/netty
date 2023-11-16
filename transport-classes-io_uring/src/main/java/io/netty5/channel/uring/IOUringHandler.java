@@ -149,8 +149,8 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
 
     private void handleEventFdRead() {
         eventfdReadSubmitted = 0;
-        eventfdAsyncNotify.set(false);
         if (!shuttingDown) {
+            eventfdAsyncNotify.set(false);
             submitEventFdRead();
         }
     }
@@ -168,6 +168,7 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
     @Override
     public void prepareToDestroy() {
         shuttingDown = true;
+        drainEventFd();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         AbstractIOUringChannel<?>[] chs = channels.values().toArray(AbstractIOUringChannel[]::new);
@@ -210,6 +211,45 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
         if (!closeCompleted) {
             completeRingClose();
         }
+    }
+
+    // We need to prevent the race condition where a wakeup event is submitted to a file descriptor that has
+    // already been freed (and potentially reallocated by the OS). Because submitted events is gated on the
+    // `eventfdAsyncNotify` flag we can close the gate but may need to read any outstanding events that have
+    // (or will) be written.
+    private void drainEventFd() {
+        boolean eventPending = eventfdAsyncNotify.getAndSet(true);
+        if (!eventPending) {
+            // No event pending so nothing to do.
+            return;
+        }
+        // We must wait for the event.
+        CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+        SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        // Make sure we're actually listening for writes to the event fd.
+        while (eventfdReadSubmitted == 0) {
+            submitEventFdRead();
+            submissionQueue.submit();
+        }
+        // Now drain the eventfd read.
+        class DrainFdEventCallback implements CompletionCallback {
+            boolean eventFdDrained;
+            @Override
+            public void handle(int fd, int res, int flags, long udata) {
+                if (fd == eventfd.intValue()) {
+                    eventFdDrained = true;
+                }
+                IOUringHandler.this.handle(fd, res, flags, udata);
+            }
+        }
+        final DrainFdEventCallback handler = new DrainFdEventCallback();
+        completionQueue.process(handler);
+        while (!handler.eventFdDrained) {
+            submissionQueue.submitAndWait();
+            completionQueue.process(handler);
+        }
+        // We've consumed the pending eventfd read and `eventfdAsyncNotify` should never
+        // transition back to false, thus we should never have any more events written.
     }
 
     private void completeRingClose() {
