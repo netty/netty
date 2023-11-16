@@ -70,7 +70,8 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
     private static final ValueValidator<CharSequence> NO_VALUE_VALIDATOR =
             (ValueValidator<CharSequence>) ValueValidator.NO_VALIDATION;
 
-    private static final DefaultHttpHeadersFactory DEFAULT = new DefaultHttpHeadersFactory();
+    private static final DefaultHttpHeadersFactory DEFAULT =
+            new DefaultHttpHeadersFactory(DEFAULT_NAME_VALIDATOR, DEFAULT_VALUE_VALIDATOR, false);
     private static final DefaultHttpHeadersFactory DEFAULT_TRAILER =
             new DefaultHttpHeadersFactory(DEFAULT_TRAILER_NAME_VALIDATOR, DEFAULT_VALUE_VALIDATOR, false);
     private static final DefaultHttpHeadersFactory DEFAULT_COMBINING =
@@ -81,13 +82,6 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
     private final NameValidator<CharSequence> nameValidator;
     private final ValueValidator<CharSequence> valueValidator;
     private final boolean combiningHeaders;
-
-    /**
-     * Create a header builder with the default settings.
-     */
-    private DefaultHttpHeadersFactory() {
-        this(DEFAULT_NAME_VALIDATOR, DEFAULT_VALUE_VALIDATOR, false);
-    }
 
     /**
      * Create a header builder with the given settings.
@@ -103,22 +97,6 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
         this.nameValidator = checkNotNull(nameValidator, "nameValidator");
         this.valueValidator = checkNotNull(valueValidator, "valueValidator");
         this.combiningHeaders = combiningHeaders;
-    }
-
-    /**
-     * Create a new header builder instance with the given overrides.
-     * This method is used by all other {@code with-} methods, for creating new builder instances.
-     *
-     * @param nameValidator The name validator to use, not null.
-     * @param valueValidator The value validator to use, not null.
-     * @param combiningHeaders {@code true} if multi-valued headers should be combined into single lines.
-     * @return The new header builder instance.
-     */
-    private static DefaultHttpHeadersFactory with(
-            NameValidator<CharSequence> nameValidator,
-            ValueValidator<CharSequence> valueValidator,
-            boolean combiningHeaders) {
-        return new DefaultHttpHeadersFactory(nameValidator, valueValidator, combiningHeaders);
     }
 
     /**
@@ -147,6 +125,14 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
             return new CombinedHttpHeaders(getNameValidator(), getValueValidator());
         }
         return new DefaultHttpHeaders(getNameValidator(), getValueValidator());
+    }
+
+    @Override
+    public HttpHeaders newEmptyHeaders() {
+        if (isCombiningHeaders()) {
+            return new CombinedHttpHeaders(getNameValidator(), getValueValidator(), 2);
+        }
+        return new DefaultHttpHeaders(getNameValidator(), getValueValidator(), 2);
     }
 
     /**
@@ -190,7 +176,7 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
         if (validator == DEFAULT_NAME_VALIDATOR && valueValidator == DEFAULT_VALUE_VALIDATOR) {
             return combiningHeaders ? DEFAULT_COMBINING : DEFAULT;
         }
-        return with(validator, valueValidator, combiningHeaders);
+        return new DefaultHttpHeadersFactory(validator, valueValidator, combiningHeaders);
     }
 
     /**
@@ -234,7 +220,7 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
         if (nameValidator == DEFAULT_NAME_VALIDATOR && validator == DEFAULT_VALUE_VALIDATOR) {
             return combiningHeaders ? DEFAULT_COMBINING : DEFAULT;
         }
-        return with(nameValidator, validator, combiningHeaders);
+        return new DefaultHttpHeadersFactory(nameValidator, validator, combiningHeaders);
     }
 
     /**
@@ -273,7 +259,7 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
         if (this.combiningHeaders == combiningHeaders) {
             return this;
         }
-        return with(nameValidator, valueValidator, combiningHeaders);
+        return new DefaultHttpHeadersFactory(nameValidator, valueValidator, combiningHeaders);
     }
 
     /**

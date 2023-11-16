@@ -26,4 +26,9 @@ public interface HttpHeadersFactory {
      * Create a new {@link HttpHeaders} instance.
      */
     HttpHeaders newHeaders();
+
+    /**
+     * Create a new {@link HttpHeaders} instance, but sized to be as small an object as possible.
+     */
+    HttpHeaders newEmptyHeaders();
 }

@@ -62,6 +62,16 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
                 checkNotNull(valueValidator, "valueValidator")));
     }
 
+    CombinedHttpHeaders(
+            NameValidator<CharSequence> nameValidator, ValueValidator<CharSequence> valueValidator, int sizeHint) {
+        super(new CombinedHttpHeadersImpl(
+                CASE_INSENSITIVE_HASHER,
+                valueConverter(),
+                checkNotNull(nameValidator, "nameValidator"),
+                checkNotNull(valueValidator, "valueValidator"),
+                sizeHint));
+    }
+
     @Override
     public boolean containsValue(CharSequence name, CharSequence value, boolean ignoreCase) {
         return super.containsValue(name, StringUtil.trimOws(value), ignoreCase);
@@ -111,7 +121,15 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
                                 ValueConverter<CharSequence> valueConverter,
                                 NameValidator<CharSequence> nameValidator,
                                 ValueValidator<CharSequence> valueValidator) {
-            super(nameHashingStrategy, valueConverter, nameValidator, 16, valueValidator);
+            this(nameHashingStrategy, valueConverter, nameValidator, valueValidator, 16);
+        }
+
+        CombinedHttpHeadersImpl(HashingStrategy<CharSequence> nameHashingStrategy,
+                                ValueConverter<CharSequence> valueConverter,
+                                NameValidator<CharSequence> nameValidator,
+                                ValueValidator<CharSequence> valueValidator,
+                                int sizeHint) {
+            super(nameHashingStrategy, valueConverter, nameValidator, sizeHint, valueValidator);
         }
 
         @Override

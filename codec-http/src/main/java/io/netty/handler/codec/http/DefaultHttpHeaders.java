@@ -113,11 +113,37 @@ public class DefaultHttpHeaders extends HttpHeaders {
     protected DefaultHttpHeaders(
             NameValidator<CharSequence> nameValidator,
             ValueValidator<CharSequence> valueValidator) {
+        this(nameValidator, valueValidator, 16);
+    }
+
+    /**
+     * Create an HTTP headers object with the given name and value validators.
+     * <p>
+     * <b>Warning!</b> It is strongly recommended that the name validator implement validation that is at least as
+     * strict as {@link HttpHeaderValidationUtil#validateToken(CharSequence)}.
+     * And that the value validator is at least as strict as
+     * {@link HttpHeaderValidationUtil#validateValidHeaderValue(CharSequence)}.
+     * <p>
+     * Without these validations in place, your code can be susceptible to
+     * <a href="https://cwe.mitre.org/data/definitions/113.html">
+     *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+     * </a>.
+     * It is the responsibility of the caller to ensure that the values supplied
+     * do not contain a non-url-escaped carriage return (CR) and/or line feed (LF) characters.
+     *
+     * @param nameValidator The {@link NameValidator} to use, never {@code null}.
+     * @param valueValidator The {@link ValueValidator} to use, never {@code null}.
+     * @param sizeHint A hint about the anticipated number of entries.
+     */
+    protected DefaultHttpHeaders(
+            NameValidator<CharSequence> nameValidator,
+            ValueValidator<CharSequence> valueValidator,
+            int sizeHint) {
         this(new DefaultHeadersImpl<CharSequence, CharSequence>(
                 CASE_INSENSITIVE_HASHER,
                 HeaderValueConverter.INSTANCE,
                 nameValidator,
-                16,
+                sizeHint,
                 valueValidator));
     }
 
