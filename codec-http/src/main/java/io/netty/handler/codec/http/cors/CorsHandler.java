@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
@@ -101,8 +102,8 @@ public class CorsHandler extends ChannelDuplexHandler {
                 request.protocolVersion(),
                 OK,
                 Unpooled.buffer(0),
-                HttpHeaders.DEFAULT_HEADER_FACTORY.withCombiningHeaders(true),
-                HttpHeaders.DEFAULT_TRAILER_FACTORY.withCombiningHeaders(true));
+                DefaultHttpHeadersFactory.headersFactory().withCombiningHeaders(true),
+                DefaultHttpHeadersFactory.trailersFactory().withCombiningHeaders(true));
         if (setOrigin(response)) {
             setAllowMethods(response);
             setAllowHeaders(response);

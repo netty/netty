@@ -324,8 +324,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     protected boolean isValidating(HttpHeadersFactory headersFactory) {
-        if (headersFactory instanceof HttpHeadersBuilder) {
-            HttpHeadersBuilder builder = (HttpHeadersBuilder) headersFactory;
+        if (headersFactory instanceof DefaultHttpHeadersFactory) {
+            DefaultHttpHeadersFactory builder = (DefaultHttpHeadersFactory) headersFactory;
             return builder.isValidatingHeaderNames() || builder.isValidatingHeaderValues();
         }
         return true; // We can't actually tell in this case, but we assume some validation is taking place.

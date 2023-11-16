@@ -28,8 +28,8 @@ public final class HttpDecoderConfig implements Cloneable {
     private int maxChunkSize = HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE;
     private boolean chunkedSupported = HttpObjectDecoder.DEFAULT_CHUNKED_SUPPORTED;
     private boolean allowPartialChunks = HttpObjectDecoder.DEFAULT_ALLOW_PARTIAL_CHUNKS;
-    private HttpHeadersFactory headersFactory = HttpHeaders.DEFAULT_HEADER_FACTORY;
-    private HttpHeadersFactory trailersFactory = HttpHeadersBuilder.DEFAULT_TRAILER;
+    private HttpHeadersFactory headersFactory = DefaultHttpHeadersFactory.headersFactory();
+    private HttpHeadersFactory trailersFactory = DefaultHttpHeadersFactory.trailersFactory();
     private boolean allowDuplicateContentLengths = HttpObjectDecoder.DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS;
     private int maxInitialLineLength = HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
     private int maxHeaderSize = HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
@@ -143,7 +143,7 @@ public final class HttpDecoderConfig implements Cloneable {
 
     /**
      * Set the {@link HttpHeadersFactory} to use when creating new HTTP headers objects.
-     * The default headers factory is {@link HttpHeaders#DEFAULT_HEADER_FACTORY}.
+     * The default headers factory is {@link DefaultHttpHeadersFactory#headersFactory()}.
      * <p>
      * For the purpose of {@link #clone()}, it is assumed that the factory is either immutable, or can otherwise be
      * shared across different decoders and decoder configs.
@@ -186,9 +186,9 @@ public final class HttpDecoderConfig implements Cloneable {
      * @return This decoder config.
      */
     public HttpDecoderConfig setValidateHeaders(boolean validateHeaders) {
-        HttpHeadersBuilder noValidation = HttpHeadersBuilder.DEFAULT_NO_VALIDATION;
-        headersFactory = validateHeaders ? HttpHeadersBuilder.DEFAULT : noValidation;
-        trailersFactory = validateHeaders ? HttpHeadersBuilder.DEFAULT_TRAILER : noValidation;
+        DefaultHttpHeadersFactory noValidation = DefaultHttpHeadersFactory.headersFactory().withValidation(false);
+        headersFactory = validateHeaders ? DefaultHttpHeadersFactory.headersFactory() : noValidation;
+        trailersFactory = validateHeaders ? DefaultHttpHeadersFactory.trailersFactory() : noValidation;
         return this;
     }
 
@@ -200,7 +200,7 @@ public final class HttpDecoderConfig implements Cloneable {
      * Set the {@link HttpHeadersFactory} used to create HTTP trailers.
      * This differs from {@link #setHeadersFactory(HttpHeadersFactory)} in that trailers have different validation
      * requirements.
-     * The default trailer factory is {@link HttpHeaders#DEFAULT_TRAILER_FACTORY}.
+     * The default trailer factory is {@link DefaultHttpHeadersFactory#headersFactory()}.
      * <p>
      * For the purpose of {@link #clone()}, it is assumed that the factory is either immutable, or can otherwise be
      * shared across different decoders and decoder configs.

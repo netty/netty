@@ -19,6 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.IllegalReferenceCountException;
+
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.trailersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -37,16 +40,14 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
      * Create a full HTTP response with the given HTTP version, method, and URI.
      */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
-        this(httpVersion, method, uri, Unpooled.buffer(0),
-                HttpHeadersBuilder.DEFAULT, HttpHeadersBuilder.DEFAULT_TRAILER);
+        this(httpVersion, method, uri, Unpooled.buffer(0), headersFactory(), trailersFactory());
     }
 
     /**
      * Create a full HTTP response with the given HTTP version, method, URI, and contents.
      */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
-        this(httpVersion, method, uri, content,
-                HttpHeadersBuilder.DEFAULT, HttpHeadersBuilder.DEFAULT_TRAILER);
+        this(httpVersion, method, uri, content, headersFactory(), trailersFactory());
     }
 
     /**
@@ -57,8 +58,8 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Deprecated
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
         this(httpVersion, method, uri, Unpooled.buffer(0),
-                HttpHeaders.DEFAULT_HEADER_FACTORY.withValidation(validateHeaders),
-                HttpHeaders.DEFAULT_TRAILER_FACTORY.withValidation(validateHeaders));
+                headersFactory().withValidation(validateHeaders),
+                trailersFactory().withValidation(validateHeaders));
     }
 
     /**
@@ -70,20 +71,20 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
                                   ByteBuf content, boolean validateHeaders) {
         this(httpVersion, method, uri, content,
-                HttpHeaders.DEFAULT_HEADER_FACTORY.withValidation(validateHeaders),
-                HttpHeaders.DEFAULT_TRAILER_FACTORY.withValidation(validateHeaders));
+                headersFactory().withValidation(validateHeaders),
+                trailersFactory().withValidation(validateHeaders));
     }
 
     /**
      * Create a full HTTP response with the given HTTP version, method, URI, contents,
      * and factories for creating headers and trailers.
      * <p>
-     * The recommended default header factory is {@link HttpHeaders#DEFAULT_HEADER_FACTORY},
-     * and the recommended default trailer factory is {@link HttpHeaders#DEFAULT_TRAILER_FACTORY}.
+     * The recommended default header factory is {@link DefaultHttpHeadersFactory#headersFactory()},
+     * and the recommended default trailer factory is {@link DefaultHttpHeadersFactory#trailersFactory()}.
      */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
             ByteBuf content, HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
-        this(httpVersion, method, uri, content, headersFactory.createHeaders(), trailersFactory.createHeaders());
+        this(httpVersion, method, uri, content, headersFactory.newHeaders(), trailersFactory.newHeaders());
     }
 
     /**

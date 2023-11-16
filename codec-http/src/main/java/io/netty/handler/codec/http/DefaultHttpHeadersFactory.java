@@ -24,11 +24,10 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * A builder of {@link HttpHeadersFactory} instances, that itself implements {@link HttpHeadersFactory}.
  * The builder is immutable, and every {@code with-} method produce a new, modified instance.
  * <p>
- * The default builder you most likely want to start with is {@link HttpHeaders#DEFAULT_HEADER_FACTORY}.
+ * The default builder you most likely want to start with is {@link DefaultHttpHeadersFactory#headersFactory()}.
  */
-public final class HttpHeadersBuilder implements HttpHeadersFactory {
-
-    static final NameValidator<CharSequence> DEFAULT_NAME_VALIDATOR = new NameValidator<CharSequence>() {
+public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
+    private static final NameValidator<CharSequence> DEFAULT_NAME_VALIDATOR = new NameValidator<CharSequence>() {
         @Override
         public void validateName(CharSequence name) {
             if (name == null || name.length() == 0) {
@@ -42,7 +41,7 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
             }
         }
     };
-    static final ValueValidator<CharSequence> DEFAULT_VALUE_VALIDATOR = new ValueValidator<CharSequence>() {
+    private static final ValueValidator<CharSequence> DEFAULT_VALUE_VALIDATOR = new ValueValidator<CharSequence>() {
         @Override
         public void validate(CharSequence value) {
             int index = HttpHeaderValidationUtil.validateValidHeaderValue(value);
@@ -52,31 +51,32 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
             }
         }
     };
-    static final NameValidator<CharSequence> DEFAULT_TRAILER_NAME_VALIDATOR = new NameValidator<CharSequence>() {
-        @Override
-        public void validateName(CharSequence name) {
-            DEFAULT_NAME_VALIDATOR.validateName(name);
-            if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
-                    || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
-                    || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
-                throw new IllegalArgumentException("prohibited trailing header: " + name);
-            }
-        }
-    };
+    private static final NameValidator<CharSequence> DEFAULT_TRAILER_NAME_VALIDATOR =
+            new NameValidator<CharSequence>() {
+                @Override
+                public void validateName(CharSequence name) {
+                    DEFAULT_NAME_VALIDATOR.validateName(name);
+                    if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
+                            || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
+                            || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
+                        throw new IllegalArgumentException("prohibited trailing header: " + name);
+                    }
+                }
+            };
 
     @SuppressWarnings("unchecked")
-    static final NameValidator<CharSequence> NO_NAME_VALIDATOR = NameValidator.NOT_NULL;
+    private static final NameValidator<CharSequence> NO_NAME_VALIDATOR = NameValidator.NOT_NULL;
     @SuppressWarnings("unchecked")
-    static final ValueValidator<CharSequence> NO_VALUE_VALIDATOR =
+    private static final ValueValidator<CharSequence> NO_VALUE_VALIDATOR =
             (ValueValidator<CharSequence>) ValueValidator.NO_VALIDATION;
 
-    static final HttpHeadersBuilder DEFAULT = new HttpHeadersBuilder();
-    static final HttpHeadersBuilder DEFAULT_TRAILER =
-            new HttpHeadersBuilder(DEFAULT_TRAILER_NAME_VALIDATOR, DEFAULT_VALUE_VALIDATOR, false);
-    static final HttpHeadersBuilder DEFAULT_COMBINING =
-            new HttpHeadersBuilder(DEFAULT.nameValidator, DEFAULT.valueValidator, true);
-    static final HttpHeadersBuilder DEFAULT_NO_VALIDATION =
-            new HttpHeadersBuilder(NO_NAME_VALIDATOR, NO_VALUE_VALIDATOR, false);
+    private static final DefaultHttpHeadersFactory DEFAULT = new DefaultHttpHeadersFactory();
+    private static final DefaultHttpHeadersFactory DEFAULT_TRAILER =
+            new DefaultHttpHeadersFactory(DEFAULT_TRAILER_NAME_VALIDATOR, DEFAULT_VALUE_VALIDATOR, false);
+    private static final DefaultHttpHeadersFactory DEFAULT_COMBINING =
+            new DefaultHttpHeadersFactory(DEFAULT.nameValidator, DEFAULT.valueValidator, true);
+    private static final DefaultHttpHeadersFactory DEFAULT_NO_VALIDATION =
+            new DefaultHttpHeadersFactory(NO_NAME_VALIDATOR, NO_VALUE_VALIDATOR, false);
 
     private final NameValidator<CharSequence> nameValidator;
     private final ValueValidator<CharSequence> valueValidator;
@@ -85,7 +85,7 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
     /**
      * Create a header builder with the default settings.
      */
-    private HttpHeadersBuilder() {
+    private DefaultHttpHeadersFactory() {
         this(DEFAULT_NAME_VALIDATOR, DEFAULT_VALUE_VALIDATOR, false);
     }
 
@@ -96,7 +96,7 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
      * @param valueValidator The value validator to use, not null.
      * @param combiningHeaders {@code true} if multi-valued headers should be combined into single lines.
      */
-    private HttpHeadersBuilder(
+    private DefaultHttpHeadersFactory(
             NameValidator<CharSequence> nameValidator,
             ValueValidator<CharSequence> valueValidator,
             boolean combiningHeaders) {
@@ -114,15 +114,35 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
      * @param combiningHeaders {@code true} if multi-valued headers should be combined into single lines.
      * @return The new header builder instance.
      */
-    private static HttpHeadersBuilder with(
+    private static DefaultHttpHeadersFactory with(
             NameValidator<CharSequence> nameValidator,
             ValueValidator<CharSequence> valueValidator,
             boolean combiningHeaders) {
-        return new HttpHeadersBuilder(nameValidator, valueValidator, combiningHeaders);
+        return new DefaultHttpHeadersFactory(nameValidator, valueValidator, combiningHeaders);
+    }
+
+    /**
+     * Get the default implementation of {@link HttpHeadersFactory} for creating headers.
+     * <p>
+     * This {@link DefaultHttpHeadersFactory} creates {@link HttpHeaders} instances that has the
+     * recommended header validation enabled.
+     */
+    public static DefaultHttpHeadersFactory headersFactory() {
+        return DEFAULT;
+    }
+
+    /**
+     * Get the default implementation of {@link HttpHeadersFactory} for creating trailers.
+     * <p>
+     * This {@link DefaultHttpHeadersFactory} creates {@link HttpHeaders} instances that has the
+     * validation enabled that is recommended for trailers.
+     */
+    public static DefaultHttpHeadersFactory trailersFactory() {
+        return DEFAULT_TRAILER;
     }
 
     @Override
-    public HttpHeaders createHeaders() {
+    public HttpHeaders newHeaders() {
         if (isCombiningHeaders()) {
             return new CombinedHttpHeaders(getNameValidator(), getValueValidator());
         }
@@ -144,7 +164,7 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
      * @param validation If validation should be enabled or disabled.
      * @return The new builder.
      */
-    public HttpHeadersBuilder withNameValidation(boolean validation) {
+    public DefaultHttpHeadersFactory withNameValidation(boolean validation) {
         return withNameValidator(validation ? DEFAULT_NAME_VALIDATOR : NO_NAME_VALIDATOR);
     }
 
@@ -163,7 +183,7 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
      * @param validator The HTTP header name validator to use.
      * @return The new builder.
      */
-    public HttpHeadersBuilder withNameValidator(NameValidator<CharSequence> validator) {
+    public DefaultHttpHeadersFactory withNameValidator(NameValidator<CharSequence> validator) {
         if (nameValidator == checkNotNull(validator, "validator")) {
             return this;
         }
@@ -188,7 +208,7 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
      * @param validation If validation should be enabled or disabled.
      * @return The new builder.
      */
-    public HttpHeadersBuilder withValueValidation(boolean validation) {
+    public DefaultHttpHeadersFactory withValueValidation(boolean validation) {
         return withValueValidator(validation ? DEFAULT_VALUE_VALIDATOR : NO_VALUE_VALIDATOR);
     }
 
@@ -207,7 +227,7 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
      * @param validator The HTTP header name validator to use.
      * @return The new builder.
      */
-    public HttpHeadersBuilder withValueValidator(ValueValidator<CharSequence> validator) {
+    public DefaultHttpHeadersFactory withValueValidator(ValueValidator<CharSequence> validator) {
         if (valueValidator == checkNotNull(validator, "validator")) {
             return this;
         }
@@ -232,7 +252,13 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
      * @param validation If validation should be enabled or disabled.
      * @return The new builder.
      */
-    public HttpHeadersBuilder withValidation(boolean validation) {
+    public DefaultHttpHeadersFactory withValidation(boolean validation) {
+        if (this == DEFAULT && !validation) {
+            return DEFAULT_NO_VALIDATION;
+        }
+        if (this == DEFAULT_NO_VALIDATION && validation) {
+            return DEFAULT;
+        }
         return withNameValidation(validation).withValueValidation(validation);
     }
 
@@ -243,7 +269,7 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
      * @param combiningHeaders {@code true} if multi-valued headers should be combined, otherwise {@code false}.
      * @return The new builder.
      */
-    public HttpHeadersBuilder withCombiningHeaders(boolean combiningHeaders) {
+    public DefaultHttpHeadersFactory withCombiningHeaders(boolean combiningHeaders) {
         if (this.combiningHeaders == combiningHeaders) {
             return this;
         }
@@ -253,7 +279,7 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
     /**
      * Get the currently configured {@link NameValidator}.
      * <p>
-     * This method will be used by the {@link #createHeaders()} method.
+     * This method will be used by the {@link #newHeaders()} method.
      *
      * @return The configured name validator.
      */
@@ -264,7 +290,7 @@ public final class HttpHeadersBuilder implements HttpHeadersFactory {
     /**
      * Get the currently configured {@link ValueValidator}.
      * <p>
-     * This method will be used by the {@link #createHeaders()} method.
+     * This method will be used by the {@link #newHeaders()} method.
      *
      * @return The configured value validator.
      */

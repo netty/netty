@@ -22,7 +22,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
@@ -577,8 +577,8 @@ public class CorsHandlerTest {
         @Override
         public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.writeAndFlush(new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.buffer(0),
-                    HttpHeaders.DEFAULT_HEADER_FACTORY.withCombiningHeaders(true),
-                    HttpHeaders.DEFAULT_TRAILER_FACTORY.withCombiningHeaders(true)));
+                    DefaultHttpHeadersFactory.headersFactory().withCombiningHeaders(true),
+                    DefaultHttpHeadersFactory.trailersFactory().withCombiningHeaders(true)));
         }
     }
 

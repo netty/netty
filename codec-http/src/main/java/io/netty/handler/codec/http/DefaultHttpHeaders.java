@@ -391,11 +391,13 @@ public class DefaultHttpHeaders extends HttpHeaders {
     }
 
     static ValueValidator<CharSequence> valueValidator(boolean validate) {
-        return validate ? HttpHeadersBuilder.DEFAULT_VALUE_VALIDATOR : HttpHeadersBuilder.NO_VALUE_VALIDATOR;
+        return validate ? DefaultHttpHeadersFactory.headersFactory().getValueValidator() :
+                DefaultHttpHeadersFactory.headersFactory().withValidation(false).getValueValidator();
     }
 
     static NameValidator<CharSequence> nameValidator(boolean validate) {
-        return validate ? HttpHeadersBuilder.DEFAULT_NAME_VALIDATOR : HttpHeadersBuilder.NO_NAME_VALIDATOR;
+        return validate ? DefaultHttpHeadersFactory.headersFactory().getNameValidator() :
+                DefaultHttpHeadersFactory.headersFactory().withNameValidation(false).getNameValidator();
     }
 
     private static class HeaderValueConverter extends CharSequenceValueConverter {

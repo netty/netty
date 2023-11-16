@@ -20,8 +20,8 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.IllegalReferenceCountException;
 
-import static io.netty.handler.codec.http.HttpHeaders.DEFAULT_HEADER_FACTORY;
-import static io.netty.handler.codec.http.HttpHeaders.DEFAULT_TRAILER_FACTORY;
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.trailersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -41,14 +41,14 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
      * Create an empty HTTP response with the given HTTP version and status.
      */
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status) {
-        this(version, status, Unpooled.buffer(0), DEFAULT_HEADER_FACTORY, DEFAULT_TRAILER_FACTORY);
+        this(version, status, Unpooled.buffer(0), headersFactory(), trailersFactory());
     }
 
     /**
      * Create an HTTP response with the given HTTP version, status, and contents.
      */
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content) {
-        this(version, status, content, DEFAULT_HEADER_FACTORY, DEFAULT_TRAILER_FACTORY);
+        this(version, status, content, headersFactory(), trailersFactory());
     }
 
     /**
@@ -60,8 +60,8 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     @Deprecated
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders) {
         this(version, status, Unpooled.buffer(0),
-                DEFAULT_HEADER_FACTORY.withValidation(validateHeaders),
-                DEFAULT_TRAILER_FACTORY.withValidation(validateHeaders));
+                headersFactory().withValidation(validateHeaders),
+                trailersFactory().withValidation(validateHeaders));
     }
 
     /**
@@ -75,8 +75,8 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders,
                                    boolean singleFieldHeaders) {
         this(version, status, Unpooled.buffer(0),
-                DEFAULT_HEADER_FACTORY.withValidation(validateHeaders).withCombiningHeaders(singleFieldHeaders),
-                DEFAULT_TRAILER_FACTORY.withValidation(validateHeaders).withCombiningHeaders(singleFieldHeaders));
+                headersFactory().withValidation(validateHeaders).withCombiningHeaders(singleFieldHeaders),
+                trailersFactory().withValidation(validateHeaders).withCombiningHeaders(singleFieldHeaders));
     }
 
     /**
@@ -89,8 +89,8 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
                                    ByteBuf content, boolean validateHeaders) {
         this(version, status, content,
-                DEFAULT_HEADER_FACTORY.withValidation(validateHeaders),
-                DEFAULT_TRAILER_FACTORY.withValidation(validateHeaders));
+                headersFactory().withValidation(validateHeaders),
+                trailersFactory().withValidation(validateHeaders));
     }
 
     /**
@@ -104,20 +104,20 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
                                    ByteBuf content, boolean validateHeaders, boolean singleFieldHeaders) {
         this(version, status, content,
-                DEFAULT_HEADER_FACTORY.withValidation(validateHeaders).withCombiningHeaders(singleFieldHeaders),
-                DEFAULT_TRAILER_FACTORY.withValidation(validateHeaders).withCombiningHeaders(singleFieldHeaders));
+                headersFactory().withValidation(validateHeaders).withCombiningHeaders(singleFieldHeaders),
+                trailersFactory().withValidation(validateHeaders).withCombiningHeaders(singleFieldHeaders));
     }
 
     /**
      * Create an HTTP response with the given HTTP version, status, contents,
      * and with headers and trailers created by the given header factories.
      * <p>
-     * The recommended header factory is {@link HttpHeaders#DEFAULT_HEADER_FACTORY},
-     * and the recommended trailer factory is {@link HttpHeaders#DEFAULT_TRAILER_FACTORY}.
+     * The recommended header factory is {@link DefaultHttpHeadersFactory#headersFactory()},
+     * and the recommended trailer factory is {@link DefaultHttpHeadersFactory#trailersFactory()}.
      */
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, ByteBuf content,
                                    HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
-        this(version, status, content, headersFactory.createHeaders(), trailersFactory.createHeaders());
+        this(version, status, content, headersFactory.newHeaders(), trailersFactory.newHeaders());
     }
 
     /**

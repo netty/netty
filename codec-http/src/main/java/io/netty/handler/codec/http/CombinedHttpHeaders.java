@@ -45,8 +45,8 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
      *
      * @param validate Should Netty validate header values to ensure they aren't malicious.
      * @deprecated Prefer instead to configuring a {@link HttpHeadersFactory}
-     * by calling {@link HttpHeadersBuilder#withCombiningHeaders(boolean) withCombiningHeaders(true)}
-     * on {@link HttpHeaders#DEFAULT_HEADER_FACTORY}.
+     * by calling {@link DefaultHttpHeadersFactory#withCombiningHeaders(boolean) withCombiningHeaders(true)}
+     * on {@link DefaultHttpHeadersFactory#headersFactory()}.
      */
     @Deprecated
     public CombinedHttpHeaders(boolean validate) {

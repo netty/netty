@@ -29,18 +29,19 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
      * Creates a new instance.
      */
     protected DefaultHttpMessage(final HttpVersion version) {
-        this(version, HttpHeaders.DEFAULT_HEADER_FACTORY);
+        this(version, DefaultHttpHeadersFactory.headersFactory());
     }
 
     /**
      * Creates a new instance.
      * <p>
      * @deprecated Use the {@link #DefaultHttpMessage(HttpVersion, HttpHeadersFactory)} constructor instead,
-     * ideally using the {@link HttpHeaders#DEFAULT_HEADER_FACTORY}, or a factory that otherwise has validation enabled.
+     * ideally using the {@link DefaultHttpHeadersFactory#headersFactory()},
+     * or a factory that otherwise has validation enabled.
      */
     @Deprecated
     protected DefaultHttpMessage(final HttpVersion version, boolean validateHeaders, boolean singleFieldHeaders) {
-        this(version, HttpHeaders.DEFAULT_HEADER_FACTORY
+        this(version, DefaultHttpHeadersFactory.headersFactory()
                 .withValidation(validateHeaders)
                 .withCombiningHeaders(singleFieldHeaders));
     }
@@ -49,7 +50,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
      * Creates a new instance.
      */
     protected DefaultHttpMessage(HttpVersion version, HttpHeadersFactory headersFactory) {
-        this(version, headersFactory.createHeaders());
+        this(version, headersFactory.newHeaders());
     }
 
     /**

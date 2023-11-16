@@ -29,7 +29,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpHeadersBuilder;
+import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
@@ -76,10 +76,10 @@ public class HttpRequestEncoderBenchmark extends AbstractMicrobenchmark {
         content = Unpooled.buffer(bytes.length);
         content.writeBytes(bytes);
         ByteBuf testContent = Unpooled.unreleasableBuffer(content.asReadOnly());
-        HttpHeadersBuilder headersFactory = HttpHeaders.DEFAULT_HEADER_FACTORY.withValidation(false);
-        HttpHeaders headersWithChunked = headersFactory.createHeaders();
+        DefaultHttpHeadersFactory headersFactory = DefaultHttpHeadersFactory.headersFactory().withValidation(false);
+        HttpHeaders headersWithChunked = headersFactory.newHeaders();
         headersWithChunked.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-        HttpHeaders headersWithContentLength = headersFactory.createHeaders();
+        HttpHeaders headersWithContentLength = headersFactory.newHeaders();
         headersWithContentLength.add(HttpHeaderNames.CONTENT_LENGTH, testContent.readableBytes());
 
         fullRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/index", testContent,

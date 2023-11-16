@@ -21,6 +21,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.Map.Entry;
 
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.trailersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -40,7 +41,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
      * Create a new last HTTP content message with the given contents.
      */
     public DefaultLastHttpContent(ByteBuf content) {
-        this(content, HttpHeadersBuilder.DEFAULT_TRAILER);
+        this(content, trailersFactory());
     }
 
     /**
@@ -60,7 +61,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
      */
     @Deprecated
     public DefaultLastHttpContent(ByteBuf content, boolean validateHeaders) {
-        this(content, HttpHeadersBuilder.DEFAULT_TRAILER.withValidation(validateHeaders));
+        this(content, trailersFactory().withValidation(validateHeaders));
     }
 
     /**
@@ -68,7 +69,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
      */
     public DefaultLastHttpContent(ByteBuf content, HttpHeadersFactory trailersFactory) {
         super(content);
-        trailingHeaders = trailersFactory.createHeaders();
+        trailingHeaders = trailersFactory.newHeaders();
     }
 
     /**

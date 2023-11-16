@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.internal.ObjectUtil;
 
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -33,7 +34,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param status  the status of this response
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
-        this(version, status, HttpHeadersBuilder.DEFAULT);
+        this(version, status, headersFactory());
     }
 
     /**
@@ -47,7 +48,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      */
     @Deprecated
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders) {
-        this(version, status, HttpHeadersBuilder.DEFAULT.withValidation(validateHeaders));
+        this(version, status, headersFactory().withValidation(validateHeaders));
     }
 
     /**
@@ -67,8 +68,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
     @Deprecated
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders,
                                boolean singleFieldHeaders) {
-        this(version, status, HttpHeadersBuilder.DEFAULT
-                .withValidation(validateHeaders)
+        this(version, status, headersFactory().withValidation(validateHeaders)
                 .withCombiningHeaders(singleFieldHeaders));
     }
 
@@ -78,10 +78,10 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param version           the HTTP version of this response
      * @param status            the status of this response
      * @param headersFactory    the {@link HttpHeadersFactory} used to create the headers for this HTTP Response.
-     * The recommended default is {@link HttpHeaders#DEFAULT_HEADER_FACTORY}.
+     * The recommended default is {@link DefaultHttpHeadersFactory#headersFactory()}.
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, HttpHeadersFactory headersFactory) {
-        this(version, status, headersFactory.createHeaders());
+        this(version, status, headersFactory.newHeaders());
     }
 
     /**

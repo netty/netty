@@ -189,7 +189,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     public HttpServerUpgradeHandler(SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory) {
         this(sourceCodec, upgradeCodecFactory, 0,
-                HttpHeaders.DEFAULT_HEADER_FACTORY, HttpHeaders.DEFAULT_TRAILER_FACTORY);
+                DefaultHttpHeadersFactory.headersFactory(), DefaultHttpHeadersFactory.trailersFactory());
     }
 
     /**
@@ -203,7 +203,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     public HttpServerUpgradeHandler(
             SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength) {
         this(sourceCodec, upgradeCodecFactory, maxContentLength,
-                HttpHeaders.DEFAULT_HEADER_FACTORY, HttpHeaders.DEFAULT_TRAILER_FACTORY);
+                DefaultHttpHeadersFactory.headersFactory(), DefaultHttpHeadersFactory.trailersFactory());
     }
 
     /**
@@ -218,8 +218,8 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     public HttpServerUpgradeHandler(SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory,
                                     int maxContentLength, boolean validateHeaders) {
         this(sourceCodec, upgradeCodecFactory, maxContentLength,
-                HttpHeaders.DEFAULT_HEADER_FACTORY.withValidation(validateHeaders),
-                HttpHeaders.DEFAULT_TRAILER_FACTORY.withValidation(validateHeaders));
+                DefaultHttpHeadersFactory.headersFactory().withValidation(validateHeaders),
+                DefaultHttpHeadersFactory.trailersFactory().withValidation(validateHeaders));
     }
 
     /**
@@ -230,9 +230,9 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      *                            for one of the requested upgrade protocols
      * @param maxContentLength the maximum length of the content of an upgrade request
      * @param headersFactory The {@link HttpHeadersFactory} to use for headers.
-     * The recommended default factory is {@link HttpHeaders#DEFAULT_HEADER_FACTORY}.
+     * The recommended default factory is {@link DefaultHttpHeadersFactory#headersFactory()}.
      * @param trailersFactory The {@link HttpHeadersFactory} to use for trailers.
-     * The recommended default factory is {@link HttpHeaders#DEFAULT_TRAILER_FACTORY}.
+     * The recommended default factory is {@link DefaultHttpHeadersFactory#trailersFactory()}.
      */
     public HttpServerUpgradeHandler(
             SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength,

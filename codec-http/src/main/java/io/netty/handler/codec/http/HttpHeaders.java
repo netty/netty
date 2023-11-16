@@ -42,21 +42,10 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * Provides the constants for the standard HTTP header names and values and
  * commonly used utility methods that accesses an {@link HttpMessage}.
  * <p>
- * Concrete instances of this class are most easily obtained from its default factory: {@link #DEFAULT_HEADER_FACTORY}.
+ * Concrete instances of this class are most easily obtained from its default factory:
+ * {@link DefaultHttpHeadersFactory#headersFactory()}.
  */
 public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>> {
-    /**
-     * Default implementation of {@link HttpHeadersFactory}, that creates an {@link HttpHeaders} instance that has the
-     * recommended header validation enabled.
-     */
-    public static final HttpHeadersBuilder DEFAULT_HEADER_FACTORY = HttpHeadersBuilder.DEFAULT;
-
-    /**
-     * Default implementation of {@link HttpHeadersFactory}, that creates an {@link HttpHeaders} instance that has the
-     * validation enabled that is recommended for trailers.
-     */
-    public static final HttpHeadersBuilder DEFAULT_TRAILER_FACTORY = HttpHeadersBuilder.DEFAULT_TRAILER;
-
     /**
      * @deprecated Use {@link EmptyHttpHeaders#INSTANCE}.
      * <p>

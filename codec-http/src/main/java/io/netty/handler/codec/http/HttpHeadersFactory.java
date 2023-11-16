@@ -18,12 +18,12 @@ package io.netty.handler.codec.http;
 /**
  * An interface for creating {@link HttpHeaders} instances.
  * <p>
- * The default implementation is {@link HttpHeadersBuilder},
- * and the default instance is {@link HttpHeaders#DEFAULT_HEADER_FACTORY}.
+ * The default implementation is {@link DefaultHttpHeadersFactory},
+ * and the default instance is {@link DefaultHttpHeadersFactory#headersFactory()}.
  */
 public interface HttpHeadersFactory {
     /**
      * Create a new {@link HttpHeaders} instance.
      */
-    HttpHeaders createHeaders();
+    HttpHeaders newHeaders();
 }

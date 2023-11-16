@@ -68,7 +68,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
 
     private static void validateHeaders(CharSequence... keyValuePairs) {
         for (int i = 0; i < keyValuePairs.length; i += 2) {
-            HttpHeadersBuilder.DEFAULT_NAME_VALIDATOR.validateName(keyValuePairs[i]);
+            DefaultHttpHeadersFactory.headersFactory().getNameValidator().validateName(keyValuePairs[i]);
         }
     }
 

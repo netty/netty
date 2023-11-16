@@ -26,7 +26,7 @@ import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpHeadersFactory;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpMethod;
@@ -65,7 +65,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      */
     public SpdyHttpDecoder(SpdyVersion version, int maxContentLength) {
         this(version, maxContentLength, new HashMap<Integer, FullHttpMessage>(),
-                HttpHeaders.DEFAULT_HEADER_FACTORY, HttpHeaders.DEFAULT_TRAILER_FACTORY);
+                DefaultHttpHeadersFactory.headersFactory(), DefaultHttpHeadersFactory.trailersFactory());
     }
 
     /**
@@ -95,7 +95,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      */
     protected SpdyHttpDecoder(SpdyVersion version, int maxContentLength, Map<Integer, FullHttpMessage> messageMap) {
         this(version, maxContentLength, messageMap,
-                HttpHeaders.DEFAULT_HEADER_FACTORY, HttpHeaders.DEFAULT_TRAILER_FACTORY);
+                DefaultHttpHeadersFactory.headersFactory(), DefaultHttpHeadersFactory.trailersFactory());
     }
 
     /**
@@ -114,8 +114,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
     protected SpdyHttpDecoder(SpdyVersion version, int maxContentLength, Map<Integer,
             FullHttpMessage> messageMap, boolean validateHeaders) {
         this(version, maxContentLength, messageMap,
-                HttpHeaders.DEFAULT_HEADER_FACTORY.withValidation(validateHeaders),
-                HttpHeaders.DEFAULT_TRAILER_FACTORY.withValidation(validateHeaders));
+                DefaultHttpHeadersFactory.headersFactory().withValidation(validateHeaders),
+                DefaultHttpHeadersFactory.trailersFactory().withValidation(validateHeaders));
     }
 
     /**

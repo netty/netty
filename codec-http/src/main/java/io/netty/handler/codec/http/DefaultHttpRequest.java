@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.internal.ObjectUtil;
-
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -35,7 +34,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * @param uri         the URI or path of the request
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
-        this(httpVersion, method, uri, HttpHeadersBuilder.DEFAULT.createHeaders());
+        this(httpVersion, method, uri, headersFactory().newHeaders());
     }
 
     /**
@@ -50,7 +49,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      */
     @Deprecated
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
-        this(httpVersion, method, uri, HttpHeadersBuilder.DEFAULT.withValidation(validateHeaders));
+        this(httpVersion, method, uri, headersFactory().withValidation(validateHeaders));
     }
 
     /**
@@ -60,11 +59,11 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * @param method            the HTTP method of the request
      * @param uri               the URI or path of the request
      * @param headersFactory    the {@link HttpHeadersFactory} used to create the headers for this Request.
-     * The recommended default is {@link HttpHeaders#DEFAULT_HEADER_FACTORY}.
+     * The recommended default is {@link DefaultHttpHeadersFactory#headersFactory()}.
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
                               HttpHeadersFactory headersFactory) {
-        this(httpVersion, method, uri, headersFactory.createHeaders());
+        this(httpVersion, method, uri, headersFactory.newHeaders());
     }
 
     /**
