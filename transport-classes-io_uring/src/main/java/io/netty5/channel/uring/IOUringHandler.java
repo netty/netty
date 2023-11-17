@@ -218,6 +218,7 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
     // `eventfdAsyncNotify` flag we can close the gate but may need to read any outstanding events that have
     // (or will) be written.
     private void drainEventFd() {
+        assert shuttingDown;
         boolean eventPending = eventfdAsyncNotify.getAndSet(true);
         if (!eventPending) {
             // No event pending so nothing to do.
