@@ -133,7 +133,7 @@ import io.netty.channel.ChannelHandlerContext;
  * BEFORE DECODE (17 bytes)                      AFTER DECODE (17 bytes)
  * +----------+----------+----------------+      +----------+----------+----------------+
  * |  Length  | Header 1 | Actual Content |----->|  Length  | Header 1 | Actual Content |
- * | 0x00000C |  0xCAFE  | "HELLO, WORLD" |      | 0x00000C |  0xCAFE  | "HELLO, WORLD" |
+ * | 0x00000E |  0xCAFE  | "HELLO, WORLD" |      | 0x00000E |  0xCAFE  | "HELLO, WORLD" |
  * +----------+----------+----------------+      +----------+----------+----------------+
  * </pre>
  *
