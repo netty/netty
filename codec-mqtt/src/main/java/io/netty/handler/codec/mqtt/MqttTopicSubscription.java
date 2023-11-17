@@ -39,7 +39,7 @@ public final class MqttTopicSubscription {
 
     /**
      * @deprecated use topicFilter
-     * */
+     */
     @Deprecated
     public String topicName() {
         return topicFilter;
