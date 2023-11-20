@@ -266,12 +266,12 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                     type, version, scid,
                     dcid, token);
             if (channel != null) {
-                // Add to queue first, we might be able to safe some flushes and consolidate them
+                // Add to queue first, we might be able to save some flushes and consolidate them
                 // in channelReadComplete(...) this way.
                 if (channel.markInFireChannelReadCompleteQueue()) {
                     needsFireChannelReadComplete.add(channel);
                 }
-                channel.recv(recipient, sender, buffer);
+                channel.recv(sender, recipient, buffer);
             }
         }
     }

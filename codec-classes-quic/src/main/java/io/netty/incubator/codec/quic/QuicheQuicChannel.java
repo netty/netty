@@ -860,8 +860,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     /**
      * Receive some data on a QUIC connection.
      */
-    void recv(InetSocketAddress recipient, InetSocketAddress sender, ByteBuf buffer) {
-        ((QuicChannelUnsafe) unsafe()).connectionRecv(recipient, sender, buffer);
+    void recv(InetSocketAddress sender, InetSocketAddress recipient, ByteBuf buffer) {
+        ((QuicChannelUnsafe) unsafe()).connectionRecv(sender, recipient, buffer);
     }
 
     void writable() {
@@ -1373,7 +1373,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
         }
 
-        void connectionRecv(InetSocketAddress recipient, InetSocketAddress sender, ByteBuf buffer) {
+        void connectionRecv(InetSocketAddress sender, InetSocketAddress recipient, ByteBuf buffer) {
             if (isConnDestroyed()) {
                 return;
             }
