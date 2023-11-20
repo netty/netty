@@ -1076,8 +1076,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     InetSocketAddress oldRemote = remote;
                     remote = QuicheSendInfo.getToAddress(sendInfo);
                     local = QuicheSendInfo.getFromAddress(sendInfo);
-                    pipeline().fireUserEventTriggered(
-                            new QuicConnectionEvent(oldRemote, remote));
+
+                    fireConnectionEventIfNeeded(oldRemote, remote);
+
                     if (size > 0) {
                         // We have something in the out list already, we need to send this now and so we set the
                         // segmentSize.
@@ -1135,6 +1136,16 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
+    private void fireConnectionEventIfNeeded(SocketAddress oldRemote, SocketAddress newRemote) {
+        // Check if the remote address changed and only in this case fire an event.
+        // This is required as even tho we check the SendInfo / RecvInfo without this extra check we might
+        // notify two times (one time in the recv and one time in the send code-path).
+        if (!oldRemote.equals(newRemote)) {
+            pipeline().fireUserEventTriggered(
+                    new QuicConnectionEvent(oldRemote, newRemote));
+        }
+    }
+
     private static int segmentSize(List<ByteBuf> bufferList) {
         assert !bufferList.isEmpty();
         int size = bufferList.size();
@@ -1181,8 +1192,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 InetSocketAddress oldRemote = remote;
                 remote = QuicheSendInfo.getToAddress(sendInfo);
                 local = QuicheSendInfo.getFromAddress(sendInfo);
-                pipeline().fireUserEventTriggered(
-                        new QuicConnectionEvent(oldRemote, remote));
+
+                fireConnectionEventIfNeeded(oldRemote, remote);
             }
             out.writerIndex(writerIndex + written);
             boolean stop = writePacket(new DatagramPacket(out, remote), maxDatagramSize, len);
@@ -1405,8 +1416,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 if (connection.isRecvInfoChanged()) {
                     // Update the cached address
                     remote = sender;
-                    pipeline().fireUserEventTriggered(
-                            new QuicConnectionEvent(oldRemote, sender));
+                    fireConnectionEventIfNeeded(oldRemote, sender);
                 }
                 local = recipient;
 
