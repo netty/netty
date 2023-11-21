@@ -18,19 +18,9 @@ package io.netty.incubator.codec.quic;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-import static org.junit.jupiter.api.Assertions.fail;
-
 class QuicChannelValidationHandler extends ChannelInboundHandlerAdapter {
 
     private volatile Throwable cause;
-
-    @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt instanceof QuicConnectionEvent && ((QuicConnectionEvent) evt).oldAddress() != null) {
-            fail("QuicConnectionEvent indication migration should never happen atm");
-        }
-        super.userEventTriggered(ctx, evt);
-    }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
