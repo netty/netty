@@ -53,7 +53,7 @@ static jobject   quiche_logger = NULL;
 static JavaVM     *global_vm = NULL;
 
 static jclass integer_class = NULL;
-static jmethodID integer_class_init = NULL;
+static jmethodID integer_class_valueof = NULL;
 
 static jclass boolean_class = NULL;
 static jmethodID boolean_class_valueof = NULL;
@@ -434,7 +434,7 @@ static jobjectArray netty_quiche_conn_peer_error0(JNIEnv* env, jclass clazz, jlo
     if (peer_error) {
         jobjectArray array = (*env)->NewObjectArray(env, 3, object_class, NULL);
         (*env)->SetObjectArrayElement(env, array, 0, (*env)->CallStaticObjectMethod(env, boolean_class, boolean_class_valueof, is_app ? JNI_TRUE : JNI_FALSE));
-        (*env)->SetObjectArrayElement(env, array, 1, (*env)->NewObject(env, integer_class, integer_class_init, (jint) error_code));
+        (*env)->SetObjectArrayElement(env, array, 1, (*env)->CallStaticObjectMethod(env, integer_class, integer_class_valueof, (jint) error_code));
         (*env)->SetObjectArrayElement(env, array, 2, to_byte_array(env, reason, reason_len));
         return array;
     }
@@ -974,8 +974,9 @@ static jint netty_quiche_JNI_OnLoad(JNIEnv* env, char const* packagePrefix) {
     nativeRegistered = 1;
 
     NETTY_JNI_UTIL_LOAD_CLASS(env, integer_class, "java/lang/Integer", done);
-    NETTY_JNI_UTIL_GET_METHOD(env, integer_class, integer_class_init, "<init>", "(I)V", done);
-
+    if ((integer_class_valueof = (*env)->GetStaticMethodID(env, integer_class, "valueOf", "(I)Ljava/lang/Integer;")) == NULL) {
+        goto done;
+    }
     NETTY_JNI_UTIL_LOAD_CLASS(env, boolean_class, "java/lang/Boolean", done);
     if ((boolean_class_valueof = (*env)->GetStaticMethodID(env, boolean_class, "valueOf", "(Z)Ljava/lang/Boolean;")) == NULL) {
         goto done;
