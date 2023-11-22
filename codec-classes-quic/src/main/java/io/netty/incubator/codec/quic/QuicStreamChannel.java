@@ -29,25 +29,10 @@ import java.net.SocketAddress;
 public interface QuicStreamChannel extends DuplexChannel {
 
     /**
-     * Should be added to a {@link ChannelFuture} when the {@code FIN} should be sent to the remote peer and no more
-     * writes will happen.
-     *
-     * <strong>Important:</strong> The FIN will not be propagated through the {@link io.netty.channel.ChannelPipeline}
-     * to make it easier to reuse this {@link ChannelFutureListener} with all kind of different handlers that sit on top
-     * of {@code QUIC}. If you want to ensure the {@code FIN} is propagated through the
-     * {@link io.netty.channel.ChannelPipeline} as a write just write a {@link QuicStreamFrame} directly with the
-     * {@code FIN} set.
-     *
-     * @deprecated use {@link #SHUTDOWN_OUTPUT}
-     */
-    @Deprecated
-    ChannelFutureListener WRITE_FIN = f -> ((QuicStreamChannel) f.channel()).shutdownOutput();
-
-    /**
      * Should be added to a {@link ChannelFuture} when the output should be cleanly shutdown via a {@code FIN}. No more
      * writes will be allowed after this point.
      */
-    ChannelFutureListener SHUTDOWN_OUTPUT = WRITE_FIN;
+    ChannelFutureListener SHUTDOWN_OUTPUT = f -> ((QuicStreamChannel) f.channel()).shutdownOutput();
 
     @Override
     default ChannelFuture bind(SocketAddress socketAddress) {
