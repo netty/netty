@@ -21,6 +21,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.ObjectUtil;
 
 import javax.crypto.Mac;
@@ -32,6 +33,13 @@ import javax.crypto.spec.SecretKeySpec;
  */
 final class HmacSignQuicConnectionIdGenerator implements QuicConnectionIdGenerator {
     static final QuicConnectionIdGenerator INSTANCE = new HmacSignQuicConnectionIdGenerator();
+
+    private static final FastThreadLocal<Mac> MACS = new FastThreadLocal<Mac>() {
+        @Override
+        protected Mac initialValue() {
+            return newMac();
+        }
+    };
 
     private static final String ALGORITM = "HmacSHA256";
     private static final byte[] randomKey = new byte[16];
@@ -66,11 +74,9 @@ final class HmacSignQuicConnectionIdGenerator implements QuicConnectionIdGenerat
         ObjectUtil.checkPositive(buffer.remaining(), "buffer");
         ObjectUtil.checkInRange(length, 0, maxConnectionIdLength(), "length");
 
-
-        // TODO: Consider using a ThreadLocal.
-        Mac mac = newMac();
+        Mac mac = MACS.get();
+        mac.reset();
         mac.update(buffer);
-
         byte[] signBytes = mac.doFinal();
         if (signBytes.length != length) {
             signBytes = Arrays.copyOf(signBytes, length);
