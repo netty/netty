@@ -2,7 +2,6 @@ version: "3"
 
 services:
 
-
   cross-compile-aarch64-runtime-setup:
     image: netty:cross_compile_aarch64
     build:

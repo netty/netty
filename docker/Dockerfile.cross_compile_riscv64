@@ -23,6 +23,3 @@ RUN apt-get update -qq \
  && rm -rf /var/lib/apt/lists/*
 
 ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"
-
-# Cleanup
-RUN rm -rf $SOURCE_DIR
