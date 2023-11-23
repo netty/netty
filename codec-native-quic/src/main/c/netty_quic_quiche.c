@@ -359,8 +359,8 @@ static jlong netty_quiche_conn_new_with_tls(JNIEnv* env, jclass clazz, jlong sci
     const struct sockaddr *peer_pointer = (const struct sockaddr*) peer;
     quiche_conn *conn = quiche_conn_new_with_tls((const uint8_t *) scid, (size_t) scid_len,
                                  odcid_pointer, (size_t) odcid_len,
-                                 local_pointer, (size_t) local_len,
-                                 peer_pointer, (size_t) peer_len,
+                                 local_pointer, (socklen_t) local_len,
+                                 peer_pointer, (socklen_t) peer_len,
                                  (quiche_config *) config, (void*) ssl, isServer == JNI_TRUE ? true : false);
     if (conn == NULL) {
         return -1;
