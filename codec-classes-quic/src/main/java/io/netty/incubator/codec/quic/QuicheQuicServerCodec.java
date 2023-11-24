@@ -42,6 +42,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     private final Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
     private final Executor sslTaskExecutor;
     private final QuicConnectionIdGenerator connectionIdAddressGenerator;
+    private final QuicResetTokenGenerator resetTokenGenerator;
     private final QuicTokenHandler tokenHandler;
     private final ChannelHandler handler;
     private final Map.Entry<ChannelOption<?>, Object>[] optionsArray;
@@ -56,6 +57,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                           int localConnIdLength,
                           QuicTokenHandler tokenHandler,
                           QuicConnectionIdGenerator connectionIdAddressGenerator,
+                          QuicResetTokenGenerator resetTokenGenerator,
                           FlushStrategy flushStrategy,
                           Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
                           Executor sslTaskExecutor,
@@ -68,6 +70,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         super(config, localConnIdLength, tokenHandler.maxTokenLength(), flushStrategy);
         this.tokenHandler = tokenHandler;
         this.connectionIdAddressGenerator = connectionIdAddressGenerator;
+        this.resetTokenGenerator = resetTokenGenerator;
         this.sslEngineProvider = sslEngineProvider;
         this.sslTaskExecutor = sslTaskExecutor;
         this.handler = handler;
@@ -93,6 +96,19 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         }
         if (mintTokenBuffer != null) {
             mintTokenBuffer.release();
+        }
+    }
+
+    @Override
+    protected void channelRecv(QuicheQuicChannel channel, InetSocketAddress sender,
+                               InetSocketAddress recipient, ByteBuf buffer) {
+        super.channelRecv(channel, sender, recipient, buffer);
+        for (ByteBuffer retiredSourceConnectionId : channel.retiredSourceConnectionId()) {
+            removeMapping(retiredSourceConnectionId);
+        }
+        for (ByteBuffer newSourceConnectionId :
+                channel.newSourceConnectionIds(connectionIdAddressGenerator, resetTokenGenerator)) {
+            addMapping(newSourceConnectionId, channel);
         }
     }
 
@@ -244,7 +260,8 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
 
         channel.attachQuicheConnection(connection);
 
-        putChannel(channel);
+        addChannel(channel);
+
         ctx.channel().eventLoop().register(channel);
         return channel;
     }

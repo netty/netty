@@ -547,6 +547,12 @@ final class Quiche {
      */
     static native int quiche_conn_max_send_udp_payload_size(long connAddr);
 
+    static native int quiche_conn_scids_left(long connAddr);
+
+    static native long quiche_conn_new_scid(long connAddr, long scidAddr, int scidLen, byte[] resetToken, boolean retire_if_needed);
+
+    static native byte[] quiche_conn_retired_scid_next(long connAddr);
+
     /**
      * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L115">quiche_config_new</a>.

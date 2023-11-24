@@ -59,6 +59,7 @@ public final class QuicServerExample {
                 .initialMaxStreamDataBidirectionalRemote(1000000)
                 .initialMaxStreamsBidirectional(100)
                 .initialMaxStreamsUnidirectional(100)
+                .activeMigration(true)
 
                 // Setup a token handler. In a production system you would want to implement and provide your custom
                 // one.

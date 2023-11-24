@@ -57,8 +57,11 @@ import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -134,7 +137,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private QuicConnectionAddress connectAddress;
-    private ByteBuffer key;
+    private final Set<ByteBuffer> sourceConnectionIds = new HashSet<>();
     private CloseData closeData;
     private QuicConnectionCloseEvent connectionCloseEvent;
     private QuicConnectionStats statsAtClose;
@@ -184,7 +187,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         config = new QuicheQuicChannelConfig(this);
         this.server = server;
         this.idGenerator = new QuicStreamIdGenerator(server);
-        this.key = key;
+        if (key != null) {
+            this.sourceConnectionIds.add(key);
+        }
         state = OPEN;
 
         this.supportsDatagram = supportsDatagram;
@@ -309,7 +314,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             throws Exception {
         assert this.connection == null;
         assert this.traceId == null;
-        assert this.key == null;
+        assert this.sourceConnectionIds.isEmpty();
 
         this.sslTaskExecutor = sslTaskExecutor;
 
@@ -358,7 +363,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
             }
             this.supportsDatagram = supportsDatagram;
-            key = connectId;
+            sourceConnectionIds.add(connectId);
         } finally {
             idBuffer.release();
         }
@@ -379,8 +384,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return false;
     }
 
-    ByteBuffer key() {
-        return key;
+    Set<ByteBuffer> sourceConnectionIds() {
+        return sourceConnectionIds;
     }
 
     private boolean closeAllIfConnectionClosed() {
@@ -864,6 +869,85 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         ((QuicChannelUnsafe) unsafe()).connectionRecv(sender, recipient, buffer);
     }
 
+    /**
+     * Return all source connection ids that are retired and so should be removed to map to the channel.
+     *
+     * @return retired ids.
+     */
+    List<ByteBuffer> retiredSourceConnectionId() {
+        QuicheQuicConnection connection = this.connection;
+        if (connection == null || connection.isClosed()) {
+            return Collections.emptyList();
+        }
+        long connAddr = connection.address();
+        assert connAddr != -1;
+        List<ByteBuffer> retiredSourceIds = null;
+        for (;;) {
+            byte[] retired = Quiche.quiche_conn_retired_scid_next(connAddr);
+            if (retired == null) {
+                break;
+            }
+            if (retiredSourceIds == null) {
+                retiredSourceIds = new ArrayList<>();
+            }
+            ByteBuffer retiredId = ByteBuffer.wrap(retired);
+            retiredSourceIds.add(retiredId);
+            sourceConnectionIds.remove(retiredId);
+        }
+        if (retiredSourceIds == null) {
+            return Collections.emptyList();
+        }
+        return retiredSourceIds;
+    }
+
+    List<ByteBuffer> newSourceConnectionIds(
+            QuicConnectionIdGenerator connectionIdGenerator, QuicResetTokenGenerator resetTokenGenerator) {
+        if (server) {
+            QuicheQuicConnection connection = this.connection;
+            if (connection == null || connection.isClosed()) {
+                return Collections.emptyList();
+            }
+            long connAddr = connection.address();
+            // Generate all extra source ids that we can provide. This will cause frames that need to be send. Which
+            // is the reason why we might need to call connectionSendAndFlush().
+            int left = Quiche.quiche_conn_scids_left(connAddr);
+            if (left > 0) {
+                List<ByteBuffer> generatedIds = new ArrayList<>(left);
+                boolean sendAndFlush = false;
+                ByteBuffer key = localIdAdrr.connId.duplicate();
+                ByteBuf connIdBuffer = alloc().directBuffer(key.remaining());
+
+                byte[] resetTokenArray = new byte[Quic.RESET_TOKEN_LEN];
+                try {
+                    do {
+                        ByteBuffer srcId = connectionIdGenerator.newId(key, key.remaining());
+                        connIdBuffer.clear();
+                        connIdBuffer.writeBytes(srcId.duplicate());
+                        ByteBuffer resetToken = resetTokenGenerator.newResetToken(srcId.duplicate());
+                        resetToken.get(resetTokenArray);
+                        long result = Quiche.quiche_conn_new_scid(
+                                connAddr, Quiche.memoryAddress(connIdBuffer, 0, connIdBuffer.readableBytes()),
+                                connIdBuffer.readableBytes(), resetTokenArray, false);
+                        if (result < 0) {
+                            break;
+                        }
+                        sendAndFlush = true;
+                        generatedIds.add(srcId);
+                        sourceConnectionIds.add(srcId);
+                    } while (--left > 0);
+                } finally {
+                    connIdBuffer.release();
+                }
+
+                if (sendAndFlush) {
+                    connectionSendAndFlush();
+                }
+                return generatedIds;
+            }
+        }
+        return Collections.emptyList();
+    }
+
     void writable() {
         boolean written = connectionSend();
         handleWritableStreams();
@@ -1320,7 +1404,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
 
             if (remote instanceof QuicConnectionAddress) {
-                if (key != null) {
+                if (!sourceConnectionIds.isEmpty()) {
                     // If a key is assigned we know this channel was already connected.
                     channelPromise.setFailure(new AlreadyConnectedException());
                     return;
@@ -1492,6 +1576,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 datagramReadable = true;
                 streamReadable = true;
+
                 recvDatagram();
                 recvStream();
             }

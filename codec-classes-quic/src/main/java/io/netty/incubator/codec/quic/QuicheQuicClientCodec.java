@@ -65,7 +65,8 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
             return;
         }
         if (channel != null) {
-            putChannel(channel);
+            addChannel(channel);
+
             channel.finishConnect();
             promise.setSuccess();
             return;

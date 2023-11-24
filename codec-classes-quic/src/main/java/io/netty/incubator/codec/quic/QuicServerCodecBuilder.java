@@ -41,6 +41,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     private ChannelHandler streamHandler;
     private QuicConnectionIdGenerator connectionIdAddressGenerator;
     private QuicTokenHandler tokenHandler;
+    private QuicResetTokenGenerator resetTokenGenerator;
 
     /**
      * Creates a new instance.
@@ -172,6 +173,18 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         return self();
     }
 
+    /**
+     * Set the {@link QuicResetTokenGenerator} that is used to generate stateless reset tokens or
+     * {@code null} if the default should be used.
+     *
+     * @param resetTokenGenerator  the {@link QuicResetTokenGenerator} to use.
+     * @return                     this instance.
+     */
+    public QuicServerCodecBuilder resetTokenGenerator(QuicResetTokenGenerator resetTokenGenerator) {
+        this.resetTokenGenerator = resetTokenGenerator;
+        return self();
+    }
+
     @Override
     protected void validate() {
         super.validate();
@@ -194,10 +207,14 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         if (generator == null) {
             generator = QuicConnectionIdGenerator.signGenerator();
         }
+        QuicResetTokenGenerator resetTokenGenerator = this.resetTokenGenerator;
+        if (resetTokenGenerator == null) {
+            resetTokenGenerator = QuicResetTokenGenerator.signGenerator();
+        }
         ChannelHandler handler = this.handler;
         ChannelHandler streamHandler = this.streamHandler;
-        return new QuicheQuicServerCodec(config, localConnIdLength, tokenHandler, generator, flushStrategy,
-                sslEngineProvider, sslTaskExecutor, handler,
+        return new QuicheQuicServerCodec(config, localConnIdLength, tokenHandler, generator, resetTokenGenerator,
+                flushStrategy, sslEngineProvider, sslTaskExecutor, handler,
                 Quic.toOptionsArray(options), Quic.toAttributesArray(attrs),
                 streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs));
     }

@@ -34,6 +34,8 @@ public final class Quic {
 
     static final int MAX_DATAGRAM_SIZE = 1350;
 
+    static final int RESET_TOKEN_LEN = 16;
+
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static {
