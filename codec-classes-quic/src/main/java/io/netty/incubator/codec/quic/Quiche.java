@@ -290,6 +290,14 @@ final class Quiche {
      */
     static final int QUICHE_CC_BBR = QuicheNativeStaticallyReferencedJniMethods.quiche_cc_bbr();
 
+
+    static final int QUICHE_PATH_EVENT_NEW = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_new();
+    static final int QUICHE_PATH_EVENT_VALIDATED = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_validated();
+    static final int QUICHE_PATH_EVENT_FAILED_VALIDATION = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_failed_validation();
+    static final int QUICHE_PATH_EVENT_CLOSED = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_closed();
+    static final int QUICHE_PATH_EVENT_REUSED_SOURCE_CONNECTION_ID = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_reused_source_connection_id();
+    static final int QUICHE_PATH_EVENT_PEER_MIGRATED = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_peer_migrated();
+
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L105">quiche_version</a>.
      */
@@ -552,6 +560,16 @@ final class Quiche {
     static native long quiche_conn_new_scid(long connAddr, long scidAddr, int scidLen, byte[] resetToken, boolean retire_if_needed);
 
     static native byte[] quiche_conn_retired_scid_next(long connAddr);
+
+    static native long quiche_conn_path_event_next(long connAddr);
+    static native int quiche_path_event_type(long pathEvent);
+    static native void quiche_path_event_free(long pathEvent);
+    static native Object[] quiche_path_event_new(long pathEvent);
+    static native Object[] quiche_path_event_validated(long pathEvent);
+    static native Object[] quiche_path_event_failed_validation(long pathEvent);
+    static native Object[]  quiche_path_event_closed(long pathEvent);
+    static native Object[] quiche_path_event_reused_source_connection_id(long pathEvent);
+    static native Object[] quiche_path_event_peer_migrated(long pathEvent);
 
     /**
      * See

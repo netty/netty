@@ -85,5 +85,12 @@ final class QuicheNativeStaticallyReferencedJniMethods {
     static native int sizeofTimeT();
     static native int sizeofLong();
 
+    static native int quiche_path_event_new();
+    static native int quiche_path_event_validated();
+    static native int quiche_path_event_failed_validation();
+    static native int quiche_path_event_closed();
+    static native int quiche_path_event_reused_source_connection_id();
+    static native int quiche_path_event_peer_migrated();
+
     private QuicheNativeStaticallyReferencedJniMethods() { }
 }

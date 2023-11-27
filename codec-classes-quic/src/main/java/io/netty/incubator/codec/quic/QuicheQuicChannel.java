@@ -1569,6 +1569,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     }
                 }
 
+                handlePathEvents(connAddr);
+
                 if (handleWritableStreams()) {
                     // Some data was produced, let's flush.
                     flushParent();
@@ -1579,6 +1581,53 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 recvDatagram();
                 recvStream();
+            }
+        }
+
+        private void handlePathEvents(long addr) {
+            long event;
+            while ((event = Quiche.quiche_conn_path_event_next(addr)) > 0) {
+                try {
+                    int type = Quiche.quiche_path_event_type(event);
+
+                    if (type == Quiche.QUICHE_PATH_EVENT_NEW) {
+                        Object[] ret = Quiche.quiche_path_event_new(event);
+                        InetSocketAddress local = (InetSocketAddress) ret[0];
+                        InetSocketAddress peer = (InetSocketAddress) ret[1];
+                        pipeline().fireUserEventTriggered(new QuicPathEvent.New(local, peer));
+                    } else if (type == Quiche.QUICHE_PATH_EVENT_VALIDATED) {
+                        Object[] ret = Quiche.quiche_path_event_validated(event);
+                        InetSocketAddress local = (InetSocketAddress) ret[0];
+                        InetSocketAddress peer = (InetSocketAddress) ret[1];
+                        pipeline().fireUserEventTriggered(new QuicPathEvent.Validated(local, peer));
+                    } else if (type == Quiche.QUICHE_PATH_EVENT_FAILED_VALIDATION) {
+                        Object[] ret = Quiche.quiche_path_event_failed_validation(event);
+                        InetSocketAddress local = (InetSocketAddress) ret[0];
+                        InetSocketAddress peer = (InetSocketAddress) ret[1];
+                        pipeline().fireUserEventTriggered(new QuicPathEvent.FailedValidation(local, peer));
+                    } else if (type == Quiche.QUICHE_PATH_EVENT_CLOSED) {
+                        Object[] ret = Quiche.quiche_path_event_closed(event);
+                        InetSocketAddress local = (InetSocketAddress) ret[0];
+                        InetSocketAddress peer = (InetSocketAddress) ret[1];
+                        pipeline().fireUserEventTriggered(new QuicPathEvent.Closed(local, peer));
+                    } else if (type == Quiche.QUICHE_PATH_EVENT_REUSED_SOURCE_CONNECTION_ID) {
+                        Object[] ret = Quiche.quiche_path_event_reused_source_connection_id(event);
+                        Long seq = (Long) ret[0];
+                        InetSocketAddress localOld = (InetSocketAddress) ret[1];
+                        InetSocketAddress peerOld = (InetSocketAddress) ret[2];
+                        InetSocketAddress local = (InetSocketAddress) ret[3];
+                        InetSocketAddress peer = (InetSocketAddress) ret[4];
+                        pipeline().fireUserEventTriggered(
+                                new QuicPathEvent.ReusedSourceConnectionId(seq, localOld, peerOld, local, peer));
+                    } else if (type == Quiche.QUICHE_PATH_EVENT_PEER_MIGRATED) {
+                        Object[] ret = Quiche.quiche_path_event_peer_migrated(event);
+                        InetSocketAddress local = (InetSocketAddress) ret[0];
+                        InetSocketAddress peer = (InetSocketAddress) ret[1];
+                        pipeline().fireUserEventTriggered(new QuicPathEvent.PeerMigrated(local, peer));
+                    }
+                } finally {
+                    Quiche.quiche_path_event_free(event);
+                }
             }
         }
 
