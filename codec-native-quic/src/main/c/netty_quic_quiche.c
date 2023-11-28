@@ -664,9 +664,17 @@ static jint netty_quiche_conn_scids_left(JNIEnv* env, jclass clazz, jlong conn) 
     return (jint) quiche_conn_scids_left((quiche_conn *) conn);
 }
 
-static jlong netty_quiche_conn_new_scid(JNIEnv* env, jclass clazz, jlong conn, jlong scid, jint scid_len, jbyteArray reset_token, jboolean retire_if_needed, jlong seq) {
+static jlong netty_quiche_conn_new_scid(JNIEnv* env, jclass clazz, jlong conn, jlong scid, jint scid_len, jbyteArray reset_token, jboolean retire_if_needed, jlong sequenceAddr) {
     uint8_t* buf = (uint8_t*) (*env)->GetByteArrayElements(env, reset_token, 0);
-    jlong ret = quiche_conn_new_scid((quiche_conn *) conn, (const uint8_t *) scid, scid_len, buf, retire_if_needed == JNI_TRUE ? true : false, (uint64_t*) seq);
+
+    uint64_t* seq;
+    if (sequenceAddr < 0) {
+        uint64_t tmp;
+        seq = &tmp;
+    } else {
+        seq = (uint64_t *) sequenceAddr;
+    }
+    jlong ret = quiche_conn_new_scid((quiche_conn *) conn, (const uint8_t *) scid, scid_len, buf, retire_if_needed == JNI_TRUE ? true : false, seq);
     (*env)->ReleaseByteArrayElements(env, reset_token, (jbyte*)buf, JNI_ABORT);
     return ret;
 }
