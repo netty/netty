@@ -22,7 +22,6 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
@@ -30,6 +29,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
@@ -76,9 +76,10 @@ public class HttpRequestEncoderBenchmark extends AbstractMicrobenchmark {
         content = Unpooled.buffer(bytes.length);
         content.writeBytes(bytes);
         ByteBuf testContent = Unpooled.unreleasableBuffer(content.asReadOnly());
-        HttpHeaders headersWithChunked = new DefaultHttpHeaders(false);
+        DefaultHttpHeadersFactory headersFactory = DefaultHttpHeadersFactory.headersFactory().withValidation(false);
+        HttpHeaders headersWithChunked = headersFactory.newHeaders();
         headersWithChunked.add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-        HttpHeaders headersWithContentLength = new DefaultHttpHeaders(false);
+        HttpHeaders headersWithContentLength = headersFactory.newHeaders();
         headersWithContentLength.add(HttpHeaderNames.CONTENT_LENGTH, testContent.readableBytes());
 
         fullRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/index", testContent,
@@ -86,7 +87,7 @@ public class HttpRequestEncoderBenchmark extends AbstractMicrobenchmark {
         contentLengthRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/index",
                 headersWithContentLength);
         chunkedRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/index", headersWithChunked);
-        lastContent = new DefaultLastHttpContent(testContent, false);
+        lastContent = new DefaultLastHttpContent(testContent, headersFactory);
 
         encoder = new HttpRequestEncoder();
         context = new EmbeddedChannelWriteReleaseHandlerContext(pooledAllocator ? PooledByteBufAllocator.DEFAULT :

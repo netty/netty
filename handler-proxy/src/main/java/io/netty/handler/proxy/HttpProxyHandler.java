@@ -29,6 +29,8 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
+import io.netty.handler.codec.http.HttpHeadersFactory;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -171,10 +173,11 @@ public final class HttpProxyHandler extends ProxyHandler {
                 hostString :
                 url;
 
+        HttpHeadersFactory headersFactory = DefaultHttpHeadersFactory.headersFactory().withValidation(false);
         FullHttpRequest req = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.CONNECT,
                 url,
-                Unpooled.EMPTY_BUFFER, false);
+                Unpooled.EMPTY_BUFFER, headersFactory, headersFactory);
 
         req.headers().set(HttpHeaderNames.HOST, hostHeader);
 

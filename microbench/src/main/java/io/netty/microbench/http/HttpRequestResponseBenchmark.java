@@ -27,6 +27,7 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -233,8 +234,10 @@ public class HttpRequestResponseBenchmark extends AbstractMicrobenchmark {
             private void writeResponse(ChannelHandlerContext ctx, ByteBuf buf, CharSequence contentType,
                                        CharSequence contentLength) {
                 // Build the response object.
-                FullHttpResponse response =
-                        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf, false);
+                FullHttpResponse response = new DefaultFullHttpResponse(
+                        HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf,
+                        DefaultHttpHeadersFactory.headersFactory().withValidation(false),
+                        DefaultHttpHeadersFactory.trailersFactory().withValidation(false));
                 HttpHeaders headers = response.headers();
                 headers.set(CONTENT_TYPE_ENTITY, contentType);
                 headers.set(SERVER_ENTITY, SERVER_NAME);

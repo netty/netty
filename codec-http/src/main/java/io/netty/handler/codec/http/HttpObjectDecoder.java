@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -31,6 +29,8 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
@@ -129,6 +129,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  * To implement the decoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
+ *
+ * <h3>Header Validation</h3>
+ *
+ * It is recommended to always enable header validation.
+ * <p>
+ * Without header validation, your system can become vulnerable to
+ * <a href="https://cwe.mitre.org/data/definitions/113.html">
+ *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+ * </a>.
+ * <p>
+ * This recommendation stands even when both peers in the HTTP exchange are trusted,
+ * as it helps with defence-in-depth.
  */
 public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
@@ -142,7 +154,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private final int maxChunkSize;
     private final boolean chunkedSupported;
     private final boolean allowPartialChunks;
+    /**
+     * This field is no longer used. It is only kept around for backwards compatibility purpose.
+     */
+    @Deprecated
     protected final boolean validateHeaders;
+    protected final HttpHeadersFactory headersFactory;
+    protected final HttpHeadersFactory trailersFactory;
     private final boolean allowDuplicateContentLengths;
     private final ByteBuf parserScratchBuffer;
     private final HeaderParser headerParser;
@@ -193,68 +211,124 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * {@code maxChunkSize (8192)}.
      */
     protected HttpObjectDecoder() {
-        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_MAX_CHUNK_SIZE,
-             DEFAULT_CHUNKED_SUPPORTED);
+        this(new HttpDecoderConfig());
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean chunkedSupported) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, DEFAULT_VALIDATE_HEADERS);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders,
-             DEFAULT_INITIAL_BUFFER_SIZE);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, initialBufferSize,
-             DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders)
+                .setInitialBufferSize(initialBufferSize));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
             boolean allowDuplicateContentLengths) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, initialBufferSize,
-            allowDuplicateContentLengths, DEFAULT_ALLOW_PARTIAL_CHUNKS);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders)
+                .setInitialBufferSize(initialBufferSize)
+                .setAllowDuplicateContentLengths(allowDuplicateContentLengths));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
             boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
-        checkPositive(maxInitialLineLength, "maxInitialLineLength");
-        checkPositive(maxHeaderSize, "maxHeaderSize");
-        checkPositive(maxChunkSize, "maxChunkSize");
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders)
+                .setInitialBufferSize(initialBufferSize)
+                .setAllowDuplicateContentLengths(allowDuplicateContentLengths)
+                .setAllowPartialChunks(allowPartialChunks));
+    }
 
-        parserScratchBuffer = Unpooled.buffer(initialBufferSize);
-        lineParser = new LineParser(parserScratchBuffer, maxInitialLineLength);
-        headerParser = new HeaderParser(parserScratchBuffer, maxHeaderSize);
-        this.maxChunkSize = maxChunkSize;
-        this.chunkedSupported = chunkedSupported;
-        this.validateHeaders = validateHeaders;
-        this.allowDuplicateContentLengths = allowDuplicateContentLengths;
-        this.allowPartialChunks = allowPartialChunks;
+    /**
+     * Creates a new instance with the specified configuration.
+     */
+    protected HttpObjectDecoder(HttpDecoderConfig config) {
+        checkNotNull(config, "config");
+
+        parserScratchBuffer = Unpooled.buffer(config.getInitialBufferSize());
+        lineParser = new LineParser(parserScratchBuffer, config.getMaxInitialLineLength());
+        headerParser = new HeaderParser(parserScratchBuffer, config.getMaxHeaderSize());
+        maxChunkSize = config.getMaxChunkSize();
+        chunkedSupported = config.isChunkedSupported();
+        headersFactory = config.getHeadersFactory();
+        trailersFactory = config.getTrailersFactory();
+        validateHeaders = isValidating(headersFactory);
+        allowDuplicateContentLengths = config.isAllowDuplicateContentLengths();
+        allowPartialChunks = config.isAllowPartialChunks();
+    }
+
+    protected boolean isValidating(HttpHeadersFactory headersFactory) {
+        if (headersFactory instanceof DefaultHttpHeadersFactory) {
+            DefaultHttpHeadersFactory builder = (DefaultHttpHeadersFactory) headersFactory;
+            return builder.isValidatingHeaderNames() || builder.isValidatingHeaderValues();
+        }
+        return true; // We can't actually tell in this case, but we assume some validation is taking place.
     }
 
     @Override
@@ -303,10 +377,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 out.add(message);
                 return;
             default:
-                /**
-                 * <a href="https://tools.ietf.org/html/rfc7230#section-3.3.3">RFC 7230, 3.3.3</a> states that if a
+                /*
+                 * RFC 7230, 3.3.3 (https://tools.ietf.org/html/rfc7230#section-3.3.3) states that if a
                  * request does not have either a transfer-encoding or a content-length header then the message body
-                 * length is 0. However for a response the body length is the number of octets received prior to the
+                 * length is 0. However, for a response the body length is the number of octets received prior to the
                  * server closing the connection. So we treat this as variable length chunked encoding.
                  */
                 long contentLength = contentLength();
@@ -365,14 +439,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
             if (chunkSize == 0) {
                 // Read all content.
-                out.add(new DefaultLastHttpContent(content, validateHeaders));
+                out.add(new DefaultLastHttpContent(content, trailersFactory));
                 resetNow();
             } else {
                 out.add(new DefaultHttpContent(content));
             }
             return;
         }
-        /**
+        /*
          * everything else after this point takes care of reading chunked content. basically, read chunk size,
          * read chunk, read and ignore the CRLF and repeat until 0
          */
@@ -755,7 +829,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         CharSequence lastHeader = null;
         if (trailer == null) {
-            trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
+            trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, trailersFactory);
         }
         while (lineLength > 0) {
             final byte[] lineContent = line.array();

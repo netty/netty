@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.util.internal.ObjectUtil;
-
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -31,16 +29,28 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
      * Creates a new instance.
      */
     protected DefaultHttpMessage(final HttpVersion version) {
-        this(version, true, false);
+        this(version, DefaultHttpHeadersFactory.headersFactory());
+    }
+
+    /**
+     * Creates a new instance.
+     * <p>
+     * @deprecated Use the {@link #DefaultHttpMessage(HttpVersion, HttpHeadersFactory)} constructor instead,
+     * ideally using the {@link DefaultHttpHeadersFactory#headersFactory()},
+     * or a factory that otherwise has validation enabled.
+     */
+    @Deprecated
+    protected DefaultHttpMessage(final HttpVersion version, boolean validateHeaders, boolean singleFieldHeaders) {
+        this(version, DefaultHttpHeadersFactory.headersFactory()
+                .withValidation(validateHeaders)
+                .withCombiningHeaders(singleFieldHeaders));
     }
 
     /**
      * Creates a new instance.
      */
-    protected DefaultHttpMessage(final HttpVersion version, boolean validateHeaders, boolean singleFieldHeaders) {
-        this(version,
-                singleFieldHeaders ? new CombinedHttpHeaders(validateHeaders)
-                                   : new DefaultHttpHeaders(validateHeaders));
+    protected DefaultHttpMessage(HttpVersion version, HttpHeadersFactory headersFactory) {
+        this(version, headersFactory.newHeaders());
     }
 
     /**
@@ -91,7 +101,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
 
     @Override
     public HttpMessage setProtocolVersion(HttpVersion version) {
-        this.version = ObjectUtil.checkNotNull(version, "version");
+        this.version = checkNotNull(version, "version");
         return this;
     }
 }
