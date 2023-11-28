@@ -664,9 +664,9 @@ static jint netty_quiche_conn_scids_left(JNIEnv* env, jclass clazz, jlong conn) 
     return (jint) quiche_conn_scids_left((quiche_conn *) conn);
 }
 
-static jlong netty_quiche_conn_new_scid(JNIEnv* env, jclass clazz, jlong conn, jlong scid, jint scid_len, jbyteArray reset_token, jboolean retire_if_needed) {
+static jlong netty_quiche_conn_new_scid(JNIEnv* env, jclass clazz, jlong conn, jlong scid, jint scid_len, jbyteArray reset_token, jboolean retire_if_needed, jlong seq) {
     uint8_t* buf = (uint8_t*) (*env)->GetByteArrayElements(env, reset_token, 0);
-    jlong ret = quiche_conn_new_scid((quiche_conn *) conn, (const uint8_t *) scid, scid_len, buf, retire_if_needed == JNI_TRUE ? true : false);
+    jlong ret = quiche_conn_new_scid((quiche_conn *) conn, (const uint8_t *) scid, scid_len, buf, retire_if_needed == JNI_TRUE ? true : false, (uint64_t*) seq);
     (*env)->ReleaseByteArrayElements(env, reset_token, (jbyte*)buf, JNI_ABORT);
     return ret;
 }
@@ -1134,7 +1134,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_set_session", "(J[B)I", (void* ) netty_quiche_conn_set_session },
   { "quiche_conn_max_send_udp_payload_size", "(J)I", (void* ) netty_quiche_conn_max_send_udp_payload_size },
   { "quiche_conn_scids_left", "(J)I", (void* ) netty_quiche_conn_scids_left },
-  { "quiche_conn_new_scid", "(JJI[BZ)J", (void* ) netty_quiche_conn_new_scid },
+  { "quiche_conn_new_scid", "(JJI[BZJ)J", (void* ) netty_quiche_conn_new_scid },
   { "quiche_conn_retired_scid_next", "(J)[B", (void* ) netty_quiche_conn_retired_scid_next },
   { "quiche_config_new", "(I)J", (void *) netty_quiche_config_new },
   { "quiche_config_enable_dgram", "(JZII)V", (void *) netty_quiche_config_enable_dgram },

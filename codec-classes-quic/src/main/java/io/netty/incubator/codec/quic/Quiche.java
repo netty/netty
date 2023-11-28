@@ -557,7 +557,7 @@ final class Quiche {
 
     static native int quiche_conn_scids_left(long connAddr);
 
-    static native long quiche_conn_new_scid(long connAddr, long scidAddr, int scidLen, byte[] resetToken, boolean retire_if_needed);
+    static native long quiche_conn_new_scid(long connAddr, long scidAddr, int scidLen, byte[] resetToken, boolean retire_if_needed, long seq);
 
     static native byte[] quiche_conn_retired_scid_next(long connAddr);
 

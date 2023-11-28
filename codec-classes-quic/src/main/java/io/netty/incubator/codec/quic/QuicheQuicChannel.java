@@ -916,9 +916,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 boolean sendAndFlush = false;
                 ByteBuffer key = localIdAdrr.connId.duplicate();
                 ByteBuf connIdBuffer = alloc().directBuffer(key.remaining());
+                ByteBuf seqBuffer = alloc().directBuffer(Long.BYTES);
 
                 byte[] resetTokenArray = new byte[Quic.RESET_TOKEN_LEN];
                 try {
+                    long seqAddress = Quiche.memoryAddress(seqBuffer, 0, seqBuffer.capacity());
                     do {
                         ByteBuffer srcId = connectionIdGenerator.newId(key, key.remaining());
                         connIdBuffer.clear();
@@ -927,7 +929,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         resetToken.get(resetTokenArray);
                         long result = Quiche.quiche_conn_new_scid(
                                 connAddr, Quiche.memoryAddress(connIdBuffer, 0, connIdBuffer.readableBytes()),
-                                connIdBuffer.readableBytes(), resetTokenArray, false);
+                                connIdBuffer.readableBytes(), resetTokenArray, false, seqAddress);
                         if (result < 0) {
                             break;
                         }
@@ -937,6 +939,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     } while (--left > 0);
                 } finally {
                     connIdBuffer.release();
+                    seqBuffer.release();
                 }
 
                 if (sendAndFlush) {
