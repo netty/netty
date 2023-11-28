@@ -642,6 +642,13 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                             return written;
                         }
                     } catch (Exception e) {
+                        if (e instanceof QuicException && (
+                                (QuicException) e).error() == QuicError.STREAM_STOPPED) {
+                            // Once its signaled that the stream is stopped we can just fail everything.
+                            queue.removeAndFailAll(e);
+                            forceClose();
+                            break;
+                        }
                         queue.remove().setFailure(e);
                         continue;
                     }
