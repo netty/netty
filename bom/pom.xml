@@ -247,6 +247,12 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
         <version>${project.version}</version>
+        <classifier>linux-riscv64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport-native-unix-common</artifactId>
+        <version>${project.version}</version>
         <classifier>linux-x86_64</classifier>
       </dependency>
       <dependency>
@@ -276,6 +282,12 @@
         <artifactId>netty-transport-native-epoll</artifactId>
         <version>${project.version}</version>
         <classifier>linux-aarch_64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport-native-epoll</artifactId>
+        <version>${project.version}</version>
+        <classifier>linux-riscv64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
