@@ -15,7 +15,9 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,7 +37,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * @param uri         the URI or path of the request
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
-        this(httpVersion, method, uri, true);
+        this(httpVersion, method, uri, DefaultHttpHeadersFactory.headersFactory());
     }
 
     /**
@@ -44,10 +46,11 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * @param httpVersion       the HTTP version of the request
      * @param method            the HTTP method of the request
      * @param uri               the URI or path of the request
-     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
+     * @param factory the factory used to create the {@link HttpHeaders}.
+     * The recommended default is {@link DefaultHttpHeadersFactory#headersFactory()}.
      */
-    public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
-        super(httpVersion, validateHeaders);
+    public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, HttpHeadersFactory factory) {
+        super(httpVersion, factory);
         this.method = requireNonNull(method, "method");
         this.uri = requireNonNull(uri, "uri");
     }

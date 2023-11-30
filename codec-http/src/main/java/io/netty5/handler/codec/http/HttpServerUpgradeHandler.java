@@ -16,7 +16,9 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.internal.DelegatingChannelHandlerContext;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import io.netty5.channel.ChannelFutureListeners;
@@ -158,7 +160,8 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
 
     private final SourceCodec sourceCodec;
     private final UpgradeCodecFactory upgradeCodecFactory;
-    private final boolean validateHeaders;
+    private final HttpHeadersFactory headersFactory;
+    private final HttpHeadersFactory trailersFactory;
     private boolean handlingUpgrade;
 
     /**
@@ -189,7 +192,8 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
      */
     public HttpServerUpgradeHandler(
             SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength) {
-        this(sourceCodec, upgradeCodecFactory, maxContentLength, true);
+        this(sourceCodec, upgradeCodecFactory, maxContentLength,
+                DefaultHttpHeadersFactory.headersFactory(), DefaultHttpHeadersFactory.trailersFactory());
     }
 
     /**
@@ -199,15 +203,20 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
      * @param upgradeCodecFactory the factory that creates a new upgrade codec
      *                            for one of the requested upgrade protocols
      * @param maxContentLength the maximum length of the content of an upgrade request
-     * @param validateHeaders validate the header names and values of the upgrade response.
+     * @param headersFactory The {@link HttpHeadersFactory} to use for headers.
+     * The recommended default factory is {@link DefaultHttpHeadersFactory#headersFactory()}.
+     * @param trailersFactory The {@link HttpHeadersFactory} to use for trailers.
+     * The recommended default factory is {@link DefaultHttpHeadersFactory#trailersFactory()}.
      */
-    public HttpServerUpgradeHandler(SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory,
-                                    int maxContentLength, boolean validateHeaders) {
+    public HttpServerUpgradeHandler(
+            SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength,
+            HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
         super(maxContentLength);
 
         this.sourceCodec = requireNonNull(sourceCodec, "sourceCodec");
         this.upgradeCodecFactory = requireNonNull(upgradeCodecFactory, "upgradeCodecFactory");
-        this.validateHeaders = validateHeaders;
+        this.headersFactory = headersFactory;
+        this.trailersFactory = trailersFactory;
     }
 
     @Override
@@ -367,7 +376,7 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
      */
     private FullHttpResponse createUpgradeResponse(BufferAllocator allocator, CharSequence upgradeProtocol) {
         DefaultFullHttpResponse res = new DefaultFullHttpResponse(
-                HTTP_1_1, SWITCHING_PROTOCOLS, allocator.allocate(0), validateHeaders);
+                HTTP_1_1, SWITCHING_PROTOCOLS, allocator.allocate(0), headersFactory, trailersFactory);
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
         res.headers().add(HttpHeaderNames.UPGRADE, upgradeProtocol);
         return res;

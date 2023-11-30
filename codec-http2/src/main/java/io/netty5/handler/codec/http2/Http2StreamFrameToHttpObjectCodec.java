@@ -39,7 +39,9 @@ import io.netty5.handler.codec.http.HttpStatusClass;
 import io.netty5.handler.codec.http.HttpUtil;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HeaderValidationException;
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.util.Attribute;
@@ -64,16 +66,19 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
         AttributeKey.valueOf(HttpScheme.class, "STREAMFRAMECODEC_SCHEME");
 
     private final boolean isServer;
-    private final boolean validateHeaders;
+    private final HttpHeadersFactory headersFactory;
+    private final HttpHeadersFactory trailersFactory;
 
     public Http2StreamFrameToHttpObjectCodec(final boolean isServer,
-                                             final boolean validateHeaders) {
+                                             final HttpHeadersFactory headersFactory,
+                                             final HttpHeadersFactory trailersFactory) {
         this.isServer = isServer;
-        this.validateHeaders = validateHeaders;
+        this.headersFactory = headersFactory;
+        this.trailersFactory = trailersFactory;
     }
 
     public Http2StreamFrameToHttpObjectCodec(final boolean isServer) {
-        this(isServer, true);
+        this(isServer, DefaultHttpHeadersFactory.headersFactory(), DefaultHttpHeadersFactory.trailersFactory());
     }
 
     @Override
@@ -107,7 +112,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
             if (headersFrame.isEndStream()) {
                 if (headers.method() == null && status == null) {
                     LastHttpContent<?> last = new DefaultLastHttpContent(ctx.bufferAllocator().allocate(0),
-                            validateHeaders);
+                            trailersFactory);
                     HttpConversionUtil.addHttp2ToHttpHeaders(id, headers, last.trailingHeaders(),
                                                              HttpVersion.HTTP_1_1, true, true);
                     ctx.fireChannelRead(last);
@@ -125,7 +130,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
         } else if (frame instanceof Http2DataFrame) {
             Http2DataFrame dataFrame = (Http2DataFrame) frame;
             if (dataFrame.isEndStream()) {
-                ctx.fireChannelRead(new DefaultLastHttpContent(dataFrame.content(), validateHeaders));
+                ctx.fireChannelRead(new DefaultLastHttpContent(dataFrame.content(), trailersFactory));
             } else {
                 ctx.fireChannelRead(new DefaultHttpContent(dataFrame.content()));
             }
@@ -141,7 +146,11 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
             last.close();
         }
         if (!last.trailingHeaders().isEmpty()) {
-            Http2Headers headers = HttpConversionUtil.toHttp2Headers(last.trailingHeaders(), validateHeaders);
+            Http2Headers headers = HttpConversionUtil.toHttp2Headers(
+                    last.trailingHeaders(),
+                    trailersFactory.isValidatingNames(),
+                    trailersFactory.isValidatingValues(),
+                    trailersFactory.isValidatingCookies());
             out.add(new DefaultHttp2HeadersFrame(headers, true));
         }
     }
@@ -210,7 +219,10 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
                         connectionScheme(ctx).name());
             }
 
-            return HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+            return HttpConversionUtil.toHttp2Headers(msg,
+                    headersFactory.isValidatingNames(),
+                    headersFactory.isValidatingValues(),
+                    headersFactory.isValidatingCookies());
         } catch (HeaderValidationException e) {
             throw new Http2Exception(Http2Error.PROTOCOL_ERROR, e.getMessage(), e);
         }
@@ -219,16 +231,16 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
     private HttpMessage newMessage(final int id,
                                    final Http2Headers headers) throws Http2Exception {
         return isServer ?
-                HttpConversionUtil.toHttpRequest(id, headers, validateHeaders) :
-                HttpConversionUtil.toHttpResponse(id, headers, validateHeaders);
+                HttpConversionUtil.toHttpRequest(id, headers, headersFactory) :
+                HttpConversionUtil.toHttpResponse(id, headers, headersFactory);
     }
 
     private FullHttpMessage<?> newFullMessage(final int id,
                                            final Http2Headers headers,
                                            final BufferAllocator alloc) throws Http2Exception {
         return isServer ?
-                HttpConversionUtil.toFullHttpRequest(id, headers, alloc, validateHeaders) :
-                HttpConversionUtil.toFullHttpResponse(id, headers, alloc, validateHeaders);
+                HttpConversionUtil.toFullHttpRequest(id, headers, alloc, headersFactory, trailersFactory) :
+                HttpConversionUtil.toFullHttpResponse(id, headers, alloc, headersFactory, trailersFactory);
     }
 
     @Override

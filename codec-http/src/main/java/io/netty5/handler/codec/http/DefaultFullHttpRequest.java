@@ -17,9 +17,13 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferClosedException;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 import io.netty5.util.Send;
 
+import static io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory.headersFactory;
+import static io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory.trailersFactory;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -34,17 +38,30 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
      */
     private int hash;
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, and contents.
+     */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, Buffer payload) {
-        this(httpVersion, method, uri, payload, true);
+        this(httpVersion, method, uri, payload, headersFactory(), trailersFactory());
     }
 
-    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
-                                  Buffer payload, boolean validateHeaders) {
-        super(httpVersion, method, uri, validateHeaders);
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, contents,
+     * and factories for creating headers and trailers.
+     * <p>
+     * The recommended default header factory is {@link DefaultHttpHeadersFactory#headersFactory()},
+     * and the recommended default trailer factory is {@link DefaultHttpHeadersFactory#trailersFactory()}.
+     */
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, Buffer payload,
+                                  HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
+        super(httpVersion, method, uri, headersFactory);
         this.payload = requireNonNull(payload, "payload");
-        trailingHeader = HttpHeaders.newHeaders(validateHeaders);
+        trailingHeader = trailersFactory.newHeaders();
     }
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, contents, and header and trailer objects.
+     */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
                                   Buffer payload, HttpHeaders headers, HttpHeaders trailingHeader) {
         super(httpVersion, method, uri, headers);

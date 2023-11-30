@@ -17,7 +17,9 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferClosedException;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 import io.netty5.util.Send;
 
 import static java.util.Objects.requireNonNull;
@@ -35,17 +37,31 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
      */
     private int hash;
 
+    /**
+     * Create an HTTP response with the given HTTP version, status, and contents.
+     */
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, Buffer payload) {
-        this(version, status, payload, true);
+        this(version, status, payload, DefaultHttpHeadersFactory.headersFactory(),
+                DefaultHttpHeadersFactory.trailersFactory());
     }
 
-    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
-                                   Buffer payload, boolean validateHeaders) {
-        super(version, status, validateHeaders);
+    /**
+     * Create an HTTP response with the given HTTP version, status, contents,
+     * and with headers and trailers created by the given header factories.
+     * <p>
+     * The recommended header factory is {@link DefaultHttpHeadersFactory#headersFactory()},
+     * and the recommended trailer factory is {@link DefaultHttpHeadersFactory#trailersFactory()}.
+     */
+    public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status, Buffer payload,
+                                   HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
+        super(version, status, headersFactory);
         this.payload = requireNonNull(payload, "payload");
-        trailingHeaders = HttpHeaders.newHeaders(validateHeaders);
+        trailingHeaders = trailersFactory.newHeaders();
     }
 
+    /**
+     * Create an HTTP response with the given HTTP version, status, contents, headers and trailers.
+     */
     public DefaultFullHttpResponse(HttpVersion version, HttpResponseStatus status,
                                    Buffer payload, HttpHeaders headers, HttpHeaders trailingHeaders) {
         super(version, status, headers);

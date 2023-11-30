@@ -24,6 +24,7 @@ import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpStatusClass;
 import io.netty5.handler.codec.http.HttpUtil;
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
 
@@ -72,16 +73,19 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
     private final Http2Connection.PropertyKey messageKey;
     private final boolean propagateSettings;
     protected final Http2Connection connection;
-    protected final boolean validateHttpHeaders;
+    protected final HttpHeadersFactory headersFactory;
+    protected final HttpHeadersFactory trailersFactory;
 
-    protected InboundHttp2ToHttpAdapter(Http2Connection connection, int maxContentLength,
-                                        boolean validateHttpHeaders, boolean propagateSettings) {
+    protected InboundHttp2ToHttpAdapter(
+            Http2Connection connection, int maxContentLength, boolean propagateSettings,
+            HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
 
         requireNonNull(connection, "connection");
         this.connection = connection;
         this.maxContentLength = checkPositive(maxContentLength, "maxContentLength");
-        this.validateHttpHeaders = validateHttpHeaders;
         this.propagateSettings = propagateSettings;
+        this.headersFactory = headersFactory;
+        this.trailersFactory = trailersFactory;
         sendDetector = DEFAULT_SEND_DETECTOR;
         messageKey = connection.newKey();
     }
@@ -144,20 +148,19 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
      *
      * @param stream The stream to create a message for
      * @param headers The headers associated with {@code stream}
-     * @param validateHttpHeaders
-     * <ul>
-     * <li>{@code true} to validate HTTP headers in the http-codec</li>
-     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
-     * </ul>
+     * @param headersFactory The factory for building the HTTP/1 header objects
+     * @param trailersFactory The factory for building the HTTP/1 trailer objects
      * @param alloc The {@link BufferAllocator} to use to generate the content of the message
      * @throws Http2Exception If there is an error when creating {@link FullHttpMessage} from
      *                        {@link Http2Stream} and {@link Http2Headers}
      */
-    protected FullHttpMessage<?> newMessage(Http2Stream stream, Http2Headers headers, boolean validateHttpHeaders,
-                                            BufferAllocator alloc) throws Http2Exception {
-        return connection.isServer() ? HttpConversionUtil.toFullHttpRequest(stream.id(), headers, alloc,
-                validateHttpHeaders) : HttpConversionUtil.toFullHttpResponse(stream.id(), headers, alloc,
-                validateHttpHeaders);
+    protected FullHttpMessage<?> newMessage(
+            Http2Stream stream, Http2Headers headers, BufferAllocator alloc,
+            HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) throws Http2Exception {
+        if (connection.isServer()) {
+            return HttpConversionUtil.toFullHttpRequest(stream.id(), headers, alloc, headersFactory, trailersFactory);
+        }
+        return HttpConversionUtil.toFullHttpResponse(stream.id(), headers, alloc, headersFactory, trailersFactory);
     }
 
     /**
@@ -191,7 +194,7 @@ public class InboundHttp2ToHttpAdapter extends Http2EventAdapter {
         FullHttpMessage<?> msg = getMessage(stream);
         boolean release = true;
         if (msg == null) {
-            msg = newMessage(stream, headers, validateHttpHeaders, ctx.bufferAllocator());
+            msg = newMessage(stream, headers, ctx.bufferAllocator(), headersFactory, trailersFactory);
         } else if (allowAppend) {
             release = false;
             HttpConversionUtil.addHttp2ToHttpHeaders(stream.id(), headers, msg, appendToTrailer);

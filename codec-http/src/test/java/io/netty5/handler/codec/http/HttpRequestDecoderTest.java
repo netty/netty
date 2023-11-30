@@ -27,8 +27,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Iterator;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.HOST;
-import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
-import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -76,7 +74,7 @@ public class HttpRequestDecoderTest {
     }
 
     void setUpNoValidation() {
-        setUpDecoder(new HttpRequestDecoder(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, false));
+        setUpDecoder(new HttpRequestDecoder(new HttpDecoderConfig().setValidateHeaders(false)));
     }
 
     void setUpDecoder(HttpRequestDecoder decoder) {

@@ -44,6 +44,10 @@ import java.util.function.BiFunction;
  * <p>
  * All header field names are compared in a
  * <a href="https://tools.ietf.org/html/rfc7230#section-3.2">case-insensitive manner</a>.
+ * <p>
+ * Concrete instances of this interface can be obtained from the {@link #newHeaders()} or {@link #emptyHeaders()}
+ * family of methods, or they can be obtained from a {@link HttpHeadersFactory}.
+ * The default header factory instance is obtained from {@link DefaultHttpHeadersFactory#headersFactory()}.
  */
 public interface HttpHeaders extends Iterable<Entry<CharSequence, CharSequence>> {
     /**

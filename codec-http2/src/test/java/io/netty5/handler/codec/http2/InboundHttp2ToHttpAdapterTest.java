@@ -135,7 +135,7 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestSingleHeaderNoDataFrames() throws Exception {
         boostrapEnv(1, 1, 1);
         try (FullHttpRequest request = new DefaultFullHttpRequest(
-                HTTP_1_1, GET, "/some/path/resource2", preferredAllocator().allocate(0), true)) {
+                HTTP_1_1, GET, "/some/path/resource2", preferredAllocator().allocate(0))) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
             httpHeaders.set(HttpHeaderNames.HOST, "example.org");
@@ -160,7 +160,7 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestSingleHeaderCookieSplitIntoMultipleEntries() throws Exception {
         boostrapEnv(1, 1, 1);
         try (FullHttpRequest request = new DefaultFullHttpRequest(
-                HTTP_1_1, GET, "/some/path/resource2", preferredAllocator().allocate(0), true)) {
+                HTTP_1_1, GET, "/some/path/resource2", preferredAllocator().allocate(0))) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
             httpHeaders.set(HttpHeaderNames.HOST, "example.org");
@@ -188,7 +188,7 @@ public class InboundHttp2ToHttpAdapterTest {
     public void clientRequestSingleHeaderCookieSplitIntoMultipleEntries2() throws Exception {
         boostrapEnv(1, 1, 1);
         try (FullHttpRequest request = new DefaultFullHttpRequest(
-                HTTP_1_1, GET, "/some/path/resource2", preferredAllocator().allocate(0), true)) {
+                HTTP_1_1, GET, "/some/path/resource2", preferredAllocator().allocate(0))) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "https");
             httpHeaders.set(HttpHeaderNames.HOST, "example.org");
@@ -236,7 +236,7 @@ public class InboundHttp2ToHttpAdapterTest {
         boostrapEnv(1, 1, 1);
         final String text = "hello world";
         Buffer hello = preferredAllocator().allocate(16).writeCharSequence(text, UTF_8);
-        try (FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/some/path/resource2", hello, true)) {
+        try (FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, GET, "/some/path/resource2", hello)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "3");
             httpHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(text.length()));
@@ -261,7 +261,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final String text = "hello world big time data!";
         try (Buffer content = preferredAllocator().allocate(32).writeCharSequence(text, UTF_8);
              FullHttpRequest request = new DefaultFullHttpRequest(
-                     HTTP_1_1, GET, "/some/path/resource2", content.copy(), true)) {
+                     HTTP_1_1, GET, "/some/path/resource2", content.copy())) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "3");
             httpHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(text.length()));
@@ -290,7 +290,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final String text = "";
         final Buffer content = preferredAllocator().allocate(0);
         try (FullHttpRequest request = new DefaultFullHttpRequest(
-                HTTP_1_1, GET, "/some/path/resource2", content, true)) {
+                HTTP_1_1, GET, "/some/path/resource2", content)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "3");
             httpHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(text.length()));
@@ -316,7 +316,7 @@ public class InboundHttp2ToHttpAdapterTest {
         final String text = "some data";
         Buffer content = preferredAllocator().allocate(16).writeCharSequence(text, UTF_8);
         try (FullHttpRequest request = new DefaultFullHttpRequest(
-                HTTP_1_1, GET, "/some/path/resource2", content, true)) {
+                HTTP_1_1, GET, "/some/path/resource2", content)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "3");
             httpHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(text.length()));
@@ -352,9 +352,9 @@ public class InboundHttp2ToHttpAdapterTest {
         final String text2 = "hello world big time data...number 2!!";
         Buffer content2 = preferredAllocator().allocate(64).writeCharSequence(text2, UTF_8);
         try (FullHttpRequest request = new DefaultFullHttpRequest(
-                HTTP_1_1, HttpMethod.PUT, "/some/path/resource", content, true);
+                HTTP_1_1, HttpMethod.PUT, "/some/path/resource", content);
              FullHttpMessage<?> request2 = new DefaultFullHttpRequest(
-                     HTTP_1_1, HttpMethod.PUT, "/some/path/resource2", content2, true)) {
+                     HTTP_1_1, HttpMethod.PUT, "/some/path/resource2", content2)) {
             HttpHeaders httpHeaders = request.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "3");
             httpHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(text.length()));
@@ -390,11 +390,11 @@ public class InboundHttp2ToHttpAdapterTest {
         final String text2 = "hello world smaller data?";
         Buffer content2 = preferredAllocator().allocate(32).writeCharSequence(text2, UTF_8);
         try (FullHttpMessage<?> response = new DefaultFullHttpResponse(
-                HTTP_1_1, HttpResponseStatus.OK, content, true);
+                HTTP_1_1, HttpResponseStatus.OK, content);
              FullHttpMessage<?> response2 = new DefaultFullHttpResponse(
-                     HTTP_1_1, HttpResponseStatus.CREATED, content2, true);
+                     HTTP_1_1, HttpResponseStatus.CREATED, content2);
              FullHttpMessage<?> request = new DefaultFullHttpRequest(
-                     HTTP_1_1, GET, "/push/test", preferredAllocator().allocate(0), true)) {
+                     HTTP_1_1, GET, "/push/test", preferredAllocator().allocate(0))) {
             HttpHeaders httpHeaders = response.headers();
             httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "3");
             httpHeaders.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(text.length()));
@@ -446,7 +446,7 @@ public class InboundHttp2ToHttpAdapterTest {
     public void serverResponseHeaderInformational() throws Exception {
         boostrapEnv(1, 2, 1, 2, 1);
         final FullHttpRequest request = new DefaultFullHttpRequest(
-                HTTP_1_1, HttpMethod.PUT, "/info/test", preferredAllocator().allocate(0), true);
+                HTTP_1_1, HttpMethod.PUT, "/info/test", preferredAllocator().allocate(0));
         HttpHeaders httpHeaders = request.headers();
         httpHeaders.set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), "3");
         httpHeaders.set(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE);
@@ -570,7 +570,6 @@ public class InboundHttp2ToHttpAdapterTest {
                 serverHandler = new Http2ConnectionHandlerBuilder().frameListener(
                         new InboundHttp2ToHttpAdapterBuilder(connection)
                            .maxContentLength(maxContentLength)
-                           .validateHttpHeaders(true)
                            .propagateSettings(true)
                            .build())
                    .connection(connection)
