@@ -251,13 +251,9 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 try {
                     message = chunks.readChunk(allocator);
                     endOfInput = chunks.isEndOfInput();
+                    // No need to suspend when reached at the end.
+                    suspend = message == null && !endOfInput;
 
-                    if (message == null) {
-                        // No need to suspend when reached at the end.
-                        suspend = !endOfInput;
-                    } else {
-                        suspend = false;
-                    }
                 } catch (final Throwable t) {
                     queue.remove();
 
