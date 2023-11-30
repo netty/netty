@@ -183,9 +183,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 } catch (Exception e) {
                     closeInput(in);
                     currentWrite.fail(e);
-                    if (logger.isWarnEnabled()) {
-                        logger.warn(ChunkedInput.class.getSimpleName() + " failed", e);
-                    }
+                    logger.warn("ChunkedInput failed", e);
                     continue;
                 }
 
@@ -363,9 +361,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
         try {
             chunks.close();
         } catch (Throwable t) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Failed to close a chunked input.", t);
-            }
+            logger.warn("Failed to close a ChunkedInput.", t);
         }
     }
 
