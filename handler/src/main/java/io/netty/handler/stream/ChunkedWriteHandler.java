@@ -72,7 +72,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
-    private Queue<PendingWrite> queue = null;
+    private Queue<PendingWrite> queue;
     private volatile ChannelHandlerContext ctx;
 
     public ChunkedWriteHandler() {
@@ -229,7 +229,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
 
             if (currentWrite.promise.isDone()) {
                 // This might happen e.g. in the case when a write operation
-                // failed, but there're still unconsumed chunks left.
+                // failed, but there are still unconsumed chunks left.
                 // Most chunked input sources would stop generating chunks
                 // and report end of input, but this doesn't work with any
                 // source wrapped in HttpChunkedInput.
@@ -296,7 +296,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                     } else {
                         // Register a listener which will close the input once the write is complete.
                         // This is needed because the Chunk may have some resource bound that can not
-                        // be closed before its not written.
+                        // be closed before it's not written.
                         //
                         // See https://github.com/netty/netty/issues/303
                         f.addListener(new ChannelFutureListener() {
