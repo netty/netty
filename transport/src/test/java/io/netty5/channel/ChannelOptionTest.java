@@ -17,6 +17,8 @@ package io.netty5.channel;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -27,7 +29,7 @@ public class ChannelOptionTest {
 
     @Test
     public void testExists() {
-        String name = "test";
+        String name = "test" + UUID.randomUUID();
         assertFalse(ChannelOption.exists(name));
         ChannelOption<String> option = ChannelOption.valueOf(name);
 
@@ -37,7 +39,7 @@ public class ChannelOptionTest {
 
     @Test
     public void testValueOf() {
-        String name = "test1";
+        String name = "test1" + UUID.randomUUID();
         assertFalse(ChannelOption.exists(name));
         ChannelOption<String> option = ChannelOption.valueOf(name);
         ChannelOption<String> option2 = ChannelOption.valueOf(name);
@@ -47,7 +49,7 @@ public class ChannelOptionTest {
 
     @Test
     public void testCreateOrFail() {
-        String name = "test2";
+        String name = "test2" + UUID.randomUUID();
         assertFalse(ChannelOption.exists(name));
         ChannelOption<String> option = ChannelOption.newInstance(name);
         assertTrue(ChannelOption.exists(name));

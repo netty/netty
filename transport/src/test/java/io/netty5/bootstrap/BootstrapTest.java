@@ -35,6 +35,7 @@ import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -65,9 +66,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BootstrapTest {
 
-    private static final EventLoopGroup groupA = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
-    private static final EventLoopGroup groupB = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
-    private static final ChannelHandler dummyHandler = new DummyHandler();
+    private static EventLoopGroup groupA;
+    private static EventLoopGroup groupB;
+    private static ChannelHandler dummyHandler;
+
+    @BeforeAll
+    public static void setUp() {
+        groupA = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        groupB = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        dummyHandler = new DummyHandler();
+    }
 
     @AfterAll
     public static void destroy() throws Exception {
