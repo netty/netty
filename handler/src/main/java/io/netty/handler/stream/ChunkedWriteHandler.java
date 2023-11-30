@@ -72,7 +72,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     private static final InternalLogger logger =
         InternalLoggerFactory.getInstance(ChunkedWriteHandler.class);
 
-    private final Queue<PendingWrite> queue = new ArrayDeque<PendingWrite>();
+    private Queue<PendingWrite> queue = null;
     private volatile ChannelHandlerContext ctx;
 
     public ChunkedWriteHandler() {
@@ -84,6 +84,16 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     @Deprecated
     public ChunkedWriteHandler(int maxPendingWrites) {
         checkPositive(maxPendingWrites, "maxPendingWrites");
+    }
+
+    private void allocateQueue() {
+        if (queue == null) {
+            queue = new ArrayDeque<PendingWrite>();
+        }
+    }
+
+    private boolean queueIsEmpty() {
+        return queue == null || queue.isEmpty();
     }
 
     @Override
@@ -123,7 +133,12 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        queue.add(new PendingWrite(msg, promise));
+        if (!queueIsEmpty() || msg instanceof ChunkedInput) {
+            allocateQueue();
+            queue.add(new PendingWrite(msg, promise));
+        } else {
+            ctx.write(msg, promise);
+        }
     }
 
     @Override
@@ -147,6 +162,9 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     }
 
     private void discard(Throwable cause) {
+        if (queueIsEmpty()) {
+            return;
+        }
         for (;;) {
             PendingWrite currentWrite = queue.poll();
 
@@ -192,6 +210,11 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
         final Channel channel = ctx.channel();
         if (!channel.isActive()) {
             discard(null);
+            return;
+        }
+
+        if (queueIsEmpty()) {
+            ctx.flush();
             return;
         }
 
