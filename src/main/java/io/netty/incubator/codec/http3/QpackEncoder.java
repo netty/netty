@@ -21,7 +21,7 @@ import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.LongObjectHashMap;
 
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Map;
 
 import static io.netty.incubator.codec.http3.Http3CodecUtils.closeOnFailure;
@@ -495,13 +495,13 @@ final class QpackEncoder {
         return blockedStreams >= maxBlockedStreams - 1;
     }
 
-    private static final class StreamTracker extends ArrayList<Integer> {
+    private static final class StreamTracker extends ArrayDeque<Integer> {
         StreamTracker() {
             super(1); // we will mostly have a single header block in a stream.
         }
 
         int takeNextInsertCount() {
-            return isEmpty() ? -1 : remove(0);
+            return isEmpty() ? -1 : poll();
         }
     }
 }
