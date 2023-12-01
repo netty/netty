@@ -151,9 +151,12 @@ final class QpackEncoder {
         if (tracker.isEmpty()) {
             streamSectionTrackers.remove(streamId);
         }
-        if (dynamicTableIndices != null) {
-            dynamicTableIndices.forEach(dynamicTable::acknowledgeInsertCount);
+
+        if (dynamicTableIndices == null) {
+            throw INVALID_SECTION_ACKNOWLEDGMENT;
         }
+
+        dynamicTableIndices.forEach(dynamicTable::acknowledgeInsertCount);
     }
 
     /**
