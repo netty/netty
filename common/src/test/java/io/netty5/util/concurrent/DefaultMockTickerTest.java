@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -69,42 +69,61 @@ class DefaultMockTickerTest {
     @Timeout(60)
     @Test
     void advanceWithWaiters() throws Exception {
+        final List<Thread> threads = new ArrayList<>();
         final MockTicker ticker = Ticker.newMockTicker();
         final int numWaiters = 4;
-        final List<CompletableFuture<Void>> futures = new ArrayList<>();
+        final List<FutureTask<Void>> futures = new ArrayList<>();
         for (int i = 0; i < numWaiters; i++) {
-            futures.add(CompletableFuture.runAsync(() -> {
+            FutureTask<Void> task = new FutureTask<>(() -> {
                 try {
                     ticker.sleep(1, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException e) {
                     throw new CompletionException(e);
                 }
-            }));
-        }
-
-        // Time did not advance at all, and thus future will not complete.
-        for (int i = 0; i < numWaiters; i++) {
-            final int finalCnt = i;
-            assertThrows(TimeoutException.class, () -> {
-                futures.get(finalCnt).get(10, TimeUnit.MILLISECONDS);
+                return null;
             });
+            Thread thread = new Thread(task);
+            threads.add(thread);
+            futures.add(task);
+            thread.start();
         }
 
-        // Advance just one nanosecond before completion.
-        ticker.advance(999_999, TimeUnit.NANOSECONDS);
+        try {
+            // Time did not advance at all, and thus future will not complete.
+            for (int i = 0; i < numWaiters; i++) {
+                final int finalCnt = i;
+                assertThrows(TimeoutException.class, () -> {
+                    futures.get(finalCnt).get(10, TimeUnit.MILLISECONDS);
+                });
+            }
 
-        // Still needs one more nanosecond.
-        for (int i = 0; i < numWaiters; i++) {
-            final int finalCnt = i;
-            assertThrows(TimeoutException.class, () -> {
-                futures.get(finalCnt).get(10, TimeUnit.MILLISECONDS);
-            });
-        }
+            // Advance just one nanosecond before completion.
+            ticker.advance(999_999, TimeUnit.NANOSECONDS);
 
-        // Reach at the 1 millisecond mark and ensure the future is complete.
-        ticker.advance(1, TimeUnit.NANOSECONDS);
-        for (int i = 0; i < numWaiters; i++) {
-            futures.get(i).get();
+            // Still needs one more nanosecond.
+            for (int i = 0; i < numWaiters; i++) {
+                final int finalCnt = i;
+                assertThrows(TimeoutException.class, () -> {
+                    futures.get(finalCnt).get(10, TimeUnit.MILLISECONDS);
+                });
+            }
+
+            // Reach at the 1 millisecond mark and ensure the future is complete.
+            ticker.advance(1, TimeUnit.NANOSECONDS);
+            for (int i = 0; i < numWaiters; i++) {
+                futures.get(i).get();
+            }
+        } catch (InterruptedException ie) {
+            for (Thread thread : threads) {
+                String name = thread.getName();
+                Thread.State state = thread.getState();
+                StackTraceElement[] stackTrace = thread.getStackTrace();
+                thread.interrupt();
+                InterruptedException threadStackTrace = new InterruptedException(name + ": " + state);
+                threadStackTrace.setStackTrace(stackTrace);
+                ie.addSuppressed(threadStackTrace);
+            }
+            throw ie;
         }
     }
 
