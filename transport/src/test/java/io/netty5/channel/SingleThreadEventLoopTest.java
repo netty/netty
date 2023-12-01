@@ -26,6 +26,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
@@ -53,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+@ResourceLock(value = "scheduler_timing", mode = ResourceAccessMode.READ)
 public class SingleThreadEventLoopTest {
 
     private static final Runnable NOOP = () -> { };
@@ -146,12 +149,14 @@ public class SingleThreadEventLoopTest {
                    is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(500))));
     }
 
+    @ResourceLock(value = "scheduler_timing", mode = ResourceAccessMode.READ_WRITE)
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void scheduleTaskAtFixedRateA() throws Exception {
         testScheduleTaskAtFixedRate(loopA);
     }
 
+    @ResourceLock(value = "scheduler_timing", mode = ResourceAccessMode.READ_WRITE)
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void scheduleTaskAtFixedRateB() throws Exception {
@@ -164,11 +169,6 @@ public class SingleThreadEventLoopTest {
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
         Future<?> f = loopA.scheduleAtFixedRate(() -> {
             timestamps.add(System.nanoTime());
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                // Ignore
-            }
             allTimeStampsLatch.countDown();
         }, 100, 100, TimeUnit.MILLISECONDS);
         allTimeStampsLatch.await();

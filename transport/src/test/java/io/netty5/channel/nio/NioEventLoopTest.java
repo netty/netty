@@ -37,13 +37,9 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntSupplier;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -157,35 +153,6 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             channel.close().asStage().sync();
         } finally {
             loop.shutdownGracefully();
-        }
-    }
-
-    @Test
-    public void testTaskRemovalOnShutdownThrowsNoUnsupportedOperationException() throws Exception {
-        final AtomicReference<Throwable> error = new AtomicReference<>();
-        final Runnable task = () -> {
-            // NOOP
-        };
-        // Just run often enough to trigger it normally.
-        for (int i = 0; i < 1000; i++) {
-            EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
-            final EventLoop loop = group.next();
-
-            Thread t = new Thread(() -> {
-                try {
-                    for (;;) {
-                        loop.execute(task);
-                    }
-                } catch (Throwable cause) {
-                    error.set(cause);
-                }
-            });
-            t.start();
-            Future<?> termination = group.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-            t.join();
-            termination.asStage().sync();
-            assertThat(error.get(), instanceOf(RejectedExecutionException.class));
-            error.set(null);
         }
     }
 

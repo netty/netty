@@ -35,6 +35,7 @@ import io.netty5.util.concurrent.Promise;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -64,10 +65,15 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class DefaultChannelPipelineTest {
 
-    private static final EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+    private static EventLoopGroup group;
 
     private Channel self;
     private Channel peer;
+
+    @BeforeAll
+    public static void beforeClass() {
+        group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+    }
 
     @AfterAll
     public static void afterClass() throws Exception {

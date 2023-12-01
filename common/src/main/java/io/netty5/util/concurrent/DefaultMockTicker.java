@@ -15,10 +15,12 @@
  */
 package io.netty5.util.concurrent;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -29,9 +31,12 @@ import static java.util.Objects.requireNonNull;
  */
 final class DefaultMockTicker implements MockTicker {
 
-    private final Lock lock = new ReentrantLock();
-    private final Condition cond = lock.newCondition();
+    // The lock is fair, so waiters get to process condition signals in the order they (the waiters) queued up.
+    private final ReentrantLock lock = new ReentrantLock(true);
+    private final Condition tickCondition = lock.newCondition();
+    private final Condition sleeperCondition = lock.newCondition();
     private final AtomicLong nanoTime = new AtomicLong();
+    private final Set<Thread> sleepers = Collections.newSetFromMap(new IdentityHashMap<>());
 
     @Override
     public long nanoTime() {
@@ -47,13 +52,30 @@ final class DefaultMockTicker implements MockTicker {
             return;
         }
 
-        final long startTimeNanos = nanoTime();
         final long delayNanos = unit.toNanos(delay);
         lock.lockInterruptibly();
         try {
+            final long startTimeNanos = nanoTime();
+            sleepers.add(Thread.currentThread());
+            sleeperCondition.signalAll();
             do {
-                cond.await();
+                tickCondition.await();
             } while (nanoTime() - startTimeNanos < delayNanos);
+        } finally {
+            sleepers.remove(Thread.currentThread());
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Wait for the given thread to enter the {@link #sleep(long, TimeUnit)} method, and block.
+     */
+    public void awaitSleepingThread(Thread thread) throws InterruptedException {
+        lock.lockInterruptibly();
+        try {
+            while (!sleepers.contains(thread)) {
+                sleeperCondition.await();
+            }
         } finally {
             lock.unlock();
         }
@@ -72,7 +94,7 @@ final class DefaultMockTicker implements MockTicker {
         lock.lock();
         try {
             nanoTime.addAndGet(amountNanos);
-            cond.signalAll();
+            tickCondition.signalAll();
         } finally {
             lock.unlock();
         }
