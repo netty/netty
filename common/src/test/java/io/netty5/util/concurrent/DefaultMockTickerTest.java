@@ -67,7 +67,7 @@ class DefaultMockTickerTest {
 
     @Test
     void advanceWithWaiters() throws Exception {
-        final MockTicker ticker = Ticker.newMockTicker();
+        final DefaultMockTicker ticker = new DefaultMockTicker();
         final int numWaiters = 4;
         final List<CompletableFuture<Void>> futures = new ArrayList<>();
         for (int i = 0; i < numWaiters; i++) {
@@ -88,6 +88,13 @@ class DefaultMockTickerTest {
             });
         }
 
+        // We must wait for all waters to have registered before we can advance the
+        // time. Give them 10 seconds.
+        for (int i = 0; i < 1000 && ticker.getWaiters() < 4; i++) {
+            Thread.sleep(10);
+        }
+        assertEquals(numWaiters, ticker.getWaiters());
+
         // Advance just one nanosecond before completion.
         ticker.advance(999_999, TimeUnit.NANOSECONDS);
 
@@ -102,7 +109,7 @@ class DefaultMockTickerTest {
         // Reach at the 1 millisecond mark and ensure the future is complete.
         ticker.advance(1, TimeUnit.NANOSECONDS);
         for (int i = 0; i < numWaiters; i++) {
-            futures.get(i).get();
+            futures.get(i).get(1, TimeUnit.SECONDS);
         }
     }
 

@@ -33,6 +33,9 @@ final class DefaultMockTicker implements MockTicker {
     private final Condition cond = lock.newCondition();
     private final AtomicLong nanoTime = new AtomicLong();
 
+    // protected by `lock`.
+    private int waiters;
+
     @Override
     public long nanoTime() {
         return nanoTime.get();
@@ -51,10 +54,12 @@ final class DefaultMockTicker implements MockTicker {
         final long delayNanos = unit.toNanos(delay);
         lock.lockInterruptibly();
         try {
+            waiters++;
             do {
                 cond.await();
             } while (nanoTime() - startTimeNanos < delayNanos);
         } finally {
+            waiters--;
             lock.unlock();
         }
     }
@@ -73,6 +78,16 @@ final class DefaultMockTicker implements MockTicker {
         try {
             nanoTime.addAndGet(amountNanos);
             cond.signalAll();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    // exposed for testing.
+    int getWaiters() {
+        lock.lock();
+        try {
+            return waiters;
         } finally {
             lock.unlock();
         }
