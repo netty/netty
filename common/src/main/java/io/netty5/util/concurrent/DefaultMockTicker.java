@@ -47,10 +47,10 @@ final class DefaultMockTicker implements MockTicker {
             return;
         }
 
-        final long startTimeNanos = nanoTime();
         final long delayNanos = unit.toNanos(delay);
         lock.lockInterruptibly();
         try {
+            final long startTimeNanos = nanoTime();
             do {
                 cond.await();
             } while (nanoTime() - startTimeNanos < delayNanos);

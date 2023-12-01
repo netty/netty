@@ -16,6 +16,7 @@
 package io.netty5.util.concurrent;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,6 +66,7 @@ class DefaultMockTickerTest {
         });
     }
 
+    @Timeout(60)
     @Test
     void advanceWithWaiters() throws Exception {
         final MockTicker ticker = Ticker.newMockTicker();
@@ -84,7 +86,7 @@ class DefaultMockTickerTest {
         for (int i = 0; i < numWaiters; i++) {
             final int finalCnt = i;
             assertThrows(TimeoutException.class, () -> {
-                futures.get(finalCnt).get(1, TimeUnit.SECONDS);
+                futures.get(finalCnt).get(10, TimeUnit.MILLISECONDS);
             });
         }
 
@@ -95,7 +97,7 @@ class DefaultMockTickerTest {
         for (int i = 0; i < numWaiters; i++) {
             final int finalCnt = i;
             assertThrows(TimeoutException.class, () -> {
-                futures.get(finalCnt).get(1, TimeUnit.SECONDS);
+                futures.get(finalCnt).get(10, TimeUnit.MILLISECONDS);
             });
         }
 
