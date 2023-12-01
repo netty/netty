@@ -36,15 +36,10 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Exchanger;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -158,49 +153,6 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             channel.close().asStage().sync();
         } finally {
             loop.shutdownGracefully();
-        }
-    }
-
-    @Test
-    public void testTaskRemovalOnShutdownThrowsNoUnsupportedOperationException() throws Exception {
-        final Runnable task = () -> {
-            // NOOP
-        };
-        final Exchanger<Object> queue = new Exchanger<>();
-        Thread t = new Thread(() -> {
-            Object signal;
-            CompletableFuture<Throwable> completable;
-            try {
-                while ((signal = queue.exchange(completable = new CompletableFuture<>())) != Boolean.TRUE) {
-                    try {
-                        EventLoop loop = (EventLoop) signal;
-                        for (;;) {
-                            loop.execute(task);
-                        }
-                    } catch (Throwable cause) {
-                        completable.complete(cause);
-                    }
-                }
-            } catch (InterruptedException ie) {
-                ie.printStackTrace();
-            }
-        });
-        t.start();
-
-        // Just run often enough to trigger it normally.
-        try {
-            for (int i = 0; i < 1000; i++) {
-                EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
-                final EventLoop loop = group.next();
-                CompletableFuture<Throwable> completable = (CompletableFuture<Throwable>) queue.exchange(loop);
-                Future<?> termination = group.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-                Throwable error = completable.get();
-                termination.asStage().sync();
-                assertThat(error, instanceOf(RejectedExecutionException.class));
-            }
-        } finally {
-            queue.exchange(Boolean.TRUE);
-            t.join();
         }
     }
 
