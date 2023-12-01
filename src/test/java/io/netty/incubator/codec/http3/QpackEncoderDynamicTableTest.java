@@ -161,7 +161,7 @@ public class QpackEncoderDynamicTableTest {
 
         final int idx = addAndValidateHeader(table, fooBarHeader);
         table.addReferenceToEntry(fooBarHeader.name, fooBarHeader.value, idx);
-        table.acknowledgeInsertCount(idx);
+        table.acknowledgeInsertCountOnAck(idx);
 
         assertThat("Unexpected known received count.", table.encodedKnownReceivedCount(), is(2));
     }
@@ -176,10 +176,10 @@ public class QpackEncoderDynamicTableTest {
         final int idx2 = addAndValidateHeader(table, fooBarHeader);
         table.addReferenceToEntry(fooBarHeader.name, fooBarHeader.value, idx2);
 
-        table.acknowledgeInsertCount(idx2);
+        table.acknowledgeInsertCountOnAck(idx2);
         assertThat("Unexpected known received count.", table.encodedKnownReceivedCount(), is(3));
 
-        table.acknowledgeInsertCount(idx1);
+        table.acknowledgeInsertCountOnAck(idx1);
         assertThat("Unexpected known received count.", table.encodedKnownReceivedCount(), is(3)); // already acked
     }
 
@@ -192,12 +192,12 @@ public class QpackEncoderDynamicTableTest {
         table.addReferenceToEntry(fooBar3Header.name, fooBar3Header.value, idx1);
         table.addReferenceToEntry(fooBar3Header.name, fooBar3Header.value, idx1);
 
-        table.acknowledgeInsertCount(idx1);
+        table.acknowledgeInsertCountOnAck(idx1);
 
         // first entry still active
         assertThat("Header added", addHeader(table, fooBar2Header), lessThan(0));
 
-        table.acknowledgeInsertCount(idx1);
+        table.acknowledgeInsertCountOnAck(idx1);
         verifyTableEmpty(table);
         addAndValidateHeader(table, fooBarHeader);
     }
@@ -229,7 +229,7 @@ public class QpackEncoderDynamicTableTest {
     private int addValidateAndAckHeader(QpackEncoderDynamicTable table, QpackHeaderField header) throws Exception {
         final int addedIdx = addAndValidateHeader(table, header);
         table.addReferenceToEntry(header.name, header.value, addedIdx);
-        table.acknowledgeInsertCount(addedIdx);
+        table.acknowledgeInsertCountOnAck(addedIdx);
         return addedIdx;
     }
 

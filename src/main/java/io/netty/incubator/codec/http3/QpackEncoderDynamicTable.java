@@ -166,7 +166,23 @@ final class QpackEncoderDynamicTable {
      * @param entryIndex For the entry corresponding to the {@link #insertCount()}.
      * @throws QpackException If the count is invalid.
      */
-    void acknowledgeInsertCount(int entryIndex) throws QpackException {
+    void acknowledgeInsertCountOnAck(int entryIndex) throws QpackException {
+        acknowledgeInsertCount(entryIndex, true);
+    }
+
+    /**
+     * Callback when a header block which had a {@link #insertCount()}} greater than {@code 0} is still not processed
+     * and the stream is <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-stream-cancellation">cancelled</a>
+     * by the decoder.
+     *
+     * @param entryIndex For the entry corresponding to the {@link #insertCount()}.
+     * @throws QpackException If the count is invalid.
+     */
+    void acknowledgeInsertCountOnCancellation(int entryIndex) throws QpackException {
+        acknowledgeInsertCount(entryIndex, false);
+    }
+
+    private void acknowledgeInsertCount(int entryIndex, boolean updateKnownReceived) throws QpackException {
         if (entryIndex < 0) {
             throw INVALID_REQUIRED_INSERT_COUNT_INCREMENT;
         }
@@ -174,7 +190,7 @@ final class QpackEncoderDynamicTable {
             if (e.index == entryIndex) {
                 assert e.refCount > 0;
                 e.refCount--;
-                if (e.index > knownReceived.index) {
+                if (updateKnownReceived && e.index > knownReceived.index) {
                     // https://www.rfc-editor.org/rfc/rfc9204.html#name-known-received-count
                     // If the Required Insert Count of the acknowledged field section is greater than the current Known
                     // Received Count, Known Received Count is updated to that Required Insert Count value.

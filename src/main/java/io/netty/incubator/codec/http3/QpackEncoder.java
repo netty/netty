@@ -156,7 +156,7 @@ final class QpackEncoder {
             throw INVALID_SECTION_ACKNOWLEDGMENT;
         }
 
-        dynamicTableIndices.forEach(dynamicTable::acknowledgeInsertCount);
+        dynamicTableIndices.forEach(dynamicTable::acknowledgeInsertCountOnAck);
     }
 
     /**
@@ -179,7 +179,7 @@ final class QpackEncoder {
                 if (dynamicTableIndices == null) {
                     break;
                 }
-                dynamicTableIndices.forEach(dynamicTable::acknowledgeInsertCount);
+                dynamicTableIndices.forEach(dynamicTable::acknowledgeInsertCountOnCancellation);
             }
         }
     }
