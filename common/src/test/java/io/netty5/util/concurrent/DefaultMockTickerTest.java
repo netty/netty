@@ -70,7 +70,7 @@ class DefaultMockTickerTest {
     @Test
     void advanceWithWaiters() throws Exception {
         final List<Thread> threads = new ArrayList<>();
-        final MockTicker ticker = Ticker.newMockTicker();
+        final DefaultMockTicker ticker = (DefaultMockTicker) Ticker.newMockTicker();
         final int numWaiters = 4;
         final List<FutureTask<Void>> futures = new ArrayList<>();
         for (int i = 0; i < numWaiters; i++) {
@@ -89,22 +89,32 @@ class DefaultMockTickerTest {
         }
 
         try {
+            // Wait for all threads to be sleeping.
+            for (Thread thread : threads) {
+                ticker.awaitSleepingThread(thread);
+            }
+
             // Time did not advance at all, and thus future will not complete.
             for (int i = 0; i < numWaiters; i++) {
                 final int finalCnt = i;
                 assertThrows(TimeoutException.class, () -> {
-                    futures.get(finalCnt).get(10, TimeUnit.MILLISECONDS);
+                    futures.get(finalCnt).get(1, TimeUnit.MILLISECONDS);
                 });
             }
 
             // Advance just one nanosecond before completion.
             ticker.advance(999_999, TimeUnit.NANOSECONDS);
 
-            // Still needs one more nanosecond.
+            // All threads should still be sleeping.
+            for (Thread thread : threads) {
+                ticker.awaitSleepingThread(thread);
+            }
+
+            // Still needs one more nanosecond for our futures.
             for (int i = 0; i < numWaiters; i++) {
                 final int finalCnt = i;
                 assertThrows(TimeoutException.class, () -> {
-                    futures.get(finalCnt).get(10, TimeUnit.MILLISECONDS);
+                    futures.get(finalCnt).get(1, TimeUnit.MILLISECONDS);
                 });
             }
 
