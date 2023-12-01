@@ -241,6 +241,18 @@ public class QpackDecoderHandlerTest {
     }
 
     @Test
+    public void streamCancelDynamicTableWithMaxCapacity0() throws Exception {
+        setup(0);
+        encodeHeaders(headers -> headers.add(fooBar.name, fooBar.value));
+        verifyRequiredInsertCount(0);
+        verifyKnownReceivedCount(0);
+        // Send a stream cancellation for a dynamic table of capacity 0.
+        // See https://www.rfc-editor.org/rfc/rfc9204.html#section-2.2.2.2
+        sendStreamCancellation(decoderStream.streamId());
+        finishStreams(false);
+    }
+
+    @Test
     public void invalidIncrement() throws Exception {
         setup(128);
         Http3Exception e = assertThrows(Http3Exception.class, () -> sendInsertCountIncrement(2));
@@ -325,8 +337,12 @@ public class QpackDecoderHandlerTest {
     }
 
     private void finishStreams() {
+        finishStreams(true);
+    }
+
+    private void finishStreams(boolean encoderPendingMessage) {
         assertThat("Unexpected decoder stream message", decoderStream.finishAndReleaseAll(), is(false));
-        assertThat("Unexpected encoder stream message", encoderStream.finishAndReleaseAll(), is(true));
+        assertThat("Unexpected encoder stream message", encoderStream.finishAndReleaseAll(), is(encoderPendingMessage));
         assertThat("Unexpected parent stream message", parent.finishAndReleaseAll(), is(false));
     }
 

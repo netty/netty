@@ -163,7 +163,12 @@ final class QpackEncoder {
      * @param streamId which is cancelled.
      */
     void streamCancellation(long streamId) throws QpackException {
-        assert streamSectionTrackers != null;
+        // If a configureDynamicTable(...) was called with a maxTableCapacity of 0 we will have not instanced
+        // streamSectionTrackers. The remote peer might still send a stream cancellation for a stream, while it
+        // is optional. See https://www.rfc-editor.org/rfc/rfc9204.html#section-2.2.2.2
+        if (streamSectionTrackers == null) {
+            return;
+        }
         final Queue<Indices> tracker = streamSectionTrackers.remove(streamId);
         if (tracker != null) {
             for (;;) {
