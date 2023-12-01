@@ -166,8 +166,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile boolean timedOut;
     private volatile String traceId;
     private volatile QuicheQuicConnection connection;
-    private volatile QuicConnectionAddress remoteIdAddr;
-    private volatile QuicConnectionAddress localIdAdrr;
 
     private static final AtomicLongFieldUpdater<QuicheQuicChannel> UNI_STREAMS_LEFT_UPDATER =
             AtomicLongFieldUpdater.newUpdater(QuicheQuicChannel.class, "uniStreamsLeft");
@@ -534,12 +532,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     @Override
     protected SocketAddress localAddress0() {
-        return localIdAdrr;
+        QuicheQuicConnection connection = this.connection;
+        return connection == null ? null : connection.sourceId();
     }
 
     @Override
     protected SocketAddress remoteAddress0() {
-        return remoteIdAddr;
+        QuicheQuicConnection connection = this.connection;
+        return connection == null ? null : connection.destinationId();
     }
 
     @Override
@@ -912,9 +912,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             // is the reason why we might need to call connectionSendAndFlush().
             int left = Quiche.quiche_conn_scids_left(connAddr);
             if (left > 0) {
+                QuicConnectionAddress sourceAddr = connection.sourceId();
+                if (sourceAddr == null) {
+                    return Collections.emptyList();
+                }
                 List<ByteBuffer> generatedIds = new ArrayList<>(left);
                 boolean sendAndFlush = false;
-                ByteBuffer key = localIdAdrr.connId.duplicate();
+                ByteBuffer key = sourceAddr.connId.duplicate();
                 ByteBuf connIdBuffer = alloc().directBuffer(key.remaining());
 
                 byte[] resetTokenArray = new byte[Quic.RESET_TOKEN_LEN];
@@ -1767,7 +1771,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 if (state == OPEN && Quiche.quiche_conn_is_established(connAddr)) {
                     // We didn't notify before about channelActive... Update state and fire the event.
                     state = ACTIVE;
-                    initAddresses(connection);
 
                     pipeline().fireChannelActive();
                     notifyAboutHandshakeCompletionIfNeeded(null);
@@ -1777,7 +1780,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 ChannelPromise promise = connectPromise;
                 connectPromise = null;
                 state = ACTIVE;
-                initAddresses(connection);
 
                 boolean promiseSet = promise.trySuccess();
                 pipeline().fireChannelActive();
@@ -1790,11 +1792,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
             }
             return false;
-        }
-
-        private void initAddresses(QuicheQuicConnection connection) {
-            localIdAdrr = connection.sourceId();
-            remoteIdAddr = connection.destinationId();
         }
 
         private void fireDatagramExtensionEvent() {
