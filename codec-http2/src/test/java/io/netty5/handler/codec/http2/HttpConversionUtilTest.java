@@ -19,6 +19,7 @@ import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpVersion;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HeaderValidationException;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
@@ -52,7 +53,7 @@ public class HttpConversionUtilTest {
         Http2Headers headers = Http2Headers.newHeaders();
         headers.authority(authority);
         headers.method(HttpMethod.CONNECT.asciiName());
-        HttpRequest request = HttpConversionUtil.toHttpRequest(0, headers, true);
+        HttpRequest request = HttpConversionUtil.toHttpRequest(0, headers, DefaultHttpHeadersFactory.headersFactory());
         assertNotNull(request);
         assertEquals(authority, request.uri());
         assertEquals(of(authority), request.headers().get(HOST));
@@ -182,13 +183,12 @@ public class HttpConversionUtilTest {
 
     @Test
     public void handlesRequest() throws Exception {
-        boolean validateHeaders = true;
         HttpRequest msg = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/path/to/something", validateHeaders);
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/path/to/something");
         HttpHeaders inHeaders = msg.headers();
         inHeaders.add(CONNECTION, "foo,  bar");
         inHeaders.add("hello", "world");
-        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true, true, true);
         assertEquals(new AsciiString("/path/to/something"), out.path());
         assertEquals(new AsciiString("http"), out.scheme());
         assertEquals(new AsciiString("example.com"), out.authority());
@@ -198,15 +198,14 @@ public class HttpConversionUtilTest {
 
     @Test
     public void handlesRequestWithDoubleSlashPath() throws Exception {
-        boolean validateHeaders = true;
         HttpRequest msg = new DefaultHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.GET, "//path/to/something", validateHeaders);
+                HttpVersion.HTTP_1_1, HttpMethod.GET, "//path/to/something");
         HttpHeaders inHeaders = msg.headers();
         inHeaders.add(CONNECTION, "foo,  bar");
         inHeaders.add(HOST, "example.com");
         inHeaders.add(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), "http");
         inHeaders.add("hello", "world");
-        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, validateHeaders);
+        Http2Headers out = HttpConversionUtil.toHttp2Headers(msg, true, true, true);
         assertEquals(new AsciiString("//path/to/something"), out.path());
         assertEquals(new AsciiString("http"), out.scheme());
         assertEquals(new AsciiString("example.com"), out.authority());

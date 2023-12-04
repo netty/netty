@@ -14,6 +14,7 @@
  */
 package io.netty5.handler.codec.http2;
 
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 import io.netty5.util.internal.UnstableApi;
 
 /**
@@ -39,8 +40,13 @@ public final class InboundHttp2ToHttpAdapterBuilder
     }
 
     @Override
-    public InboundHttp2ToHttpAdapterBuilder validateHttpHeaders(boolean validate) {
-        return super.validateHttpHeaders(validate);
+    protected InboundHttp2ToHttpAdapterBuilder headersFactory(HttpHeadersFactory headersFactory) {
+        return super.headersFactory(headersFactory);
+    }
+
+    @Override
+    protected InboundHttp2ToHttpAdapterBuilder trailersFactory(HttpHeadersFactory trailersFactory) {
+        return super.trailersFactory(trailersFactory);
     }
 
     @Override
@@ -54,12 +60,10 @@ public final class InboundHttp2ToHttpAdapterBuilder
     }
 
     @Override
-    protected InboundHttp2ToHttpAdapter build(Http2Connection connection,
-                                              int maxContentLength,
-                                              boolean validateHttpHeaders,
-                                              boolean propagateSettings) throws Exception {
-
-        return new InboundHttp2ToHttpAdapter(connection, maxContentLength,
-                                             validateHttpHeaders, propagateSettings);
+    protected InboundHttp2ToHttpAdapter build(
+            Http2Connection connection, int maxContentLength, boolean propagateSettings,
+            HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) throws Exception {
+        return new InboundHttp2ToHttpAdapter(
+                connection, maxContentLength, propagateSettings, headersFactory, trailersFactory);
     }
 }

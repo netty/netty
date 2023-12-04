@@ -114,7 +114,8 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                 }
 
                 // Convert and write the headers.
-                Http2Headers http2Headers = HttpConversionUtil.toHttp2Headers(httpMsg, validateHeaders);
+                Http2Headers http2Headers = HttpConversionUtil.toHttp2Headers(
+                        httpMsg, validateHeaders, validateHeaders, validateHeaders);
                 endStream = msg instanceof FullHttpMessage && ((FullHttpMessage<?>) msg).payload().readableBytes() == 0;
                 writeHeaders(ctx, encoder, currentStreamId, httpMsg.headers(), http2Headers,
                         endStream).cascadeTo(promiseAggregator.newPromise());
@@ -130,7 +131,8 @@ public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
                     // Convert any trailing headers.
                     final LastHttpContent<?> lastContent = (LastHttpContent<?>) msg;
                     trailers = lastContent.trailingHeaders();
-                    http2Trailers = HttpConversionUtil.toHttp2Headers(trailers, validateHeaders);
+                    http2Trailers = HttpConversionUtil.toHttp2Headers(trailers,
+                            validateHeaders, validateHeaders, validateHeaders);
                 }
 
                 // Write the data

@@ -29,7 +29,9 @@ import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpRequestEncoder;
 import io.netty5.handler.codec.http.HttpVersion;
 import io.netty5.handler.codec.http.LastHttpContent;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
@@ -81,7 +83,9 @@ public class HttpObjectEncoderBenchmark extends AbstractMicrobenchmark {
         contentLengthRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/index",
                 headersWithContentLength);
         chunkedRequest = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/index", headersWithChunked);
-        lastContent = new DefaultLastHttpContent(testContent, false);
+        HttpHeadersFactory trailerFactory = DefaultHttpHeadersFactory.trailersFactory()
+                .withNameValidation(false).withValueValidation(false).withCookieValidation(false);
+        lastContent = new DefaultLastHttpContent(testContent, trailerFactory);
 
         encoder = new HttpRequestEncoder();
         context = new EmbeddedChannelWriteReleaseHandlerContext(allocator, encoder) {

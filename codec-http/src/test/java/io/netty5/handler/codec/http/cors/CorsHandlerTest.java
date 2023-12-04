@@ -597,7 +597,7 @@ public class CorsHandlerTest {
         @Override
         public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
             ctx.writeAndFlush(new DefaultFullHttpResponse(
-                    HTTP_1_1, OK, preferredAllocator().allocate(0), true));
+                    HTTP_1_1, OK, preferredAllocator().allocate(0)));
         }
     }
 

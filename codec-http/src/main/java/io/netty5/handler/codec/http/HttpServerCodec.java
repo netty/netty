@@ -30,6 +30,18 @@ import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL
  * A combination of {@link HttpRequestDecoder} and {@link HttpResponseEncoder}
  * which enables easier server side HTTP implementation.
  *
+ * <h3>Header Validation</h3>
+ *
+ * It is recommended to always enable header validation.
+ * <p>
+ * Without header validation, your system can become vulnerable to
+ * <a href="https://cwe.mitre.org/data/definitions/113.html">
+ *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+ * </a>.
+ * <p>
+ * This recommendation stands even when both peers in the HTTP exchange are trusted,
+ * as it helps with defence-in-depth.
+ *
  * @see HttpClientCodec
  */
 public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequestDecoder, HttpResponseEncoder>
@@ -39,9 +51,10 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     private final Queue<HttpMethod> queue = new ArrayDeque<>();
 
     /**
-     * Creates a new instance with the default decoder options
-     * ({@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}, and
-     * {@code maxChunkSize (8192)}).
+     * Creates a new instance with the default
+     * {@code maxInitialLineLength} ({@value HttpObjectDecoder#DEFAULT_MAX_INITIAL_LINE_LENGTH}),
+     * {@code maxHeaderSize} ({@value HttpObjectDecoder#DEFAULT_MAX_HEADER_SIZE}),
+     * and {@code chunkedSupported} ({@value HttpObjectDecoder#DEFAULT_CHUNKED_SUPPORTED}).
      */
     public HttpServerCodec() {
         this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE);
@@ -56,32 +69,11 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
     }
 
     /**
-     * Creates a new instance with the specified decoder options.
+     * Creates a new instance with the specified decoder configuration.
      */
-    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, boolean validateHeaders) {
-        init(new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize, validateHeaders),
+    public HttpServerCodec(HttpDecoderConfig config) {
+        init(new HttpServerRequestDecoder(config),
                 new HttpServerResponseEncoder());
-    }
-
-    /**
-     * Creates a new instance with the specified decoder options.
-     */
-    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, boolean validateHeaders,
-                           int initialBufferSize) {
-        init(
-          new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize,
-                  validateHeaders, initialBufferSize),
-          new HttpServerResponseEncoder());
-    }
-
-    /**
-     * Creates a new instance with the specified decoder options.
-     */
-    public HttpServerCodec(int maxInitialLineLength, int maxHeaderSize, boolean validateHeaders,
-                           int initialBufferSize, boolean allowDuplicateContentLengths) {
-        init(new HttpServerRequestDecoder(maxInitialLineLength, maxHeaderSize, validateHeaders,
-                                          initialBufferSize, allowDuplicateContentLengths),
-             new HttpServerResponseEncoder());
     }
 
     /**
@@ -101,25 +93,13 @@ public final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequ
             super(maxInitialLineLength, maxHeaderSize);
         }
 
-        HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize,
-                                        boolean validateHeaders) {
-            super(maxInitialLineLength, maxHeaderSize, validateHeaders);
-        }
-
-        HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize,
-                                        boolean validateHeaders, int initialBufferSize) {
-            super(maxInitialLineLength, maxHeaderSize, validateHeaders, initialBufferSize);
+        HttpServerRequestDecoder(HttpDecoderConfig config) {
+            super(config);
         }
 
         @Override
         protected void decode(final ChannelHandlerContext ctx, Buffer buffer) throws Exception {
             super.decode(context, buffer);
-        }
-
-        HttpServerRequestDecoder(int maxInitialLineLength, int maxHeaderSize,
-                                 boolean validateHeaders, int initialBufferSize, boolean allowDuplicateContentLengths) {
-            super(maxInitialLineLength, maxHeaderSize, validateHeaders, initialBufferSize,
-                  allowDuplicateContentLengths);
         }
 
         @Override

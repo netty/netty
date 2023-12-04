@@ -231,7 +231,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testUpgradeDataEnd() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", UTF_8);
-        LastHttpContent<?> end = new DefaultLastHttpContent(hello, true);
+        LastHttpContent<?> end = new DefaultLastHttpContent(hello);
         assertTrue(ch.writeOutbound(end));
 
         try (Http2DataFrame dataFrame = ch.readOutbound()) {
@@ -247,7 +247,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        LastHttpContent<?> trailers = new DefaultLastHttpContent(preferredAllocator().allocate(0), true);
+        LastHttpContent<?> trailers = new DefaultLastHttpContent(preferredAllocator().allocate(0));
         HttpHeaders headers = trailers.trailingHeaders();
         headers.set("key", "value");
         assertTrue(ch.writeOutbound(trailers));
@@ -265,7 +265,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testUpgradeDataEndWithTrailers() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", UTF_8);
-        LastHttpContent<?> trailers = new DefaultLastHttpContent(hello, true);
+        LastHttpContent<?> trailers = new DefaultLastHttpContent(hello);
         HttpHeaders headers = trailers.trailingHeaders();
         headers.set("key", "value");
         assertTrue(ch.writeOutbound(trailers));
@@ -605,7 +605,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testEncodeDataEndAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", UTF_8);
-        LastHttpContent<?> end = new DefaultLastHttpContent(hello, true);
+        LastHttpContent<?> end = new DefaultLastHttpContent(hello);
         assertTrue(ch.writeOutbound(end));
 
         try (Http2DataFrame dataFrame = ch.readOutbound()) {
@@ -621,7 +621,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testEncodeTrailersAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         LastHttpContent<?> trailers = new DefaultLastHttpContent(
-                preferredAllocator().allocate(0), true);
+                preferredAllocator().allocate(0));
         HttpHeaders headers = trailers.trailingHeaders();
         headers.set("key", "value");
         assertTrue(ch.writeOutbound(trailers));
@@ -638,7 +638,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testEncodeDataEndWithTrailersAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Buffer hello = preferredAllocator().allocate(16).writeCharSequence("hello world", UTF_8);
-        LastHttpContent<?> trailers = new DefaultLastHttpContent(hello, true);
+        LastHttpContent<?> trailers = new DefaultLastHttpContent(hello);
         HttpHeaders headers = trailers.trailingHeaders();
         headers.set("key", "value");
         assertTrue(ch.writeOutbound(trailers));
@@ -742,7 +742,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertFalse(ch.finish());
     }
 
-    @ParameterizedTest()
+    @ParameterizedTest
     @ValueSource(strings = {"204", "304"})
     public void testDecodeResponseHeadersContentAlwaysEmpty(String statusCode) {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
@@ -772,7 +772,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         testDecodeFullResponseHeaders(true);
     }
 
-    private void testDecodeFullResponseHeaders(boolean withStreamId) {
+    private static void testDecodeFullResponseHeaders(boolean withStreamId) {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Http2Headers headers = Http2Headers.newHeaders();
         headers.scheme(HttpScheme.HTTP.name());

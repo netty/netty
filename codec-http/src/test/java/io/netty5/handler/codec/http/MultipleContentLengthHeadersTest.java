@@ -23,10 +23,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_INITIAL_BUFFER_SIZE;
-import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
-import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
-import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_VALIDATE_HEADERS;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -51,11 +47,7 @@ public class MultipleContentLengthHeadersTest {
 
     private static EmbeddedChannel newChannel(boolean allowDuplicateContentLengths) {
         HttpRequestDecoder decoder = new HttpRequestDecoder(
-                DEFAULT_MAX_INITIAL_LINE_LENGTH,
-                DEFAULT_MAX_HEADER_SIZE,
-                DEFAULT_VALIDATE_HEADERS,
-                DEFAULT_INITIAL_BUFFER_SIZE,
-                allowDuplicateContentLengths);
+                new HttpDecoderConfig().setAllowDuplicateContentLengths(allowDuplicateContentLengths));
         return new EmbeddedChannel(decoder);
     }
 

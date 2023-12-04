@@ -15,6 +15,8 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.handler.codec.TooLongFrameException;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 import io.netty5.util.internal.UnstableApi;
 
 import static java.util.Objects.requireNonNull;
@@ -28,7 +30,8 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
 
     private final Http2Connection connection;
     private int maxContentLength;
-    private boolean validateHttpHeaders;
+    private HttpHeadersFactory headersFactory;
+    private HttpHeadersFactory trailersFactory;
     private boolean propagateSettings;
 
     /**
@@ -39,6 +42,8 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
      */
     protected AbstractInboundHttp2ToHttpAdapterBuilder(Http2Connection connection) {
         this.connection = requireNonNull(connection, "connection");
+        headersFactory = DefaultHttpHeadersFactory.headersFactory();
+        trailersFactory = DefaultHttpHeadersFactory.trailersFactory();
     }
 
     @SuppressWarnings("unchecked")
@@ -73,24 +78,34 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
     }
 
     /**
-     * Return {@code true} if HTTP header validation should be performed.
+     * Return the {@link HttpHeadersFactory} used to create HTTP/1 header objects
      */
-    protected boolean isValidateHttpHeaders() {
-        return validateHttpHeaders;
+    protected HttpHeadersFactory headersFactory() {
+        return headersFactory;
     }
 
     /**
-     * Specifies whether validation of HTTP headers should be performed.
-     *
-     * @param validate
-     * <ul>
-     * <li>{@code true} to validate HTTP headers in the http-codec</li>
-     * <li>{@code false} not to validate HTTP headers in the http-codec</li>
-     * </ul>
-     * @return {@link AbstractInboundHttp2ToHttpAdapterBuilder} the builder for the {@link InboundHttp2ToHttpAdapter}
+     * Return the {@link HttpHeadersFactory} used to create HTTP/1 header objects
      */
-    protected B validateHttpHeaders(boolean validate) {
-        validateHttpHeaders = validate;
+    protected HttpHeadersFactory trailersFactory() {
+        return trailersFactory;
+    }
+
+    /**
+     * Specify the {@link HttpHeadersFactory} used when creating header objects.
+     * @param headersFactory The header factory.
+     */
+    protected B headersFactory(HttpHeadersFactory headersFactory) {
+        this.headersFactory = requireNonNull(headersFactory, "headersFactory");
+        return self();
+    }
+
+    /**
+     * Specify the {@link  HttpHeadersFactory} used when creating trailers.
+     * @param trailersFactory The header factory.
+     */
+    protected B trailersFactory(HttpHeadersFactory trailersFactory) {
+        this.trailersFactory = requireNonNull(trailersFactory, "trailersFactory");
         return self();
     }
 
@@ -119,8 +134,8 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
     protected T build() {
         final T instance;
         try {
-            instance = build(connection(), maxContentLength(),
-                                     isValidateHttpHeaders(), isPropagateSettings());
+            instance = build(connection(), maxContentLength(), isPropagateSettings(),
+                    headersFactory(), trailersFactory());
         } catch (Throwable t) {
             throw new IllegalStateException("failed to create a new InboundHttp2ToHttpAdapter", t);
         }
@@ -131,6 +146,6 @@ public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
     /**
      * Creates a new {@link InboundHttp2ToHttpAdapter} with the specified properties.
      */
-    protected abstract T build(Http2Connection connection, int maxContentLength,
-                               boolean validateHttpHeaders, boolean propagateSettings) throws Exception;
+    protected abstract T build(Http2Connection connection, int maxContentLength, boolean propagateSettings,
+                               HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) throws Exception;
 }

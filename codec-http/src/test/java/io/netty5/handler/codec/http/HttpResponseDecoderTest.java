@@ -33,8 +33,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
-import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
-import static io.netty5.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -56,7 +54,7 @@ public class HttpResponseDecoderTest {
     }
 
     private void setUpNoValidation() {
-        setUpDecoder(new HttpResponseDecoder(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, false));
+        setUpDecoder(new HttpResponseDecoder(new HttpDecoderConfig().setValidateHeaders(false)));
     }
 
     private void setUpDecoder(HttpResponseDecoder decoder) {

@@ -24,14 +24,13 @@ import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.PrematureChannelClosureException;
 import io.netty5.handler.codec.TooLongFrameException;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 import io.netty5.util.AsciiString;
 import io.netty5.util.ByteProcessor;
 import io.netty5.util.internal.AppendableCharSequence;
 
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static io.netty5.util.internal.ObjectUtil.checkPositive;
 
 /**
  * Decodes {@link Buffer}s into {@link HttpMessage}s and
@@ -113,6 +112,18 @@ import static io.netty5.util.internal.ObjectUtil.checkPositive;
  * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  * To implement the decoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
+ *
+ * <h3>Header Validation</h3>
+ *
+ * It is recommended to always enable header validation.
+ * <p>
+ * Without header validation, your system can become vulnerable to
+ * <a href="https://cwe.mitre.org/data/definitions/113.html">
+ *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+ * </a>.
+ * <p>
+ * This recommendation stands even when both peers in the HTTP exchange are trusted,
+ * as it helps with defence-in-depth.
  */
 public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
@@ -125,7 +136,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private static final String EMPTY_VALUE = "";
 
     private final boolean chunkedSupported;
-    protected final boolean validateHeaders;
+    protected final HttpHeadersFactory headersFactory;
+    protected final HttpHeadersFactory trailersFactory;
     private final boolean allowDuplicateContentLengths;
     private final HeaderParser headerParser;
     private final LineParser lineParser;
@@ -163,52 +175,25 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     /**
      * Creates a new instance with the default
-     * {@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}, and
-     * {@code maxChunkSize (8192)}.
+     * {@code maxInitialLineLength} ({@value DEFAULT_MAX_INITIAL_LINE_LENGTH}),
+     * {@code maxHeaderSize} ({@value DEFAULT_MAX_HEADER_SIZE}),
+     * and {@code chunkedSupported} ({@value DEFAULT_CHUNKED_SUPPORTED}).
      */
     protected HttpObjectDecoder() {
-        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_CHUNKED_SUPPORTED);
+        this(new HttpDecoderConfig());
     }
 
     /**
-     * Creates a new instance with the specified parameters.
+     * Creates a new instance with the specified configuration.
      */
-    protected HttpObjectDecoder(
-            int maxInitialLineLength, int maxHeaderSize, boolean chunkedSupported) {
-        this(maxInitialLineLength, maxHeaderSize, chunkedSupported, DEFAULT_VALIDATE_HEADERS);
-    }
-
-    /**
-     * Creates a new instance with the specified parameters.
-     */
-    protected HttpObjectDecoder(
-            int maxInitialLineLength, int maxHeaderSize,
-            boolean chunkedSupported, boolean validateHeaders) {
-        this(maxInitialLineLength, maxHeaderSize, chunkedSupported, validateHeaders, DEFAULT_INITIAL_BUFFER_SIZE);
-    }
-
-    /**
-     * Creates a new instance with the specified parameters.
-     */
-    protected HttpObjectDecoder(
-            int maxInitialLineLength, int maxHeaderSize,
-            boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
-        this(maxInitialLineLength, maxHeaderSize, chunkedSupported, validateHeaders, initialBufferSize,
-             DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS);
-    }
-
-    protected HttpObjectDecoder(
-            int maxInitialLineLength, int maxHeaderSize,
-            boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
-            boolean allowDuplicateContentLengths) {
-        checkPositive(maxInitialLineLength, "maxInitialLineLength");
-        checkPositive(maxHeaderSize, "maxHeaderSize");
-        AppendableCharSequence seq = new AppendableCharSequence(initialBufferSize);
-        lineParser = new LineParser(seq, maxInitialLineLength);
-        headerParser = new HeaderParser(seq, maxHeaderSize);
-        this.chunkedSupported = chunkedSupported;
-        this.validateHeaders = validateHeaders;
-        this.allowDuplicateContentLengths = allowDuplicateContentLengths;
+    protected HttpObjectDecoder(HttpDecoderConfig config) {
+        headersFactory = config.getHeadersFactory();
+        trailersFactory = config.getTrailersFactory();
+        AppendableCharSequence seq = new AppendableCharSequence(config.getInitialBufferSize());
+        lineParser = new LineParser(seq, config.getMaxInitialLineLength());
+        headerParser = new HeaderParser(seq, config.getMaxHeaderSize());
+        chunkedSupported = config.isChunkedSupported();
+        allowDuplicateContentLengths = config.isAllowDuplicateContentLengths();
     }
 
     @Override
@@ -323,7 +308,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
             if (chunkSize == 0) {
                 // Read all content.
-                ctx.fireChannelRead(new DefaultLastHttpContent(content, validateHeaders));
+                ctx.fireChannelRead(new DefaultLastHttpContent(content, trailersFactory));
                 resetNow();
             } else {
                 ctx.fireChannelRead(new DefaultHttpContent(content));
@@ -691,7 +676,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         CharSequence lastHeader = null;
         if (trailer == null) {
-            trailer = this.trailer = new DefaultLastHttpContent(allocator.allocate(0), validateHeaders);
+            trailer = this.trailer = new DefaultLastHttpContent(allocator.allocate(0), trailersFactory);
         }
         while (line.length() > 0) {
             char firstChar = line.charAtUnsafe(0);

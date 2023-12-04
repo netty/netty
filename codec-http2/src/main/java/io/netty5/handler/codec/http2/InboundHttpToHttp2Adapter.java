@@ -68,7 +68,7 @@ public class InboundHttpToHttp2Adapter implements ChannelHandler {
             stream = connection.remote().createStream(streamId, false);
         }
         message.headers().set(HttpConversionUtil.ExtensionHeaderNames.SCHEME.text(), HttpScheme.HTTP.name());
-        Http2Headers messageHeaders = HttpConversionUtil.toHttp2Headers(message, true);
+        Http2Headers messageHeaders = HttpConversionUtil.toHttp2Headers(message, true, true, true);
         boolean hasContent = message.payload().readableBytes() > 0;
         boolean hasTrailers = !message.trailingHeaders().isEmpty();
         listener.onHeadersRead(
@@ -78,7 +78,7 @@ public class InboundHttpToHttp2Adapter implements ChannelHandler {
             listener.onDataRead(ctx, streamId, payload, 0, !hasTrailers);
         }
         if (hasTrailers) {
-            Http2Headers headers = HttpConversionUtil.toHttp2Headers(message.trailingHeaders(), true);
+            Http2Headers headers = HttpConversionUtil.toHttp2Headers(message.trailingHeaders(), true, true, true);
             listener.onHeadersRead(ctx, streamId, headers, 0, true);
         }
         stream.closeRemoteSide();

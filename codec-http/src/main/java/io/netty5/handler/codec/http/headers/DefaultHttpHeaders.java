@@ -69,6 +69,15 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
 
     /**
      * Create a new instance.
+     * <p>
+     * <b>Warning!</b> Setting any of the validation parameters to {@code false} will mean that Netty won't
+     * validate & protect against user-supplied headers that are malicious.
+     * This can leave your server implementation vulnerable to
+     * <a href="https://cwe.mitre.org/data/definitions/113.html">
+     *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+     * </a>.
+     * When disabling this validation, it is the responsibility of the caller to ensure that the values supplied
+     * do not contain a non-url-escaped carriage return (CR) and/or line feed (LF) characters.
      *
      * @param arraySizeHint A hint as to how large the hash data structure should be.
      *                      The next positive power of two will be used. An upper bound may be enforced.
@@ -606,6 +615,22 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * <b>Warning!</b> It is strongly recommended that the name validator implement validation that is at least as
+     * strict as {@link HttpHeaderValidationUtil#validateToken(CharSequence)}.
+     * <p>
+     * Without these validations in place, your code can be susceptible to
+     * <a href="https://cwe.mitre.org/data/definitions/113.html">
+     *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+     * </a>.
+     *
+     * @param name The key which will be inserted.
+     * @param forAdd {@code true} if this validation is for adding to the headers, or {@code false} if this is for
+     * setting (overwriting) the given header.
+     * @return The validated header name.
+     */
     @Override
     protected CharSequence validateKey(@Nullable final CharSequence name, boolean forAdd) {
         if (name == null || name.length() == 0) {
@@ -617,6 +642,21 @@ public class DefaultHttpHeaders extends MultiMap<CharSequence, CharSequence> imp
         return name;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * <b>Warning!</b> It is strongly recommended that the name validator implement validation that is at least as
+     * strict as {@link HttpHeaderValidationUtil#validateValidHeaderValue(CharSequence)}.
+     * <p>
+     * Without these validations in place, your code can be susceptible to
+     * <a href="https://cwe.mitre.org/data/definitions/113.html">
+     *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+     * </a>.
+     *
+     * @param key The key for which the value is being inserted, for reference.
+     * @param value The value which will be inserted.
+     * @return The validated value.
+     */
     @Override
     protected CharSequence validateValue(CharSequence key, final CharSequence value) {
         if (validateValues) {

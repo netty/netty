@@ -20,6 +20,7 @@ import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
 import io.netty5.handler.codec.http.DefaultHttpRequest;
 import io.netty5.handler.codec.http.DefaultHttpResponse;
+import io.netty5.handler.codec.http.HttpDecoderConfig;
 import io.netty5.handler.codec.http.HttpMessage;
 import io.netty5.handler.codec.http.HttpObjectDecoder;
 import io.netty5.handler.codec.http.HttpResponseStatus;
@@ -27,7 +28,7 @@ import io.netty5.handler.codec.http.HttpResponseStatus;
 import java.util.regex.Pattern;
 
 /**
- * Decodes {@link io.netty5.buffer.ByteBuf}s into RTSP messages represented in
+ * Decodes {@link io.netty5.buffer.Buffer}s into RTSP messages represented in
  * {@link HttpMessage}s.
  * <p>
  * <h3>Parameters that prevents excessive memory consumption</h3>
@@ -73,48 +74,31 @@ public class RtspDecoder extends HttpObjectDecoder {
     private static final Pattern versionPattern = Pattern.compile("RTSP/\\d\\.\\d");
 
     /**
-     * Constant for default max content length.
-     */
-    public static final int DEFAULT_MAX_CONTENT_LENGTH = 8192;
-
-    /**
      * Creates a new instance with the default
-     * {@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}, and
-     * {@code maxContentLength (8192)}.
+     * {@code maxInitialLineLength} ({@value DEFAULT_MAX_INITIAL_LINE_LENGTH}),
+     * {@code maxHeaderSize} ({@value DEFAULT_MAX_HEADER_SIZE}),
+     * and {@code chunkedSupported} ({@value DEFAULT_CHUNKED_SUPPORTED}).
      */
     public RtspDecoder() {
-        this(DEFAULT_MAX_INITIAL_LINE_LENGTH,
-             DEFAULT_MAX_HEADER_SIZE,
-             DEFAULT_MAX_CONTENT_LENGTH);
+        this(new HttpDecoderConfig());
     }
 
     /**
      * Creates a new instance with the specified parameters.
      * @param maxInitialLineLength The max allowed length of initial line
      * @param maxHeaderSize The max allowed size of header
-     * @param maxContentLength The max allowed content length
      */
     public RtspDecoder(final int maxInitialLineLength,
-                       final int maxHeaderSize,
-                       final int maxContentLength) {
-        super(maxInitialLineLength, maxHeaderSize, false);
+                       final int maxHeaderSize) {
+        this(new HttpDecoderConfig().setMaxInitialLineLength(maxInitialLineLength).setMaxHeaderSize(maxHeaderSize));
     }
 
     /**
-     * Creates a new instance with the specified parameters.
-     * @param maxInitialLineLength The max allowed length of initial line
-     * @param maxHeaderSize The max allowed size of header
-     * @param maxContentLength The max allowed content length
-     * @param validateHeaders Set to true if headers should be validated
+     * Creates a new instance with the specified configuration.
+     * @param config The decoder configuration.
      */
-    public RtspDecoder(final int maxInitialLineLength,
-                       final int maxHeaderSize,
-                       final int maxContentLength,
-                       final boolean validateHeaders) {
-        super(maxInitialLineLength,
-              maxHeaderSize,
-              false,
-              validateHeaders);
+    public RtspDecoder(HttpDecoderConfig config) {
+        super(config);
     }
 
     @Override
@@ -127,13 +111,13 @@ public class RtspDecoder extends HttpObjectDecoder {
             return new DefaultHttpResponse(RtspVersions.valueOf(initialLine[0]),
                 new HttpResponseStatus(Integer.parseInt(initialLine[1]),
                                        initialLine[2]),
-                validateHeaders);
+                headersFactory);
         } else {
             isDecodingRequest = true;
             return new DefaultHttpRequest(RtspVersions.valueOf(initialLine[2]),
                     RtspMethods.valueOf(initialLine[0]),
                     initialLine[1],
-                    validateHeaders);
+                    headersFactory);
         }
     }
 
@@ -148,10 +132,10 @@ public class RtspDecoder extends HttpObjectDecoder {
     protected HttpMessage createInvalidMessage(ChannelHandlerContext ctx) {
         if (isDecodingRequest) {
             return new DefaultFullHttpRequest(RtspVersions.RTSP_1_0, RtspMethods.OPTIONS, "/bad-request",
-                    ctx.bufferAllocator().allocate(0), validateHeaders);
+                    ctx.bufferAllocator().allocate(0), headersFactory, trailersFactory);
         } else {
             return new DefaultFullHttpResponse(RtspVersions.RTSP_1_0, UNKNOWN_STATUS,
-                    ctx.bufferAllocator().allocate(0), validateHeaders);
+                    ctx.bufferAllocator().allocate(0), headersFactory, trailersFactory);
         }
     }
 

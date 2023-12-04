@@ -24,6 +24,7 @@ import io.netty5.handler.codec.http.HttpHeaderValues;
 import io.netty5.handler.codec.http.HttpRequest;
 import io.netty5.handler.codec.http.HttpResponse;
 import io.netty5.handler.codec.http.HttpUtil;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;
@@ -99,7 +100,9 @@ public class CorsHandler implements ChannelHandler {
 
     private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) throws Exception {
         final HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), OK,
-                ctx.bufferAllocator().allocate(0), true);
+                ctx.bufferAllocator().allocate(0),
+                DefaultHttpHeadersFactory.headersFactory(),
+                DefaultHttpHeadersFactory.trailersFactory());
         if (setOrigin(response)) {
             setAllowMethods(response);
             setAllowHeaders(response);

@@ -71,7 +71,7 @@ public class HttpClientCodecTest {
 
     @Test
     public void testConnectWithResponseContent() {
-        HttpClientCodec codec = new HttpClientCodec(4096, 8192, true);
+        HttpClientCodec codec = new HttpClientCodec(new HttpDecoderConfig(), true);
         EmbeddedChannel ch = new EmbeddedChannel(codec);
 
         sendRequestAndReadResponse(ch, HttpMethod.CONNECT, RESPONSE);
@@ -80,7 +80,7 @@ public class HttpClientCodecTest {
 
     @Test
     public void testFailsNotOnRequestResponseChunked() {
-        HttpClientCodec codec = new HttpClientCodec(4096, 8192, true);
+        HttpClientCodec codec = new HttpClientCodec(new HttpDecoderConfig(), true);
         EmbeddedChannel ch = new EmbeddedChannel(codec);
 
         sendRequestAndReadResponse(ch, HttpMethod.GET, CHUNKED_RESPONSE);
@@ -89,7 +89,7 @@ public class HttpClientCodecTest {
 
     @Test
     public void testFailsOnMissingResponse() {
-        HttpClientCodec codec = new HttpClientCodec(4096, 8192, true);
+        HttpClientCodec codec = new HttpClientCodec(new HttpDecoderConfig(), true);
         EmbeddedChannel ch = new EmbeddedChannel(codec);
 
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET,
@@ -107,7 +107,7 @@ public class HttpClientCodecTest {
 
     @Test
     public void testFailsOnIncompleteChunkedResponse() {
-        HttpClientCodec codec = new HttpClientCodec(4096, 8192, true);
+        HttpClientCodec codec = new HttpClientCodec(new HttpDecoderConfig(), true);
         EmbeddedChannel ch = new EmbeddedChannel(codec);
 
         ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/",
@@ -139,7 +139,7 @@ public class HttpClientCodecTest {
                 @Override
                 protected void initChannel(Channel ch) {
                     // Don't use the HttpServerCodec, because we don't want to have content-length or anything added.
-                    ch.pipeline().addLast(new HttpRequestDecoder(4096, 8192, true));
+                    ch.pipeline().addLast(new HttpRequestDecoder());
                     ch.pipeline().addLast(new HttpObjectAggregator<DefaultHttpContent>(4096));
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<FullHttpRequest>() {
                         @Override
@@ -177,7 +177,7 @@ public class HttpClientCodecTest {
             cb.handler(new ChannelInitializer<>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new HttpClientCodec(4096, 8192, true, true));
+                    ch.pipeline().addLast(new HttpClientCodec(new HttpDecoderConfig(), true));
                     ch.pipeline().addLast(new HttpObjectAggregator<DefaultHttpContent>(4096));
                     ch.pipeline().addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
                         @Override
@@ -215,7 +215,7 @@ public class HttpClientCodecTest {
     }
 
     private static void testAfterConnect(final boolean parseAfterConnect) {
-        EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec(4096, 8192, true, true, parseAfterConnect));
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpClientCodec(new HttpDecoderConfig(), true, parseAfterConnect));
 
         Consumer connectResponseConsumer = new Consumer();
         sendRequestAndReadResponse(ch, HttpMethod.CONNECT, EMPTY_RESPONSE, connectResponseConsumer);
@@ -288,7 +288,7 @@ public class HttpClientCodecTest {
                 "Connection: Upgrade\r\n" +
                 "Upgrade: TLS/1.2, HTTP/1.1\r\n\r\n";
 
-        HttpClientCodec codec = new HttpClientCodec(4096, 8192, true);
+        HttpClientCodec codec = new HttpClientCodec(new HttpDecoderConfig(), true);
         EmbeddedChannel ch = new EmbeddedChannel(codec, new HttpObjectAggregator<DefaultHttpContent>(1024));
 
         HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/",
@@ -403,7 +403,7 @@ public class HttpClientCodecTest {
         String response = "HTTP/1.1 200 OK\r\n" +
                 "Content-Length: 0\r\n\r\n";
 
-        HttpClientCodec codec = new HttpClientCodec(4096, 8192, true);
+        HttpClientCodec codec = new HttpClientCodec(new HttpDecoderConfig(), true);
         EmbeddedChannel ch = new EmbeddedChannel(codec, new HttpObjectAggregator<DefaultHttpContent>(1024));
 
         HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://localhost/",

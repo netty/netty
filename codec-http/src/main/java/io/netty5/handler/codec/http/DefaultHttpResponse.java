@@ -15,7 +15,9 @@
  */
 package io.netty5.handler.codec.http;
 
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 
 import static java.util.Objects.requireNonNull;
 
@@ -33,7 +35,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param status  the status of this response
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
-        this(version, status, true);
+        this(version, status, DefaultHttpHeadersFactory.headersFactory());
     }
 
     /**
@@ -41,10 +43,11 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      *
      * @param version           the HTTP version of this response
      * @param status            the status of this response
-     * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
+     * @param factory the factory used to create the {@link HttpHeaders}.
+     * The recommended default is {@link DefaultHttpHeadersFactory#headersFactory()}.
      */
-    public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders) {
-        super(version, validateHeaders);
+    public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, HttpHeadersFactory factory) {
+        super(version, factory);
         this.status = requireNonNull(status, "status");
     }
 

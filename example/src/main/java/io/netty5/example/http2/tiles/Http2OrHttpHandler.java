@@ -56,7 +56,7 @@ public class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
     private static void configureHttp2(ChannelHandlerContext ctx) {
         DefaultHttp2Connection connection = new DefaultHttp2Connection(true);
         InboundHttp2ToHttpAdapter listener = new InboundHttp2ToHttpAdapterBuilder(connection)
-                .propagateSettings(true).validateHttpHeaders(false)
+                .propagateSettings(true)
                 .maxContentLength(MAX_CONTENT_LENGTH).build();
 
         ctx.pipeline().addLast(new HttpToHttp2ConnectionHandlerBuilder()

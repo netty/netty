@@ -198,7 +198,7 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                             if (index != -1) {
                                 throw new HeaderValidationException(
                                         "a cookie name can only contain \"token\" characters, " +
-                                        "but found invalid character 0x" + Integer.toHexString(c) +
+                                        "but found invalid character 0x" + toHexString(c) +
                                         " at index " + index + " of header '" + name + "'.");
                             }
                         }

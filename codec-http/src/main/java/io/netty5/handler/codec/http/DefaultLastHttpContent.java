@@ -16,11 +16,11 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.Buffer;
-import io.netty5.handler.codec.http.headers.DefaultHttpHeaders;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Map.Entry;
 
@@ -33,14 +33,27 @@ public class DefaultLastHttpContent extends DefaultHttpObject implements LastHtt
     private final HttpHeaders trailingHeaders;
     private final Buffer payload;
 
+    /**
+     * Create a new last HTTP content message with the given contents.
+     */
     public DefaultLastHttpContent(Buffer payload) {
-        this(payload, true);
+        this(payload, DefaultHttpHeadersFactory.headersFactory());
     }
 
-    public DefaultLastHttpContent(Buffer payload, boolean validateHeaders) {
-        this(payload, new TrailingHttpHeaders(validateHeaders));
+    /**
+     * Create a new last HTTP content message with the given contents, and trailing headers from the given factory.
+     * <p>
+     * The recommended default factory is {@link DefaultHttpHeadersFactory#trailersFactory()}.
+     */
+    public DefaultLastHttpContent(Buffer payload, HttpHeadersFactory factory) {
+        this(payload, factory.newHeaders());
     }
 
+    /**
+     * Create a new last HTTP content message with the given contents, and trailing headers.
+     * <p>
+     * It is recommended to get the trailing headers instance from {@link DefaultHttpHeadersFactory#trailersFactory()}.
+     */
     public DefaultLastHttpContent(Buffer payload, HttpHeaders trailingHeaders) {
         this.payload = requireNonNull(payload, "payload");
         this.trailingHeaders = requireNonNull(trailingHeaders, "trailingHeaders");
@@ -101,21 +114,5 @@ public class DefaultLastHttpContent extends DefaultHttpObject implements LastHtt
     @Override
     public Buffer payload() {
         return payload;
-    }
-
-    private static final class TrailingHttpHeaders extends DefaultHttpHeaders {
-        TrailingHttpHeaders(boolean validate) {
-            super(16, validate, validate, validate);
-        }
-
-        @Override
-        protected CharSequence validateKey(@Nullable CharSequence name, boolean forAdd) {
-            if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
-                || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
-                || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
-                throw new IllegalArgumentException("Prohibited trailing header: " + name);
-            }
-            return super.validateKey(name, forAdd);
-        }
     }
 }
