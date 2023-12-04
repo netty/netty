@@ -21,11 +21,15 @@ import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.testsuite.transport.AbstractSingleThreadEventLoopTest;
+import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IOUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
@@ -60,6 +64,23 @@ public class IOUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    @RepeatedTest(100)
+    public void shutdownNotSoGracefully() throws Exception {
+        EventLoopGroup group =  new MultithreadEventLoopGroup(1, newIoHandlerFactory());
+        CountDownLatch latch = new CountDownLatch(1);
+        group.submit(() -> latch.countDown());
+        latch.await(5, TimeUnit.SECONDS);
+        assertTrue(group.shutdownGracefully(0L, 0L, TimeUnit.NANOSECONDS).asStage()
+                .await(1500L, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    public void shutsDownGracefully() throws Exception {
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, newIoHandlerFactory());
+        assertTrue(group.shutdownGracefully(1L, 1L, TimeUnit.MILLISECONDS)
+                .asStage().await(1500L, TimeUnit.MILLISECONDS));
     }
 
     @Test

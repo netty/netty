@@ -51,6 +51,7 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
     private final long eventfdReadBuf;
     private long eventfdReadSubmitted;
 
+    private boolean eventFdClosing;
     private volatile boolean shuttingDown;
     private boolean closeCompleted;
 
@@ -149,8 +150,8 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
 
     private void handleEventFdRead() {
         eventfdReadSubmitted = 0;
-        eventfdAsyncNotify.set(false);
-        if (!shuttingDown) {
+        if (!eventFdClosing) {
+            eventfdAsyncNotify.set(false);
             submitEventFdRead();
         }
     }
@@ -190,10 +191,7 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
     public void destroy() {
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
-        if (eventfdReadSubmitted != 0) {
-            submissionQueue.addCancel(eventfd.intValue(), eventfdReadSubmitted);
-            eventfdReadSubmitted = 0;
-        }
+        drainEventFd();
         if (submissionQueue.remaining() < 2) {
             // We need to submit 2 linked operations. Since they are linked, we cannot allow a submit-call to
             // separate them. We don't have enough room (< 2) in the queue, so we submit now to make more room.
@@ -207,12 +205,60 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
         submissionQueue.addLinkTimeout(ringBuffer.fd(), TimeUnit.MILLISECONDS.toNanos(200), (short) 0);
         submissionQueue.submitAndWait();
         completionQueue.process(this);
-        if (!closeCompleted) {
-            completeRingClose();
+        completeRingClose();
+    }
+
+    // We need to prevent the race condition where a wakeup event is submitted to a file descriptor that has
+    // already been freed (and potentially reallocated by the OS). Because submitted events is gated on the
+    // `eventfdAsyncNotify` flag we can close the gate but may need to read any outstanding events that have
+    // (or will) be written.
+    private void drainEventFd() {
+        CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+        SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        assert !eventFdClosing;
+        eventFdClosing = true;
+        boolean eventPending = eventfdAsyncNotify.getAndSet(true);
+        if (eventPending) {
+            // There is an event that has been or will be written by another thread, so we must wait for the event.
+            // Make sure we're actually listening for writes to the event fd.
+            while (eventfdReadSubmitted == 0) {
+                submitEventFdRead();
+                submissionQueue.submit();
+            }
+            // Drain the eventfd of the pending wakup.
+            class DrainFdEventCallback implements CompletionCallback {
+                boolean eventFdDrained;
+
+                @Override
+                public void handle(int fd, int res, int flags, long udata) {
+                    if (fd == eventfd.intValue()) {
+                        eventFdDrained = true;
+                    }
+                    IOUringHandler.this.handle(fd, res, flags, udata);
+                }
+            }
+            final DrainFdEventCallback handler = new DrainFdEventCallback();
+            completionQueue.process(handler);
+            while (!handler.eventFdDrained) {
+                submissionQueue.submitAndWait();
+                completionQueue.process(handler);
+            }
+        }
+        // We've consumed any pending eventfd read and `eventfdAsyncNotify` should never
+        // transition back to false, thus we should never have any more events written.
+        // So, if we have a read event pending, we can cancel it.
+        if (eventfdReadSubmitted != 0) {
+            submissionQueue.addCancel(eventfd.intValue(), eventfdReadSubmitted);
+            eventfdReadSubmitted = 0;
+            submissionQueue.submit();
         }
     }
 
     private void completeRingClose() {
+        if (closeCompleted) {
+            // already done.
+            return;
+        }
         closeCompleted = true;
         ringBuffer.close();
         try {
