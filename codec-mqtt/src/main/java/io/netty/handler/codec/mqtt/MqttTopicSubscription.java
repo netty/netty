@@ -37,7 +37,15 @@ public final class MqttTopicSubscription {
         this.option = option;
     }
 
+    /**
+     * @deprecated use topicFilter
+     */
+    @Deprecated
     public String topicName() {
+        return topicFilter;
+    }
+
+    public String topicFilter() {
         return topicFilter;
     }
 
