@@ -416,7 +416,9 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                                 "Multiple content-length headers received");
                     }
                 }
-            } else if (validateHeaders && !headers.isEmpty()) {
+                // Use size() instead of isEmpty() for backward compatibility with grpc-java prior to 1.59.1,
+                // see https://github.com/grpc/grpc-java/issues/10665
+            } else if (validateHeaders && headers.size() > 0) {
                 // Need to check trailers don't contain pseudo headers. According to RFC 9113
                 // Trailers MUST NOT include pseudo-header fields (Section 8.3).
                 for (Iterator<Entry<CharSequence, CharSequence>> iterator =
