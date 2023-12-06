@@ -562,7 +562,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                     requestedRemoteAddress = remoteAddress;
 
                     // Schedule connect timeout.
-                    int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                    final int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(new Runnable() {
                             @Override
@@ -570,7 +570,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                                 ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
                                 if (connectPromise != null && !connectPromise.isDone()
                                         && connectPromise.tryFailure(new ConnectTimeoutException(
-                                        "connection timed out: " + remoteAddress))) {
+                                                "connection timed out after " + connectTimeoutMillis + " ms: " +
+                                                        remoteAddress))) {
                                     close(voidPromise());
                                 }
                             }
