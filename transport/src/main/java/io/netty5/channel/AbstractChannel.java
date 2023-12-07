@@ -1407,7 +1407,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                         Promise<Void> connectPromise = this.connectPromise;
                         if (connectPromise != null && !connectPromise.isDone()
                                 && connectPromise.tryFailure(new ConnectTimeoutException(
-                                "connection timed out: " + remoteAddress))) {
+                                "connection timed out after " + connectTimeoutMillis + " ms: " +
+                                        remoteAddress))) {
                             closeTransport(newPromise());
                         }
                     }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
