@@ -184,6 +184,13 @@
     </dependency>
     <dependency>
       <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-linux-riscv64</artifactId>
+      <version>${brotli4j.version}</version>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
       <artifactId>native-linux-armv7</artifactId>
       <version>${brotli4j.version}</version>
       <scope>runtime</scope>

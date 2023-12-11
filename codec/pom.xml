@@ -105,6 +105,11 @@
     </dependency>
     <dependency>
       <groupId>com.aayushatharva.brotli4j</groupId>
+      <artifactId>native-linux-riscv64</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.aayushatharva.brotli4j</groupId>
       <artifactId>native-osx-x86_64</artifactId>
       <optional>true</optional>
     </dependency>
