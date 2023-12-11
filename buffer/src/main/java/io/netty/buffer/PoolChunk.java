@@ -39,7 +39,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * return a (long) handle that encodes this offset information, (this memory segment is then
  * marked as reserved so it is always used by exactly one ByteBuf and no more)
  *
- * For simplicity all sizes are normalized according to {@link PoolArena#size2SizeIdx(int)} method.
+ * For simplicity all sizes are normalized according to {@link PoolArena#sizeClass#size2SizeIdx(int)} method.
  * This ensures that when we request for memory segments of size > pageSize the normalizedCapacity
  * equals the next nearest size in {@link SizeClasses}.
  *
@@ -240,7 +240,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     private void insertAvailRun(int runOffset, int pages, long handle) {
-        int pageIdxFloor = arena.pages2pageIdxFloor(pages);
+        int pageIdxFloor = arena.sizeClass.pages2pageIdxFloor(pages);
         IntPriorityQueue queue = runsAvail[pageIdxFloor];
         assert isRun(handle);
         queue.offer((int) (handle >> BITMAP_IDX_BIT_LENGTH));
@@ -259,7 +259,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     private void removeAvailRun(long handle) {
-        int pageIdxFloor = arena.pages2pageIdxFloor(runPages(handle));
+        int pageIdxFloor = arena.sizeClass.pages2pageIdxFloor(runPages(handle));
         runsAvail[pageIdxFloor].remove((int) (handle >> BITMAP_IDX_BIT_LENGTH));
         removeAvailRun0(handle);
     }
@@ -313,7 +313,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolThreadCache cache) {
         final long handle;
-        if (sizeIdx <= arena.smallMaxSizeIdx) {
+        if (sizeIdx <= arena.sizeClass.smallMaxSizeIdx) {
             final PoolSubpage<T> nextSub;
             // small
             // Obtain the head of the PoolSubPage pool that is owned by the PoolArena and synchronize on it.
@@ -323,8 +323,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
             try {
                 nextSub = head.next;
                 if (nextSub != head) {
-                    assert nextSub.doNotDestroy && nextSub.elemSize == arena.sizeIdx2size(sizeIdx) : "doNotDestroy=" +
-                            nextSub.doNotDestroy + ", elemSize=" + nextSub.elemSize + ", sizeIdx=" + sizeIdx;
+                    assert nextSub.doNotDestroy && nextSub.elemSize == arena.sizeClass.sizeIdx2size(sizeIdx) :
+                            "doNotDestroy=" + nextSub.doNotDestroy + ", elemSize=" + nextSub.elemSize + ", sizeIdx=" +
+                                    sizeIdx;
                     handle = nextSub.allocate();
                     assert handle >= 0;
                     assert isSubpage(handle);
@@ -342,7 +343,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         } else {
             // normal
             // runSize must be multiple of pageSize
-            int runSize = arena.sizeIdx2size(sizeIdx);
+            int runSize = arena.sizeClass.sizeIdx2size(sizeIdx);
             handle = allocateRun(runSize);
             if (handle < 0) {
                 return false;
@@ -357,7 +358,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     private long allocateRun(int runSize) {
         int pages = runSize >> pageShifts;
-        int pageIdx = arena.pages2pageIdx(pages);
+        int pageIdx = arena.sizeClass.pages2pageIdx(pages);
 
         runsAvailLock.lock();
         try {
@@ -391,7 +392,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         int runSize = 0;
         int nElements;
 
-        final int elemSize = arena.sizeIdx2size(sizeIdx);
+        final int elemSize = arena.sizeClass.sizeIdx2size(sizeIdx);
 
         //find lowest common multiple of pageSize and elemSize
         do {
@@ -413,9 +414,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     private int runFirstBestFit(int pageIdx) {
         if (freeBytes == chunkSize) {
-            return arena.nPSizes - 1;
+            return arena.sizeClass.nPSizes - 1;
         }
-        for (int i = pageIdx; i < arena.nPSizes; i++) {
+        for (int i = pageIdx; i < arena.sizeClass.nPSizes; i++) {
             IntPriorityQueue queue = runsAvail[i];
             if (queue != null && !queue.isEmpty()) {
                 return i;
@@ -469,7 +470,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
         int runOffset = runOffset(runHandle);
         assert subpages[runOffset] == null;
-        int elemSize = arena.sizeIdx2size(sizeIdx);
+        int elemSize = arena.sizeClass.sizeIdx2size(sizeIdx);
 
         PoolSubpage<T> subpage = new PoolSubpage<T>(head, this, pageShifts, runOffset,
                 runSize(pageShifts, runHandle), elemSize);
