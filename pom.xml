@@ -74,7 +74,7 @@
     <javaModuleName />
     <skipTests>false</skipTests>
     <packaging.type>jar</packaging.type>
-    <netty.version>4.1.101.Final</netty.version>
+    <netty.version>4.1.103.Final</netty.version>
     <netty.build.version>31</netty.build.version>
     <netty.jni-util.version>0.0.9.Final</netty.jni-util.version>
     <junit.version>5.9.0</junit.version>
