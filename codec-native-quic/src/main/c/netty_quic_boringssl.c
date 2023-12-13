@@ -19,6 +19,8 @@
 #include <string.h>
 #include <errno.h>
 #include <openssl/ssl.h>
+#include <openssl/rand.h>
+#include <openssl/hmac.h>
 
 #include "netty_jni_util.h"
 #include "netty_quic.h"
@@ -33,6 +35,15 @@
 #define CLASSNAME "io/netty/incubator/codec/quic/BoringSSL"
 
 #define ERR_LEN 256
+
+// For encoding of keys see BoringSSLSessionTicketCallback.setSessionTicketKeys(...)
+#define SSL_SESSION_TICKET_KEY_NAME_OFFSET 1
+#define SSL_SESSION_TICKET_KEY_HMAC_OFFSET 17
+#define SSL_SESSION_TICKET_KEY_EVP_OFFSET 33
+#define SSL_SESSION_TICKET_KEY_NAME_LEN 16
+#define SSL_SESSION_TICKET_AES_KEY_LEN  16
+#define SSL_SESSION_TICKET_HMAC_KEY_LEN 16
+#define SSL_SESSION_TICKET_KEY_LEN 49
 
 static jweak sslTaskClassWeak = NULL;
 static jmethodID sslTaskDestroyMethod = NULL;
@@ -68,6 +79,9 @@ static jmethodID keylogCallbackMethod = NULL;
 static jweak sessionCallbackClassWeak = NULL;
 static jmethodID sessionCallbackMethod = NULL;
 
+static jweak sessionTicketCallbackClassWeak = NULL;
+static jmethodID sessionTicketCallbackMethod = NULL;
+
 static jclass byteArrayClass = NULL;
 static jclass stringClass = NULL;
 
@@ -79,6 +93,7 @@ static int keylogCallbackIdx = -1;
 static int sessionCallbackIdx = -1;
 static int sslPrivateKeyMethodIdx = -1;
 static int sslTaskIdx = -1;
+static int sessionTicketCallbackIdx = -1;
 static int alpn_data_idx = -1;
 static int crypto_buffer_pool_idx = -1;
 
@@ -962,7 +977,7 @@ int new_session_callback(SSL *ssl, SSL_SESSION *session) {
     return 0;
 }
 
-static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean server, jbyteArray alpn_protos, jobject handshakeCompleteCallback, jobject certificateCallback, jobject verifyCallback, jobject servernameCallback, jobject keylogCallback, jobject sessionCallback, jobject privateKeyMethod, jint verifyMode, jobjectArray subjectNames) {
+static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean server, jbyteArray alpn_protos, jobject handshakeCompleteCallback, jobject certificateCallback, jobject verifyCallback, jobject servernameCallback, jobject keylogCallback, jobject sessionCallback, jobject privateKeyMethod, jobject sessionTicketCallback, jint verifyMode, jobjectArray subjectNames) {
     jobject handshakeCompleteCallbackRef = NULL;
     jobject certificateCallbackRef = NULL;
     jobject verifyCallbackRef = NULL;
@@ -970,6 +985,7 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
     jobject keylogCallbackRef = NULL;
     jobject sessionCallbackRef = NULL;
     jobject privateKeyMethodRef = NULL;
+    jobject sessionTicketCallbackRef = NULL;
 
     if ((handshakeCompleteCallbackRef = (*env)->NewGlobalRef(env, handshakeCompleteCallback)) == NULL) {
         goto error;
@@ -1005,6 +1021,9 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
         if ((privateKeyMethodRef = (*env)->NewGlobalRef(env, privateKeyMethod)) == NULL) {
             goto error;
         }
+    }
+    if ((sessionTicketCallbackRef = (*env)->NewGlobalRef(env, sessionTicketCallback)) == NULL) {
+        goto error;
     }
 
     SSL_CTX *ctx = SSL_CTX_new(TLS_with_buffers_method());
@@ -1049,6 +1068,8 @@ static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean
     if (privateKeyMethodRef != NULL) {
         SSL_CTX_set_ex_data(ctx, sslPrivateKeyMethodIdx, privateKeyMethodRef);
     }
+
+    SSL_CTX_set_ex_data(ctx, sessionTicketCallbackIdx, sessionTicketCallbackRef);
 
     // Use a pool for our certificates so we can share these across connections.
     SSL_CTX_set_ex_data(ctx, crypto_buffer_pool_idx, CRYPTO_BUFFER_POOL_new());
@@ -1095,9 +1116,11 @@ error:
     if (sessionCallbackRef != NULL) {
         (*env)->DeleteGlobalRef(env, sessionCallbackRef);
     }
-
     if (privateKeyMethodRef != NULL) {
         (*env)->DeleteGlobalRef(env, privateKeyMethodRef);
+    }
+    if (sessionTicketCallbackRef != NULL) {
+        (*env)->DeleteGlobalRef(env, sessionTicketCallbackRef);
     }
     return -1;
 }
@@ -1141,10 +1164,15 @@ static void netty_boringssl_SSLContext_free(JNIEnv* env, jclass clazz, jlong ctx
     alpn_data* data = SSL_CTX_get_ex_data(ssl_ctx, alpn_data_idx);
     OPENSSL_free(data);
 
+    jobject sessionTicketCallbackRef = SSL_CTX_get_ex_data(ssl_ctx, sessionTicketCallbackIdx);
+    if (sessionCallbackRef != NULL) {
+        (*env)->DeleteGlobalRef(env, sessionTicketCallbackRef);
+    }
+
     CRYPTO_BUFFER_POOL* pool = SSL_CTX_get_ex_data(ssl_ctx, crypto_buffer_pool_idx);
     SSL_CTX_free(ssl_ctx);
 
-    // The pool should be freed last in case that the SSL_CTX has a reference to things tha are stored in the
+    // The pool should be freed last in case that the SSL_CTX has a reference to things that are stored in the
     // pool itself. Otherwise we may see an assert error when trying to call CRYPTO_BUFFER_POOL_free.
     if (pool != NULL) {
         CRYPTO_BUFFER_POOL_free(pool);
@@ -1282,6 +1310,87 @@ jstring netty_boringssl_ERR_last_error(JNIEnv* env, jclass clazz) {
     return (*env)->NewStringUTF(env, buf);
 }
 
+static int netty_boringssl_tlsext_ticket_key_cb(SSL *s, unsigned char key_name[16], unsigned char *iv, EVP_CIPHER_CTX *ctx, HMAC_CTX *hctx, int enc) {
+    SSL_CTX *c = SSL_get_SSL_CTX(s);
+    if (c == NULL) {
+        return 0;
+    }
+
+    jobject sessionTicketCallback = SSL_CTX_get_ex_data(c, sessionTicketCallbackIdx);
+    if (sessionTicketCallback == NULL) {
+       return 0;
+    }
+    JNIEnv* env = NULL;
+    if (quic_get_java_env(&env) != JNI_OK) {
+        return 0;
+    }
+
+    if (enc) { /* create new session */
+        jbyteArray key = (jbyteArray) (*env)->CallObjectMethod(env, sessionTicketCallback, sessionTicketCallbackMethod, NULL);
+        if (key != NULL) {
+            int keyLen = (*env)->GetArrayLength(env, key);
+            if (keyLen != SSL_SESSION_TICKET_KEY_LEN) {
+                return -1;
+            }
+            if (RAND_bytes(iv, EVP_MAX_IV_LENGTH) <= 0) {
+                return -1; /* insufficient random */
+            }
+
+            uint8_t* data = (uint8_t*) (*env)->GetByteArrayElements(env, key, 0);
+
+            memcpy(key_name, data + SSL_SESSION_TICKET_KEY_NAME_OFFSET, SSL_SESSION_TICKET_KEY_NAME_LEN);
+
+            HMAC_Init_ex(hctx, (void*) (data + SSL_SESSION_TICKET_KEY_HMAC_OFFSET), SSL_SESSION_TICKET_HMAC_KEY_LEN, EVP_sha256(), NULL);
+
+            EVP_EncryptInit_ex(ctx, EVP_aes_128_cbc(), NULL, (void*) (data + SSL_SESSION_TICKET_KEY_EVP_OFFSET), iv);
+
+            (*env)->ReleaseByteArrayElements(env, key, (jbyte*) data, JNI_ABORT);
+
+            return 1;
+        }
+        // No ticket configured
+        return 0;
+    } else { /* retrieve session */
+        jbyteArray name = to_byte_array(env, (uint8_t*) key_name, 16);
+        jbyteArray key = (jbyteArray) (*env)->CallObjectMethod(env, sessionTicketCallback, sessionTicketCallbackMethod, name);
+
+        if (key != NULL) {
+            int keyLen = (*env)->GetArrayLength(env, key);
+            if (keyLen != SSL_SESSION_TICKET_KEY_LEN) {
+                return -1;
+            }
+
+            uint8_t* data = (uint8_t*) (*env)->GetByteArrayElements(env, key, 0);
+            // The first byte is used to encode if the key needs to be upgraded.
+            int is_current_key = *data != 0;
+
+            HMAC_Init_ex(hctx, (void*) (data + SSL_SESSION_TICKET_KEY_HMAC_OFFSET), SSL_SESSION_TICKET_HMAC_KEY_LEN, EVP_sha256(), NULL);
+
+            EVP_DecryptInit_ex(ctx, EVP_aes_128_cbc(), NULL, (void*) (data + SSL_SESSION_TICKET_KEY_EVP_OFFSET), iv);
+
+            (*env)->ReleaseByteArrayElements(env, key, (jbyte*) data, JNI_ABORT);
+
+            if (!is_current_key) {
+                // The ticket matched a key in the list, and we want to upgrade it to the current
+                // key.
+                return 2;
+            }
+            // The ticket matched the current key.
+            return 1;
+        }
+        // No matching ticket.
+        return 0;
+    }
+}
+
+void netty_boringssl_SSLContext_setSessionTicketKeys(JNIEnv* env, jclass clazz, jlong ctx, jboolean enableCallback) {
+    if (enableCallback == JNI_TRUE) {
+        SSL_CTX_set_tlsext_ticket_key_cb((SSL_CTX *) ctx, netty_boringssl_tlsext_ticket_key_cb);
+    } else {
+        SSL_CTX_set_tlsext_ticket_key_cb((SSL_CTX *) ctx, NULL);
+    }
+}
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -1311,11 +1420,12 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
 
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
-  { "SSLContext_new0", "(Z[BLjava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;I[[B)J", (void *) netty_boringssl_SSLContext_new0 },
+  { "SSLContext_new0", "(Z[BLjava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;I[[B)J", (void *) netty_boringssl_SSLContext_new0 },
   { "SSLContext_free", "(J)V", (void *) netty_boringssl_SSLContext_free },
   { "SSLContext_setSessionCacheTimeout", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheTimeout },
   { "SSLContext_setSessionCacheSize", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheSize },
   { "SSLContext_set_early_data_enabled", "(JZ)V", (void *) netty_boringssl_SSLContext_set_early_data_enabled },
+  { "SSLContext_setSessionTicketKeys", "(JZ)V", (void *) netty_boringssl_SSLContext_setSessionTicketKeys },
   { "SSL_new0", "(JZLjava/lang/String;)J", (void *) netty_boringssl_SSL_new0 },
   { "SSL_free", "(J)V", (void *) netty_boringssl_SSL_free },
   { "SSL_getTask", "(J)Ljava/lang/Runnable;", (void *) netty_boringssl_SSL_getTask },
@@ -1344,6 +1454,7 @@ static void unload_all_classes(JNIEnv* env) {
     NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, servernameCallbackClassWeak);
     NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, keylogCallbackClassWeak);
     NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, sessionCallbackClassWeak);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, sessionTicketCallbackClassWeak);
 }
 
 // IMPORTANT: If you add any NETTY_JNI_UTIL_LOAD_CLASS or NETTY_JNI_UTIL_FIND_CLASS calls you also need to update
@@ -1365,6 +1476,7 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     jclass servernameCallbackClass = NULL;
     jclass keylogCallbackClass = NULL;
     jclass sessionCallbackClass = NULL;
+    jclass sessionTicketCallbackClass = NULL;
 
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
@@ -1465,6 +1577,11 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sessionCallbackClass, sessionCallbackClassWeak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, sessionCallbackClass, sessionCallbackMethod, "newSession", "(JJJ[BZ[B)V", done);
 
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLSessionTicketCallback", name, done);
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sessionTicketCallbackClassWeak, name, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sessionTicketCallbackClass, sessionTicketCallbackClassWeak, done);
+    NETTY_JNI_UTIL_GET_METHOD(env, sessionTicketCallbackClass, sessionTicketCallbackMethod, "findSessionTicket", "([B)[B", done);
+
     verifyCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     certificateCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     handshakeCompleteCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
@@ -1473,9 +1590,10 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     sessionCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     sslPrivateKeyMethodIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     sslTaskIdx = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
-
     alpn_data_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
     crypto_buffer_pool_idx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+    sessionTicketCallbackIdx = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+
     ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
     if (ret == JNI_ERR) {
@@ -1499,6 +1617,7 @@ done:
     NETTY_JNI_UTIL_DELETE_LOCAL(env, servernameCallbackClass);
     NETTY_JNI_UTIL_DELETE_LOCAL(env, keylogCallbackClass);
     NETTY_JNI_UTIL_DELETE_LOCAL(env, sessionCallbackClass);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, sessionTicketCallbackClass);
 
     return ret;
 }

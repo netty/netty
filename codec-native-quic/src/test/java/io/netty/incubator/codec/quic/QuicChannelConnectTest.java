@@ -1277,13 +1277,38 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testSessionTickets(Executor executor) throws Throwable {
+        testSessionReuse(executor, true);
+    }
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
     @Timeout(5)
     public void testSessionReusedOnClientSide(Executor executor) throws Exception {
+        testSessionReuse(executor, false);
+    }
+
+    private static void testSessionReuse(Executor executor, boolean ticketKey) throws Exception {
+        QuicSslContext sslServerCtx = QuicSslContextBuilder.forServer(
+                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.key(), null,
+                        QuicTestUtils.SELF_SIGNED_CERTIFICATE.cert())
+                .applicationProtocols(QuicTestUtils.PROTOS)
+                .build();
+        QuicSslContext sslClientCtx = QuicSslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols(QuicTestUtils.PROTOS).build();
+
+        if (ticketKey) {
+
+            SslSessionTicketKey key = new SslSessionTicketKey(new byte[SslSessionTicketKey.NAME_SIZE],
+                    new byte[SslSessionTicketKey.HMAC_KEY_SIZE], new byte[SslSessionTicketKey.AES_KEY_SIZE]);
+            sslClientCtx.sessionContext().setTicketKeys(key);
+            sslServerCtx.sessionContext().setTicketKeys(key);
+        }
         CountDownLatch serverSslCompletionEventLatch = new CountDownLatch(2);
-        Channel server = QuicTestUtils.newServer(executor,
+        Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor, sslServerCtx),
+                InsecureQuicTokenHandler.INSTANCE,
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public boolean isSharable() {
@@ -1294,12 +1319,12 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     public void channelActive(ChannelHandlerContext ctx) {
                         ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL,
                                 new ChannelInboundHandlerAdapter() {
-                            @Override
-                            public void channelActive(ChannelHandlerContext ctx) {
-                                ctx.writeAndFlush(ctx.alloc().directBuffer(10).writeZero(10))
-                                        .addListener(f -> ctx.close());
-                            }
-                        });
+                                    @Override
+                                    public void channelActive(ChannelHandlerContext ctx) {
+                                        ctx.writeAndFlush(ctx.alloc().directBuffer(10).writeZero(10))
+                                                .addListener(f -> ctx.close());
+                                    }
+                                });
                         ctx.fireChannelActive();
                     }
 
@@ -1312,11 +1337,9 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 },
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
-        QuicSslContext clientSslContext = QuicSslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE).applicationProtocols(QuicTestUtils.PROTOS).build();
 
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor).sslEngineProvider(c ->
-                clientSslContext.newEngine(c.alloc(), "localhost", 9999)));
+                sslClientCtx.newEngine(c.alloc(), "localhost", 9999)));
         try {
             CountDownLatch clientSslCompletionEventLatch = new CountDownLatch(2);
 

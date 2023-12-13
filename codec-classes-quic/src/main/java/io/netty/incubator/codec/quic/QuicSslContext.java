@@ -33,6 +33,9 @@ public abstract class QuicSslContext extends SslContext {
     @Override
     public abstract QuicSslEngine newEngine(ByteBufAllocator alloc, String peerHost, int peerPort);
 
+    @Override
+    public abstract QuicSslSessionContext sessionContext();
+
     static X509Certificate[] toX509Certificates0(InputStream stream)
             throws CertificateException {
         return SslContext.toX509Certificates(stream);
