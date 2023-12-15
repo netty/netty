@@ -28,11 +28,11 @@ import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jctools.queues.MessagePassingQueue;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -346,13 +346,14 @@ final class PoolThreadCache {
 
     private abstract static class MemoryRegionCache<T> {
         private final int size;
-        private final Queue<Entry<T>> queue;
+        private final MessagePassingQueue<Entry<T>> queue;
         private final SizeClass sizeClass;
         private int allocations;
 
+        @SuppressWarnings("unchecked")
         MemoryRegionCache(int size, SizeClass sizeClass) {
             this.size = MathUtil.safeFindNextPositivePowerOfTwo(size);
-            queue = PlatformDependent.newFixedMpscQueue(this.size);
+            queue = (MessagePassingQueue<Entry<T>>) PlatformDependent.newFixedMpscQueue(this.size);
             this.sizeClass = sizeClass;
         }
 
@@ -368,7 +369,7 @@ final class PoolThreadCache {
         @SuppressWarnings("unchecked")
         public final boolean add(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity) {
             Entry<T> entry = newEntry(chunk, nioBuffer, handle, normCapacity);
-            boolean queued = queue.offer(entry);
+            boolean queued = queue.relaxedOffer(entry);
             if (!queued) {
                 // If it was not possible to cache the chunk, immediately recycle the entry
                 entry.unguardedRecycle();
@@ -381,7 +382,7 @@ final class PoolThreadCache {
          * Allocate something out of the cache if possible and remove the entry from the cache.
          */
         public final boolean allocate(PooledByteBuf<T> buf, int reqCapacity, PoolThreadCache threadCache) {
-            Entry<T> entry = queue.poll();
+            Entry<T> entry = queue.relaxedPoll();
             if (entry == null) {
                 return false;
             }
