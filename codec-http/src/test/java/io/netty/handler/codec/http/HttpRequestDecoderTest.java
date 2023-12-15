@@ -639,6 +639,20 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
+    @Test
+    public void testChunkSizeOverflow() {
+        String requestStr = "PUT /some/path HTTP/1.1\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "8ccccccc\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        HttpContent c = channel.readInbound();
+        c.release();
+        assertFalse(channel.finish());
+    }
+
     private static void testInvalidHeaders0(String requestStr) {
         testInvalidHeaders0(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII));
     }

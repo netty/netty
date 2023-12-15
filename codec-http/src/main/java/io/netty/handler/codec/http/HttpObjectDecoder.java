@@ -913,6 +913,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             result *= 16;
             result += digit;
         }
+        if (result < 0) {
+            throw new NumberFormatException();
+        }
         return result;
     }
 
