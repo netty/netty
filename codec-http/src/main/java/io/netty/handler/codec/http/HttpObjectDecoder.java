@@ -914,7 +914,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             result += digit;
         }
         if (result < 0) {
-            throw new NumberFormatException();
+            throw new NumberFormatException("Chunk size overflow: " + result);
         }
         return result;
     }
