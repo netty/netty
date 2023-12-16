@@ -369,7 +369,7 @@ final class PoolThreadCache {
         @SuppressWarnings("unchecked")
         public final boolean add(PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, int normCapacity) {
             Entry<T> entry = newEntry(chunk, nioBuffer, handle, normCapacity);
-            boolean queued = queue.relaxedOffer(entry);
+            boolean queued = queue.offer(entry);
             if (!queued) {
                 // If it was not possible to cache the chunk, immediately recycle the entry
                 entry.unguardedRecycle();
