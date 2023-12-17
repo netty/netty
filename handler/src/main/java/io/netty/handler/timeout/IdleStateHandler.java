@@ -242,10 +242,9 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             // channelActive() event has been fired already, which means this.channelActive() will
             // not be invoked. We have to initialize here instead.
             initialize(ctx);
-        } else {
-            // channelActive() event has not been fired yet.  this.channelActive() will be invoked
-            // and initialization will occur there.
         }
+        // channelActive() event has not been fired yet.  this.channelActive() will be invoked
+        // and initialization will occur there.
     }
 
     @Override
