@@ -905,7 +905,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                         // empty case
                         throw new NumberFormatException();
                     }
-                    return result;
+                    break;
                 }
                 // non-hex char fail-fast path
                 throw new NumberFormatException();
