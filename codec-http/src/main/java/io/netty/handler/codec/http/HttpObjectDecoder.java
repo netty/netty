@@ -912,9 +912,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
             result *= 16;
             result += digit;
-        }
-        if (result < 0) {
-            throw new NumberFormatException("Chunk size overflow: " + result);
+            if (result < 0) {
+                throw new NumberFormatException("Chunk size overflow: " + result);
+            }
         }
         return result;
     }
