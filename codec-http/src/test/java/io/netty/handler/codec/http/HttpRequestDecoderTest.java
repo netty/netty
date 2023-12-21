@@ -35,6 +35,7 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -650,6 +651,8 @@ public class HttpRequestDecoderTest {
         assertTrue(request.decoderResult().isSuccess());
         HttpContent c = channel.readInbound();
         c.release();
+        assertTrue(c.decoderResult().isFailure());
+        assertInstanceOf(NumberFormatException.class, c.decoderResult().cause());
         assertFalse(channel.finish());
     }
 
@@ -664,6 +667,8 @@ public class HttpRequestDecoderTest {
         assertTrue(request.decoderResult().isSuccess());
         HttpContent c = channel.readInbound();
         c.release();
+        assertTrue(c.decoderResult().isFailure());
+        assertInstanceOf(NumberFormatException.class, c.decoderResult().cause());
         assertFalse(channel.finish());
     }
 
