@@ -1396,7 +1396,7 @@ public class DnsNameResolver extends InetNameResolver {
             }
 
             // Check if the response was truncated and if we can fallback to TCP to retry.
-            if (!res.isTruncated() || socketBootstrap == null) {
+            if (res.isTruncated() || socketBootstrap == null) {
                 qCtx.finishSuccess(res);
                 return;
             }
