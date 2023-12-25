@@ -880,7 +880,7 @@
         <artifactId>brotli4j</artifactId>
         <version>${brotli4j.version}</version>
       </dependency>
-     <dependency>
+      <dependency>
         <groupId>com.aayushatharva.brotli4j</groupId>
         <artifactId>native-linux-ppc64le</artifactId>
         <version>${brotli4j.version}</version>
