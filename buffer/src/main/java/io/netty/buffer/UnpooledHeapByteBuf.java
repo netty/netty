@@ -81,12 +81,30 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
         setIndex(0, initialArray.length);
     }
 
-    protected byte[] allocateArray(int initialCapacity) {
+    protected byte[] doAllocateArray(int initialCapacity) {
         return new byte[initialCapacity];
     }
 
-    protected void freeArray(byte[] array) {
+    protected void doFreeArray(byte[] array) {
         // NOOP
+    }
+
+    private byte[] allocateArray(int initialCapacity) {
+        ByteBufAllocator alloc = alloc();
+        if (alloc instanceof AbstractByteBufAllocator) {
+            AbstractByteBufAllocator alloc0 = (AbstractByteBufAllocator) alloc;
+            alloc0.notifyMemoryAllocated0(initialCapacity, false);
+        }
+        return doAllocateArray(initialCapacity);
+    }
+
+    private void freeArray(byte[] array) {
+        ByteBufAllocator alloc = alloc();
+        if (alloc instanceof AbstractByteBufAllocator && null != array) {
+            AbstractByteBufAllocator alloc0 = (AbstractByteBufAllocator) alloc;
+            alloc0.notifyMemoryReleased0(array.length, false);
+        }
+        doFreeArray(array);
     }
 
     private void setArray(byte[] initialArray) {

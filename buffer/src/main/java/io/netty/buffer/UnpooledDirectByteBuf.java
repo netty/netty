@@ -100,15 +100,33 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     /**
      * Allocate a new direct {@link ByteBuffer} with the given initialCapacity.
      */
-    protected ByteBuffer allocateDirect(int initialCapacity) {
+    protected ByteBuffer doAllocateDirect(int initialCapacity) {
         return ByteBuffer.allocateDirect(initialCapacity);
     }
 
     /**
      * Free a direct {@link ByteBuffer}
      */
-    protected void freeDirect(ByteBuffer buffer) {
+    protected void doFreeDirect(ByteBuffer buffer) {
         PlatformDependent.freeDirectBuffer(buffer);
+    }
+
+    private ByteBuffer allocateDirect(int initialCapacity) {
+        ByteBufAllocator alloc = alloc();
+        if (alloc instanceof AbstractByteBufAllocator) {
+            AbstractByteBufAllocator alloc0 = (AbstractByteBufAllocator) alloc;
+            alloc0.notifyMemoryAllocated0(initialCapacity, true);
+        }
+        return doAllocateDirect(initialCapacity);
+    }
+
+    private void freeDirect(ByteBuffer buffer) {
+        ByteBufAllocator alloc = alloc();
+        if (alloc instanceof AbstractByteBufAllocator) {
+            AbstractByteBufAllocator alloc0 = (AbstractByteBufAllocator) alloc;
+            alloc0.notifyMemoryReleased0(buffer.capacity(), true);
+        }
+        doFreeDirect(buffer);
     }
 
     void setByteBuffer(ByteBuffer buffer, boolean tryFree) {

@@ -617,12 +617,14 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     void incrementPinnedMemory(int delta) {
+        arena.parent.notifyMemoryAllocated0(delta, arena.isDirect());
         assert delta > 0;
         pinnedBytes.add(delta);
     }
 
     void decrementPinnedMemory(int delta) {
         assert delta > 0;
+        arena.parent.notifyMemoryReleased0(delta, arena.isDirect());
         pinnedBytes.add(-delta);
     }
 

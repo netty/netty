@@ -26,7 +26,7 @@ final class WrappedUnpooledUnsafeDirectByteBuf extends UnpooledUnsafeDirectByteB
     }
 
     @Override
-    protected void freeDirect(ByteBuffer buffer) {
+    protected void doFreeDirect(ByteBuffer buffer) {
         PlatformDependent.freeMemory(memoryAddress);
     }
 }

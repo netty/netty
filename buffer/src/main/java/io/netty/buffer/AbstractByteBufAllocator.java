@@ -83,6 +83,7 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
 
     private final boolean directByDefault;
     private final ByteBuf emptyBuf;
+    private MemoryStateListener listener;
 
     /**
      * Instance use heap buffers by default
@@ -242,6 +243,32 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
      * Create a direct {@link ByteBuf} with the given initialCapacity and maxCapacity.
      */
     protected abstract ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity);
+
+    protected void setMemoryStateListener(MemoryStateListener listener) {
+        this.listener = listener;
+    }
+
+    void notifyMemoryReleased0(int released, boolean direct) {
+        if (null == listener) {
+            return;
+        }
+        try {
+            listener.memoryReleased(released, direct);
+        } catch (Exception ex) {
+            // ignore
+        }
+    }
+
+    void notifyMemoryAllocated0(int allocated, boolean direct) {
+        if (null == listener) {
+            return;
+        }
+        try {
+            listener.memoryAllocated(allocated, direct);
+        } catch (Exception ex) {
+            // ignore
+        }
+    }
 
     @Override
     public String toString() {
