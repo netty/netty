@@ -1396,7 +1396,7 @@ public class DnsNameResolver extends InetNameResolver {
             }
 
             // Check if we can fallback to TCP to retry.
-            if (ocketBootstrap == null) {
+            if (socketBootstrap == null) {
                 qCtx.finishSuccess(res);
                 return;
             }
