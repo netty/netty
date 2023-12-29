@@ -3293,30 +3293,8 @@ public class DnsNameResolverTest {
             if (tcpFallback) {
                 // If we are configured to use TCP as a fallback lets replay the dns message over TCP
                 Socket socket = serverSocket.accept();
+                responseViaSocket(socket, messageRef.get());
 
-                InputStream in = socket.getInputStream();
-                assertTrue((in.read() << 8 | (in.read() & 0xff)) > 2); // skip length field
-                int txnId = in.read() << 8 | (in.read() & 0xff);
-
-                IoBuffer ioBuffer = IoBuffer.allocate(1024);
-                // Must replace the transactionId with the one from the TCP request
-                DnsMessageModifier modifier = modifierFrom(messageRef.get());
-                modifier.setTransactionId(txnId);
-                new DnsMessageEncoder().encode(ioBuffer, modifier.getDnsMessage());
-                ioBuffer.flip();
-
-                ByteBuffer lenBuffer = ByteBuffer.allocate(2);
-                lenBuffer.putShort((short) ioBuffer.remaining());
-                lenBuffer.flip();
-
-                while (lenBuffer.hasRemaining()) {
-                    socket.getOutputStream().write(lenBuffer.get());
-                }
-
-                while (ioBuffer.hasRemaining()) {
-                    socket.getOutputStream().write(ioBuffer.get());
-                }
-                socket.getOutputStream().flush();
                 // Let's wait until we received the envelope before closing the socket.
                 envelopeFuture.syncUninterruptibly();
 
@@ -3349,6 +3327,137 @@ public class DnsNameResolverTest {
             if (resolver != null) {
                 resolver.close();
             }
+        }
+    }
+
+    private static void responseViaSocket(Socket socket, DnsMessage message) throws IOException {
+        InputStream in = socket.getInputStream();
+        assertTrue((in.read() << 8 | (in.read() & 0xff)) > 2); // skip length field
+        int txnId = in.read() << 8 | (in.read() & 0xff);
+
+        IoBuffer ioBuffer = IoBuffer.allocate(1024);
+        // Must replace the transactionId with the one from the TCP request
+        DnsMessageModifier modifier = modifierFrom(message);
+        modifier.setTransactionId(txnId);
+        new DnsMessageEncoder().encode(ioBuffer, modifier.getDnsMessage());
+        ioBuffer.flip();
+
+        ByteBuffer lenBuffer = ByteBuffer.allocate(2);
+        lenBuffer.putShort((short) ioBuffer.remaining());
+        lenBuffer.flip();
+
+        while (lenBuffer.hasRemaining()) {
+            socket.getOutputStream().write(lenBuffer.get());
+        }
+
+        while (ioBuffer.hasRemaining()) {
+            socket.getOutputStream().write(ioBuffer.get());
+        }
+        socket.getOutputStream().flush();
+    }
+
+    @Test
+    public void testTcpFallbackWhenTimeout() throws IOException {
+        testTcpFallbackWhenTimeout(true);
+    }
+
+    @Test
+    public void testTcpFallbackFailedWhenTimeout() throws IOException {
+        testTcpFallbackWhenTimeout(false);
+    }
+
+    private void testTcpFallbackWhenTimeout(boolean tcpSuccess) throws IOException {
+        ServerSocket serverSocket = new ServerSocket();
+        serverSocket.setReuseAddress(true);
+        serverSocket.bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
+
+        final String host = "somehost.netty.io";
+        final String txt = "this is a txt record";
+        final AtomicReference<DnsMessage> messageRef = new AtomicReference<DnsMessage>();
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                String name = question.getDomainName();
+                if (name.equals(host)) {
+                    return Collections.<ResourceRecord>singleton(
+                            new TestDnsServer.TestResourceRecord(name, RecordType.TXT,
+                                    Collections.<String, Object>singletonMap(
+                                            DnsAttribute.CHARACTER_STRING.toLowerCase(), txt)));
+                }
+                return null;
+            }
+        }) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                // Store a original message so we can replay it later on.
+                messageRef.set(message);
+                return null;
+            }
+        };
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver();
+            final DatagramChannel datagramChannel = new NioDatagramChannel();
+            ChannelFactory<DatagramChannel> channelFactory = new ChannelFactory<DatagramChannel>() {
+                @Override
+                public DatagramChannel newChannel() {
+                    return datagramChannel;
+                }
+            };
+            builder.channelFactory(channelFactory);
+            dnsServer2.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
+            // If we are configured to use TCP as a fallback also bind a TCP socket
+            builder.socketChannelType(NioSocketChannel.class);
+
+            builder.queryTimeoutMillis(1000)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+            resolver = builder.build();
+            Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> envelopeFuture = resolver.query(
+                    new DefaultDnsQuestion(host, DnsRecordType.TXT));
+
+            // If we are configured to use TCP as a fallback lets replay the dns message over TCP
+            Socket socket = serverSocket.accept();
+
+            if (tcpSuccess) {
+                responseViaSocket(socket, messageRef.get());
+                socket.close();
+
+                // Let's wait until we received the envelope before closing the socket.
+                envelopeFuture.syncUninterruptibly();
+
+                AddressedEnvelope<DnsResponse, InetSocketAddress> envelope =
+                        envelopeFuture.syncUninterruptibly().getNow();
+                assertNotNull(envelope.sender());
+
+                DnsResponse response = envelope.content();
+                assertNotNull(response);
+
+                assertEquals(DnsResponseCode.NOERROR, response.code());
+                int count = response.count(DnsSection.ANSWER);
+
+                assertEquals(1, count);
+                List<String> texts = decodeTxt(response.recordAt(DnsSection.ANSWER, 0));
+                assertEquals(1, texts.size());
+                assertEquals(txt, texts.get(0));
+
+                assertFalse(envelope.content().isTruncated());
+                assertTrue(envelope.release());
+            } else {
+                // Just close the socket. This should cause the original exception to be used.
+                socket.close();
+                Throwable error = envelopeFuture.awaitUninterruptibly().cause();
+                assertThat(error, instanceOf(DnsNameResolverTimeoutException.class));
+                assertThat(error.getSuppressed().length, greaterThanOrEqualTo(1));
+            }
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+            serverSocket.close();
         }
     }
 
