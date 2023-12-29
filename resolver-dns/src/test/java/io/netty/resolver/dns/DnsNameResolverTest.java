@@ -3423,10 +3423,10 @@ public class DnsNameResolverTest {
 
             if (tcpSuccess) {
                 responseViaSocket(socket, messageRef.get());
-                socket.close();
 
                 // Let's wait until we received the envelope before closing the socket.
                 envelopeFuture.syncUninterruptibly();
+                socket.close();
 
                 AddressedEnvelope<DnsResponse, InetSocketAddress> envelope =
                         envelopeFuture.syncUninterruptibly().getNow();
