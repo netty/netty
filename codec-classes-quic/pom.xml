@@ -43,6 +43,7 @@
               <archive>
                 <manifest>
                   <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                  <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                 </manifest>
                 <manifestEntries>
                   <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
