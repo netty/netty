@@ -43,7 +43,7 @@ import static io.netty5.util.internal.PlatformDependent.threadId;
 import static java.util.Objects.requireNonNull;
 
 /**
- * An auto-tuning pooling allocator.
+ * An auto-tuning pooling allocator, that follows an anti-generational hypothesis.
  * <p>
  * The allocator is organized into a list of Magazines, and each magazine has a chunk-buffer that they allocate buffers
  * from.
@@ -64,7 +64,7 @@ import static java.util.Objects.requireNonNull;
  * This allows the allocator to quickly respond to changes in the application workload,
  * without suffering undue overhead from maintaining its statistics.
  * <p>
- * Since magazines "relatively thread-local", the allocator has a central queue that allow excess chunks from any
+ * Since magazines are "relatively thread-local", the allocator has a central queue that allow excess chunks from any
  * magazine, to be shared with other magazines.
  * The {@link #createSharedChunkQueue()} method can be overridden to customize this queue.
  */
