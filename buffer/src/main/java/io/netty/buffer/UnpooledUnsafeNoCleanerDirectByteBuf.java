@@ -31,13 +31,10 @@ class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
     }
 
     private ByteBuffer reallocateDirect(ByteBuffer oldBuffer, int initialCapacity) {
-        ByteBufAllocator alloc = alloc();
-        if (alloc instanceof AbstractByteBufAllocator) {
-            AbstractByteBufAllocator alloc0 = (AbstractByteBufAllocator) alloc;
-            alloc0.notifyMemoryReleased0(buffer.capacity(), true);
-            alloc0.notifyMemoryAllocated0(initialCapacity, true);
-        }
-        return doReallocateDirect(oldBuffer, initialCapacity);
+        notifyUnpooledMemoryAllocated(initialCapacity);
+        ByteBuffer buffer = doReallocateDirect(oldBuffer, initialCapacity);
+        notifyUnpooledMemoryReleased(oldBuffer.capacity());
+        return buffer;
     }
 
     protected ByteBuffer doReallocateDirect(ByteBuffer oldBuffer, int initialCapacity) {
