@@ -86,45 +86,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         connection.connectionStream().setProperty(stateKey, connectionState);
 
         // Register for notification of new streams.
-        connection.addListener(new Http2ConnectionAdapter() {
-            @Override
-            public void onStreamAdded(Http2Stream stream) {
-                // Unconditionally used the reduced flow control state because it requires no object allocation
-                // and the DefaultFlowState will be allocated in onStreamActive.
-                stream.setProperty(stateKey, REDUCED_FLOW_STATE);
-            }
-
-            @Override
-            public void onStreamActive(Http2Stream stream) {
-                // Need to be sure the stream's initial window is adjusted for SETTINGS
-                // frames which may have been exchanged while it was in IDLE
-                stream.setProperty(stateKey, new DefaultState(stream, initialWindowSize));
-            }
-
-            @Override
-            public void onStreamClosed(Http2Stream stream) {
-                try {
-                    // When a stream is closed, consume any remaining bytes so that they
-                    // are restored to the connection window.
-                    FlowState state = state(stream);
-                    int unconsumedBytes = state.unconsumedBytes();
-                    if (ctx != null && unconsumedBytes > 0) {
-                        if (consumeAllBytes(state, unconsumedBytes)) {
-                            // As the user has no real control on when this callback is used we should better
-                            // call flush() if we produced any window update to ensure we not stale.
-                            ctx.flush();
-                        }
-                    }
-                } catch (Http2Exception e) {
-                    PlatformDependent.throwException(e);
-                } finally {
-                    // Unconditionally reduce the amount of memory required for flow control because there is no
-                    // object allocation costs associated with doing so and the stream will not have any more
-                    // local flow control state to keep track of anymore.
-                    stream.setProperty(stateKey, REDUCED_FLOW_STATE);
-                }
-            }
-        });
+        connection.addListener(new StreamListener());
     }
 
     @Override
@@ -642,6 +604,46 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
         public void throwIfError() throws CompositeStreamException {
             if (compositeException != null) {
                 throw compositeException;
+            }
+        }
+    }
+
+    final class StreamListener extends Http2ConnectionAdapter {
+        @Override
+        public void onStreamAdded(Http2Stream stream) {
+            // Unconditionally used the reduced flow control state because it requires no object allocation
+            // and the DefaultFlowState will be allocated in onStreamActive.
+            stream.setProperty(stateKey, REDUCED_FLOW_STATE);
+        }
+
+        @Override
+        public void onStreamActive(Http2Stream stream) {
+            // Need to be sure the stream's initial window is adjusted for SETTINGS
+            // frames which may have been exchanged while it was in IDLE
+            stream.setProperty(stateKey, new DefaultState(stream, initialWindowSize));
+        }
+
+        @Override
+        public void onStreamClosed(Http2Stream stream) {
+            try {
+                // When a stream is closed, consume any remaining bytes so that they
+                // are restored to the connection window.
+                FlowState state = state(stream);
+                int unconsumedBytes = state.unconsumedBytes();
+                if (ctx != null && unconsumedBytes > 0) {
+                    if (consumeAllBytes(state, unconsumedBytes)) {
+                        // As the user has no real control on when this callback is used we should better
+                        // call flush() if we produced any window update to ensure we not stale.
+                        ctx.flush();
+                    }
+                }
+            } catch (Http2Exception e) {
+                PlatformDependent.throwException(e);
+            } finally {
+                // Unconditionally reduce the amount of memory required for flow control because there is no
+                // object allocation costs associated with doing so and the stream will not have any more
+                // local flow control state to keep track of anymore.
+                stream.setProperty(stateKey, REDUCED_FLOW_STATE);
             }
         }
     }

@@ -53,17 +53,7 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
         connectionStream.setProperty(stateKey, new State(connectionStream));
 
         // Register for notification of new streams.
-        connection.addListener(new Http2ConnectionAdapter() {
-            @Override
-            public void onStreamAdded(Http2Stream stream) {
-                stream.setProperty(stateKey, new State(stream));
-            }
-
-            @Override
-            public void onStreamClosed(Http2Stream stream) {
-                state(stream).close();
-            }
-        });
+        connection.addListener(new StreamListener());
     }
 
     /**
@@ -200,6 +190,18 @@ public final class UniformStreamByteDistributor implements StreamByteDistributor
 
             // Clear the streamable bytes.
             updateStreamableBytes(0, false, 0);
+        }
+    }
+
+    final class StreamListener extends Http2ConnectionAdapter {
+        @Override
+        public void onStreamAdded(Http2Stream stream) {
+            stream.setProperty(stateKey, new State(stream));
+        }
+
+        @Override
+        public void onStreamClosed(Http2Stream stream) {
+            state(stream).close();
         }
     }
 }

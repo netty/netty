@@ -83,46 +83,7 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
         monitor.windowSize(connectionState, initialWindowSize);
 
         // Register for notification of new streams.
-        connection.addListener(new Http2ConnectionAdapter() {
-            @Override
-            public void onStreamAdded(Http2Stream stream) {
-                // If the stream state is not open then the stream is not yet eligible for flow controlled frames and
-                // only requires the ReducedFlowState. Otherwise the full amount of memory is required.
-                stream.setProperty(stateKey, new FlowState(stream));
-            }
-
-            @Override
-            public void onStreamActive(Http2Stream stream) {
-                // If the object was previously created, but later activated then we have to ensure the proper
-                // initialWindowSize is used.
-                monitor.windowSize(state(stream), initialWindowSize);
-            }
-
-            @Override
-            public void onStreamClosed(Http2Stream stream) {
-                // Any pending frames can never be written, cancel and
-                // write errors for any pending frames.
-                state(stream).cancel(STREAM_CLOSED, null);
-            }
-
-            @Override
-            public void onStreamHalfClosed(Http2Stream stream) {
-                if (HALF_CLOSED_LOCAL == stream.state()) {
-                    /*
-                     * When this method is called there should not be any
-                     * pending frames left if the API is used correctly. However,
-                     * it is possible that a erroneous application can sneak
-                     * in a frame even after having already written a frame with the
-                     * END_STREAM flag set, as the stream state might not transition
-                     * immediately to HALF_CLOSED_LOCAL / CLOSED due to flow control
-                     * delaying the write.
-                     *
-                     * This is to cancel any such illegal writes.
-                     */
-                    state(stream).cancel(STREAM_CLOSED, null);
-                }
-            }
-        });
+        connection.addListener(new StreamListener());
     }
 
     /**
@@ -763,6 +724,47 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             // Make sure we mark that we have notified as a result of this change.
             connectionState.markedWritability(isWritableConnection());
             connection.forEachActiveStream(this);
+        }
+    }
+
+    final class StreamListener extends Http2ConnectionAdapter {
+        @Override
+        public void onStreamAdded(Http2Stream stream) {
+            // If the stream state is not open then the stream is not yet eligible for flow controlled frames and
+            // only requires the ReducedFlowState. Otherwise the full amount of memory is required.
+            stream.setProperty(stateKey, new FlowState(stream));
+        }
+
+        @Override
+        public void onStreamActive(Http2Stream stream) {
+            // If the object was previously created, but later activated then we have to ensure the proper
+            // initialWindowSize is used.
+            monitor.windowSize(state(stream), initialWindowSize);
+        }
+
+        @Override
+        public void onStreamClosed(Http2Stream stream) {
+            // Any pending frames can never be written, cancel and
+            // write errors for any pending frames.
+            state(stream).cancel(STREAM_CLOSED, null);
+        }
+
+        @Override
+        public void onStreamHalfClosed(Http2Stream stream) {
+            if (HALF_CLOSED_LOCAL == stream.state()) {
+                /*
+                 * When this method is called there should not be any
+                 * pending frames left if the API is used correctly. However,
+                 * it is possible that a erroneous application can sneak
+                 * in a frame even after having already written a frame with the
+                 * END_STREAM flag set, as the stream state might not transition
+                 * immediately to HALF_CLOSED_LOCAL / CLOSED due to flow control
+                 * delaying the write.
+                 *
+                 * This is to cancel any such illegal writes.
+                 */
+                state(stream).cancel(STREAM_CLOSED, null);
+            }
         }
     }
 }

@@ -116,77 +116,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         connectionStream.setProperty(stateKey, connectionState = new State(connectionStream, 16));
 
         // Register for notification of new streams.
-        connection.addListener(new Http2ConnectionAdapter() {
-            @Override
-            public void onStreamAdded(Http2Stream stream) {
-                State state = stateOnlyMap.remove(stream.id());
-                if (state == null) {
-                    state = new State(stream);
-                    // Only the stream which was just added will change parents. So we only need an array of size 1.
-                    List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1);
-                    connectionState.takeChild(state, false, events);
-                    notifyParentChanged(events);
-                } else {
-                    stateOnlyRemovalQueue.removeTyped(state);
-                    state.stream = stream;
-                }
-                switch (stream.state()) {
-                    case RESERVED_REMOTE:
-                    case RESERVED_LOCAL:
-                        state.setStreamReservedOrActivated();
-                        // wasStreamReservedOrActivated is part of the comparator for stateOnlyRemovalQueue there is no
-                        // need to reprioritize here because it will not be in stateOnlyRemovalQueue.
-                        break;
-                    default:
-                        break;
-                }
-                stream.setProperty(stateKey, state);
-            }
-
-            @Override
-            public void onStreamActive(Http2Stream stream) {
-                state(stream).setStreamReservedOrActivated();
-                // wasStreamReservedOrActivated is part of the comparator for stateOnlyRemovalQueue there is no need to
-                // reprioritize here because it will not be in stateOnlyRemovalQueue.
-            }
-
-            @Override
-            public void onStreamClosed(Http2Stream stream) {
-                state(stream).close();
-            }
-
-            @Override
-            public void onStreamRemoved(Http2Stream stream) {
-                // The stream has been removed from the connection. We can no longer rely on the stream's property
-                // storage to track the State. If we have room, and the precedence of the stream is sufficient, we
-                // should retain the State in the stateOnlyMap.
-                State state = state(stream);
-
-                // Typically the stream is set to null when the stream is closed because it is no longer needed to write
-                // data. However if the stream was not activated it may not be closed (reserved streams) so we ensure
-                // the stream reference is set to null to avoid retaining a reference longer than necessary.
-                state.stream = null;
-
-                if (WeightedFairQueueByteDistributor.this.maxStateOnlySize == 0) {
-                    state.parent.removeChild(state);
-                    return;
-                }
-                if (stateOnlyRemovalQueue.size() == WeightedFairQueueByteDistributor.this.maxStateOnlySize) {
-                    State stateToRemove = stateOnlyRemovalQueue.peek();
-                    if (StateOnlyComparator.INSTANCE.compare(stateToRemove, state) >= 0) {
-                        // The "lowest priority" stream is a "higher priority" than the stream being removed, so we
-                        // just discard the state.
-                        state.parent.removeChild(state);
-                        return;
-                    }
-                    stateOnlyRemovalQueue.poll();
-                    stateToRemove.parent.removeChild(stateToRemove);
-                    stateOnlyMap.remove(stateToRemove.streamId);
-                }
-                stateOnlyRemovalQueue.add(state);
-                stateOnlyMap.put(state.streamId, state);
-            }
-        });
+        connection.addListener(new StreamListener());
     }
 
     @Override
@@ -798,6 +728,78 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
         ParentChangedEvent(State state, State oldParent) {
             this.state = state;
             this.oldParent = oldParent;
+        }
+    }
+
+    final class StreamListener extends Http2ConnectionAdapter {
+        @Override
+        public void onStreamAdded(Http2Stream stream) {
+            State state = stateOnlyMap.remove(stream.id());
+            if (state == null) {
+                state = new State(stream);
+                // Only the stream which was just added will change parents. So we only need an array of size 1.
+                List<ParentChangedEvent> events = new ArrayList<ParentChangedEvent>(1);
+                connectionState.takeChild(state, false, events);
+                notifyParentChanged(events);
+            } else {
+                stateOnlyRemovalQueue.removeTyped(state);
+                state.stream = stream;
+            }
+            switch (stream.state()) {
+                case RESERVED_REMOTE:
+                case RESERVED_LOCAL:
+                    state.setStreamReservedOrActivated();
+                    // wasStreamReservedOrActivated is part of the comparator for stateOnlyRemovalQueue there is no
+                    // need to reprioritize here because it will not be in stateOnlyRemovalQueue.
+                    break;
+                default:
+                    break;
+            }
+            stream.setProperty(stateKey, state);
+        }
+
+        @Override
+        public void onStreamActive(Http2Stream stream) {
+            state(stream).setStreamReservedOrActivated();
+            // wasStreamReservedOrActivated is part of the comparator for stateOnlyRemovalQueue there is no need to
+            // reprioritize here because it will not be in stateOnlyRemovalQueue.
+        }
+
+        @Override
+        public void onStreamClosed(Http2Stream stream) {
+            state(stream).close();
+        }
+
+        @Override
+        public void onStreamRemoved(Http2Stream stream) {
+            // The stream has been removed from the connection. We can no longer rely on the stream's property
+            // storage to track the State. If we have room, and the precedence of the stream is sufficient, we
+            // should retain the State in the stateOnlyMap.
+            State state = state(stream);
+
+            // Typically the stream is set to null when the stream is closed because it is no longer needed to write
+            // data. However if the stream was not activated it may not be closed (reserved streams) so we ensure
+            // the stream reference is set to null to avoid retaining a reference longer than necessary.
+            state.stream = null;
+
+            if (WeightedFairQueueByteDistributor.this.maxStateOnlySize == 0) {
+                state.parent.removeChild(state);
+                return;
+            }
+            if (stateOnlyRemovalQueue.size() == WeightedFairQueueByteDistributor.this.maxStateOnlySize) {
+                State stateToRemove = stateOnlyRemovalQueue.peek();
+                if (StateOnlyComparator.INSTANCE.compare(stateToRemove, state) >= 0) {
+                    // The "lowest priority" stream is a "higher priority" than the stream being removed, so we
+                    // just discard the state.
+                    state.parent.removeChild(state);
+                    return;
+                }
+                stateOnlyRemovalQueue.poll();
+                stateToRemove.parent.removeChild(stateToRemove);
+                stateOnlyMap.remove(stateToRemove.streamId);
+            }
+            stateOnlyRemovalQueue.add(state);
+            stateOnlyMap.put(state.streamId, state);
         }
     }
 }
