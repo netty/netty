@@ -30,7 +30,7 @@ import java.net.SocketAddress;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketDomain;
 
-public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel implements DomainSocketChannel {
+public class EpollDomainSocketChannel extends AbstractEpollStreamChannel implements DomainSocketChannel {
     private final EpollDomainSocketChannelConfig config = new EpollDomainSocketChannelConfig(this);
 
     private volatile DomainSocketAddress local;
