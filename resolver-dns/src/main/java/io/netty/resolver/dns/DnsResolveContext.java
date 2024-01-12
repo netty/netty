@@ -668,7 +668,7 @@ abstract class DnsResolveContext<T> {
                 //                ....
                 if (!res.isAuthoritativeAnswer()) {
                     query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
-                            newDnsQueryLifecycleObserver(question), true, promise, cause(code));
+                            newDnsQueryLifecycleObserver(question), true, promise, null);
                 } else {
                     // Failed with NX cause - distinction between an authoritative NXDOMAIN vs a timeout
                     tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question,
