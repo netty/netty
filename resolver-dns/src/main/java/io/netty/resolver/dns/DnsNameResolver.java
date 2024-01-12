@@ -470,8 +470,7 @@ public class DnsNameResolver extends InetNameResolver {
             socketBootstrap.option(ChannelOption.SO_REUSEADDR, true)
                     .group(executor())
                     .channelFactory(socketChannelFactory)
-                    .attr(DNS_PIPELINE_ATTRIBUTE, Boolean.TRUE)
-                    .handler(TCP_ENCODER);
+                    .attr(DNS_PIPELINE_ATTRIBUTE, Boolean.TRUE);
             if (queryTimeoutMillis > 0 && queryTimeoutMillis <= Integer.MAX_VALUE) {
                 // Set the connect timeout to the same as queryTimeout as otherwise it might take a long
                 // time for the query to fail in case of a connection timeout.
