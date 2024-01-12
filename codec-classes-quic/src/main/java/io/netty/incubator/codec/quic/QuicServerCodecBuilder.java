@@ -60,6 +60,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
         streamHandler = builder.streamHandler;
         connectionIdAddressGenerator = builder.connectionIdAddressGenerator;
         tokenHandler = builder.tokenHandler;
+        resetTokenGenerator = builder.resetTokenGenerator;
     }
 
     @Override
