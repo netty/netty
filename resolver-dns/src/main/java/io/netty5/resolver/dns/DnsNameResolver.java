@@ -439,6 +439,11 @@ public class DnsNameResolver extends InetNameResolver {
                     .channelFactory(socketChannelFactory)
                     .attr(DNS_PIPELINE_ATTRIBUTE, Boolean.TRUE)
                     .handler(TCP_ENCODER);
+            if (queryTimeoutMillis > 0 && queryTimeoutMillis <= Integer.MAX_VALUE) {
+                // Set the connect timeout to the same as queryTimeout as otherwise it might take a long
+                // time for the query to fail in case of a connection timeout.
+                socketBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) queryTimeoutMillis);
+            }
         }
         switch (this.resolvedAddressTypes) {
             case IPV4_ONLY:
