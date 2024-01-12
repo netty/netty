@@ -3408,7 +3408,7 @@ public class DnsNameResolverTest {
             builder.channelFactory(channelFactory);
             dnsServer2.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
             // If we are configured to use TCP as a fallback also bind a TCP socket
-            builder.socketChannelType(NioSocketChannel.class);
+            builder.socketChannelType(NioSocketChannel.class, true);
 
             builder.queryTimeoutMillis(1000)
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)

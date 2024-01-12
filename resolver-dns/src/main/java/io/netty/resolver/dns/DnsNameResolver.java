@@ -279,6 +279,7 @@ public class DnsNameResolver extends InetNameResolver {
     private final DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory;
     private final boolean completeOncePreferredResolved;
     private final Bootstrap socketBootstrap;
+    private final boolean retryWithTcpOnTimeout;
 
     private final int maxNumConsolidation;
     private final Map<String, Future<List<InetAddress>>> inflightLookups;
@@ -382,44 +383,18 @@ public class DnsNameResolver extends InetNameResolver {
             String[] searchDomains,
             int ndots,
             boolean decodeIdn) {
-        this(eventLoop, channelFactory, null, resolveCache, NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache,
+        this(eventLoop, channelFactory, null, false, resolveCache,
+                NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache, null,
              dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
              maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
-             dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn, false);
+             dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn, false, 0);
     }
 
     DnsNameResolver(
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
             ChannelFactory<? extends SocketChannel> socketChannelFactory,
-            final DnsCache resolveCache,
-            final DnsCnameCache cnameCache,
-            final AuthoritativeDnsServerCache authoritativeDnsServerCache,
-            DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory,
-            long queryTimeoutMillis,
-            ResolvedAddressTypes resolvedAddressTypes,
-            boolean recursionDesired,
-            int maxQueriesPerResolve,
-            boolean traceEnabled,
-            int maxPayloadSize,
-            boolean optResourceEnabled,
-            HostsFileEntriesResolver hostsFileEntriesResolver,
-            DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
-            String[] searchDomains,
-            int ndots,
-            boolean decodeIdn,
-            boolean completeOncePreferredResolved) {
-        this(eventLoop, channelFactory, socketChannelFactory, resolveCache, cnameCache, authoritativeDnsServerCache,
-                null, dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes,
-                recursionDesired, maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled,
-                hostsFileEntriesResolver, dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn,
-                completeOncePreferredResolved, 0);
-    }
-
-    DnsNameResolver(
-            EventLoop eventLoop,
-            ChannelFactory<? extends DatagramChannel> channelFactory,
-            ChannelFactory<? extends SocketChannel> socketChannelFactory,
+            boolean retryWithTcpOnTimeout,
             final DnsCache resolveCache,
             final DnsCnameCache cnameCache,
             final AuthoritativeDnsServerCache authoritativeDnsServerCache,
@@ -463,6 +438,7 @@ public class DnsNameResolver extends InetNameResolver {
         this.ndots = ndots >= 0 ? ndots : DEFAULT_OPTIONS.ndots();
         this.decodeIdn = decodeIdn;
         this.completeOncePreferredResolved = completeOncePreferredResolved;
+        this.retryWithTcpOnTimeout = retryWithTcpOnTimeout;
         if (socketChannelFactory == null) {
             socketBootstrap = null;
         } else {
@@ -470,7 +446,8 @@ public class DnsNameResolver extends InetNameResolver {
             socketBootstrap.option(ChannelOption.SO_REUSEADDR, true)
                     .group(executor())
                     .channelFactory(socketChannelFactory)
-                    .attr(DNS_PIPELINE_ATTRIBUTE, Boolean.TRUE);
+                    .attr(DNS_PIPELINE_ATTRIBUTE, Boolean.TRUE)
+                    .handler(NOOP_HANDLER);
             if (queryTimeoutMillis > 0 && queryTimeoutMillis <= Integer.MAX_VALUE) {
                 // Set the connect timeout to the same as queryTimeout as otherwise it might take a long
                 // time for the query to fail in case of a connection timeout.
@@ -1360,7 +1337,7 @@ public class DnsNameResolver extends InetNameResolver {
         try {
             DnsQueryContext queryContext = new DatagramDnsQueryContext(ch, channelReadyPromise, nameServerAddr,
                     queryContextManager, payloadSize, isRecursionDesired(), queryTimeoutMillis(), question, additionals,
-                    castPromise, socketBootstrap);
+                    castPromise, socketBootstrap, retryWithTcpOnTimeout);
             ChannelFuture future = queryContext.writeQuery(flush);
             queryLifecycleObserver.queryWritten(nameServerAddr, future);
             return castPromise;

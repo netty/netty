@@ -75,6 +75,8 @@ abstract class DnsQueryContext {
     private final boolean recursionDesired;
 
     private final Bootstrap socketBootstrap;
+
+    private final boolean retryWithTcpOnTimeout;
     private final long queryTimeoutMillis;
 
     private volatile Future<?> timeoutFuture;
@@ -90,7 +92,9 @@ abstract class DnsQueryContext {
                     long queryTimeoutMillis,
                     DnsQuestion question,
                     DnsRecord[] additionals,
-                    Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise, Bootstrap socketBootstrap) {
+                    Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise,
+                    Bootstrap socketBootstrap,
+                    boolean retryWithTcpOnTimeout) {
         this.channel = checkNotNull(channel, "channel");
         this.queryContextManager = checkNotNull(queryContextManager, "queryContextManager");
         this.channelReadyFuture = checkNotNull(channelReadyFuture, "channelReadyFuture");
@@ -101,6 +105,7 @@ abstract class DnsQueryContext {
         this.recursionDesired = recursionDesired;
         this.queryTimeoutMillis = queryTimeoutMillis;
         this.socketBootstrap = socketBootstrap;
+        this.retryWithTcpOnTimeout = retryWithTcpOnTimeout;
 
         if (maxPayLoadSize > 0 &&
                 // Only add the extra OPT record if there is not already one. This is required as only one is allowed
@@ -313,7 +318,7 @@ abstract class DnsQueryContext {
      */
     void finishSuccess(AddressedEnvelope<? extends DnsResponse, InetSocketAddress> envelope, boolean truncated) {
         // Check if the response was not truncated or if a fallback to TCP is possible.
-        if (!truncated || !retryWithTCP(envelope)) {
+        if (!truncated || !retryWithTcp(envelope)) {
             final DnsResponse res = envelope.content();
             if (res.count(DnsSection.QUESTION) != 1) {
                 logger.warn("{} Received a DNS response with invalid number of questions. Expected: 1, found: {}",
@@ -358,7 +363,7 @@ abstract class DnsQueryContext {
             // This was caused by a timeout so use DnsNameResolverTimeoutException to allow the user to
             // handle it special (like retry the query).
             e = new DnsNameResolverTimeoutException(nameServerAddr, question, buf.toString());
-            if (retryWithTCP(e)) {
+            if (retryWithTcpOnTimeout && retryWithTcp(e)) {
                 // We did successfully retry with TCP.
                 return false;
             }
@@ -375,7 +380,7 @@ abstract class DnsQueryContext {
      * @return                  {@code true} if retry via TCP is supported and so the ownership of
      *                          {@code originalResult} was transferred, {@code false} otherwise.
      */
-    private boolean retryWithTCP(final Object originalResult) {
+    private boolean retryWithTcp(final Object originalResult) {
         if (socketBootstrap == null) {
             return false;
         }
