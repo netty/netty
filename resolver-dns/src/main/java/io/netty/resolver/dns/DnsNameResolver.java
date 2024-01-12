@@ -471,10 +471,10 @@ public class DnsNameResolver extends InetNameResolver {
                     .group(executor())
                     .channelFactory(socketChannelFactory)
                     .attr(DNS_PIPELINE_ATTRIBUTE, Boolean.TRUE)
-                    .handler(NOOP_HANDLER);
-            if (queryTimeoutMillis > 0) {
+                    .handler(TCP_ENCODER);
+            if (queryTimeoutMillis > 0 && queryTimeoutMillis <= Integer.MAX_VALUE) {
                 // Set the connect timeout to the same as queryTimeout as otherwise it might take a long
-                // time to fail the original query if the connect times out.
+                // time for the query to fail in case of a connection timeout.
                 socketBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) queryTimeoutMillis);
             }
         }
