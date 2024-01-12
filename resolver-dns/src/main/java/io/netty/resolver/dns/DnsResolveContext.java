@@ -60,6 +60,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import static io.netty.handler.codec.dns.DnsResponseCode.NXDOMAIN;
+import static io.netty.handler.codec.dns.DnsResponseCode.SERVFAIL;
 import static io.netty.resolver.dns.DnsAddressDecoder.decodeAddress;
 import static java.lang.Math.min;
 
@@ -81,6 +83,12 @@ abstract class DnsResolveContext<T> {
     private static final RuntimeException NAME_SERVERS_EXHAUSTED_EXCEPTION =
             DnsResolveContextException.newStatic("No name servers returned an answer",
             DnsResolveContext.class, "tryToFinishResolve(..)");
+    private static final RuntimeException SERVFAIL_QUERY_FAILED_EXCEPTION =
+            DnsErrorCauseException.newStatic("Query failed with SERVFAIL", SERVFAIL,
+                    DnsResolveContext.class, "onResponse(..)");
+    private static final RuntimeException NXDOMAIN_CAUSE_QUERY_FAILED_EXCEPTION =
+            DnsErrorCauseException.newStatic("Query failed with NXDOMAIN", NXDOMAIN,
+                    DnsResolveContext.class, "onResponse(..)");
 
     final DnsNameResolver parent;
     private final Channel channel;
@@ -636,7 +644,7 @@ abstract class DnsResolveContext<T> {
             // Retry with the next server if the server did not tell us that the domain does not exist.
             if (code != DnsResponseCode.NXDOMAIN) {
                 query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
-                      queryLifecycleObserver.queryNoAnswer(code), true, promise, null);
+                      queryLifecycleObserver.queryNoAnswer(code), true, promise, cause(code));
             } else {
                 queryLifecycleObserver.queryFailed(NXDOMAIN_QUERY_FAILED_EXCEPTION);
 
@@ -661,6 +669,10 @@ abstract class DnsResolveContext<T> {
                 if (!res.isAuthoritativeAnswer()) {
                     query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
                             newDnsQueryLifecycleObserver(question), true, promise, null);
+                } else {
+                    // Failed with NX cause - distinction between an authoritative NXDOMAIN vs a timeout
+                    tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question,
+                            queryLifecycleObserver, promise, NXDOMAIN_CAUSE_QUERY_FAILED_EXCEPTION);
                 }
             }
         } finally {
@@ -714,6 +726,17 @@ abstract class DnsResolveContext<T> {
             }
         }
         return false;
+    }
+
+    private static Throwable cause(final DnsResponseCode code) {
+        assert code != null;
+        if (SERVFAIL.intValue() == code.intValue()) {
+            return SERVFAIL_QUERY_FAILED_EXCEPTION;
+        } else if (NXDOMAIN.intValue() == code.intValue()) {
+            return NXDOMAIN_CAUSE_QUERY_FAILED_EXCEPTION;
+        }
+
+        return null;
     }
 
     private static final class DnsAddressStreamList extends AbstractList<InetSocketAddress> {
