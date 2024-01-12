@@ -423,7 +423,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             if (continueReading && !isShutdown(ChannelShutdownDirection.Inbound)) {
                 maybeAddChannelToReadCompletePendingQueue();
             } else {
-                notifyReadComplete(readHandle, true);
+                notifyReadComplete(readHandle, true, false);
             }
         } else {
             if (inboundBuffer == null) {
@@ -436,7 +436,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     void fireChildReadComplete() {
         assert executor().inEventLoop();
         assert readStatus != ReadStatus.IDLE || !readCompletePending;
-        notifyReadComplete(readHandle(), false);
+        notifyReadComplete(readHandle(), false, false);
     }
 
     void closeWithError(Http2Error error) {
@@ -694,34 +694,46 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     }
 
     void doBeginRead() {
-        // Process messages until there are none left (or the user stopped requesting) and also handle EOS.
-        while (readStatus != ReadStatus.IDLE) {
-            Object message = pollQueuedMessage();
-            if (message == null) {
-                if (readEOS) {
-                    closeForcibly();
-                }
-                // We need to double check that there is nothing left to flush such as a
-                // window update frame.
+        if (readStatus == ReadStatus.IDLE) {
+            // Don't wait for the user to request a read to notify of channel closure.
+            if (readEOS && (inboundBuffer == null || inboundBuffer.isEmpty())) {
+                // Double check there is nothing left to flush such as a window update frame.
                 flush();
-                break;
+                closeForcibly();
             }
-            final ReadHandleFactory.ReadHandle allocHandle = readHandle();
-            boolean continueReading;
-            do {
-                continueReading = doRead0((Http2Frame) message, allocHandle);
-            } while ((readEOS || continueReading)
-                    && (message = pollQueuedMessage()) != null);
+        } else {
+            do { // Process messages until there are none left (or the user stopped requesting) and also handle EOS.
+                Object message = pollQueuedMessage();
+                if (message == null) {
+                    // Double check there is nothing left to flush such as a window update frame.
+                    flush();
+                    if (readEOS) {
+                        closeForcibly();
+                    }
+                    break;
+                }
+                final ReadHandleFactory.ReadHandle readHandle = readHandle();
+                boolean continueReading;
+                do {
+                    continueReading = doRead0((Http2Frame) message, readHandle);
+                } while ((readEOS || continueReading)
+                        && (message = pollQueuedMessage()) != null);
 
-            if (continueReading && handler.isParentReadInProgress() && !readEOS) {
-                // Currently the parent and child channel are on the same EventLoop thread. If the parent is
-                // currently reading it is possible that more frames will be delivered to this child channel. In
-                // the case that this child channel still wants to read we delay the channelReadComplete on this
-                // child channel until the parent is done reading.
-                maybeAddChannelToReadCompletePendingQueue();
-            } else {
-                notifyReadComplete(allocHandle, true);
-            }
+                if (continueReading && handler.isParentReadInProgress() && !readEOS) {
+                    // Currently the parent and child channel are on the same EventLoop thread. If the parent is
+                    // currently reading it is possible that more frames will be delivered to this child channel. In
+                    // the case that this child channel still wants to read we delay the channelReadComplete on this
+                    // child channel until the parent is done reading.
+                    maybeAddChannelToReadCompletePendingQueue();
+                } else {
+                    notifyReadComplete(readHandle, true, true);
+
+                    // While in the read loop reset the readState AFTER calling readComplete (or other pipeline
+                    // callbacks) to prevents re-entry into this method (if autoRead is disabled and the user calls
+                    // read on each readComplete) and StackOverflowException.
+                    resetReadStatus();
+                }
+            } while (readStatus != ReadStatus.IDLE);
         }
     }
 
@@ -752,17 +764,20 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         }
     }
 
-    void notifyReadComplete(ReadHandleFactory.ReadHandle allocHandle, boolean forceReadComplete) {
+    private void resetReadStatus() {
+        readStatus = readStatus == ReadStatus.REQUESTED ? ReadStatus.IN_PROGRESS : ReadStatus.IDLE;
+    }
+
+    void notifyReadComplete(ReadHandleFactory.ReadHandle allocHandle, boolean forceReadComplete, boolean inReadLoop) {
         if (!readCompletePending && !forceReadComplete) {
             return;
         }
         // Set to false just in case we added the channel multiple times before.
         readCompletePending = false;
 
-        if (readStatus == ReadStatus.REQUESTED) {
-            readStatus = ReadStatus.IN_PROGRESS;
-        } else {
-            readStatus = ReadStatus.IDLE;
+        if (!inReadLoop) {
+            // While in the read loop we reset the state after calling pipeline methods to prevent StackOverflow.
+            resetReadStatus();
         }
 
         allocHandle.readComplete();
