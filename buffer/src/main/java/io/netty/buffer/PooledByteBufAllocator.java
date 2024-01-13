@@ -58,7 +58,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
     private static final int CACHE_NOT_USED = 0;
 
-    private static final int MAX_ORDER_UPPER_BOUNDER = 14;
+    private static final int MAX_ORDER_UPPER_BOUND = 14;
 
     private static final int DEFAULT_MAX_ORDER_SETTING = 9; // 8192 << 9 = 4 MiB per chunk
 
@@ -77,25 +77,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         int defaultAlignment = SystemPropertyUtil.getInt(
                 "io.netty.allocator.directMemoryCacheAlignment", DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT_SETTING);
         int defaultPageSize = SystemPropertyUtil.getInt("io.netty.allocator.pageSize", DEFAULT_PAGE_SIZE_SETTING);
-        Throwable pageSizeFallbackCause = null;
-        try {
-            validateAndCalculatePageShifts(defaultPageSize, defaultAlignment);
-        } catch (Throwable t) {
-            pageSizeFallbackCause = t;
-            defaultPageSize = DEFAULT_PAGE_SIZE_SETTING;
-            defaultAlignment = DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT_SETTING;
-        }
+        validateAndCalculatePageShifts(defaultPageSize, defaultAlignment);
         DEFAULT_PAGE_SIZE = defaultPageSize;
         DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT = defaultAlignment;
 
         int defaultMaxOrder = SystemPropertyUtil.getInt("io.netty.allocator.maxOrder", DEFAULT_MAX_ORDER_SETTING);
-        Throwable maxOrderFallbackCause = null;
-        try {
-            validateAndCalculateChunkSize(DEFAULT_PAGE_SIZE, defaultMaxOrder);
-        } catch (Throwable t) {
-            maxOrderFallbackCause = t;
-            defaultMaxOrder = calculateDefaultMaxOrder(DEFAULT_PAGE_SIZE);
-        }
+        validateAndCalculateChunkSize(DEFAULT_PAGE_SIZE, defaultMaxOrder);
         DEFAULT_MAX_ORDER = defaultMaxOrder;
 
         // Determine reasonable default for nHeapArena and nDirectArena.
@@ -165,20 +152,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.allocator.numHeapArenas: {}", DEFAULT_NUM_HEAP_ARENA);
             logger.debug("-Dio.netty.allocator.numDirectArenas: {}", DEFAULT_NUM_DIRECT_ARENA);
-            if (pageSizeFallbackCause == null) {
-                logger.debug("-Dio.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE);
-                logger.debug("-Dio.netty.allocator.directMemoryCacheAlignment: {}",
-                        DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
-            } else {
-                logger.debug("-Dio.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE, pageSizeFallbackCause);
-                logger.debug("-Dio.netty.allocator.directMemoryCacheAlignment: {}",
-                        DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT, pageSizeFallbackCause);
-            }
-            if (maxOrderFallbackCause == null) {
-                logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER);
-            } else {
-                logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER, maxOrderFallbackCause);
-            }
+            logger.debug("-Dio.netty.allocator.pageSize: {}", DEFAULT_PAGE_SIZE);
+            logger.debug("-Dio.netty.allocator.directMemoryCacheAlignment: {}", DEFAULT_DIRECT_MEMORY_CACHE_ALIGNMENT);
+            logger.debug("-Dio.netty.allocator.maxOrder: {}", DEFAULT_MAX_ORDER);
             logger.debug("-Dio.netty.allocator.chunkSize: {}", DEFAULT_PAGE_SIZE << DEFAULT_MAX_ORDER);
             logger.debug("-Dio.netty.allocator.smallCacheSize: {}", DEFAULT_SMALL_CACHE_SIZE);
             logger.debug("-Dio.netty.allocator.normalCacheSize: {}", DEFAULT_NORMAL_CACHE_SIZE);
@@ -363,9 +339,9 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     private static int validateAndCalculateChunkSize(int pageSize, int maxOrder) {
-        if (maxOrder > MAX_ORDER_UPPER_BOUNDER || maxOrder < 0) {
+        if (maxOrder > MAX_ORDER_UPPER_BOUND || maxOrder < 0) {
             throw new IllegalArgumentException(String.format("maxOrder: " + maxOrder + " (expected: 0-%d)",
-                    MAX_ORDER_UPPER_BOUNDER));
+                    MAX_ORDER_UPPER_BOUND));
         }
 
         // Ensure the resulting chunkSize does not overflow.
