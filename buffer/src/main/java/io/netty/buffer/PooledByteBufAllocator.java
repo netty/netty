@@ -28,7 +28,6 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.jctools.util.Pow2;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -309,7 +308,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         if (pageSize > MAX_CHUNK_SIZE) {
             throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: " + MAX_CHUNK_SIZE + ')');
         }
-        if (!Pow2.isPowerOfTwo(pageSize)) {
+        if (!PlatformDependent.isPowerOfTwo(pageSize)) {
             throw new IllegalArgumentException("pageSize: " + pageSize + " (expected: power of 2)");
         }
         if (pageSize < alignment) {
@@ -318,7 +317,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         }
 
         checkPositiveOrZero(alignment, "alignment");
-        if (!Pow2.isPowerOfTwo(alignment)) {
+        if (!PlatformDependent.isPowerOfTwo(alignment)) {
             throw new IllegalArgumentException("alignment: " + alignment + " (expected: power of two)");
         }
         // At this point we know that `pageSize` is aligned with `alignment`, because:

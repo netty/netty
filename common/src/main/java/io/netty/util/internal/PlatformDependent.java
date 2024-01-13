@@ -1503,6 +1503,10 @@ public final class PlatformDependent {
         return file;
     }
 
+    public static boolean isPowerOfTwo(final int value) {
+        return Pow2.isPowerOfTwo(value);
+    }
+
     /**
      * Adds only those classifier strings to <tt>dest</tt> which are present in <tt>allowed</tt>.
      *
