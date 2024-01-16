@@ -50,7 +50,7 @@ import java.net.SocketAddress;
  * and back. It can be used as an adapter in conjunction with {@link
  * Http3ServerConnectionHandler} or {@link Http3ClientConnectionHandler} to make http/3 connections
  * backward-compatible with {@link ChannelHandler}s expecting {@link HttpObject}.
- *
+ * <p>
  * For simplicity, it converts to chunked encoding unless the entire stream
  * is a single header.
  */
@@ -148,7 +148,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
                     return;
                 } else {
                     throw new EncoderException(
-                            HttpResponseStatus.CONTINUE.toString() + " must be a FullHttpResponse");
+                            HttpResponseStatus.CONTINUE + " must be a FullHttpResponse");
                 }
             }
         }
@@ -172,32 +172,36 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
 
         if (isLast) {
             LastHttpContent last = (LastHttpContent) msg;
-            boolean readable = last.content().isReadable();
-            boolean hasTrailers = !last.trailingHeaders().isEmpty();
+            try {
+                boolean readable = last.content().isReadable();
+                boolean hasTrailers = !last.trailingHeaders().isEmpty();
 
-            if (combiner == null && readable && hasTrailers && !promise.isVoid()) {
-                combiner = new PromiseCombiner(ctx.executor());
-            }
+                if (combiner == null && readable && hasTrailers && !promise.isVoid()) {
+                    combiner = new PromiseCombiner(ctx.executor());
+                }
 
-            if (readable) {
-                promise = writeWithOptionalCombiner(ctx,
-                        new DefaultHttp3DataFrame(last.content()), promise, combiner, true);
-            }
-            if (hasTrailers) {
-                Http3Headers headers = HttpConversionUtil.toHttp3Headers(last.trailingHeaders(), validateHeaders);
-                promise = writeWithOptionalCombiner(ctx,
-                        new DefaultHttp3HeadersFrame(headers), promise, combiner, true);
-            }
-            if (!readable) {
+                if (readable) {
+                    promise = writeWithOptionalCombiner(
+                            ctx, new DefaultHttp3DataFrame(last.content().retain()), promise, combiner, true);
+                }
+                if (hasTrailers) {
+                    Http3Headers headers = HttpConversionUtil.toHttp3Headers(last.trailingHeaders(), validateHeaders);
+                    promise = writeWithOptionalCombiner(ctx,
+                            new DefaultHttp3HeadersFrame(headers), promise, combiner, true);
+                } else if (!readable) {
+                    if (combiner == null) {
+                        // We only need to write something if there was no write before.
+                        promise = writeWithOptionalCombiner(
+                                ctx, new DefaultHttp3DataFrame(last.content().retain()), promise, combiner, true);
+                    }
+                }
+                // The shutdown is always done via the listener to ensure previous written data is correctly drained
+                // before QuicStreamChannel.shutdownOutput() is called. Missing to do so might cause previous queued
+                // data to be failed with a ClosedChannelException.
+                promise = promise.unvoid().addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+            } finally {
+                // Release LastHttpContent, we retain the content if we need it.
                 last.release();
-            }
-
-            if (!readable && !hasTrailers && combiner == null) {
-                // we had to write nothing. happy days!
-                ((QuicStreamChannel) ctx.channel()).shutdownOutput();
-                promise.trySuccess();
-            } else {
-                promise.addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
             }
         } else if (msg instanceof HttpContent) {
             promise = writeWithOptionalCombiner(ctx,

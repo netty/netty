@@ -61,6 +61,11 @@ import io.netty.incubator.codec.quic.QuicSslContextBuilder;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
@@ -71,6 +76,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -221,6 +227,13 @@ public class Http3FrameToHttpObjectCodecTest {
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
 
         assertTrue(ch.isOutputShutdown());
+        Http3DataFrame dataFrame = ch.readOutbound();
+        try {
+            assertThat(dataFrame.content().readableBytes(), is(0));
+        } finally {
+            dataFrame.release();
+        }
+
         assertFalse(ch.finish());
     }
 
@@ -510,6 +523,13 @@ public class Http3FrameToHttpObjectCodecTest {
         ch.writeOutbound(LastHttpContent.EMPTY_LAST_CONTENT);
 
         assertTrue(ch.isOutputShutdown());
+        Http3DataFrame dataFrame = ch.readOutbound();
+        try {
+            assertThat(dataFrame.content().readableBytes(), is(0));
+        } finally {
+            dataFrame.release();
+        }
+
         assertFalse(ch.finish());
     }
 
@@ -606,6 +626,13 @@ public class Http3FrameToHttpObjectCodecTest {
         assertThat(headers.path().toString(), is("/hello/world"));
         assertTrue(ch.isOutputShutdown());
 
+        Http3DataFrame dataFrame = ch.readOutbound();
+        try {
+            assertThat(dataFrame.content().readableBytes(), is(0));
+        } finally {
+            dataFrame.release();
+        }
+
         assertFalse(ch.finish());
     }
 
@@ -684,31 +711,30 @@ data.release();
         assertFalse(ch.finish());
     }
 
-    @Test
-    public void testEncodeCombinations() {
-        // this test goes through all the branches of Http3FrameToHttpObjectCodec and ensures right functionality
-
-        for (boolean headers : new boolean[]{false, true}) {
-            for (boolean last : new boolean[]{false, true}) {
-                for (boolean nonEmptyContent : new boolean[]{false, true}) {
-                    for (boolean hasTrailers : new boolean[]{false, true}) {
-                        for (boolean voidPromise : new boolean[]{false, true}) {
-                            testEncodeCombination(headers, last, nonEmptyContent, hasTrailers, voidPromise);
+    private static final class EncodeCombinationsArgumentsProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) {
+            List<Arguments> arguments = new ArrayList<>();
+            for (boolean headers : new boolean[]{false, true}) {
+                for (boolean last : new boolean[]{false, true}) {
+                    for (boolean nonEmptyContent : new boolean[]{false, true}) {
+                        for (boolean hasTrailers : new boolean[]{false, true}) {
+                            for (boolean voidPromise : new boolean[]{false, true}) {
+                                // this test goes through all the branches of Http3FrameToHttpObjectCodec
+                                // and ensures right functionality
+                                arguments.add(Arguments.of(headers, last, nonEmptyContent, hasTrailers, voidPromise));
+                            }
                         }
                     }
                 }
             }
+            return arguments.stream();
         }
     }
 
-    /**
-     * @param headers         Should this be an initial message, with headers ({@link HttpRequest})?
-     * @param last            Should this be a last message ({@link LastHttpContent})?
-     * @param nonEmptyContent Should this message have non-empty content?
-     * @param hasTrailers     Should this {@code last} message have trailers?
-     * @param voidPromise     Should the write operation use a void promise?
-     */
-    private static void testEncodeCombination(
+    @ParameterizedTest(name = "headers: {0}, last: {1}, nonEmptyContent: {2}, hasTrailers: {3}, voidPromise: {4}")
+    @ArgumentsSource(value = EncodeCombinationsArgumentsProvider.class)
+    public void testEncodeCombination(
             boolean headers,
             boolean last,
             boolean nonEmptyContent,
@@ -772,31 +798,28 @@ data.release();
             Http3DataFrame dataFrame = ch.readOutbound();
             assertThat(dataFrame.content().readableBytes(), is(1));
             dataFrame.release();
-        } else if (!headers && !hasTrailers && !last) {
-            ch.<Http3DataFrame>readOutbound().release();
         }
         if (hasTrailers) {
             Http3HeadersFrame trailersFrame = ch.readOutbound();
             assertThat(trailersFrame.headers().get("foo"), is("bar"));
+        } else if (!nonEmptyContent && !headers) {
+            Http3DataFrame dataFrame = ch.readOutbound();
+            assertThat(dataFrame.content().readableBytes(), is(0));
+            dataFrame.release();
         }
-        // empty LastHttpContent has no data written and will complete the promise immediately
-        boolean anyData = hasTrailers || nonEmptyContent || headers || !last;
+
         if (!voidPromise) {
-            if (anyData) {
-                assertFalse(fullPromise.isDone());
-            } else {
-                // nothing to write, immediately complete
-                assertTrue(fullPromise.isDone());
-            }
+            assertFalse(fullPromise.isDone());
         }
-        if (!last || anyData) {
-            assertFalse(ch.isOutputShutdown());
-        }
+
+        assertFalse(ch.isOutputShutdown());
         for (ChannelPromise framePromise : framePromises) {
             framePromise.trySuccess();
         }
         if (last) {
             assertTrue(ch.isOutputShutdown());
+        } else {
+            assertFalse(ch.isOutputShutdown());
         }
         if (!voidPromise) {
             assertTrue(fullPromise.isDone());
