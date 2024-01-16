@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.AbstractReferenceCountedByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
@@ -275,9 +276,20 @@ public final class ChannelOutboundBuffer {
 
         removeEntry(e);
 
+        // only release message, notify and decrement if it was not canceled before.
         if (!e.cancelled) {
-            // only release message, notify and decrement if it was not canceled before.
-            ReferenceCountUtil.safeRelease(msg);
+            // this save both checking against the ReferenceCounted interface
+            // and makes better use of virtual calls vs interface ones
+            if (msg instanceof AbstractReferenceCountedByteBuf) {
+                try {
+                    // release now as it is flushed.
+                    ((AbstractReferenceCountedByteBuf) msg).release();
+                } catch (Throwable t) {
+                    logger.warn("Failed to release a ByteBuf: {}", msg, t);
+                }
+            } else {
+                ReferenceCountUtil.safeRelease(msg);
+            }
             safeSuccess(promise);
             decrementPendingOutboundBytes(size, false, true);
         }
