@@ -205,11 +205,9 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
     protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response, ChannelPromise promise)
             throws Exception {
         List<WebSocketServerExtension> validExtensionsList = validExtensions.poll();
-        HttpResponse httpResponse = response;
-        //checking the status is faster than looking at headers
-        //so we do this first
-        if (HttpResponseStatus.SWITCHING_PROTOCOLS.equals(httpResponse.status())) {
-            handlePotentialUpgrade(ctx, promise, httpResponse, validExtensionsList);
+        // checking the status is faster than looking at headers so we do this first
+        if (HttpResponseStatus.SWITCHING_PROTOCOLS.equals(response.status())) {
+            handlePotentialUpgrade(ctx, promise, response, validExtensionsList);
         }
         super.write(ctx, response, promise);
     }
