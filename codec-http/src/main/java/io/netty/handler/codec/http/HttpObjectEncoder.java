@@ -307,22 +307,42 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
             final H m = (H) o;
 
-            final ByteBuf buf = ctx.alloc().buffer((int) headersEncodedSizeAccumulator);
-
-            encodeInitialLine(buf, m);
-
             final int state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
                     HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
+
+            ByteBuf content = msg.content();
+            // try to save adding the content as an additional buffer to the out list by merging it into the headers
+            final boolean copyContent = content.readableBytes() > 0 &&
+                                        state == ST_CONTENT_NON_CHUNK &&
+                                        // heap buffers will be copied anyway so don't try to save memory
+                                        (content.hasArray() || content.readableBytes() <= 128);
+
+            final int headersAndContentSize = (int) headersEncodedSizeAccumulator +
+                                                  (copyContent? content.readableBytes() : 0);
+            final ByteBuf buf = ctx.alloc().buffer(headersAndContentSize);
+
+            encodeInitialLine(buf, m);
 
             sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
 
             encodeHeaders(m.headers(), buf);
             ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
 
+            // don't consider the copyContent case here: the statistics is just related the headers
             headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
                     HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
 
-            encodeByteBufHttpContent(state, ctx, buf, msg.content(), msg.trailingHeaders(), out);
+            if (copyContent) {
+                assert state == ST_CONTENT_NON_CHUNK;
+                // verify if the estimation we made before was correct to hold the content,
+                // otherwise fallback to the existing path: subsequent attempts will likely be more accurate
+                if (buf.maxFastWritableBytes() >= content.readableBytes()) {
+                    buf.writeBytes(content);
+                    out.add(buf);
+                    return;
+                }
+            }
+            encodeByteBufHttpContent(state, ctx, buf, content, msg.trailingHeaders(), out);
         } finally {
             msg.release();
         }
@@ -331,7 +351,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private static boolean encodeContentNonChunk(List<Object> out, ByteBuf buf, ByteBuf content) {
         final int contentLength = content.readableBytes();
         if (contentLength > 0) {
-            if (buf.writableBytes() >= contentLength) {
+            if (buf.maxWritableBytes() >= contentLength) {
                 // merge into other buffer for performance reasons
                 buf.writeBytes(content);
                 out.add(buf);
