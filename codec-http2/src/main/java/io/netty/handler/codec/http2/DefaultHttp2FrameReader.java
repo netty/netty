@@ -63,6 +63,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
      * renders the connection unusable.
      */
     private boolean readError;
+    private boolean resetReader;
     private byte frameType;
     private int streamId;
     private Http2Flags flags;
@@ -139,6 +140,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             throws Http2Exception {
         if (readError) {
             input.skipBytes(input.readableBytes());
+            resetReader = false;
             return;
         }
         try {
@@ -164,6 +166,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             } while (input.isReadable());
         } catch (Http2Exception e) {
             readError = !Http2Exception.isStreamError(e);
+            if (resetReader) {
+                resetReader = false;
+                readingHeaders = true;
+                input.skipBytes(input.readableBytes());
+            }
             throw e;
         } catch (RuntimeException e) {
             readError = true;
@@ -309,6 +316,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         verifyNotProcessingHeaders();
 
         if (payloadLength != PRIORITY_ENTRY_LENGTH) {
+            resetReader = true;
             throw streamError(streamId, FRAME_SIZE_ERROR,
                     "Invalid frame length %d.", payloadLength);
         }
@@ -428,10 +436,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             long word1 = payload.readUnsignedInt();
             final boolean exclusive = (word1 & 0x80000000L) != 0;
             final int streamDependency = (int) (word1 & 0x7FFFFFFFL);
+            final short weight = (short) (payload.readUnsignedByte() + 1);
             if (streamDependency == streamId) {
+                resetReader = true;
                 throw streamError(streamId, PROTOCOL_ERROR, "A stream cannot depend on itself.");
             }
-            final short weight = (short) (payload.readUnsignedByte() + 1);
             final int lenToRead = lengthWithoutTrailingPadding(payloadEndIndex - payload.readerIndex(), padding);
 
             // Create a handler that invokes the listener when the header block is complete.
@@ -496,10 +505,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         long word1 = payload.readUnsignedInt();
         boolean exclusive = (word1 & 0x80000000L) != 0;
         int streamDependency = (int) (word1 & 0x7FFFFFFFL);
+        short weight = (short) (payload.readUnsignedByte() + 1);
         if (streamDependency == streamId) {
+            resetReader = true;
             throw streamError(streamId, PROTOCOL_ERROR, "A stream cannot depend on itself.");
         }
-        short weight = (short) (payload.readUnsignedByte() + 1);
         listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
     }
 
