@@ -81,7 +81,7 @@ abstract class DnsQueryContext {
 
     private volatile Future<?> timeoutFuture;
 
-    private int id = -1;
+    private int id = Integer.MIN_VALUE;
 
     DnsQueryContext(Channel channel,
                     Future<? extends Channel> channelReadyFuture,
@@ -172,8 +172,15 @@ abstract class DnsQueryContext {
      * @return                      the {@link ChannelFuture} that is notified once once the write completes.
      */
     final ChannelFuture writeQuery(boolean flush) {
-        assert id == -1 : this.getClass().getSimpleName() + ".writeQuery(...) can only be executed once.";
-        id = queryContextManager.add(nameServerAddr, this);
+        assert id == Integer.MIN_VALUE : this.getClass().getSimpleName() +
+                ".writeQuery(...) can only be executed once.";
+
+        if ((id = queryContextManager.add(nameServerAddr, this)) == -1) {
+            // We did exhaust the id space, fail the query
+            IllegalStateException e = new IllegalStateException("query ID space exhausted: " + question());
+            finishFailure("failed to send a query via " + protocol(), e, false);
+            return channel.newFailedFuture(e);
+        }
 
         // Ensure we remove the id from the QueryContextManager once the query completes.
         promise.addListener(new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
