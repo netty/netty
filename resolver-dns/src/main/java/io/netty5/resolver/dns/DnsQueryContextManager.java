@@ -38,11 +38,27 @@ final class DnsQueryContextManager {
     private final Map<InetSocketAddress, DnsQueryContextMap> map =
             new HashMap<>();
 
+    /**
+     * Add {@link DnsQueryContext} to the context manager and return the ID that should be used for the query.
+     * This method will return {@code -1} if an ID could not be generated and the context was not stored.
+     *
+     * @param nameServerAddr    The {@link InetSocketAddress} of the nameserver to query.
+     * @param qCtx              The {@link {@link DnsQueryContext} to store.
+     * @return                  the ID that should be used or {@code -1} if none could be generated.
+     */
     int add(InetSocketAddress nameServerAddr, DnsQueryContext qCtx) {
         final DnsQueryContextMap contexts = getOrCreateContextMap(nameServerAddr);
         return contexts.add(qCtx);
     }
 
+    /**
+     * Return the {@link DnsQueryContext} for the given {@link InetSocketAddress} and id or {@code null} if
+     * none could be found.
+     *
+     * @param nameServerAddr    The {@link InetSocketAddress} of the nameserver.
+     * @param id                The id that identifies the {@link DnsQueryContext} and was used for the query.
+     * @return                  The context or {@code null} if none could be found.
+     */
     DnsQueryContext get(InetSocketAddress nameServerAddr, int id) {
         final DnsQueryContextMap contexts = getContextMap(nameServerAddr);
         if (contexts == null) {
@@ -51,6 +67,14 @@ final class DnsQueryContextManager {
         return contexts.get(id);
     }
 
+    /**
+     * Remove the {@link DnsQueryContext} for the given {@link InetSocketAddress} and id or {@code null} if
+     * none could be found.
+     *
+     * @param nameServerAddr    The {@link InetSocketAddress} of the nameserver.
+     * @param id                The id that identifies the {@link DnsQueryContext} and was used for the query.
+     * @return                  The context or {@code null} if none could be removed.
+     */
     DnsQueryContext remove(InetSocketAddress nameServerAddr, int id) {
         final DnsQueryContextMap contexts = getContextMap(nameServerAddr);
         if (contexts == null) {
@@ -150,8 +174,7 @@ final class DnsQueryContextManager {
 
                 id = id + 1 & 0xFFFF;
                 if (++tries >= MAX_TRIES) {
-                    throw new IllegalStateException(
-                            "query ID space exhausted after " + MAX_TRIES + ": " + ctx.question());
+                    return -1;
                 }
             }
         }
