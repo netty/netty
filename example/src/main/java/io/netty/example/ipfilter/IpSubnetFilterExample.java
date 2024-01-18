@@ -47,7 +47,7 @@ public final class IpSubnetFilterExample {
         EventLoopGroup workerGroup = new NioEventLoopGroup(1);
 
         try {
-            List<IpSubnetFilterRule> rules = new ArrayList<>();
+            List<IpSubnetFilterRule> rules = new ArrayList<IpSubnetFilterRule>();
 
             // Reject 10.10.10.0/24 and 192.168.0.0/16 ranges but accept the rest
             rules.add(new IpSubnetFilterRule("10.10.10.0", 24, IpFilterRuleType.REJECT));
