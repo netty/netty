@@ -903,15 +903,18 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 if (b == ';' || isControlOrWhitespaceAsciiChar(b)) {
                     if (i == 0) {
                         // empty case
-                        throw new NumberFormatException();
+                        throw new NumberFormatException("Empty chunk size");
                     }
                     return result;
                 }
                 // non-hex char fail-fast path
-                throw new NumberFormatException();
+                throw new NumberFormatException("Invalid character in chunk size");
             }
             result *= 16;
             result += digit;
+            if (result < 0) {
+                throw new NumberFormatException("Chunk size overflow: " + result);
+            }
         }
         return result;
     }

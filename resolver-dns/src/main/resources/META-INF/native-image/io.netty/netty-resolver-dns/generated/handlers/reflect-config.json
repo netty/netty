@@ -7,9 +7,16 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.resolver.dns.DnsNameResolver$3",
+    "name": "io.netty.resolver.dns.DnsNameResolver$2",
     "condition": {
-      "typeReachable": "io.netty.resolver.dns.DnsNameResolver$3"
+      "typeReachable": "io.netty.resolver.dns.DnsNameResolver$2"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.resolver.dns.DnsNameResolver$4",
+    "condition": {
+      "typeReachable": "io.netty.resolver.dns.DnsNameResolver$4"
     },
     "queryAllPublicMethods": true
   },
@@ -21,9 +28,9 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.resolver.dns.DnsNameResolver$DnsResponseHandler$1$1",
+    "name": "io.netty.resolver.dns.DnsQueryContext$6$1",
     "condition": {
-      "typeReachable": "io.netty.resolver.dns.DnsNameResolver$DnsResponseHandler$1$1"
+      "typeReachable": "io.netty.resolver.dns.DnsQueryContext$6$1"
     },
     "queryAllPublicMethods": true
   }

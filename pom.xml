@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.105.Final-SNAPSHOT</version>
+  <version>4.1.106.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -666,7 +666,7 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>19.3.6</graalvm.version>
-    <brotli4j.version>1.13.0</brotli4j.version>
+    <brotli4j.version>1.14.0</brotli4j.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
@@ -882,6 +882,11 @@
       </dependency>
       <dependency>
         <groupId>com.aayushatharva.brotli4j</groupId>
+        <artifactId>native-linux-ppc64le</artifactId>
+        <version>${brotli4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aayushatharva.brotli4j</groupId>
         <artifactId>native-linux-x86_64</artifactId>
         <version>${brotli4j.version}</version>
       </dependency>
@@ -913,6 +918,11 @@
       <dependency>
         <groupId>com.aayushatharva.brotli4j</groupId>
         <artifactId>native-windows-x86_64</artifactId>
+        <version>${brotli4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aayushatharva.brotli4j</groupId>
+        <artifactId>native-windows-aarch64</artifactId>
         <version>${brotli4j.version}</version>
       </dependency>
 
@@ -1877,6 +1887,7 @@
                 <archive>
                   <manifest>
                     <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                   </manifest>
                   <manifestEntries>
                     <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>

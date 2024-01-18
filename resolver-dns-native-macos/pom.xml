@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.105.Final-SNAPSHOT</version>
+    <version>4.1.106.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-resolver-dns-native-macos</artifactId>
 
@@ -104,6 +104,7 @@
                   <archive>
                     <manifest>
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                      <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                     </manifest>
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_${os.detected.arch}.jnilib; osname=MacOSX; processor=${os.detected.arch}</Bundle-NativeCode>
@@ -212,6 +213,7 @@
                   <archive>
                     <manifest>
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                      <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                     </manifest>
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_aarch_64.jnilib; osname=MacOSX; processor=aarch64</Bundle-NativeCode>
@@ -321,6 +323,7 @@
                   <archive>
                     <manifest>
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                      <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                     </manifest>
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_x86_64.jnilib; osname=MacOSX; processor=x86_64</Bundle-NativeCode>
