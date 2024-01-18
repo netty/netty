@@ -81,6 +81,23 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
                         // There can't be any duplicates for pseudy header names.
                         throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
                     }
+                } else if (HttpMethod.OPTIONS.asciiName().contentEqualsIgnoreCase(method)) {
+                    // See:
+                    //
+                    // https://www.rfc-editor.org/rfc/rfc9114.html#section-4.3.1
+                    // https://www.rfc-editor.org/rfc/rfc9110#section-7.1
+                    // - :method
+                    // - :scheme
+                    // - :authority
+                    // - :path
+                    if (pseudoHeadersCount != 4 &&
+                            // - :method
+                            // - :scheme
+                            // - :path
+                            !(pseudoHeadersCount == 3 && headers.authority() == null &&
+                                    "*".contentEquals(headers.path()))) {
+                        throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
+                    }
                 } else {
                     // For requests we must include:
                     // - :method
