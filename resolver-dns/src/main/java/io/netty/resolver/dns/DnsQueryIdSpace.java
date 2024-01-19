@@ -30,9 +30,6 @@ final class DnsQueryIdSpace {
 
     // Holds all possible ids which are stored as unsigned shorts
     private final short[] ids = new short[MAX_ID + 1];
-    private final int mask = ids.length - 1;
-    private int head;
-    private int tail;
     private int count;
 
     DnsQueryIdSpace() {
@@ -52,8 +49,7 @@ final class DnsQueryIdSpace {
         if (count == 0) {
             return -1;
         }
-        short id = ids[head];
-        head = (head + 1) & mask;
+        short id = ids[count - 1];
         count--;
 
         return id & 0xFFFF;
@@ -68,29 +64,12 @@ final class DnsQueryIdSpace {
         if (count == ids.length) {
             throw new IllegalStateException("overflow");
         }
-
         assert id <= MAX_ID && id >= 0;
-        if (tail == head) {
-            ids[tail] = (short) id;
-        } else {
-            // Let's ensure our ids will be returned in a random fashion by not always add the id to the tail.
-            final int idx;
-            Random random = PlatformDependent.threadLocalRandom();
-            if (tail < head) {
-                if (tail != 0 && random.nextBoolean()) {
-                    idx = random.nextInt(tail);
-                } else {
-                    idx = random.nextInt(ids.length - head) + head;
-                }
-            } else {
-                idx = random.nextInt(tail - head) + head;
-            }
-            short otherId = ids[idx];
-            ids[idx] = (short) id;
-            ids[tail] = otherId;
-            assert otherId != (short) id;
-        }
-        tail = (tail + 1) & mask;
+        // pick a slot for our index, and whatever was in that slot before will get moved to the tail.
+        Random random = PlatformDependent.threadLocalRandom();
+        int insertionPosition = random.nextInt(count + 1);
+        ids[count] = ids[insertionPosition];
+        ids[insertionPosition] = (short) id;
         count++;
     }
 
