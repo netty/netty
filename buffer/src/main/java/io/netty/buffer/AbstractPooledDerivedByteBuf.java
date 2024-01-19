@@ -32,7 +32,7 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     /**
      * Deallocations of a pooled derived buffer should always propagate through the entire chain of derived buffers.
      * This is because each pooled derived buffer maintains its own reference count and we should respect each one.
-     * If deallocations cause a release of the "root parent" then then we may prematurely release the underlying
+     * If deallocations cause a release of the "root parent" then we may prematurely release the underlying
      * content before all the derived buffers have been released.
      */
     private ByteBuf parent;
