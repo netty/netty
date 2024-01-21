@@ -62,7 +62,7 @@ public class LazyJavaxX509CertificateTest {
             // JDK does not support this anymore
             return;
         }
-        LazyX509Certificate lazyX509Certificate = new LazyX509Certificate(CERTIFICATE.getBytes(CharsetUtil.UTF_8));
+        LazyJavaxX509Certificate lazyX509Certificate = new LazyJavaxX509Certificate(CERTIFICATE.getBytes(CharsetUtil.UTF_8));
         assertEquals(x509Certificate.getVersion(), lazyX509Certificate.getVersion());
         assertEquals(x509Certificate.getSerialNumber(), lazyX509Certificate.getSerialNumber());
         assertEquals(x509Certificate.getIssuerDN(), lazyX509Certificate.getIssuerDN());
