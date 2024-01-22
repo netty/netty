@@ -69,6 +69,7 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty5-dev-tools</artifactId>
+      <version>${project.version}</version>
       <scope>test</scope>
       <optional>true</optional>
     </dependency>
