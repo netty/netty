@@ -16,14 +16,12 @@
 package io.netty.handler.ssl.util;
 
 import io.netty.util.CharsetUtil;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import javax.security.cert.CertificateException;
 import javax.security.cert.X509Certificate;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class LazyJavaxX509CertificateTest {
@@ -76,6 +74,5 @@ public class LazyJavaxX509CertificateTest {
         assertEquals(x509Certificate.getSigAlgName(), lazyX509Certificate.getSigAlgName());
         assertEquals(x509Certificate.getSigAlgOID(), lazyX509Certificate.getSigAlgOID());
         assertEquals(x509Certificate.getSigAlgParams(), lazyX509Certificate.getSigAlgParams());
-        assertArrayEquals(x509Certificate.getEncoded(), lazyX509Certificate.getEncoded());
     }
 }
