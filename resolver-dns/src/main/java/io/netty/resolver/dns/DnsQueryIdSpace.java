@@ -91,10 +91,7 @@ final class DnsQueryIdSpace {
             throw new IllegalArgumentException("id too large: " + id);
         }
         DnsQueryIdRange bucket = idBuckets[bucketIdx];
-        if (bucket == null) {
-            bucket = newBucket(bucketIdx);
-            idBuckets[bucketIdx] = bucket;
-        }
+        assert bucket != null;
         bucket.pushId(id);
 
         if (bucket.usableIds() == bucket.maxUsableIds()) {
