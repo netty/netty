@@ -19,7 +19,6 @@ package io.netty.resolver.dns;
 import io.netty.util.NetUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.internal.PlatformDependent;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -154,29 +153,17 @@ final class DnsQueryContextManager {
     }
 
     private static final class DnsQueryContextMap {
-        private static final int MAX_ID = 65535;
-        private static final int MAX_TRIES = MAX_ID << 1;
+
+        private final DnsQueryIdSpace idSpace = new DnsQueryIdSpace();
 
         // We increment on every usage so start with -1, this will ensure we start with 0 as first id.
         private final IntObjectMap<DnsQueryContext> map = new IntObjectHashMap<DnsQueryContext>();
 
         synchronized int add(DnsQueryContext ctx) {
-            int tries = 0;
-            int id = PlatformDependent.threadLocalRandom().nextInt(MAX_ID - 1) + 1;
-            for (;;) {
-                // Let's directly use put as its very unlikely that we still have the id in use.
-                DnsQueryContext oldCtx = map.put(id, ctx);
-                if (oldCtx == null) {
-                    return id;
-                }
-                // Restore the mapping to the old context.
-                map.put(id, oldCtx);
-
-                id = id + 1 & 0xFFFF;
-                if (++tries >= MAX_TRIES) {
-                    return -1;
-                }
-            }
+            int id = idSpace.nextId();
+            DnsQueryContext oldCtx = map.put(id, ctx);
+            assert oldCtx == null;
+            return id;
         }
 
         synchronized DnsQueryContext get(int id) {
@@ -184,6 +171,7 @@ final class DnsQueryContextManager {
         }
 
         synchronized DnsQueryContext remove(int id) {
+            idSpace.pushId(id);
             return map.remove(id);
         }
     }
