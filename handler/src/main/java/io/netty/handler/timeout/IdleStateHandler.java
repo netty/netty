@@ -125,8 +125,8 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     private boolean firstAllIdleEvent = true;
 
     private byte state;
-    private static final byte  ST_INITIALIZED = 1;
-    private static final byte  ST_DESTROYED = 2;
+    private static final byte ST_INITIALIZED = 1;
+    private static final byte ST_DESTROYED = 2;
 
     private boolean reading;
 
