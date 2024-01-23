@@ -732,6 +732,12 @@
         <optional>true</optional>
       </dependency>
 
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>netty-dev-tools</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
       <!-- Needed for java11 and later as javax.activation is not part of the JDK anymore -->
       <dependency>
         <groupId>com.sun.activation</groupId>
@@ -2097,7 +2103,7 @@
                   <!-- bundledSignature>jdk-system-out</bundledSignature -->
                 </bundledSignatures>
                 <signaturesFiles>
-                  <signaturesFile>../target/dev-tools/forbidden/signatures.txt</signaturesFile>
+                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
                 </signaturesFiles>
                 <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
               </configuration>
@@ -2121,7 +2127,7 @@
                   <!-- bundledSignature>jdk-deprecated</bundledSignature -->
                 </bundledSignatures>
                 <signaturesFiles>
-                  <signaturesFile>../target/dev-tools/forbidden/signatures.txt</signaturesFile>
+                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
                 </signaturesFiles>
                 <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
               </configuration>
