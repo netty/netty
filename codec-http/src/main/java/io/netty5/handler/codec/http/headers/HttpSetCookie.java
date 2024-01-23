@@ -138,4 +138,11 @@ public interface HttpSetCookie extends HttpCookiePair {
     enum SameSite {
         Lax, Strict, None
     }
+
+    /**
+     * Checks to see if this {@link HttpSetCookie} is partitioned
+     *
+     * @return True if this {@link HttpSetCookie} is partitioned, otherwise false
+     */
+    boolean isPartitioned();
 }

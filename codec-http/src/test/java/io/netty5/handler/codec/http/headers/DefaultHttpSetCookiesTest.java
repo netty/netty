@@ -790,7 +790,8 @@ class DefaultHttpSetCookiesTest {
                 cookie1.sameSite() == cookie2.sameSite() &&
                 cookie1.isHttpOnly() == cookie2.isHttpOnly() &&
                 cookie1.isSecure() == cookie2.isSecure() &&
-                cookie1.isWrapped() == cookie2.isWrapped();
+                cookie1.isWrapped() == cookie2.isWrapped() &&
+                cookie1.isPartitioned() == cookie2.isPartitioned();
     }
 
     private static boolean areCookiesEqual(final HttpCookiePair cookie1, final HttpCookiePair cookie2) {
@@ -885,6 +886,11 @@ class DefaultHttpSetCookiesTest {
         @Override
         public boolean isHttpOnly() {
             return isHttpOnly;
+        }
+
+        @Override
+        public boolean isPartitioned() {
+            return false;
         }
 
         @Override

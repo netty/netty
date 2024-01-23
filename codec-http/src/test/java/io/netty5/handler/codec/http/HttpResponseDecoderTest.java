@@ -794,7 +794,7 @@ public class HttpResponseDecoderTest {
         setUpNoValidation();
         String cookieString = "Set-Cookie: myCookie=myValue;expires="
                               + DateFormatter.format(new Date(System.currentTimeMillis() + 50000))
-                              + ";path=/apathsomewhere;domain=.adomainsomewhere;secure;SameSite=None";
+                              + ";path=/apathsomewhere;domain=.adomainsomewhere;secure;SameSite=None;Partitioned";
         HttpSetCookie cookie = parseRequestWithCookies(cookieString).headers().getSetCookie("myCookie");
         assertNotNull(cookie);
         assertEquals("myValue", cookie.value());
@@ -804,13 +804,14 @@ public class HttpResponseDecoderTest {
         assertTrue(cookie.isSecure());
 
         assertEquals(SameSite.None, cookie.sameSite());
+        assertTrue(cookie.isPartitioned());
     }
 
     @Test
     public void setCookieHeaderDecodingSingleCookieV0Validating() {
         String cookieString = "Set-Cookie: myCookie=myValue; expires="
                               + DateFormatter.format(new Date(System.currentTimeMillis() + 50000))
-                              + "; path=/apathsomewhere; domain=.adomainsomewhere; secure; SameSite=None";
+                              + "; path=/apathsomewhere; domain=.adomainsomewhere; secure; SameSite=None; Partitioned";
         HttpSetCookie cookie = parseRequestWithCookies(cookieString).headers().getSetCookie("myCookie");
         assertNotNull(cookie);
         assertEquals("myValue", cookie.value());
@@ -819,6 +820,7 @@ public class HttpResponseDecoderTest {
         assertEquals("/apathsomewhere", cookie.path());
         assertTrue(cookie.isSecure());
         assertEquals(SameSite.None, cookie.sameSite());
+        assertTrue(cookie.isPartitioned());
     }
 
     @Test
