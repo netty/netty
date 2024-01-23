@@ -124,7 +124,10 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     private Future<?> allIdleTimeout;
     private boolean firstAllIdleEvent = true;
 
-    private byte state; // 0 - none, 1 - initialized, 2 - destroyed
+    private byte state;
+    private static final byte  ST_INITIALIZED = 1;
+    private static final byte  ST_DESTROYED = 2;
+
     private boolean reading;
 
     private long lastChangeCheckTimeStamp;
@@ -316,7 +319,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
              break;
         }
 
-        state = 1;
+        state = ST_INITIALIZED;
         initOutputChanged(ctx);
 
         lastReadTime = lastWriteTime = ticksInNanos();
@@ -349,7 +352,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     }
 
     private void destroy() {
-        state = 2;
+        state = ST_DESTROYED;
 
         if (readerIdleTimeout != null) {
             readerIdleTimeout.cancel(false);
