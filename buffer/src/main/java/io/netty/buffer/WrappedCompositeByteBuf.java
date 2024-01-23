@@ -409,6 +409,16 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
+    protected int forEachByteAsc0(int start, int end, ByteProcessor processor) throws Exception {
+        return wrapped.forEachByteAsc0(start, end, processor);
+    }
+
+    @Override
+    protected int forEachByteDesc0(int rStart, int rEnd, ByteProcessor processor) throws Exception {
+        return wrapped.forEachByteDesc0(rStart, rEnd, processor);
+    }
+
+    @Override
     public final int hashCode() {
         return wrapped.hashCode();
     }

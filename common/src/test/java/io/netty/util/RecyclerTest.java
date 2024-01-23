@@ -15,6 +15,7 @@
 */
 package io.netty.util;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
@@ -23,11 +24,13 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -38,21 +41,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RecyclerTest {
 
-    private static Recycler<HandledObject> newRecycler(int maxCapacityPerThread) {
-        return newRecycler(maxCapacityPerThread, 2, 8, 2, 8);
+    protected static Recycler<HandledObject> newRecycler(int maxCapacityPerThread) {
+        return newRecycler(maxCapacityPerThread, 8, maxCapacityPerThread >> 1);
     }
 
-    private static Recycler<HandledObject> newRecycler(int maxCapacityPerThread, int maxSharedCapacityFactor,
-                                                       int ratio, int maxDelayedQueuesPerThread,
-                                                       int delayedQueueRatio) {
-        return new Recycler<HandledObject>(maxCapacityPerThread, maxSharedCapacityFactor, ratio,
-                maxDelayedQueuesPerThread, delayedQueueRatio) {
+    protected static Recycler<HandledObject> newRecycler(int maxCapacityPerThread, int ratio, int chunkSize) {
+        return new Recycler<HandledObject>(maxCapacityPerThread, ratio, chunkSize) {
             @Override
             protected HandledObject newObject(
                     Recycler.Handle<HandledObject> handle) {
                 return new HandledObject(handle);
             }
         };
+    }
+
+    @NotNull
+    protected Thread newThread(Runnable runnable) {
+        return new Thread(runnable);
     }
 
     @Test
@@ -94,6 +99,11 @@ public class RecyclerTest {
     }
 
     @Test
+    public void verySmallRecycer() {
+        newRecycler(2, 0, 1).get();
+    }
+
+    @Test
     public void testMultipleRecycle() {
         Recycler<HandledObject> recycler = newRecycler(1024);
         final HandledObject object = recycler.get();
@@ -111,7 +121,7 @@ public class RecyclerTest {
         Recycler<HandledObject> recycler = newRecycler(1024);
         final HandledObject object = recycler.get();
         final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
-        final Thread thread1 = new Thread(new Runnable() {
+        final Thread thread1 = newThread(new Runnable() {
             @Override
             public void run() {
                 object.recycle();
@@ -120,7 +130,7 @@ public class RecyclerTest {
         thread1.start();
         thread1.join();
 
-        final Thread thread2 = new Thread(new Runnable() {
+        final Thread thread2 = newThread(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -146,7 +156,7 @@ public class RecyclerTest {
         final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
 
         final CountDownLatch countDownLatch = new CountDownLatch(2);
-        final Thread thread1 = new Thread(new Runnable() {
+        final Thread thread1 = newThread(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -163,7 +173,7 @@ public class RecyclerTest {
         });
         thread1.start();
 
-        final Thread thread2 = new Thread(new Runnable() {
+        final Thread thread2 = newThread(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -187,7 +197,7 @@ public class RecyclerTest {
             assertNotSame(a, b);
             IllegalStateException exception = exceptionStore.get();
             if (exception != null) {
-                assertEquals("recycled already", exception.getMessage());
+                assertThat(exception).hasMessageContaining("recycled already");
                 assertEquals(0, exception.getSuppressed().length);
             }
         } finally {
@@ -203,7 +213,7 @@ public class RecyclerTest {
         final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
 
         final CountDownLatch countDownLatch = new CountDownLatch(1);
-        final Thread thread1 = new Thread(new Runnable() {
+        final Thread thread1 = newThread(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -235,9 +245,7 @@ public class RecyclerTest {
             HandledObject b = recycler.get();
             assertNotSame(a, b);
             IllegalStateException exception = exceptionStore.get();
-            if (exception != null) {
-                throw exception;
-            }
+            assertNotNull(exception); // Object got recycled twice, so at least one of the calls must throw.
         } finally {
             thread1.join(1000);
         }
@@ -265,7 +273,7 @@ public class RecyclerTest {
 
     @Test
     public void testRecycleDisableDrop() {
-        Recycler<HandledObject> recycler = newRecycler(1024, 2, 0, 2, 0);
+        Recycler<HandledObject> recycler = newRecycler(1024, 0, 16);
         HandledObject object = recycler.get();
         object.recycle();
         HandledObject object2 = recycler.get();
@@ -274,27 +282,6 @@ public class RecyclerTest {
         HandledObject object3 = recycler.get();
         assertSame(object, object3);
         object3.recycle();
-    }
-
-    @Test
-    public void testRecycleDisableDelayedQueueDrop() throws Exception {
-        final Recycler<HandledObject> recycler = newRecycler(1024, 2, 1, 2, 0);
-        final HandledObject o = recycler.get();
-        final HandledObject o2 = recycler.get();
-        final HandledObject o3 = recycler.get();
-        final Thread thread = new Thread() {
-            @Override
-            public void run() {
-                o.recycle();
-                o2.recycle();
-                o3.recycle();
-            }
-        };
-        thread.start();
-        thread.join();
-        // In reverse order
-        assertSame(o3, recycler.get());
-        assertSame(o, recycler.get());
     }
 
     /**
@@ -322,24 +309,24 @@ public class RecyclerTest {
             objects[i] = null;
         }
 
-        assertTrue(maxCapacity >= recycler.threadLocalCapacity(),
-                "The threadLocalCapacity (" + recycler.threadLocalCapacity() + ") must be <= maxCapacity ("
+        assertTrue(maxCapacity >= recycler.threadLocalSize(),
+                "The threadLocalSize (" + recycler.threadLocalSize() + ") must be <= maxCapacity ("
                 + maxCapacity + ") as we not pool all new handles internally");
     }
 
     @Test
     public void testRecycleAtDifferentThread() throws Exception {
-        final Recycler<HandledObject> recycler = newRecycler(256, 10, 2, 10, 2);
+        final Recycler<HandledObject> recycler = newRecycler(256, 2, 16);
         final HandledObject o = recycler.get();
         final HandledObject o2 = recycler.get();
 
-        final Thread thread = new Thread() {
+        final Thread thread = newThread(new Runnable() {
             @Override
             public void run() {
                 o.recycle();
                 o2.recycle();
             }
-        };
+        });
         thread.start();
         thread.join();
 
@@ -352,7 +339,12 @@ public class RecyclerTest {
         final Recycler<HandledObject> recycler = newRecycler(256);
         final HandledObject o = recycler.get();
 
-        ExecutorService single = Executors.newSingleThreadExecutor();
+        ExecutorService single = Executors.newSingleThreadExecutor(new ThreadFactory() {
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                return RecyclerTest.this.newThread(r);
+            }
+        });
 
         final CountDownLatch latch1 = new CountDownLatch(1);
         single.execute(new Runnable() {
@@ -386,8 +378,8 @@ public class RecyclerTest {
 
     @Test
     public void testMaxCapacityWithRecycleAtDifferentThread() throws Exception {
-        final int maxCapacity = 4; // Choose the number smaller than WeakOrderQueue.LINK_CAPACITY
-        final Recycler<HandledObject> recycler = newRecycler(maxCapacity);
+        final int maxCapacity = 4;
+        final Recycler<HandledObject> recycler = newRecycler(maxCapacity, 4, 4);
 
         // Borrow 2 * maxCapacity objects.
         // Return the half from the same thread.
@@ -402,25 +394,23 @@ public class RecyclerTest {
             array[i].recycle();
         }
 
-        final Thread thread = new Thread() {
+        final Thread thread = newThread(new Runnable() {
             @Override
             public void run() {
-                for (int i = maxCapacity; i < array.length; i ++) {
-                    array[i].recycle();
+                for (int i1 = maxCapacity; i1 < array.length; i1++) {
+                    array[i1].recycle();
                 }
             }
-        };
+        });
         thread.start();
         thread.join();
 
-        assertEquals(maxCapacity, recycler.threadLocalCapacity());
-        assertEquals(1, recycler.threadLocalSize());
+        assertEquals(maxCapacity * 3 / 4, recycler.threadLocalSize());
 
         for (int i = 0; i < array.length; i ++) {
             recycler.get();
         }
 
-        assertEquals(maxCapacity, recycler.threadLocalCapacity());
         assertEquals(0, recycler.threadLocalSize());
     }
 
@@ -429,7 +419,7 @@ public class RecyclerTest {
         final int maxCapacity = 32;
         final AtomicInteger instancesCount = new AtomicInteger(0);
 
-        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(maxCapacity, 2) {
+        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(maxCapacity) {
             @Override
             protected HandledObject newObject(Recycler.Handle<HandledObject> handle) {
                 instancesCount.incrementAndGet();
@@ -448,14 +438,14 @@ public class RecyclerTest {
         instancesCount.set(0);
 
         // Recycle from other thread.
-        final Thread thread = new Thread() {
+        final Thread thread = newThread(new Runnable() {
             @Override
             public void run() {
                 for (HandledObject object: array) {
                     object.recycle();
                 }
             }
-        };
+        });
         thread.start();
         thread.join();
 

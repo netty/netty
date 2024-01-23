@@ -17,13 +17,20 @@ package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.ObjectUtil;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 public abstract class SocketWritableByteChannel implements WritableByteChannel {
-    private final FileDescriptor fd;
+    protected final FileDescriptor fd;
 
     protected SocketWritableByteChannel(FileDescriptor fd) {
         this.fd = ObjectUtil.checkNotNull(fd, "fd");
+    }
+
+    protected int write(ByteBuffer buf, int pos, int limit) throws IOException {
+        return fd.write(buf, pos, limit);
     }
 
     @Override
@@ -32,7 +39,7 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
         int position = src.position();
         int limit = src.limit();
         if (src.isDirect()) {
-            written = fd.write(src, position, src.limit());
+            written = write(src, position, src.limit());
         } else {
             final int readableBytes = limit - position;
             io.netty.buffer.ByteBuf buffer = null;
@@ -52,7 +59,7 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
                 }
                 buffer.writeBytes(src.duplicate());
                 java.nio.ByteBuffer nioBuffer = buffer.internalNioBuffer(buffer.readerIndex(), readableBytes);
-                written = fd.write(nioBuffer, nioBuffer.position(), nioBuffer.limit());
+                written = write(nioBuffer, nioBuffer.position(), nioBuffer.limit());
             } finally {
                 if (buffer != null) {
                     buffer.release();

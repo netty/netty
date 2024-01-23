@@ -1,0 +1,30 @@
+[
+  {
+    "name": "io.netty.handler.codec.redis.RedisArrayAggregator",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.redis.RedisArrayAggregator"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.redis.RedisBulkStringAggregator",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.redis.RedisBulkStringAggregator"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.redis.RedisDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.redis.RedisDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.redis.RedisEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.redis.RedisEncoder"
+    },
+    "queryAllPublicMethods": true
+  }
+]

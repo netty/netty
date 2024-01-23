@@ -22,6 +22,7 @@ import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthResponseDecoder.State;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -33,7 +34,8 @@ import java.util.List;
  */
 public class Socks5PasswordAuthResponseDecoder extends ReplayingDecoder<State> {
 
-    enum State {
+    @UnstableApi
+    public enum State {
         INIT,
         SUCCESS,
         FAILURE

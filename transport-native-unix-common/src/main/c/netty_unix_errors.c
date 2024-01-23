@@ -24,9 +24,9 @@
 
 #define ERRORS_CLASSNAME "io/netty/channel/unix/ErrorsStaticallyReferencedJniMethods"
 
+static jweak channelExceptionClassWeak = NULL;
 static jclass oomErrorClass = NULL;
 static jclass runtimeExceptionClass = NULL;
-static jclass channelExceptionClass = NULL;
 static jclass ioExceptionClass = NULL;
 static jclass portUnreachableExceptionClass = NULL;
 static jclass closedChannelExceptionClass = NULL;
@@ -102,11 +102,18 @@ void netty_unix_errors_throwRuntimeExceptionErrorNo(JNIEnv* env, char* message, 
 }
 
 void netty_unix_errors_throwChannelExceptionErrorNo(JNIEnv* env, char* message, int errorNumber) {
+    jclass channelExceptionClass = NULL;
     char* allocatedMessage = exceptionMessage(message, errorNumber);
     if (allocatedMessage == NULL) {
         return;
     }
+
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, channelExceptionClass, channelExceptionClassWeak, done);
+
     (*env)->ThrowNew(env, channelExceptionClass, allocatedMessage);
+done:
+
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, channelExceptionClass);
     free(allocatedMessage);
 }
 
@@ -188,6 +195,10 @@ static jint netty_unix_errors_errorENETUNREACH(JNIEnv* env, jclass clazz) {
     return ENETUNREACH;
 }
 
+static jint netty_unix_errors_errorEHOSTUNREACH(JNIEnv* env, jclass clazz) {
+    return EHOSTUNREACH;
+}
+
 static jstring netty_unix_errors_strError(JNIEnv* env, jclass clazz, jint error) {
     return (*env)->NewStringUTF(env, strerror(error));
 }
@@ -207,6 +218,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "errorEISCONN", "()I", (void *) netty_unix_errors_errorEISCONN },
   { "errorEALREADY", "()I", (void *) netty_unix_errors_errorEALREADY },
   { "errorENETUNREACH", "()I", (void *) netty_unix_errors_errorENETUNREACH },
+  { "errorEHOSTUNREACH", "()I", (void *) netty_unix_errors_errorEHOSTUNREACH },
   { "strError", "(I)Ljava/lang/String;", (void *) netty_unix_errors_strError }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
@@ -216,6 +228,7 @@ static const jint statically_referenced_fixed_method_table_size = sizeof(statica
 //            Unix to reflect that.
 jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     char* nettyClassName = NULL;
+    jclass channelExceptionClass = NULL;
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
             packagePrefix,
@@ -230,7 +243,11 @@ jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_LOAD_CLASS(env, runtimeExceptionClass, "java/lang/RuntimeException", error);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/ChannelException", nettyClassName, error);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, channelExceptionClass, nettyClassName, error);
+
+
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, channelExceptionClassWeak, nettyClassName, error);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, channelExceptionClass, channelExceptionClassWeak, error);
+
     netty_jni_util_free_dynamic_name(&nettyClassName);
 
     NETTY_JNI_UTIL_LOAD_CLASS(env, closedChannelExceptionClass, "java/nio/channels/ClosedChannelException", error);
@@ -240,9 +257,14 @@ jint netty_unix_errors_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
 
     NETTY_JNI_UTIL_LOAD_CLASS(env, portUnreachableExceptionClass, "java/net/PortUnreachableException", error);
 
+
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, channelExceptionClass);
     return NETTY_JNI_UTIL_JNI_VERSION;
 error:
     free(nettyClassName);
+
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, channelExceptionClass);
+
     return JNI_ERR;
 }
 
@@ -250,7 +272,7 @@ void netty_unix_errors_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     // delete global references so the GC can collect them
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, oomErrorClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, runtimeExceptionClass);
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, channelExceptionClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, channelExceptionClassWeak);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, ioExceptionClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, portUnreachableExceptionClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, closedChannelExceptionClass);

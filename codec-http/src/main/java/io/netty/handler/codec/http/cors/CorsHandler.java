@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http.cors;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -24,6 +25,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
@@ -69,7 +71,7 @@ public class CorsHandler extends ChannelDuplexHandler {
      * config matches a certain origin, the first in the List will be used.
      *
      * @param configList     List of {@link CorsConfig}
-     * @param isShortCircuit Same as {@link CorsConfig#shortCircuit} but applicable to all supplied configs.
+     * @param isShortCircuit Same as {@link CorsConfig#isShortCircuit} but applicable to all supplied configs.
      */
     public CorsHandler(final List<CorsConfig> configList, boolean isShortCircuit) {
         checkNonEmpty(configList, "configList");
@@ -96,13 +98,19 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     private void handlePreflight(final ChannelHandlerContext ctx, final HttpRequest request) {
-        final HttpResponse response = new DefaultFullHttpResponse(request.protocolVersion(), OK, true, true);
+        final HttpResponse response = new DefaultFullHttpResponse(
+                request.protocolVersion(),
+                OK,
+                Unpooled.buffer(0),
+                DefaultHttpHeadersFactory.headersFactory().withCombiningHeaders(true),
+                DefaultHttpHeadersFactory.trailersFactory().withCombiningHeaders(true));
         if (setOrigin(response)) {
             setAllowMethods(response);
             setAllowHeaders(response);
             setAllowCredentials(response);
             setMaxAge(response);
             setPreflightHeaders(response);
+            setAllowPrivateNetwork(response);
         }
         if (!response.headers().contains(HttpHeaderNames.CONTENT_LENGTH)) {
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, HttpHeaderValues.ZERO);
@@ -212,6 +220,16 @@ public class CorsHandler extends ChannelDuplexHandler {
 
     private void setMaxAge(final HttpResponse response) {
         response.headers().set(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, config.maxAge());
+    }
+
+    private void setAllowPrivateNetwork(final HttpResponse response) {
+        if (request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK)) {
+            if (config.isPrivateNetworkAllowed()) {
+                response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK, "true");
+            } else {
+                response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK, "false");
+            }
+        }
     }
 
     @Override

@@ -17,10 +17,12 @@ package io.netty.handler.codec.rtsp;
 
 import java.util.regex.Pattern;
 
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpDecoderConfig;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObjectDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -96,7 +98,11 @@ public class RtspDecoder extends HttpObjectDecoder {
     public RtspDecoder(final int maxInitialLineLength,
                        final int maxHeaderSize,
                        final int maxContentLength) {
-        super(maxInitialLineLength, maxHeaderSize, maxContentLength * 2, false);
+        super(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxContentLength * 2)
+                .setChunkedSupported(false));
     }
 
     /**
@@ -105,16 +111,29 @@ public class RtspDecoder extends HttpObjectDecoder {
      * @param maxHeaderSize The max allowed size of header
      * @param maxContentLength The max allowed content length
      * @param validateHeaders Set to true if headers should be validated
+     * @deprecated Use the {@link #RtspDecoder(HttpDecoderConfig)} constructor instead,
+     * or the {@link #RtspDecoder(int, int, int)} to always enable header validation.
      */
+    @Deprecated
     public RtspDecoder(final int maxInitialLineLength,
                        final int maxHeaderSize,
                        final int maxContentLength,
                        final boolean validateHeaders) {
-        super(maxInitialLineLength,
-              maxHeaderSize,
-              maxContentLength * 2,
-              false,
-              validateHeaders);
+        super(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxContentLength * 2)
+                .setChunkedSupported(false)
+                .setValidateHeaders(validateHeaders));
+    }
+
+    /**
+     * Creates a new instance with the specified configuration.
+     */
+    public RtspDecoder(HttpDecoderConfig config) {
+        super(config.clone()
+                .setMaxChunkSize(2 * config.getMaxChunkSize())
+                .setChunkedSupported(false));
     }
 
     @Override
@@ -127,13 +146,13 @@ public class RtspDecoder extends HttpObjectDecoder {
             return new DefaultHttpResponse(RtspVersions.valueOf(initialLine[0]),
                 new HttpResponseStatus(Integer.parseInt(initialLine[1]),
                                        initialLine[2]),
-                validateHeaders);
+                headersFactory);
         } else {
             isDecodingRequest = true;
             return new DefaultHttpRequest(RtspVersions.valueOf(initialLine[2]),
                     RtspMethods.valueOf(initialLine[0]),
                     initialLine[1],
-                    validateHeaders);
+                    headersFactory);
         }
     }
 
@@ -148,11 +167,10 @@ public class RtspDecoder extends HttpObjectDecoder {
     protected HttpMessage createInvalidMessage() {
         if (isDecodingRequest) {
             return new DefaultFullHttpRequest(RtspVersions.RTSP_1_0,
-                       RtspMethods.OPTIONS, "/bad-request", validateHeaders);
+                       RtspMethods.OPTIONS, "/bad-request", Unpooled.buffer(0), headersFactory, trailersFactory);
         } else {
-            return new DefaultFullHttpResponse(RtspVersions.RTSP_1_0,
-                                               UNKNOWN_STATUS,
-                                               validateHeaders);
+            return new DefaultFullHttpResponse(
+                    RtspVersions.RTSP_1_0, UNKNOWN_STATUS, Unpooled.buffer(0), headersFactory, trailersFactory);
         }
     }
 

@@ -12,7 +12,6 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
@@ -39,6 +38,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -220,10 +221,15 @@ public class Http2ConnectionHandlerTest {
         }).when(ctx).fireChannelRead(any());
     }
 
-    private Http2ConnectionHandler newHandler() throws Exception {
-        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder().codec(decoder, encoder).build();
+    private Http2ConnectionHandler newHandler(boolean flushPreface) throws Exception {
+        Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder().codec(decoder, encoder)
+                .flushPreface(flushPreface).build();
         handler.handlerAdded(ctx);
         return handler;
+    }
+
+    private Http2ConnectionHandler newHandler() throws Exception {
+        return newHandler(true);
     }
 
     @AfterEach
@@ -257,11 +263,13 @@ public class Http2ConnectionHandlerTest {
         assertEquals(Http2Error.INTERNAL_ERROR, e.error());
     }
 
-    @Test
-    public void clientShouldveSentPrefaceAndSettingsFrameWhenUserEventIsTriggered() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void clientShouldveSentPrefaceAndSettingsFrameWhenUserEventIsTriggered(boolean flushPreface)
+            throws Exception {
         when(connection.isServer()).thenReturn(false);
         when(channel.isActive()).thenReturn(false);
-        handler = newHandler();
+        handler = newHandler(flushPreface);
         when(channel.isActive()).thenReturn(true);
 
         final Http2ConnectionPrefaceAndSettingsFrameWrittenEvent evt =
@@ -282,6 +290,11 @@ public class Http2ConnectionHandlerTest {
         doAnswer(verifier).when(ctx).fireUserEventTriggered(evt);
 
         handler.channelActive(ctx);
+        if (flushPreface) {
+            verify(ctx, times(1)).flush();
+        } else {
+            verify(ctx, never()).flush();
+        }
         assertTrue(verified.get());
     }
 
@@ -696,7 +709,7 @@ public class Http2ConnectionHandlerTest {
     @Test
     public void canCloseStreamWithVoidPromise() throws Exception {
         handler = newHandler();
-        handler.closeStream(stream, ctx.voidPromise());
+        handler.closeStream(stream, ctx.voidPromise().setSuccess());
         verify(stream, times(1)).close();
         verifyNoMoreInteractions(stream);
     }

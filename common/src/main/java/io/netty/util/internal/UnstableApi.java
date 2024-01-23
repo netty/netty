@@ -33,7 +33,7 @@ import java.lang.annotation.Target;
  *         broken in a non-major release!</li>
  * </ol>
  */
-@Retention(RetentionPolicy.SOURCE)
+@Retention(RetentionPolicy.SOURCE) // TODO Retention policy needs to be CLASS in Netty 5.
 @Target({
         ElementType.ANNOTATION_TYPE,
         ElementType.CONSTRUCTOR,

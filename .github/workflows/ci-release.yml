@@ -20,21 +20,24 @@ on:
   # Releases can only be triggered via the action tab
   workflow_dispatch:
 
+permissions: read-all
+
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
 
 jobs:
   prepare-release:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           ref: 4.1
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-version: 8
+          distribution: 'zulu'
+          java-version: '8'
 
       - name: Setup git configuration
         run: |
@@ -49,7 +52,8 @@ jobs:
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-prepare-release-${{ hashFiles('**/pom.xml') }}
@@ -66,7 +70,7 @@ jobs:
         run: ./.github/scripts/release_checkout_tag.sh release.properties
 
       - name: Upload workspace
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: prepare-release-workspace
           path: ${{ github.workspace }}/**
@@ -83,12 +87,15 @@ jobs:
           - setup: linux-aarch64
             docker-compose-build: "-f docker/docker-compose.centos-7.yaml build"
             docker-compose-run: "-f docker/docker-compose.centos-7.yaml run cross-compile-aarch64-stage-release"
+          - setup: linux-riscv64
+            docker-compose-build: "-f docker/docker-compose.ubuntu-20.04.yaml build"
+            docker-compose-run: "-f docker/docker-compose.ubuntu-20.04.yaml run cross-compile-riscv64-stage-release"
 
     name: stage-release-${{ matrix.setup }}
 
     steps:
       - name: Download release-workspace
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: prepare-release-workspace
           path: ./prepare-release-workspace/
@@ -97,9 +104,10 @@ jobs:
         run: chmod 755 ./prepare-release-workspace/mvnw
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-version: 8
+          distribution: 'zulu'
+          java-version: '8'
 
       - name: Setup git configuration
         run: |
@@ -112,16 +120,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
-      # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.11
-        continue-on-error: true
-        with:
-          key: ${{ runner.os }}-staging-docker-cache-${{ matrix.setup }}-{hash}
-          restore-keys: |
-            ${{ runner.os }}-staging-docker-cache-${{ matrix.setup }}-
-            ${{ runner.os }}-staging-docker-cache-
-
-      - uses: s4u/maven-settings-action@v2.2.0
+      - uses: s4u/maven-settings-action@v2.8.0
         with:
           servers: |
             [{
@@ -132,7 +131,8 @@ jobs:
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
@@ -156,7 +156,7 @@ jobs:
         run: docker-compose ${{ matrix.docker-compose-run }}
 
       - name: Upload local staging directory
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.setup }}-local-staging
           path: ~/local-staging
@@ -169,12 +169,12 @@ jobs:
         run: bash ./.github/scripts/release_rollback.sh release.properties netty/netty 4.1
 
   deploy-staged-release:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     # Wait until we have staged everything
     needs: stage-release-linux
     steps:
       - name: Download release-workspace
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: prepare-release-workspace
           path: ./prepare-release-workspace/
@@ -183,9 +183,10 @@ jobs:
         run: chmod 755 ./prepare-release-workspace/mvnw
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
-          java-version: 8
+          distribution: 'zulu'
+          java-version: '8'
 
       - name: Setup git configuration
         run: |
@@ -201,13 +202,19 @@ jobs:
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups. There is currently no way to pull this out of the config.
       - name: Download linux-aarch64 staging directory
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: linux-aarch64-local-staging
           path: ~/linux-aarch64-local-staging
 
+      - name: Download linux-riscv64 staging directory
+        uses: actions/download-artifact@v3
+        with:
+          name: linux-riscv64-local-staging
+          path: ~/linux-riscv64-local-staging
+
       - name: Download linux-x86_64-java8 staging directory
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: linux-x86_64-java8-local-staging
           path: ~/linux-x86_64-java8-local-staging
@@ -216,9 +223,9 @@ jobs:
       # all together with one maven command.
       - name: Merge staging repositories
         working-directory: ./prepare-release-workspace/
-        run: bash ./.github/scripts/merge_local_staging.sh /home/runner/local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-x86_64-java8-local-staging/staging
+        run: bash ./.github/scripts/merge_local_staging.sh /home/runner/local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-riscv64-local-staging/staging ~/linux-x86_64-java8-local-staging/staging
 
-      - uses: s4u/maven-settings-action@v2.2.0
+      - uses: s4u/maven-settings-action@v2.8.0
         with:
           servers: |
             [{
@@ -229,7 +236,8 @@ jobs:
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-deploy-staged-release-${{ hashFiles('**/pom.xml') }}

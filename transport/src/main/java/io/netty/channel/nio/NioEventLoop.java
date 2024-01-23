@@ -44,6 +44,7 @@ import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -76,22 +77,25 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     // Workaround for JDK NIO bug.
     //
     // See:
-    // - https://bugs.java.com/view_bug.do?bug_id=6427854
+    // - https://bugs.openjdk.java.net/browse/JDK-6427854 for first few dev (unreleased) builds of JDK 7
+    // - https://bugs.openjdk.java.net/browse/JDK-6527572 for JDK prior to 5.0u15-rev and 6u10
     // - https://github.com/netty/netty/issues/203
     static {
-        final String key = "sun.nio.ch.bugLevel";
-        final String bugLevel = SystemPropertyUtil.get(key);
-        if (bugLevel == null) {
-            try {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override
-                    public Void run() {
-                        System.setProperty(key, "");
-                        return null;
-                    }
-                });
-            } catch (final SecurityException e) {
-                logger.debug("Unable to get/set System Property: " + key, e);
+        if (PlatformDependent.javaVersion() < 7) {
+            final String key = "sun.nio.ch.bugLevel";
+            final String bugLevel = SystemPropertyUtil.get(key);
+            if (bugLevel == null) {
+                try {
+                    AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                        @Override
+                        public Void run() {
+                            System.setProperty(key, "");
+                            return null;
+                        }
+                    });
+                } catch (final SecurityException e) {
+                    logger.debug("Unable to get/set System Property: " + key, e);
+                }
             }
         }
 
@@ -367,6 +371,71 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     @Override
     public int registeredChannels() {
         return selector.keys().size() - cancelledKeys;
+    }
+
+    @Override
+    public Iterator<Channel> registeredChannelsIterator() {
+        assert inEventLoop();
+        final Set<SelectionKey> keys = selector.keys();
+        if (keys.isEmpty()) {
+            return ChannelsReadOnlyIterator.empty();
+        }
+        return new Iterator<Channel>() {
+            final Iterator<SelectionKey> selectionKeyIterator =
+                    ObjectUtil.checkNotNull(keys, "selectionKeys")
+                            .iterator();
+            Channel next;
+            boolean isDone;
+
+            @Override
+            public boolean hasNext() {
+                if (isDone) {
+                    return false;
+                }
+                Channel cur = next;
+                if (cur == null) {
+                    cur = next = nextOrDone();
+                    return cur != null;
+                }
+                return true;
+            }
+
+            @Override
+            public Channel next() {
+                if (isDone) {
+                    throw new NoSuchElementException();
+                }
+                Channel cur = next;
+                if (cur == null) {
+                    cur = nextOrDone();
+                    if (cur == null) {
+                        throw new NoSuchElementException();
+                    }
+                }
+                next = nextOrDone();
+                return cur;
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException("remove");
+            }
+
+            private Channel nextOrDone() {
+                Iterator<SelectionKey> it = selectionKeyIterator;
+                while (it.hasNext()) {
+                    SelectionKey key = it.next();
+                    if (key.isValid()) {
+                        Object attachment = key.attachment();
+                        if (attachment instanceof AbstractNioChannel) {
+                            return (AbstractNioChannel) attachment;
+                        }
+                    }
+                }
+                isDone = true;
+                return null;
+            }
+        };
     }
 
     private void rebuildSelector0() {
@@ -710,7 +779,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
             if ((readyOps & SelectionKey.OP_WRITE) != 0) {
                 // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to write
-                ch.unsafe().forceFlush();
+               unsafe.forceFlush();
             }
 
             // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead

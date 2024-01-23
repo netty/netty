@@ -19,6 +19,8 @@ import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.Recycler.EnhancedHandle;
+import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectPool;
@@ -246,10 +248,10 @@ public final class ByteBufUtil {
         }
 
         // When the needle has only one byte that can be read,
-        // the firstIndexOf method needs to be called
+        // the ByteBuf.indexOf() can be used
         if (m == 1) {
-            return firstIndexOf((AbstractByteBuf) haystack, haystack.readerIndex(),
-                    haystack.writerIndex(), needle.getByte(needle.readerIndex()));
+            return haystack.indexOf(haystack.readerIndex(), haystack.writerIndex(),
+                          needle.getByte(needle.readerIndex()));
         }
 
         int i;
@@ -279,7 +281,7 @@ public final class ByteBufUtil {
                         --i;
                     }
                     if (i <= memory) {
-                        return j;
+                        return j + bStartIndex;
                     }
                     j += per;
                     memory = m - per - 1;
@@ -304,7 +306,7 @@ public final class ByteBufUtil {
                         --i;
                     }
                     if (i < 0) {
-                        return j;
+                        return j + bStartIndex;
                     }
                     j += per;
                 } else {
@@ -474,7 +476,7 @@ public final class ByteBufUtil {
     private static long compareUintLittleEndian(
             ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
         for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
-            long comp = bufferA.getUnsignedIntLE(aIndex) - bufferB.getUnsignedIntLE(bIndex);
+            long comp = uintFromLE(bufferA.getUnsignedIntLE(aIndex)) - uintFromLE(bufferB.getUnsignedIntLE(bIndex));
             if (comp != 0) {
                 return comp;
             }
@@ -485,7 +487,9 @@ public final class ByteBufUtil {
     private static long compareUintBigEndianA(
             ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
         for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
-            long comp =  bufferA.getUnsignedInt(aIndex) - bufferB.getUnsignedIntLE(bIndex);
+            long a = bufferA.getUnsignedInt(aIndex);
+            long b = uintFromLE(bufferB.getUnsignedIntLE(bIndex));
+            long comp =  a - b;
             if (comp != 0) {
                 return comp;
             }
@@ -496,12 +500,18 @@ public final class ByteBufUtil {
     private static long compareUintBigEndianB(
             ByteBuf bufferA, ByteBuf bufferB, int aIndex, int bIndex, int uintCountIncrement) {
         for (int aEnd = aIndex + uintCountIncrement; aIndex < aEnd; aIndex += 4, bIndex += 4) {
-            long comp =  bufferA.getUnsignedIntLE(aIndex) - bufferB.getUnsignedInt(bIndex);
+            long a = uintFromLE(bufferA.getUnsignedIntLE(aIndex));
+            long b = bufferB.getUnsignedInt(bIndex);
+            long comp =  a - b;
             if (comp != 0) {
                 return comp;
             }
         }
         return 0;
+    }
+
+    private static long uintFromLE(long value) {
+        return Long.reverseBytes(value) >>> Integer.SIZE;
     }
 
     private static final class SWARByteSearch {
@@ -681,6 +691,24 @@ public final class ByteBufUtil {
     public static ByteBuf writeMediumBE(ByteBuf buf, int mediumValue) {
         return buf.order() == ByteOrder.BIG_ENDIAN? buf.writeMedium(mediumValue) :
                 buf.writeMedium(swapMedium(mediumValue));
+    }
+
+    /**
+     * Reads a big-endian unsigned 16-bit short integer from the buffer.
+     */
+    @SuppressWarnings("deprecation")
+    public static int readUnsignedShortBE(ByteBuf buf) {
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.readUnsignedShort() :
+                swapShort((short) buf.readUnsignedShort()) & 0xFFFF;
+    }
+
+    /**
+     * Reads a big-endian 32-bit integer from the buffer.
+     */
+    @SuppressWarnings("deprecation")
+    public static int readIntBE(ByteBuf buf) {
+        return buf.order() == ByteOrder.BIG_ENDIAN? buf.readInt() :
+                swapInt(buf.readInt());
     }
 
     /**
@@ -1060,6 +1088,9 @@ public final class ByteBufUtil {
      * It behaves like {@link #utf8MaxBytes(int)} applied to {@code seq} {@link CharSequence#length()}.
      */
     public static int utf8MaxBytes(CharSequence seq) {
+        if (seq instanceof AsciiString) {
+            return seq.length();
+        }
         return utf8MaxBytes(seq.length());
     }
 
@@ -1179,9 +1210,16 @@ public final class ByteBufUtil {
         }
     }
 
-    // Fast-Path implementation
     static int writeAscii(AbstractByteBuf buffer, int writerIndex, CharSequence seq, int len) {
+        if (seq instanceof AsciiString) {
+            writeAsciiString(buffer, writerIndex, (AsciiString) seq, 0, len);
+        } else {
+            writeAsciiCharSequence(buffer, writerIndex, seq, len);
+        }
+        return len;
+    }
 
+    private static int writeAsciiCharSequence(AbstractByteBuf buffer, int writerIndex, CharSequence seq, int len) {
         // We can use the _set methods as these not need to do any index checks and reference checks.
         // This is possible as we called ensureWritable(...) before.
         for (int i = 0; i < len; i++) {
@@ -1614,11 +1652,11 @@ public final class ByteBufUtil {
             return buf;
         }
 
-        private final Handle<ThreadLocalUnsafeDirectByteBuf> handle;
+        private final EnhancedHandle<ThreadLocalUnsafeDirectByteBuf> handle;
 
         private ThreadLocalUnsafeDirectByteBuf(Handle<ThreadLocalUnsafeDirectByteBuf> handle) {
             super(UnpooledByteBufAllocator.DEFAULT, 256, Integer.MAX_VALUE);
-            this.handle = handle;
+            this.handle = (EnhancedHandle<ThreadLocalUnsafeDirectByteBuf>) handle;
         }
 
         @Override
@@ -1627,7 +1665,7 @@ public final class ByteBufUtil {
                 super.deallocate();
             } else {
                 clear();
-                handle.recycle(this);
+                handle.unguardedRecycle(this);
             }
         }
     }
@@ -1648,11 +1686,11 @@ public final class ByteBufUtil {
             return buf;
         }
 
-        private final Handle<ThreadLocalDirectByteBuf> handle;
+        private final EnhancedHandle<ThreadLocalDirectByteBuf> handle;
 
         private ThreadLocalDirectByteBuf(Handle<ThreadLocalDirectByteBuf> handle) {
             super(UnpooledByteBufAllocator.DEFAULT, 256, Integer.MAX_VALUE);
-            this.handle = handle;
+            this.handle = (EnhancedHandle<ThreadLocalDirectByteBuf>) handle;
         }
 
         @Override
@@ -1661,7 +1699,7 @@ public final class ByteBufUtil {
                 super.deallocate();
             } else {
                 clear();
-                handle.recycle(this);
+                handle.unguardedRecycle(this);
             }
         }
     }
@@ -1899,6 +1937,15 @@ public final class ByteBufUtil {
             out.write(in, inOffset, len);
             outLen -= len;
         } while (outLen > 0);
+    }
+
+    /**
+     * Set {@link AbstractByteBuf#leakDetector}'s {@link ResourceLeakDetector.LeakListener}.
+     *
+     * @param leakListener If leakListener is not null, it will be notified once a ByteBuf leak is detected.
+     */
+    public static void setLeakListener(ResourceLeakDetector.LeakListener leakListener) {
+        AbstractByteBuf.leakDetector.setLeakListener(leakListener);
     }
 
     private ByteBufUtil() { }

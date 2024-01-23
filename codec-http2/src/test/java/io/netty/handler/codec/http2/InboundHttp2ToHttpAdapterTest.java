@@ -96,6 +96,7 @@ public class InboundHttp2ToHttpAdapterTest {
     private CountDownLatch serverLatch2;
     private CountDownLatch clientLatch2;
     private CountDownLatch settingsLatch;
+    private CountDownLatch clientHandlersAddedLatch;
     private int maxContentLength;
     private HttpResponseDelegator serverDelegator;
     private HttpResponseDelegator clientDelegator;
@@ -663,6 +664,7 @@ public class InboundHttp2ToHttpAdapterTest {
         serverLatch2 = new CountDownLatch(serverLatchCount2);
         clientLatch2 = new CountDownLatch(clientLatchCount2);
         settingsLatch = new CountDownLatch(settingsLatchCount);
+        clientHandlersAddedLatch = new CountDownLatch(1);
 
         sb = new ServerBootstrap();
         cb = new Bootstrap();
@@ -735,16 +737,23 @@ public class InboundHttp2ToHttpAdapterTest {
                         }
                     }
                 });
+                p.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+                        clientHandlersAddedLatch.countDown();
+                    }
+                });
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress("InboundHttp2ToHttpAdapterTest")).sync().channel();
+        serverChannel = sb.bind(new LocalAddress(getClass())).sync().channel();
 
         ChannelFuture ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
         clientChannel = ccf.channel();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
+        assertTrue(clientHandlersAddedLatch.await(5, SECONDS));
     }
 
     private void cleanupCapturedRequests() {

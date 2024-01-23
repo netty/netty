@@ -16,8 +16,7 @@
 package io.netty.handler.ssl;
 
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.condition.DisabledOnOs;
-import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -64,7 +63,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
-    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Disabled("Disable until figured out why this sometimes fail on the CI")
     @Override
     public void testMutualAuthSameCerts(SSLEngineTestParam param) throws Throwable {
         super.testMutualAuthSameCerts(param);
@@ -72,7 +71,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
-    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Disabled("Disable until figured out why this sometimes fail on the CI")
     @Override
     public void testMutualAuthDiffCerts(SSLEngineTestParam param) throws Exception {
         super.testMutualAuthDiffCerts(param);
@@ -80,7 +79,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
-    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Disabled("Disable until figured out why this sometimes fail on the CI")
     @Override
     public void testMutualAuthDiffCertsServerFailure(SSLEngineTestParam param) throws Exception {
         super.testMutualAuthDiffCertsServerFailure(param);
@@ -88,7 +87,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
-    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Disabled("Disable until figured out why this sometimes fail on the CI")
     @Override
     public void testMutualAuthDiffCertsClientFailure(SSLEngineTestParam param) throws Exception {
         super.testMutualAuthDiffCertsClientFailure(param);
@@ -96,7 +95,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
-    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Disabled("Disable until figured out why this sometimes fail on the CI")
     @Override
     public void testMutualAuthInvalidIntermediateCASucceedWithOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
@@ -106,7 +105,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
-    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Disabled("Disable until figured out why this sometimes fail on the CI")
     @Override
     public void testMutualAuthInvalidIntermediateCAFailWithOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
@@ -116,7 +115,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
-    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Disabled("Disable until figured out why this sometimes fail on the CI")
     @Override
     public void testMutualAuthInvalidIntermediateCAFailWithRequiredClientAuth(SSLEngineTestParam param)
             throws Exception {
@@ -126,7 +125,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
-    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Disabled("Disable until figured out why this sometimes fail on the CI")
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailOptionalClientAuth(SSLEngineTestParam param)
             throws Exception {
@@ -136,7 +135,7 @@ public class JdkOpenSslEngineInteroptTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
-    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "Disable until figured out why this sometimes fail on the CI")
+    @Disabled("Disable until figured out why this sometimes fail on the CI")
     @Override
     public void testMutualAuthValidClientCertChainTooLongFailRequireClientAuth(SSLEngineTestParam param)
             throws Exception {

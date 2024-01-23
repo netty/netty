@@ -25,22 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
 final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFuture<V>, PriorityQueueNode {
-    private static final long START_TIME = System.nanoTime();
-
-    static long nanoTime() {
-        return System.nanoTime() - START_TIME;
-    }
-
-    static long deadlineNanos(long delay) {
-        long deadlineNanos = nanoTime() + delay;
-        // Guard against overflow
-        return deadlineNanos < 0 ? Long.MAX_VALUE : deadlineNanos;
-    }
-
-    static long initialNanoTime() {
-        return START_TIME;
-    }
-
     // set once when added to priority queue
     private long id;
 
@@ -109,22 +93,21 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         // Optimization to avoid checking system clock again
         // after deadline has passed and task has been dequeued
         if (periodNanos == 0) {
-            assert nanoTime() >= deadlineNanos;
+            assert scheduledExecutor().getCurrentTimeNanos() >= deadlineNanos;
             deadlineNanos = 0L;
         }
     }
 
     public long delayNanos() {
-        return deadlineToDelayNanos(deadlineNanos());
+        return delayNanos(scheduledExecutor().getCurrentTimeNanos());
     }
 
-    static long deadlineToDelayNanos(long deadlineNanos) {
-        return deadlineNanos == 0L ? 0L : Math.max(0L, deadlineNanos - nanoTime());
+    static long deadlineToDelayNanos(long currentTimeNanos, long deadlineNanos) {
+        return deadlineNanos == 0L ? 0L : Math.max(0L, deadlineNanos - currentTimeNanos);
     }
 
     public long delayNanos(long currentTimeNanos) {
-        return deadlineNanos == 0L ? 0L
-                : Math.max(0L, deadlineNanos() - (currentTimeNanos - START_TIME));
+        return deadlineToDelayNanos(currentTimeNanos, deadlineNanos);
     }
 
     @Override
@@ -178,7 +161,7 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
                         if (periodNanos > 0) {
                             deadlineNanos += periodNanos;
                         } else {
-                            deadlineNanos = nanoTime() - periodNanos;
+                            deadlineNanos = scheduledExecutor().getCurrentTimeNanos() - periodNanos;
                         }
                         if (!isCancelled()) {
                             scheduledExecutor().scheduledTaskQueue().add(this);

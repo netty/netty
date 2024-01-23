@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-import static io.netty.handler.codec.compression.Snappy.*;
+import static io.netty.handler.codec.compression.Snappy.calculateChecksum;
 
 /**
  * Compresses a {@link ByteBuf} using the Snappy framing format.

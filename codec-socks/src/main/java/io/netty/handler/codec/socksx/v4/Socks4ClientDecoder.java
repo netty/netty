@@ -16,12 +16,14 @@
 package io.netty.handler.codec.socksx.v4;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socksx.v4.Socks4ClientDecoder.State;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -33,7 +35,8 @@ import java.util.List;
  */
 public class Socks4ClientDecoder extends ReplayingDecoder<State> {
 
-    enum State {
+    @UnstableApi
+    public enum State {
         START,
         SUCCESS,
         FAILURE
@@ -55,8 +58,8 @@ public class Socks4ClientDecoder extends ReplayingDecoder<State> {
                 }
 
                 final Socks4CommandStatus status = Socks4CommandStatus.valueOf(in.readByte());
-                final int dstPort = in.readUnsignedShort();
-                final String dstAddr = NetUtil.intToIpAddress(in.readInt());
+                final int dstPort = ByteBufUtil.readUnsignedShortBE(in);
+                final String dstAddr = NetUtil.intToIpAddress(ByteBufUtil.readIntBE(in));
 
                 out.add(new DefaultSocks4CommandResponse(status, dstAddr, dstPort));
                 checkpoint(State.SUCCESS);

@@ -21,6 +21,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.ObjectUtil;
@@ -47,7 +48,7 @@ public class DefaultServerSocketChannelConfig extends DefaultChannelConfig
      * Creates a new instance.
      */
     public DefaultServerSocketChannelConfig(ServerSocketChannel channel, ServerSocket javaSocket) {
-        super(channel);
+        super(channel, new ServerChannelRecvByteBufAllocator());
         this.javaSocket = ObjectUtil.checkNotNull(javaSocket, "javaSocket");
     }
 

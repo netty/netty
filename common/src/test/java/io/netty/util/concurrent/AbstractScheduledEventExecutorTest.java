@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -115,6 +116,12 @@ public class AbstractScheduledEventExecutorTest {
                 executor.scheduleWithFixedDelay(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS);
             }
         });
+    }
+
+    @Test
+    public void testDeadlineNanosNotOverflow() {
+        Assertions.assertEquals(Long.MAX_VALUE, AbstractScheduledEventExecutor.deadlineNanos(
+                AbstractScheduledEventExecutor.defaultCurrentTimeNanos(), Long.MAX_VALUE));
     }
 
     private static final class TestScheduledEventExecutor extends AbstractScheduledEventExecutor {

@@ -310,7 +310,11 @@ public final class SslContextBuilder {
      * {@link #trustManager(TrustManagerFactory trustManagerFactory)} also apply here.
      */
     public SslContextBuilder trustManager(TrustManager trustManager) {
-        this.trustManagerFactory = new TrustManagerFactoryWrapper(trustManager);
+        if (trustManager != null) {
+            this.trustManagerFactory = new TrustManagerFactoryWrapper(trustManager);
+        } else {
+            this.trustManagerFactory = null;
+        }
         trustCertCollection = null;
         return this;
     }
@@ -429,7 +433,7 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder keyManager(PrivateKey key, String keyPassword, X509Certificate... keyCertChain) {
         if (forServer) {
-            checkNonEmpty(keyCertChain, "keyCertChain"); // lgtm[java/dereferenced-value-may-be-null]
+            checkNonEmpty(keyCertChain, "keyCertChain");
             checkNotNull(key, "key required for servers");
         }
         if (keyCertChain == null || keyCertChain.length == 0) {

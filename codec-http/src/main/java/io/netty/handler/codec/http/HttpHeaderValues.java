@@ -119,6 +119,12 @@ public final class HttpHeaderValues {
      * {@code "br"}
      */
     public static final AsciiString BR = AsciiString.cached("br");
+
+    /**
+     * {@code "snappy"}
+     */
+    public static final AsciiString SNAPPY = AsciiString.cached("snappy");
+
     /**
      * {@code "zstd"}
      */

@@ -71,9 +71,9 @@ public class ReadOnlyHttp2HeadersTest {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() {
-                ReadOnlyHttp2Headers.trailers(true, new AsciiString(":name"), new AsciiString("foo"),
+                ReadOnlyHttp2Headers.trailers(true, new AsciiString(":scheme"), new AsciiString("foo"),
                         new AsciiString("othername"), new AsciiString("goo"),
-                        new AsciiString(":pseudo"), new AsciiString("val"));
+                        new AsciiString(":path"), new AsciiString("val"));
             }
         });
     }

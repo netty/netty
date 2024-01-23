@@ -19,12 +19,10 @@ import io.netty.handler.codec.CharSequenceValueConverter;
 import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.DefaultHeaders.NameValidator;
+import io.netty.handler.codec.DefaultHeaders.ValueValidator;
 import io.netty.handler.codec.DefaultHeadersImpl;
 import io.netty.handler.codec.HeadersUtils;
 import io.netty.handler.codec.ValueConverter;
-import io.netty.util.AsciiString;
-import io.netty.util.ByteProcessor;
-import io.netty.util.internal.PlatformDependent;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -43,43 +41,19 @@ import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
  * Default implementation of {@link HttpHeaders}.
  */
 public class DefaultHttpHeaders extends HttpHeaders {
-    private static final int HIGHEST_INVALID_VALUE_CHAR_MASK = ~15;
-    private static final ByteProcessor HEADER_NAME_VALIDATOR = new ByteProcessor() {
-        @Override
-        public boolean process(byte value) throws Exception {
-            validateHeaderNameElement(value);
-            return true;
-        }
-    };
-    static final NameValidator<CharSequence> HttpNameValidator = new NameValidator<CharSequence>() {
-        @Override
-        public void validateName(CharSequence name) {
-            if (name == null || name.length() == 0) {
-                throw new IllegalArgumentException("empty headers are not allowed [" + name + "]");
-            }
-            if (name instanceof AsciiString) {
-                try {
-                    ((AsciiString) name).forEachByte(HEADER_NAME_VALIDATOR);
-                } catch (Exception e) {
-                    PlatformDependent.throwException(e);
-                }
-            } else {
-                // Go through each character in the name
-                for (int index = 0; index < name.length(); ++index) {
-                    validateHeaderNameElement(name.charAt(index));
-                }
-            }
-        }
-    };
-
     private final DefaultHeaders<CharSequence, CharSequence, ?> headers;
 
+    /**
+     * Create a new, empty HTTP headers object.
+     * <p>
+     * Header names and values are validated as they are added, to ensure they are compliant with the HTTP protocol.
+     */
     public DefaultHttpHeaders() {
-        this(true);
+        this(nameValidator(true), valueValidator(true));
     }
 
     /**
-     * <b>Warning!</b> Setting <code>validate</code> to <code>false</code> will mean that Netty won't
+     * <b>Warning!</b> Setting {@code validate} to {@code false} will mean that Netty won't
      * validate & protect against user-supplied header values that are malicious.
      * This can leave your server implementation vulnerable to
      * <a href="https://cwe.mitre.org/data/definitions/113.html">
@@ -88,16 +62,89 @@ public class DefaultHttpHeaders extends HttpHeaders {
      * When disabling this validation, it is the responsibility of the caller to ensure that the values supplied
      * do not contain a non-url-escaped carriage return (CR) and/or line feed (LF) characters.
      *
-     * @param validate Should Netty validate Header values to ensure they aren't malicious.
+     * @param validate Should Netty validate header values to ensure they aren't malicious.
+     * @deprecated Prefer using the {@link #DefaultHttpHeaders()} constructor instead,
+     * to always have validation enabled.
      */
+    @Deprecated
     public DefaultHttpHeaders(boolean validate) {
-        this(validate, nameValidator(validate));
+        this(nameValidator(validate), valueValidator(validate));
     }
 
-    protected DefaultHttpHeaders(boolean validate, NameValidator<CharSequence> nameValidator) {
-        this(new DefaultHeadersImpl<CharSequence, CharSequence>(CASE_INSENSITIVE_HASHER,
-                                                                valueConverter(validate),
-                                                                nameValidator));
+    /**
+     * Create an HTTP headers object with the given name validator.
+     * <p>
+     * <b>Warning!</b> It is strongly recommended that the name validator implement validation that is at least as
+     * strict as {@link HttpHeaderValidationUtil#validateToken(CharSequence)}.
+     * It is also strongly recommended that {@code validateValues} is enabled.
+     * <p>
+     * Without these validations in place, your code can be susceptible to
+     * <a href="https://cwe.mitre.org/data/definitions/113.html">
+     *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+     * </a>.
+     * It is the responsibility of the caller to ensure that the values supplied
+     * do not contain a non-url-escaped carriage return (CR) and/or line feed (LF) characters.
+     *
+     * @param validateValues Should Netty validate header values to ensure they aren't malicious.
+     * @param nameValidator The {@link NameValidator} to use, never {@code null.
+     */
+    protected DefaultHttpHeaders(boolean validateValues, NameValidator<CharSequence> nameValidator) {
+        this(nameValidator, valueValidator(validateValues));
+    }
+
+    /**
+     * Create an HTTP headers object with the given name and value validators.
+     * <p>
+     * <b>Warning!</b> It is strongly recommended that the name validator implement validation that is at least as
+     * strict as {@link HttpHeaderValidationUtil#validateToken(CharSequence)}.
+     * And that the value validator is at least as strict as
+     * {@link HttpHeaderValidationUtil#validateValidHeaderValue(CharSequence)}.
+     * <p>
+     * Without these validations in place, your code can be susceptible to
+     * <a href="https://cwe.mitre.org/data/definitions/113.html">
+     *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+     * </a>.
+     * It is the responsibility of the caller to ensure that the values supplied
+     * do not contain a non-url-escaped carriage return (CR) and/or line feed (LF) characters.
+     *
+     * @param nameValidator The {@link NameValidator} to use, never {@code null}.
+     * @param valueValidator The {@link ValueValidator} to use, never {@code null}.
+     */
+    protected DefaultHttpHeaders(
+            NameValidator<CharSequence> nameValidator,
+            ValueValidator<CharSequence> valueValidator) {
+        this(nameValidator, valueValidator, 16);
+    }
+
+    /**
+     * Create an HTTP headers object with the given name and value validators.
+     * <p>
+     * <b>Warning!</b> It is strongly recommended that the name validator implement validation that is at least as
+     * strict as {@link HttpHeaderValidationUtil#validateToken(CharSequence)}.
+     * And that the value validator is at least as strict as
+     * {@link HttpHeaderValidationUtil#validateValidHeaderValue(CharSequence)}.
+     * <p>
+     * Without these validations in place, your code can be susceptible to
+     * <a href="https://cwe.mitre.org/data/definitions/113.html">
+     *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+     * </a>.
+     * It is the responsibility of the caller to ensure that the values supplied
+     * do not contain a non-url-escaped carriage return (CR) and/or line feed (LF) characters.
+     *
+     * @param nameValidator The {@link NameValidator} to use, never {@code null}.
+     * @param valueValidator The {@link ValueValidator} to use, never {@code null}.
+     * @param sizeHint A hint about the anticipated number of entries.
+     */
+    protected DefaultHttpHeaders(
+            NameValidator<CharSequence> nameValidator,
+            ValueValidator<CharSequence> valueValidator,
+            int sizeHint) {
+        this(new DefaultHeadersImpl<CharSequence, CharSequence>(
+                CASE_INSENSITIVE_HASHER,
+                HeaderValueConverter.INSTANCE,
+                nameValidator,
+                sizeHint,
+                valueValidator));
     }
 
     protected DefaultHttpHeaders(DefaultHeaders<CharSequence, CharSequence, ?> headers) {
@@ -365,62 +412,18 @@ public class DefaultHttpHeaders extends HttpHeaders {
         return new DefaultHttpHeaders(headers.copy());
     }
 
-    private static void validateHeaderNameElement(byte value) {
-        switch (value) {
-        case 0x00:
-        case '\t':
-        case '\n':
-        case 0x0b:
-        case '\f':
-        case '\r':
-        case ' ':
-        case ',':
-        case ':':
-        case ';':
-        case '=':
-            throw new IllegalArgumentException(
-               "a header name cannot contain the following prohibited characters: =,;: \\t\\r\\n\\v\\f: " +
-                       value);
-        default:
-            // Check to see if the character is not an ASCII character, or invalid
-            if (value < 0) {
-                throw new IllegalArgumentException("a header name cannot contain non-ASCII character: " + value);
-            }
-        }
+    static ValueConverter<CharSequence> valueConverter() {
+        return HeaderValueConverter.INSTANCE;
     }
 
-    private static void validateHeaderNameElement(char value) {
-        switch (value) {
-        case 0x00:
-        case '\t':
-        case '\n':
-        case 0x0b:
-        case '\f':
-        case '\r':
-        case ' ':
-        case ',':
-        case ':':
-        case ';':
-        case '=':
-            throw new IllegalArgumentException(
-               "a header name cannot contain the following prohibited characters: =,;: \\t\\r\\n\\v\\f: " +
-                       value);
-        default:
-            // Check to see if the character is not an ASCII character, or invalid
-            if (value > 127) {
-                throw new IllegalArgumentException("a header name cannot contain non-ASCII character: " +
-                        value);
-            }
-        }
+    static ValueValidator<CharSequence> valueValidator(boolean validate) {
+        return validate ? DefaultHttpHeadersFactory.headersFactory().getValueValidator() :
+                DefaultHttpHeadersFactory.headersFactory().withValidation(false).getValueValidator();
     }
 
-    static ValueConverter<CharSequence> valueConverter(boolean validate) {
-        return validate ? HeaderValueConverterAndValidator.INSTANCE : HeaderValueConverter.INSTANCE;
-    }
-
-    @SuppressWarnings("unchecked")
     static NameValidator<CharSequence> nameValidator(boolean validate) {
-        return validate ? HttpNameValidator : NameValidator.NOT_NULL;
+        return validate ? DefaultHttpHeadersFactory.headersFactory().getNameValidator() :
+                DefaultHttpHeadersFactory.headersFactory().withNameValidation(false).getNameValidator();
     }
 
     private static class HeaderValueConverter extends CharSequenceValueConverter {
@@ -438,77 +441,6 @@ public class DefaultHttpHeaders extends HttpHeaders {
                 return DateFormatter.format(((Calendar) value).getTime());
             }
             return value.toString();
-        }
-    }
-
-    private static final class HeaderValueConverterAndValidator extends HeaderValueConverter {
-        static final HeaderValueConverterAndValidator INSTANCE = new HeaderValueConverterAndValidator();
-
-        @Override
-        public CharSequence convertObject(Object value) {
-            CharSequence seq = super.convertObject(value);
-            int state = 0;
-            // Start looping through each of the character
-            for (int index = 0; index < seq.length(); index++) {
-                state = validateValueChar(seq, state, seq.charAt(index));
-            }
-
-            if (state != 0) {
-                throw new IllegalArgumentException("a header value must not end with '\\r' or '\\n':" + seq);
-            }
-            return seq;
-        }
-
-        private static int validateValueChar(CharSequence seq, int state, char character) {
-            /*
-             * State:
-             * 0: Previous character was neither CR nor LF
-             * 1: The previous character was CR
-             * 2: The previous character was LF
-             */
-            if ((character & HIGHEST_INVALID_VALUE_CHAR_MASK) == 0) {
-                // Check the absolutely prohibited characters.
-                switch (character) {
-                case 0x0: // NULL
-                    throw new IllegalArgumentException("a header value contains a prohibited character '\0': " + seq);
-                case 0x0b: // Vertical tab
-                    throw new IllegalArgumentException("a header value contains a prohibited character '\\v': " + seq);
-                case '\f':
-                    throw new IllegalArgumentException("a header value contains a prohibited character '\\f': " + seq);
-                default:
-                    break;
-                }
-            }
-
-            // Check the CRLF (HT | SP) pattern
-            switch (state) {
-                case 0:
-                    switch (character) {
-                        case '\r':
-                            return 1;
-                        case '\n':
-                            return 2;
-                        default:
-                            break;
-                    }
-                    break;
-                case 1:
-                    if (character == '\n') {
-                        return 2;
-                    }
-                    throw new IllegalArgumentException("only '\\n' is allowed after '\\r': " + seq);
-                case 2:
-                    switch (character) {
-                        case '\t':
-                        case ' ':
-                            return 0;
-                        default:
-                            throw new IllegalArgumentException("only ' ' and '\\t' are allowed after '\\n': " + seq);
-                    }
-                default:
-                    break;
-            }
-            return state;
         }
     }
 }

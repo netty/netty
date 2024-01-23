@@ -97,7 +97,7 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
     }
 
     boolean allocate(PooledByteBuf<T> buf, int reqCapacity, int sizeIdx, PoolThreadCache threadCache) {
-        int normCapacity = arena.sizeIdx2size(sizeIdx);
+        int normCapacity = arena.sizeClass.sizeIdx2size(sizeIdx);
         if (normCapacity > maxCapacity) {
             // Either this PoolChunkList is empty or the requested capacity is larger then the capacity which can
             // be handled by the PoolChunks that are contained in this PoolChunkList.
@@ -209,7 +209,8 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
 
     @Override
     public Iterator<PoolChunkMetric> iterator() {
-        synchronized (arena) {
+        arena.lock();
+        try {
             if (head == null) {
                 return EMPTY_METRICS;
             }
@@ -222,13 +223,16 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
                 }
             }
             return metrics.iterator();
+        } finally {
+            arena.unlock();
         }
     }
 
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();
-        synchronized (arena) {
+        arena.lock();
+        try {
             if (head == null) {
                 return "none";
             }
@@ -241,6 +245,8 @@ final class PoolChunkList<T> implements PoolChunkListMetric {
                 }
                 buf.append(StringUtil.NEWLINE);
             }
+        } finally {
+            arena.unlock();
         }
         return buf.toString();
     }

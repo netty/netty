@@ -22,6 +22,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +38,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpUtilTest {
+
+    @Test
+    public void testRecognizesOriginForm() {
+        // Origin form: https://tools.ietf.org/html/rfc7230#section-5.3.1
+        assertTrue(HttpUtil.isOriginForm(URI.create("/where?q=now")));
+        // Absolute form: https://tools.ietf.org/html/rfc7230#section-5.3.2
+        assertFalse(HttpUtil.isOriginForm(URI.create("http://www.example.org/pub/WWW/TheProject.html")));
+        // Authority form: https://tools.ietf.org/html/rfc7230#section-5.3.3
+        assertFalse(HttpUtil.isOriginForm(URI.create("www.example.com:80")));
+        // Asterisk form: https://tools.ietf.org/html/rfc7230#section-5.3.4
+        assertFalse(HttpUtil.isOriginForm(URI.create("*")));
+    }
+
+    @Test public void testRecognizesAsteriskForm() {
+        // Asterisk form: https://tools.ietf.org/html/rfc7230#section-5.3.4
+        assertTrue(HttpUtil.isAsteriskForm(URI.create("*")));
+        // Origin form: https://tools.ietf.org/html/rfc7230#section-5.3.1
+        assertFalse(HttpUtil.isAsteriskForm(URI.create("/where?q=now")));
+        // Absolute form: https://tools.ietf.org/html/rfc7230#section-5.3.2
+        assertFalse(HttpUtil.isAsteriskForm(URI.create("http://www.example.org/pub/WWW/TheProject.html")));
+        // Authority form: https://tools.ietf.org/html/rfc7230#section-5.3.3
+        assertFalse(HttpUtil.isAsteriskForm(URI.create("www.example.com:80")));
+    }
 
     @Test
     public void testRemoveTransferEncodingIgnoreCase() {

@@ -16,9 +16,9 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelPipeline;
-import io.netty.handler.codec.TooLongFrameException;
-
+import io.netty.util.AsciiString;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpRequest}s and {@link HttpContent}s.
@@ -32,12 +32,12 @@ import io.netty.handler.codec.TooLongFrameException;
  * <td>{@code maxInitialLineLength}</td>
  * <td>The maximum length of the initial line (e.g. {@code "GET / HTTP/1.0"})
  *     If the length of the initial line exceeds this value, a
- *     {@link TooLongFrameException} will be raised.</td>
+ *     {@link TooLongHttpLineException} will be raised.</td>
  * </tr>
  * <tr>
  * <td>{@code maxHeaderSize}</td>
  * <td>The maximum length of all headers.  If the sum of the length of each
- *     header exceeds this value, a {@link TooLongFrameException} will be raised.</td>
+ *     header exceeds this value, a {@link TooLongHttpHeaderException} will be raised.</td>
  * </tr>
  * <tr>
  * <td>{@code maxChunkSize}</td>
@@ -75,8 +75,48 @@ import io.netty.handler.codec.TooLongFrameException;
  *     the readable bytes are greater or equal to the chunk size.</td>
  * </tr>
  * </table>
+ *
+ * <h3>Header Validation</h3>
+ *
+ * It is recommended to always enable header validation.
+ * <p>
+ * Without header validation, your system can become vulnerable to
+ * <a href="https://cwe.mitre.org/data/definitions/113.html">
+ *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+ * </a>.
+ * <p>
+ * This recommendation stands even when both peers in the HTTP exchange are trusted,
+ * as it helps with defence-in-depth.
  */
 public class HttpRequestDecoder extends HttpObjectDecoder {
+
+    private static final AsciiString Host = AsciiString.cached("Host");
+    private static final AsciiString Connection = AsciiString.cached("Connection");
+    private static final AsciiString ContentType = AsciiString.cached("Content-Type");
+    private static final AsciiString ContentLength = AsciiString.cached("Content-Length");
+
+    private static final int GET_AS_INT = 'G' | 'E' << 8 | 'T' << 16;
+    private static final int POST_AS_INT = 'P' | 'O' << 8 | 'S' << 16 | 'T' << 24;
+    private static final long HTTP_1_1_AS_LONG = 'H' | 'T' << 8 | 'T' << 16 | 'P' << 24 | (long) '/' << 32 |
+            (long) '1' << 40 | (long) '.' << 48 | (long) '1' << 56;
+
+    private static final long HTTP_1_0_AS_LONG = 'H' | 'T' << 8 | 'T' << 16 | 'P' << 24 | (long) '/' << 32 |
+            (long) '1' << 40 | (long) '.' << 48 | (long) '0' << 56;
+
+    private static final int HOST_AS_INT = 'H' | 'o' << 8 | 's' << 16 | 't' << 24;
+
+    private static final long CONNECTION_AS_LONG_0 = 'C' | 'o' << 8 | 'n' << 16 | 'n' << 24 |
+            (long) 'e' << 32 | (long) 'c' << 40 | (long) 't' << 48 | (long) 'i' << 56;
+
+    private static final short CONNECTION_AS_SHORT_1 = 'o' | 'n' << 8;
+
+    private static final long CONTENT_AS_LONG = 'C' | 'o' << 8 | 'n' << 16 | 't' << 24 |
+            (long) 'e' << 32 | (long) 'n' << 40 | (long) 't' << 48 | (long) '-' << 56;
+
+    private static final int TYPE_AS_INT = 'T' | 'y' << 8 | 'p' << 16 | 'e' << 24;
+
+    private static final long LENGTH_AS_LONG = 'L' | 'e' << 8 | 'n' << 16 | 'g' << 24 |
+            (long) 't' << 32 | (long) 'h' << 40;
 
     /**
      * Creates a new instance with the default
@@ -91,14 +131,27 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
      */
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize));
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpRequestDecoder(HttpDecoderConfig)} constructor,
+     * to always have header validation enabled.
+     */
+    @Deprecated
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
         super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED, validateHeaders);
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpRequestDecoder(HttpDecoderConfig)} constructor,
+     * to always have header validation enabled.
+     */
+    @Deprecated
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
             int initialBufferSize) {
@@ -106,6 +159,11 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
               initialBufferSize);
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpRequestDecoder(HttpDecoderConfig)} constructor,
+     * to always have header validation enabled.
+     */
+    @Deprecated
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
             int initialBufferSize, boolean allowDuplicateContentLengths) {
@@ -113,6 +171,11 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
               initialBufferSize, allowDuplicateContentLengths);
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpRequestDecoder(HttpDecoderConfig)} constructor,
+     * to always have header validation enabled.
+     */
+    @Deprecated
     public HttpRequestDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
             int initialBufferSize, boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
@@ -120,20 +183,177 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
               initialBufferSize, allowDuplicateContentLengths, allowPartialChunks);
     }
 
+    /**
+     * Creates a new instance with the specified configuration.
+     */
+    public HttpRequestDecoder(HttpDecoderConfig config) {
+        super(config);
+    }
+
     @Override
     protected HttpMessage createMessage(String[] initialLine) throws Exception {
         return new DefaultHttpRequest(
                 HttpVersion.valueOf(initialLine[2]),
-                HttpMethod.valueOf(initialLine[0]), initialLine[1], validateHeaders);
+                HttpMethod.valueOf(initialLine[0]), initialLine[1], headersFactory);
+    }
+
+    @Override
+    protected AsciiString splitHeaderName(final byte[] sb, final int start, final int length) {
+        final byte firstChar = sb[start];
+        if (firstChar == 'H' && length == 4) {
+            if (isHost(sb, start)) {
+                return Host;
+            }
+        } else if (firstChar == 'C') {
+            if (length == 10) {
+                if (isConnection(sb, start)) {
+                    return Connection;
+                }
+            } else if (length == 12) {
+                if (isContentType(sb, start)) {
+                    return ContentType;
+                }
+            } else if (length == 14) {
+                if (isContentLength(sb, start)) {
+                    return ContentLength;
+                }
+            }
+        }
+        return super.splitHeaderName(sb, start, length);
+    }
+
+    private static boolean isHost(byte[] sb, int start) {
+        final int maybeHost = sb[start] |
+                sb[start + 1] << 8 |
+                sb[start + 2] << 16 |
+                sb[start + 3] << 24;
+        return maybeHost == HOST_AS_INT;
+    }
+
+    private static boolean isConnection(byte[] sb, int start) {
+        final long maybeConnecti = sb[start] |
+                sb[start + 1] << 8 |
+                sb[start + 2] << 16 |
+                sb[start + 3] << 24 |
+                (long) sb[start + 4] << 32 |
+                (long) sb[start + 5] << 40 |
+                (long) sb[start + 6] << 48 |
+                (long) sb[start + 7] << 56;
+        if (maybeConnecti != CONNECTION_AS_LONG_0) {
+            return false;
+        }
+        final short maybeOn = (short) (sb[start + 8] | sb[start + 9] << 8);
+        return maybeOn == CONNECTION_AS_SHORT_1;
+    }
+
+    private static boolean isContentType(byte[] sb, int start) {
+        final long maybeContent = sb[start] |
+                sb[start + 1] << 8 |
+                sb[start + 2] << 16 |
+                sb[start + 3] << 24 |
+                (long) sb[start + 4] << 32 |
+                (long) sb[start + 5] << 40 |
+                (long) sb[start + 6] << 48 |
+                (long) sb[start + 7] << 56;
+        if (maybeContent != CONTENT_AS_LONG) {
+            return false;
+        }
+        final int maybeType = sb[start + 8] |
+                sb[start + 9] << 8 |
+                sb[start + 10] << 16 |
+                sb[start + 11] << 24;
+        return maybeType == TYPE_AS_INT;
+    }
+
+    private static boolean isContentLength(byte[] sb, int start) {
+        final long maybeContent = sb[start] |
+                sb[start + 1] << 8 |
+                sb[start + 2] << 16 |
+                sb[start + 3] << 24 |
+                (long) sb[start + 4] << 32 |
+                (long) sb[start + 5] << 40 |
+                (long) sb[start + 6] << 48 |
+                (long) sb[start + 7] << 56;
+        if (maybeContent != CONTENT_AS_LONG) {
+            return false;
+        }
+        final long maybeLength = sb[start + 8] |
+                sb[start + 9] << 8 |
+                sb[start + 10] << 16 |
+                sb[start + 11] << 24 |
+                (long) sb[start + 12] << 32 |
+                (long) sb[start + 13] << 40;
+        return maybeLength == LENGTH_AS_LONG;
+    }
+
+    private static boolean isGetMethod(final byte[] sb, int start) {
+        final int maybeGet = sb[start] |
+                sb[start + 1] << 8 |
+                sb[start + 2] << 16;
+        return maybeGet == GET_AS_INT;
+    }
+
+    private static boolean isPostMethod(final byte[] sb, int start) {
+        final int maybePost = sb[start] |
+                sb[start + 1] << 8 |
+                sb[start + 2] << 16 |
+                sb[start + 3] << 24;
+        return maybePost == POST_AS_INT;
+    }
+
+    @Override
+    protected String splitFirstWordInitialLine(final byte[] sb, final int start, final int length) {
+        if (length == 3) {
+            if (isGetMethod(sb, start)) {
+                return HttpMethod.GET.name();
+            }
+        } else if (length == 4) {
+            if (isPostMethod(sb, start)) {
+                return HttpMethod.POST.name();
+            }
+        }
+        return super.splitFirstWordInitialLine(sb, start, length);
+    }
+
+    @Override
+    protected String splitThirdWordInitialLine(final byte[] sb, final int start, final int length) {
+        if (length == 8) {
+            final long maybeHttp1_x = sb[start] |
+                    sb[start + 1] << 8 |
+                    sb[start + 2] << 16 |
+                    sb[start + 3] << 24 |
+                    (long) sb[start + 4] << 32 |
+                    (long) sb[start + 5] << 40 |
+                    (long) sb[start + 6] << 48 |
+                    (long) sb[start + 7] << 56;
+            if (maybeHttp1_x == HTTP_1_1_AS_LONG) {
+                return HttpVersion.HTTP_1_1_STRING;
+            } else if (maybeHttp1_x == HTTP_1_0_AS_LONG) {
+                return HttpVersion.HTTP_1_0_STRING;
+            }
+        }
+        return super.splitThirdWordInitialLine(sb, start, length);
     }
 
     @Override
     protected HttpMessage createInvalidMessage() {
-        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request", validateHeaders);
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.GET, "/bad-request",
+                Unpooled.buffer(0), headersFactory, trailersFactory);
     }
 
     @Override
     protected boolean isDecodingRequest() {
         return true;
+    }
+
+    @Override
+    protected boolean isContentAlwaysEmpty(final HttpMessage msg) {
+        // fast-path to save expensive O(n) checks; users can override createMessage
+        // and extends DefaultHttpRequest making implementing HttpResponse:
+        // this is why we cannot use instanceof DefaultHttpRequest here :(
+        if (msg.getClass() == DefaultHttpRequest.class) {
+            return false;
+        }
+        return super.isContentAlwaysEmpty(msg);
     }
 }

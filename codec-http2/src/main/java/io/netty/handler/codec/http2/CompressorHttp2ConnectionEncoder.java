@@ -24,6 +24,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.BrotliEncoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliOptions;
 import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.DeflateOptions;
@@ -31,6 +32,8 @@ import io.netty.handler.codec.compression.GzipOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZstdEncoder;
 import io.netty.handler.codec.compression.ZstdOptions;
+import io.netty.handler.codec.compression.SnappyFrameEncoder;
+import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
@@ -44,6 +47,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
+import static io.netty.handler.codec.http.HttpHeaderValues.SNAPPY;
 
 /**
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
@@ -67,14 +71,26 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     private GzipOptions gzipCompressionOptions;
     private DeflateOptions deflateOptions;
     private ZstdOptions zstdOptions;
+    private SnappyOptions snappyOptions;
 
     /**
      * Create a new {@link CompressorHttp2ConnectionEncoder} instance
      * with default implementation of {@link StandardCompressionOptions}
      */
     public CompressorHttp2ConnectionEncoder(Http2ConnectionEncoder delegate) {
-        this(delegate, StandardCompressionOptions.brotli(), StandardCompressionOptions.gzip(),
-                StandardCompressionOptions.deflate());
+        this(delegate, defaultCompressionOptions());
+    }
+
+    private static CompressionOptions[] defaultCompressionOptions() {
+        if (Brotli.isAvailable()) {
+            return new CompressionOptions[] {
+                    StandardCompressionOptions.brotli(),
+                    StandardCompressionOptions.snappy(),
+                    StandardCompressionOptions.gzip(),
+                    StandardCompressionOptions.deflate() };
+        }
+        return new CompressionOptions[] { StandardCompressionOptions.snappy(),
+                StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate() };
     }
 
     /**
@@ -113,7 +129,13 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         ObjectUtil.deepCheckNotNull("CompressionOptions", compressionOptionsArgs);
 
         for (CompressionOptions compressionOptions : compressionOptionsArgs) {
-            if (compressionOptions instanceof BrotliOptions) {
+            // BrotliOptions' class initialization depends on Brotli classes being on the classpath.
+            // The Brotli.isAvailable check ensures that BrotliOptions will only get instantiated if Brotli is on
+            // the classpath.
+            // This results in the static analysis of native-image identifying the instanceof BrotliOptions check
+            // and thus BrotliOptions itself as unreachable, enabling native-image to link all classes at build time
+            // and not complain about the missing Brotli classes.
+            if (Brotli.isAvailable() && compressionOptions instanceof BrotliOptions) {
                 brotliOptions = (BrotliOptions) compressionOptions;
             } else if (compressionOptions instanceof GzipOptions) {
                 gzipCompressionOptions = (GzipOptions) compressionOptions;
@@ -121,6 +143,8 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 deflateOptions = (DeflateOptions) compressionOptions;
             } else if (compressionOptions instanceof ZstdOptions) {
                 zstdOptions = (ZstdOptions) compressionOptions;
+            } else if (compressionOptions instanceof SnappyOptions) {
+                snappyOptions = (SnappyOptions) compressionOptions;
             } else {
                 throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
                         ": " + compressionOptions);
@@ -248,7 +272,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * @param contentEncoding the value of the {@code content-encoding} header
      * @return a new {@link ByteToMessageDecoder} if the specified encoding is supported. {@code null} otherwise
      * (alternatively, you can throw a {@link Http2Exception} to block unknown encoding).
-     * @throws Http2Exception If the specified encoding is not not supported and warrants an exception
+     * @throws Http2Exception If the specified encoding is not supported and warrants an exception
      */
     protected EmbeddedChannel newContentCompressor(ChannelHandlerContext ctx, CharSequence contentEncoding)
             throws Http2Exception {
@@ -258,7 +282,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) || X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             return newCompressionChannel(ctx, ZlibWrapper.ZLIB);
         }
-        if (brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
+        if (Brotli.isAvailable() && brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
                     ctx.channel().config(), new BrotliEncoder(brotliOptions.parameters()));
         }
@@ -266,6 +290,10 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
                     ctx.channel().config(), new ZstdEncoder(zstdOptions.compressionLevel(),
                     zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
+        }
+        if (snappyOptions != null && SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
+            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                    ctx.channel().config(), new SnappyFrameEncoder());
         }
         // 'identity' or unsupported
         return null;

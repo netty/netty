@@ -51,7 +51,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         }
 
         // Suppress a warning since i becomes negative when an integer overflow happens
-        for (int i = 512; i > 0; i <<= 1) { // lgtm[java/constant-comparison]
+        for (int i = 512; i > 0; i <<= 1) {
             sizeTable.add(i);
         }
 

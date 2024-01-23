@@ -45,16 +45,15 @@ final class PemReader {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PemReader.class);
 
-    private static final Pattern CERT_PATTERN = Pattern.compile(
-            "-+BEGIN\\s+.*CERTIFICATE[^-]*-+(?:\\s|\\r|\\n)+" + // Header
-                    "([a-z0-9+/=\\r\\n]+)" +                    // Base64 text
-                    "-+END\\s+.*CERTIFICATE[^-]*-+",            // Footer
-            Pattern.CASE_INSENSITIVE);
-    private static final Pattern KEY_PATTERN = Pattern.compile(
-            "-+BEGIN\\s+.*PRIVATE\\s+KEY[^-]*-+(?:\\s|\\r|\\n)+" + // Header
-                    "([a-z0-9+/=\\r\\n]+)" +                       // Base64 text
-                    "-+END\\s+.*PRIVATE\\s+KEY[^-]*-+",            // Footer
-            Pattern.CASE_INSENSITIVE);
+    private static final Pattern CERT_HEADER = Pattern.compile(
+            "-+BEGIN\\s[^-\\r\\n]*CERTIFICATE[^-\\r\\n]*-+(?:\\s|\\r|\\n)+");
+    private static final Pattern CERT_FOOTER = Pattern.compile(
+            "-+END\\s[^-\\r\\n]*CERTIFICATE[^-\\r\\n]*-+(?:\\s|\\r|\\n)*");
+    private static final Pattern KEY_HEADER = Pattern.compile(
+            "-+BEGIN\\s[^-\\r\\n]*PRIVATE\\s+KEY[^-\\r\\n]*-+(?:\\s|\\r|\\n)+");
+    private static final Pattern KEY_FOOTER = Pattern.compile(
+            "-+END\\s[^-\\r\\n]*PRIVATE\\s+KEY[^-\\r\\n]*-+(?:\\s|\\r|\\n)*");
+    private static final Pattern BODY = Pattern.compile("[a-z0-9+/=][a-z0-9+/=\\r\\n]*", Pattern.CASE_INSENSITIVE);
 
     static ByteBuf[] readCertificates(File file) throws CertificateException {
         try {
@@ -79,19 +78,36 @@ final class PemReader {
         }
 
         List<ByteBuf> certs = new ArrayList<ByteBuf>();
-        Matcher m = CERT_PATTERN.matcher(content);
+        Matcher m = CERT_HEADER.matcher(content);
         int start = 0;
         for (;;) {
             if (!m.find(start)) {
                 break;
             }
 
-            ByteBuf base64 = Unpooled.copiedBuffer(m.group(1), CharsetUtil.US_ASCII);
+            // Here and below it's necessary to save the position as it is reset
+            // after calling usePattern() on Android due to a bug.
+            //
+            // See https://issuetracker.google.com/issues/293206296
+            start = m.end();
+            m.usePattern(BODY);
+            if (!m.find(start)) {
+                break;
+            }
+
+            ByteBuf base64 = Unpooled.copiedBuffer(m.group(0), CharsetUtil.US_ASCII);
+            start = m.end();
+            m.usePattern(CERT_FOOTER);
+            if (!m.find(start)) {
+                // Certificate is incomplete.
+                break;
+            }
             ByteBuf der = Base64.decode(base64);
             base64.release();
             certs.add(der);
 
             start = m.end();
+            m.usePattern(CERT_HEADER);
         }
 
         if (certs.isEmpty()) {
@@ -122,17 +138,32 @@ final class PemReader {
         } catch (IOException e) {
             throw new KeyException("failed to read key input stream", e);
         }
-
-        Matcher m = KEY_PATTERN.matcher(content);
-        if (!m.find()) {
-            throw new KeyException("could not find a PKCS #8 private key in input stream" +
-                    " (see https://netty.io/wiki/sslcontextbuilder-and-private-key.html for more information)");
+        int start = 0;
+        Matcher m = KEY_HEADER.matcher(content);
+        if (!m.find(start)) {
+            throw keyNotFoundException();
+        }
+        start = m.end();
+        m.usePattern(BODY);
+        if (!m.find(start)) {
+            throw keyNotFoundException();
         }
 
-        ByteBuf base64 = Unpooled.copiedBuffer(m.group(1), CharsetUtil.US_ASCII);
+        ByteBuf base64 = Unpooled.copiedBuffer(m.group(0), CharsetUtil.US_ASCII);
+        start = m.end();
+        m.usePattern(KEY_FOOTER);
+        if (!m.find(start)) {
+            // Key is incomplete.
+            throw keyNotFoundException();
+        }
         ByteBuf der = Base64.decode(base64);
         base64.release();
         return der;
+    }
+
+    private static KeyException keyNotFoundException() {
+        return new KeyException("could not find a PKCS #8 private key in input stream" +
+                " (see https://netty.io/wiki/sslcontextbuilder-and-private-key.html for more information)");
     }
 
     private static String readContent(InputStream in) throws IOException {

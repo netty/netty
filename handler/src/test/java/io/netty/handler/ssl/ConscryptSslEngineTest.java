@@ -88,4 +88,12 @@ public class ConscryptSslEngineTest extends SSLEngineTest {
     public void testRSASSAPSS(SSLEngineTestParam param) {
         // skip
     }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    @Disabled("Disabled due a conscrypt bug")
+    @Override
+    public void testInvalidSNIIsIgnoredAndNotThrow(SSLEngineTestParam param) throws Exception {
+        super.testInvalidSNIIsIgnoredAndNotThrow(param);
+    }
 }

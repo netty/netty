@@ -220,7 +220,7 @@ public class Http2FrameCodecTest {
         Http2Connection conn = new DefaultHttp2Connection(true);
         Http2ConnectionEncoder enc = new DefaultHttp2ConnectionEncoder(conn, new DefaultHttp2FrameWriter());
         Http2ConnectionDecoder dec = new DefaultHttp2ConnectionDecoder(conn, enc, new DefaultHttp2FrameReader());
-        Http2FrameCodec codec = new Http2FrameCodec(enc, dec, new Http2Settings(), false);
+        Http2FrameCodec codec = new Http2FrameCodec(enc, dec, new Http2Settings(), false, true);
         EmbeddedChannel em = new EmbeddedChannel(codec);
 
         // We call #consumeBytes on a stream id which has not been seen yet to emulate the case

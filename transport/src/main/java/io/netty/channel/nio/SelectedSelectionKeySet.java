@@ -20,6 +20,7 @@ import java.util.AbstractSet;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
 
@@ -36,11 +37,11 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
             return false;
         }
 
-        keys[size++] = o;
         if (size == keys.length) {
             increaseCapacity();
         }
 
+        keys[size++] = o;
         return true;
     }
 
@@ -51,6 +52,13 @@ final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
 
     @Override
     public boolean contains(Object o) {
+        SelectionKey[] array = keys;
+        for (int i = 0, s = size; i < s; i++) {
+            SelectionKey k = array[i];
+            if (k.equals(o)) {
+                return true;
+            }
+        }
         return false;
     }
 

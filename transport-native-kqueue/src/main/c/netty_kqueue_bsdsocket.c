@@ -37,7 +37,7 @@
 
 // Those are initialized in the init(...) method and cached for performance reasons
 static jclass stringClass = NULL;
-static jclass peerCredentialsClass = NULL;
+static jweak peerCredentialsClassWeak = NULL;
 static jfieldID fileChannelFieldId = NULL;
 static jfieldID transferredFieldId = NULL;
 static jfieldID fdFieldId = NULL;
@@ -194,6 +194,10 @@ static void netty_kqueue_bsdsocket_setSndLowAt(JNIEnv* env, jclass clazz, jint f
     netty_unix_socket_setOption(env, fd, SOL_SOCKET, SO_SNDLOWAT, &optval, sizeof(optval));
 }
 
+static void netty_kqueue_bsdsocket_setTcpFastOpen(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN, &optval, sizeof(optval));
+}
+
 static jint netty_kqueue_bsdsocket_getTcpNoPush(JNIEnv* env, jclass clazz, jint fd) {
   int optval;
   if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_NOPUSH, &optval, sizeof(optval)) == -1) {
@@ -210,8 +214,19 @@ static jint netty_kqueue_bsdsocket_getSndLowAt(JNIEnv* env, jclass clazz, jint f
   return optval;
 }
 
+static jint netty_kqueue_bsdsocket_isTcpFastOpen(JNIEnv* env, jclass clazz, jint fd) {
+    int optval = 0;
+    if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_FASTOPEN, &optval, sizeof(optval)) == -1) {
+        netty_unix_socket_getOptionHandleError(env, errno);
+        return 0;
+    }
+    return optval;
+}
+
 static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass clazz, jint fd) {
     struct xucred credentials;
+    jclass peerCredentialsClass = NULL;
+
     // It has been observed on MacOS that this method can complete successfully but not set all fields of xucred.
     credentials.cr_ngroups = 0;
     if(netty_unix_socket_getOption(env,fd, SOL_SOCKET, LOCAL_PEERCRED, &credentials, sizeof (credentials)) == -1) {
@@ -240,7 +255,13 @@ static jobject netty_kqueue_bsdsocket_getPeerCredentials(JNIEnv *env, jclass cla
     }
 #endif
 
-    return (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, pid, credentials.cr_uid, gids);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, peerCredentialsClass, peerCredentialsClassWeak, error);
+
+    jobject creds = (*env)->NewObject(env, peerCredentialsClass, peerCredentialsMethodId, pid, credentials.cr_uid, gids);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, peerCredentialsClass);
+    return creds;
+ error:
+    return NULL;
 }
 // JNI Registered Methods End
 
@@ -249,9 +270,11 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setAcceptFilter", "(ILjava/lang/String;Ljava/lang/String;)V", (void *) netty_kqueue_bsdsocket_setAcceptFilter },
   { "setTcpNoPush", "(II)V", (void *) netty_kqueue_bsdsocket_setTcpNoPush },
   { "setSndLowAt", "(II)V", (void *) netty_kqueue_bsdsocket_setSndLowAt },
+  { "setTcpFastOpen", "(II)V", (void *) netty_kqueue_bsdsocket_setTcpFastOpen },
   { "getAcceptFilter", "(I)[Ljava/lang/String;", (void *) netty_kqueue_bsdsocket_getAcceptFilter },
   { "getTcpNoPush", "(I)I", (void *) netty_kqueue_bsdsocket_getTcpNoPush },
   { "getSndLowAt", "(I)I", (void *) netty_kqueue_bsdsocket_getSndLowAt },
+  { "isTcpFastOpen", "(I)I", (void *) netty_kqueue_bsdsocket_isTcpFastOpen },
   { "connectx", "(IIZ[BIIZ[BIIIJII)I", (void *) netty_kqueue_bsdsocket_connectx }
 };
 
@@ -302,6 +325,7 @@ jint netty_kqueue_bsdsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     jclass fileRegionCls = NULL;
     jclass fileChannelCls = NULL;
     jclass fileDescriptorCls = NULL;
+    jclass peerCredentialsClass = NULL;
     // Register the methods which are not referenced by static member variables
     JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
     if (dynamicMethods == NULL) {
@@ -332,7 +356,9 @@ jint netty_kqueue_bsdsocket_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_LOAD_CLASS(env, stringClass, "java/lang/String", done);
 
     NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/unix/PeerCredentials", nettyClassName, done);
-    NETTY_JNI_UTIL_LOAD_CLASS(env, peerCredentialsClass, nettyClassName, done);
+
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, peerCredentialsClassWeak, nettyClassName, done);
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, peerCredentialsClass, peerCredentialsClassWeak, done);
     netty_jni_util_free_dynamic_name(&nettyClassName);
   
     NETTY_JNI_UTIL_GET_METHOD(env, peerCredentialsClass, peerCredentialsMethodId, "<init>", "(II[I)V", done);
@@ -341,11 +367,13 @@ done:
     netty_jni_util_free_dynamic_methods_table(dynamicMethods, fixed_method_table_size, dynamicMethodsTableSize());
     free(nettyClassName);
 
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, peerCredentialsClass);
+
     return ret;
 }
 
 void netty_kqueue_bsdsocket_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
-    NETTY_JNI_UTIL_UNLOAD_CLASS(env, peerCredentialsClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, peerCredentialsClassWeak);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
 
     netty_jni_util_unregister_natives(env, packagePrefix, BSDSOCKET_CLASSNAME);

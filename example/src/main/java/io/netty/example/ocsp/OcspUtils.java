@@ -32,7 +32,7 @@ import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.BERTags;
-import org.bouncycastle.asn1.DERTaggedObject;
+import org.bouncycastle.asn1.DLTaggedObject;
 import org.bouncycastle.asn1.DLSequence;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.cert.ocsp.OCSPReq;
@@ -72,7 +72,7 @@ public final class OcspUtils {
         }
 
         DLSequence aiaSequence = (DLSequence) authorityInfoAccess;
-        DERTaggedObject taggedObject = findObject(aiaSequence, OCSP_RESPONDER_OID, DERTaggedObject.class);
+        DLTaggedObject taggedObject = findObject(aiaSequence, OCSP_RESPONDER_OID, DLTaggedObject.class);
         if (taggedObject == null) {
             return null;
         }
@@ -82,7 +82,7 @@ public final class OcspUtils {
         }
 
         byte[] encoded = taggedObject.getEncoded();
-        int length = (int) encoded[1] & 0xFF;
+        int length = encoded[1] & 0xFF;
         String uri = new String(encoded, 2, length, CharsetUtil.UTF_8);
         return URI.create(uri);
     }

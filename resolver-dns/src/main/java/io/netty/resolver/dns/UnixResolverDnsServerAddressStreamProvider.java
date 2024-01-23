@@ -100,7 +100,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
         domainToNameServerStreamMap = useEtcResolverFiles ? parse(etcResolverFiles) : etcResolvConfMap;
 
         DnsServerAddresses defaultNameServerAddresses
-                = etcResolvConfMap.get(etcResolvConf.getName());  // lgtm[java/dereferenced-value-may-be-null]
+                = etcResolvConfMap.get(etcResolvConf.getName());
         if (defaultNameServerAddresses == null) {
             Collection<DnsServerAddresses> values = etcResolvConfMap.values();
             if (values.isEmpty()) {
@@ -211,7 +211,14 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                                 port = Integer.parseInt(maybeIP.substring(i + 1));
                                 maybeIP = maybeIP.substring(0, i);
                             }
-                            addresses.add(SocketUtils.socketAddress(maybeIP, port));
+                            InetSocketAddress addr = SocketUtils.socketAddress(maybeIP, port);
+                            // Check if the address is resolved and only if this is the case use it. Otherwise just
+                            // ignore it. This is needed to filter out invalid entries, as if for example an ipv6
+                            // address is used with a scope that represent a network interface that does not exists
+                            // on the host.
+                            if (!addr.isUnresolved()) {
+                                addresses.add(addr);
+                            }
                         } else if (line.startsWith(DOMAIN_ROW_LABEL)) {
                             int i = indexOfNonWhiteSpace(line, DOMAIN_ROW_LABEL.length());
                             if (i < 0) {

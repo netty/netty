@@ -12,6 +12,9 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
 
@@ -68,12 +71,34 @@ class CloseWebSocketFrameTest {
         doTestValidCode(new CloseWebSocketFrame(true, 0, 1000, "valid code"), 1000, "valid code");
     }
 
+    @Test
+    void testNonZeroReaderIndex() {
+        ByteBuf buffer = Unpooled.buffer().writeZero(1);
+        buffer.writeShort(WebSocketCloseStatus.NORMAL_CLOSURE.code())
+                .writeCharSequence(WebSocketCloseStatus.NORMAL_CLOSURE.reasonText(), CharsetUtil.US_ASCII);
+        doTestValidCode(new CloseWebSocketFrame(true, 0, buffer.skipBytes(1)),
+                WebSocketCloseStatus.NORMAL_CLOSURE.code(), WebSocketCloseStatus.NORMAL_CLOSURE.reasonText());
+    }
+
+    @Test
+    void testCustomCloseCode() {
+        ByteBuf buffer = Unpooled.buffer().writeZero(1);
+        buffer.writeShort(60000)
+                .writeCharSequence("Custom close code", CharsetUtil.US_ASCII);
+        doTestValidCode(new CloseWebSocketFrame(true, 0, buffer.skipBytes(1)),
+                60000, "Custom close code");
+    }
+
     private static void doTestInvalidCode(ThrowableAssert.ThrowingCallable callable) {
         assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(callable);
     }
 
     private static void doTestValidCode(CloseWebSocketFrame frame, int expectedCode, String expectedReason) {
-        assertThat(frame.statusCode()).isEqualTo(expectedCode);
-        assertThat(frame.reasonText()).isEqualTo(expectedReason);
+        try {
+            assertThat(frame.statusCode()).isEqualTo(expectedCode);
+            assertThat(frame.reasonText()).isEqualTo(expectedReason);
+        } finally {
+            frame.release();
+        }
     }
 }

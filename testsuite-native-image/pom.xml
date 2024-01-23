@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.69.Final-SNAPSHOT</version>
+    <version>4.1.107.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-native-image</artifactId>
@@ -30,8 +30,10 @@
 
   <properties>
     <japicmp.skip>true</japicmp.skip>
+    <revapi.skip>true</revapi.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <javaModuleName>io.netty.testsuite_native_image</javaModuleName>
   </properties>
 
   <dependencies>

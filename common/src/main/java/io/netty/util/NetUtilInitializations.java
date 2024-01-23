@@ -26,6 +26,8 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -66,22 +68,36 @@ final class NetUtilInitializations {
         return localhost6;
     }
 
-    static NetworkIfaceAndInetAddress determineLoopback(Inet4Address localhost4, Inet6Address localhost6) {
-        // Retrieve the list of available network interfaces.
-        List<NetworkInterface> ifaces = new ArrayList<NetworkInterface>();
+    static Collection<NetworkInterface> networkInterfaces() {
+        List<NetworkInterface> networkInterfaces = new ArrayList<NetworkInterface>();
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
             if (interfaces != null) {
                 while (interfaces.hasMoreElements()) {
-                    NetworkInterface iface = interfaces.nextElement();
-                    // Use the interface with proper INET addresses only.
-                    if (SocketUtils.addressesFromNetworkInterface(iface).hasMoreElements()) {
-                        ifaces.add(iface);
-                    }
+                    networkInterfaces.add(interfaces.nextElement());
                 }
             }
         } catch (SocketException e) {
             logger.warn("Failed to retrieve the list of available network interfaces", e);
+        } catch (NullPointerException e) {
+            if (!PlatformDependent.isAndroid()) {
+                throw e;
+            }
+            // Might happen on earlier version of Android.
+            // See https://developer.android.com/reference/java/net/NetworkInterface#getNetworkInterfaces()
+        }
+        return Collections.unmodifiableList(networkInterfaces);
+    }
+
+    static NetworkIfaceAndInetAddress determineLoopback(
+            Collection<NetworkInterface> networkInterfaces, Inet4Address localhost4, Inet6Address localhost6) {
+        // Retrieve the list of available network interfaces.
+        List<NetworkInterface> ifaces = new ArrayList<NetworkInterface>();
+        for (NetworkInterface iface: networkInterfaces) {
+            // Use the interface with proper INET addresses only.
+            if (SocketUtils.addressesFromNetworkInterface(iface).hasMoreElements()) {
+                ifaces.add(iface);
+            }
         }
 
         // Find the first loopback interface available from its INET address (127.0.0.1 or ::1)

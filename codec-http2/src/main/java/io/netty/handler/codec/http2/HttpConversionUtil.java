@@ -435,16 +435,19 @@ public final class HttpConversionUtil {
         final Http2Headers out = new DefaultHttp2Headers(validateHeaders, inHeaders.size());
         if (in instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) in;
-            URI requestTargetUri = URI.create(request.uri());
-            out.path(toHttp2Path(requestTargetUri));
-            out.method(request.method().asciiName());
-            setHttp2Scheme(inHeaders, requestTargetUri, out);
-
-            if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
-                // Attempt to take from HOST header before taking from the request-line
-                String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-                setHttp2Authority(host == null || host.isEmpty() ? requestTargetUri.getAuthority() : host, out);
+            String host = inHeaders.getAsString(HttpHeaderNames.HOST);
+            if (isOriginForm(request.uri()) || isAsteriskForm(request.uri())) {
+                out.path(new AsciiString(request.uri()));
+                setHttp2Scheme(inHeaders, out);
+            } else {
+                URI requestTargetUri = URI.create(request.uri());
+                out.path(toHttp2Path(requestTargetUri));
+                // Take from the request-line if HOST header was empty
+                host = isNullOrEmpty(host) ? requestTargetUri.getAuthority() : host;
+                setHttp2Scheme(inHeaders, requestTargetUri, out);
             }
+            setHttp2Authority(host, out);
+            out.method(request.method().asciiName());
         } else if (in instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) in;
             out.status(response.status().codeAsText());
@@ -602,9 +605,13 @@ public final class HttpConversionUtil {
         }
     }
 
+    private static void setHttp2Scheme(HttpHeaders in, Http2Headers out) {
+        setHttp2Scheme(in, URI.create(""), out);
+    }
+
     private static void setHttp2Scheme(HttpHeaders in, URI uri, Http2Headers out) {
         String value = uri.getScheme();
-        if (value != null) {
+        if (!isNullOrEmpty(value)) {
             out.scheme(new AsciiString(value));
             return;
         }

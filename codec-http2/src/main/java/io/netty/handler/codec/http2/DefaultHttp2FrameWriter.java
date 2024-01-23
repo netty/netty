@@ -567,7 +567,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 ByteBuf fragment = headerBlock.readRetainedSlice(fragmentReadableBytes);
 
                 if (headerBlock.isReadable()) {
-                    ctx.write(buf.retain(), promiseAggregator.newPromise());
+                    ctx.write(buf.retainedSlice(), promiseAggregator.newPromise());
                 } else {
                     // The frame header is different for the last frame, so re-allocate and release the old buffer
                     flags = flags.endOfHeaders(true);

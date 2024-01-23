@@ -19,7 +19,8 @@ import io.netty.buffer.ByteBuf;
 
 import java.util.Arrays;
 
-import static io.netty.handler.codec.compression.Bzip2Constants.*;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_ENCODE_MAX_CODE_LENGTH;
+import static io.netty.handler.codec.compression.Bzip2Constants.HUFFMAN_GROUP_RUN_LENGTH;
 
 /**
  * An encoder for the Bzip2 Huffman encoding stage.

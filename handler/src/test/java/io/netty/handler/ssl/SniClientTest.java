@@ -97,7 +97,7 @@ public class SniClientTest {
     @MethodSource("parameters")
     public void testSniClient(SslProvider sslServerProvider, SslProvider sslClientProvider) throws Exception {
         String sniHostName = "sni.netty.io";
-        LocalAddress address = new LocalAddress("test");
+        LocalAddress address = new LocalAddress("SniClientTest");
         EventLoopGroup group = new DefaultEventLoopGroup(1);
         SelfSignedCertificate cert = new SelfSignedCertificate();
         SslContext sslServerContext = null;

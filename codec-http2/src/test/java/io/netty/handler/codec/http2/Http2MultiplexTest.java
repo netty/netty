@@ -26,17 +26,22 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.handler.codec.http2.LastInboundHandler.Consumer;
+import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -45,12 +50,15 @@ import org.mockito.stubbing.Answer;
 import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyChannelPromise;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
 import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
@@ -161,7 +169,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
                 any(ByteBuf.class), any(ChannelPromise.class));
     }
 
-    private Http2StreamChannel newInboundStream(int streamId, boolean endStream, final ChannelHandler childHandler) {
+    Http2StreamChannel newInboundStream(int streamId, boolean endStream, final ChannelHandler childHandler) {
         return newInboundStream(streamId, endStream, null, childHandler);
     }
 
@@ -357,6 +365,35 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
+    public void streamExceptionCauseRstStreamWithProtocolError() {
+        request.addLong(HttpHeaderNames.CONTENT_LENGTH, 10);
+        Http2StreamChannel channel = newInboundStream(3, false, new ChannelInboundHandlerAdapter());
+        channel.pipeline().fireExceptionCaught(new Http2FrameStreamException(channel.stream(),
+                Http2Error.PROTOCOL_ERROR, new IllegalArgumentException()));
+        assertFalse(channel.isActive());
+        verify(frameWriter).writeRstStream(eqCodecCtx(), eq(3),
+                eq(Http2Error.PROTOCOL_ERROR.code()), anyChannelPromise());
+    }
+
+    @Test
+    public void contentLengthNotMatchRstStreamWithProtocolError() {
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        request.addLong(HttpHeaderNames.CONTENT_LENGTH, 10);
+        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        frameInboundWriter.writeInboundData(3, bb(8), 0, true);
+        assertThrows(StreamException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+        assertNotNull(inboundHandler.readInbound());
+        assertFalse(channel.isActive());
+        verify(frameWriter).writeRstStream(eqCodecCtx(), eq(3),
+                eq(Http2Error.PROTOCOL_ERROR.code()), anyChannelPromise());
+    }
+
+    @Test
     public void framesShouldBeMultiplexed() {
         LastInboundHandler handler1 = new LastInboundHandler();
         Http2StreamChannel channel1 = newInboundStream(3, false, handler1);
@@ -439,6 +476,74 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         childChannel.config().setAutoRead(true);
         verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 2);
+    }
+
+    @Test
+    public void noAutoReadWithReentrantReadDoesNotSOOE() {
+        final AtomicBoolean shouldRead = new AtomicBoolean();
+        Consumer<ChannelHandlerContext> ctxConsumer = new Consumer<ChannelHandlerContext>() {
+            @Override
+            public void accept(ChannelHandlerContext obj) {
+                if (shouldRead.get()) {
+                    obj.read();
+                }
+            }
+        };
+        LastInboundHandler inboundHandler = new LastInboundHandler(ctxConsumer);
+        AtomicInteger maxReads = new AtomicInteger(1);
+        Http2StreamChannel childChannel = newInboundStream(3, false, maxReads, inboundHandler);
+        assertTrue(childChannel.config().isAutoRead());
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        childChannel.config().setAutoRead(false);
+
+        final int maxWrites = 10000; // enough writes to generated SOOE.
+        for (int i = 0; i < maxWrites; ++i) {
+            frameInboundWriter.writeInboundData(childChannel.stream().id(), bb(String.valueOf(i)), 0, false);
+        }
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb(String.valueOf(maxWrites)), 0, true);
+        shouldRead.set(true);
+        childChannel.read();
+
+        for (int i = 0; i < maxWrites; ++i) {
+            Http2DataFrame dataFrame0 = inboundHandler.readInbound();
+            assertNotNull(dataFrame0);
+            release(dataFrame0);
+        }
+        Http2DataFrame dataFrame0 = inboundHandler.readInbound();
+        assertTrue(dataFrame0.isEndStream());
+        release(dataFrame0);
+
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 0);
+    }
+
+    @Test
+    public void readNotRequiredToEndStream() {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        AtomicInteger maxReads = new AtomicInteger(1);
+        Http2StreamChannel childChannel = newInboundStream(3, false, maxReads, inboundHandler);
+        assertTrue(childChannel.config().isAutoRead());
+
+        childChannel.config().setAutoRead(false);
+
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        assertNull(inboundHandler.readInbound());
+
+        frameInboundWriter.writeInboundRstStream(childChannel.stream().id(), NO_ERROR.code());
+
+        assertFalse(inboundHandler.isChannelActive());
+        childChannel.closeFuture().syncUninterruptibly();
+
+        Http2ResetFrame resetFrame = useUserEventForResetFrame() ? inboundHandler.<Http2ResetFrame>readUserEvent() :
+                inboundHandler.<Http2ResetFrame>readInbound();
+
+        assertEquals(childChannel.stream(), resetFrame.stream());
+        assertEquals(NO_ERROR.code(), resetFrame.errorCode());
+
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 0);
     }
 
     @Test
@@ -907,7 +1012,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertFalse(parentChannel.isWritable());
 
         assertTrue(childChannel.isWritable());
-        assertEquals(4096, childChannel.bytesBeforeUnwritable());
+        assertEquals(4097, childChannel.bytesBeforeUnwritable());
 
         // Flush everything which simulate writing everything to the socket.
         parentChannel.flush();
@@ -1059,7 +1164,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         childChannel.config().setAutoRead(true);
         numReads.set(1);
 
-        frameInboundWriter.writeInboundRstStream(childChannel.stream().id(), Http2Error.NO_ERROR.code());
+        frameInboundWriter.writeInboundRstStream(childChannel.stream().id(), NO_ERROR.code());
 
         // Detecting EOS should flush all pending data regardless of read calls.
         assertEqualsAndRelease(dataFrame2, inboundHandler.<Http2DataFrame>readInbound());
@@ -1075,7 +1180,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
                 inboundHandler.<Http2ResetFrame>readInbound();
 
         assertEquals(childChannel.stream(), resetFrame.stream());
-        assertEquals(Http2Error.NO_ERROR.code(), resetFrame.errorCode());
+        assertEquals(NO_ERROR.code(), resetFrame.errorCode());
 
         assertNull(inboundHandler.readInbound());
 
@@ -1365,6 +1470,26 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         verify(frameWriter).writeWindowUpdate(
             eqCodecCtx(), eq(childChannel.stream().id()), eq(32 * 1024), anyChannelPromise());
         assertTrue(flushSniffer.checkFlush());
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] value={0}")
+    @MethodSource("userEvents")
+    public void userEventsThatPropagatedToChildChannels(Object userEvent) {
+        final LastInboundHandler inboundParentHandler = new LastInboundHandler();
+        final LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
+        assertTrue(channel.isActive());
+        parentChannel.pipeline().addLast(inboundParentHandler);
+        parentChannel.pipeline().fireUserEventTriggered(userEvent);
+        assertEquals(userEvent, inboundHandler.readUserEvent());
+        assertEquals(userEvent, inboundParentHandler.readUserEvent());
+        assertNull(inboundHandler.readUserEvent());
+        assertNull(inboundParentHandler.readUserEvent());
+    }
+
+    private static Collection<Object> userEvents() {
+        return Arrays.asList(ChannelInputShutdownReadComplete.INSTANCE,
+                ChannelOutputShutdownEvent.INSTANCE, SslCloseCompletionEvent.SUCCESS);
     }
 
     private static void verifyFramesMultiplexedToCorrectChannel(Http2StreamChannel streamChannel,

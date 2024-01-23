@@ -26,4 +26,8 @@ public class UnixChannelOption<T> extends ChannelOption<T> {
     protected UnixChannelOption() {
         super(null);
     }
+
+    UnixChannelOption(String name) {
+        super(name);
+    }
 }

@@ -1,0 +1,30 @@
+[
+  {
+    "name": "io.netty.handler.codec.sctp.SctpInboundByteStreamHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.sctp.SctpInboundByteStreamHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.sctp.SctpMessageCompletionHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.sctp.SctpMessageCompletionHandler"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.sctp.SctpMessageToMessageDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.sctp.SctpMessageToMessageDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.sctp.SctpOutboundByteStreamHandler",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.sctp.SctpOutboundByteStreamHandler"
+    },
+    "queryAllPublicMethods": true
+  }
+]

@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -160,6 +161,36 @@ public class HashedWheelTimerTest {
                 "Timeout + " + scheduledTasks + " delay " + delay + " must be " + timeout + " < " + maxTimeout);
         }
 
+        timer.stop();
+    }
+
+    @Test
+    public void testExecutionOnTaskExecutor() throws InterruptedException {
+        int timeout = 10;
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        final CountDownLatch timeoutLatch = new CountDownLatch(1);
+        Executor executor = new Executor() {
+            @Override
+            public void execute(Runnable command) {
+                try {
+                    command.run();
+                } finally {
+                    latch.countDown();
+                }
+            }
+        };
+        final HashedWheelTimer timer = new HashedWheelTimer(Executors.defaultThreadFactory(), 100,
+                TimeUnit.MILLISECONDS, 32, true, 2, executor);
+        timer.newTimeout(new TimerTask() {
+            @Override
+            public void run(final Timeout timeout) throws Exception {
+                timeoutLatch.countDown();
+            }
+        }, timeout, TimeUnit.MILLISECONDS);
+
+        latch.await();
+        timeoutLatch.await();
         timer.stop();
     }
 

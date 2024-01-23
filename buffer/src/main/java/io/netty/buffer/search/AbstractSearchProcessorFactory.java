@@ -82,8 +82,8 @@ public abstract class AbstractSearchProcessorFactory implements SearchProcessorF
      * to the {@code needle} itself.
      * <br>
      * Search (the actual application of {@link SearchProcessor}) time is linear in the size of
-     * {@link io.netty.buffer.ByteBuf} on which the search is peformed ({@code O(|haystack|)}).
-     * Every byte of {@link io.netty.buffer.ByteBuf} is processed only once, sequentually.
+     * {@link io.netty.buffer.ByteBuf} on which the search is performed ({@code O(|haystack|)}).
+     * Every byte of {@link io.netty.buffer.ByteBuf} is processed only once, sequentially.
      *
      * @param needle an array of bytes to search for
      * @return a new instance of {@link KmpSearchProcessorFactory} precomputed for the given {@code needle}
@@ -102,8 +102,8 @@ public abstract class AbstractSearchProcessorFactory implements SearchProcessorF
      * The factory allocates and retains a long[256] array.
      * <br>
      * Search (the actual application of {@link SearchProcessor}) time is linear in the size of
-     * {@link io.netty.buffer.ByteBuf} on which the search is peformed ({@code O(|haystack|)}).
-     * Every byte of {@link io.netty.buffer.ByteBuf} is processed only once, sequentually.
+     * {@link io.netty.buffer.ByteBuf} on which the search is performed ({@code O(|haystack|)}).
+     * Every byte of {@link io.netty.buffer.ByteBuf} is processed only once, sequentially.
      *
      * @param needle an array <b>of no more than 64 bytes</b> to search for
      * @return a new instance of {@link BitapSearchProcessorFactory} precomputed for the given {@code needle}

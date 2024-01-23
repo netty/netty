@@ -23,6 +23,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
@@ -35,7 +36,8 @@ import java.util.Queue;
  */
 public class LocalServerChannel extends AbstractServerChannel {
 
-    private final ChannelConfig config = new DefaultChannelConfig(this);
+    private final ChannelConfig config =
+            new DefaultChannelConfig(this, new ServerChannelRecvByteBufAllocator()) { };
     private final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
     private final Runnable shutdownHook = new Runnable() {
         @Override
@@ -156,7 +158,7 @@ public class LocalServerChannel extends AbstractServerChannel {
             }
             pipeline.fireChannelRead(m);
         } while (handle.continueReading());
-
+        handle.readComplete();
         pipeline.fireChannelReadComplete();
     }
 

@@ -15,12 +15,14 @@
  */
 package io.netty.handler.codec.http.cors;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
@@ -482,6 +484,32 @@ public class CorsHandlerTest {
         assertThat(host2Response.headers().getAsString(ACCESS_CONTROL_MAX_AGE), equalTo("1800"));
     }
 
+    @Test
+    public void simpleRequestAllowPrivateNetwork() {
+        final CorsConfig config = forOrigin("http://localhost:8888").allowPrivateNetwork().build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = optionsRequest("http://localhost:8888", "", null);
+        request.headers().set(ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK, "true");
+        assertThat(channel.writeInbound(request), is(false));
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK), equalTo("true"));
+        assertThat(ReferenceCountUtil.release(response), is(true));
+    }
+
+    @Test
+    public void simpleRequestDoNotAllowPrivateNetwork() {
+        final CorsConfig config = forOrigin("http://localhost:8888").build();
+        final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config));
+        final FullHttpRequest request = optionsRequest("http://localhost:8888", "", null);
+        request.headers().set(ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK, "true");
+        assertThat(channel.writeInbound(request), is(false));
+        final HttpResponse response = channel.readOutbound();
+
+        assertThat(response.headers().get(ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK), equalTo("false"));
+        assertThat(ReferenceCountUtil.release(response), is(true));
+    }
+
     private static HttpResponse simpleRequest(final CorsConfig config, final String origin) {
         return simpleRequest(config, origin, null);
     }
@@ -548,7 +576,9 @@ public class CorsHandlerTest {
     private static class EchoHandler extends SimpleChannelInboundHandler<Object> {
         @Override
         public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-            ctx.writeAndFlush(new DefaultFullHttpResponse(HTTP_1_1, OK, true, true));
+            ctx.writeAndFlush(new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.buffer(0),
+                    DefaultHttpHeadersFactory.headersFactory().withCombiningHeaders(true),
+                    DefaultHttpHeadersFactory.trailersFactory().withCombiningHeaders(true)));
         }
     }
 

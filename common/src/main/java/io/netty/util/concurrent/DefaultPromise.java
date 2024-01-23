@@ -55,7 +55,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      *
      * Threading - synchronized(this). We must support adding listeners when there is no EventExecutor.
      */
-    private Object listeners;
+    private GenericFutureListener<? extends Future<?>> listener;
+    private DefaultFutureListeners listeners;
     /**
      * Threading - synchronized(this). We are required to hold the monitor to use Java's underlying wait()/notifyAll().
      */
@@ -142,7 +143,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
         // Suppress a warning since the method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             setStackTrace(CANCELLATION_STACK);
             return this;
         }
@@ -535,31 +536,42 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private void notifyListenersNow() {
-        Object listeners;
+        GenericFutureListener listener;
+        DefaultFutureListeners listeners;
         synchronized (this) {
+            listener = this.listener;
+            listeners = this.listeners;
             // Only proceed if there are listeners to notify and we are not already notifying listeners.
-            if (notifyingListeners || this.listeners == null) {
+            if (notifyingListeners || (listener == null && listeners == null)) {
                 return;
             }
             notifyingListeners = true;
-            listeners = this.listeners;
-            this.listeners = null;
+            if (listener != null) {
+                this.listener = null;
+            } else {
+                this.listeners = null;
+            }
         }
         for (;;) {
-            if (listeners instanceof DefaultFutureListeners) {
-                notifyListeners0((DefaultFutureListeners) listeners);
+            if (listener != null) {
+                notifyListener0(this, listener);
             } else {
-                notifyListener0(this, (GenericFutureListener<?>) listeners);
+                notifyListeners0(listeners);
             }
             synchronized (this) {
-                if (this.listeners == null) {
+                if (this.listener == null && this.listeners == null) {
                     // Nothing can throw from within this method, so setting notifyingListeners back to false does not
                     // need to be in a finally block.
                     notifyingListeners = false;
                     return;
                 }
+                listener = this.listener;
                 listeners = this.listeners;
-                this.listeners = null;
+                if (listener != null) {
+                    this.listener = null;
+                } else {
+                    this.listeners = null;
+                }
             }
         }
     }
@@ -584,20 +596,28 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private void addListener0(GenericFutureListener<? extends Future<? super V>> listener) {
-        if (listeners == null) {
-            listeners = listener;
-        } else if (listeners instanceof DefaultFutureListeners) {
-            ((DefaultFutureListeners) listeners).add(listener);
+        if (this.listener == null) {
+            if (listeners == null) {
+                this.listener = listener;
+            } else {
+                listeners.add(listener);
+            }
         } else {
-            listeners = new DefaultFutureListeners((GenericFutureListener<?>) listeners, listener);
+            assert listeners == null;
+            listeners = new DefaultFutureListeners(this.listener, listener);
+            this.listener = null;
         }
     }
 
-    private void removeListener0(GenericFutureListener<? extends Future<? super V>> listener) {
-        if (listeners instanceof DefaultFutureListeners) {
-            ((DefaultFutureListeners) listeners).remove(listener);
-        } else if (listeners == listener) {
-            listeners = null;
+    private void removeListener0(GenericFutureListener<? extends Future<? super V>> toRemove) {
+        if (listener == toRemove) {
+            listener = null;
+        } else if (listeners != null) {
+            listeners.remove(toRemove);
+            // Removal is rare, no need for compaction
+            if (listeners.size() == 0) {
+                listeners = null;
+            }
         }
     }
 
@@ -628,7 +648,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         if (waiters > 0) {
             notifyAll();
         }
-        return listeners != null;
+        return listener != null || listeners != null;
     }
 
     private void incWaiters() {
@@ -759,15 +779,16 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * {@code null}.
      */
     private synchronized Object progressiveListeners() {
-        Object listeners = this.listeners;
-        if (listeners == null) {
+        final GenericFutureListener listener = this.listener;
+        final DefaultFutureListeners listeners = this.listeners;
+        if (listener == null && listeners == null) {
             // No listeners added
             return null;
         }
 
-        if (listeners instanceof DefaultFutureListeners) {
+        if (listeners != null) {
             // Copy DefaultFutureListeners into an array of listeners.
-            DefaultFutureListeners dfl = (DefaultFutureListeners) listeners;
+            DefaultFutureListeners dfl = listeners;
             int progressiveSize = dfl.progressiveSize();
             switch (progressiveSize) {
                 case 0:
@@ -791,8 +812,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             }
 
             return copy;
-        } else if (listeners instanceof GenericProgressiveFutureListener) {
-            return listeners;
+        } else if (listener instanceof GenericProgressiveFutureListener) {
+            return listener;
         } else {
             // Only one listener was added and it's not a progressive listener.
             return null;

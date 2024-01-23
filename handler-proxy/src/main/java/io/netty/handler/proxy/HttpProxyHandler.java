@@ -29,6 +29,8 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
+import io.netty.handler.codec.http.HttpHeadersFactory;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -42,6 +44,15 @@ import io.netty.util.internal.ObjectUtil;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+/**
+ * Handler that establishes a blind forwarding proxy tunnel using
+ * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.6">HTTP/1.1 CONNECT</a> request. It can be used to
+ * establish plaintext or secure tunnels.
+ * <p>
+ * HTTP users who need to connect to a
+ * <a href="https://datatracker.ietf.org/doc/html/rfc7230#page-10">message-forwarding HTTP proxy agent</a> instead of a
+ * tunneling proxy should not use this handler.
+ */
 public final class HttpProxyHandler extends ProxyHandler {
 
     private static final String PROTOCOL = "http";
@@ -162,10 +173,11 @@ public final class HttpProxyHandler extends ProxyHandler {
                 hostString :
                 url;
 
+        HttpHeadersFactory headersFactory = DefaultHttpHeadersFactory.headersFactory().withValidation(false);
         FullHttpRequest req = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.CONNECT,
                 url,
-                Unpooled.EMPTY_BUFFER, false);
+                Unpooled.EMPTY_BUFFER, headersFactory, headersFactory);
 
         req.headers().set(HttpHeaderNames.HOST, hostHeader);
 

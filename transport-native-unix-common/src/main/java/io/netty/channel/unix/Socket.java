@@ -16,6 +16,7 @@
 package io.netty.channel.unix;
 
 import io.netty.channel.ChannelException;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 
@@ -27,7 +28,6 @@ import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
@@ -45,6 +45,8 @@ import static io.netty.channel.unix.NativeInetAddress.ipv4MappedIpv6Address;
  */
 public class Socket extends FileDescriptor {
 
+    private static volatile boolean isIpv6Preferred;
+
     @Deprecated
     public static final int UDS_SUN_PATH_SIZE = 100;
 
@@ -54,7 +56,6 @@ public class Socket extends FileDescriptor {
         super(fd);
         ipv6 = isIPv6(fd);
     }
-
     /**
      * Returns {@code true} if we should use IPv6 internally, {@code false} otherwise.
      */
@@ -267,6 +268,44 @@ public class Socket extends FileDescriptor {
         return recvFromAddressDomainSocket(fd, memoryAddress, pos, limit);
     }
 
+    public int recv(ByteBuffer buf, int pos, int limit) throws IOException {
+        int res = recv(intValue(), buf, pos, limit);
+        if (res > 0) {
+            return res;
+        }
+        if (res == 0) {
+            return -1;
+        }
+        return ioResult("recv", res);
+    }
+
+    public int recvAddress(long address, int pos, int limit) throws IOException {
+        int res = recvAddress(intValue(), address, pos, limit);
+        if (res > 0) {
+            return res;
+        }
+        if (res == 0) {
+            return -1;
+        }
+        return ioResult("recvAddress", res);
+    }
+
+    public int send(ByteBuffer buf, int pos, int limit) throws IOException {
+        int res = send(intValue(), buf, pos, limit);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("send", res);
+    }
+
+    public int sendAddress(long address, int pos, int limit) throws IOException {
+        int res = sendAddress(intValue(), address, pos, limit);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("sendAddress", res);
+    }
+
     public final int recvFd() throws IOException {
         int res = recvFd(fd);
         if (res > 0) {
@@ -375,11 +414,21 @@ public class Socket extends FileDescriptor {
         return addr == null ? null : address(addr, 0, addr.length);
     }
 
+    public final DomainSocketAddress remoteDomainSocketAddress() {
+        byte[] addr = remoteDomainSocketAddress(fd);
+        return addr == null ? null : new DomainSocketAddress(new String(addr));
+    }
+
     public final InetSocketAddress localAddress() {
         byte[] addr = localAddress(fd);
         // addr may be null if getpeername failed.
         // See https://github.com/netty/netty/issues/3328
         return addr == null ? null : address(addr, 0, addr.length);
+    }
+
+    public final DomainSocketAddress localDomainSocketAddress() {
+        byte[] addr = localDomainSocketAddress(fd);
+        return addr == null ? null : new DomainSocketAddress(new String(addr));
     }
 
     public final int getReceiveBufferSize() throws IOException {
@@ -458,7 +507,53 @@ public class Socket extends FileDescriptor {
         setTrafficClass(fd, ipv6, trafficClass);
     }
 
-    public static native boolean isIPv6Preferred();
+    public void setIntOpt(int level, int optname, int optvalue) throws IOException {
+        setIntOpt(fd, level, optname, optvalue);
+    }
+
+    public void setRawOpt(int level, int optname, ByteBuffer optvalue) throws IOException {
+        int limit = optvalue.limit();
+        if (optvalue.isDirect()) {
+            setRawOptAddress(fd, level, optname,
+                    Buffer.memoryAddress(optvalue) + optvalue.position(), optvalue.remaining());
+        } else if (optvalue.hasArray()) {
+            setRawOptArray(fd, level, optname,
+                    optvalue.array(), optvalue.arrayOffset() + optvalue.position(), optvalue.remaining());
+        } else {
+            byte[] bytes = new byte[optvalue.remaining()];
+            optvalue.duplicate().get(bytes);
+            setRawOptArray(fd, level, optname, bytes, 0, bytes.length);
+        }
+        optvalue.position(limit);
+    }
+
+    public int getIntOpt(int level, int optname) throws IOException {
+        return getIntOpt(fd, level, optname);
+    }
+
+    public void getRawOpt(int level, int optname, ByteBuffer out) throws IOException {
+        if (out.isDirect()) {
+            getRawOptAddress(fd, level, optname, Buffer.memoryAddress(out) + out.position() , out.remaining());
+        } else if (out.hasArray()) {
+            getRawOptArray(fd, level, optname, out.array(), out.position() + out.arrayOffset(), out.remaining());
+        } else {
+            byte[] outArray = new byte[out.remaining()];
+            getRawOptArray(fd, level, optname, outArray, 0, outArray.length);
+            out.put(outArray);
+        }
+        out.position(out.limit());
+    }
+
+    public static boolean isIPv6Preferred() {
+        return isIpv6Preferred;
+    }
+
+    public static boolean shouldUseIpv6(InternetProtocolFamily family) {
+        return family == null ? isIPv6Preferred() :
+                        family == InternetProtocolFamily.IPv6;
+    }
+
+    private static native boolean isIPv6Preferred0(boolean ipv4Preferred);
 
     private static native boolean isIPv6(int fd);
 
@@ -468,8 +563,6 @@ public class Socket extends FileDescriptor {
                 "fd=" + fd +
                 '}';
     }
-
-    private static final AtomicBoolean INITIALIZED = new AtomicBoolean();
 
     public static Socket newSocketStream() {
         return new Socket(newSocketStream0());
@@ -488,13 +581,15 @@ public class Socket extends FileDescriptor {
     }
 
     public static void initialize() {
-        if (INITIALIZED.compareAndSet(false, true)) {
-            initialize(NetUtil.isIpV4StackPreferred());
-        }
+        isIpv6Preferred = isIPv6Preferred0(NetUtil.isIpV4StackPreferred());
     }
 
     protected static int newSocketStream0() {
         return newSocketStream0(isIPv6Preferred());
+    }
+
+    protected static int newSocketStream0(InternetProtocolFamily protocol) {
+        return newSocketStream0(shouldUseIpv6(protocol));
     }
 
     protected static int newSocketStream0(boolean ipv6) {
@@ -507,6 +602,10 @@ public class Socket extends FileDescriptor {
 
     protected static int newSocketDgram0() {
         return newSocketDgram0(isIPv6Preferred());
+    }
+
+    protected static int newSocketDgram0(InternetProtocolFamily family) {
+        return newSocketDgram0(shouldUseIpv6(family));
     }
 
     protected static int newSocketDgram0(boolean ipv6) {
@@ -544,7 +643,15 @@ public class Socket extends FileDescriptor {
     private static native int accept(int fd, byte[] addr);
 
     private static native byte[] remoteAddress(int fd);
+    private static native byte[] remoteDomainSocketAddress(int fd);
     private static native byte[] localAddress(int fd);
+    private static native byte[] localDomainSocketAddress(int fd);
+
+    private static native int send(int fd, ByteBuffer buf, int pos, int limit);
+    private static native int sendAddress(int fd, long address, int pos, int limit);
+    private static native int recv(int fd, ByteBuffer buf, int pos, int limit);
+
+    private static native int recvAddress(int fd, long address, int pos, int limit);
 
     private static native int sendTo(
             int fd, boolean ipv6, ByteBuffer buf, int pos, int limit, byte[] address, int scopeId, int port,
@@ -599,5 +706,15 @@ public class Socket extends FileDescriptor {
     private static native void setSoLinger(int fd, int soLinger) throws IOException;
     private static native void setBroadcast(int fd, int broadcast) throws IOException;
     private static native void setTrafficClass(int fd, boolean ipv6, int trafficClass) throws IOException;
-    private static native void initialize(boolean ipv4Preferred);
+
+    private static native void setIntOpt(int fd, int level, int optname, int optvalue) throws IOException;
+    private static native void setRawOptArray(int fd, int level, int optname, byte[] optvalue, int offset, int length)
+            throws IOException;
+    private static native void setRawOptAddress(int fd, int level, int optname, long optvalueMemoryAddress, int length)
+            throws IOException;
+    private static native int getIntOpt(int fd, int level, int optname) throws IOException;
+    private static native void getRawOptArray(int fd, int level, int optname, byte[] out, int offset, int length)
+            throws IOException;
+    private static native void getRawOptAddress(int fd, int level, int optname, long outMemoryAddress, int length)
+            throws IOException;
 }

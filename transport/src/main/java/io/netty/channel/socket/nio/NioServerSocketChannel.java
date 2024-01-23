@@ -19,6 +19,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.SocketUtils;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
@@ -29,6 +30,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
@@ -51,18 +53,16 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
 
-    private static ServerSocketChannel newSocket(SelectorProvider provider) {
+    private static final Method OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY =
+            SelectorProviderUtil.findOpenMethod("openServerSocketChannel");
+
+    private static ServerSocketChannel newChannel(SelectorProvider provider, InternetProtocolFamily family) {
         try {
-            /**
-             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
-             *  {@link SelectorProvider#provider()} which is called by each ServerSocketChannel.open() otherwise.
-             *
-             *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
-             */
-            return provider.openServerSocketChannel();
+            ServerSocketChannel channel =
+                    SelectorProviderUtil.newChannel(OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
+            return channel == null ? provider.openServerSocketChannel() : channel;
         } catch (IOException e) {
-            throw new ChannelException(
-                    "Failed to open a server socket.", e);
+            throw new ChannelException("Failed to open a socket.", e);
         }
     }
 
@@ -72,14 +72,21 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      * Create a new instance
      */
     public NioServerSocketChannel() {
-        this(newSocket(DEFAULT_SELECTOR_PROVIDER));
+        this(DEFAULT_SELECTOR_PROVIDER);
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider}.
      */
     public NioServerSocketChannel(SelectorProvider provider) {
-        this(newSocket(provider));
+        this(provider, null);
+    }
+
+    /**
+     * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
+     */
+    public NioServerSocketChannel(SelectorProvider provider, InternetProtocolFamily family) {
+        this(newChannel(provider, family));
     }
 
     /**

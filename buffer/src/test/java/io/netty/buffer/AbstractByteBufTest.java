@@ -5943,6 +5943,16 @@ public abstract class AbstractByteBufTest {
         buffer.readerIndex(0);
         assertEquals(0x0807060504030201L, Double.doubleToRawLongBits(buffer.readDoubleLE()));
         buffer.readerIndex(0);
+
+        assertEquals(0x0201, buffer.getShortLE(0));
+        assertEquals(0x0201, buffer.getUnsignedShortLE(0));
+        assertEquals(0x030201, buffer.getMediumLE(0));
+        assertEquals(0x030201, buffer.getUnsignedMediumLE(0));
+        assertEquals(0x04030201, buffer.getIntLE(0));
+        assertEquals(0x04030201, buffer.getUnsignedIntLE(0));
+        assertEquals(0x04030201, Float.floatToRawIntBits(buffer.getFloatLE(0)));
+        assertEquals(0x0807060504030201L, buffer.getLongLE(0));
+        assertEquals(0x0807060504030201L, Double.doubleToRawLongBits(buffer.getDoubleLE(0)));
     }
 
     @Test
@@ -5965,5 +5975,18 @@ public abstract class AbstractByteBufTest {
         buffer.clear();
         buffer.writeDoubleLE(Double.longBitsToDouble(0x0102030405060708L));
         assertEquals(0x0102030405060708L, Double.doubleToRawLongBits(buffer.readDoubleLE()));
+
+        buffer.setShortLE(0, 0x0102);
+        assertEquals(0x0102, buffer.getShortLE(0));
+        buffer.setMediumLE(0, 0x010203);
+        assertEquals(0x010203, buffer.getMediumLE(0));
+        buffer.setIntLE(0, 0x01020304);
+        assertEquals(0x01020304, buffer.getIntLE(0));
+        buffer.setFloatLE(0, Float.intBitsToFloat(0x01020304));
+        assertEquals(0x01020304, Float.floatToRawIntBits(buffer.getFloatLE(0)));
+        buffer.setLongLE(0, 0x0102030405060708L);
+        assertEquals(0x0102030405060708L, buffer.getLongLE(0));
+        buffer.setDoubleLE(0, Double.longBitsToDouble(0x0102030405060708L));
+        assertEquals(0x0102030405060708L, Double.doubleToRawLongBits(buffer.getDoubleLE(0)));
     }
 }

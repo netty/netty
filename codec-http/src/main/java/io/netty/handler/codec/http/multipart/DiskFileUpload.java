@@ -210,6 +210,7 @@ public class DiskFileUpload extends AbstractDiskHttpData implements FileUpload {
                 throw new ChannelException(e);
             }
         }
+        upload.setCompleted(isCompleted());
         return upload;
     }
 

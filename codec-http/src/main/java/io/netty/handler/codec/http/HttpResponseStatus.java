@@ -49,6 +49,11 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
     public static final HttpResponseStatus PROCESSING = newStatus(102, "Processing");
 
     /**
+     * 103 Early Hints (RFC 8297)
+     */
+    public static final HttpResponseStatus EARLY_HINTS = newStatus(103, "Early Hints");
+
+    /**
      * 200 OK
      */
     public static final HttpResponseStatus OK = newStatus(200, "OK");
@@ -344,6 +349,8 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
             return SWITCHING_PROTOCOLS;
         case 102:
             return PROCESSING;
+        case 103:
+            return EARLY_HINTS;
         case 200:
             return OK;
         case 201:
@@ -520,7 +527,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
 
     private final int code;
     private final AsciiString codeAsText;
-    private HttpStatusClass codeClass;
+    private final HttpStatusClass codeClass;
 
     private final String reasonPhrase;
     private final byte[] bytes;
@@ -555,6 +562,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
         }
 
         this.code = code;
+        this.codeClass = HttpStatusClass.valueOf(code);
         String codeString = Integer.toString(code);
         codeAsText = new AsciiString(codeString);
         this.reasonPhrase = reasonPhrase;
@@ -590,11 +598,7 @@ public class HttpResponseStatus implements Comparable<HttpResponseStatus> {
      * Returns the class of this {@link HttpResponseStatus}
      */
     public HttpStatusClass codeClass() {
-        HttpStatusClass type = this.codeClass;
-        if (type == null) {
-            this.codeClass = type = HttpStatusClass.valueOf(code);
-        }
-        return type;
+        return this.codeClass;
     }
 
     @Override

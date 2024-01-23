@@ -43,10 +43,11 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
     // Value might not equal "real" reference count, all access should be via the updater
     @SuppressWarnings({"unused", "FieldMayBeFinal"})
-    private volatile int refCnt = updater.initialValue();
+    private volatile int refCnt;
 
     protected AbstractReferenceCountedByteBuf(int maxCapacity) {
         super(maxCapacity);
+        updater.setInitialValue(this);
     }
 
     @Override

@@ -22,9 +22,9 @@ import java.net.URI;
 public class WebSocketClientHandshaker08Test extends WebSocketClientHandshaker07Test {
     @Override
     protected WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
-                                                      boolean absoluteUpgradeUrl) {
+                                                      boolean absoluteUpgradeUrl, boolean generateOriginHeader) {
         return new WebSocketClientHandshaker08(uri, WebSocketVersion.V08, subprotocol, false, headers,
           1024, true, true, 10000,
-          absoluteUpgradeUrl);
+          absoluteUpgradeUrl, generateOriginHeader);
     }
 }

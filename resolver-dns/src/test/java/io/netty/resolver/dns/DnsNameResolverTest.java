@@ -73,8 +73,10 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.BindException;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -84,6 +86,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -121,11 +124,13 @@ import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -2324,11 +2329,77 @@ public class DnsNameResolverTest {
         DnsNameResolver resolver = builder.build();
         Future<InetAddress> result = resolver.resolve("doesnotexist.netty.io").awaitUninterruptibly();
         Throwable cause = result.cause();
-        assertTrue(cause instanceof UnknownHostException);
-        assertTrue(cause.getCause() instanceof DnsNameResolverTimeoutException);
+        assertThat(cause, Matchers.instanceOf(UnknownHostException.class));
+        cause.getCause().printStackTrace();
+        assertThat(cause.getCause(), Matchers.instanceOf(DnsNameResolverTimeoutException.class));
         assertTrue(DnsNameResolver.isTimeoutError(cause));
         assertTrue(DnsNameResolver.isTransportOrTimeoutError(cause));
         resolver.close();
+    }
+
+    @Test
+    public void testTimeoutIpv4PreferredA() throws IOException {
+        testTimeoutOneQuery(ResolvedAddressTypes.IPV4_PREFERRED, RecordType.A, RecordType.AAAA);
+    }
+    @Test
+    public void testTimeoutIpv4PreferredAAAA() throws IOException {
+        testTimeoutOneQuery(ResolvedAddressTypes.IPV4_PREFERRED, RecordType.AAAA, RecordType.A);
+    }
+
+    @Test
+    public void testTimeoutIpv6PreferredA() throws IOException {
+        testTimeoutOneQuery(ResolvedAddressTypes.IPV6_PREFERRED, RecordType.A, RecordType.AAAA);
+    }
+    @Test
+    public void testTimeoutIpv6PreferredAAAA() throws IOException {
+        testTimeoutOneQuery(ResolvedAddressTypes.IPV6_PREFERRED, RecordType.AAAA, RecordType.A);
+    }
+
+    private static void testTimeoutOneQuery(ResolvedAddressTypes type, final RecordType recordType, RecordType dropType)
+            throws IOException {
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(2);
+                Map<String, Object> map1 = new HashMap<String, Object>();
+                if (question.getRecordType() == RecordType.A) {
+                    map1.put(DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.2");
+                } else {
+                    map1.put(DnsAttribute.IP_ADDRESS.toLowerCase(), "::1");
+                }
+                records.add(new TestDnsServer.TestResourceRecord(
+                        question.getDomainName(), recordType, map1));
+                return records;
+            }
+        });
+        dnsServer2.start(dropType);
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .recursionDesired(true)
+                    .queryTimeoutMillis(500)
+                    .resolvedAddressTypes(type)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+
+            resolver = builder.build();
+            List<InetAddress> resolvedAddresses =
+                    resolver.resolveAll("somehost.netty.io").syncUninterruptibly().getNow();
+            assertEquals(1, resolvedAddresses.size());
+            if (recordType == RecordType.A) {
+                assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 })));
+            } else {
+                assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(
+                        new byte[]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 })));
+            }
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
     }
 
     @Test
@@ -2388,6 +2459,70 @@ public class DnsNameResolverTest {
             assertEquals(2, resolvedAddresses.size());
             assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 99 })));
             assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 })));
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    //
+    // This should only result in one query.
+    // ;; ANSWER SECTION:
+    // somehost.netty.io.     594    IN    CNAME    cname.netty.io.
+    // cname.netty.io.        9042   IN    CNAME    cname2.netty.io.
+    // cname2.netty.io.       1312   IN    CNAME    cname3.netty.io.io.
+    // cname3.netty.io.       20     IN    A        10.0.0.2
+    @Test
+    public void testCNAMEFollowInResponseWithoutExtraQuery() throws IOException {
+        final AtomicInteger queryCount = new AtomicInteger();
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                queryCount.incrementAndGet();
+                if (question.getDomainName().equals("somehost.netty.io")) {
+                    Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>(2);
+                    Map<String, Object> map = new HashMap<String, Object>();
+                    map.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname.netty.io");
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            question.getDomainName(), RecordType.CNAME, map));
+
+                    map = new HashMap<String, Object>();
+                    map.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname2.netty.io");
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            "cname.netty.io", RecordType.CNAME, map));
+
+                    map = new HashMap<String, Object>();
+                    map.put(DnsAttribute.DOMAIN_NAME.toLowerCase(), "cname3.netty.io");
+                    records.add(new TestDnsServer.TestResourceRecord(
+                            "cname2.netty.io", RecordType.CNAME, map));
+
+                    Map<String, Object> map1 = new HashMap<String, Object>();
+                    map1.put(DnsAttribute.IP_ADDRESS.toLowerCase(), "10.0.0.2");
+                    records.add(new TestDnsServer.TestResourceRecord(
+                           "cname3.netty.io", RecordType.A, map1));
+                    return records;
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver()
+                    .recursionDesired(true)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+
+            resolver = builder.build();
+            List<InetAddress> resolvedAddresses =
+                    resolver.resolveAll("somehost.netty.io").syncUninterruptibly().getNow();
+            assertEquals(1, resolvedAddresses.size());
+            assertTrue(resolvedAddresses.contains(InetAddress.getByAddress(new byte[] { 10, 0, 0, 2 })));
+            assertEquals(1, queryCount.get());
         } finally {
             dnsServer2.stop();
             if (resolver != null) {
@@ -2591,7 +2726,7 @@ public class DnsNameResolverTest {
             List<? extends DnsCacheEntry> cached2 = cache.get(domainWithDot, null);
 
             assertEquals(1, cached.size());
-            assertSame(cached, cached2);
+            assertEquals(cached, cached2);
         } finally {
             resolver.close();
         }
@@ -2614,7 +2749,7 @@ public class DnsNameResolverTest {
             List<? extends DnsCacheEntry> cached = cache.cache.get("test.netty.io", null);
             List<? extends DnsCacheEntry> cached2 = cache.cache.get("test.netty.io.", null);
             assertEquals(1, cached.size());
-            assertSame(cached, cached2);
+            assertEquals(cached, cached2);
 
             resolver.resolve("test").syncUninterruptibly();
             List<? extends DnsCacheEntry> entries = cache.cacheHits.get("test.netty.io");
@@ -2942,7 +3077,7 @@ public class DnsNameResolverTest {
     public void testDropAAAA() throws IOException {
         String host = "somehost.netty.io";
         TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(host));
-        dnsServer2.start(true);
+        dnsServer2.start(RecordType.AAAA);
         DnsNameResolver resolver = null;
         try {
             DnsNameResolverBuilder builder = newResolver()
@@ -2969,13 +3104,14 @@ public class DnsNameResolverTest {
     public void testDropAAAAResolveFast() throws IOException {
         String host = "somehost.netty.io";
         TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton(host));
-        dnsServer2.start(true);
+        dnsServer2.start(RecordType.AAAA);
         DnsNameResolver resolver = null;
         try {
             DnsNameResolverBuilder builder = newResolver()
                     .recursionDesired(false)
                     .queryTimeoutMillis(10000)
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                    .completeOncePreferredResolved(true)
                     .maxQueriesPerResolve(16)
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
 
@@ -3011,7 +3147,7 @@ public class DnsNameResolverTest {
                 return null;
             }
         });
-        dnsServer2.start(true);
+        dnsServer2.start(RecordType.AAAA);
         DnsNameResolver resolver = null;
         try {
             DnsNameResolverBuilder builder = newResolver()
@@ -3075,6 +3211,14 @@ public class DnsNameResolverTest {
     }
 
     private static void testTruncated0(boolean tcpFallback, final boolean truncatedBecauseOfMtu) throws IOException {
+        ServerSocket serverSocket = null;
+        if (tcpFallback) {
+            // If we are configured to use TCP as a fallback also bind a TCP socket
+            serverSocket = new ServerSocket();
+            serverSocket.setReuseAddress(true);
+            serverSocket.bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
+        }
+
         final String host = "somehost.netty.io";
         final String txt = "this is a txt record";
         final AtomicReference<DnsMessage> messageRef = new AtomicReference<DnsMessage>();
@@ -3106,26 +3250,32 @@ public class DnsNameResolverTest {
                 return message;
             }
         };
-        dnsServer2.start();
         DnsNameResolver resolver = null;
-        ServerSocket serverSocket = null;
         try {
-            DnsNameResolverBuilder builder = newResolver()
-                    .queryTimeoutMillis(10000)
+            DnsNameResolverBuilder builder = newResolver();
+            final DatagramChannel datagramChannel = new NioDatagramChannel();
+            ChannelFactory<DatagramChannel> channelFactory = new ChannelFactory<DatagramChannel>() {
+                @Override
+                public DatagramChannel newChannel() {
+                    return datagramChannel;
+                }
+            };
+            builder.channelFactory(channelFactory);
+            if (tcpFallback) {
+                dnsServer2.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
+
+                // If we are configured to use TCP as a fallback also bind a TCP socket
+                builder.socketChannelType(NioSocketChannel.class);
+            } else {
+                dnsServer2.start();
+            }
+            builder.queryTimeoutMillis(10000)
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .maxQueriesPerResolve(16)
                     .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
-
-            if (tcpFallback) {
-                // If we are configured to use TCP as a fallback also bind a TCP socket
-                serverSocket = new ServerSocket(dnsServer2.localAddress().getPort());
-                serverSocket.setReuseAddress(true);
-
-                builder.socketChannelType(NioSocketChannel.class);
-            }
             resolver = builder.build();
             if (truncatedBecauseOfMtu) {
-                resolver.ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+                datagramChannel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         if (msg instanceof DatagramPacket) {
@@ -3143,30 +3293,8 @@ public class DnsNameResolverTest {
             if (tcpFallback) {
                 // If we are configured to use TCP as a fallback lets replay the dns message over TCP
                 Socket socket = serverSocket.accept();
+                responseViaSocket(socket, messageRef.get());
 
-                InputStream in = socket.getInputStream();
-                assertTrue((in.read() << 8 | (in.read() & 0xff)) > 2); // skip length field
-                int txnId = in.read() << 8 | (in.read() & 0xff);
-
-                IoBuffer ioBuffer = IoBuffer.allocate(1024);
-                // Must replace the transactionId with the one from the TCP request
-                DnsMessageModifier modifier = modifierFrom(messageRef.get());
-                modifier.setTransactionId(txnId);
-                new DnsMessageEncoder().encode(ioBuffer, modifier.getDnsMessage());
-                ioBuffer.flip();
-
-                ByteBuffer lenBuffer = ByteBuffer.allocate(2);
-                lenBuffer.putShort((short) ioBuffer.remaining());
-                lenBuffer.flip();
-
-                while (lenBuffer.hasRemaining()) {
-                    socket.getOutputStream().write(lenBuffer.get());
-                }
-
-                while (ioBuffer.hasRemaining()) {
-                    socket.getOutputStream().write(ioBuffer.get());
-                }
-                socket.getOutputStream().flush();
                 // Let's wait until we received the envelope before closing the socket.
                 envelopeFuture.syncUninterruptibly();
 
@@ -3199,6 +3327,137 @@ public class DnsNameResolverTest {
             if (resolver != null) {
                 resolver.close();
             }
+        }
+    }
+
+    private static void responseViaSocket(Socket socket, DnsMessage message) throws IOException {
+        InputStream in = socket.getInputStream();
+        assertTrue((in.read() << 8 | (in.read() & 0xff)) > 2); // skip length field
+        int txnId = in.read() << 8 | (in.read() & 0xff);
+
+        IoBuffer ioBuffer = IoBuffer.allocate(1024);
+        // Must replace the transactionId with the one from the TCP request
+        DnsMessageModifier modifier = modifierFrom(message);
+        modifier.setTransactionId(txnId);
+        new DnsMessageEncoder().encode(ioBuffer, modifier.getDnsMessage());
+        ioBuffer.flip();
+
+        ByteBuffer lenBuffer = ByteBuffer.allocate(2);
+        lenBuffer.putShort((short) ioBuffer.remaining());
+        lenBuffer.flip();
+
+        while (lenBuffer.hasRemaining()) {
+            socket.getOutputStream().write(lenBuffer.get());
+        }
+
+        while (ioBuffer.hasRemaining()) {
+            socket.getOutputStream().write(ioBuffer.get());
+        }
+        socket.getOutputStream().flush();
+    }
+
+    @Test
+    public void testTcpFallbackWhenTimeout() throws IOException {
+        testTcpFallbackWhenTimeout(true);
+    }
+
+    @Test
+    public void testTcpFallbackFailedWhenTimeout() throws IOException {
+        testTcpFallbackWhenTimeout(false);
+    }
+
+    private void testTcpFallbackWhenTimeout(boolean tcpSuccess) throws IOException {
+        ServerSocket serverSocket = new ServerSocket();
+        serverSocket.setReuseAddress(true);
+        serverSocket.bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
+
+        final String host = "somehost.netty.io";
+        final String txt = "this is a txt record";
+        final AtomicReference<DnsMessage> messageRef = new AtomicReference<DnsMessage>();
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                String name = question.getDomainName();
+                if (name.equals(host)) {
+                    return Collections.<ResourceRecord>singleton(
+                            new TestDnsServer.TestResourceRecord(name, RecordType.TXT,
+                                    Collections.<String, Object>singletonMap(
+                                            DnsAttribute.CHARACTER_STRING.toLowerCase(), txt)));
+                }
+                return null;
+            }
+        }) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                // Store a original message so we can replay it later on.
+                messageRef.set(message);
+                return null;
+            }
+        };
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver();
+            final DatagramChannel datagramChannel = new NioDatagramChannel();
+            ChannelFactory<DatagramChannel> channelFactory = new ChannelFactory<DatagramChannel>() {
+                @Override
+                public DatagramChannel newChannel() {
+                    return datagramChannel;
+                }
+            };
+            builder.channelFactory(channelFactory);
+            dnsServer2.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
+            // If we are configured to use TCP as a fallback also bind a TCP socket
+            builder.socketChannelType(NioSocketChannel.class, true);
+
+            builder.queryTimeoutMillis(1000)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+            resolver = builder.build();
+            Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> envelopeFuture = resolver.query(
+                    new DefaultDnsQuestion(host, DnsRecordType.TXT));
+
+            // If we are configured to use TCP as a fallback lets replay the dns message over TCP
+            Socket socket = serverSocket.accept();
+
+            if (tcpSuccess) {
+                responseViaSocket(socket, messageRef.get());
+
+                // Let's wait until we received the envelope before closing the socket.
+                envelopeFuture.syncUninterruptibly();
+                socket.close();
+
+                AddressedEnvelope<DnsResponse, InetSocketAddress> envelope =
+                        envelopeFuture.syncUninterruptibly().getNow();
+                assertNotNull(envelope.sender());
+
+                DnsResponse response = envelope.content();
+                assertNotNull(response);
+
+                assertEquals(DnsResponseCode.NOERROR, response.code());
+                int count = response.count(DnsSection.ANSWER);
+
+                assertEquals(1, count);
+                List<String> texts = decodeTxt(response.recordAt(DnsSection.ANSWER, 0));
+                assertEquals(1, texts.size());
+                assertEquals(txt, texts.get(0));
+
+                assertFalse(envelope.content().isTruncated());
+                assertTrue(envelope.release());
+            } else {
+                // Just close the socket. This should cause the original exception to be used.
+                socket.close();
+                Throwable error = envelopeFuture.awaitUninterruptibly().cause();
+                assertThat(error, instanceOf(DnsNameResolverTimeoutException.class));
+                assertThat(error.getSuppressed().length, greaterThanOrEqualTo(1));
+            }
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+            serverSocket.close();
         }
     }
 
@@ -3539,4 +3798,425 @@ public class DnsNameResolverTest {
             ReferenceCountUtil.release(record);
         }
     }
+
+    @Test
+    public void testResolveIpv6WithScopeId() throws Exception {
+        testResolveIpv6WithScopeId0(false);
+    }
+
+    @Test
+    public void testResolveAllIpv6WithScopeId() throws Exception {
+        testResolveIpv6WithScopeId0(true);
+    }
+
+    private void testResolveIpv6WithScopeId0(boolean resolveAll) throws Exception {
+        DnsNameResolver resolver = newResolver().build();
+        String address = "fe80:0:0:0:1c31:d1d1:4824:72a9";
+        int scopeId = 15;
+        String addressString = address + '%' + scopeId;
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(address);
+        Inet6Address inet6Address = Inet6Address.getByAddress(null, bytes, scopeId);
+        try {
+            final InetAddress addr;
+            if (resolveAll) {
+                List<InetAddress> addressList = resolver.resolveAll(addressString).getNow();
+                assertEquals(1, addressList.size());
+                addr = addressList.get(0);
+            } else {
+                addr = resolver.resolve(addressString).getNow();
+            }
+            assertEquals(inet6Address, addr);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test
+    public void testResolveIpv6WithoutScopeId() throws Exception {
+        testResolveIpv6WithoutScopeId0(false);
+    }
+
+    @Test
+    public void testResolveAllIpv6WithoutScopeId() throws Exception {
+        testResolveIpv6WithoutScopeId0(true);
+    }
+
+    private void testResolveIpv6WithoutScopeId0(boolean resolveAll) throws Exception {
+        DnsNameResolver resolver = newResolver().build();
+        String addressString = "fe80:0:0:0:1c31:d1d1:4824:72a9";
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(addressString);
+        Inet6Address inet6Address = (Inet6Address) InetAddress.getByAddress(bytes);
+        try {
+            final InetAddress addr;
+            if (resolveAll) {
+                List<InetAddress> addressList = resolver.resolveAll(addressString).getNow();
+                assertEquals(1, addressList.size());
+                addr = addressList.get(0);
+            } else {
+                addr = resolver.resolve(addressString).getNow();
+            }
+            assertEquals(inet6Address, addr);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test
+    public void testResolveIp4() throws Exception {
+        testResolveIp4(false);
+    }
+
+    @Test
+    public void testResolveAllIp4() throws Exception {
+        testResolveIp4(true);
+    }
+
+    private void testResolveIp4(boolean resolveAll) throws Exception {
+        DnsNameResolver resolver = newResolver().build();
+        String addressString = "10.0.0.1";
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(addressString);
+        InetAddress inetAddress = InetAddress.getByAddress(bytes);
+        try {
+            final InetAddress addr;
+            if (resolveAll) {
+                List<InetAddress> addressList = resolver.resolveAll(addressString).getNow();
+                assertEquals(1, addressList.size());
+                addr = addressList.get(0);
+            } else {
+                addr = resolver.resolve(addressString).getNow();
+            }
+            assertEquals(inetAddress, addr);
+        } finally {
+            resolver.close();
+        }
+    }
+
+    @Test
+    public void testResolveSearchDomainStopOnFirstSuccess() throws Exception {
+        final String addressString = "10.0.0.1";
+        final Queue<String> names = new ConcurrentLinkedQueue<String>();
+        final TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            private int called;
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                names.offer(question.getDomainName());
+                if (++called == 2) {
+                    ResourceRecordModifier rm = new ResourceRecordModifier();
+                    rm.setDnsClass(RecordClass.IN);
+                    rm.setDnsName(question.getDomainName());
+                    rm.setDnsTtl(100);
+
+                    rm.setDnsType(question.getRecordType());
+                    rm.put(DnsAttribute.IP_ADDRESS, addressString);
+                    return Collections.singleton(rm.getEntry());
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = newResolver().searchDomains(
+                Arrays.asList("search1.netty.io", "search2.netty.io", "search3.netty.io"))
+                .ndots(2).nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                .build();
+
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(addressString);
+        InetAddress inetAddress = InetAddress.getByAddress(bytes);
+        try {
+            final InetAddress addr = resolver.resolve("netty.io").sync().getNow();
+            assertEquals(inetAddress, addr);
+        } finally {
+            resolver.close();
+            dnsServer2.stop();
+            assertEquals("netty.io.search1.netty.io", names.poll());
+            assertEquals("netty.io.search2.netty.io", names.poll());
+            assertTrue(names.isEmpty());
+        }
+    }
+
+    @Test
+    public void testResolveTryWithoutSearchDomainFirst() throws Exception {
+        testResolveTryWithoutSearchDomainFirst(true);
+    }
+
+    @Test
+    public void testResolveTryWithoutSearchDomainFirstButContinue() throws Exception {
+        testResolveTryWithoutSearchDomainFirst(false);
+    }
+
+    private static void testResolveTryWithoutSearchDomainFirst(final boolean absoluteSuccess) throws Exception {
+        final String addressString = "10.0.0.1";
+        final Queue<String> names = new ConcurrentLinkedQueue<String>();
+        final TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            private int called;
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                names.offer(question.getDomainName());
+                ++called;
+                if ((absoluteSuccess && called == 1) || called == 3) {
+                    ResourceRecordModifier rm = new ResourceRecordModifier();
+                    rm.setDnsClass(RecordClass.IN);
+                    rm.setDnsName(question.getDomainName());
+                    rm.setDnsTtl(100);
+
+                    rm.setDnsType(question.getRecordType());
+                    rm.put(DnsAttribute.IP_ADDRESS, addressString);
+                    return Collections.singleton(rm.getEntry());
+                }
+                return null;
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = newResolver().searchDomains(
+                        Arrays.asList("search1.netty.io", "search2.netty.io", "search3.netty.io"))
+                .ndots(1).nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                .build();
+
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(addressString);
+        InetAddress inetAddress = InetAddress.getByAddress(bytes);
+        try {
+            final InetAddress addr = resolver.resolve("netty.io").sync().getNow();
+            assertEquals(inetAddress, addr);
+        } finally {
+            resolver.close();
+            dnsServer2.stop();
+            assertEquals("netty.io", names.poll());
+            if (!absoluteSuccess) {
+                assertEquals("netty.io.search1.netty.io", names.poll());
+                assertEquals("netty.io.search2.netty.io", names.poll());
+            }
+            assertTrue(names.isEmpty());
+        }
+    }
+
+    @Test
+    public void testInflightQueries() throws Exception {
+        final String addressString = "10.0.0.1";
+        final AtomicInteger called = new AtomicInteger();
+        final CountDownLatch latch = new CountDownLatch(1);
+        final TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                called.incrementAndGet();
+                try {
+                    latch.await();
+                    ResourceRecordModifier rm = new ResourceRecordModifier();
+                    rm.setDnsClass(RecordClass.IN);
+                    rm.setDnsName(question.getDomainName());
+                    rm.setDnsTtl(100);
+
+                    rm.setDnsType(question.getRecordType());
+                    rm.put(DnsAttribute.IP_ADDRESS, addressString);
+                    return Collections.singleton(rm.getEntry());
+                } catch (InterruptedException e) {
+                    throw new IllegalStateException(e);
+                }
+            }
+        });
+        dnsServer2.start();
+
+        DnsNameResolver resolver = newResolver()
+                .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()))
+                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                .consolidateCacheSize(2)
+                .build();
+
+        byte[] bytes =  NetUtil.createByteArrayFromIpAddressString(addressString);
+        InetAddress inetAddress = InetAddress.getByAddress(bytes);
+        try {
+            Future<InetAddress> f = resolver.resolve("netty.io");
+            Future<InetAddress> f2 = resolver.resolve("netty.io");
+            assertFalse(f.isDone());
+            assertFalse(f2.isDone());
+
+            // Now unblock so we receive the response back for our query.
+            latch.countDown();
+
+            assertEquals(inetAddress, f.sync().getNow());
+            assertEquals(inetAddress, f2.sync().getNow());
+        } finally {
+            resolver.close();
+            dnsServer2.stop();
+            assertEquals(1, called.get());
+        }
+    }
+
+    @Test
+    public void testAddressAlreadyInUse() throws Exception {
+        DatagramSocket datagramSocket = new DatagramSocket();
+        try {
+            assertTrue(datagramSocket.isBound());
+            try {
+                final DnsNameResolver resolver = newResolver()
+                        .localAddress(datagramSocket.getLocalSocketAddress()).build();
+                try {
+                    Throwable cause = assertThrows(UnknownHostException.class, new Executable() {
+                        @Override
+                        public void execute() throws Throwable {
+                            resolver.resolve("netty.io").sync();
+                        }
+                    });
+                    assertThat(cause.getCause(), Matchers.<Throwable>instanceOf(BindException.class));
+                } finally {
+                    resolver.close();
+                }
+            } catch (IllegalStateException cause) {
+                // We might also throw directly here... in this case let's verify that we use the correct exception.
+                assertThat(cause.getCause(), Matchers.<Throwable>instanceOf(BindException.class));
+            }
+        } finally {
+            datagramSocket.close();
+        }
+    }
+
+    @Test
+    public void testResponseFeedbackStream() {
+        final AtomicBoolean successCalled = new AtomicBoolean();
+        final AtomicBoolean failureCalled = new AtomicBoolean();
+        final AtomicBoolean returnSuccess = new AtomicBoolean(false);
+        final DnsNameResolver resolver = newResolver(true, new DnsServerAddressStreamProvider() {
+            @Override
+            public DnsServerAddressStream nameServerAddressStream(String hostname) {
+                return new DnsServerResponseFeedbackAddressStream() {
+                    @Override
+                    public void feedbackSuccess(InetSocketAddress address, long queryResponseTimeNanos) {
+                        assertThat(queryResponseTimeNanos, greaterThanOrEqualTo(0L));
+                        successCalled.set(true);
+                    }
+
+                    @Override
+                    public void feedbackFailure(InetSocketAddress address,
+                                                Throwable failureCause,
+                                                long queryResponseTimeNanos) {
+                        assertThat(queryResponseTimeNanos, greaterThanOrEqualTo(0L));
+                        assertNotNull(failureCause);
+                        failureCalled.set(true);
+                    }
+
+                    @Override
+                    public InetSocketAddress next() {
+                        if (returnSuccess.get()) {
+                            return dnsServer.localAddress();
+                        }
+                        try {
+                            return new InetSocketAddress(InetAddress.getByAddress("foo.com",
+                                    new byte[] {(byte) 169, (byte) 254, 12, 34 }), 53);
+                        } catch (UnknownHostException e) {
+                            throw new Error(e);
+                        }
+                    }
+
+                    @Override
+                    public int size() {
+                        return 1;
+                    }
+
+                    @Override
+                    public DnsServerAddressStream duplicate() {
+                        return this;
+                    }
+                };
+            }
+        }).build();
+        try {
+            // setup call to be successful and verify
+            returnSuccess.set(true);
+            resolver.resolve("google.com").syncUninterruptibly().getNow();
+            assertTrue(successCalled.get());
+            assertFalse(failureCalled.get());
+
+            // reset state for next query
+            successCalled.set(false);
+            failureCalled.set(false);
+
+            // setup call to fail and verify
+            returnSuccess.set(false);
+            try {
+                resolver.resolve("yahoo.com").syncUninterruptibly().getNow();
+                fail();
+            } catch (Exception e) {
+                // expected
+                assertThat(e, is(instanceOf(UnknownHostException.class)));
+            } finally {
+                assertFalse(successCalled.get());
+                assertTrue(failureCalled.get());
+            }
+        } finally {
+            if (resolver != null) {
+                resolver.close();
+            }
+        }
+    }
+
+    @Test
+    public void testCnameWithAAndAdditionalsAndAuthorities() throws Exception {
+        final String hostname = "test.netty.io";
+        final String cname = "cname.netty.io";
+
+        final List<String> nameServers = new ArrayList<String>();
+
+        for (int i = 0; i < 13; i++) {
+            nameServers.add("ns" + i + ".foo.bar");
+        }
+
+        TestDnsServer server = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
+                ResourceRecordModifier rm = new ResourceRecordModifier();
+                rm.setDnsClass(RecordClass.IN);
+                rm.setDnsName(hostname);
+                rm.setDnsTtl(10000);
+                rm.setDnsType(RecordType.CNAME);
+                rm.put(DnsAttribute.DOMAIN_NAME, cname);
+
+                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>();
+                records.add(rm.getEntry());
+                records.add(newARecord(cname, "10.0.0.2"));
+                return records;
+            }
+        }) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                for (QuestionRecord record: message.getQuestionRecords()) {
+                    if (record.getDomainName().equals(hostname)) {
+                        // Let's add some extra records.
+                        message.getAuthorityRecords().clear();
+                        message.getAdditionalRecords().clear();
+
+                        for (String nameserver: nameServers) {
+                            message.getAuthorityRecords().add(TestDnsServer.newNsRecord(".", nameserver));
+                            message.getAdditionalRecords().add(newAddressRecord(nameserver, RecordType.A, "10.0.0.1"));
+                            message.getAdditionalRecords().add(newAddressRecord(nameserver, RecordType.AAAA, "::1"));
+                        }
+
+                        return message;
+                    }
+                }
+                return message;
+            }
+        };
+        server.start();
+        EventLoopGroup group = new NioEventLoopGroup(1);
+
+        final DnsNameResolver resolver = new DnsNameResolver(
+                group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
+                NoopDnsCache.INSTANCE, NoopAuthoritativeDnsServerCache.INSTANCE,
+                NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000, ResolvedAddressTypes.IPV4_ONLY,
+                true, 8, true, 4096,
+                false, HostsFileEntriesResolver.DEFAULT,
+                new SingletonDnsServerAddressStreamProvider(server.localAddress()),
+                new String [] { "k8se-apps.svc.cluster.local, svc.cluster.local, cluster.local" }, 1, true);
+        try {
+            InetAddress address = resolver.resolve(hostname).sync().getNow();
+            assertArrayEquals(new byte[] { 10, 0, 0, 2 }, address.getAddress());
+        } finally {
+            resolver.close();
+            group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
+            server.stop();
+        }
+    }
+
 }

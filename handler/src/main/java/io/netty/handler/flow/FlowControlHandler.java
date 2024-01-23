@@ -142,6 +142,8 @@ public class FlowControlHandler extends ChannelDuplexHandler {
             // relayed to downstream to keep the flow going.
             shouldConsume = true;
             ctx.read();
+        } else if (config.isAutoRead()) {
+            ctx.read();
         }
     }
 

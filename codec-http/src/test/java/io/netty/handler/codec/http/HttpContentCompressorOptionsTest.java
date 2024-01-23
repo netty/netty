@@ -16,9 +16,11 @@
 package io.netty.handler.codec.http;
 
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -28,7 +30,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@EnabledIf("isBrotiAvailable")
 class HttpContentCompressorOptionsTest {
+
+    static boolean isBrotiAvailable() {
+        return Brotli.isAvailable();
+    }
 
     @Test
     void testGetBrTargetContentEncoding() {
@@ -36,7 +43,8 @@ class HttpContentCompressorOptionsTest {
             StandardCompressionOptions.gzip(),
             StandardCompressionOptions.deflate(),
             StandardCompressionOptions.brotli(),
-            StandardCompressionOptions.zstd()
+            StandardCompressionOptions.zstd(),
+            StandardCompressionOptions.snappy()
         );
 
         String[] tests = {
@@ -63,7 +71,8 @@ class HttpContentCompressorOptionsTest {
             StandardCompressionOptions.gzip(),
             StandardCompressionOptions.deflate(),
             StandardCompressionOptions.brotli(),
-            StandardCompressionOptions.zstd()
+            StandardCompressionOptions.zstd(),
+            StandardCompressionOptions.snappy()
         );
 
         String[] tests = {
@@ -74,6 +83,33 @@ class HttpContentCompressorOptionsTest {
                 "compress, zstd;q=0.5", "zstd",
                 "zstd; q=0.5, identity", "zstd",
                 "zstd; q=0, deflate", "zstd",
+        };
+        for (int i = 0; i < tests.length; i += 2) {
+            String acceptEncoding = tests[i];
+            String contentEncoding = tests[i + 1];
+            String targetEncoding = compressor.determineEncoding(acceptEncoding);
+            assertEquals(contentEncoding, targetEncoding);
+        }
+    }
+
+    @Test
+    void testGetSnappyTargetContentEncoding() {
+        HttpContentCompressor compressor = new HttpContentCompressor(
+                StandardCompressionOptions.gzip(),
+                StandardCompressionOptions.deflate(),
+                StandardCompressionOptions.brotli(),
+                StandardCompressionOptions.zstd(),
+                StandardCompressionOptions.snappy()
+        );
+
+        String[] tests = {
+                // Accept-Encoding -> Content-Encoding
+                "", null,
+                "*;q=0.0", null,
+                "snappy", "snappy",
+                "compress, snappy;q=0.5", "snappy",
+                "snappy; q=0.5, identity", "snappy",
+                "snappy; q=0, deflate", "snappy",
         };
         for (int i = 0; i < tests.length; i += 2) {
             String acceptEncoding = tests[i];
@@ -115,7 +151,7 @@ class HttpContentCompressorOptionsTest {
 
     private static FullHttpRequest newRequest() {
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
-        req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "br, zstd, gzip, deflate");
+        req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "br, zstd, snappy, gzip, deflate");
         return req;
     }
 }

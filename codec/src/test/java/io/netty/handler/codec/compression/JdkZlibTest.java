@@ -15,7 +15,9 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.buffer.AbstractByteBufAllocator;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
@@ -163,5 +165,49 @@ public class JdkZlibTest extends ZlibTest {
 
         assertNull(channel.readInbound());
         uncompressedBuffer.release();
+    }
+
+    @Test
+    public void testLargeEncode() throws Exception {
+        // construct a 128M buffer out of many times the same 1M buffer :)
+        byte[] smallArray = new byte[1024 * 1024];
+        byte[][] arrayOfArrays = new byte[128][];
+        Arrays.fill(arrayOfArrays, smallArray);
+        ByteBuf bigBuffer = Unpooled.wrappedBuffer(arrayOfArrays);
+
+        EmbeddedChannel channel = new EmbeddedChannel(new JdkZlibEncoder(ZlibWrapper.NONE));
+        channel.config().setAllocator(new LimitedByteBufAllocator(channel.alloc()));
+        assertTrue(channel.writeOutbound(bigBuffer));
+        assertTrue(channel.finish());
+        channel.checkException();
+        assertTrue(channel.releaseOutbound());
+    }
+
+    /**
+     * Allocator that will limit buffer capacity to 1M.
+     */
+    private static final class LimitedByteBufAllocator extends AbstractByteBufAllocator {
+        private static final int MAX = 1024 * 1024;
+
+        private final ByteBufAllocator wrapped;
+
+        LimitedByteBufAllocator(ByteBufAllocator wrapped) {
+            this.wrapped = wrapped;
+        }
+
+        @Override
+        public boolean isDirectBufferPooled() {
+            return wrapped.isDirectBufferPooled();
+        }
+
+        @Override
+        protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
+            return wrapped.heapBuffer(initialCapacity, Math.min(maxCapacity, MAX));
+        }
+
+        @Override
+        protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
+            return wrapped.directBuffer(initialCapacity, Math.min(maxCapacity, MAX));
+        }
     }
 }

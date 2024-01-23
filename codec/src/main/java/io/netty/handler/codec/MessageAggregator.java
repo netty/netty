@@ -63,6 +63,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     private ChannelFutureListener continueResponseWriteListener;
 
     private boolean aggregating;
+    private boolean handleIncompleteAggregateDuringClose = true;
 
     /**
      * Creates a new instance.
@@ -104,13 +105,10 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
         // NOTE: It's tempting to make this check only if aggregating is false. There are however
         // side conditions in decode(...) in respect to large messages.
         if (isStartMessage(in)) {
-            aggregating = true;
             return true;
-        } else if (aggregating && isContentMessage(in)) {
-            return true;
+        } else {
+            return aggregating && isContentMessage(in);
         }
-
-        return false;
     }
 
     /**
@@ -206,9 +204,8 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
     @Override
     protected void decode(final ChannelHandlerContext ctx, I msg, List<Object> out) throws Exception {
-        assert aggregating;
-
         if (isStartMessage(msg)) {
+            aggregating = true;
             handlingOversizedMessage = false;
             if (currentMessage != null) {
                 currentMessage.release();
@@ -243,6 +240,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 final ChannelFuture future = ctx.writeAndFlush(continueResponse).addListener(listener);
 
                 if (closeAfterWrite) {
+                    handleIncompleteAggregateDuringClose = false;
                     future.addListener(ChannelFutureListener.CLOSE);
                     return;
                 }
@@ -400,6 +398,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
     private void invokeHandleOversizedMessage(ChannelHandlerContext ctx, S oversized) throws Exception {
         handlingOversizedMessage = true;
         currentMessage = null;
+        handleIncompleteAggregateDuringClose = false;
         try {
             handleOversizedMessage(ctx, oversized);
         } finally {
@@ -433,6 +432,10 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        if (aggregating && handleIncompleteAggregateDuringClose) {
+            ctx.fireExceptionCaught(
+                    new PrematureChannelClosureException("Channel closed while still aggregating message"));
+        }
         try {
             // release current message if it is not null as it may be a left-over
             super.channelInactive(ctx);

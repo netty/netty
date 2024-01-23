@@ -51,7 +51,7 @@ public class DefaultEventLoop extends SingleThreadEventLoop {
         for (;;) {
             Runnable task = takeTask();
             if (task != null) {
-                task.run();
+                runTask(task);
                 updateLastExecutionTime();
             }
 

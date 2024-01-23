@@ -82,7 +82,7 @@ public class EpollSpliceTest {
                         // We are splicing two channels together, at this point we have a tcp proxy which handles all
                         // the data transfer only in kernel space!
 
-                        // Integer.MAX_VALUE will splice infinitly.
+                        // Integer.MAX_VALUE will splice infinitely.
                         ch.spliceTo(ch2, Integer.MAX_VALUE).addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
@@ -150,11 +150,7 @@ public class EpollSpliceTest {
                 break;
             }
 
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
+            Thread.sleep(50);
         }
 
         while (sh.counter < data.length) {
@@ -165,11 +161,7 @@ public class EpollSpliceTest {
                 break;
             }
 
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
+            Thread.sleep(50);
         }
 
         sh.channel.close().sync();
@@ -223,11 +215,7 @@ public class EpollSpliceTest {
             if (sh.exception.get() != null) {
                 break;
             }
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
+            Thread.sleep(50);
         }
 
         sc.close().sync();

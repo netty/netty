@@ -21,6 +21,7 @@ import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -105,7 +106,7 @@ public class Http2Exception extends Exception {
      * @return An exception which can be translated into an HTTP/2 error.
      */
     public static Http2Exception connectionError(Http2Error error, String fmt, Object... args) {
-        return new Http2Exception(error, String.format(fmt, args));
+        return new Http2Exception(error, formatErrorMessage(fmt, args));
     }
 
     /**
@@ -119,7 +120,7 @@ public class Http2Exception extends Exception {
      */
     public static Http2Exception connectionError(Http2Error error, Throwable cause,
             String fmt, Object... args) {
-        return new Http2Exception(error, String.format(fmt, args), cause);
+        return new Http2Exception(error, formatErrorMessage(fmt, args), cause);
     }
 
     /**
@@ -131,7 +132,7 @@ public class Http2Exception extends Exception {
      * @return An exception which can be translated into an HTTP/2 error.
      */
     public static Http2Exception closedStreamError(Http2Error error, String fmt, Object... args) {
-        return new ClosedStreamCreationException(error, String.format(fmt, args));
+        return new ClosedStreamCreationException(error, formatErrorMessage(fmt, args));
     }
 
     /**
@@ -149,7 +150,7 @@ public class Http2Exception extends Exception {
     public static Http2Exception streamError(int id, Http2Error error, String fmt, Object... args) {
         return CONNECTION_STREAM_ID == id ?
                 connectionError(error, fmt, args) :
-                    new StreamException(id, error, String.format(fmt, args));
+                    new StreamException(id, error, formatErrorMessage(fmt, args));
     }
 
     /**
@@ -169,7 +170,7 @@ public class Http2Exception extends Exception {
             String fmt, Object... args) {
         return CONNECTION_STREAM_ID == id ?
                 connectionError(error, cause, fmt, args) :
-                    new StreamException(id, error, String.format(fmt, args), cause);
+                    new StreamException(id, error, formatErrorMessage(fmt, args), cause);
     }
 
     /**
@@ -191,7 +192,17 @@ public class Http2Exception extends Exception {
             String fmt, Object... args) {
         return CONNECTION_STREAM_ID == id ?
                 connectionError(error, fmt, args) :
-                    new HeaderListSizeException(id, error, String.format(fmt, args), onDecode);
+                    new HeaderListSizeException(id, error, formatErrorMessage(fmt, args), onDecode);
+    }
+
+    private static String formatErrorMessage(String fmt, Object[] args) {
+        if (fmt == null) {
+            if (args == null || args.length == 0) {
+                return "Unexpected error";
+            }
+            return "Unexpected error: " + Arrays.toString(args);
+        }
+        return String.format(fmt, args);
     }
 
     /**

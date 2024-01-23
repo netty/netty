@@ -23,10 +23,11 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import junit.framework.AssertionFailedError;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -49,12 +50,14 @@ import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
@@ -231,7 +234,13 @@ public class DefaultHttp2ConnectionDecoderTest {
         decode().onSettingsAckRead(ctx);
 
         // Disallow any further flushes now that settings ACK has been sent
-        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
+        when(ctx.flush()).then(new Answer<ChannelHandlerContext>() {
+            @Override
+            public ChannelHandlerContext answer(InvocationOnMock invocationOnMock) {
+                fail();
+                return null;
+            }
+        });
     }
 
     @Test
@@ -569,6 +578,23 @@ public class DefaultHttp2ConnectionDecoderTest {
                 decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
             }
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {":scheme", ":custom-pseudo-header"})
+    public void trailersWithPseudoHeadersThrows(String pseudoHeader) throws Exception {
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+
+        final Http2Headers trailers = new DefaultHttp2Headers(false);
+        trailers.add(pseudoHeader, "something");
+        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode().onHeadersRead(ctx, STREAM_ID, trailers, 0, true);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, ex.error());
+        assertThat(ex.getMessage(), containsString(pseudoHeader));
     }
 
     @Test

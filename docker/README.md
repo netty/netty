@@ -23,4 +23,10 @@ docker-compose -f docker/docker-compose.yaml run cross-compile-aarch64-build
 ```
 The default version of aarch64 gcc is `4.9-2016.02`. Update the parameter `gcc_version` in `docker-compose.yaml` to use a version you want.
 
+## riscv64 cross compile for transport-native-epoll on X86_64
+
+```
+docker-compose -f docker/docker-compose.ubuntu-20.04.yaml run cross-compile-riscv64-build
+```
+
 etc, etc

@@ -133,6 +133,50 @@ public abstract class ZlibTest {
         }
     }
 
+    @Test
+    public void testGZIP3() throws Exception {
+        byte[] bytes = "Foo".getBytes(CharsetUtil.UTF_8);
+        ByteBuf data = Unpooled.wrappedBuffer(bytes);
+        ByteBuf deflatedData = Unpooled.wrappedBuffer(
+                new byte[]{
+                        31, -117, // magic number
+                        8, // CM
+                        2, // FLG.FHCRC
+                        0, 0, 0, 0, // MTIME
+                        0, // XFL
+                        7, // OS
+                        -66, -77, // CRC16
+                        115, -53, -49, 7, 0, // compressed blocks
+                        -63, 35, 62, -76, // CRC32
+                        3, 0, 0, 0 // ISIZE
+                }
+        );
+
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
+        try {
+            while (deflatedData.isReadable()) {
+                chDecoderGZip.writeInbound(deflatedData.readRetainedSlice(1));
+            }
+            deflatedData.release();
+            assertTrue(chDecoderGZip.finish());
+            ByteBuf buf = Unpooled.buffer();
+            for (;;) {
+                ByteBuf b = chDecoderGZip.readInbound();
+                if (b == null) {
+                    break;
+                }
+                buf.writeBytes(b);
+                b.release();
+            }
+            assertEquals(buf, data);
+            assertNull(chDecoderGZip.readInbound());
+            data.release();
+            buf.release();
+        } finally {
+            dispose(chDecoderGZip);
+        }
+    }
+
     private void testCompress0(ZlibWrapper encoderWrapper, ZlibWrapper decoderWrapper, ByteBuf data) throws Exception {
         EmbeddedChannel chEncoder = new EmbeddedChannel(createEncoder(encoderWrapper));
         EmbeddedChannel chDecoderZlib = new EmbeddedChannel(createDecoder(decoderWrapper));

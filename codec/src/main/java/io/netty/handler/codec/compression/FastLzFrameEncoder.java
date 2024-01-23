@@ -22,7 +22,20 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import java.util.zip.Adler32;
 import java.util.zip.Checksum;
 
-import static io.netty.handler.codec.compression.FastLz.*;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_TYPE_COMPRESSED;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_TYPE_NON_COMPRESSED;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_WITHOUT_CHECKSUM;
+import static io.netty.handler.codec.compression.FastLz.BLOCK_WITH_CHECKSUM;
+import static io.netty.handler.codec.compression.FastLz.CHECKSUM_OFFSET;
+import static io.netty.handler.codec.compression.FastLz.LEVEL_1;
+import static io.netty.handler.codec.compression.FastLz.LEVEL_2;
+import static io.netty.handler.codec.compression.FastLz.LEVEL_AUTO;
+import static io.netty.handler.codec.compression.FastLz.MAGIC_NUMBER;
+import static io.netty.handler.codec.compression.FastLz.MAX_CHUNK_LENGTH;
+import static io.netty.handler.codec.compression.FastLz.MIN_LENGTH_TO_COMPRESSION;
+import static io.netty.handler.codec.compression.FastLz.OPTIONS_OFFSET;
+import static io.netty.handler.codec.compression.FastLz.calculateOutputBufferLength;
+import static io.netty.handler.codec.compression.FastLz.compress;
 
 /**
  * Compresses a {@link ByteBuf} using the FastLZ algorithm.

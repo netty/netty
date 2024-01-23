@@ -22,6 +22,7 @@ import org.mockito.Mockito;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -767,5 +768,54 @@ public class UnpooledTest {
         } finally {
             wrappedBuffer.release();
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void littleEndianWriteOnLittleEndianBufferMustStoreLittleEndianValue() {
+        ByteBuf b = buffer(1024).order(ByteOrder.LITTLE_ENDIAN);
+
+        b.writeShortLE(0x0102);
+        assertEquals((short) 0x0102, b.getShortLE(0));
+        assertEquals((short) 0x0102, b.getShort(0));
+        b.clear();
+
+        b.writeMediumLE(0x010203);
+        assertEquals(0x010203, b.getMediumLE(0));
+        assertEquals(0x010203, b.getMedium(0));
+        b.clear();
+
+        b.writeIntLE(0x01020304);
+        assertEquals(0x01020304, b.getIntLE(0));
+        assertEquals(0x01020304, b.getInt(0));
+        b.clear();
+
+        b.writeLongLE(0x0102030405060708L);
+        assertEquals(0x0102030405060708L, b.getLongLE(0));
+        assertEquals(0x0102030405060708L, b.getLong(0));
+    }
+
+    @Test
+    public void littleEndianWriteOnDefaultBufferMustStoreLittleEndianValue() {
+        ByteBuf b = buffer(1024);
+
+        b.writeShortLE(0x0102);
+        assertEquals((short) 0x0102, b.getShortLE(0));
+        assertEquals((short) 0x0201, b.getShort(0));
+        b.clear();
+
+        b.writeMediumLE(0x010203);
+        assertEquals(0x010203, b.getMediumLE(0));
+        assertEquals(0x030201, b.getMedium(0));
+        b.clear();
+
+        b.writeIntLE(0x01020304);
+        assertEquals(0x01020304, b.getIntLE(0));
+        assertEquals(0x04030201, b.getInt(0));
+        b.clear();
+
+        b.writeLongLE(0x0102030405060708L);
+        assertEquals(0x0102030405060708L, b.getLongLE(0));
+        assertEquals(0x0807060504030201L, b.getLong(0));
     }
 }

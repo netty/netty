@@ -106,6 +106,14 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
+        // fast-path
+        if (name == HttpMethod.GET.name()) {
+            return HttpMethod.GET;
+        }
+        if (name == HttpMethod.POST.name()) {
+            return HttpMethod.POST;
+        }
+        // "slow"-path
         HttpMethod result = methodMap.get(name);
         return result != null ? result : new HttpMethod(name);
     }

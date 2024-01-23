@@ -16,19 +16,27 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.CorruptedFrameException;
 
 /**
  *
  */
 public class Utf8FrameValidator extends ChannelInboundHandlerAdapter {
 
+    private final boolean closeOnProtocolViolation;
+
     private int fragmentedFramesCount;
     private Utf8Validator utf8Validator;
+
+    public Utf8FrameValidator() {
+        this(true);
+    }
+
+    public Utf8FrameValidator(boolean closeOnProtocolViolation) {
+        this.closeOnProtocolViolation = closeOnProtocolViolation;
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -74,8 +82,7 @@ public class Utf8FrameValidator extends ChannelInboundHandlerAdapter {
                     fragmentedFramesCount++;
                 }
             } catch (CorruptedWebSocketFrameException e) {
-                frame.release();
-                throw e;
+                protocolViolation(ctx, frame, e);
             }
         }
 
@@ -89,11 +96,25 @@ public class Utf8FrameValidator extends ChannelInboundHandlerAdapter {
         utf8Validator.check(buffer);
     }
 
+    private void protocolViolation(ChannelHandlerContext ctx, WebSocketFrame frame,
+                                   CorruptedWebSocketFrameException ex) {
+        frame.release();
+        if (closeOnProtocolViolation && ctx.channel().isOpen()) {
+            WebSocketCloseStatus closeStatus = ex.closeStatus();
+            String reasonText = ex.getMessage();
+            if (reasonText == null) {
+                reasonText = closeStatus.reasonText();
+            }
+
+            CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(closeStatus.code(), reasonText);
+            ctx.writeAndFlush(closeFrame).addListener(ChannelFutureListener.CLOSE);
+        }
+
+        throw ex;
+    }
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        if (cause instanceof CorruptedFrameException && ctx.channel().isOpen()) {
-            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
-        }
         super.exceptionCaught(ctx, cause);
     }
 }

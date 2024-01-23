@@ -701,7 +701,7 @@ public class NetUtilTest {
     }
 
     @Test
-    public void testBytesToIpAddress() throws UnknownHostException {
+    public void testBytesToIpAddress() {
         for (Entry<String, String> e : validIpV4Hosts.entrySet()) {
             assertEquals(e.getKey(), bytesToIpAddress(createByteArrayFromIpAddressString(e.getKey())));
             assertEquals(e.getKey(), bytesToIpAddress(validIpV4ToBytes(e.getKey())));
@@ -709,6 +709,31 @@ public class NetUtilTest {
         for (Entry<byte[], String> testEntry : ipv6ToAddressStrings.entrySet()) {
             assertEquals(testEntry.getValue(), bytesToIpAddress(testEntry.getKey()));
         }
+    }
+
+    @Test
+    public void testBytesToIpAddressWithOffset() {
+        for (Entry<String, String> e : validIpV4Hosts.entrySet()) {
+            byte[] bytes = copyWithOffset(createByteArrayFromIpAddressString(e.getKey()));
+            assertEquals(e.getKey(), bytesToIpAddress(bytes, 1, bytes.length - 2));
+
+            byte[] bytes2 = copyWithOffset(createByteArrayFromIpAddressString(e.getKey()));
+            assertEquals(e.getKey(), bytesToIpAddress(bytes2, 1, bytes2.length - 2));
+        }
+
+        for (Entry<byte[], String> testEntry : ipv6ToAddressStrings.entrySet()) {
+            byte[] bytes = copyWithOffset(testEntry.getKey());
+            assertEquals(testEntry.getValue(), bytesToIpAddress(bytes, 1, bytes.length - 2));
+        }
+    }
+
+    private static byte[] copyWithOffset(byte[] bytes) {
+        if (bytes == null) {
+            return null;
+        }
+        byte[] array = new byte[bytes.length + 2];
+        System.arraycopy(bytes, 0, array, 1,  bytes.length);
+        return array;
     }
 
     @Test

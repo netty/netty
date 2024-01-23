@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package io.netty.handler.codec.http2;
 
 import io.netty.bootstrap.Bootstrap;
@@ -44,8 +43,8 @@ import java.util.concurrent.CountDownLatch;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isStreamIdValid;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -69,7 +68,7 @@ public class Http2MultiplexCodecBuilderTest {
     @BeforeEach
     public void setUp() throws InterruptedException {
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        LocalAddress serverAddress = new LocalAddress(getClass().getName());
+        LocalAddress serverAddress = new LocalAddress(getClass());
         serverLastInboundHandler = new SharableLastInboundHandler();
         ServerBootstrap sb = new ServerBootstrap()
                 .channel(LocalServerChannel.class)
@@ -192,27 +191,31 @@ public class Http2MultiplexCodecBuilderTest {
         Http2Headers headers = new DefaultHttp2Headers();
         childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
         ByteBuf data = Unpooled.buffer(100).writeZero(100);
-        childChannel.writeAndFlush(new DefaultHttp2DataFrame(data, true));
+        try {
+            childChannel.writeAndFlush(new DefaultHttp2DataFrame(data.retainedDuplicate(), true));
 
-        Http2HeadersFrame headersFrame = serverLastInboundHandler.blockingReadInbound();
-        assertNotNull(headersFrame);
-        assertEquals(3, headersFrame.stream().id());
-        assertEquals(headers, headersFrame.headers());
+            Http2HeadersFrame headersFrame = serverLastInboundHandler.blockingReadInbound();
+            assertNotNull(headersFrame);
+            assertEquals(3, headersFrame.stream().id());
+            assertEquals(headers, headersFrame.headers());
 
-        Http2DataFrame dataFrame = serverLastInboundHandler.blockingReadInbound();
-        assertNotNull(dataFrame);
-        assertEquals(3, dataFrame.stream().id());
-        assertEquals(data.resetReaderIndex(), dataFrame.content());
-        assertTrue(dataFrame.isEndStream());
-        dataFrame.release();
+            Http2DataFrame dataFrame = serverLastInboundHandler.blockingReadInbound();
+            assertNotNull(dataFrame);
+            assertEquals(3, dataFrame.stream().id());
+            assertEquals(data, dataFrame.content());
+            assertTrue(dataFrame.isEndStream());
+            dataFrame.release();
 
-        childChannel.close();
+            childChannel.close();
 
-        Http2ResetFrame rstFrame = serverLastInboundHandler.blockingReadInbound();
-        assertNotNull(rstFrame);
-        assertEquals(3, rstFrame.stream().id());
+            Http2ResetFrame rstFrame = serverLastInboundHandler.blockingReadInbound();
+            assertNotNull(rstFrame);
+            assertEquals(3, rstFrame.stream().id());
 
-        serverLastInboundHandler.checkException();
+            serverLastInboundHandler.checkException();
+        } finally {
+            data.release();
+        }
     }
 
     @Sharable
