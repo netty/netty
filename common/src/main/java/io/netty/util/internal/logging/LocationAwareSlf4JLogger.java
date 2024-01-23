@@ -47,7 +47,7 @@ final class LocationAwareSlf4JLogger extends AbstractInternalLogger {
     }
 
     private void log(final int level, final org.slf4j.helpers.FormattingTuple tuple) {
-        logger.log(null, FQCN, level, tuple.getMessage(), tuple.getArgArray(), tuple.getThrowable());
+        logger.log(null, FQCN, level, tuple.getMessage(), null, tuple.getThrowable());
     }
 
     @Override
