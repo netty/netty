@@ -118,7 +118,10 @@ public class IdleStateHandler implements ChannelHandler {
     private Future<?> allIdleTimeout;
     private boolean firstAllIdleEvent = true;
 
-    private byte state; // 0 - none, 1 - initialized, 2 - destroyed
+    private byte state;
+    private static final byte ST_INITIALIZED = 1;
+    private static final byte ST_DESTROYED = 2;
+
     private boolean reading;
 
     /**
@@ -289,7 +292,7 @@ public class IdleStateHandler implements ChannelHandler {
              break;
         }
 
-        state = 1;
+        state = ST_INITIALIZED;
 
         lastReadTime = lastWriteTime = ticksInNanos();
         if (readerIdleTimeNanos > 0) {
@@ -323,7 +326,7 @@ public class IdleStateHandler implements ChannelHandler {
     }
 
     private void destroy() {
-        state = 2;
+        state = ST_DESTROYED;
 
         if (readerIdleTimeout != null) {
             readerIdleTimeout.cancel();
