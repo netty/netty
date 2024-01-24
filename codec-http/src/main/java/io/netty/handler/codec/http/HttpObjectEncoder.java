@@ -315,7 +315,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
             ByteBuf content = msg.content();
 
-            final boolean copyContent = content.readableBytes() > 0 &&
+            final boolean accountForContentSize = content.readableBytes() > 0 &&
                                         state == ST_CONTENT_NON_CHUNK &&
                                         // try embed the content if less or equals than
                                         // the biggest of ~12.5% of the header estimated size and COPY_DATA_THRESHOLD:
@@ -324,7 +324,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                                         Math.max(COPY_CONTENT_THRESHOLD, ((int) headersEncodedSizeAccumulator) / 8);
 
             final int headersAndContentSize = (int) headersEncodedSizeAccumulator +
-                                                  (copyContent? content.readableBytes() : 0);
+                                                  (accountForContentSize? content.readableBytes() : 0);
             final ByteBuf buf = ctx.alloc().buffer(headersAndContentSize);
 
             encodeInitialLine(buf, m);
@@ -338,16 +338,6 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
                     HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
 
-            if (copyContent) {
-                assert state == ST_CONTENT_NON_CHUNK;
-                // verify if the estimation we made before was correct to hold the content,
-                // otherwise fallback to the existing path: subsequent attempts will likely be more accurate
-                if (buf.maxFastWritableBytes() >= content.readableBytes()) {
-                    buf.writeBytes(content);
-                    out.add(buf);
-                    return;
-                }
-            }
             encodeByteBufHttpContent(state, ctx, buf, content, msg.trailingHeaders(), out);
         } finally {
             msg.release();
