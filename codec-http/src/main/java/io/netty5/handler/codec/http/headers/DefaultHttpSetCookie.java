@@ -50,6 +50,7 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
     private static final String ENCODED_LABEL_HTTP_ONLY = "; httponly";
     private static final String ENCODED_LABEL_SECURE = "; secure";
     private static final String ENCODED_LABEL_SAMESITE = "; samesite=";
+    private static final String ENCODED_LABEL_PARTITIONED = "; Partitioned";
 
     private static ParseState parseStateOf(CharSequence fieldName) {
         // Try a binary search based on length. We can read length without bounds checks.
@@ -98,6 +99,7 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
     private final boolean wrapped;
     private final boolean secure;
     private final boolean httpOnly;
+    private final boolean partitioned;
 
     /**
      * Create a new not wrapped, not secure and not HTTP-only {@link HttpSetCookie} instance, with no path, domain,
@@ -123,7 +125,7 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
      */
     public DefaultHttpSetCookie(final CharSequence name, final CharSequence value,
                                 final boolean wrapped, final boolean secure, final boolean httpOnly) {
-        this(name, value, null, null, null, null, null, wrapped, secure, httpOnly);
+        this(name, value, null, null, null, null, null, wrapped, secure, httpOnly, false);
     }
 
     /**
@@ -149,6 +151,34 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                                 @Nullable final CharSequence domain, @Nullable final CharSequence expires,
                                 @Nullable final Long maxAge, @Nullable final SameSite sameSite, final boolean wrapped,
                                 final boolean secure, final boolean httpOnly) {
+        this(name, value, path, domain, expires, maxAge, sameSite, wrapped, secure, httpOnly, false);
+    }
+
+    /**
+     * Creates a new {@link HttpSetCookie} instance.
+     *
+     * @param name the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">cookie-name</a>.
+     * @param value the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">cookie-value</a>.
+     * @param path the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">path-value</a>.
+     * @param domain the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">domain-value</a>.
+     * @param expires the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">expires-av</a>.
+     * Represented as an RFC-1123 date defined in
+     * <a href="https://tools.ietf.org/html/rfc2616#section-3.3.1">RFC-2616, Section 3.3.1</a>.
+     * @param maxAge the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">max-age-av</a>.
+     * @param wrapped {@code true} if the value should be wrapped in DQUOTE as described in
+     * <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">cookie-value</a>.
+     * @param secure the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">secure-av</a>.
+     * @param httpOnly the <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">httponly-av</a> (see
+     * <a href="https://www.owasp.org/index.php/HTTPOnly">HTTP-only</a>).
+     * @param sameSite the
+     * <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05#section-5.3.7">SameSite attribute</a>.
+     * @param partitioned the {@code Partitioned} attribute.
+     * (see <a href="https://developers.google.com/privacy-sandbox/3pcd/chips">Partitioned attribute</a>)
+     */
+    public DefaultHttpSetCookie(final CharSequence name, final CharSequence value, @Nullable final CharSequence path,
+                                @Nullable final CharSequence domain, @Nullable final CharSequence expires,
+                                @Nullable final Long maxAge, @Nullable final SameSite sameSite, final boolean wrapped,
+                                final boolean secure, final boolean httpOnly, final boolean partitioned) {
         validateCookieNameAndValue(name, value);
         this.name = name;
         this.value = value;
@@ -160,6 +190,7 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
         this.wrapped = wrapped;
         this.secure = secure;
         this.httpOnly = httpOnly;
+        this.partitioned = partitioned;
     }
 
     static HttpSetCookie parseSetCookie(final CharSequence setCookieString, boolean validateContent,
@@ -173,6 +204,7 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
         boolean isWrapped = false;
         boolean isSecure = false;
         boolean isHttpOnly = false;
+        boolean isPartitioned = false;
         int begin;
         ParseState parseState;
         if (name != null) {
@@ -290,6 +322,8 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                                 isSecure = true;
                             } else if (contentEqualsIgnoreCase(avName, "httponly")) {
                                 isHttpOnly = true;
+                            } else if (contentEqualsIgnoreCase(avName, "partitioned")) {
+                                isPartitioned = true;
                             }
                             break;
                     }
@@ -357,6 +391,8 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                         isSecure = true;
                     } else if (contentEqualsIgnoreCase(avName, "httponly")) {
                         isHttpOnly = true;
+                    } else if (contentEqualsIgnoreCase(avName, "partitioned")) {
+                        isPartitioned = true;
                     }
                     break;
             }
@@ -383,7 +419,7 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
 
         assert name != null && value != null; // these are checked at runtime in the constructor
         return new DefaultHttpSetCookie(name, value, path, domain, expires, maxAge, sameSite, isWrapped, isSecure,
-                isHttpOnly);
+                isHttpOnly, isPartitioned);
     }
 
     /**
@@ -454,6 +490,11 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
     }
 
     @Override
+    public boolean isPartitioned() {
+        return partitioned;
+    }
+
+    @Override
     public CharSequence encodedCookie() {
         return new DefaultHttpCookiePair(name, value, wrapped).encodedCookie();
     }
@@ -468,7 +509,8 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
                 (maxAge != null ? ENCODED_LABEL_MAX_AGE.length() + 11 : 0) +
                 (sameSite != null ? ENCODED_LABEL_SAMESITE.length() + SameSite.Strict.toString().length() : 0) +
                 (httpOnly ? ENCODED_LABEL_HTTP_ONLY.length() : 0) +
-                (secure ? ENCODED_LABEL_SECURE.length() : 0));
+                (secure ? ENCODED_LABEL_SECURE.length() : 0) +
+                (partitioned ? ENCODED_LABEL_PARTITIONED.length() : 0));
         sb.append(name).append('=');
         if (wrapped) {
             sb.append('"').append(value).append('"');
@@ -500,6 +542,9 @@ public final class DefaultHttpSetCookie implements HttpSetCookie {
         }
         if (secure) {
             sb.append(ENCODED_LABEL_SECURE);
+        }
+        if (partitioned) {
+            sb.append(ENCODED_LABEL_PARTITIONED);
         }
         return sb.toString();
     }
