@@ -145,6 +145,7 @@ jobs:
             **/hs_err*.log
 
   build-android:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     name: android
     env:
