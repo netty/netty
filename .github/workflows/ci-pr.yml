@@ -156,7 +156,6 @@ jobs:
             **/hs_err*.log
 
   build-pr-android:
-    if: ${{ false }}
     runs-on: ubuntu-latest
     name: android
     env:
@@ -186,11 +185,16 @@ jobs:
           distribution: zulu
           java-version: 8
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 8512546
+
       - name: Install Android SDK platforms
-        run: ${ANDROID_HOME}/tools/bin/sdkmanager "platforms;${{ env.SDK_VER }}"
+        run: sdkmanager "platforms;${{ env.SDK_VER }}"
 
       - name: Install Android NDK
-        run: ${ANDROID_HOME}/tools/bin/sdkmanager "ndk;${{ env.NDK_VER }}"
+        run: sdkmanager "ndk;${{ env.NDK_VER }}"
 
       - name: Setup environment
         run: export ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}
