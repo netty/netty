@@ -247,11 +247,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             case NOT_HANDSHAKING:
             case FINISHED:
                 handshakeCompletionNotified = true;
-                String sniHostname = connection.engine().sniHostname;
-                if (sniHostname != null) {
-                    connection.engine().sniHostname = null;
-                    pipeline().fireUserEventTriggered(new SniCompletionEvent(sniHostname));
-                }
                 pipeline().fireUserEventTriggered(SslHandshakeCompletionEvent.SUCCESS);
                 break;
             default:
@@ -279,7 +274,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             this.traceId = new String(traceId);
         }
 
-        connection.initInfo(local, remote);
+        connection.init(local, remote,
+                sniHostname -> pipeline().fireUserEventTriggered(new SniCompletionEvent(sniHostname)));
 
         // Setup QLOG if needed.
         QLogConfiguration configuration = config.getQLogConfiguration();

@@ -39,6 +39,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.LongFunction;
 
 final class QuicheQuicSslEngine extends QuicSslEngine {
@@ -54,7 +55,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     final String tlsHostName;
     volatile QuicheQuicConnection connection;
 
-    String sniHostname;
+    volatile Consumer<String> sniSelectedCallback;
 
     QuicheQuicSslEngine(QuicheQuicSslContext ctx, String peerHost, int peerPort) {
         this.ctx = ctx;
@@ -75,7 +76,10 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         this.ctx.remove(this);
         this.ctx = ctx;
         long added = ctx.add(this);
-        sniHostname = hostname;
+        Consumer<String> sniSelectedCallback = this.sniSelectedCallback;
+        if (sniSelectedCallback != null) {
+            sniSelectedCallback.accept(hostname);
+        }
         return added;
     }
 

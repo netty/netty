@@ -23,6 +23,7 @@ import io.netty.util.ResourceLeakTracker;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 final class QuicheQuicConnection {
@@ -178,7 +179,7 @@ final class QuicheQuicConnection {
         return connection;
     }
 
-    void initInfo(InetSocketAddress local, InetSocketAddress remote) {
+    void init(InetSocketAddress local, InetSocketAddress remote, Consumer<String> sniSelectedCallback) {
         assert connection != -1;
         assert recvInfoBuffer.refCnt() != 0;
         assert sendInfoBuffer.refCnt() != 0;
@@ -190,6 +191,7 @@ final class QuicheQuicConnection {
         // Fill both quiche_send_info structs with the same address.
         QuicheSendInfo.setSendInfo(sendInfoBuffer1, local, remote);
         QuicheSendInfo.setSendInfo(sendInfoBuffer2, local, remote);
+        engine.sniSelectedCallback = sniSelectedCallback;
     }
 
     ByteBuffer nextRecvInfo() {
