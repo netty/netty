@@ -855,7 +855,11 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public int lastStreamCreated() {
-            return nextStreamIdToCreate > 1 ? nextStreamIdToCreate - 2 : 0;
+            // Stream ids are always incremented by 2 so just subtract it. This is even ok in the case
+            // of nextStreamIdToCreate overflown as it will just return the correct positive number.
+            // Use max(...) to ensure we return the correct value for the case when its a client and no stream
+            // was created yet.
+            return Math.max(0, nextStreamIdToCreate - 2);
         }
 
         @Override
@@ -907,7 +911,7 @@ public class DefaultHttp2Connection implements Http2Connection {
                         streamId, nextStreamIdToCreate);
             }
             if (nextStreamIdToCreate <= 0) {
-                // We exhausted the stream id space that we  can use. Let's signal this back but also signal that
+                // We exhausted the stream id space that we can use. Let's signal this back but also signal that
                 // we still may want to process active streams.
                 throw new Http2Exception(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.",
                         Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN);
