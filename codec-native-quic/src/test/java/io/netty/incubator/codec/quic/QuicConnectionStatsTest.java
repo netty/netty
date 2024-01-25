@@ -49,8 +49,8 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
+                super.channelActive(ctx);
                 collectStats(ctx, serverActiveStats);
-                ctx.fireChannelActive();
             }
 
             @Override

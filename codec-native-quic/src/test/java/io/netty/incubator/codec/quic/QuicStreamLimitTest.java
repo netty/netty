@@ -138,6 +138,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
+                super.channelActive(ctx);
                 QuicChannel channel = (QuicChannel) ctx.channel();
                 channel.createStream(type, new ChannelInboundHandlerAdapter())
                         .addListener((Future<QuicStreamChannel> future) -> {

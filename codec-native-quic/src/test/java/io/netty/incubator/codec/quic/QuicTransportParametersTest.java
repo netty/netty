@@ -41,9 +41,9 @@ public class QuicTransportParametersTest extends AbstractQuicTest {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
+                super.channelActive(ctx);
                 QuicheQuicChannel channel = (QuicheQuicChannel) ctx.channel();
                 serverParams.setSuccess(channel.peerTransportParameters());
-                ctx.fireChannelActive();
             }
         };
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();

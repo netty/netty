@@ -85,6 +85,7 @@ public class QuicStreamHalfClosureTest extends AbstractQuicTest {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
+            super.channelActive(ctx);
             QuicChannel channel = (QuicChannel) ctx.channel();
             channel.createStream(type, new ChannelInboundHandlerAdapter() {
                 @Override

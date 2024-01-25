@@ -195,6 +195,7 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
 
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
+                super.channelActive(ctx);
                 ctx.read();
             }
 

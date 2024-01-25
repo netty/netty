@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.EmptyArrays;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -27,6 +28,8 @@ import java.util.Objects;
  * A {@link QuicConnectionAddress} that can be used to connect too.
  */
 public final class QuicConnectionAddress extends SocketAddress {
+
+    static final QuicConnectionAddress NULL_LEN = new QuicConnectionAddress(EmptyArrays.EMPTY_BYTES);
 
     /**
      * Special {@link QuicConnectionAddress} that should be used when the connection address should be generated

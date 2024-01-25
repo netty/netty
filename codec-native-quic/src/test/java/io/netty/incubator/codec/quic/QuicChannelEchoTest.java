@@ -221,6 +221,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
+                super.channelActive(ctx);
                 setAllocator(ctx.channel(), allocator);
                 ctx.channel().config().setAutoRead(autoRead);
                 if (!autoRead) {

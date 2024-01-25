@@ -78,6 +78,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -253,24 +254,25 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
     public void testConnectWithCustomIdLength(Executor executor) throws Throwable {
-        testConnectWithCustomIdLength(executor, 10);
+        testConnectWithCustomIdLength(executor, 10, 5);
     }
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
     public void testConnectWithCustomIdLengthOfZero(Executor executor) throws Throwable {
-        testConnectWithCustomIdLength(executor, 0);
+        testConnectWithCustomIdLength(executor, 0, 0);
     }
 
-    private static void testConnectWithCustomIdLength(Executor executor, int idLength) throws Throwable {
+    private static void testConnectWithCustomIdLength(Executor executor, int clientIdLength, int serverIdLength)
+            throws Throwable {
         ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
         ChannelStateVerifyHandler serverQuicStreamHandler = new ChannelStateVerifyHandler();
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor)
-                        .localConnectionIdLength(idLength),
+                        .localConnectionIdLength(serverIdLength),
                 InsecureQuicTokenHandler.INSTANCE, serverQuicChannelHandler, serverQuicStreamHandler);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
-                .localConnectionIdLength(idLength));
+                .localConnectionIdLength(clientIdLength));
         try {
             ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
@@ -283,8 +285,12 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             ChannelFuture closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
+            assertEquals(clientIdLength, clientQuicChannelHandler.localAddress().connId.remaining());
+            assertEquals(serverIdLength, clientQuicChannelHandler.remoteAddress().connId.remaining());
         } finally {
             serverQuicChannelHandler.assertState();
+            assertEquals(serverIdLength, serverQuicChannelHandler.localAddress().connId.remaining());
+            assertEquals(clientIdLength, serverQuicChannelHandler.remoteAddress().connId.remaining());
             serverQuicStreamHandler.assertState();
 
             server.close().sync();
@@ -1439,8 +1445,6 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
     private static final class ChannelActiveVerifyHandler extends QuicChannelValidationHandler {
         private final BlockingQueue<Integer> states = new LinkedBlockingQueue<>();
-        private volatile QuicConnectionAddress localAddress;
-        private volatile QuicConnectionAddress remoteAddress;
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) {
@@ -1456,9 +1460,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
-            localAddress = (QuicConnectionAddress) ctx.channel().localAddress();
-            remoteAddress = (QuicConnectionAddress) ctx.channel().remoteAddress();
-            ctx.fireChannelActive();
+            super.channelActive(ctx);
             states.add(1);
         }
 
@@ -1475,14 +1477,6 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             }
             assertNull(states.poll());
             super.assertState();
-        }
-
-        QuicConnectionAddress localAddress() {
-            return localAddress;
-        }
-
-        QuicConnectionAddress remoteAddress() {
-            return remoteAddress;
         }
     }
 

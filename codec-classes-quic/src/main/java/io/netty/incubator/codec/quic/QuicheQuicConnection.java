@@ -153,7 +153,7 @@ final class QuicheQuicConnection {
             }
             id = idSupplier.get();
         }
-        return id == null ? null : new QuicConnectionAddress(id);
+        return id == null ? QuicConnectionAddress.NULL_LEN : new QuicConnectionAddress(id);
     }
 
     QuicheQuicTransportParameters peerParameters() {
