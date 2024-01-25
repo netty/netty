@@ -89,19 +89,19 @@ public class Slf4JLoggerFactoryTest {
         internalLogger.warn("{} {} {}", "warn1", "warn2", "warn3");
 
         verify(logger, times(3)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
-                eq(LocationAwareLogger.DEBUG_INT), captor.capture(), any(Object[].class),
+                eq(LocationAwareLogger.DEBUG_INT), captor.capture(), ArgumentMatchers.<Object[]>isNull(),
                 ArgumentMatchers.<Throwable>isNull());
         verify(logger, times(3)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
-                eq(LocationAwareLogger.ERROR_INT), captor.capture(), any(Object[].class),
+                eq(LocationAwareLogger.ERROR_INT), captor.capture(), ArgumentMatchers.<Object[]>isNull(),
                 ArgumentMatchers.<Throwable>isNull());
         verify(logger, times(3)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
-                eq(LocationAwareLogger.INFO_INT), captor.capture(), any(Object[].class),
+                eq(LocationAwareLogger.INFO_INT), captor.capture(), ArgumentMatchers.<Object[]>isNull(),
                 ArgumentMatchers.<Throwable>isNull());
         verify(logger, times(3)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
-                eq(LocationAwareLogger.TRACE_INT), captor.capture(), any(Object[].class),
+                eq(LocationAwareLogger.TRACE_INT), captor.capture(), ArgumentMatchers.<Object[]>isNull(),
                 ArgumentMatchers.<Throwable>isNull());
         verify(logger, times(3)).log(ArgumentMatchers.<Marker>isNull(), eq(LocationAwareSlf4JLogger.FQCN),
-                eq(LocationAwareLogger.WARN_INT), captor.capture(), any(Object[].class),
+                eq(LocationAwareLogger.WARN_INT), captor.capture(), ArgumentMatchers.<Object[]>isNull(),
                 ArgumentMatchers.<Throwable>isNull());
 
         Iterator<String> logMessages = captor.getAllValues().iterator();
