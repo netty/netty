@@ -922,7 +922,7 @@ public class DnsNameResolver extends InetNameResolver {
         // It was not A/AAAA question or there was no entry in /etc/hosts.
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        new DnsRecordResolveContext(this, ch, promise, question, additionals,
+        new DnsRecordResolveContext(this, ch, channelReadyPromise, promise, question, additionals,
                 nameServerAddrs, maxQueriesPerResolve).resolve(promise);
         return promise;
     }
@@ -1216,8 +1216,8 @@ public class DnsNameResolver extends InetNameResolver {
                             final boolean completeEarlyIfPossible) {
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
-        DnsAddressResolveContext ctx = new DnsAddressResolveContext(this, ch, originalPromise, hostname,
-                additionals, nameServerAddrs, maxQueriesPerResolve, resolveCache,
+        DnsAddressResolveContext ctx = new DnsAddressResolveContext(this, ch, channelReadyPromise,
+                originalPromise, hostname, additionals, nameServerAddrs, maxQueriesPerResolve, resolveCache,
                 authoritativeDnsServerCache, completeEarlyIfPossible);
         ctx.resolve(promise);
     }
@@ -1264,8 +1264,9 @@ public class DnsNameResolver extends InetNameResolver {
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             InetSocketAddress nameServerAddr, DnsQuestion question) {
 
-        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE, EMPTY_ADDITIONALS, true,
-                      ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
+        return doQuery(ch, channelReadyPromise, nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                EMPTY_ADDITIONALS, true,
+                ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
     }
 
     /**
@@ -1274,7 +1275,7 @@ public class DnsNameResolver extends InetNameResolver {
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             InetSocketAddress nameServerAddr, DnsQuestion question, Iterable<DnsRecord> additionals) {
 
-        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+        return doQuery(ch, channelReadyPromise, nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
                 toArray(additionals, false), true,
                 ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
     }
@@ -1286,7 +1287,7 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+        return doQuery(ch, channelReadyPromise, nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
                 EMPTY_ADDITIONALS, true, promise);
     }
 
@@ -1298,7 +1299,7 @@ public class DnsNameResolver extends InetNameResolver {
             Iterable<DnsRecord> additionals,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        return query0(nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+        return doQuery(ch, channelReadyPromise, nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
                 toArray(additionals, false), true, promise);
     }
 
@@ -1320,22 +1321,18 @@ public class DnsNameResolver extends InetNameResolver {
         return cause != null && cause.getCause() instanceof DnsNameResolverTimeoutException;
     }
 
-    final void flushQueries() {
-        ch.flush();
-    }
-
-    final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query0(
+    final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> doQuery(
+            Channel channel, Future<? extends Channel> channelReadyFuture,
             InetSocketAddress nameServerAddr, DnsQuestion question,
             final DnsQueryLifecycleObserver queryLifecycleObserver,
-            DnsRecord[] additionals,
-            boolean flush,
+            DnsRecord[] additionals, boolean flush,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
         final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise = cast(
                 checkNotNull(promise, "promise"));
         final int payloadSize = isOptResourceEnabled() ? maxPayloadSize() : 0;
         try {
-            DnsQueryContext queryContext = new DatagramDnsQueryContext(ch, channelReadyPromise, nameServerAddr,
+            DnsQueryContext queryContext = new DatagramDnsQueryContext(channel, channelReadyFuture, nameServerAddr,
                     queryContextManager, payloadSize, isRecursionDesired(), queryTimeoutMillis(), question, additionals,
                     castPromise, socketBootstrap, retryWithTcpOnTimeout);
             ChannelFuture future = queryContext.writeQuery(flush);
