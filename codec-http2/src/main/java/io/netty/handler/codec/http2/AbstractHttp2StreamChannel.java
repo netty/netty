@@ -900,7 +900,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         private void updateLocalWindowIfNeeded() {
-            if (flowControlledBytes != 0) {
+            if (flowControlledBytes != 0 && !parentContext().isRemoved()) {
                 int bytes = flowControlledBytes;
                 flowControlledBytes = 0;
                 ChannelFuture future = write0(parentContext(), new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
