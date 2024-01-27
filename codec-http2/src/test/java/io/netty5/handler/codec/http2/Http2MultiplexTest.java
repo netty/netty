@@ -655,6 +655,30 @@ public class Http2MultiplexTest {
         Future<Http2StreamChannel> future = new Http2StreamChannelBootstrap(parentChannel).handler(handler).open();
         return future.asStage().get();
     }
+    @Test
+    public void allQueuedFramesDeliveredAfterParentIsClosed() throws Exception {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel childChannel = newInboundStream(3, false, new AtomicInteger(1), inboundHandler);
+        assertTrue(childChannel.getOption(ChannelOption.AUTO_READ));
+        childChannel.setOption(ChannelOption.AUTO_READ, false);
+        assertFalse(childChannel.getOption(ChannelOption.AUTO_READ));
+
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("foo"), 0, false);
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("baz"), 0, true);
+        assertNull(inboundHandler.readInbound());
+
+        parentChannel.close();
+        assertTrue(childChannel.isActive());
+        childChannel.read();
+        inboundHandler.checkException();
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 2);
+        assertFalse(childChannel.isActive());
+    }
 
     /**
      * A child channel for an HTTP/2 stream in IDLE state (that is no headers sent or received),

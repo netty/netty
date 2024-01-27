@@ -742,7 +742,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     }
 
     private void updateLocalWindowIfNeeded() {
-        if (flowControlledBytes != 0) {
+        if (flowControlledBytes != 0 && !handler.parentContext().isRemoved()) {
             int bytes = flowControlledBytes;
             flowControlledBytes = 0;
             Future<Void> future = handler.parentContext()
