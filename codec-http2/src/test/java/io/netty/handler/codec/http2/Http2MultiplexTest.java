@@ -631,6 +631,31 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 6);
     }
 
+    @Test
+    public void allQueuedFramesDeliveredAfterParentIsClosed() throws Exception {
+        LastInboundHandler inboundHandler = new LastInboundHandler();
+        Http2StreamChannel childChannel = newInboundStream(3, false, new AtomicInteger(1), inboundHandler);
+        assertTrue(childChannel.config().isAutoRead());
+        childChannel.config().setAutoRead(false);
+        assertFalse(childChannel.config().isAutoRead());
+
+        Http2HeadersFrame headersFrame = inboundHandler.readInbound();
+        assertNotNull(headersFrame);
+
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("foo"), 0, false);
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("bar"), 0, false);
+        frameInboundWriter.writeInboundData(childChannel.stream().id(), bb("baz"), 0, true);
+        assertNull(inboundHandler.readInbound());
+
+        parentChannel.close();
+        assertTrue(childChannel.isActive());
+        childChannel.read();
+        inboundHandler.checkException();
+        verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 2);
+        assertFalse(childChannel.isActive());
+    }
+
     private Http2StreamChannel newOutboundStream(ChannelHandler handler) {
         return new Http2StreamChannelBootstrap(parentChannel).handler(handler)
                 .open().syncUninterruptibly().getNow();
