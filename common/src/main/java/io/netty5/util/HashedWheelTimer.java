@@ -20,6 +20,8 @@ import io.netty5.util.internal.PlatformDependent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.jctools.util.Pow2;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Queue;
@@ -35,7 +37,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static io.netty5.util.internal.ObjectUtil.checkInRange;
 import static io.netty5.util.internal.ObjectUtil.checkPositive;
 import static io.netty5.util.internal.StringUtil.simpleClassName;
 import static java.util.Objects.requireNonNull;
@@ -331,23 +332,13 @@ public class HashedWheelTimer implements Timer {
     }
 
     private static HashedWheelBucket[] createWheel(int ticksPerWheel) {
-        //ticksPerWheel may not be greater than 2^30
-        checkInRange(ticksPerWheel, 1, 1073741824, "ticksPerWheel");
+        ticksPerWheel = Pow2.roundToPowerOfTwo(ticksPerWheel);
 
-        ticksPerWheel = normalizeTicksPerWheel(ticksPerWheel);
         HashedWheelBucket[] wheel = new HashedWheelBucket[ticksPerWheel];
         for (int i = 0; i < wheel.length; i ++) {
             wheel[i] = new HashedWheelBucket();
         }
         return wheel;
-    }
-
-    private static int normalizeTicksPerWheel(int ticksPerWheel) {
-        int normalizedTicksPerWheel = 1;
-        while (normalizedTicksPerWheel < ticksPerWheel) {
-            normalizedTicksPerWheel <<= 1;
-        }
-        return normalizedTicksPerWheel;
     }
 
     /**
