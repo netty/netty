@@ -92,6 +92,7 @@ abstract class DnsResolveContext<T> {
 
     final DnsNameResolver parent;
     private final Channel channel;
+    private final Future<? extends Channel> channelReadyFuture;
     private final Promise<?> originalPromise;
     private final DnsServerAddressStream nameServerAddrs;
     private final String hostname;
@@ -108,13 +109,14 @@ abstract class DnsResolveContext<T> {
     private boolean triedCNAME;
     private boolean completeEarly;
 
-    DnsResolveContext(DnsNameResolver parent, Channel channel, Promise<?> originalPromise,
-                      String hostname, int dnsClass, DnsRecordType[] expectedTypes,
+    DnsResolveContext(DnsNameResolver parent, Channel channel, Future<? extends Channel> channelReadyFuture,
+                      Promise<?> originalPromise, String hostname, int dnsClass, DnsRecordType[] expectedTypes,
                       DnsRecord[] additionals, DnsServerAddressStream nameServerAddrs, int allowedQueries) {
         assert expectedTypes.length > 0;
 
         this.parent = parent;
         this.channel = channel;
+        this.channelReadyFuture = channelReadyFuture;
         this.originalPromise = originalPromise;
         this.hostname = hostname;
         this.dnsClass = dnsClass;
@@ -177,6 +179,7 @@ abstract class DnsResolveContext<T> {
      * Creates a new context with the given parameters.
      */
     abstract DnsResolveContext<T> newResolverContext(DnsNameResolver parent, Channel channel,
+                                                     Future<? extends Channel> channelReadyFuture,
                                                      Promise<?> originalPromise,
                                                      String hostname,
                                                      int dnsClass, DnsRecordType[] expectedTypes,
@@ -288,8 +291,9 @@ abstract class DnsResolveContext<T> {
     }
 
     void doSearchDomainQuery(String hostname, Promise<List<T>> nextPromise) {
-        DnsResolveContext<T> nextContext = newResolverContext(parent, channel, originalPromise, hostname, dnsClass,
-                                                              expectedTypes, additionals, nameServerAddrs,
+        DnsResolveContext<T> nextContext = newResolverContext(parent, channel, channelReadyFuture,
+                originalPromise, hostname, dnsClass,
+                expectedTypes, additionals, nameServerAddrs,
                 parent.maxQueriesPerResolve());
         nextContext.internalResolve(hostname, nextPromise);
     }
@@ -368,8 +372,8 @@ abstract class DnsResolveContext<T> {
             }
             query(name, expectedTypes[end], nameServerAddressStream, false, promise);
         } finally {
-            // Now flush everything we submitted before.
-            parent.flushQueries();
+            // Now flush everything we submitted before for the Channel.
+            channel.flush();
         }
     }
 
@@ -453,7 +457,8 @@ abstract class DnsResolveContext<T> {
         }
 
         final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f =
-                parent.query0(nameServerAddr, question, queryLifecycleObserver, additionals, flush, queryPromise);
+                parent.doQuery(channel, channelReadyFuture, nameServerAddr, question,
+                        queryLifecycleObserver, additionals, flush, queryPromise);
 
         queriesInProgress.add(f);
 
@@ -541,13 +546,13 @@ abstract class DnsResolveContext<T> {
         if (!DnsNameResolver.doResolveAllCached(nameServerName, additionals, resolverPromise, resolveCache,
                 parent.resolvedProtocolFamiliesUnsafe())) {
 
-            new DnsAddressResolveContext(parent, channel, originalPromise, nameServerName, additionals,
-                                         parent.newNameServerAddressStream(nameServerName),
-                                         // Resolving the unresolved nameserver must be limited by allowedQueries
-                                         // so we eventually fail
-                                         allowedQueries,
-                                         resolveCache,
-                                         redirectAuthoritativeDnsServerCache(authoritativeDnsServerCache()), false)
+            new DnsAddressResolveContext(parent, channel, channelReadyFuture,
+                    originalPromise, nameServerName, additionals, parent.newNameServerAddressStream(nameServerName),
+                    // Resolving the unresolved nameserver must be limited by allowedQueries
+                    // so we eventually fail
+                    allowedQueries,
+                    resolveCache,
+                    redirectAuthoritativeDnsServerCache(authoritativeDnsServerCache()), false)
                     .resolve(resolverPromise);
         }
     }
