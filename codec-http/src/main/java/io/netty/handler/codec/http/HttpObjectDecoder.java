@@ -368,7 +368,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             case SKIP_CONTROL_CHARS:
                 // fast-path
                 // No content is expected.
-                out.add(message);
+                addCurrentMessage(out);
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                 resetNow();
                 return;
@@ -377,7 +377,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     throw new IllegalArgumentException("Chunked messages not supported");
                 }
                 // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
-                out.add(message);
+                addCurrentMessage(out);
                 return;
             default:
                 /*
@@ -387,7 +387,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                  * server closing the connection. So we treat this as variable length chunked encoding.
                  */
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
-                    out.add(message);
+                    addCurrentMessage(out);
                     out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                     resetNow();
                     return;
@@ -396,7 +396,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 assert nextState == State.READ_FIXED_LENGTH_CONTENT ||
                         nextState == State.READ_VARIABLE_LENGTH_CONTENT;
 
-                out.add(message);
+                addCurrentMessage(out);
 
                 if (nextState == State.READ_FIXED_LENGTH_CONTENT) {
                     // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT state reads data chunk by chunk.
@@ -608,6 +608,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
         super.userEventTriggered(ctx, evt);
+    }
+
+    private void addCurrentMessage(List<Object> out) {
+        HttpMessage message = this.message;
+        assert message != null;
+        this.message = null;
+        out.add(message);
     }
 
     protected boolean isContentAlwaysEmpty(HttpMessage msg) {
