@@ -127,8 +127,9 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
         }
 
         private static PseudoHeaderName getPseudoHeaderName(CharSequence header) {
-            if (header.length() > 0 && header.charAt(0) == PSEUDO_HEADER_PREFIX) {
-                switch (header.length()) {
+            int length = header.length();
+            if (length > 0 && header.charAt(0) == PSEUDO_HEADER_PREFIX) {
+                switch (length) {
                 case 5:
                     // :path
                     return ":path".contentEquals(header)? PATH : null;
@@ -168,10 +169,7 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
          */
         public static PseudoHeaderName getPseudoHeader(AsciiString header) {
             int length = header.length();
-            if (length == 0) {
-                return null;
-            }
-            if (header.charAt(0) == PSEUDO_HEADER_PREFIX_BYTE) {
+            if (length > 0 && header.charAt(0) == PSEUDO_HEADER_PREFIX) {
                 switch (length) {
                 case 5:
                     // :path
