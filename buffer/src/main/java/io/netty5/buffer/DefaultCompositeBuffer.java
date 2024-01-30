@@ -155,7 +155,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
      * @see CompositeBuffer#compose(BufferAllocator)
      */
     public static CompositeBuffer compose(BufferAllocator allocator) {
-        return new DefaultCompositeBuffer(allocator, EMPTY_BUFFER_ARRAY, COMPOSITE_DROP);
+        return new DefaultCompositeBuffer(allocator, false, EMPTY_BUFFER_ARRAY, COMPOSITE_DROP);
     }
 
     private static Buffer[] filterExternalBufs(Iterable<Buffer> externals) {
@@ -252,19 +252,30 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
     }
 
-    private DefaultCompositeBuffer(BufferAllocator allocator, Buffer[] bufs, Drop<DefaultCompositeBuffer> drop) {
+    /**
+     * Normal constructor. {@link #readOnly} state is deduced from {@code bufs} parameter.
+     */
+    private DefaultCompositeBuffer(
+            BufferAllocator allocator, Buffer[] bufs, Drop<DefaultCompositeBuffer> drop) {
         super(drop);
         try {
             this.allocator = Objects.requireNonNull(allocator, "BufferAllocator cannot be null.");
-            if (bufs.length > 0) {
-                boolean targetReadOnly = bufs[0].readOnly();
-                for (Buffer buf : bufs) {
-                    if (buf.readOnly() != targetReadOnly) {
-                        throw new IllegalArgumentException("Constituent buffers have inconsistent read-only state.");
-                    }
+
+            // if any input is readOnly, make all readOnly.
+            boolean readOnly = false;
+            for (Buffer buf : bufs) {
+                if (buf.readOnly()) {
+                    readOnly = true;
+                    break;
                 }
-                readOnly = targetReadOnly;
             }
+            if (readOnly) {
+                for (Buffer buf : bufs) {
+                    buf.makeReadOnly();
+                }
+            }
+            this.readOnly = readOnly;
+
             this.bufs = bufs;
             computeBufferOffsets();
             implicitCapacityLimit = MAX_BUFFER_SIZE;
@@ -279,6 +290,23 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 }
             }
             throw e;
+        }
+    }
+
+    /**
+     * Constructor with an additional check that the input bufs match the requested {@link #readOnly} state.
+     */
+    private DefaultCompositeBuffer(
+            BufferAllocator allocator, boolean readOnly, Buffer[] bufs, Drop<DefaultCompositeBuffer> drop) {
+        this(allocator, bufs, drop);
+        if (readOnly != this.readOnly) {
+            // normally, readOnly state should be deduced correctly from input bufs. why didn't it work?
+            if (readOnly && bufs.length == 0) {
+                // no input bufs to deduce from
+                this.readOnly = true;
+            } else {
+                throw new IllegalArgumentException("Given bufs must already be in correct state");
+            }
         }
     }
 
@@ -398,10 +426,12 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public CompositeBuffer makeReadOnly() {
-        for (Buffer buf : bufs) {
-            buf.makeReadOnly();
+        if (!readOnly) {
+            for (Buffer buf : bufs) {
+                buf.makeReadOnly();
+            }
+            readOnly = true;
         }
-        readOnly = true;
         return this;
     }
 
@@ -464,11 +494,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 copies = Arrays.copyOf(copies, j);
             } else {
                 // Specialize for length == 0.
-                copies = new Buffer[] { choice.copy(subOffset, 0) };
+                copies = new Buffer[] { choice.copy(subOffset, 0, readOnly) };
             }
         }
 
-        return new DefaultCompositeBuffer(allocator, copies, COMPOSITE_DROP);
+        return new DefaultCompositeBuffer(allocator, readOnly, copies, COMPOSITE_DROP);
     }
 
     @Override
@@ -857,12 +887,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             }
             throw new IllegalStateException("This buffer cannot be extended because it is not in an owned state.");
         }
-        if (bufs.length > 0 && buffer.readOnly() != readOnly()) {
-            buffer.close();
-            throw new IllegalArgumentException(
-                    "This buffer is " + (readOnly? "read-only" : "writable") + ", " +
-                    "and cannot be extended with a buffer that is " +
-                    (buffer.readOnly()? "read-only." : "writable."));
+        if (readOnly) {
+            buffer.makeReadOnly();
+        } else if (buffer.readOnly()) {
+            // "devolve" to a readOnly buf to accomodate.
+            this.makeReadOnly();
         }
 
         long extensionCapacity = buffer.capacity();
@@ -884,9 +913,6 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             concatArray[bufs.length] = buffer;
             bufs = filterExternalBufs(Arrays.asList(concatArray));
             computeBufferOffsets();
-            if (restoreTemp.length == 0) {
-                readOnly = buffer.readOnly();
-            }
         } catch (Exception e) {
             bufs = restoreTemp;
             throw e;
@@ -926,7 +952,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         checkSplit(splitOffset);
         if (bufs.length == 0) {
             // Splitting a zero-length buffer is trivial.
-            return new DefaultCompositeBuffer(allocator, bufs, unsafeGetDrop());
+            return buildSplitBuffer(bufs);
         }
 
         int i = searchOffsets(splitOffset);
@@ -941,8 +967,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     private CompositeBuffer buildSplitBuffer(Buffer[] splits) {
-        // TODO do we need to preserve read-only state of empty buffer?
-        return new DefaultCompositeBuffer(allocator, splits, unsafeGetDrop());
+        return new DefaultCompositeBuffer(allocator, readOnly, splits, unsafeGetDrop());
     }
 
     @Override
@@ -950,7 +975,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         checkSplit(splitOffset);
         if (bufs.length == 0) {
             // Splitting a zero-length buffer is trivial.
-            return new DefaultCompositeBuffer(allocator, bufs, unsafeGetDrop());
+            return buildSplitBuffer(bufs);
         }
 
         int i = searchOffsets(splitOffset);
@@ -969,7 +994,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         checkSplit(splitOffset);
         if (bufs.length == 0) {
             // Splitting a zero-length buffer is trivial.
-            return new DefaultCompositeBuffer(allocator, bufs, unsafeGetDrop());
+            return buildSplitBuffer(bufs);
         }
 
         int i = searchOffsets(splitOffset);
@@ -1355,8 +1380,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             for (int i = 0; i < sends.length; i++) {
                 received[i] = sends[i].receive();
             }
-            var composite = new DefaultCompositeBuffer(allocator, received, drop);
-            composite.readOnly = readOnly;
+            var composite = new DefaultCompositeBuffer(allocator, readOnly, received, drop);
             composite.implicitCapacityLimit = implicitCapacityLimit;
             return composite;
         };

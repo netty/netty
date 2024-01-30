@@ -87,9 +87,6 @@ import java.nio.charset.Charset;
  *
  * <h3>Constituent buffer requirements</h3>
  *
- * The buffers that are being composed must all have the same writability.
- * Either all components must be {@linkplain Buffer#readOnly() read-only}, or they must all be writable.
- * <p>
  * It is not a requirement that the buffers have the same size.
  * <p>
  * It is not a requirement that the buffers are allocated by this allocator, but if
@@ -102,6 +99,13 @@ import java.nio.charset.Charset;
  * For sending to be possible, both the composite buffer itself, and all of its constituent buffers, must be in a
  * state that permits them being sent. This should be the case by default, as it shouldn't be possible to create
  * composite buffers that can't be sent.
+ *
+ * <h3>Writability</h3>
+ *
+ * A composite buffer is either fully writable or fully read-only. If a composite buffer is created with a mix of
+ * writable and read-only buffers, all constituent buffers are made read-only. If a read-only composite buffer is
+ * extended with a writable buffer, the new components becomes read-only. If a writable composite buffer is extended
+ * with a read-only buffer, the full composite buffer becomes read-only.
  */
 public interface CompositeBuffer extends Buffer {
 
@@ -132,6 +136,8 @@ public interface CompositeBuffer extends Buffer {
      * This works as if the extension had originally been included at the end of the list of constituent buffers when
      * the composite buffer was created.
      * The extension buffer is added to the end of this composite buffer, which is modified in-place.
+     * If the extension buffer is {@link #readOnly()} but this composite buffer is not, this composite buffer is made
+     * {@link #readOnly()} to accommodate.
      *
      * @see BufferAllocator#compose(Send)
      * @param extension The buffer to extend the composite buffer with.
