@@ -37,6 +37,17 @@ public class Http2HeadersTest {
     }
 
     @Test
+    public void pseudoHeaderNamesAreLiterals() {
+        // despite is an implementation details. is a relevant optimization
+        assertSame(":authority", PseudoHeaderName.AUTHORITY.value().toString());
+        assertSame(":method", PseudoHeaderName.METHOD.value().toString());
+        assertSame(":path", PseudoHeaderName.PATH.value().toString());
+        assertSame(":scheme", PseudoHeaderName.SCHEME.value().toString());
+        assertSame(":status", PseudoHeaderName.STATUS.value().toString());
+        assertSame(":protocol", PseudoHeaderName.PROTOCOL.value().toString());
+    }
+
+    @Test
     public void testIsPseudoHeader() {
         // same as before but for isPseudoHeader
         for (PseudoHeaderName pseudoHeaderName : PseudoHeaderName.values()) {
