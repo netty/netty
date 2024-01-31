@@ -506,13 +506,11 @@ public class DnsNameResolver extends InetNameResolver {
             }
         });
 
-        final ChannelFuture future;
         if (localAddress == null) {
-            b.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
-            future = b.register();
-        } else {
-            future = b.bind(localAddress);
+            localAddress = new InetSocketAddress(0);
         }
+
+        ChannelFuture future = b.bind(localAddress);
         if (future.isDone()) {
             Throwable cause = future.cause();
             if (cause != null) {
