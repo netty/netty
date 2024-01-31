@@ -19,12 +19,14 @@ import io.netty5.buffer.Buffer;
 import io.netty5.buffer.CompositeBuffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.DecoderResultProvider;
+import io.netty5.handler.codec.PrematureChannelClosureException;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.AsciiString;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
 
 import static io.netty5.buffer.CompositeBuffer.isComposite;
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
@@ -673,5 +675,15 @@ public class HttpObjectAggregatorTest {
         } finally {
           channel.close();
         }
+    }
+
+    @Test
+    public void testPrematureClosureWithChunkedEncodingAndAggregator() {
+        final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(), new HttpObjectAggregator(1024));
+
+        // Write the partial response.
+        assertFalse(ch.writeInbound(preferredAllocator().copyOf(
+                "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n8\r\n12345678", StandardCharsets.US_ASCII)));
+        assertThrows(PrematureChannelClosureException.class, ch::finish);
     }
 }

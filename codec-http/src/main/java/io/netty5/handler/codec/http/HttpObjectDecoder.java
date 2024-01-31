@@ -145,6 +145,8 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private HttpMessage message;
     private long chunkSize;
     private long contentLength = Long.MIN_VALUE;
+    private boolean chunked;
+    private boolean isSwitchingToNonHttp1Protocol;
     private final AtomicBoolean resetRequested = new AtomicBoolean();
 
     // These will be updated by splitHeader(...)
@@ -221,7 +223,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             currentState = State.READ_HEADER;
             // fall-through
         } catch (Exception e) {
-            ctx.fireChannelRead(invalidMessage(ctx, buffer, e));
+            ctx.fireChannelRead(invalidMessage(ctx, message, buffer, e));
             return;
         }
         case READ_HEADER: try {
@@ -234,7 +236,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             case SKIP_CONTROL_CHARS:
                 // fast-path
                 // No content is expected.
-                ctx.fireChannelRead(message);
+                addCurrentMessage(ctx);
                 ctx.fireChannelRead(new EmptyLastHttpContent(ctx.bufferAllocator()));
                 resetNow();
                 return;
@@ -243,7 +245,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     throw new IllegalArgumentException("Chunked messages not supported");
                 }
                 // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
-                ctx.fireChannelRead(message);
+                addCurrentMessage(ctx);
                 return;
             default:
                 /*
@@ -252,7 +254,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                   length is 0. However for a response the body length is the number of octets received prior to the
                   server closing the connection. So we treat this as variable length chunked encoding.
                  */
-                long contentLength = contentLength();
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                     ctx.fireChannelRead(message);
                     ctx.fireChannelRead(new EmptyLastHttpContent(ctx.bufferAllocator()));
@@ -263,7 +264,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 assert nextState == State.READ_FIXED_LENGTH_CONTENT ||
                         nextState == State.READ_VARIABLE_LENGTH_CONTENT;
 
-                ctx.fireChannelRead(message);
+                addCurrentMessage(ctx);
 
                 if (nextState == State.READ_FIXED_LENGTH_CONTENT) {
                     // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT state reads data chunk by chunk.
@@ -274,7 +275,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return;
             }
         } catch (Exception e) {
-            ctx.fireChannelRead(invalidMessage(ctx, buffer, e));
+            ctx.fireChannelRead(invalidMessage(ctx, message, buffer, e));
             return;
         }
         case READ_VARIABLE_LENGTH_CONTENT: {
@@ -408,40 +409,50 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             resetNow();
         }
         // Handle the last unfinished message.
-        if (message != null) {
-            boolean chunked = HttpUtil.isTransferEncodingChunked(message);
-            if (currentState == State.READ_VARIABLE_LENGTH_CONTENT && in.readableBytes() == 0 && !chunked) {
-                // End of connection.
-                ctx.fireChannelRead(new EmptyLastHttpContent(ctx.bufferAllocator()));
-                resetNow();
+        switch (currentState) {
+            case READ_VARIABLE_LENGTH_CONTENT:
+                if (!chunked && in.readableBytes() == 0) {
+                    // End of connection.
+                    ctx.fireChannelRead(new EmptyLastHttpContent(ctx.bufferAllocator()));
+                    resetNow();
+                }
                 return;
-            }
-
-            if (currentState == State.READ_HEADER) {
+            case READ_HEADER:
                 // If we are still in the state of reading headers we need to create a new invalid message that
                 // signals that the connection was closed before we received the headers.
-                ctx.fireChannelRead(invalidMessage(ctx,
+                ctx.fireChannelRead(invalidMessage(ctx, message,
                         new PrematureChannelClosureException("Connection closed before received headers")));
                 resetNow();
                 return;
-            }
-
-            // Check if the closure of the connection signifies the end of the content.
-            boolean prematureClosure;
-            if (isDecodingRequest() || chunked) {
-                // The last request did not wait for a response.
-                prematureClosure = true;
-            } else {
-                // Compare the length of the received content and the 'Content-Length' header.
-                // If the 'Content-Length' header is absent, the length of the content is determined by the end of the
-                // connection, so it is perfectly fine.
-                prematureClosure = contentLength() > 0;
-            }
-
-            if (!prematureClosure) {
-                ctx.fireChannelRead(new EmptyLastHttpContent(ctx.bufferAllocator()));
-            }
-            resetNow();
+            case READ_CHUNK_DELIMITER: // fall-trough
+            case READ_CHUNK_FOOTER: // fall-trough
+            case READ_CHUNKED_CONTENT: // fall-trough
+            case READ_CHUNK_SIZE: // fall-trough
+            case READ_FIXED_LENGTH_CONTENT:
+                // Check if the closure of the connection signifies the end of the content.
+                boolean prematureClosure;
+                if (isDecodingRequest() || chunked) {
+                    // The last request did not wait for a response.
+                    prematureClosure = true;
+                } else {
+                    // Compare the length of the received content and the 'Content-Length' header.
+                    // If the 'Content-Length' header is absent, the length of the content is determined by the end of
+                    // the connection, so it is perfectly fine.
+                    prematureClosure = contentLength > 0;
+                }
+                if (!prematureClosure) {
+                    ctx.fireChannelRead(new EmptyLastHttpContent(ctx.bufferAllocator()));
+                }
+                resetNow();
+                return;
+            case SKIP_CONTROL_CHARS: // fall-trough
+            case READ_INITIAL:// fall-trough
+            case BAD_MESSAGE: // fall-trough
+            case UPGRADED: // fall-trough
+                // Do nothing
+                break;
+            default:
+                throw new IllegalStateException("Unhandled state " + currentState);
         }
     }
 
@@ -459,6 +470,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
         super.channelInboundEvent(ctx, evt);
+    }
+
+    private void addCurrentMessage(ChannelHandlerContext ctx) {
+        HttpMessage message = this.message;
+        assert message != null;
+        this.message = null;
+        ctx.fireChannelRead(message);
     }
 
     protected boolean isContentAlwaysEmpty(HttpMessage msg) {
@@ -505,44 +523,41 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private void resetNow() {
-        HttpMessage message = this.message;
-        this.message = null;
+        message = null;
         name = null;
         value = null;
         contentLength = Long.MIN_VALUE;
+        chunked = false;
         lineParser.reset();
         headerParser.reset();
         trailer = null;
-        if (!isDecodingRequest()) {
-            HttpResponse res = (HttpResponse) message;
-            if (res != null && isSwitchingToNonHttp1Protocol(res)) {
-                currentState = State.UPGRADED;
-                return;
-            }
+        if (isSwitchingToNonHttp1Protocol) {
+            isSwitchingToNonHttp1Protocol = false;
+            currentState = State.UPGRADED;
+            return;
         }
 
         resetRequested.lazySet(false);
         currentState = State.SKIP_CONTROL_CHARS;
     }
 
-    private HttpMessage invalidMessage(ChannelHandlerContext ctx, Buffer in, Exception cause) {
+    private HttpMessage invalidMessage(ChannelHandlerContext ctx, HttpMessage current, Buffer in, Exception cause) {
         // Advance the readerIndex so that ByteToMessageDecoder does not complain
         // when we produced an invalid message without consuming anything.
         in.skipReadableBytes(in.readableBytes());
-        return invalidMessage(ctx, cause);
+        return invalidMessage(ctx, current, cause);
     }
 
-    private HttpMessage invalidMessage(ChannelHandlerContext ctx, Exception cause) {
+    private HttpMessage invalidMessage(ChannelHandlerContext ctx, HttpMessage current, Exception cause) {
         currentState = State.BAD_MESSAGE;
-
-        if (message == null) {
-            message = createInvalidMessage(ctx);
-        }
-        message.setDecoderResult(DecoderResult.failure(cause));
-
-        HttpMessage ret = message;
         message = null;
-        return ret;
+        trailer = null;
+
+        if (current == null) {
+            current = createInvalidMessage(ctx);
+        }
+        current.setDecoderResult(DecoderResult.failure(cause));
+        return current;
     }
 
     private HttpContent<?> invalidChunk(BufferAllocator allocator, Buffer in, Exception cause) {
@@ -614,21 +629,30 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (contentLength != -1) {
                 headers.set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(contentLength));
             }
+        } else {
+            contentLength = -1;
+        }
+
+        if (!isDecodingRequest() && message instanceof HttpResponse) {
+            HttpResponse res = (HttpResponse) message;
+            this.isSwitchingToNonHttp1Protocol = isSwitchingToNonHttp1Protocol(res);
         }
 
         if (isContentAlwaysEmpty(message)) {
             HttpUtil.setTransferEncodingChunked(message, false);
             return State.SKIP_CONTROL_CHARS;
-        } else if (HttpUtil.isTransferEncodingChunked(message)) {
+        }
+        if (HttpUtil.isTransferEncodingChunked(message)) {
+            this.chunked = true;
             if (hasContentLength && message.protocolVersion() == HttpVersion.HTTP_1_1) {
                 handleTransferEncodingChunkedWithContentLength(message);
             }
             return State.READ_CHUNK_SIZE;
-        } else if (contentLength() >= 0) {
-            return State.READ_FIXED_LENGTH_CONTENT;
-        } else {
-            return State.READ_VARIABLE_LENGTH_CONTENT;
         }
+        if (contentLength >= 0) {
+            return State.READ_FIXED_LENGTH_CONTENT;
+        }
+        return State.READ_VARIABLE_LENGTH_CONTENT;
     }
 
     /**
@@ -653,13 +677,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected void handleTransferEncodingChunkedWithContentLength(HttpMessage message) {
         message.headers().remove(HttpHeaderNames.CONTENT_LENGTH);
         contentLength = Long.MIN_VALUE;
-    }
-
-    private long contentLength() {
-        if (contentLength == Long.MIN_VALUE) {
-            contentLength = HttpUtil.getContentLength(message, -1L);
-        }
-        return contentLength;
     }
 
     private LastHttpContent<?> readTrailingHeaders(BufferAllocator allocator, Buffer buffer) {
