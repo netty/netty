@@ -485,17 +485,13 @@ public class DnsNameResolver extends InetNameResolver {
             }
         });
         b.option(ChannelOption.READ_HANDLE_FACTORY, new FixedReadHandleFactory(maxPayloadSize));
-
+        if (localAddress == null) {
+            localAddress = new InetSocketAddress(0);
+        }
         try {
-            Future<Void> future;
-            if (localAddress == null) {
-                b.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
-                ch = b.createUnregistered();
-                future = ch.register();
-            } else {
-                ch = b.createUnregistered();
-                future = ch.bind(localAddress);
-            }
+            ch = b.createUnregistered();
+            SocketAddress local = localAddress;
+            Future<Void> future = ch.register().flatMap(__ -> ch.bind(local));
             if (future.isFailed()) {
                 throw future.cause();
             } else if (!future.isSuccess()) {
