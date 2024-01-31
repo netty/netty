@@ -29,6 +29,7 @@ import static io.netty5.handler.codec.http.websocketx.WebSocketClientProtocolCon
 import static io.netty5.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT_HANDLE_CLOSE_FRAMES;
 import static io.netty5.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT_PERFORM_MASKING;
 import static io.netty5.handler.codec.http.websocketx.WebSocketServerProtocolConfig.DEFAULT_HANDSHAKE_TIMEOUT_MILLIS;
+import static io.netty5.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT_WITH_UTF8_VALIDATOR;
 
 /**
  * This handler does all the heavy lifting for you to run a websocket client.
@@ -77,6 +78,23 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
             clientConfig.absoluteUpgradeUrl(),
             clientConfig.generateOriginHeader()
         );
+        this.clientConfig = clientConfig;
+    }
+
+    /**
+     * Base constructor
+     *
+     * @param handshaker
+     *            The {@link WebSocketClientHandshaker} which will be used to issue the handshake once the connection
+     *            was established to the remote peer.
+     * @param clientConfig
+     *            Client protocol configuration.
+     */
+    public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker,
+                                          WebSocketClientProtocolConfig clientConfig) {
+        super(Objects.requireNonNull(clientConfig, "clientConfig").dropPongFrames(),
+              clientConfig.sendCloseFrame(), clientConfig.forceCloseTimeoutMillis());
+        this.handshaker = handshaker;
         this.clientConfig = clientConfig;
     }
 
@@ -314,11 +332,34 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
                                           boolean dropPongFrames, long handshakeTimeoutMillis) {
+        this(handshaker, handleCloseFrames, dropPongFrames, handshakeTimeoutMillis, DEFAULT_WITH_UTF8_VALIDATOR);
+    }
+
+    /**
+     * Base constructor
+     *
+     * @param handshaker
+     *            The {@link WebSocketClientHandshaker} which will be used to issue the handshake once the connection
+     *            was established to the remote peer.
+     * @param handleCloseFrames
+     *            {@code true} if close frames should not be forwarded and just close the channel
+     * @param dropPongFrames
+     *            {@code true} if pong frames should not be forwarded
+     * @param handshakeTimeoutMillis
+     *            Handshake timeout in mills, when handshake timeout, will trigger user
+     *            event {@link WebSocketClientHandshakeCompletionEvent}
+     * @param withUTF8Validator
+     *            {@code true} if UTF8 validation of text frames should be enabled
+     */
+    public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
+                                          boolean dropPongFrames, long handshakeTimeoutMillis,
+                                          boolean withUTF8Validator) {
         super(dropPongFrames);
         this.handshaker = handshaker;
         this.clientConfig = WebSocketClientProtocolConfig.newBuilder()
             .handleCloseFrames(handleCloseFrames)
             .handshakeTimeoutMillis(handshakeTimeoutMillis)
+            .withUTF8Validator(withUTF8Validator)
             .build();
     }
 
