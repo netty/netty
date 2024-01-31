@@ -89,10 +89,7 @@ public interface Http2Headers extends HttpHeaders {
         public static boolean hasPseudoHeaderFormat(CharSequence headerName) {
             if (headerName instanceof AsciiString) {
                 final AsciiString asciiHeaderName = (AsciiString) headerName;
-                // We don't call AsciiString.byteAt() because a direct array access seems to optimise better when we'll
-                // never trigger the bounds-checks.
-                return !asciiHeaderName.isEmpty() &&
-                        asciiHeaderName.array()[asciiHeaderName.arrayOffset()] == PSEUDO_HEADER_PREFIX_BYTE;
+                return asciiHeaderName.length() > 0 && asciiHeaderName.byteAt(0) == PSEUDO_HEADER_PREFIX_BYTE;
             } else {
                 return headerName.length() > 0 && headerName.charAt(0) == PSEUDO_HEADER_PREFIX;
             }
@@ -106,53 +103,104 @@ public interface Http2Headers extends HttpHeaders {
         }
 
         /**
+         * Indicates whether the given header name is a valid HTTP/2 pseudo header.
+         */
+        public static boolean isPseudoHeader(AsciiString header) {
+            return getPseudoHeader(header) != null;
+        }
+
+        /**
+         * Indicates whether the given header name is a valid HTTP/2 pseudo header.
+         */
+        public static boolean isPseudoHeader(String header) {
+            return getPseudoHeader(header) != null;
+        }
+
+        /**
          * Returns the {@link PseudoHeaderName} corresponding to the specified header name.
          *
          * @return corresponding {@link PseudoHeaderName} if any, {@code null} otherwise.
          */
         public static PseudoHeaderName getPseudoHeader(CharSequence header) {
-            if (header.length() < 5 || header.charAt(0) != ':') {
-                return null;
+            if (header instanceof AsciiString) {
+                return getPseudoHeader((AsciiString) header);
             }
-            // The second character is a perfect discriminant. Here in alphabetical order:
-            //   :path => a
-            //   :scheme => c
-            //   :method => e
-            //   :protocol => r
-            //   :status => t
-            //   :authority => u
-            //     ^
-            switch (header.charAt(2)) {
-            case 'a':
-                if (AsciiString.contentEqualsIgnoreCase(PATH.value, header)) {
-                    return PATH;
+            return getPseudoHeaderName(header);
+        }
+
+        private static PseudoHeaderName getPseudoHeaderName(CharSequence header) {
+            int length = header.length();
+            if (length > 0 && header.charAt(0) == PSEUDO_HEADER_PREFIX) {
+                switch (length) {
+                    case 5:
+                        // :path
+                        return ":path".contentEquals(header)? PATH : null;
+                    case 7:
+                        // :method, :scheme, :status
+                        if (":method" == header) {
+                            return METHOD;
+                        }
+                        if (":scheme" == header) {
+                            return SCHEME;
+                        }
+                        if (":status" == header) {
+                            return STATUS;
+                        }
+                        if (":method".contentEquals(header)) {
+                            return METHOD;
+                        }
+                        if (":scheme".contentEquals(header)) {
+                            return SCHEME;
+                        }
+                        return ":status".contentEquals(header)? STATUS : null;
+                    case 9:
+                        // :protocol
+                        return ":protocol".contentEquals(header)? PROTOCOL : null;
+                    case 10:
+                        // :authority
+                        return ":authority".contentEquals(header)? AUTHORITY : null;
                 }
-                break;
-            case 'c':
-                if (AsciiString.contentEqualsIgnoreCase(SCHEME.value, header)) {
-                    return SCHEME;
+            }
+            return null;
+        }
+
+        /**
+         * Returns the {@link PseudoHeaderName} corresponding to the specified header name.
+         *
+         * @return corresponding {@link PseudoHeaderName} if any, {@code null} otherwise.
+         */
+        public static PseudoHeaderName getPseudoHeader(AsciiString header) {
+            int length = header.length();
+            if (length > 0 && header.charAt(0) == PSEUDO_HEADER_PREFIX) {
+                switch (length) {
+                    case 5:
+                        // :path
+                        return PATH.value().equals(header) ? PATH : null;
+                    case 7:
+                        if (header == METHOD.value()) {
+                            return METHOD;
+                        }
+                        if (header == SCHEME.value()) {
+                            return SCHEME;
+                        }
+                        if (header == STATUS.value()) {
+                            return STATUS;
+                        }
+                        // :method, :scheme, :status
+                        if (METHOD.value().equals(header)) {
+                            return METHOD;
+                        }
+                        if (SCHEME.value().equals(header)) {
+                            return SCHEME;
+                        }
+                        return STATUS.value().equals(header)? STATUS : null;
+                    case 9:
+                        // :protocol
+                        return PROTOCOL.value().equals(header)? PROTOCOL : null;
+                    case 10:
+                        // :authority
+                        return AUTHORITY.value().equals(header)? AUTHORITY : null;
                 }
-                break;
-            case 'e':
-                if (AsciiString.contentEqualsIgnoreCase(METHOD.value, header)) {
-                    return METHOD;
-                }
-                break;
-            case 'r':
-                if (AsciiString.contentEqualsIgnoreCase(PROTOCOL.value, header)) {
-                    return PROTOCOL;
-                }
-                break;
-            case 't':
-                if (AsciiString.contentEqualsIgnoreCase(STATUS.value, header)) {
-                    return STATUS;
-                }
-                break;
-            case 'u':
-                if (AsciiString.contentEqualsIgnoreCase(AUTHORITY.value, header)) {
-                    return AUTHORITY;
-                }
-                break;
             }
             return null;
         }
