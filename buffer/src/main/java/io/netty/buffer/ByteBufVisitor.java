@@ -142,6 +142,13 @@ public final class ByteBufVisitor {
         }
 
         @Override
+        public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
+            // TODO: It would be more optimal to have a callback method that takes a byte array
+            callback.visitBuffer(Unpooled.wrappedBuffer(src), srcIndex, length);
+            return this;
+        }
+
+        @Override
         public boolean hasArray() {
             // return false so that the wrapped buffer is visited
             return false;
@@ -542,11 +549,6 @@ public final class ByteBufVisitor {
 
         @Override
         public ByteBuf setBytes(int index, byte[] src) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
             throw new UnsupportedOperationException();
         }
 
