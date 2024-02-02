@@ -110,6 +110,15 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     }
 
     @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        if (writeResumptionListener != null) {
+            // drain everything so we are sure we never leak anything.
+            writeResumptionListener.drain();
+        }
+        super.handlerRemoved0(ctx);
+    }
+
+    @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         ByteBuf buffer;
         if (msg instanceof QuicStreamFrame) {
