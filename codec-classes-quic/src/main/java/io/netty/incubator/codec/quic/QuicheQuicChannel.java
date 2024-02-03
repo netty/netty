@@ -118,8 +118,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     };
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
-    private final long[] readableStreams = new long[128];
-    private final long[] writableStreams = new long[128];
+    private long[] readableStreams = new long[4];
+    private long[] writableStreams = new long[4];
 
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final QuicheQuicChannelConfig config;
@@ -218,6 +218,19 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return new QuicheQuicChannel(parent, true, key, local, remote, supportsDatagram,
                 streamHandler, streamOptionsArray, streamAttrsArray, timeoutTask,
                 sslTaskExecutor);
+    }
+
+    private static final int MAX_ARRAY_LEN = 128;
+
+    private static long[] growIfNeeded(long[] array, int maxLength) {
+        if (maxLength > array.length) {
+            if (array.length == MAX_ARRAY_LEN) {
+                return array;
+            }
+            // Increase by 4 until we reach MAX_ARRAY_LEN
+            return new long[Math.min(MAX_ARRAY_LEN, array.length + 4)];
+        }
+        return array;
     }
 
     @Override
@@ -979,6 +992,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     Quiche.quiche_conn_is_in_early_data(connAddr)) {
                 long writableIterator = Quiche.quiche_conn_writable(connAddr);
 
+                int totalWritable = 0;
                 try {
                     // For streams we always process all streams when at least on read was requested.
                     for (;;) {
@@ -997,6 +1011,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                 }
                             }
                         }
+                        if (writable > 0) {
+                            totalWritable += writable;
+                        }
                         if (writable < writableStreams.length) {
                             // We did handle all writable streams.
                             break;
@@ -1005,6 +1022,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 } finally {
                     Quiche.quiche_stream_iter_free(writableIterator);
                 }
+                writableStreams = growIfNeeded(writableStreams, totalWritable);
             }
             return mayNeedWrite;
         } finally {
@@ -1674,6 +1692,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         private void recvStream() {
             long connAddr = connection.address();
             long readableIterator = Quiche.quiche_conn_readable(connAddr);
+            int totalReadable = 0;
             if (readableIterator != -1) {
                 try {
                     // For streams we always process all streams when at least on read was requested.
@@ -1699,11 +1718,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                 streamReadable = false;
                                 break;
                             }
+                            if (readable > 0) {
+                                totalReadable += readable;
+                            }
                         }
                     }
                 } finally {
                     Quiche.quiche_stream_iter_free(readableIterator);
                 }
+                readableStreams = growIfNeeded(readableStreams, totalReadable);
             }
         }
 
