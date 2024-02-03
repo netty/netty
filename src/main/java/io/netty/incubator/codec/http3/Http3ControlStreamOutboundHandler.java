@@ -28,25 +28,16 @@ import static io.netty.incubator.codec.http3.Http3CodecUtils.closeOnFailure;
 final class Http3ControlStreamOutboundHandler
         extends Http3FrameTypeDuplexValidationHandler<Http3ControlStreamFrame> {
     private final boolean server;
-    private final Http3SettingsFrame localSettings;
     private final ChannelHandler codec;
     private Long sentMaxPushId;
     private Long sendGoAwayId;
+    private Http3SettingsFrame localSettings;
 
     Http3ControlStreamOutboundHandler(boolean server, Http3SettingsFrame localSettings, ChannelHandler codec) {
         super(Http3ControlStreamFrame.class);
         this.server = server;
         this.localSettings = ObjectUtil.checkNotNull(localSettings, "localSettings");
         this.codec = ObjectUtil.checkNotNull(codec, "codec");
-    }
-
-    /**
-     * Returns the local settings that were sent on the control stream.
-     *
-     * @return the local {@link Http3SettingsFrame}.
-     */
-    Http3SettingsFrame localSettings() {
-        return localSettings;
     }
 
     /**
@@ -69,8 +60,13 @@ final class Http3ControlStreamOutboundHandler
         // Add the encoder and decoder in the pipeline so we can handle Http3Frames. This needs to happen after
         // we did write the type via a ByteBuf.
         ctx.pipeline().addFirst(codec);
+
+        assert localSettings != null;
         // If writing of the local settings fails let's just teardown the connection.
-        closeOnFailure(ctx.writeAndFlush(DefaultHttp3SettingsFrame.copyOf(localSettings)));
+        closeOnFailure(ctx.writeAndFlush(localSettings));
+
+        // Let the GC collect localSettings.
+        localSettings = null;
 
         ctx.fireChannelActive();
     }

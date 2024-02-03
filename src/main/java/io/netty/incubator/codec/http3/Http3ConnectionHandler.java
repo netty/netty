@@ -43,6 +43,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
     final QpackEncoder qpackEncoder;
     private boolean controlStreamCreationInProgress;
 
+    final long maxTableCapacity;
+
     /**
      * Create a new instance.
      * @param server                                {@code true} if server-side, {@code false} otherwise.
@@ -71,7 +73,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
             // Just use the maximum value we can represent via a Long.
             maxFieldSectionSize = Long.MAX_VALUE;
         }
-        long maxTableCapacity = localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0);
+        this.maxTableCapacity = localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0);
         int maxBlockedStreams = toIntExact(localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 0));
         qpackDecoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);
         qpackEncoder = new QpackEncoder();
@@ -192,6 +194,10 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      * @param streamChannel the {@link QuicStreamChannel}.
      */
     abstract void initUnidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel);
+
+    long maxTableCapacity() {
+        return maxTableCapacity;
+    }
 
     /**
      * Always returns {@code false} as it keeps state.

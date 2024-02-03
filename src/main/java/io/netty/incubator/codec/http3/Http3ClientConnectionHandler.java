@@ -21,8 +21,6 @@ import io.netty.incubator.codec.quic.QuicStreamChannel;
 
 import java.util.function.LongFunction;
 
-import static io.netty.incubator.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
-
 public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
 
     private final LongFunction<ChannelHandler> pushStreamHandlerFactory;
@@ -69,8 +67,7 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
 
     @Override
     void initUnidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel) {
-        final Long maxTableCapacity = remoteControlStreamHandler.localSettings()
-                .get(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY);
+        final long maxTableCapacity = maxTableCapacity();
         streamChannel.pipeline().addLast(
                 new Http3UnidirectionalStreamInboundClientHandler(codecFactory,
                         localControlStreamHandler, remoteControlStreamHandler,

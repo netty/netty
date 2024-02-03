@@ -81,8 +81,7 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
 
     @Override
     void initUnidirectionalStream(ChannelHandlerContext ctx, QuicStreamChannel streamChannel) {
-        final Long maxTableCapacity = remoteControlStreamHandler.localSettings()
-                .get(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY);
+        final long maxTableCapacity = maxTableCapacity();
         streamChannel.pipeline().addLast(
                 new Http3UnidirectionalStreamInboundServerHandler(codecFactory,
                         localControlStreamHandler, remoteControlStreamHandler,
