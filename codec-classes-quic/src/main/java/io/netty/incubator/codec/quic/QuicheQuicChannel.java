@@ -114,19 +114,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    private final ChannelFutureListener continueSendingListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture channelFuture) {
-            if (connectionSend()) {
-                flushParent();
-            }
+    private final ChannelFutureListener continueSendingListener = f -> {
+        if (connectionSend()) {
+            flushParent();
         }
     };
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private long[] readableStreams = new long[4];
     private long[] writableStreams = new long[4];
-
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
     private final QuicheQuicChannelConfig config;
     private final boolean server;
@@ -135,8 +131,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray;
     private final Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray;
     private final TimeoutHandler timeoutHandler;
+    private final QuicConnectionIdGenerator connectionIdAddressGenerator;
+    private final QuicResetTokenGenerator resetTokenGenerator;
     private Executor sslTaskExecutor;
-
     private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
     private ByteBuf finBuffer;
@@ -147,13 +144,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private CloseData closeData;
     private QuicConnectionCloseEvent connectionCloseEvent;
     private QuicConnectionStats statsAtClose;
-
     private InetSocketAddress local;
     private InetSocketAddress remote;
     private boolean supportsDatagram;
     private boolean recvDatagramPending;
     private boolean datagramReadable;
-
     private boolean recvStreamPending;
     private boolean streamReadable;
     private boolean handshakeCompletionNotified;
@@ -183,11 +178,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
                               Consumer<QuicheQuicChannel> timeoutTask,
-                              Executor sslTaskExecutor) {
+                              Executor sslTaskExecutor, QuicConnectionIdGenerator connectionIdAddressGenerator,
+                              QuicResetTokenGenerator resetTokenGenerator) {
         super(parent);
         config = new QuicheQuicChannelConfig(this);
         this.server = server;
         this.idGenerator = new QuicStreamIdGenerator(server);
+        this.connectionIdAddressGenerator = connectionIdAddressGenerator;
+        this.resetTokenGenerator = resetTokenGenerator;
         if (key != null) {
             this.sourceConnectionIds.add(key);
         }
@@ -208,7 +206,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
         return new QuicheQuicChannel(parent, false, null, local, remote, false, streamHandler,
-                streamOptionsArray, streamAttrsArray, null, null);
+                streamOptionsArray, streamAttrsArray, null, null, null, null);
     }
 
     static QuicheQuicChannel forServer(Channel parent, ByteBuffer key, InetSocketAddress local,
@@ -216,10 +214,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                        boolean supportsDatagram, ChannelHandler streamHandler,
                                        Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                                        Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
-                                       Consumer<QuicheQuicChannel> timeoutTask, Executor sslTaskExecutor) {
+                                       Consumer<QuicheQuicChannel> timeoutTask, Executor sslTaskExecutor,
+                                       QuicConnectionIdGenerator connectionIdAddressGenerator,
+                                       QuicResetTokenGenerator resetTokenGenerator) {
         return new QuicheQuicChannel(parent, true, key, local, remote, supportsDatagram,
                 streamHandler, streamOptionsArray, streamAttrsArray, timeoutTask,
-                sslTaskExecutor);
+                sslTaskExecutor, connectionIdAddressGenerator, resetTokenGenerator);
     }
 
     private static final int MAX_ARRAY_LEN = 128;
@@ -910,9 +910,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return retiredSourceIds;
     }
 
-    List<ByteBuffer> newSourceConnectionIds(
-            QuicConnectionIdGenerator connectionIdGenerator, QuicResetTokenGenerator resetTokenGenerator) {
-        if (server) {
+    List<ByteBuffer> newSourceConnectionIds() {
+        if (connectionIdAddressGenerator != null && resetTokenGenerator != null ) {
             QuicheQuicConnection connection = this.connection;
             if (connection == null || connection.isClosed()) {
                 return Collections.emptyList();
@@ -934,7 +933,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 byte[] resetTokenArray = new byte[Quic.RESET_TOKEN_LEN];
                 try {
                     do {
-                        ByteBuffer srcId = connectionIdGenerator.newId(key, key.remaining());
+                        ByteBuffer srcId = connectionIdAddressGenerator.newId(key, key.remaining());
                         connIdBuffer.clear();
                         connIdBuffer.writeBytes(srcId.duplicate());
                         ByteBuffer resetToken = resetTokenGenerator.newResetToken(srcId.duplicate());
@@ -1499,8 +1498,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 ByteBuffer recvInfo = connection.nextRecvInfo();
                 QuicheRecvInfo.setRecvInfo(recvInfo, sender, recipient);
-
-                SocketAddress oldRemote = remote;
 
                 if (connection.isRecvInfoChanged()) {
                     // Update the cached address

@@ -290,26 +290,21 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                     type, version, scid,
                     dcid, token);
             if (channel != null) {
-                channelRecv(channel, sender, recipient, buffer);
+                // Add to queue first, we might be able to safe some flushes and consolidate them
+                // in channelReadComplete(...) this way.
+                if (channel.markInFireChannelReadCompleteQueue()) {
+                    needsFireChannelReadComplete.add(channel);
+                }
+                channel.recv(sender, recipient, buffer);
+                for (ByteBuffer retiredSourceConnectionId : channel.retiredSourceConnectionId()) {
+                    removeMapping(retiredSourceConnectionId);
+                }
+                for (ByteBuffer newSourceConnectionId :
+                        channel.newSourceConnectionIds()) {
+                    addMapping(newSourceConnectionId, channel);
+                }
             }
         }
     }
 
-    /**
-     * Called once something was received for a {@link QuicheQuicChannel}.
-     *
-     * @param channel   the channel for which the data was received
-     * @param sender    the sender
-     * @param recipient the recipient
-     * @param buffer    the acutal data.
-     */
-    protected void channelRecv(QuicheQuicChannel channel, InetSocketAddress sender,
-                               InetSocketAddress recipient, ByteBuf buffer) {
-        // Add to queue first, we might be able to safe some flushes and consolidate them
-        // in channelReadComplete(...) this way.
-        if (channel.markInFireChannelReadCompleteQueue()) {
-            needsFireChannelReadComplete.add(channel);
-        }
-        channel.recv(sender, recipient, buffer);
-    }
 }

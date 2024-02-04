@@ -100,19 +100,6 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     }
 
     @Override
-    protected void channelRecv(QuicheQuicChannel channel, InetSocketAddress sender,
-                               InetSocketAddress recipient, ByteBuf buffer) {
-        super.channelRecv(channel, sender, recipient, buffer);
-        for (ByteBuffer retiredSourceConnectionId : channel.retiredSourceConnectionId()) {
-            removeMapping(retiredSourceConnectionId);
-        }
-        for (ByteBuffer newSourceConnectionId :
-                channel.newSourceConnectionIds(connectionIdAddressGenerator, resetTokenGenerator)) {
-            addMapping(newSourceConnectionId, channel);
-        }
-    }
-
-    @Override
     protected QuicheQuicChannel quicPacketRead(ChannelHandlerContext ctx, InetSocketAddress sender,
                                                InetSocketAddress recipient, QuicPacketType type, int version,
                                                ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
@@ -226,7 +213,8 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         }
         QuicheQuicChannel channel = QuicheQuicChannel.forServer(
                 ctx.channel(), key, recipient, sender, config.isDatagramSupported(),
-                streamHandler, streamOptionsArray, streamAttrsArray, this::removeChannel, sslTaskExecutor);
+                streamHandler, streamOptionsArray, streamAttrsArray, this::removeChannel, sslTaskExecutor,
+                connectionIdAddressGenerator, resetTokenGenerator);
 
         Quic.setupChannel(channel, optionsArray, attrsArray, handler, LOGGER);
         QuicSslEngine engine = sslEngineProvider.apply(channel);
