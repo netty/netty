@@ -54,23 +54,25 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
                         SocketAddress localAddress, ChannelPromise promise) {
-        final QuicheQuicChannel channel;
-        try {
-            channel = QuicheQuicChannel.handleConnect(sslEngineProvider, sslTaskExecutor, remoteAddress, config.nativeAddress(),
-                    localConnIdLength, config.isDatagramSupported(),
-                    senderSockaddrMemory.internalNioBuffer(0, senderSockaddrMemory.capacity()),
-                    recipientSockaddrMemory.internalNioBuffer(0, recipientSockaddrMemory.capacity()));
-        } catch (Exception e) {
-            promise.setFailure(e);
-            return;
-        }
-        if (channel != null) {
-            addChannel(channel);
+        if (remoteAddress instanceof QuicheQuicChannelAddress) {
+            QuicheQuicChannelAddress addr = (QuicheQuicChannelAddress) remoteAddress;
+            QuicheQuicChannel channel = addr.channel;
+            try {
+                channel.connectNow(sslEngineProvider, sslTaskExecutor, config.nativeAddress(),
+                        localConnIdLength, config.isDatagramSupported(),
+                        senderSockaddrMemory.internalNioBuffer(0, senderSockaddrMemory.capacity()),
+                        recipientSockaddrMemory.internalNioBuffer(0, recipientSockaddrMemory.capacity()));
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+                return;
+            }
 
+            addChannel(channel);
             channel.finishConnect();
             promise.setSuccess();
             return;
         }
+
         ctx.connect(remoteAddress, localAddress, promise);
     }
 }

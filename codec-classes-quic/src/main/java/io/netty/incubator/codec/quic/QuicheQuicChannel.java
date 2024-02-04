@@ -317,9 +317,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    private void connect(Function<QuicChannel, ? extends QuicSslEngine> engineProvider, Executor sslTaskExecutor,
-                         long configAddr, int localConnIdLength,
-                         boolean supportsDatagram, ByteBuffer fromSockaddrMemory, ByteBuffer toSockaddrMemory)
+    void connectNow(Function<QuicChannel, ? extends QuicSslEngine> engineProvider, Executor sslTaskExecutor,
+                 long configAddr, int localConnIdLength,
+                 boolean supportsDatagram, ByteBuffer fromSockaddrMemory, ByteBuffer toSockaddrMemory)
             throws Exception {
         assert this.connection == null;
         assert this.traceId == null;
@@ -1851,34 +1851,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 !isConnDestroyed() && Quiche.quiche_conn_is_in_early_data(connection.address())) {
             earlyDataReadyNotified = true;
             pipeline().fireUserEventTriggered(SslEarlyDataReadyEvent.INSTANCE);
-        }
-    }
-
-    // TODO: Come up with something better.
-    static QuicheQuicChannel handleConnect(Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
-                                           Executor sslTaskExecutor,
-                                           SocketAddress address, long config, int localConnIdLength,
-                                           boolean supportsDatagram, ByteBuffer fromSockaddrMemory,
-                                           ByteBuffer toSockaddrMemory) throws Exception {
-        if (address instanceof QuicheQuicChannel.QuicheQuicChannelAddress) {
-            QuicheQuicChannel.QuicheQuicChannelAddress addr = (QuicheQuicChannel.QuicheQuicChannelAddress) address;
-            QuicheQuicChannel channel = addr.channel;
-            channel.connect(sslEngineProvider, sslTaskExecutor, config, localConnIdLength, supportsDatagram,
-                    fromSockaddrMemory, toSockaddrMemory);
-            return channel;
-        }
-        return null;
-    }
-
-    /**
-     * Just a container to pass the {@link QuicheQuicChannel} to {@link QuicheQuicClientCodec}.
-     */
-    private static final class QuicheQuicChannelAddress extends SocketAddress {
-
-        final QuicheQuicChannel channel;
-
-        QuicheQuicChannelAddress(QuicheQuicChannel channel) {
-            this.channel = channel;
         }
     }
 
