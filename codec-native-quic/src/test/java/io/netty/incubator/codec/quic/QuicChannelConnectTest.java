@@ -22,6 +22,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.ssl.ClientAuth;
@@ -51,6 +53,7 @@ import java.io.File;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
@@ -414,6 +417,39 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .connect();
             Throwable cause = future.await().cause();
             assertThat(cause, CoreMatchers.instanceOf(ConnectTimeoutException.class));
+            verifyHandler.assertState();
+        } finally {
+            socket.close();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testConnectFailsInParentPipeline(Executor executor) throws Throwable {
+        // Bind to something so we can use the port to connect too and so can ensure we really timeout.
+        DatagramSocket socket = new DatagramSocket();
+        Channel channel = QuicTestUtils.newClient(executor);
+        final Exception exception = new UnsupportedOperationException();
+        channel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+                                ChannelPromise promise) {
+                promise.setFailure(exception);
+            }
+        });
+        try {
+            ChannelStateVerifyHandler verifyHandler = new ChannelStateVerifyHandler();
+            Future<QuicChannel> future = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(verifyHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(socket.getLocalSocketAddress())
+                    .connect();
+            Throwable cause = future.await().cause();
+            assertSame(cause, exception);
             verifyHandler.assertState();
         } finally {
             socket.close();

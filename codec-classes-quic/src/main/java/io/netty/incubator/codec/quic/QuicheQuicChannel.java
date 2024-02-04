@@ -1451,7 +1451,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     }
                 });
 
-                parent().connect(new QuicheQuicChannelAddress(QuicheQuicChannel.this));
+                parent().connect(new QuicheQuicChannelAddress(QuicheQuicChannel.this))
+                        .addListener(f -> {
+                            ChannelPromise connectPromise = QuicheQuicChannel.this.connectPromise;
+                            if (connectPromise != null && !f.isSuccess()) {
+                                connectPromise.tryFailure(f.cause());
+                            }
+                        });
                 return;
             }
 
