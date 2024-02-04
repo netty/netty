@@ -91,6 +91,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         OK
     }
 
+    private enum ChannelState {
+        OPEN,
+        ACTIVE,
+        CLOSED
+    }
+
     private static final class CloseData implements ChannelFutureListener {
         final boolean applicationClose;
         final int err;
@@ -159,10 +165,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private static final int IN_HANDLE_WRITABLE_STREAMS = 1 << 3;
     private static final int IN_FORCE_CLOSE = 1 << 4;
 
-    private static final int CLOSED = 0;
-    private static final int OPEN = 1;
-    private static final int ACTIVE = 2;
-    private volatile int state;
+    private volatile ChannelState state = ChannelState.OPEN;
     private volatile boolean timedOut;
     private volatile String traceId;
     private volatile QuicheQuicConnection connection;
@@ -188,7 +191,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (key != null) {
             this.sourceConnectionIds.add(key);
         }
-        state = OPEN;
 
         this.supportsDatagram = supportsDatagram;
         this.local = local;
@@ -434,7 +436,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         statsAtClose = collectStats0(conn,  eventLoop().newPromise());
         try {
             failPendingConnectPromise();
-            state = CLOSED;
+            state = ChannelState.CLOSED;
             timedOut = Quiche.quiche_conn_is_timed_out(conn.address());
 
             closeStreams();
@@ -443,7 +445,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 finBuffer.release();
                 finBuffer = null;
             }
-            state = CLOSED;
 
             timeoutHandler.cancel();
         } finally {
@@ -563,7 +564,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     @Override
     protected void doClose() throws Exception {
-        state = CLOSED;
+        state = ChannelState.CLOSED;
 
         final boolean app;
         final int err;
@@ -699,12 +700,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     @Override
     public boolean isOpen() {
-        return state >= OPEN;
+        return state != ChannelState.CLOSED;
     }
 
     @Override
     public boolean isActive() {
-        return state == ACTIVE;
+        return state == ChannelState.ACTIVE;
     }
 
     @Override
@@ -1787,9 +1788,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         private boolean handlePendingChannelActive() {
             long connAddr = connection.address();
             if (server) {
-                if (state == OPEN && Quiche.quiche_conn_is_established(connAddr)) {
+                if (state == ChannelState.OPEN && Quiche.quiche_conn_is_established(connAddr)) {
                     // We didn't notify before about channelActive... Update state and fire the event.
-                    state = ACTIVE;
+                    state = ChannelState.ACTIVE;
 
                     pipeline().fireChannelActive();
                     notifyAboutHandshakeCompletionIfNeeded(null);
@@ -1798,7 +1799,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             } else if (connectPromise != null && Quiche.quiche_conn_is_established(connAddr)) {
                 ChannelPromise promise = connectPromise;
                 connectPromise = null;
-                state = ACTIVE;
+                state = ChannelState.ACTIVE;
 
                 boolean promiseSet = promise.trySuccess();
                 pipeline().fireChannelActive();
