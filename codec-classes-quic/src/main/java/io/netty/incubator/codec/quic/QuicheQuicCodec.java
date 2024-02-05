@@ -25,6 +25,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static io.netty.incubator.codec.quic.Quiche.allocateNativeOrder;
 
@@ -42,12 +44,14 @@ import static io.netty.incubator.codec.quic.Quiche.allocateNativeOrder;
  */
 abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicCodec.class);
-
     private final Map<ByteBuffer, QuicheQuicChannel> connectionIdToChannel = new HashMap<>();
     private final Set<QuicheQuicChannel> channels = new HashSet<>();
     private final Queue<QuicheQuicChannel> needsFireChannelReadComplete = new ArrayDeque<>();
+    private final Consumer<QuicheQuicChannel> freeTask = this::removeChannel;
     private final int maxTokenLength;
     private final FlushStrategy flushStrategy;
+    private final int localConnIdLength;
+    private final QuicheConfig config;
 
     private MessageSizeEstimator.Handle estimatorHandle;
     private QuicHeaderParser headerParser;
@@ -55,12 +59,9 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private int pendingBytes;
     private int pendingPackets;
     private boolean inChannelReadComplete;
-
-    protected final QuicheConfig config;
-    protected final int localConnIdLength;
     // This buffer is used to copy InetSocketAddress to sockaddr_storage and so pass it down the JNI layer.
-    protected ByteBuf senderSockaddrMemory;
-    protected ByteBuf recipientSockaddrMemory;
+    private ByteBuf senderSockaddrMemory;
+    private ByteBuf recipientSockaddrMemory;
 
     QuicheQuicCodec(QuicheConfig config, int localConnIdLength, int maxTokenLength, FlushStrategy flushStrategy) {
         this.config = config;
@@ -73,19 +74,22 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         return connectionIdToChannel.get(key);
     }
 
-    protected final void addMapping(ByteBuffer key, QuicheQuicChannel channel) {
-        connectionIdToChannel.put(key, channel);
+    private void addMapping(QuicheQuicChannel channel, ByteBuffer id) {
+        QuicheQuicChannel ch = connectionIdToChannel.put(id, channel);
+        assert ch == null;
     }
 
-    protected final void removeMapping(ByteBuffer key) {
-        connectionIdToChannel.remove(key);
+    private void removeMapping(QuicheQuicChannel channel, ByteBuffer id) {
+        QuicheQuicChannel ch = connectionIdToChannel.remove(id);
+        assert ch == channel;
     }
 
-    protected final void removeChannel(QuicheQuicChannel channel) {
+    private void removeChannel(QuicheQuicChannel channel) {
         boolean removed = channels.remove(channel);
         assert removed;
         for (ByteBuffer id : channel.sourceConnectionIds()) {
-            connectionIdToChannel.remove(id);
+            QuicheQuicChannel ch = connectionIdToChannel.remove(id);
+            assert ch == channel;
         }
     }
 
@@ -93,17 +97,26 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         boolean added = channels.add(channel);
         assert added;
         for (ByteBuffer id : channel.sourceConnectionIds()) {
-            connectionIdToChannel.put(id, channel);
+            QuicheQuicChannel ch = connectionIdToChannel.put(id.duplicate(), channel);
+            assert ch == null;
         }
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) {
+    public final void handlerAdded(ChannelHandlerContext ctx) {
         senderSockaddrMemory = allocateNativeOrder(Quiche.SIZEOF_SOCKADDR_STORAGE);
         recipientSockaddrMemory = allocateNativeOrder(Quiche.SIZEOF_SOCKADDR_STORAGE);
         headerParser = new QuicHeaderParser(maxTokenLength, localConnIdLength);
         parserCallback = new QuicCodecHeaderProcessor(ctx);
         estimatorHandle = ctx.channel().config().getMessageSizeEstimator().newHandle();
+        handlerAdded(ctx, localConnIdLength);
+    }
+
+    /**
+     * See {@link io.netty.channel.ChannelHandler#handlerAdded(ChannelHandlerContext)}.
+     */
+    protected void handlerAdded(ChannelHandlerContext ctx, int localConnIdLength) {
+        // NOOP.
     }
 
     @Override
@@ -114,14 +127,14 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
             for (QuicheQuicChannel ch : channels.toArray(new QuicheQuicChannel[0])) {
                 ch.forceClose();
             }
-            channels.clear();
-            connectionIdToChannel.clear();
-
-            needsFireChannelReadComplete.clear();
             if (pendingPackets > 0) {
                 flushNow(ctx);
             }
         } finally {
+            channels.clear();
+            connectionIdToChannel.clear();
+            needsFireChannelReadComplete.clear();
+
             config.free();
             if (senderSockaddrMemory != null) {
                 senderSockaddrMemory.release();
@@ -168,7 +181,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     }
 
     /**
-     * Handle a QUIC packet and return {@code true} if we need to call {@link ChannelHandlerContext#flush()}.
+     * Handle a QUIC packet and return {@link QuicheQuicChannel} that is mapped to the id.
      *
      * @param ctx the {@link ChannelHandlerContext}.
      * @param sender the {@link InetSocketAddress} of the sender of the QUIC packet
@@ -178,13 +191,21 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
      * @param scid the source connection id.
      * @param dcid the destination connection id
      * @param token the token
-     * @return {@code true} if we need to call {@link ChannelHandlerContext#flush()} before there is no new events
-     *                      for this handler in the current eventloop run.
+     * @param senderSockaddrMemory the {@link ByteBuf} that can be used for the sender {@code struct sockaddr).
+     * @param recipientSockaddrMemory the {@link ByteBuf} that can be used for the recipient {@code struct sockaddr).
+     * @param freeTask the {@link Consumer} that will be called once native memory of the {@link QuicheQuicChannel} is
+     *                  freed and so the mappings should be deleted to the ids.
+     * @param localConnIdLength the length of the local connection ids.
+     * @param config the {@link QuicheConfig} that is used.
+     * @return the {@link QuicheQuicChannel} that is mapped to the id.
      * @throws Exception  thrown if there is an error during processing.
      */
     protected abstract QuicheQuicChannel quicPacketRead(ChannelHandlerContext ctx, InetSocketAddress sender,
                                                         InetSocketAddress recipient, QuicPacketType type, int version,
-                                                        ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception;
+                                                        ByteBuf scid, ByteBuf dcid, ByteBuf token,
+                                                        ByteBuf senderSockaddrMemory, ByteBuf recipientSockaddrMemory,
+                                                        Consumer<QuicheQuicChannel> freeTask,
+                                                        int localConnIdLength, QuicheConfig config) throws Exception;
 
     @Override
     public final void channelReadComplete(ChannelHandlerContext ctx) {
@@ -261,6 +282,40 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         }
     }
 
+    @Override
+    public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+                        ChannelPromise promise) throws Exception {
+        if (remoteAddress instanceof QuicheQuicChannelAddress) {
+            QuicheQuicChannelAddress addr = (QuicheQuicChannelAddress) remoteAddress;
+            QuicheQuicChannel channel = addr.channel;
+            connectQuicChannel(channel, remoteAddress, localAddress,
+                    senderSockaddrMemory, recipientSockaddrMemory, freeTask, localConnIdLength, config, promise);
+        } else {
+            ctx.connect(remoteAddress, localAddress, promise);
+        }
+    }
+
+    /**
+     * Connects the given {@link QuicheQuicChannel}.
+     *
+     * @param channel                   the {@link QuicheQuicChannel} to connect.
+     * @param remoteAddress             the remote {@link SocketAddress}.
+     * @param localAddress              the local  {@link SocketAddress}
+     * @param senderSockaddrMemory      the {@link ByteBuf} that can be used for the sender {@code struct sockaddr).
+     * @param recipientSockaddrMemory   the {@link ByteBuf} that can be used for the recipient {@code struct sockaddr).
+     * @param freeTask                  the {@link Consumer} that will be called once native memory of the
+     *                                  {@link QuicheQuicChannel} is freed and so the mappings should be deleted to
+     *                                  the ids.
+     * @param localConnIdLength         the length of the local connection ids.
+     * @param config                    the {@link QuicheConfig} that is used.
+     * @param promise                   the {@link ChannelPromise} to notify once the connect is done.
+     */
+    protected abstract void connectQuicChannel(QuicheQuicChannel channel, SocketAddress remoteAddress,
+                                               SocketAddress localAddress, ByteBuf senderSockaddrMemory,
+                                               ByteBuf recipientSockaddrMemory, Consumer<QuicheQuicChannel> freeTask,
+                                               int localConnIdLength, QuicheConfig config, ChannelPromise promise);
+
+
     private void flushIfNeeded(ChannelHandlerContext ctx) {
         // Check if we should force a flush() and so ensure the packets are delivered in a timely
         // manner and also make room in the outboundbuffer again that belongs to the underlying channel.
@@ -288,7 +343,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                             int version, ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
             QuicheQuicChannel channel = quicPacketRead(ctx, sender, recipient,
                     type, version, scid,
-                    dcid, token);
+                    dcid, token, senderSockaddrMemory, recipientSockaddrMemory, freeTask, localConnIdLength, config);
             if (channel != null) {
                 // Add to queue first, we might be able to safe some flushes and consolidate them
                 // in channelReadComplete(...) this way.
@@ -297,14 +352,12 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                 }
                 channel.recv(sender, recipient, buffer);
                 for (ByteBuffer retiredSourceConnectionId : channel.retiredSourceConnectionId()) {
-                    removeMapping(retiredSourceConnectionId);
+                    removeMapping(channel, retiredSourceConnectionId);
                 }
-                for (ByteBuffer newSourceConnectionId :
-                        channel.newSourceConnectionIds()) {
-                    addMapping(newSourceConnectionId, channel);
+                for (ByteBuffer newSourceConnectionId : channel.newSourceConnectionIds()) {
+                    addMapping(channel, newSourceConnectionId);
                 }
             }
         }
     }
-
 }
