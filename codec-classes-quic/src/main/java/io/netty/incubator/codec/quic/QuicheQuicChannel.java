@@ -1178,7 +1178,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 int segmentSize = -1;
                 if (connection.isSendInfoChanged()) {
                     // Change the cached address and let the user know there was a connection migration.
-                    InetSocketAddress oldRemote = remote;
                     remote = QuicheSendInfo.getToAddress(sendInfo);
                     local = QuicheSendInfo.getFromAddress(sendInfo);
 
@@ -1508,10 +1507,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 ByteBuffer recvInfo = connection.nextRecvInfo();
                 QuicheRecvInfo.setRecvInfo(recvInfo, sender, recipient);
 
-                if (connection.isRecvInfoChanged()) {
-                    // Update the cached address
-                    remote = sender;
-                }
+                remote = sender;
                 local = recipient;
 
                 long connAddr = connection.address();

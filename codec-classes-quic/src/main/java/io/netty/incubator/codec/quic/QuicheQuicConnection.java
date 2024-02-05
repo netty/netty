@@ -51,10 +51,8 @@ final class QuicheQuicConnection {
     private final ByteBuf recvInfoBuffer;
     private final ByteBuf sendInfoBuffer;
 
-    private boolean recvInfoFirst = true;
     private boolean sendInfoFirst = true;
     private final ByteBuffer recvInfoBuffer1;
-    private final ByteBuffer recvInfoBuffer2;
     private final ByteBuffer sendInfoBuffer1;
     private final ByteBuffer sendInfoBuffer2;
 
@@ -66,7 +64,7 @@ final class QuicheQuicConnection {
         this.engine = engine;
         this.refCnt = refCnt;
         // TODO: Maybe cache these per thread as we only use them temporary within a limited scope.
-        recvInfoBuffer = Quiche.allocateNativeOrder(2 * TOTAL_RECV_INFO_SIZE);
+        recvInfoBuffer = Quiche.allocateNativeOrder(TOTAL_RECV_INFO_SIZE);
         sendInfoBuffer = Quiche.allocateNativeOrder(2 * Quiche.SIZEOF_QUICHE_SEND_INFO);
 
         // Let's memset the memory.
@@ -74,8 +72,6 @@ final class QuicheQuicConnection {
         sendInfoBuffer.setZero(0, sendInfoBuffer.capacity());
 
         recvInfoBuffer1 = recvInfoBuffer.nioBuffer(0, TOTAL_RECV_INFO_SIZE);
-        recvInfoBuffer2 = recvInfoBuffer.nioBuffer(TOTAL_RECV_INFO_SIZE, TOTAL_RECV_INFO_SIZE);
-
         sendInfoBuffer1 = sendInfoBuffer.nioBuffer(0, Quiche.SIZEOF_QUICHE_SEND_INFO);
         sendInfoBuffer2 = sendInfoBuffer.nioBuffer(Quiche.SIZEOF_QUICHE_SEND_INFO, Quiche.SIZEOF_QUICHE_SEND_INFO);
         this.engine.connection = this;
@@ -184,11 +180,10 @@ final class QuicheQuicConnection {
         assert recvInfoBuffer.refCnt() != 0;
         assert sendInfoBuffer.refCnt() != 0;
 
-        // Fill both quiche_recv_info structs with the same address.
+        // Fill quiche_recv_info struct with the addresses.
         QuicheRecvInfo.setRecvInfo(recvInfoBuffer1, remote, local);
-        QuicheRecvInfo.setRecvInfo(recvInfoBuffer2, remote, local);
 
-        // Fill both quiche_send_info structs with the same address.
+        // Fill both quiche_send_info structs with the same addresses.
         QuicheSendInfo.setSendInfo(sendInfoBuffer1, local, remote);
         QuicheSendInfo.setSendInfo(sendInfoBuffer2, local, remote);
         engine.sniSelectedCallback = sniSelectedCallback;
@@ -196,8 +191,7 @@ final class QuicheQuicConnection {
 
     ByteBuffer nextRecvInfo() {
         assert recvInfoBuffer.refCnt() != 0;
-        recvInfoFirst = !recvInfoFirst;
-        return recvInfoFirst ? recvInfoBuffer1 : recvInfoBuffer2;
+        return recvInfoBuffer1;
     }
 
     ByteBuffer nextSendInfo() {
@@ -209,11 +203,6 @@ final class QuicheQuicConnection {
     boolean isSendInfoChanged() {
         assert sendInfoBuffer.refCnt() != 0;
         return !QuicheSendInfo.isSameAddress(sendInfoBuffer1, sendInfoBuffer2);
-    }
-
-    boolean isRecvInfoChanged() {
-        assert recvInfoBuffer.refCnt() != 0;
-        return !QuicheRecvInfo.isSameAddress(recvInfoBuffer1, recvInfoBuffer2);
     }
 
     boolean isClosed() {

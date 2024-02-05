@@ -70,16 +70,4 @@ final class QuicheRecvInfo {
             memory.position(position);
         }
     }
-
-    /**
-     * Returns {@code true} if both {@link ByteBuffer}s have the same {@code sock_addr} stored.
-     *
-     * @param memory    the first {@link ByteBuffer} which holds a {@code quiche_recv_info}.
-     * @param memory2   the second {@link ByteBuffer} which holds a {@code quiche_recv_info}.
-     * @return          {@code true} if both {@link ByteBuffer}s have the same {@code sock_addr} stored, {@code false}
-     *                  otherwise.
-     */
-    static boolean isSameAddress(ByteBuffer memory, ByteBuffer memory2) {
-        return Quiche.isSameAddress(memory, memory2, Quiche.SIZEOF_QUICHE_RECV_INFO);
-    }
 }
