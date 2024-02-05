@@ -722,7 +722,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     /**
-     * This may call {@link #flush()} on the parent channel if needed. The flush may delayed until the read loop
+     * This may call {@link #flush()} on the parent channel if needed. The flush may be delayed until the read loop
      * is over.
      */
     private void flushParent() {
@@ -732,7 +732,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     /**
-     * Call @link #flush()} on the parent channel.
+     * Call {@link #flush()} on the parent channel.
      */
     private void forceFlushParent() {
         parent().flush();
@@ -925,7 +925,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 return Collections.emptyList();
             }
             long connAddr = connection.address();
-            // Generate all extra source ids that we can provide. This will cause frames that need to be send. Which
+            // Generate all extra source ids that we can provide. This will cause frames that need to be sent. Which
             // is the reason why we might need to call connectionSendAndFlush().
             int left = Quiche.quiche_conn_scids_left(connAddr);
             if (left > 0) {
@@ -1086,26 +1086,31 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 sslTaskExecutor == ImmediateEventExecutor.INSTANCE;
     }
 
-    private void runAllTaskSend(Runnable task) {
-        sslTaskExecutor.execute(decorateTaskSend(task));
+    private void runAllTaskSend(QuicheQuicConnection connection, Runnable task) {
+        sslTaskExecutor.execute(decorateTaskSend(connection, task));
     }
 
-    private void runAll(Runnable task) {
+    private void runAll(QuicheQuicConnection connection, Runnable task) {
         do {
             task.run();
         } while ((task = connection.sslTask()) != null);
     }
 
-    private Runnable decorateTaskSend(Runnable task) {
+    private Runnable decorateTaskSend(QuicheQuicConnection connection, Runnable task) {
         return () -> {
             try {
-                runAll(task);
+                runAll(connection, task);
             } finally {
                 // Move back to the EventLoop.
                 eventLoop().execute(() -> {
                     // Call connection send to continue handshake if needed.
                     if (connectionSend()) {
                         forceFlushParent();
+                    }
+                    if (connection.isClosed()) {
+                        freeIfClosed();
+                    } else if (Quiche.quiche_conn_is_closed(connection.address())) {
+                        forceClose();
                     }
                 });
             }
@@ -1365,7 +1370,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     // Let's try again sending after we did process all tasks.
                     return packetWasWritten | connectionSend();
                 } else {
-                    runAllTaskSend(task);
+                    runAllTaskSend(connection, task);
                 }
             } else {
                 // Notify about early data ready if needed.
@@ -1470,7 +1475,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             channelPromise.setFailure(new UnsupportedOperationException());
         }
 
-        private void fireConnectCloseEventIfNeeded(long connAddr) {
+        private void fireConnectionCloseEventIfNeeded(long connAddr) {
             if (connectionCloseEvent == null) {
                 connectionCloseEvent = Quiche.quiche_conn_peer_error(connAddr);
                 if (connectionCloseEvent != null) {
@@ -1538,7 +1543,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                 } while ((task = connection.sslTask()) != null);
                                 processReceived(connAddr);
                             } else {
-                                runAllTaskRecv(task);
+                                runAllTaskRecv(connection, task);
                             }
                         } else {
                             processReceived(connAddr);
@@ -1574,7 +1579,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
             notifyAboutHandshakeCompletionIfNeeded(null);
 
-            fireConnectCloseEventIfNeeded(connAddr);
+            fireConnectionCloseEventIfNeeded(connAddr);
 
             if (Quiche.quiche_conn_is_established(connAddr) ||
                     Quiche.quiche_conn_is_in_early_data(connAddr)) {
@@ -1653,24 +1658,35 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             }
         }
 
-        private void runAllTaskRecv(Runnable task) {
-            sslTaskExecutor.execute(decorateTaskRecv(task));
+        private void runAllTaskRecv(QuicheQuicConnection connection, Runnable task) {
+            sslTaskExecutor.execute(decorateTaskRecv(connection, task));
         }
 
-        private Runnable decorateTaskRecv(Runnable task) {
+        private Runnable decorateTaskRecv(QuicheQuicConnection connection, Runnable task) {
             return () -> {
                 try {
-                    runAll(task);
+                    runAll(connection, task);
                 } finally {
                     // Move back to the EventLoop.
                     eventLoop().execute(() -> {
                         if (connection != null) {
-                            processReceived(connection.address());
+                            if (connection.isClosed()) {
+                                freeIfClosed();
+                            } else {
+                                processReceived(connection.address());
 
-                            // Call connection send to continue handshake if needed.
-                            if (connectionSend()) {
-                                forceFlushParent();
+                                // Call connection send to continue handshake if needed.
+                                if (connectionSend()) {
+                                    forceFlushParent();
+                                }
+
+                                if (connection.isClosed()) {
+                                    freeIfClosed();
+                                } else if (Quiche.quiche_conn_is_closed(connection.address())) {
+                                    forceClose();
+                                }
                             }
+
                         }
                     });
                 }
@@ -1814,7 +1830,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 notifyAboutHandshakeCompletionIfNeeded(null);
                 fireDatagramExtensionEvent();
                 if (!promiseSet) {
-                    fireConnectCloseEventIfNeeded(connAddr);
+                    fireConnectionCloseEventIfNeeded(connAddr);
                     this.close(this.voidPromise());
                     return true;
                 }
@@ -1842,7 +1858,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     /**
-     * Finish the connect of a client channel.
+     * Finish the connect operation of a client channel.
      */
     void finishConnect() {
         assert !server;
