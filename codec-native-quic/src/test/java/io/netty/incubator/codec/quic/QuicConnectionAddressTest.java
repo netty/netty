@@ -41,9 +41,9 @@ public class QuicConnectionAddressTest extends AbstractQuicTest {
         byte[] bytes = new byte[8];
         ThreadLocalRandom.current().nextBytes(bytes);
         QuicConnectionAddress address = new QuicConnectionAddress(bytes);
-        assertEquals(ByteBuffer.wrap(bytes), address.connId);
+        assertEquals(ByteBuffer.wrap(bytes), address.id());
         ThreadLocalRandom.current().nextBytes(bytes);
-        assertNotEquals(ByteBuffer.wrap(bytes), address.connId);
+        assertNotEquals(ByteBuffer.wrap(bytes), address.id());
     }
 
     @Test
@@ -52,8 +52,8 @@ public class QuicConnectionAddressTest extends AbstractQuicTest {
         ThreadLocalRandom.current().nextBytes(bytes);
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
         QuicConnectionAddress address = new QuicConnectionAddress(bytes);
-        assertEquals(buffer, address.connId);
+        assertEquals(buffer, address.id());
         buffer.position(1);
-        assertNotEquals(buffer, address.connId);
+        assertNotEquals(buffer, address.id());
     }
 }

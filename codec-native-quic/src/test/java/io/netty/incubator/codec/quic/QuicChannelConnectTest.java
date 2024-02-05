@@ -288,12 +288,12 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             ChannelFuture closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
-            assertEquals(clientIdLength, clientQuicChannelHandler.localAddress().connId.remaining());
-            assertEquals(serverIdLength, clientQuicChannelHandler.remoteAddress().connId.remaining());
+            assertEquals(clientIdLength, clientQuicChannelHandler.localAddress().id().remaining());
+            assertEquals(serverIdLength, clientQuicChannelHandler.remoteAddress().id().remaining());
         } finally {
             serverQuicChannelHandler.assertState();
-            assertEquals(serverIdLength, serverQuicChannelHandler.localAddress().connId.remaining());
-            assertEquals(clientIdLength, serverQuicChannelHandler.remoteAddress().connId.remaining());
+            assertEquals(serverIdLength, serverQuicChannelHandler.localAddress().id().remaining());
+            assertEquals(clientIdLength, serverQuicChannelHandler.remoteAddress().id().remaining());
             serverQuicStreamHandler.assertState();
 
             server.close().sync();
@@ -542,10 +542,6 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
             assertEquals(serverQuicChannelHandler.localAddress(), remoteAddress);
             assertEquals(serverQuicChannelHandler.remoteAddress(), localAddress);
-
-            // Check if we also can access these after the channel was closed.
-            assertNotNull(quicChannel.localAddress());
-            assertNotNull(quicChannel.remoteAddress());
         } finally {
             serverLatch.await();
 

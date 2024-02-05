@@ -86,10 +86,11 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     private void removeChannel(QuicheQuicChannel channel) {
         boolean removed = channels.remove(channel);
-        assert removed;
-        for (ByteBuffer id : channel.sourceConnectionIds()) {
-            QuicheQuicChannel ch = connectionIdToChannel.remove(id);
-            assert ch == channel;
+        if (removed) {
+            for (ByteBuffer id : channel.sourceConnectionIds()) {
+                QuicheQuicChannel ch = connectionIdToChannel.remove(id);
+                assert ch == channel;
+            }
         }
     }
 

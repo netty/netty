@@ -39,8 +39,7 @@ public final class QuicConnectionAddress extends SocketAddress {
 
     private final String toStr;
 
-    // Accessed by QuicheQuicheChannel
-    final ByteBuffer connId;
+    private final ByteBuffer connId;
 
     /**
      * Create a new instance
@@ -57,7 +56,7 @@ public final class QuicConnectionAddress extends SocketAddress {
      * @param connId the connection id to use.
      */
     public QuicConnectionAddress(ByteBuffer connId) {
-        this(connId, true);
+        this(connId.duplicate(), true);
     }
 
     private QuicConnectionAddress(ByteBuffer connId, boolean validate) {
@@ -66,10 +65,11 @@ public final class QuicConnectionAddress extends SocketAddress {
             throw new IllegalArgumentException("Connection ID can only be of max length "
                     + Quiche.QUICHE_MAX_CONN_ID_LEN);
         }
-        this.connId = connId;
         if (connId == null) {
+            this.connId = null;
             toStr = "QuicConnectionAddress{EPHEMERAL}";
         } else {
+            this.connId = connId.asReadOnlyBuffer().duplicate();
             ByteBuf buffer = Unpooled.wrappedBuffer(connId);
             try {
                 toStr = "QuicConnectionAddress{" +
@@ -102,10 +102,14 @@ public final class QuicConnectionAddress extends SocketAddress {
         if (obj == this) {
             return true;
         }
-        if (connId == null) {
-            return false;
-        }
         return connId.equals(address.connId);
+    }
+
+    ByteBuffer id() {
+        if (connId == null) {
+            return ByteBuffer.allocate(0);
+        }
+        return connId.duplicate();
     }
 
     /**
@@ -128,5 +132,4 @@ public final class QuicConnectionAddress extends SocketAddress {
     public static QuicConnectionAddress random() {
         return random(Quiche.QUICHE_MAX_CONN_ID_LEN);
     }
-
 }

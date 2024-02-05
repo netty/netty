@@ -332,14 +332,15 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         this.freeTask = freeTask;
 
         QuicConnectionAddress address = this.connectAddress;
+
         if (address == QuicConnectionAddress.EPHEMERAL) {
             address = QuicConnectionAddress.random(localConnIdLength);
-        } else {
-            if (address.connId.remaining() != localConnIdLength) {
-                failConnectPromiseAndThrow(new IllegalArgumentException("connectionAddress has length "
-                        + address.connId.remaining()
-                        + " instead of " + localConnIdLength));
-            }
+        }
+        ByteBuffer connectId = address.id();
+        if (connectId.remaining() != localConnIdLength) {
+            failConnectPromiseAndThrow(new IllegalArgumentException("connectionAddress has length "
+                    + connectId.remaining()
+                    + " instead of " + localConnIdLength));
         }
         QuicSslEngine engine = engineProvider.apply(this);
         if (!(engine instanceof QuicheQuicSslEngine)) {
@@ -351,7 +352,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             failConnectPromiseAndThrow(new IllegalArgumentException("QuicSslEngine is not create in client mode"));
         }
         QuicheQuicSslEngine quicheEngine = (QuicheQuicSslEngine) engine;
-        ByteBuffer connectId = address.connId.duplicate();
         ByteBuf idBuffer = alloc().directBuffer(connectId.remaining()).writeBytes(connectId.duplicate());
         try {
             int fromSockaddrLen = SockaddrIn.setAddress(fromSockaddrMemory, local);
@@ -558,6 +558,18 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     protected SocketAddress remoteAddress0() {
         QuicheQuicConnection connection = this.connection;
         return connection == null ? null : connection.destinationId();
+    }
+
+    @Override
+    public SocketAddress localAddress() {
+        // Override so we never cache as the sourceId() can change over life-time.
+        return localAddress0();
+    }
+
+    @Override
+    public SocketAddress remoteAddress() {
+        // Override so we never cache as the destinationId() can change over life-time.
+        return remoteAddress0();
     }
 
     @Override
@@ -935,13 +947,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 }
                 List<ByteBuffer> generatedIds = new ArrayList<>(left);
                 boolean sendAndFlush = false;
-                ByteBuffer key = sourceAddr.connId.duplicate();
+                ByteBuffer key = sourceAddr.id();
                 ByteBuf connIdBuffer = alloc().directBuffer(key.remaining());
 
                 byte[] resetTokenArray = new byte[Quic.RESET_TOKEN_LEN];
                 try {
                     do {
-                        ByteBuffer srcId = connectionIdAddressGenerator.newId(key, key.remaining());
+                        ByteBuffer srcId = connectionIdAddressGenerator.newId(key.duplicate(), key.remaining())
+                                .asReadOnlyBuffer();
                         connIdBuffer.clear();
                         connIdBuffer.writeBytes(srcId.duplicate());
                         ByteBuffer resetToken = resetTokenGenerator.newResetToken(srcId.duplicate());
@@ -953,7 +966,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             break;
                         }
                         sendAndFlush = true;
-                        generatedIds.add(srcId);
+                        generatedIds.add(srcId.duplicate());
                         sourceConnectionIds.add(srcId);
                     } while (--left > 0);
                 } finally {
@@ -1435,9 +1448,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     return;
                 }
 
-                QuicConnectionAddress address = (QuicConnectionAddress) remote;
+                connectAddress = (QuicConnectionAddress) remote;
                 connectPromise = channelPromise;
-                connectAddress = address;
 
                 // Schedule connect timeout.
                 int connectTimeoutMillis = config().getConnectTimeoutMillis();
