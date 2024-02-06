@@ -185,9 +185,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
 
-    // Updated once a new handshake is started and so the SSLSession reused.
-    private volatile long lastAccessed = -1;
-
     private String endPointIdentificationAlgorithm;
     // Store as object as AlgorithmConstraints only exists since java 7.
     private Object algorithmConstraints;
@@ -1983,12 +1980,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         engineMap.add(this);
 
         if (!sessionSet) {
-            parentContext.sessionContext().setSessionFromCache(getPeerHost(), getPeerPort(), ssl);
+            parentContext.sessionContext().setSessionFromCache(ssl, session, getPeerHost(), getPeerPort());
             sessionSet = true;
-        }
-
-        if (lastAccessed == -1) {
-            lastAccessed = System.currentTimeMillis();
         }
 
         int code = SSL.doHandshake(ssl);
@@ -2351,10 +2344,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
-    final void setSessionId(OpenSslSessionId id) {
-        session.setSessionId(id);
-    }
-
     private static final X509Certificate[] JAVAX_CERTS_NOT_SUPPORTED = new X509Certificate[0];
 
     private final class DefaultOpenSslSession implements OpenSslSession  {
@@ -2369,10 +2358,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         private String protocol;
         private String cipher;
         private OpenSslSessionId id = OpenSslSessionId.NULL_ID;
-        private volatile long creationTime;
+        private long creationTime;
+
+        // Updated once a new handshake is started and so the SSLSession reused.
+        private long lastAccessed = -1;
+
         private volatile int applicationBufferSize = MAX_PLAINTEXT_LENGTH;
         private volatile Certificate[] localCertificateChain;
-        // lazy init for memory reasons
         private Map<String, Object> values;
 
         DefaultOpenSslSession(OpenSslSessionContext sessionContext) {
@@ -2384,11 +2376,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         @Override
-        public void setSessionId(OpenSslSessionId sessionId) {
+        public void setSessionDetails(
+                long creationTime, long lastAccessedTime, OpenSslSessionId sessionId) {
             synchronized (ReferenceCountedOpenSslEngine.this) {
                 if (this.id == OpenSslSessionId.NULL_ID) {
                     this.id = sessionId;
-                    creationTime = System.currentTimeMillis();
+                    this.creationTime = creationTime;
+                    this.lastAccessed = lastAccessedTime;
                 }
             }
         }
@@ -2430,10 +2424,18 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         @Override
+        public void setLastAccessedTime(long time) {
+            synchronized (ReferenceCountedOpenSslEngine.this) {
+                this.lastAccessed = time;
+            }
+        }
+
+        @Override
         public long getLastAccessedTime() {
-            long lastAccessed = ReferenceCountedOpenSslEngine.this.lastAccessed;
             // if lastAccessed is -1 we will just return the creation time as the handshake was not started yet.
-            return lastAccessed == -1 ? getCreationTime() : lastAccessed;
+            synchronized (ReferenceCountedOpenSslEngine.this) {
+                return lastAccessed == -1 ? creationTime : lastAccessed;
+            }
         }
 
         @Override
@@ -2528,9 +2530,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 throws SSLException {
             synchronized (ReferenceCountedOpenSslEngine.this) {
                 if (!isDestroyed()) {
-                    this.creationTime = creationTime;
                     if (this.id == OpenSslSessionId.NULL_ID) {
+                        // if the handshake finished and it was not a resumption let ensure we try to set the id
                         this.id = id == null ? OpenSslSessionId.NULL_ID : new OpenSslSessionId(id);
+                        // Once the handshake was done the lastAccessed and creationTime should be the same if we
+                        // did not set it earlier via setSessionDetails(...)
+                        this.creationTime = lastAccessed = creationTime;
                     }
                     this.cipher = toJavaCipherSuite(cipher);
                     this.protocol = protocol;
