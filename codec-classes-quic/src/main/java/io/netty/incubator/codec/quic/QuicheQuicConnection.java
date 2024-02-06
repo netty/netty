@@ -87,6 +87,10 @@ final class QuicheQuicConnection {
         free(true);
     }
 
+    boolean isFreed() {
+        return connection == -1;
+    }
+
     private void free(boolean closeLeakTracker) {
         boolean release = false;
         synchronized (this) {

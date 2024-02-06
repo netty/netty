@@ -28,10 +28,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -47,6 +45,8 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private final Map<ByteBuffer, QuicheQuicChannel> connectionIdToChannel = new HashMap<>();
     private final Set<QuicheQuicChannel> channels = new HashSet<>();
     private final Queue<QuicheQuicChannel> needsFireChannelReadComplete = new ArrayDeque<>();
+    private final Queue<QuicheQuicChannel> delayedRemoval = new ArrayDeque<>();
+
     private final Consumer<QuicheQuicChannel> freeTask = this::removeChannel;
     private final int maxTokenLength;
     private final FlushStrategy flushStrategy;
@@ -59,6 +59,8 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private int pendingBytes;
     private int pendingPackets;
     private boolean inChannelReadComplete;
+    private boolean delayRemoval;
+
     // This buffer is used to copy InetSocketAddress to sockaddr_storage and so pass it down the JNI layer.
     private ByteBuf senderSockaddrMemory;
     private ByteBuf recipientSockaddrMemory;
@@ -84,12 +86,28 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         assert ch == channel;
     }
 
+    private void processDelayedRemoval() {
+        for (;;) {
+            // Now remove all channels that we marked for removal.
+            QuicheQuicChannel toBeRemoved = delayedRemoval.poll();
+            if (toBeRemoved == null) {
+                break;
+            }
+            removeChannel(toBeRemoved);
+        }
+    }
+
     private void removeChannel(QuicheQuicChannel channel) {
-        boolean removed = channels.remove(channel);
-        if (removed) {
-            for (ByteBuffer id : channel.sourceConnectionIds()) {
-                QuicheQuicChannel ch = connectionIdToChannel.remove(id);
-                assert ch == channel;
+        if (delayRemoval) {
+            boolean added = delayedRemoval.offer(channel);
+            assert added;
+        } else {
+            boolean removed = channels.remove(channel);
+            if (removed) {
+                for (ByteBuffer id : channel.sourceConnectionIds()) {
+                    QuicheQuicChannel ch = connectionIdToChannel.remove(id);
+                    assert ch == channel;
+                }
             }
         }
     }
@@ -135,6 +153,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
             channels.clear();
             connectionIdToChannel.clear();
             needsFireChannelReadComplete.clear();
+            delayedRemoval.clear();
 
             config.free();
             if (senderSockaddrMemory != null) {
@@ -218,9 +237,6 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                     break;
                 }
                 channel.recvComplete();
-                if (channel.freeIfClosed()) {
-                    removeChannel(channel);
-                }
             }
         } finally {
             inChannelReadComplete = false;
@@ -233,21 +249,18 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     @Override
     public final void channelWritabilityChanged(ChannelHandlerContext ctx) {
         if (ctx.channel().isWritable()) {
-            List<QuicheQuicChannel> closed = null;
-            for (QuicheQuicChannel channel : channels) {
-                // TODO: Be a bit smarter about this.
-                channel.writable();
-                if (channel.freeIfClosed()) {
-                    if (closed == null) {
-                        closed = new ArrayList<>();
-                    }
-                    closed.add(channel);
+            // Ensure we delay removal from the channels Set as otherwise we will might see an exception
+            // due modifications while iteration.
+            delayRemoval = true;
+            try {
+                for (QuicheQuicChannel channel : channels) {
+                    // TODO: Be a bit smarter about this.
+                    channel.writable();
                 }
-            }
-            if (closed != null) {
-                for (QuicheQuicChannel ch: closed) {
-                    removeChannel(ch);
-                }
+            } finally {
+                // We are done with the loop, reset the flag and process the removals from the channels Set.
+                delayRemoval = false;
+                processDelayedRemoval();
             }
         } else {
             // As we batch flushes we need to ensure we at least try to flush a batch once the channel becomes
