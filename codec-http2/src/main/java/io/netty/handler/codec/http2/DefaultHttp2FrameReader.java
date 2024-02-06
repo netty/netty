@@ -63,7 +63,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
      * renders the connection unusable.
      */
     private boolean readError;
-    private boolean resetReader;
     private byte frameType;
     private int streamId;
     private Http2Flags flags;
@@ -140,36 +139,33 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             throws Http2Exception {
         if (readError) {
             input.skipBytes(input.readableBytes());
-            resetReader = false;
             return;
         }
         try {
             do {
-                if (readingHeaders) {
-                    processHeaderState(input);
-                    if (readingHeaders) {
-                        // Wait until the entire header has arrived.
-                        return;
-                    }
+                if (readingHeaders && !preProcessFrame(input)) {
+                    return;
                 }
-
+                verifyHeaderState();
                 // The header is complete, fall into the next case to process the payload.
                 // This is to ensure the proper handling of zero-length payloads. In this
                 // case, we don't want to loop around because there may be no more data
                 // available, causing us to exit the loop. Instead, we just want to perform
                 // the first pass at payload processing now.
-                processPayloadState(ctx, input, listener);
-                if (!readingHeaders) {
-                    // Wait until the entire payload has arrived.
+
+                // Wait until the entire payload has been read.
+                if (input.readableBytes() < payloadLength) {
                     return;
                 }
+                // Slice to work only on the frame being read
+                ByteBuf framePayload = input.readSlice(payloadLength);
+                processPayloadState(ctx, framePayload, listener);
             } while (input.isReadable());
         } catch (Http2Exception e) {
             readError = !Http2Exception.isStreamError(e);
-            if (resetReader) {
-                resetReader = false;
+            // Stream error found, reset to reading headers once again for next request coming in
+            if (!readError) {
                 readingHeaders = true;
-                input.skipBytes(input.readableBytes());
             }
             throw e;
         } catch (RuntimeException e) {
@@ -181,25 +177,28 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         }
     }
 
-    private void processHeaderState(ByteBuf in) throws Http2Exception {
+    private boolean preProcessFrame(ByteBuf in) throws Http2Exception {
+        // Start pre-processing the frame by reading the necessary data
+        // in common between all frame types
         if (in.readableBytes() < FRAME_HEADER_LENGTH) {
-            // Wait until the entire frame header has been read.
-            return;
+            // Wait until the entire framing section has been read.
+            return false;
         }
-
-        // Read the header and prepare the unmarshaller to read the frame.
         payloadLength = in.readUnsignedMedium();
+        frameType = in.readByte();
+        flags = new Http2Flags(in.readUnsignedByte());
+        streamId = readUnsignedInt(in);
         if (payloadLength > maxFrameSize) {
             throw connectionError(FRAME_SIZE_ERROR, "Frame length: %d exceeds maximum: %d", payloadLength,
                                   maxFrameSize);
         }
-        frameType = in.readByte();
-        flags = new Http2Flags(in.readUnsignedByte());
-        streamId = readUnsignedInt(in);
+        return true;
+    }
 
-        // We have consumed the data, next time we read we will be expecting to read the frame payload.
-        readingHeaders = false;
-
+    private void verifyHeaderState() throws Http2Exception {
+        if (!readingHeaders) { // Already verified headers, no need to do so again
+            return;
+        }
         switch (frameType) {
             case DATA:
                 verifyDataFrame();
@@ -236,28 +235,18 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 verifyUnknownFrame();
                 break;
         }
+        readingHeaders = false;
     }
 
     private void processPayloadState(ChannelHandlerContext ctx, ByteBuf in, Http2FrameListener listener)
                     throws Http2Exception {
-        if (in.readableBytes() < payloadLength) {
-            // Wait until the entire payload has been read.
-            return;
-        }
-
-        // Only process up to payloadLength bytes.
-        int payloadEndIndex = in.readerIndex() + payloadLength;
-
-        // We have consumed the data, next time we read we will be expecting to read a frame header.
-        readingHeaders = true;
-
         // Read the payload and fire the frame event to the listener.
         switch (frameType) {
             case DATA:
-                readDataFrame(ctx, in, payloadEndIndex, listener);
+                readDataFrame(ctx, in, payloadLength, listener);
                 break;
             case HEADERS:
-                readHeadersFrame(ctx, in, payloadEndIndex, listener);
+                readHeadersFrame(ctx, in, payloadLength, listener);
                 break;
             case PRIORITY:
                 readPriorityFrame(ctx, in, listener);
@@ -269,25 +258,26 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 readSettingsFrame(ctx, in, listener);
                 break;
             case PUSH_PROMISE:
-                readPushPromiseFrame(ctx, in, payloadEndIndex, listener);
+                readPushPromiseFrame(ctx, in, payloadLength, listener);
                 break;
             case PING:
                 readPingFrame(ctx, in.readLong(), listener);
                 break;
             case GO_AWAY:
-                readGoAwayFrame(ctx, in, payloadEndIndex, listener);
+                readGoAwayFrame(ctx, in, payloadLength, listener);
                 break;
             case WINDOW_UPDATE:
                 readWindowUpdateFrame(ctx, in, listener);
                 break;
             case CONTINUATION:
-                readContinuationFrame(in, payloadEndIndex, listener);
+                readContinuationFrame(in, payloadLength, listener);
                 break;
             default:
-                readUnknownFrame(ctx, in, payloadEndIndex, listener);
+                readUnknownFrame(ctx, in, payloadLength, listener);
                 break;
         }
-        in.readerIndex(payloadEndIndex);
+        // We have consumed the data, next time we read we will be expecting to read a frame header.
+        readingHeaders = true;
     }
 
     private void verifyDataFrame() throws Http2Exception {
@@ -316,7 +306,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         verifyNotProcessingHeaders();
 
         if (payloadLength != PRIORITY_ENTRY_LENGTH) {
-            resetReader = true;
             throw streamError(streamId, FRAME_SIZE_ERROR,
                     "Invalid frame length %d.", payloadLength);
         }
@@ -438,7 +427,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             final int streamDependency = (int) (word1 & 0x7FFFFFFFL);
             final short weight = (short) (payload.readUnsignedByte() + 1);
             if (streamDependency == streamId) {
-                resetReader = true;
                 throw streamError(streamId, PROTOCOL_ERROR, "A stream cannot depend on itself.");
             }
             final int lenToRead = lengthWithoutTrailingPadding(payloadEndIndex - payload.readerIndex(), padding);
@@ -507,7 +495,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         int streamDependency = (int) (word1 & 0x7FFFFFFFL);
         short weight = (short) (payload.readUnsignedByte() + 1);
         if (streamDependency == streamId) {
-            resetReader = true;
             throw streamError(streamId, PROTOCOL_ERROR, "A stream cannot depend on itself.");
         }
         listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
