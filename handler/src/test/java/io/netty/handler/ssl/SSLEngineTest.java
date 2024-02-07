@@ -3306,8 +3306,16 @@ public abstract class SSLEngineTest {
             }
 
             assertSessionReusedForEngine(clientEngine, serverEngine, reuse);
+            String key = "key";
             if (reuse) {
                 if (clientSessionReused != SessionReusedState.NOT_REUSED) {
+                    // We should see the previous stored value on session reuse.
+                    // This is broken in conscrypt.
+                    // TODO: Open an issue in the conscrypt project.
+                    if (!Conscrypt.isEngineSupported(clientEngine)) {
+                        assertEquals(Boolean.TRUE, clientEngine.getSession().getValue(key));
+                    }
+
                     Matcher<Long> creationTimeMatcher;
                     if (clientSessionReused == SessionReusedState.REUSED) {
                         // If we know for sure it was reused so the accessedTime needs to be larger.
@@ -3323,6 +3331,8 @@ public abstract class SSLEngineTest {
                 // If we don't sleep and execution is very fast we will see test-failures once we go into the
                 // reuse branch.
                 Thread.sleep(1);
+
+                clientEngine.getSession().putValue(key, Boolean.TRUE);
             }
             closeOutboundAndInbound(param.type(), clientEngine, serverEngine);
         } finally {
@@ -3612,8 +3622,27 @@ public abstract class SSLEngineTest {
                 clientContextBuilder.keyManager(ssc.key(), ssc.cert());
             }
         }
+
+        final String handshakeKey = "handshake";
+        TrustManagerFactory tmf = new ConstantTrustManagerFactory(new EmptyExtendedX509TrustManager() {
+            @Override
+            public void checkClientTrusted(java.security.cert.X509Certificate[] chain,
+                                           String authType, SSLEngine engine) {
+                assertEquals(0, engine.getHandshakeSession().getValueNames().length);
+                engine.getHandshakeSession().putValue(handshakeKey, Boolean.TRUE);
+            }
+
+            @Override
+            public void checkServerTrusted(java.security.cert.X509Certificate[] chain,
+                                           String authType, SSLEngine engine) {
+                assertEquals(0, engine.getHandshakeSession().getValueNames().length);
+                engine.getHandshakeSession().putValue(handshakeKey, Boolean.TRUE);
+            }
+        });
+
+
         clientSslCtx = wrapContext(param, clientContextBuilder
-                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                        .trustManager(tmf)
                                         .sslProvider(sslClientProvider())
                                         .sslContextProvider(clientSslContextProvider())
                                         .protocols(param.protocols())
@@ -3626,7 +3655,7 @@ public abstract class SSLEngineTest {
         if (mutualAuth) {
             serverContextBuilder.clientAuth(ClientAuth.REQUIRE);
         }
-        serverSslCtx = wrapContext(param, serverContextBuilder.trustManager(InsecureTrustManagerFactory.INSTANCE)
+        serverSslCtx = wrapContext(param, serverContextBuilder.trustManager(tmf)
                                      .sslProvider(sslServerProvider())
                                      .sslContextProvider(serverSslContextProvider())
                                      .protocols(param.protocols())
@@ -3643,11 +3672,23 @@ public abstract class SSLEngineTest {
             assertEquals(Boolean.TRUE, clientEngine.getSession().getValue(key));
             serverEngine.getSession().putValue(key, Boolean.TRUE);
             assertEquals(Boolean.TRUE, serverEngine.getSession().getValue(key));
+            clientEngine.getSession().removeValue(key);
+            serverEngine.getSession().removeValue(key);
 
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             SSLSession clientSession = clientEngine.getSession();
             SSLSession serverSession = serverEngine.getSession();
+
+            // The values should not have been carried over.
+            // This is broken in conscrypt.
+            // TODO: Open an issue in the conscrypt project.
+            if (!Conscrypt.isEngineSupported(clientEngine)) {
+                assertNull(clientSession.getValue(key));
+            }
+            if (!Conscrypt.isEngineSupported(serverEngine)) {
+                assertNull(serverSession.getValue(key));
+            }
 
             clientSession.removeValue(key);
             serverSession.removeValue(key);
@@ -3690,6 +3731,17 @@ public abstract class SSLEngineTest {
             }
 
             Object value = new Object();
+
+            assertEquals(1, clientSession.getValueNames().length);
+            assertEquals(clientSession.getValue(handshakeKey), Boolean.TRUE);
+            clientSession.removeValue(handshakeKey);
+
+            if (mutualAuth) {
+                // Server trust manager factory is only called if server authenticates clients.
+                assertEquals(1, serverSession.getValueNames().length);
+                assertEquals(serverSession.getValue(handshakeKey), Boolean.TRUE);
+                serverSession.removeValue(handshakeKey);
+            }
 
             assertEquals(0, clientSession.getValueNames().length);
             clientSession.putValue("test", value);

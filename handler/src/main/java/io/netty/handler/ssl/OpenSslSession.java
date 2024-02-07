@@ -18,6 +18,7 @@ package io.netty.handler.ssl;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
 import java.security.cert.Certificate;
+import java.util.Map;
 
 /**
  * {@link SSLSession} that is specific to our native implementation.
@@ -36,9 +37,31 @@ interface OpenSslSession extends SSLSession {
     void setLocalCertificate(Certificate[] localCertificate);
 
     /**
-     * Set the {@link OpenSslSessionId} for the {@link OpenSslSession}.
+     * Set the details for the session which might come from a cache.
+     *
+     * @param creationTime the time at which the session was created.
+     * @param lastAccessedTime the time at which the session was last accessed via the session infrastructure (cache).
+     * @param id the {@link OpenSslSessionId}
+     * @param keyValueStorage the key value store. See {@link #keyValueStorage()}.
      */
-    void setSessionDetails(long creationTime, long lastAccessedTime, OpenSslSessionId id);
+    void setSessionDetails(long creationTime, long lastAccessedTime, OpenSslSessionId id,
+                           Map<String, Object> keyValueStorage);
+
+    /**
+     * Return the underlying {@link Map} that is used by the following methods:
+     *
+     * <ul>
+     *     <li>{@link #putValue(String, Object)}</li>
+     *     <li>{@link #removeValue(String)}</li>
+     *     <li>{@link #getValue(String)}</li>
+     *     <li> {@link #getValueNames()}</li>
+     * </ul>
+     *
+     * The {@link Map} must be thread-safe!
+     *
+     * @return storage
+     */
+    Map<String, Object> keyValueStorage();
 
     /**
      * Set the last access time which will be returned by {@link #getLastAccessedTime()}.

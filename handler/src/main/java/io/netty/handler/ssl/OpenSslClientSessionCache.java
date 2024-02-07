@@ -88,7 +88,7 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
             }
             nativeSslSession.setLastAccessedTime(System.currentTimeMillis());
             session.setSessionDetails(nativeSslSession.getCreationTime(), nativeSslSession.getLastAccessedTime(),
-                    nativeSslSession.sessionId());
+                    nativeSslSession.sessionId(), nativeSslSession.keyValueStorage);
         }
     }
 
