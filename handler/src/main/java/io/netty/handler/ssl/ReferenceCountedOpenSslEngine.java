@@ -72,6 +72,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullArrayParam;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static java.lang.Integer.MAX_VALUE;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_TASK;
@@ -183,9 +184,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     };
 
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
-
-    // Updated once a new handshake is started and so the SSLSession reused.
-    private volatile long lastAccessed = -1;
 
     private String endPointIdentificationAlgorithm;
     // Store as object as AlgorithmConstraints only exists since java 7.
@@ -704,9 +702,23 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * This method is intentionally not synchronized, only use if you know you are in the EventLoop
      * thread and visibility on {@link #maxWrapBufferSize} and {@link #maxWrapOverhead} is achieved
      * via other synchronized blocks.
+     * <br>
+     * Calculates the max size of a single wrap operation for the given plaintextLength and
+     * numComponents.
      */
     final int calculateMaxLengthForWrap(int plaintextLength, int numComponents) {
         return (int) min(maxWrapBufferSize, plaintextLength + (long) maxWrapOverhead * numComponents);
+    }
+
+    /**
+     * This method is intentionally not synchronized, only use if you know you are in the EventLoop
+     * thread and visibility on {@link #maxWrapOverhead} is achieved via other synchronized blocks.
+     * <br>
+     * Calculates the size of the out net buf to create for the given plaintextLength and numComponents.
+     * This is not related to the max size per wrap, as we can wrap chunks at a time into one out net buf.
+     */
+    final int calculateOutNetBufSize(int plaintextLength, int numComponents) {
+        return (int) min(MAX_VALUE, plaintextLength + (long) maxWrapOverhead * numComponents);
     }
 
     final synchronized int sslPending() {
@@ -1968,12 +1980,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         engineMap.add(this);
 
         if (!sessionSet) {
-            parentContext.sessionContext().setSessionFromCache(getPeerHost(), getPeerPort(), ssl);
+            parentContext.sessionContext().setSessionFromCache(ssl, session, getPeerHost(), getPeerPort());
             sessionSet = true;
-        }
-
-        if (lastAccessed == -1) {
-            lastAccessed = System.currentTimeMillis();
         }
 
         int code = SSL.doHandshake(ssl);
@@ -2336,9 +2344,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
-    final void setSessionId(OpenSslSessionId id) {
-        session.setSessionId(id);
-    }
+    private static final X509Certificate[] JAVAX_CERTS_NOT_SUPPORTED = new X509Certificate[0];
 
     private final class DefaultOpenSslSession implements OpenSslSession  {
         private final OpenSslSessionContext sessionContext;
@@ -2352,10 +2358,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         private String protocol;
         private String cipher;
         private OpenSslSessionId id = OpenSslSessionId.NULL_ID;
-        private volatile long creationTime;
+        private long creationTime;
+
+        // Updated once a new handshake is started and so the SSLSession reused.
+        private long lastAccessed = -1;
+
         private volatile int applicationBufferSize = MAX_PLAINTEXT_LENGTH;
         private volatile Certificate[] localCertificateChain;
-        // lazy init for memory reasons
         private Map<String, Object> values;
 
         DefaultOpenSslSession(OpenSslSessionContext sessionContext) {
@@ -2367,11 +2376,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         @Override
-        public void setSessionId(OpenSslSessionId sessionId) {
+        public void setSessionDetails(
+                long creationTime, long lastAccessedTime, OpenSslSessionId sessionId) {
             synchronized (ReferenceCountedOpenSslEngine.this) {
                 if (this.id == OpenSslSessionId.NULL_ID) {
                     this.id = sessionId;
-                    creationTime = System.currentTimeMillis();
+                    this.creationTime = creationTime;
+                    this.lastAccessed = lastAccessedTime;
                 }
             }
         }
@@ -2413,10 +2424,18 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         @Override
+        public void setLastAccessedTime(long time) {
+            synchronized (ReferenceCountedOpenSslEngine.this) {
+                this.lastAccessed = time;
+            }
+        }
+
+        @Override
         public long getLastAccessedTime() {
-            long lastAccessed = ReferenceCountedOpenSslEngine.this.lastAccessed;
             // if lastAccessed is -1 we will just return the creation time as the handshake was not started yet.
-            return lastAccessed == -1 ? getCreationTime() : lastAccessed;
+            synchronized (ReferenceCountedOpenSslEngine.this) {
+                return lastAccessed == -1 ? creationTime : lastAccessed;
+            }
         }
 
         @Override
@@ -2511,9 +2530,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 throws SSLException {
             synchronized (ReferenceCountedOpenSslEngine.this) {
                 if (!isDestroyed()) {
-                    this.creationTime = creationTime;
                     if (this.id == OpenSslSessionId.NULL_ID) {
+                        // if the handshake finished and it was not a resumption let ensure we try to set the id
                         this.id = id == null ? OpenSslSessionId.NULL_ID : new OpenSslSessionId(id);
+                        // Once the handshake was done the lastAccessed and creationTime should be the same if we
+                        // did not set it earlier via setSessionDetails(...)
+                        this.creationTime = lastAccessed = creationTime;
                     }
                     this.cipher = toJavaCipherSuite(cipher);
                     this.protocol = protocol;
@@ -2521,10 +2543,18 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     if (clientMode) {
                         if (isEmpty(peerCertificateChain)) {
                             peerCerts = EmptyArrays.EMPTY_CERTIFICATES;
-                            x509PeerCerts = EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
+                            if (OpenSsl.JAVAX_CERTIFICATE_CREATION_SUPPORTED) {
+                                x509PeerCerts = EmptyArrays.EMPTY_JAVAX_X509_CERTIFICATES;
+                            } else {
+                                x509PeerCerts = JAVAX_CERTS_NOT_SUPPORTED;
+                            }
                         } else {
                             peerCerts = new Certificate[peerCertificateChain.length];
-                            x509PeerCerts = new X509Certificate[peerCertificateChain.length];
+                            if (OpenSsl.JAVAX_CERTIFICATE_CREATION_SUPPORTED) {
+                                x509PeerCerts = new X509Certificate[peerCertificateChain.length];
+                            } else {
+                                x509PeerCerts = JAVAX_CERTS_NOT_SUPPORTED;
+                            }
                             initCerts(peerCertificateChain, 0);
                         }
                     } else {
@@ -2539,12 +2569,24 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         } else {
                             if (isEmpty(peerCertificateChain)) {
                                 peerCerts = new Certificate[] {new LazyX509Certificate(peerCertificate)};
-                                x509PeerCerts = new X509Certificate[] {new LazyJavaxX509Certificate(peerCertificate)};
+                                if (OpenSsl.JAVAX_CERTIFICATE_CREATION_SUPPORTED) {
+                                    x509PeerCerts = new X509Certificate[] {
+                                            new LazyJavaxX509Certificate(peerCertificate)
+                                    };
+                                } else {
+                                    x509PeerCerts = JAVAX_CERTS_NOT_SUPPORTED;
+                                }
                             } else {
                                 peerCerts = new Certificate[peerCertificateChain.length + 1];
-                                x509PeerCerts = new X509Certificate[peerCertificateChain.length + 1];
                                 peerCerts[0] = new LazyX509Certificate(peerCertificate);
-                                x509PeerCerts[0] = new LazyJavaxX509Certificate(peerCertificate);
+
+                                if (OpenSsl.JAVAX_CERTIFICATE_CREATION_SUPPORTED) {
+                                    x509PeerCerts = new X509Certificate[peerCertificateChain.length + 1];
+                                    x509PeerCerts[0] = new LazyJavaxX509Certificate(peerCertificate);
+                                } else {
+                                    x509PeerCerts = JAVAX_CERTS_NOT_SUPPORTED;
+                                }
+
                                 initCerts(peerCertificateChain, 1);
                             }
                         }
@@ -2563,7 +2605,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             for (int i = 0; i < chain.length; i++) {
                 int certPos = startPos + i;
                 peerCerts[certPos] = new LazyX509Certificate(chain[i]);
-                x509PeerCerts[certPos] = new LazyJavaxX509Certificate(chain[i]);
+                if (x509PeerCerts != JAVAX_CERTS_NOT_SUPPORTED) {
+                    x509PeerCerts[certPos] = new LazyJavaxX509Certificate(chain[i]);
+                }
             }
         }
 
@@ -2589,6 +2633,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         @Override
         public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
             synchronized (ReferenceCountedOpenSslEngine.this) {
+                if (x509PeerCerts == JAVAX_CERTS_NOT_SUPPORTED) {
+                    // Not supported by the underlying JDK, so just throw. This is fine in terms of the API
+                    // contract. See SSLSession.html#getPeerCertificateChain().
+                    throw new UnsupportedOperationException();
+                }
                 if (isEmpty(x509PeerCerts)) {
                     throw new SSLPeerUnverifiedException("peer not verified");
                 }

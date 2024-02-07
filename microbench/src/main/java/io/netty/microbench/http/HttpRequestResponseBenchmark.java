@@ -21,14 +21,13 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
@@ -54,7 +53,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.concurrent.TimeUnit;
 
 @State(Scope.Thread)
 @Warmup(iterations = 10, time = 1)
@@ -236,8 +234,10 @@ public class HttpRequestResponseBenchmark extends AbstractMicrobenchmark {
             private void writeResponse(ChannelHandlerContext ctx, ByteBuf buf, CharSequence contentType,
                                        CharSequence contentLength) {
                 // Build the response object.
-                FullHttpResponse response =
-                        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf, false);
+                FullHttpResponse response = new DefaultFullHttpResponse(
+                        HttpVersion.HTTP_1_1, HttpResponseStatus.OK, buf,
+                        DefaultHttpHeadersFactory.headersFactory().withValidation(false),
+                        DefaultHttpHeadersFactory.trailersFactory().withValidation(false));
                 HttpHeaders headers = response.headers();
                 headers.set(CONTENT_TYPE_ENTITY, contentType);
                 headers.set(SERVER_ENTITY, SERVER_NAME);

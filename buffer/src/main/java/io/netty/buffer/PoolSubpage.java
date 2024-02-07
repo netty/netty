@@ -33,6 +33,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     private final long[] bitmap;
     private final int bitmapLength;
     private final int maxNumElems;
+    final int headIndex;
 
     PoolSubpage<T> prev;
     PoolSubpage<T> next;
@@ -41,13 +42,13 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     private int nextAvail;
     private int numAvail;
 
-    private final ReentrantLock lock;
+    final ReentrantLock lock;
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
     /** Special constructor that creates a linked list head */
-    PoolSubpage() {
+    PoolSubpage(int headIndex) {
         chunk = null;
         lock = new ReentrantLock();
         pageShifts = -1;
@@ -56,10 +57,12 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
         runSize = -1;
         bitmap = null;
         bitmapLength = -1;
-        maxNumElems = -1;
+        maxNumElems = 0;
+        this.headIndex = headIndex;
     }
 
     PoolSubpage(PoolSubpage<T> head, PoolChunk<T> chunk, int pageShifts, int runOffset, int runSize, int elemSize) {
+        this.headIndex = head.headIndex;
         this.chunk = chunk;
         this.pageShifts = pageShifts;
         this.runOffset = runOffset;
@@ -177,8 +180,6 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     }
 
     private int findNextAvail() {
-        final long[] bitmap = this.bitmap;
-        final int bitmapLength = this.bitmapLength;
         for (int i = 0; i < bitmapLength; i ++) {
             long bits = bitmap[i];
             if (~bits != 0) {
@@ -189,9 +190,7 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
     }
 
     private int findNextAvail0(int i, long bits) {
-        final int maxNumElems = this.maxNumElems;
         final int baseVal = i << 6;
-
         for (int j = 0; j < 64; j ++) {
             if ((bits & 1) == 0) {
                 int val = baseVal | j;
@@ -217,54 +216,33 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
 
     @Override
     public String toString() {
-        final boolean doNotDestroy;
-        final int maxNumElems;
         final int numAvail;
-        final int elemSize;
         if (chunk == null) {
             // This is the head so there is no need to synchronize at all as these never change.
-            doNotDestroy = true;
-            maxNumElems = 0;
             numAvail = 0;
-            elemSize = -1;
         } else {
-            chunk.arena.lock();
+            final boolean doNotDestroy;
+            PoolSubpage<T> head = chunk.arena.smallSubpagePools[headIndex];
+            head.lock();
             try {
-                if (!this.doNotDestroy) {
-                    doNotDestroy = false;
-                    // Not used for creating the String.
-                    maxNumElems = numAvail = elemSize = -1;
-                } else {
-                    doNotDestroy = true;
-                    maxNumElems = this.maxNumElems;
-                    numAvail = this.numAvail;
-                    elemSize = this.elemSize;
-                }
+                doNotDestroy = this.doNotDestroy;
+                numAvail = this.numAvail;
             } finally {
-                chunk.arena.unlock();
+                head.unlock();
+            }
+            if (!doNotDestroy) {
+                // Not used for creating the String.
+                return "(" + runOffset + ": not in use)";
             }
         }
 
-        if (!doNotDestroy) {
-            return "(" + runOffset + ": not in use)";
-        }
-
-        return "(" + runOffset + ": " + (maxNumElems - numAvail) + '/' + maxNumElems +
-                ", offset: " + runOffset + ", length: " + runSize + ", elemSize: " + elemSize + ')';
+        return "(" + this.runOffset + ": " + (this.maxNumElems - numAvail) + '/' + this.maxNumElems +
+                ", offset: " + this.runOffset + ", length: " + this.runSize + ", elemSize: " + this.elemSize + ')';
     }
 
     @Override
     public int maxNumElements() {
-        if (chunk == null) {
-            // It's the head.
-            return 0;
-        }
-        chunk.arena.lock();
-        try {
-            return maxNumElems;
-        } finally {
-            chunk.arena.unlock();
-        }
+        return maxNumElems;
     }
 
     @Override
@@ -273,33 +251,37 @@ final class PoolSubpage<T> implements PoolSubpageMetric {
             // It's the head.
             return 0;
         }
-
-        chunk.arena.lock();
+        PoolSubpage<T> head = chunk.arena.smallSubpagePools[headIndex];
+        head.lock();
         try {
             return numAvail;
         } finally {
-            chunk.arena.unlock();
+            head.unlock();
         }
     }
 
     @Override
     public int elementSize() {
-        if (chunk == null) {
-            // It's the head.
-            return -1;
-        }
-
-        chunk.arena.lock();
-        try {
-            return elemSize;
-        } finally {
-            chunk.arena.unlock();
-        }
+        return elemSize;
     }
 
     @Override
     public int pageSize() {
         return 1 << pageShifts;
+    }
+
+    boolean isDoNotDestroy() {
+        if (chunk == null) {
+            // It's the head.
+            return true;
+        }
+        PoolSubpage<T> head = chunk.arena.smallSubpagePools[headIndex];
+        head.lock();
+        try {
+            return doNotDestroy;
+        } finally {
+            head.unlock();
+        }
     }
 
     void destroy() {

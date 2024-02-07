@@ -47,8 +47,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig imple
     private boolean activeOnOpen;
 
     KQueueDatagramChannelConfig(KQueueDatagramChannel channel) {
-        super(channel);
-        setRecvByteBufAllocator(new FixedRecvByteBufAllocator(2048));
+        super(channel, new FixedRecvByteBufAllocator(2048));
     }
 
     @Override

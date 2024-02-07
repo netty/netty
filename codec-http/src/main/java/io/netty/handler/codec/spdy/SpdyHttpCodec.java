@@ -16,6 +16,10 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.handler.codec.http.FullHttpMessage;
+import io.netty.handler.codec.http.HttpHeadersFactory;
+
+import java.util.HashMap;
 
 /**
  * A combination of {@link SpdyHttpDecoder} and {@link SpdyHttpEncoder}
@@ -31,7 +35,17 @@ public final class SpdyHttpCodec extends CombinedChannelDuplexHandler<SpdyHttpDe
     /**
      * Creates a new instance with the specified decoder options.
      */
+    @Deprecated
     public SpdyHttpCodec(SpdyVersion version, int maxContentLength, boolean validateHttpHeaders) {
         super(new SpdyHttpDecoder(version, maxContentLength, validateHttpHeaders), new SpdyHttpEncoder(version));
+    }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     */
+    public SpdyHttpCodec(SpdyVersion version, int maxContentLength,
+                         HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
+        super(new SpdyHttpDecoder(version, maxContentLength, new HashMap<Integer, FullHttpMessage>(),
+                headersFactory, trailersFactory), new SpdyHttpEncoder(version));
     }
 }

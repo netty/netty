@@ -27,6 +27,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -75,6 +76,8 @@ final class PlatformDependent0 {
     private static final long UNSAFE_COPY_THRESHOLD = 1024L * 1024L;
 
     private static final boolean UNALIGNED;
+
+    private static final long BITS_MAX_DIRECT_MEMORY;
 
     static {
         final ByteBuffer direct;
@@ -271,6 +274,7 @@ final class PlatformDependent0 {
             INT_ARRAY_BASE_OFFSET = -1;
             INT_ARRAY_INDEX_SCALE = -1;
             UNALIGNED = false;
+            BITS_MAX_DIRECT_MEMORY = -1;
             DIRECT_BUFFER_CONSTRUCTOR = null;
             ALLOCATE_ARRAY_METHOD = null;
             STORE_FENCE_AVAILABLE = false;
@@ -336,6 +340,8 @@ final class PlatformDependent0 {
             LONG_ARRAY_BASE_OFFSET = UNSAFE.arrayBaseOffset(long[].class);
             LONG_ARRAY_INDEX_SCALE = UNSAFE.arrayIndexScale(long[].class);
             final boolean unaligned;
+            // using a known type to avoid loading new classes
+            final AtomicLong maybeMaxMemory = new AtomicLong(-1);
             Object maybeUnaligned = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
                 public Object run() {
@@ -345,9 +351,20 @@ final class PlatformDependent0 {
                         int version = javaVersion();
                         if (unsafeStaticFieldOffsetSupported() && version >= 9) {
                             // Java9/10 use all lowercase and later versions all uppercase.
-                            String fieldName = version >= 11 ? "UNALIGNED" : "unaligned";
+                            String fieldName = version >= 11? "MAX_MEMORY" : "maxMemory";
                             // On Java9 and later we try to directly access the field as we can do this without
                             // adjust the accessible levels.
+                            try {
+                                Field maxMemoryField = bitsClass.getDeclaredField(fieldName);
+                                if (maxMemoryField.getType() == long.class) {
+                                    long offset = UNSAFE.staticFieldOffset(maxMemoryField);
+                                    Object object = UNSAFE.staticFieldBase(maxMemoryField);
+                                    maybeMaxMemory.lazySet(UNSAFE.getLong(object, offset));
+                                }
+                            } catch (Throwable ignore) {
+                                // ignore if can't access
+                            }
+                            fieldName = version >= 11? "UNALIGNED" : "unaligned";
                             try {
                                 Field unalignedField = bitsClass.getDeclaredField(fieldName);
                                 if (unalignedField.getType() == boolean.class) {
@@ -397,6 +414,7 @@ final class PlatformDependent0 {
             }
 
             UNALIGNED = unaligned;
+            BITS_MAX_DIRECT_MEMORY = maybeMaxMemory.get() >= 0? maybeMaxMemory.get() : -1;
 
             if (javaVersion() >= 9) {
                 Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
@@ -520,6 +538,13 @@ final class PlatformDependent0 {
 
     static boolean isUnaligned() {
         return UNALIGNED;
+    }
+
+    /**
+     * Any value >= 0 should be considered as a valid max direct memory value.
+     */
+    static long bitsMaxDirectMemory() {
+        return BITS_MAX_DIRECT_MEMORY;
     }
 
     static boolean hasUnsafe() {

@@ -33,33 +33,38 @@ public class PoolArenaTest {
 
     @Test
     public void testNormalizeCapacity() {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
+        SizeClasses sc = new SizeClasses(PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, sc);
         int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
         int[] expectedResult = {16, 16, 512, 1024, 1024, 1280};
         for (int i = 0; i < reqCapacities.length; i ++) {
-            assertEquals(expectedResult[i], arena.sizeIdx2size(arena.size2SizeIdx(reqCapacities[i])));
+            assertEquals(expectedResult[i],
+                    arena.sizeClass.sizeIdx2size(arena.sizeClass.size2SizeIdx(reqCapacities[i])));
         }
     }
 
     @Test
     public void testNormalizeAlignedCapacity() {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 64);
+        SizeClasses sc = new SizeClasses(PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 64);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, sc);
         int[] reqCapacities = {0, 15, 510, 1024, 1023, 1025};
         int[] expectedResult = {64, 64, 512, 1024, 1024, 1280};
         for (int i = 0; i < reqCapacities.length; i ++) {
-            assertEquals(expectedResult[i], arena.sizeIdx2size(arena.size2SizeIdx(reqCapacities[i])));
+            assertEquals(expectedResult[i],
+                    arena.sizeClass.sizeIdx2size(arena.sizeClass.size2SizeIdx(reqCapacities[i])));
         }
     }
 
     @Test
     public void testSize2SizeIdx() {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
+        SizeClasses sc = new SizeClasses(PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, sc);
 
         for (int sz = 0; sz <= CHUNK_SIZE; sz++) {
-            int sizeIdx = arena.size2SizeIdx(sz);
-            assertTrue(sz <= arena.sizeIdx2size(sizeIdx));
+            int sizeIdx = arena.sizeClass.size2SizeIdx(sz);
+            assertTrue(sz <= arena.sizeClass.sizeIdx2size(sizeIdx));
             if (sizeIdx > 0) {
-                assertTrue(sz > arena.sizeIdx2size(sizeIdx - 1));
+                assertTrue(sz > arena.sizeClass.sizeIdx2size(sizeIdx - 1));
             }
         }
     }
@@ -67,38 +72,40 @@ public class PoolArenaTest {
     @Test
     public void testPages2PageIdx() {
         int pageShifts = PAGE_SHIFTS;
-
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
+        SizeClasses sc = new SizeClasses(PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, sc);
 
         int maxPages = CHUNK_SIZE >> pageShifts;
         for (int pages = 1; pages <= maxPages; pages++) {
-            int pageIdxFloor = arena.pages2pageIdxFloor(pages);
-            assertTrue(pages << pageShifts >= arena.pageIdx2size(pageIdxFloor));
+            int pageIdxFloor = arena.sizeClass.pages2pageIdxFloor(pages);
+            assertTrue(pages << pageShifts >= arena.sizeClass.pageIdx2size(pageIdxFloor));
             if (pageIdxFloor > 0 && pages < maxPages) {
-                assertTrue(pages << pageShifts < arena.pageIdx2size(pageIdxFloor + 1));
+                assertTrue(pages << pageShifts < arena.sizeClass.pageIdx2size(pageIdxFloor + 1));
             }
 
-            int pageIdxCeiling = arena.pages2pageIdx(pages);
-            assertTrue(pages << pageShifts <= arena.pageIdx2size(pageIdxCeiling));
+            int pageIdxCeiling = arena.sizeClass.pages2pageIdx(pages);
+            assertTrue(pages << pageShifts <= arena.sizeClass.pageIdx2size(pageIdxCeiling));
             if (pageIdxCeiling > 0) {
-                assertTrue(pages << pageShifts > arena.pageIdx2size(pageIdxCeiling - 1));
+                assertTrue(pages << pageShifts > arena.sizeClass.pageIdx2size(pageIdxCeiling - 1));
             }
         }
     }
 
     @Test
     public void testSizeIdx2size() {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
-        for (int i = 0; i < arena.nSizes; i++) {
-            assertEquals(arena.sizeIdx2sizeCompute(i), arena.sizeIdx2size(i));
+        SizeClasses sc = new SizeClasses(PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, sc);
+        for (int i = 0; i < arena.sizeClass.nSizes; i++) {
+            assertEquals(arena.sizeClass.sizeIdx2sizeCompute(i), arena.sizeClass.sizeIdx2size(i));
         }
     }
 
     @Test
     public void testPageIdx2size() {
-        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
-        for (int i = 0; i < arena.nPSizes; i++) {
-            assertEquals(arena.pageIdx2sizeCompute(i), arena.pageIdx2size(i));
+        SizeClasses sc = new SizeClasses(PAGE_SIZE, PAGE_SHIFTS, CHUNK_SIZE, 0);
+        PoolArena<ByteBuffer> arena = new PoolArena.DirectArena(null, sc);
+        for (int i = 0; i < arena.sizeClass.nPSizes; i++) {
+            assertEquals(arena.sizeClass.pageIdx2sizeCompute(i), arena.sizeClass.pageIdx2size(i));
         }
     }
 

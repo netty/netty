@@ -35,6 +35,7 @@ public final class WebSocketClientProtocolConfig {
     static final boolean DEFAULT_HANDLE_CLOSE_FRAMES = true;
     static final boolean DEFAULT_DROP_PONG_FRAMES = true;
     static final boolean DEFAULT_GENERATE_ORIGIN_HEADER = true;
+    static final boolean DEFAULT_WITH_UTF8_VALIDATOR = true;
 
     private final URI webSocketUri;
     private final String subprotocol;
@@ -195,7 +196,7 @@ public final class WebSocketClientProtocolConfig {
                 -1,
                 false,
                 DEFAULT_GENERATE_ORIGIN_HEADER,
-                true);
+                DEFAULT_WITH_UTF8_VALIDATOR);
     }
 
     public static final class Builder {

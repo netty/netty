@@ -28,6 +28,10 @@ import io.netty.handler.codec.socksx.v4.Socks4CommandType;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+/**
+ * Handler that establishes a blind forwarding proxy tunnel using
+ * <a href="https://www.openssh.com/txt/socks4.protocol">SOCKS4</a> protocol.
+ */
 public final class Socks4ProxyHandler extends ProxyHandler {
 
     private static final String PROTOCOL = "socks4";

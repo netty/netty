@@ -364,6 +364,9 @@ public class AsciiStringCharacterTest {
 
     @Test
     public void testLastIndexOfCharSequence() {
+        final byte[] bytes = {'a', 'b', 'c', 'd', 'e'};
+        final AsciiString ascii = new AsciiString(bytes, 2, 3, false);
+
         assertEquals(0, new AsciiString("abcd").lastIndexOf("abcd", 0));
         assertEquals(0, new AsciiString("abcd").lastIndexOf("abc", 4));
         assertEquals(1, new AsciiString("abcd").lastIndexOf("bcd", 4));
@@ -374,11 +377,14 @@ public class AsciiStringCharacterTest {
         assertEquals(1, new AsciiString("abcdabcd", 4, 4).lastIndexOf("bcd", 4));
         assertEquals(3, new AsciiString("012345").lastIndexOf("345", 3));
         assertEquals(3, new AsciiString("012345").lastIndexOf("345", 6));
+        assertEquals(1, ascii.lastIndexOf("de", 3));
+        assertEquals(0, ascii.lastIndexOf("cde", 3));
 
         // Test with empty string
         assertEquals(0, new AsciiString("abcd").lastIndexOf("", 0));
         assertEquals(1, new AsciiString("abcd").lastIndexOf("", 1));
         assertEquals(3, new AsciiString("abcd", 1, 3).lastIndexOf("", 4));
+        assertEquals(3, ascii.lastIndexOf("", 3));
 
         // Test not found
         assertEquals(-1, new AsciiString("abcd").lastIndexOf("abcde", 0));
@@ -390,6 +396,9 @@ public class AsciiStringCharacterTest {
         assertEquals(-1, new AsciiString("012345").lastIndexOf("abc", 0));
         assertEquals(-1, new AsciiString("012345").lastIndexOf("abcdefghi", 0));
         assertEquals(-1, new AsciiString("012345").lastIndexOf("abcdefghi", 4));
+        assertEquals(-1, ascii.lastIndexOf("a", 3));
+        assertEquals(-1, ascii.lastIndexOf("abc", 3));
+        assertEquals(-1, ascii.lastIndexOf("ce", 3));
     }
 
     @Test

@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.DecoderResultProvider;
+import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -743,5 +744,20 @@ public class HttpObjectAggregatorTest {
         } finally {
           channel.close();
         }
+    }
+
+    @Test
+    public void testPrematureClosureWithChunkedEncodingAndAggregator() {
+        final EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(), new HttpObjectAggregator(1024));
+
+        // Write the partial response.
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer(
+                "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n8\r\n12345678", CharsetUtil.US_ASCII)));
+        assertThrows(PrematureChannelClosureException.class, new Executable() {
+            @Override
+            public void execute() {
+                ch.finish();
+            }
+        });
     }
 }

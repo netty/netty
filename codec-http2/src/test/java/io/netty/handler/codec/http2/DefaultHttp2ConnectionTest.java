@@ -652,6 +652,32 @@ public class DefaultHttp2ConnectionTest {
         }
     }
 
+    @Test
+    public void clientLastStreamCreatedWithoutStreamCreated() {
+        assertEquals(0, client.local().lastStreamCreated());
+    }
+
+    @Test
+    public void serverLastStreamCreatedWithoutStreamCreated() {
+        assertEquals(0, server.local().lastStreamCreated());
+    }
+
+    @Test
+    public void clientCreateMaxStreamId() throws Exception {
+        int id = MAX_VALUE;
+        client.local().createStream(id, false);
+        assertTrue(client.streamMayHaveExisted(id));
+        assertEquals(id, client.local().lastStreamCreated());
+    }
+
+    @Test
+    public void serverCreateMaxStreamId() throws Exception {
+        int id = MAX_VALUE - 1;
+        server.local().createStream(id, false);
+        assertTrue(server.streamMayHaveExisted(id));
+        assertEquals(id, server.local().lastStreamCreated());
+    }
+
     private void testRemoveAllStreams() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final Promise<Void> promise = group.next().newPromise();

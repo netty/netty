@@ -16,6 +16,11 @@
 # ----------------------------------------------------------------------------
 set -e
 
+if [ -z "$JAVA8_HOME" ]; then
+    echo "The JAVA8_HOME environment variable needs to be set"
+    exit 1
+fi
+
 if [ "$#" -ne 2 ]; then
     echo "Expected staging profile id and branch name, login into oss.sonatype.org to retrieve it"
     exit 1
@@ -23,7 +28,6 @@ fi
 
 OS=$(uname)
 ARCH=$(uname -p)
-
 
 if [ "$OS" != "Darwin" ]; then
     echo "Needs to be executed on macOS"

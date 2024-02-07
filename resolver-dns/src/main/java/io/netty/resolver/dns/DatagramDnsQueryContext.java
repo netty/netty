@@ -15,6 +15,7 @@
  */
 package io.netty.resolver.dns;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.dns.DatagramDnsQuery;
@@ -33,10 +34,12 @@ final class DatagramDnsQueryContext extends DnsQueryContext {
                             InetSocketAddress nameServerAddr,
                             DnsQueryContextManager queryContextManager,
                             int maxPayLoadSize, boolean recursionDesired,
+                            long queryTimeoutMillis,
                             DnsQuestion question, DnsRecord[] additionals,
-                            Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
+                            Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise,
+                            Bootstrap socketBootstrap, boolean retryWithTcpOnTimeout) {
         super(channel, channelReadyFuture, nameServerAddr, queryContextManager, maxPayLoadSize, recursionDesired,
-                question, additionals, promise);
+                queryTimeoutMillis, question, additionals, promise, socketBootstrap, retryWithTcpOnTimeout);
     }
 
     @Override

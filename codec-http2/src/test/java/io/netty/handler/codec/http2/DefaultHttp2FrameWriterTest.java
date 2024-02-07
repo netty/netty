@@ -189,7 +189,7 @@ public class DefaultHttp2FrameWriterTest {
         int streamId = 1;
         Http2Headers headers = new DefaultHttp2Headers()
                 .method("GET").path("/").authority("foo.com").scheme("https");
-        headers = dummyHeaders(headers, 20);
+        headers = dummyHeaders(headers, 60);
 
         http2HeadersEncoder.configuration().maxHeaderListSize(Integer.MAX_VALUE);
         frameWriter.headersConfiguration().maxHeaderListSize(Integer.MAX_VALUE);
@@ -198,7 +198,7 @@ public class DefaultHttp2FrameWriterTest {
 
         byte[] expectedPayload = headerPayload(streamId, headers);
 
-        // First frame: HEADER(length=0x4000, flags=0x01)
+        // First frame: HEADER(length=0x4000, type=0x01, flags=0x01)
         assertEquals(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND,
                      outbound.readUnsignedMedium());
         assertEquals(0x01, outbound.readByte());
@@ -207,22 +207,49 @@ public class DefaultHttp2FrameWriterTest {
 
         byte[] firstPayload = new byte[Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND];
         outbound.readBytes(firstPayload);
+        int index = 0;
+        assertArrayEquals(Arrays.copyOfRange(expectedPayload, index, index + firstPayload.length),
+                          firstPayload);
+        index += firstPayload.length;
 
-        int remainPayloadLength = expectedPayload.length - Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
-        // Second frame: CONTINUATION(length=remainPayloadLength, flags=0x04)
+        // Second frame: HEADER(length=0x4000, type=0x09, flags=0x00)
+        assertEquals(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND,
+                     outbound.readUnsignedMedium());
+        assertEquals(0x09, outbound.readByte());
+        assertEquals(0x00, outbound.readByte());
+        assertEquals(streamId, outbound.readInt());
+
+        byte[] secondPayload = new byte[Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND];
+        outbound.readBytes(secondPayload);
+        assertArrayEquals(Arrays.copyOfRange(expectedPayload, index, index + secondPayload.length),
+                          secondPayload);
+        index += secondPayload.length;
+
+        // third frame: HEADER(length=0x4000, type=0x09, flags=0x00)
+        assertEquals(Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND,
+                     outbound.readUnsignedMedium());
+        assertEquals(0x09, outbound.readByte());
+        assertEquals(0x00, outbound.readByte());
+        assertEquals(streamId, outbound.readInt());
+
+        byte[] thirdPayload = new byte[Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND];
+        outbound.readBytes(thirdPayload);
+        assertArrayEquals(Arrays.copyOfRange(expectedPayload, index, index + thirdPayload.length),
+                          thirdPayload);
+        index += thirdPayload.length;
+
+        int remainPayloadLength = expectedPayload.length - index;
+        // Second frame: CONTINUATION(length=remainPayloadLength, type=0x09, flags=0x04)
         assertEquals(remainPayloadLength, outbound.readUnsignedMedium());
         assertEquals(0x09, outbound.readByte());
         assertEquals(0x04, outbound.readByte());
         assertEquals(streamId, outbound.readInt());
 
-        byte[] secondPayload = new byte[remainPayloadLength];
-        outbound.readBytes(secondPayload);
+        byte[] fourthPayload = new byte[remainPayloadLength];
+        outbound.readBytes(fourthPayload);
 
-        assertArrayEquals(Arrays.copyOfRange(expectedPayload, 0, firstPayload.length),
-                          firstPayload);
-        assertArrayEquals(Arrays.copyOfRange(expectedPayload, firstPayload.length,
-                                             expectedPayload.length),
-                          secondPayload);
+        assertArrayEquals(Arrays.copyOfRange(expectedPayload, index, index + fourthPayload.length),
+                          fourthPayload);
     }
 
     @Test

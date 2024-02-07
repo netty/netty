@@ -225,6 +225,22 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             protected void decrementPendingOutboundBytes(long size) {
                 AbstractHttp2StreamChannel.this.decrementPendingOutboundBytes(size, true);
             }
+
+            @Override
+            protected void onUnhandledInboundException(Throwable cause) {
+                // Ensure we use the correct Http2Error to close the channel.
+                if (cause instanceof Http2FrameStreamException) {
+                    closeWithError(((Http2FrameStreamException) cause).error());
+                    return;
+                } else {
+                    Http2Exception exception = Http2CodecUtil.getEmbeddedHttp2Exception(cause);
+                    if (exception != null) {
+                        closeWithError(exception.error());
+                        return;
+                    }
+                }
+                super.onUnhandledInboundException(cause);
+            }
         };
 
         closePromise = pipeline.newPromise();
@@ -589,7 +605,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             if (allocHandle.continueReading()) {
                 maybeAddChannelToReadCompletePendingQueue();
             } else {
-                unsafe.notifyReadComplete(allocHandle, true);
+                unsafe.notifyReadComplete(allocHandle, true, false);
             }
         } else {
             if (inboundBuffer == null) {
@@ -602,7 +618,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     void fireChildReadComplete() {
         assert eventLoop().inEventLoop();
         assert readStatus != ReadStatus.IDLE || !readCompletePending;
-        unsafe.notifyReadComplete(unsafe.recvBufAllocHandle(), false);
+        unsafe.notifyReadComplete(unsafe.recvBufAllocHandle(), false, false);
     }
 
     final void closeWithError(Http2Error error) {
@@ -835,35 +851,47 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         void doBeginRead() {
-            // Process messages until there are none left (or the user stopped requesting) and also handle EOS.
-            while (readStatus != ReadStatus.IDLE) {
-                Object message = pollQueuedMessage();
-                if (message == null) {
-                    if (readEOS) {
-                        unsafe.closeForcibly();
-                    }
-                    // We need to double check that there is nothing left to flush such as a
-                    // window update frame.
+            if (readStatus == ReadStatus.IDLE) {
+                // Don't wait for the user to request a read to notify of channel closure.
+                if (readEOS && (inboundBuffer == null || inboundBuffer.isEmpty())) {
+                    // Double check there is nothing left to flush such as a window update frame.
                     flush();
-                    break;
+                    unsafe.closeForcibly();
                 }
-                final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
-                allocHandle.reset(config());
-                boolean continueReading = false;
-                do {
-                    doRead0((Http2Frame) message, allocHandle);
-                } while ((readEOS || (continueReading = allocHandle.continueReading()))
-                        && (message = pollQueuedMessage()) != null);
+            } else {
+                do { // Process messages until there are none left (or the user stopped requesting) and also handle EOS.
+                    Object message = pollQueuedMessage();
+                    if (message == null) {
+                        // Double check there is nothing left to flush such as a window update frame.
+                        flush();
+                        if (readEOS) {
+                            unsafe.closeForcibly();
+                        }
+                        break;
+                    }
+                    final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+                    allocHandle.reset(config());
+                    boolean continueReading = false;
+                    do {
+                        doRead0((Http2Frame) message, allocHandle);
+                    } while ((readEOS || (continueReading = allocHandle.continueReading()))
+                            && (message = pollQueuedMessage()) != null);
 
-                if (continueReading && isParentReadInProgress() && !readEOS) {
-                    // Currently the parent and child channel are on the same EventLoop thread. If the parent is
-                    // currently reading it is possible that more frames will be delivered to this child channel. In
-                    // the case that this child channel still wants to read we delay the channelReadComplete on this
-                    // child channel until the parent is done reading.
-                    maybeAddChannelToReadCompletePendingQueue();
-                } else {
-                    notifyReadComplete(allocHandle, true);
-                }
+                    if (continueReading && isParentReadInProgress() && !readEOS) {
+                        // Currently the parent and child channel are on the same EventLoop thread. If the parent is
+                        // currently reading it is possible that more frames will be delivered to this child channel. In
+                        // the case that this child channel still wants to read we delay the channelReadComplete on this
+                        // child channel until the parent is done reading.
+                        maybeAddChannelToReadCompletePendingQueue();
+                    } else {
+                        notifyReadComplete(allocHandle, true, true);
+
+                        // While in the read loop reset the readState AFTER calling readComplete (or other pipeline
+                        // callbacks) to prevents re-entry into this method (if autoRead is disabled and the user calls
+                        // read on each readComplete) and StackOverflowException.
+                        resetReadStatus();
+                    }
+                } while (readStatus != ReadStatus.IDLE);
             }
         }
 
@@ -872,7 +900,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         private void updateLocalWindowIfNeeded() {
-            if (flowControlledBytes != 0) {
+            if (flowControlledBytes != 0 && !parentContext().isRemoved()) {
                 int bytes = flowControlledBytes;
                 flowControlledBytes = 0;
                 ChannelFuture future = write0(parentContext(), new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
@@ -892,17 +920,21 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
         }
 
-        void notifyReadComplete(RecvByteBufAllocator.Handle allocHandle, boolean forceReadComplete) {
+        private void resetReadStatus() {
+            readStatus = readStatus == ReadStatus.REQUESTED ? ReadStatus.IN_PROGRESS : ReadStatus.IDLE;
+        }
+
+        void notifyReadComplete(RecvByteBufAllocator.Handle allocHandle, boolean forceReadComplete,
+                                boolean inReadLoop) {
             if (!readCompletePending && !forceReadComplete) {
                 return;
             }
             // Set to false just in case we added the channel multiple times before.
             readCompletePending = false;
 
-            if (readStatus == ReadStatus.REQUESTED) {
-                readStatus = ReadStatus.IN_PROGRESS;
-            } else {
-                readStatus = ReadStatus.IDLE;
+            if (!inReadLoop) {
+                // While in the read loop we reset the state after calling pipeline methods to prevent StackOverflow.
+                resetReadStatus();
             }
 
             allocHandle.readComplete();

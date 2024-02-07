@@ -93,7 +93,7 @@ public final class LazyX509Certificate extends X509Certificate {
 
     @Override
     public Collection<List<?>> getIssuerAlternativeNames() throws CertificateParsingException {
-        return unwrap().getSubjectAlternativeNames();
+        return unwrap().getIssuerAlternativeNames();
     }
 
     // No @Override annotation as it was only introduced in Java8.

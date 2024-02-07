@@ -32,7 +32,7 @@ jobs:
   verify-pr:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up JDK 8
         uses: actions/setup-java@v3
         with:
@@ -42,6 +42,7 @@ jobs:
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-verify-pr-${{ hashFiles('**/pom.xml') }}
@@ -63,7 +64,7 @@ jobs:
     name: windows-x86_64-java11-boringssl
     needs: verify-pr
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 11
         uses: actions/setup-java@v3
@@ -74,6 +75,7 @@ jobs:
       # Cache .m2/repository
       # Caching of maven dependencies
       - uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: pr-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
@@ -102,32 +104,40 @@ jobs:
             **/target/surefire-reports/
             **/hs_err*.log
 
-  build-pr-aarch64:
-    name: linux-aarch64-verify-native
+  build-pr-cross:
     # The host should always be Linux
     runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        include:
+          - arch: aarch64
+            java_arch: arm64
+          - arch: riscv64
+
+    name: linux-${{ matrix.arch }}-verify-native
     permissions:
       contents: read  # for actions/checkout to fetch code
       packages: write  # for uraimo/run-on-arch-action to cache docker images
     needs: verify-pr
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-build-pr-aarch64-${{ hashFiles('**/pom.xml') }}
+          key: ${{ runner.os }}-maven-build-pr-${{ matrix.arch }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-build-pr-aarch64-
+            ${{ runner.os }}-maven-build-pr-${{ matrix.arch }}-
             ${{ runner.os }}-maven-
 
-      - uses: uraimo/run-on-arch-action@v2.5.0
+      - uses: uraimo/run-on-arch-action@v2.5.1
         name: Run commands
         id: runcmd
         with:
-          arch: aarch64
+          arch: ${{ matrix.arch }}
           distro: ubuntu20.04
 
           # Not required, but speeds up builds by storing container images in
@@ -144,11 +154,11 @@ jobs:
             apt-get install -q -y openjdk-11-jdk autoconf automake libtool make tar maven git
 
           # Compile native code and the modules it depend on and run NativeLoadingTest. This is enough to ensure
-          # we can load the native module on aarch64
+          # we can load the native module on ${{ matrix.arch }}
           #
           # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |
-            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64 ./mvnw -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
+            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-${{ matrix.java_arch || matrix.arch }} ./mvnw -V -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
     runs-on: ubuntu-latest
@@ -167,9 +177,9 @@ jobs:
           - setup: linux-x86_64-java17
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build-leak"
-          - setup: linux-x86_64-java20
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.20.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.20.yaml run build-leak"
+          - setup: linux-x86_64-java21
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.21.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.21.yaml run build-leak"
           - setup: linux-x86_64-java11-boringssl
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-boringssl-static"
@@ -177,26 +187,18 @@ jobs:
     name: ${{ matrix.setup }} build
     needs: verify-pr
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v3
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-${{ matrix.setup }}-
             ${{ runner.os }}-maven-
-
-      # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.11
-        continue-on-error: true
-        with:
-          key: build-docker-cache-${{ matrix.setup }}-{hash}
-          restore-keys: |
-            build-docker-cache-${{ matrix.setup }}-
-            build-docker-cache-
 
       - name: Build docker image
         run: docker-compose ${{ matrix.docker-compose-build }}

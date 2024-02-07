@@ -78,14 +78,13 @@ import static io.netty.buffer.PoolThreadCache.*;
  * <p>
  *   ( 76,    24,       22,        1,       yes,            no,        no)
  */
-abstract class SizeClasses implements SizeClassesMetric {
+final class SizeClasses implements SizeClassesMetric {
 
     static final int LOG2_QUANTUM = 4;
 
     private static final int LOG2_SIZE_CLASS_GROUP = 2;
     private static final int LOG2_MAX_LOOKUP_SIZE = 12;
 
-    private static final int INDEX_IDX = 0;
     private static final int LOG2GROUP_IDX = 1;
     private static final int LOG2DELTA_IDX = 2;
     private static final int NDELTA_IDX = 3;
@@ -95,10 +94,10 @@ abstract class SizeClasses implements SizeClassesMetric {
 
     private static final byte no = 0, yes = 1;
 
-    protected final int pageSize;
-    protected final int pageShifts;
-    protected final int chunkSize;
-    protected final int directMemoryCacheAlignment;
+    final int pageSize;
+    final int pageShifts;
+    final int chunkSize;
+    final int directMemoryCacheAlignment;
 
     final int nSizes;
     final int nSubpages;
@@ -115,7 +114,7 @@ abstract class SizeClasses implements SizeClassesMetric {
     // spacing is 1 << LOG2_QUANTUM, so the size of array is lookupMaxClass >> LOG2_QUANTUM
     private final int[] size2idxTab;
 
-    protected SizeClasses(int pageSize, int pageShifts, int chunkSize, int directMemoryCacheAlignment) {
+    SizeClasses(int pageSize, int pageShifts, int chunkSize, int directMemoryCacheAlignment) {
         int group = log2(chunkSize) - LOG2_QUANTUM - LOG2_SIZE_CLASS_GROUP + 1;
 
         //generate size classes
@@ -181,9 +180,9 @@ abstract class SizeClasses implements SizeClassesMetric {
         this.directMemoryCacheAlignment = directMemoryCacheAlignment;
 
         //generate lookup tables
-        sizeIdx2sizeTab = newIdx2SizeTab(sizeClasses, nSizes, directMemoryCacheAlignment);
-        pageIdx2sizeTab = newPageIdx2sizeTab(sizeClasses, nSizes, nPSizes, directMemoryCacheAlignment);
-        size2idxTab = newSize2idxTab(lookupMaxSize, sizeClasses);
+        this.sizeIdx2sizeTab = newIdx2SizeTab(sizeClasses, nSizes, directMemoryCacheAlignment);
+        this.pageIdx2sizeTab = newPageIdx2sizeTab(sizeClasses, nSizes, nPSizes, directMemoryCacheAlignment);
+        this.size2idxTab = newSize2idxTab(lookupMaxSize, sizeClasses);
     }
 
     //calculate size class

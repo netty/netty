@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -31,6 +29,8 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
@@ -129,6 +129,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  * To implement the decoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
+ *
+ * <h3>Header Validation</h3>
+ *
+ * It is recommended to always enable header validation.
+ * <p>
+ * Without header validation, your system can become vulnerable to
+ * <a href="https://cwe.mitre.org/data/definitions/113.html">
+ *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+ * </a>.
+ * <p>
+ * This recommendation stands even when both peers in the HTTP exchange are trusted,
+ * as it helps with defence-in-depth.
  */
 public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
@@ -142,7 +154,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private final int maxChunkSize;
     private final boolean chunkedSupported;
     private final boolean allowPartialChunks;
+    /**
+     * This field is no longer used. It is only kept around for backwards compatibility purpose.
+     */
+    @Deprecated
     protected final boolean validateHeaders;
+    protected final HttpHeadersFactory headersFactory;
+    protected final HttpHeadersFactory trailersFactory;
     private final boolean allowDuplicateContentLengths;
     private final ByteBuf parserScratchBuffer;
     private final HeaderParser headerParser;
@@ -151,6 +169,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private HttpMessage message;
     private long chunkSize;
     private long contentLength = Long.MIN_VALUE;
+    private boolean chunked;
+    private boolean isSwitchingToNonHttp1Protocol;
+
     private final AtomicBoolean resetRequested = new AtomicBoolean();
 
     // These will be updated by splitHeader(...)
@@ -193,68 +214,124 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * {@code maxChunkSize (8192)}.
      */
     protected HttpObjectDecoder() {
-        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_MAX_CHUNK_SIZE,
-             DEFAULT_CHUNKED_SUPPORTED);
+        this(new HttpDecoderConfig());
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean chunkedSupported) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, DEFAULT_VALIDATE_HEADERS);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders,
-             DEFAULT_INITIAL_BUFFER_SIZE);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, initialBufferSize,
-             DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders)
+                .setInitialBufferSize(initialBufferSize));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
             boolean allowDuplicateContentLengths) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, initialBufferSize,
-            allowDuplicateContentLengths, DEFAULT_ALLOW_PARTIAL_CHUNKS);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders)
+                .setInitialBufferSize(initialBufferSize)
+                .setAllowDuplicateContentLengths(allowDuplicateContentLengths));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
             boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
-        checkPositive(maxInitialLineLength, "maxInitialLineLength");
-        checkPositive(maxHeaderSize, "maxHeaderSize");
-        checkPositive(maxChunkSize, "maxChunkSize");
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders)
+                .setInitialBufferSize(initialBufferSize)
+                .setAllowDuplicateContentLengths(allowDuplicateContentLengths)
+                .setAllowPartialChunks(allowPartialChunks));
+    }
 
-        parserScratchBuffer = Unpooled.buffer(initialBufferSize);
-        lineParser = new LineParser(parserScratchBuffer, maxInitialLineLength);
-        headerParser = new HeaderParser(parserScratchBuffer, maxHeaderSize);
-        this.maxChunkSize = maxChunkSize;
-        this.chunkedSupported = chunkedSupported;
-        this.validateHeaders = validateHeaders;
-        this.allowDuplicateContentLengths = allowDuplicateContentLengths;
-        this.allowPartialChunks = allowPartialChunks;
+    /**
+     * Creates a new instance with the specified configuration.
+     */
+    protected HttpObjectDecoder(HttpDecoderConfig config) {
+        checkNotNull(config, "config");
+
+        parserScratchBuffer = Unpooled.buffer(config.getInitialBufferSize());
+        lineParser = new LineParser(parserScratchBuffer, config.getMaxInitialLineLength());
+        headerParser = new HeaderParser(parserScratchBuffer, config.getMaxHeaderSize());
+        maxChunkSize = config.getMaxChunkSize();
+        chunkedSupported = config.isChunkedSupported();
+        headersFactory = config.getHeadersFactory();
+        trailersFactory = config.getTrailersFactory();
+        validateHeaders = isValidating(headersFactory);
+        allowDuplicateContentLengths = config.isAllowDuplicateContentLengths();
+        allowPartialChunks = config.isAllowPartialChunks();
+    }
+
+    protected boolean isValidating(HttpHeadersFactory headersFactory) {
+        if (headersFactory instanceof DefaultHttpHeadersFactory) {
+            DefaultHttpHeadersFactory builder = (DefaultHttpHeadersFactory) headersFactory;
+            return builder.isValidatingHeaderNames() || builder.isValidatingHeaderValues();
+        }
+        return true; // We can't actually tell in this case, but we assume some validation is taking place.
     }
 
     @Override
@@ -278,7 +355,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             currentState = State.READ_HEADER;
             // fall-through
         } catch (Exception e) {
-            out.add(invalidMessage(buffer, e));
+            out.add(invalidMessage(message, buffer, e));
             return;
         }
         case READ_HEADER: try {
@@ -291,7 +368,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             case SKIP_CONTROL_CHARS:
                 // fast-path
                 // No content is expected.
-                out.add(message);
+                addCurrentMessage(out);
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                 resetNow();
                 return;
@@ -300,18 +377,17 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     throw new IllegalArgumentException("Chunked messages not supported");
                 }
                 // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
-                out.add(message);
+                addCurrentMessage(out);
                 return;
             default:
-                /**
-                 * <a href="https://tools.ietf.org/html/rfc7230#section-3.3.3">RFC 7230, 3.3.3</a> states that if a
+                /*
+                 * RFC 7230, 3.3.3 (https://tools.ietf.org/html/rfc7230#section-3.3.3) states that if a
                  * request does not have either a transfer-encoding or a content-length header then the message body
-                 * length is 0. However for a response the body length is the number of octets received prior to the
+                 * length is 0. However, for a response the body length is the number of octets received prior to the
                  * server closing the connection. So we treat this as variable length chunked encoding.
                  */
-                long contentLength = contentLength();
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
-                    out.add(message);
+                    addCurrentMessage(out);
                     out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                     resetNow();
                     return;
@@ -320,7 +396,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 assert nextState == State.READ_FIXED_LENGTH_CONTENT ||
                         nextState == State.READ_VARIABLE_LENGTH_CONTENT;
 
-                out.add(message);
+                addCurrentMessage(out);
 
                 if (nextState == State.READ_FIXED_LENGTH_CONTENT) {
                     // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT state reads data chunk by chunk.
@@ -331,7 +407,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return;
             }
         } catch (Exception e) {
-            out.add(invalidMessage(buffer, e));
+            out.add(invalidMessage(message, buffer, e));
             return;
         }
         case READ_VARIABLE_LENGTH_CONTENT: {
@@ -365,14 +441,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
             if (chunkSize == 0) {
                 // Read all content.
-                out.add(new DefaultLastHttpContent(content, validateHeaders));
+                out.add(new DefaultLastHttpContent(content, trailersFactory));
                 resetNow();
             } else {
                 out.add(new DefaultHttpContent(content));
             }
             return;
         }
-        /**
+        /*
          * everything else after this point takes care of reading chunked content. basically, read chunk size,
          * read chunk, read and ignore the CRLF and repeat until 0
          */
@@ -469,41 +545,52 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // LastHttpContent while there was already one.
             resetNow();
         }
-        // Handle the last unfinished message.
-        if (message != null) {
-            boolean chunked = HttpUtil.isTransferEncodingChunked(message);
-            if (currentState == State.READ_VARIABLE_LENGTH_CONTENT && !in.isReadable() && !chunked) {
-                // End of connection.
-                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
-                resetNow();
-                return;
-            }
 
-            if (currentState == State.READ_HEADER) {
+        // Handle the last unfinished message.
+        switch (currentState) {
+            case READ_VARIABLE_LENGTH_CONTENT:
+                if (!chunked && !in.isReadable()) {
+                    // End of connection.
+                    out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                    resetNow();
+                }
+                return;
+            case READ_HEADER:
                 // If we are still in the state of reading headers we need to create a new invalid message that
                 // signals that the connection was closed before we received the headers.
-                out.add(invalidMessage(Unpooled.EMPTY_BUFFER,
+                out.add(invalidMessage(message, Unpooled.EMPTY_BUFFER,
                         new PrematureChannelClosureException("Connection closed before received headers")));
                 resetNow();
                 return;
-            }
-
-            // Check if the closure of the connection signifies the end of the content.
-            boolean prematureClosure;
-            if (isDecodingRequest() || chunked) {
-                // The last request did not wait for a response.
-                prematureClosure = true;
-            } else {
-                // Compare the length of the received content and the 'Content-Length' header.
-                // If the 'Content-Length' header is absent, the length of the content is determined by the end of the
-                // connection, so it is perfectly fine.
-                prematureClosure = contentLength() > 0;
-            }
-
-            if (!prematureClosure) {
-                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
-            }
-            resetNow();
+            case READ_CHUNK_DELIMITER: // fall-trough
+            case READ_CHUNK_FOOTER: // fall-trough
+            case READ_CHUNKED_CONTENT: // fall-trough
+            case READ_CHUNK_SIZE: // fall-trough
+            case READ_FIXED_LENGTH_CONTENT:
+                // Check if the closure of the connection signifies the end of the content.
+                boolean prematureClosure;
+                if (isDecodingRequest() || chunked) {
+                    // The last request did not wait for a response.
+                    prematureClosure = true;
+                } else {
+                    // Compare the length of the received content and the 'Content-Length' header.
+                    // If the 'Content-Length' header is absent, the length of the content is determined by the end of
+                    // the connection, so it is perfectly fine.
+                    prematureClosure = contentLength > 0;
+                }
+                if (!prematureClosure) {
+                    out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                }
+                resetNow();
+                return;
+            case SKIP_CONTROL_CHARS: // fall-trough
+            case READ_INITIAL:// fall-trough
+            case BAD_MESSAGE: // fall-trough
+            case UPGRADED: // fall-trough
+                // Do nothing
+                break;
+            default:
+                throw new IllegalStateException("Unhandled state " + currentState);
         }
     }
 
@@ -521,6 +608,13 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
         super.userEventTriggered(ctx, evt);
+    }
+
+    private void addCurrentMessage(List<Object> out) {
+        HttpMessage message = this.message;
+        assert message != null;
+        this.message = null;
+        out.add(message);
     }
 
     protected boolean isContentAlwaysEmpty(HttpMessage msg) {
@@ -574,45 +668,45 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     }
 
     private void resetNow() {
-        HttpMessage message = this.message;
-        this.message = null;
+        message = null;
         name = null;
         value = null;
         contentLength = Long.MIN_VALUE;
+        chunked = false;
         lineParser.reset();
         headerParser.reset();
         trailer = null;
-        if (!isDecodingRequest()) {
-            HttpResponse res = (HttpResponse) message;
-            if (res != null && isSwitchingToNonHttp1Protocol(res)) {
-                currentState = State.UPGRADED;
-                return;
-            }
+        if (isSwitchingToNonHttp1Protocol) {
+            isSwitchingToNonHttp1Protocol = false;
+            currentState = State.UPGRADED;
+            return;
         }
 
         resetRequested.lazySet(false);
         currentState = State.SKIP_CONTROL_CHARS;
     }
 
-    private HttpMessage invalidMessage(ByteBuf in, Exception cause) {
+    private HttpMessage invalidMessage(HttpMessage current, ByteBuf in, Exception cause) {
         currentState = State.BAD_MESSAGE;
+        message = null;
+        trailer = null;
 
         // Advance the readerIndex so that ByteToMessageDecoder does not complain
         // when we produced an invalid message without consuming anything.
         in.skipBytes(in.readableBytes());
 
-        if (message == null) {
-            message = createInvalidMessage();
+        if (current == null) {
+            current = createInvalidMessage();
         }
-        message.setDecoderResult(DecoderResult.failure(cause));
+        current.setDecoderResult(DecoderResult.failure(cause));
 
-        HttpMessage ret = message;
-        message = null;
-        return ret;
+        return current;
     }
 
     private HttpContent invalidChunk(ByteBuf in, Exception cause) {
         currentState = State.BAD_MESSAGE;
+        message = null;
+        trailer = null;
 
         // Advance the readerIndex so that ByteToMessageDecoder does not complain
         // when we produced an invalid message without consuming anything.
@@ -620,8 +714,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         HttpContent chunk = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
         chunk.setDecoderResult(DecoderResult.failure(cause));
-        message = null;
-        trailer = null;
         return chunk;
     }
 
@@ -689,21 +781,30 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     headers.set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
                 }
             }
+        } else {
+            // We know the content length if it's a Web Socket message even if
+            // Content-Length header is missing.
+            contentLength = HttpUtil.getWebSocketContentLength(message);
         }
-
+        if (!isDecodingRequest() && message instanceof HttpResponse) {
+            HttpResponse res = (HttpResponse) message;
+            this.isSwitchingToNonHttp1Protocol = isSwitchingToNonHttp1Protocol(res);
+        }
         if (isContentAlwaysEmpty(message)) {
             HttpUtil.setTransferEncodingChunked(message, false);
             return State.SKIP_CONTROL_CHARS;
-        } else if (HttpUtil.isTransferEncodingChunked(message)) {
+        }
+        if (HttpUtil.isTransferEncodingChunked(message)) {
+            this.chunked = true;
             if (!contentLengthFields.isEmpty() && message.protocolVersion() == HttpVersion.HTTP_1_1) {
                 handleTransferEncodingChunkedWithContentLength(message);
             }
             return State.READ_CHUNK_SIZE;
-        } else if (contentLength() >= 0) {
-            return State.READ_FIXED_LENGTH_CONTENT;
-        } else {
-            return State.READ_VARIABLE_LENGTH_CONTENT;
         }
+        if (contentLength >= 0) {
+            return State.READ_FIXED_LENGTH_CONTENT;
+        }
+        return State.READ_VARIABLE_LENGTH_CONTENT;
     }
 
     /**
@@ -732,13 +833,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         contentLength = Long.MIN_VALUE;
     }
 
-    private long contentLength() {
-        if (contentLength == Long.MIN_VALUE) {
-            contentLength = HttpUtil.getContentLength(message, -1L);
-        }
-        return contentLength;
-    }
-
     private LastHttpContent readTrailingHeaders(ByteBuf buffer) {
         final HeaderParser headerParser = this.headerParser;
         ByteBuf line = headerParser.parse(buffer);
@@ -755,7 +849,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         CharSequence lastHeader = null;
         if (trailer == null) {
-            trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
+            trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, trailersFactory);
         }
         while (lineLength > 0) {
             final byte[] lineContent = line.array();
@@ -829,15 +923,18 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 if (b == ';' || isControlOrWhitespaceAsciiChar(b)) {
                     if (i == 0) {
                         // empty case
-                        throw new NumberFormatException();
+                        throw new NumberFormatException("Empty chunk size");
                     }
                     return result;
                 }
                 // non-hex char fail-fast path
-                throw new NumberFormatException();
+                throw new NumberFormatException("Invalid character in chunk size");
             }
             result *= 16;
             result += digit;
+            if (result < 0) {
+                throw new NumberFormatException("Chunk size overflow: " + result);
+            }
         }
         return result;
     }

@@ -21,8 +21,10 @@ import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.parseLine;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class HttpResponseStatusTest {
     @Test
@@ -109,5 +111,37 @@ public class HttpResponseStatusTest {
                 parseLine(new AsciiString("200a foo"));
             }
         });
+    }
+
+    @Test
+    public void testHttpStatusClassValueOf() {
+        // status scope: [100, 600).
+        for (int code = 100; code < 600; code ++) {
+            HttpStatusClass httpStatusClass = HttpStatusClass.valueOf(code);
+            assertNotSame(HttpStatusClass.UNKNOWN, httpStatusClass);
+            if (HttpStatusClass.INFORMATIONAL.contains(code)) {
+                assertEquals(HttpStatusClass.INFORMATIONAL, httpStatusClass);
+            } else if (HttpStatusClass.SUCCESS.contains(code)) {
+                assertEquals(HttpStatusClass.SUCCESS, httpStatusClass);
+            } else if (HttpStatusClass.REDIRECTION.contains(code)) {
+                assertEquals(HttpStatusClass.REDIRECTION, httpStatusClass);
+            } else if (HttpStatusClass.CLIENT_ERROR.contains(code)) {
+                assertEquals(HttpStatusClass.CLIENT_ERROR, httpStatusClass);
+            } else if (HttpStatusClass.SERVER_ERROR.contains(code)) {
+                assertEquals(HttpStatusClass.SERVER_ERROR, httpStatusClass);
+            } else {
+                fail("At least one of the if-branches above must be true");
+            }
+        }
+        // status scope: [Integer.MIN_VALUE, 100).
+        for (int code = Integer.MIN_VALUE; code < 100; code ++) {
+            HttpStatusClass httpStatusClass = HttpStatusClass.valueOf(code);
+            assertEquals(HttpStatusClass.UNKNOWN, httpStatusClass);
+        }
+        // status scope: [600, Integer.MAX_VALUE].
+        for (int code = 600; code > 0; code ++) {
+            HttpStatusClass httpStatusClass = HttpStatusClass.valueOf(code);
+            assertEquals(HttpStatusClass.UNKNOWN, httpStatusClass);
+        }
     }
 }

@@ -37,8 +37,7 @@ public final class EpollDomainDatagramChannelConfig extends EpollChannelConfig i
     private boolean activeOnOpen;
 
     EpollDomainDatagramChannelConfig(EpollDomainDatagramChannel channel) {
-        super(channel);
-        setRecvByteBufAllocator(new FixedRecvByteBufAllocator(2048));
+        super(channel, new FixedRecvByteBufAllocator(2048));
     }
 
     @Override

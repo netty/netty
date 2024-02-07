@@ -21,7 +21,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.PrematureChannelClosureException;
-import io.netty.util.ReferenceCountUtil;
 
 import java.util.ArrayDeque;
 import java.util.List;
@@ -43,9 +42,21 @@ import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_VALIDATE_HEA
  * {@link HttpResponseDecoder} to learn what additional state management needs
  * to be done for <tt>HEAD</tt> and <tt>CONNECT</tt> and why
  * {@link HttpResponseDecoder} can not handle it by itself.
- *
+ * <p>
  * If the {@link Channel} is closed and there are missing responses,
  * a {@link PrematureChannelClosureException} is thrown.
+ *
+ * <h3>Header Validation</h3>
+ *
+ * It is recommended to always enable header validation.
+ * <p>
+ * Without header validation, your system can become vulnerable to
+ * <a href="https://cwe.mitre.org/data/definitions/113.html">
+ *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+ * </a>.
+ * <p>
+ * This recommendation stands even when both peers in the HTTP exchange are trusted,
+ * as it helps with defence-in-depth.
  *
  * @see HttpServerCodec
  */
@@ -70,15 +81,21 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
      * {@code maxChunkSize (8192)}).
      */
     public HttpClientCodec() {
-        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_MAX_CHUNK_SIZE,
-             DEFAULT_FAIL_ON_MISSING_RESPONSE);
+        this(new HttpDecoderConfig(),
+                DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST,
+                DEFAULT_FAIL_ON_MISSING_RESPONSE);
     }
 
     /**
      * Creates a new instance with the specified decoder options.
      */
     public HttpClientCodec(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_FAIL_ON_MISSING_RESPONSE);
+        this(new HttpDecoderConfig()
+                        .setMaxInitialLineLength(maxInitialLineLength)
+                        .setMaxHeaderSize(maxHeaderSize)
+                        .setMaxChunkSize(maxChunkSize),
+                DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST,
+                DEFAULT_FAIL_ON_MISSING_RESPONSE);
     }
 
     /**
@@ -86,72 +103,142 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
      */
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, failOnMissingResponse, DEFAULT_VALIDATE_HEADERS);
+        this(new HttpDecoderConfig()
+                        .setMaxInitialLineLength(maxInitialLineLength)
+                        .setMaxHeaderSize(maxHeaderSize)
+                        .setMaxChunkSize(maxChunkSize),
+                DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST,
+                failOnMissingResponse);
     }
 
     /**
      * Creates a new instance with the specified decoder options.
+     *
+     * @deprecated Prefer the {@link #HttpClientCodec(int, int, int, boolean)} constructor,
+     * to always enable header validation.
      */
+    @Deprecated
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
             boolean validateHeaders) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, failOnMissingResponse, validateHeaders,
-             DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST);
+        this(new HttpDecoderConfig()
+                        .setMaxInitialLineLength(maxInitialLineLength)
+                        .setMaxHeaderSize(maxHeaderSize)
+                        .setMaxChunkSize(maxChunkSize)
+                        .setValidateHeaders(validateHeaders),
+                DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST,
+                failOnMissingResponse);
     }
 
     /**
      * Creates a new instance with the specified decoder options.
+     *
+     * @deprecated Prefer the {@link #HttpClientCodec(HttpDecoderConfig, boolean, boolean)} constructor,
+     * to always enable header validation.
      */
+    @Deprecated
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
             boolean validateHeaders, boolean parseHttpAfterConnectRequest) {
-        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders), new Encoder());
-        this.failOnMissingResponse = failOnMissingResponse;
-        this.parseHttpAfterConnectRequest = parseHttpAfterConnectRequest;
+        this(new HttpDecoderConfig()
+                        .setMaxInitialLineLength(maxInitialLineLength)
+                        .setMaxHeaderSize(maxHeaderSize)
+                        .setMaxChunkSize(maxChunkSize)
+                        .setValidateHeaders(validateHeaders),
+                parseHttpAfterConnectRequest,
+                failOnMissingResponse);
     }
 
     /**
      * Creates a new instance with the specified decoder options.
+     *
+     * @deprecated Prefer the {@link #HttpClientCodec(HttpDecoderConfig, boolean, boolean)} constructor,
+     * to always enable header validation.
      */
+    @Deprecated
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
             boolean validateHeaders, int initialBufferSize) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, failOnMissingResponse, validateHeaders,
-             initialBufferSize, DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST);
+        this(new HttpDecoderConfig()
+                        .setMaxInitialLineLength(maxInitialLineLength)
+                        .setMaxHeaderSize(maxHeaderSize)
+                        .setMaxChunkSize(maxChunkSize)
+                        .setValidateHeaders(validateHeaders)
+                        .setInitialBufferSize(initialBufferSize),
+                DEFAULT_PARSE_HTTP_AFTER_CONNECT_REQUEST,
+                failOnMissingResponse);
     }
 
     /**
      * Creates a new instance with the specified decoder options.
+     *
+     * @deprecated Prefer the {@link #HttpClientCodec(HttpDecoderConfig, boolean, boolean)} constructor,
+     * to always enable header validation.
      */
+    @Deprecated
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
             boolean validateHeaders, int initialBufferSize, boolean parseHttpAfterConnectRequest) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, failOnMissingResponse, validateHeaders,
-             initialBufferSize, parseHttpAfterConnectRequest, DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS);
+        this(new HttpDecoderConfig()
+                        .setMaxInitialLineLength(maxInitialLineLength)
+                        .setMaxHeaderSize(maxHeaderSize)
+                        .setMaxChunkSize(maxChunkSize)
+                        .setValidateHeaders(validateHeaders)
+                        .setInitialBufferSize(initialBufferSize),
+                parseHttpAfterConnectRequest,
+                failOnMissingResponse);
     }
-
     /**
      * Creates a new instance with the specified decoder options.
+     *
+     * @deprecated Prefer the {@link #HttpClientCodec(HttpDecoderConfig, boolean, boolean)} constructor,
+     * to always enable header validation.
      */
+    @Deprecated
     public HttpClientCodec(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
             boolean validateHeaders, int initialBufferSize, boolean parseHttpAfterConnectRequest,
             boolean allowDuplicateContentLengths) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, failOnMissingResponse, validateHeaders,
-            initialBufferSize, parseHttpAfterConnectRequest, allowDuplicateContentLengths,
-            DEFAULT_ALLOW_PARTIAL_CHUNKS);
+        this(new HttpDecoderConfig()
+                        .setMaxInitialLineLength(maxInitialLineLength)
+                        .setMaxHeaderSize(maxHeaderSize)
+                        .setMaxChunkSize(maxChunkSize)
+                        .setValidateHeaders(validateHeaders)
+                        .setInitialBufferSize(initialBufferSize)
+                        .setAllowDuplicateContentLengths(allowDuplicateContentLengths),
+                parseHttpAfterConnectRequest,
+                failOnMissingResponse);
+    }
+
+    /**
+     * Creates a new instance with the specified decoder options.
+     *
+     * @deprecated Prefer the {@link #HttpClientCodec(HttpDecoderConfig, boolean, boolean)}
+     * constructor, to always enable header validation.
+     */
+    @Deprecated
+    public HttpClientCodec(
+            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
+            boolean validateHeaders, int initialBufferSize, boolean parseHttpAfterConnectRequest,
+            boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setValidateHeaders(validateHeaders)
+                .setInitialBufferSize(initialBufferSize)
+                .setAllowDuplicateContentLengths(allowDuplicateContentLengths)
+                .setAllowPartialChunks(allowPartialChunks),
+                parseHttpAfterConnectRequest,
+                failOnMissingResponse);
     }
 
     /**
      * Creates a new instance with the specified decoder options.
      */
     public HttpClientCodec(
-            int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean failOnMissingResponse,
-            boolean validateHeaders, int initialBufferSize, boolean parseHttpAfterConnectRequest,
-            boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
-        init(new Decoder(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize,
-                         allowDuplicateContentLengths, allowPartialChunks),
-             new Encoder());
+            HttpDecoderConfig config, boolean parseHttpAfterConnectRequest, boolean failOnMissingResponse) {
+        init(new Decoder(config), new Encoder());
         this.parseHttpAfterConnectRequest = parseHttpAfterConnectRequest;
         this.failOnMissingResponse = failOnMissingResponse;
     }
@@ -213,14 +300,8 @@ public final class HttpClientCodec extends CombinedChannelDuplexHandler<HttpResp
     }
 
     private final class Decoder extends HttpResponseDecoder {
-        Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
-            super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders);
-        }
-
-        Decoder(int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
-                int initialBufferSize, boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
-            super(maxInitialLineLength, maxHeaderSize, maxChunkSize, validateHeaders, initialBufferSize,
-                  allowDuplicateContentLengths, allowPartialChunks);
+        Decoder(HttpDecoderConfig config) {
+            super(config);
         }
 
         @Override

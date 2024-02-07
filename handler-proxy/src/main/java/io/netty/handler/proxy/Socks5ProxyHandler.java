@@ -42,6 +42,10 @@ import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.Collections;
 
+/**
+ * Handler that establishes a blind forwarding proxy tunnel using
+ * <a href="https://www.rfc-editor.org/rfc/rfc1928">SOCKS Protocol Version 5</a>.
+ */
 public final class Socks5ProxyHandler extends ProxyHandler {
 
     private static final String PROTOCOL = "socks5";

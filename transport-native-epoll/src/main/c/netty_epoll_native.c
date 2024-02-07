@@ -321,6 +321,8 @@ static inline void cpu_relax() {
     asm volatile("pause\n": : :"memory");
 #elif defined(__aarch64__)
     asm volatile("isb\n": : :"memory");
+#elif defined(__riscv) && defined(__riscv_zihintpause)
+    asm volatile("pause\n": : :"memory");
 #endif
 }
 

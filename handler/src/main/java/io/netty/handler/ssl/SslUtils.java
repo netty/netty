@@ -56,6 +56,11 @@ final class SslUtils {
                           "TLS_AES_128_GCM_SHA256", "TLS_AES_128_CCM_8_SHA256",
                           "TLS_AES_128_CCM_SHA256")));
 
+    static final short DTLS_1_0 = (short) 0xFEFF;
+    static final short DTLS_1_2 = (short) 0xFEFD;
+    static final short DTLS_1_3 = (short) 0xFEFC;
+    static final short DTLS_RECORD_HEADER_LENGTH = 13;
+
     /**
      * GMSSL Protocol Version
      */
@@ -260,17 +265,12 @@ final class SslUtils {
      * the readerIndex of the given {@link ByteBuf}.
      *
      * @param   buffer
-     *                  The {@link ByteBuf} to read from. Be aware that it must have at least
-     *                  {@link #SSL_RECORD_HEADER_LENGTH} bytes to read,
-     *                  otherwise it will throw an {@link IllegalArgumentException}.
+     *                  The {@link ByteBuf} to read from.
      * @return length
      *                  The length of the encrypted packet that is included in the buffer or
      *                  {@link #SslUtils#NOT_ENOUGH_DATA} if not enough data is present in the
      *                  {@link ByteBuf}. This will return {@link SslUtils#NOT_ENCRYPTED} if
      *                  the given {@link ByteBuf} is not encrypted at all.
-     * @throws IllegalArgumentException
-     *                  Is thrown if the given {@link ByteBuf} has not at least {@link #SSL_RECORD_HEADER_LENGTH}
-     *                  bytes to read.
      */
     static int getEncryptedPacketLength(ByteBuf buffer, int offset) {
         int packetLength = 0;
@@ -293,13 +293,21 @@ final class SslUtils {
         if (tls) {
             // SSLv3 or TLS or GMSSLv1.0 or GMSSLv1.1 - Check ProtocolVersion
             int majorVersion = buffer.getUnsignedByte(offset + 1);
-            if (majorVersion == 3 || buffer.getShort(offset + 1) == GMSSL_PROTOCOL_VERSION) {
+            int version = buffer.getShort(offset + 1);
+            if (majorVersion == 3 || version == GMSSL_PROTOCOL_VERSION) {
                 // SSLv3 or TLS or GMSSLv1.0 or GMSSLv1.1
                 packetLength = unsignedShortBE(buffer, offset + 3) + SSL_RECORD_HEADER_LENGTH;
                 if (packetLength <= SSL_RECORD_HEADER_LENGTH) {
                     // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                     tls = false;
                 }
+            } else if (version == DTLS_1_0 || version == DTLS_1_2 || version == DTLS_1_3) {
+                if (buffer.readableBytes() < offset + DTLS_RECORD_HEADER_LENGTH) {
+                    return NOT_ENOUGH_DATA;
+                }
+                // length is the last 2 bytes in the 13 byte header.
+                packetLength = unsignedShortBE(buffer, offset + DTLS_RECORD_HEADER_LENGTH - 2) +
+                        DTLS_RECORD_HEADER_LENGTH;
             } else {
                 // Neither SSLv3 or TLSv1 (i.e. SSLv2 or bad data)
                 tls = false;

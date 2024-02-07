@@ -28,6 +28,7 @@ import java.security.Principal;
 import java.security.cert.Certificate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Delegates all operations to a wrapped {@link OpenSslSession} except the methods defined by {@link ExtendedSSLSession}
@@ -69,8 +70,8 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     }
 
     @Override
-    public void setSessionId(OpenSslSessionId id) {
-        wrapped.setSessionId(id);
+    public void setSessionDetails(long creationTime, long lastAccessedTime, OpenSslSessionId id) {
+        wrapped.setSessionDetails(creationTime, lastAccessedTime, id);
     }
 
     @Override
@@ -111,6 +112,11 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     @Override
     public final long getLastAccessedTime() {
         return wrapped.getLastAccessedTime();
+    }
+
+    @Override
+    public void setLastAccessedTime(long time) {
+        wrapped.setLastAccessedTime(time);
     }
 
     @Override

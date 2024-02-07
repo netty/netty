@@ -30,6 +30,8 @@ public final class CookieHeaderNames {
 
     public static final String SAMESITE = "SameSite";
 
+    public static final String PARTITIONED = "Partitioned";
+
     /**
      * Possible values for the SameSite attribute.
      * See <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-05">changes to RFC6265bis</a>

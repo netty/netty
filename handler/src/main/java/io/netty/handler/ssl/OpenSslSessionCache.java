@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -141,7 +142,7 @@ class OpenSslSessionCache implements SSLSessionCache {
     }
 
     @Override
-    public final boolean sessionCreated(long ssl, long sslSession) {
+    public boolean sessionCreated(long ssl, long sslSession) {
         ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
         if (engine == null) {
             // We couldn't find the engine itself.
@@ -149,7 +150,8 @@ class OpenSslSessionCache implements SSLSessionCache {
         }
         NativeSslSession session = new NativeSslSession(sslSession, engine.getPeerHost(), engine.getPeerPort(),
                 getSessionTimeout() * 1000L);
-        engine.setSessionId(session.sessionId());
+        ((OpenSslSession) engine.getSession()).setSessionDetails(
+                session.creationTime, session.lastAccessedTime, session.sessionId());
         synchronized (this) {
             // Mimic what OpenSSL is doing and expunge every 255 new sessions
             // See https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_flush_sessions.html
@@ -164,7 +166,6 @@ class OpenSslSessionCache implements SSLSessionCache {
                 session.close();
                 return false;
             }
-
             final NativeSslSession old = sessions.put(session.sessionId(), session);
             if (old != null) {
                 notifyRemovalAndFree(old);
@@ -203,11 +204,18 @@ class OpenSslSessionCache implements SSLSessionCache {
                 removeSessionWithId(session.sessionId());
             }
         }
-        session.updateLastAccessedTime();
+        session.setLastAccessedTime(System.currentTimeMillis());
+        ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
+        if (engine != null) {
+            OpenSslSession sslSession = (OpenSslSession) engine.getSession();
+            sslSession.setSessionDetails(session.getCreationTime(),
+                    session.getLastAccessedTime(), session.sessionId());
+        }
+
         return session.session();
     }
 
-    void setSession(long ssl, String host, int port) {
+    void setSession(long ssl, OpenSslSession session, String host, int port) {
         // Do nothing by default as this needs special handling for the client side.
     }
 
@@ -305,7 +313,7 @@ class OpenSslSessionCache implements SSLSessionCache {
         }
 
         @Override
-        public void setSessionId(OpenSslSessionId id) {
+        public void setSessionDetails(long creationTime, long lastAccessedTime, OpenSslSessionId id) {
             throw new UnsupportedOperationException();
         }
 
@@ -378,8 +386,9 @@ class OpenSslSessionCache implements SSLSessionCache {
             return creationTime;
         }
 
-        void updateLastAccessedTime() {
-            lastAccessedTime = System.currentTimeMillis();
+        @Override
+        public void setLastAccessedTime(long time) {
+            lastAccessedTime = time;
         }
 
         @Override

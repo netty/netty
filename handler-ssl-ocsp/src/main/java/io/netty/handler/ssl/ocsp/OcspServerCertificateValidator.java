@@ -21,6 +21,7 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
@@ -41,6 +42,11 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * will perform certificate validation using OCSP over HTTP/1.1 with the server's certificate issuer OCSP responder.
  */
 public class OcspServerCertificateValidator extends ChannelInboundHandlerAdapter {
+    /**
+     * An attribute used to mark all channels created by the {@link OcspServerCertificateValidator}.
+     */
+    public static final AttributeKey<Boolean> OCSP_PIPELINE_ATTRIBUTE =
+            AttributeKey.newInstance("io.netty.handler.ssl.ocsp.pipeline");
 
     private final boolean closeAndThrowIfNotValid;
     private final boolean validateNonce;

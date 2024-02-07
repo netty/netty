@@ -47,6 +47,8 @@ public final class DnsNameResolverBuilder {
     volatile EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private ChannelFactory<? extends SocketChannel> socketChannelFactory;
+    private boolean retryOnTimeout;
+
     private DnsCache resolveCache;
     private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
@@ -106,6 +108,8 @@ public final class DnsNameResolverBuilder {
 
     /**
      * Sets the {@link ChannelFactory} that will create a {@link DatagramChannel}.
+     * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
+     * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
      *
      * @param channelFactory the {@link ChannelFactory}
      * @return {@code this}
@@ -118,6 +122,8 @@ public final class DnsNameResolverBuilder {
     /**
      * Sets the {@link ChannelFactory} as a {@link ReflectiveChannelFactory} of this type.
      * Use as an alternative to {@link #channelFactory(ChannelFactory)}.
+     * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
+     * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
      *
      * @param channelType the type
      * @return {@code this}
@@ -130,12 +136,53 @@ public final class DnsNameResolverBuilder {
      * Sets the {@link ChannelFactory} that will create a {@link SocketChannel} for
      * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
      *
+     * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
+     * {@link ChannelFactory} for this method.
+     *
      * @param channelFactory the {@link ChannelFactory} or {@code null}
      *                       if <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should not be supported.
+     *                       By default, TCP fallback is not enabled.
      * @return {@code this}
      */
     public DnsNameResolverBuilder socketChannelFactory(ChannelFactory<? extends SocketChannel> channelFactory) {
+        return socketChannelFactory(channelFactory, false);
+    }
+
+    /**
+     * Sets the {@link ChannelFactory} as a {@link ReflectiveChannelFactory} of this type for
+     * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
+     * Use as an alternative to {@link #socketChannelFactory(ChannelFactory)}.
+     *
+     * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
+     * {@code channelType} for this method.
+     *
+     * @param channelType the type or {@code null} if <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a>
+     *                    should not be supported. By default, TCP fallback is not enabled.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder socketChannelType(Class<? extends SocketChannel> channelType) {
+        return socketChannelType(channelType, false);
+    }
+
+    /**
+     * Sets the {@link ChannelFactory} that will create a {@link SocketChannel} for
+     * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
+     *
+     * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
+     * {@link ChannelFactory} for this method.
+     *
+     * @param channelFactory the {@link ChannelFactory} or {@code null}
+     *                       if <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should not be supported.
+     *                       By default, TCP fallback is not enabled.
+     * @param retryOnTimeout if {@code true} the {@link DnsNameResolver} will also fallback to TCP if a timeout
+     *                       was detected, if {@code false} it will only try to use TCP if the response was marked
+     *                       as truncated.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder socketChannelFactory(
+            ChannelFactory<? extends SocketChannel> channelFactory, boolean retryOnTimeout) {
         this.socketChannelFactory = channelFactory;
+        this.retryOnTimeout = retryOnTimeout;
         return this;
     }
 
@@ -144,15 +191,22 @@ public final class DnsNameResolverBuilder {
      * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
      * Use as an alternative to {@link #socketChannelFactory(ChannelFactory)}.
      *
+     * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
+     * {@code channelType} for this method.
+     *
      * @param channelType the type or {@code null} if <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a>
-     *                    should not be supported.
+     *                    should not be supported. By default, TCP fallback is not enabled.
+     * @param retryOnTimeout if {@code true} the {@link DnsNameResolver} will also fallback to TCP if a timeout
+     *                       was detected, if {@code false} it will only try to use TCP if the response was marked
+     *                       as truncated.
      * @return {@code this}
      */
-    public DnsNameResolverBuilder socketChannelType(Class<? extends SocketChannel> channelType) {
+    public DnsNameResolverBuilder socketChannelType(
+            Class<? extends SocketChannel> channelType, boolean retryOnTimeout) {
         if (channelType == null) {
-            return socketChannelFactory(null);
+            return socketChannelFactory(null, retryOnTimeout);
         }
-        return socketChannelFactory(new ReflectiveChannelFactory<SocketChannel>(channelType));
+        return socketChannelFactory(new ReflectiveChannelFactory<SocketChannel>(channelType), retryOnTimeout);
     }
 
     /**
@@ -517,6 +571,7 @@ public final class DnsNameResolverBuilder {
                 eventLoop,
                 channelFactory,
                 socketChannelFactory,
+                retryOnTimeout,
                 resolveCache,
                 cnameCache,
                 authoritativeDnsServerCache,
@@ -554,9 +609,7 @@ public final class DnsNameResolverBuilder {
             copiedBuilder.channelFactory(channelFactory);
         }
 
-        if (socketChannelFactory != null) {
-            copiedBuilder.socketChannelFactory(socketChannelFactory);
-        }
+        copiedBuilder.socketChannelFactory(socketChannelFactory, retryOnTimeout);
 
         if (resolveCache != null) {
             copiedBuilder.resolveCache(resolveCache);

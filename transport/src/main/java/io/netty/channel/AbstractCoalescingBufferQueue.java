@@ -154,28 +154,40 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry == null) {
                     break;
                 }
-                if (entry instanceof ChannelFutureListener) {
-                    aggregatePromise.addListener((ChannelFutureListener) entry);
-                    continue;
-                }
-                entryBuffer = (ByteBuf) entry;
-                if (entryBuffer.readableBytes() > bytes) {
-                    // Add the buffer back to the queue as we can't consume all of it.
-                    bufAndListenerPairs.addFirst(entryBuffer);
-                    if (bytes > 0) {
-                        // Take a slice of what we can consume and retain it.
-                        entryBuffer = entryBuffer.readRetainedSlice(bytes);
-                        toReturn = toReturn == null ? composeFirst(alloc, entryBuffer)
-                                                    : compose(alloc, toReturn, entryBuffer);
-                        bytes = 0;
+                // fast-path vs abstract type
+                if (entry instanceof ByteBuf) {
+                    entryBuffer = (ByteBuf) entry;
+                    int bufferBytes = entryBuffer.readableBytes();
+
+                    if (bufferBytes > bytes) {
+                        // Add the buffer back to the queue as we can't consume all of it.
+                        bufAndListenerPairs.addFirst(entryBuffer);
+                        if (bytes > 0) {
+                            // Take a slice of what we can consume and retain it.
+                            entryBuffer = entryBuffer.readRetainedSlice(bytes);
+                            // we end here, so if this is the only buffer to return, skip composing
+                            toReturn = toReturn == null ? entryBuffer
+                                    : compose(alloc, toReturn, entryBuffer);
+                            bytes = 0;
+                        }
+                        break;
                     }
-                    break;
-                } else {
-                    bytes -= entryBuffer.readableBytes();
-                    toReturn = toReturn == null ? composeFirst(alloc, entryBuffer)
-                                                : compose(alloc, toReturn, entryBuffer);
+
+                    bytes -= bufferBytes;
+                    if (toReturn == null) {
+                        // if there are no more bytes in the queue after this, there's no reason to compose
+                        toReturn = bufferBytes == readableBytes
+                                ? entryBuffer
+                                : composeFirst(alloc, entryBuffer);
+                    } else {
+                        toReturn = compose(alloc, toReturn, entryBuffer);
+                    }
+                    entryBuffer = null;
+                } else if (entry instanceof DelegatingChannelPromiseNotifier) {
+                    aggregatePromise.addListener((DelegatingChannelPromiseNotifier) entry);
+                } else if (entry instanceof ChannelFutureListener) {
+                    aggregatePromise.addListener((ChannelFutureListener) entry);
                 }
-                entryBuffer = null;
             }
         } catch (Throwable cause) {
             safeRelease(entryBuffer);

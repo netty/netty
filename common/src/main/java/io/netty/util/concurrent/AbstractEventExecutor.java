@@ -20,7 +20,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import org.jetbrains.annotations.Async.Execute;
-import org.jetbrains.annotations.Async.Schedule;
 
 import java.util.Collection;
 import java.util.Collections;

@@ -41,7 +41,7 @@ public class ClientCookieDecoderTest {
     public void testDecodingSingleCookieV0() {
         String cookieString = "myCookie=myValue;expires="
                 + DateFormatter.format(new Date(System.currentTimeMillis() + 50000))
-                + ";path=/apathsomewhere;domain=.adomainsomewhere;secure;SameSite=None";
+                + ";path=/apathsomewhere;domain=.adomainsomewhere;secure;SameSite=None;Partitioned";
 
         Cookie cookie = ClientCookieDecoder.STRICT.decode(cookieString);
         assertNotNull(cookie);
@@ -55,7 +55,9 @@ public class ClientCookieDecoderTest {
         assertTrue(cookie.isSecure());
 
         assertThat(cookie, is(instanceOf(DefaultCookie.class)));
-        assertEquals(SameSite.None, ((DefaultCookie) cookie).sameSite());
+        DefaultCookie c = (DefaultCookie) cookie;
+        assertEquals(SameSite.None, c.sameSite());
+        assertTrue(c.isPartitioned());
     }
 
     @Test

@@ -130,6 +130,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -3292,30 +3293,8 @@ public class DnsNameResolverTest {
             if (tcpFallback) {
                 // If we are configured to use TCP as a fallback lets replay the dns message over TCP
                 Socket socket = serverSocket.accept();
+                responseViaSocket(socket, messageRef.get());
 
-                InputStream in = socket.getInputStream();
-                assertTrue((in.read() << 8 | (in.read() & 0xff)) > 2); // skip length field
-                int txnId = in.read() << 8 | (in.read() & 0xff);
-
-                IoBuffer ioBuffer = IoBuffer.allocate(1024);
-                // Must replace the transactionId with the one from the TCP request
-                DnsMessageModifier modifier = modifierFrom(messageRef.get());
-                modifier.setTransactionId(txnId);
-                new DnsMessageEncoder().encode(ioBuffer, modifier.getDnsMessage());
-                ioBuffer.flip();
-
-                ByteBuffer lenBuffer = ByteBuffer.allocate(2);
-                lenBuffer.putShort((short) ioBuffer.remaining());
-                lenBuffer.flip();
-
-                while (lenBuffer.hasRemaining()) {
-                    socket.getOutputStream().write(lenBuffer.get());
-                }
-
-                while (ioBuffer.hasRemaining()) {
-                    socket.getOutputStream().write(ioBuffer.get());
-                }
-                socket.getOutputStream().flush();
                 // Let's wait until we received the envelope before closing the socket.
                 envelopeFuture.syncUninterruptibly();
 
@@ -3348,6 +3327,137 @@ public class DnsNameResolverTest {
             if (resolver != null) {
                 resolver.close();
             }
+        }
+    }
+
+    private static void responseViaSocket(Socket socket, DnsMessage message) throws IOException {
+        InputStream in = socket.getInputStream();
+        assertTrue((in.read() << 8 | (in.read() & 0xff)) > 2); // skip length field
+        int txnId = in.read() << 8 | (in.read() & 0xff);
+
+        IoBuffer ioBuffer = IoBuffer.allocate(1024);
+        // Must replace the transactionId with the one from the TCP request
+        DnsMessageModifier modifier = modifierFrom(message);
+        modifier.setTransactionId(txnId);
+        new DnsMessageEncoder().encode(ioBuffer, modifier.getDnsMessage());
+        ioBuffer.flip();
+
+        ByteBuffer lenBuffer = ByteBuffer.allocate(2);
+        lenBuffer.putShort((short) ioBuffer.remaining());
+        lenBuffer.flip();
+
+        while (lenBuffer.hasRemaining()) {
+            socket.getOutputStream().write(lenBuffer.get());
+        }
+
+        while (ioBuffer.hasRemaining()) {
+            socket.getOutputStream().write(ioBuffer.get());
+        }
+        socket.getOutputStream().flush();
+    }
+
+    @Test
+    public void testTcpFallbackWhenTimeout() throws IOException {
+        testTcpFallbackWhenTimeout(true);
+    }
+
+    @Test
+    public void testTcpFallbackFailedWhenTimeout() throws IOException {
+        testTcpFallbackWhenTimeout(false);
+    }
+
+    private void testTcpFallbackWhenTimeout(boolean tcpSuccess) throws IOException {
+        ServerSocket serverSocket = new ServerSocket();
+        serverSocket.setReuseAddress(true);
+        serverSocket.bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
+
+        final String host = "somehost.netty.io";
+        final String txt = "this is a txt record";
+        final AtomicReference<DnsMessage> messageRef = new AtomicReference<DnsMessage>();
+
+        TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord question) {
+                String name = question.getDomainName();
+                if (name.equals(host)) {
+                    return Collections.<ResourceRecord>singleton(
+                            new TestDnsServer.TestResourceRecord(name, RecordType.TXT,
+                                    Collections.<String, Object>singletonMap(
+                                            DnsAttribute.CHARACTER_STRING.toLowerCase(), txt)));
+                }
+                return null;
+            }
+        }) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                // Store a original message so we can replay it later on.
+                messageRef.set(message);
+                return null;
+            }
+        };
+        DnsNameResolver resolver = null;
+        try {
+            DnsNameResolverBuilder builder = newResolver();
+            final DatagramChannel datagramChannel = new NioDatagramChannel();
+            ChannelFactory<DatagramChannel> channelFactory = new ChannelFactory<DatagramChannel>() {
+                @Override
+                public DatagramChannel newChannel() {
+                    return datagramChannel;
+                }
+            };
+            builder.channelFactory(channelFactory);
+            dnsServer2.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
+            // If we are configured to use TCP as a fallback also bind a TCP socket
+            builder.socketChannelType(NioSocketChannel.class, true);
+
+            builder.queryTimeoutMillis(1000)
+                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                    .maxQueriesPerResolve(16)
+                    .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer2.localAddress()));
+            resolver = builder.build();
+            Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> envelopeFuture = resolver.query(
+                    new DefaultDnsQuestion(host, DnsRecordType.TXT));
+
+            // If we are configured to use TCP as a fallback lets replay the dns message over TCP
+            Socket socket = serverSocket.accept();
+
+            if (tcpSuccess) {
+                responseViaSocket(socket, messageRef.get());
+
+                // Let's wait until we received the envelope before closing the socket.
+                envelopeFuture.syncUninterruptibly();
+                socket.close();
+
+                AddressedEnvelope<DnsResponse, InetSocketAddress> envelope =
+                        envelopeFuture.syncUninterruptibly().getNow();
+                assertNotNull(envelope.sender());
+
+                DnsResponse response = envelope.content();
+                assertNotNull(response);
+
+                assertEquals(DnsResponseCode.NOERROR, response.code());
+                int count = response.count(DnsSection.ANSWER);
+
+                assertEquals(1, count);
+                List<String> texts = decodeTxt(response.recordAt(DnsSection.ANSWER, 0));
+                assertEquals(1, texts.size());
+                assertEquals(txt, texts.get(0));
+
+                assertFalse(envelope.content().isTruncated());
+                assertTrue(envelope.release());
+            } else {
+                // Just close the socket. This should cause the original exception to be used.
+                socket.close();
+                Throwable error = envelopeFuture.awaitUninterruptibly().cause();
+                assertThat(error, instanceOf(DnsNameResolverTimeoutException.class));
+                assertThat(error.getSuppressed().length, greaterThanOrEqualTo(1));
+            }
+        } finally {
+            dnsServer2.stop();
+            if (resolver != null) {
+                resolver.close();
+            }
+            serverSocket.close();
         }
     }
 
@@ -4040,4 +4150,73 @@ public class DnsNameResolverTest {
             }
         }
     }
+
+    @Test
+    public void testCnameWithAAndAdditionalsAndAuthorities() throws Exception {
+        final String hostname = "test.netty.io";
+        final String cname = "cname.netty.io";
+
+        final List<String> nameServers = new ArrayList<String>();
+
+        for (int i = 0; i < 13; i++) {
+            nameServers.add("ns" + i + ".foo.bar");
+        }
+
+        TestDnsServer server = new TestDnsServer(new RecordStore() {
+            @Override
+            public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
+                ResourceRecordModifier rm = new ResourceRecordModifier();
+                rm.setDnsClass(RecordClass.IN);
+                rm.setDnsName(hostname);
+                rm.setDnsTtl(10000);
+                rm.setDnsType(RecordType.CNAME);
+                rm.put(DnsAttribute.DOMAIN_NAME, cname);
+
+                Set<ResourceRecord> records = new LinkedHashSet<ResourceRecord>();
+                records.add(rm.getEntry());
+                records.add(newARecord(cname, "10.0.0.2"));
+                return records;
+            }
+        }) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                for (QuestionRecord record: message.getQuestionRecords()) {
+                    if (record.getDomainName().equals(hostname)) {
+                        // Let's add some extra records.
+                        message.getAuthorityRecords().clear();
+                        message.getAdditionalRecords().clear();
+
+                        for (String nameserver: nameServers) {
+                            message.getAuthorityRecords().add(TestDnsServer.newNsRecord(".", nameserver));
+                            message.getAdditionalRecords().add(newAddressRecord(nameserver, RecordType.A, "10.0.0.1"));
+                            message.getAdditionalRecords().add(newAddressRecord(nameserver, RecordType.AAAA, "::1"));
+                        }
+
+                        return message;
+                    }
+                }
+                return message;
+            }
+        };
+        server.start();
+        EventLoopGroup group = new NioEventLoopGroup(1);
+
+        final DnsNameResolver resolver = new DnsNameResolver(
+                group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
+                NoopDnsCache.INSTANCE, NoopAuthoritativeDnsServerCache.INSTANCE,
+                NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000, ResolvedAddressTypes.IPV4_ONLY,
+                true, 8, true, 4096,
+                false, HostsFileEntriesResolver.DEFAULT,
+                new SingletonDnsServerAddressStreamProvider(server.localAddress()),
+                new String [] { "k8se-apps.svc.cluster.local, svc.cluster.local, cluster.local" }, 1, true);
+        try {
+            InetAddress address = resolver.resolve(hostname).sync().getNow();
+            assertArrayEquals(new byte[] { 10, 0, 0, 2 }, address.getAddress());
+        } finally {
+            resolver.close();
+            group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
+            server.stop();
+        }
+    }
+
 }

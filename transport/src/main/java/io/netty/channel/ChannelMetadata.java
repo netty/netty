@@ -35,7 +35,7 @@ public final class ChannelMetadata {
      *                          again, such as UDP/IP.
      */
     public ChannelMetadata(boolean hasDisconnect) {
-        this(hasDisconnect, 1);
+        this(hasDisconnect, 16);
     }
 
     /**

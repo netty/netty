@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.internal.ObjectUtil;
 
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -33,7 +34,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param status  the status of this response
      */
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status) {
-        this(version, status, true, false);
+        this(version, status, headersFactory());
     }
 
     /**
@@ -42,9 +43,12 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * @param version           the HTTP version of this response
      * @param status            the status of this response
      * @param validateHeaders   validate the header names and values when adding them to the {@link HttpHeaders}
+     * @deprecated Use the {@link #DefaultHttpResponse(HttpVersion, HttpResponseStatus, HttpHeadersFactory)} constructor
+     * instead.
      */
+    @Deprecated
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders) {
-        this(version, status, validateHeaders, false);
+        this(version, status, headersFactory().withValidation(validateHeaders));
     }
 
     /**
@@ -58,11 +62,26 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
      * See <a href="https://tools.ietf.org/html/rfc7230#section-3.2.2">RFC 7230, 3.2.2</a>.
      * {@code false} to allow multiple header entries with the same name to
      * coexist.
+     * @deprecated Use the {@link #DefaultHttpResponse(HttpVersion, HttpResponseStatus, HttpHeadersFactory)} constructor
+     * instead.
      */
+    @Deprecated
     public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, boolean validateHeaders,
                                boolean singleFieldHeaders) {
-        super(version, validateHeaders, singleFieldHeaders);
-        this.status = checkNotNull(status, "status");
+        this(version, status, headersFactory().withValidation(validateHeaders)
+                .withCombiningHeaders(singleFieldHeaders));
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param version           the HTTP version of this response
+     * @param status            the status of this response
+     * @param headersFactory    the {@link HttpHeadersFactory} used to create the headers for this HTTP Response.
+     * The recommended default is {@link DefaultHttpHeadersFactory#headersFactory()}.
+     */
+    public DefaultHttpResponse(HttpVersion version, HttpResponseStatus status, HttpHeadersFactory headersFactory) {
+        this(version, status, headersFactory.newHeaders());
     }
 
     /**

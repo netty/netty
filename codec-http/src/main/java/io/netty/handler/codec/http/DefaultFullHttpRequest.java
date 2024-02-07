@@ -19,6 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.IllegalReferenceCountException;
+
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.trailersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -33,25 +36,60 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
      */
     private int hash;
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, and URI.
+     */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri) {
-        this(httpVersion, method, uri, Unpooled.buffer(0));
+        this(httpVersion, method, uri, Unpooled.buffer(0), headersFactory(), trailersFactory());
     }
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, and contents.
+     */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, ByteBuf content) {
-        this(httpVersion, method, uri, content, true);
+        this(httpVersion, method, uri, content, headersFactory(), trailersFactory());
     }
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, and optional validation.
+     * @deprecated Use the {@link #DefaultFullHttpRequest(HttpVersion, HttpMethod, String, ByteBuf,
+     * HttpHeadersFactory, HttpHeadersFactory)} constructor instead.
+     */
+    @Deprecated
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, boolean validateHeaders) {
-        this(httpVersion, method, uri, Unpooled.buffer(0), validateHeaders);
+        this(httpVersion, method, uri, Unpooled.buffer(0),
+                headersFactory().withValidation(validateHeaders),
+                trailersFactory().withValidation(validateHeaders));
     }
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, contents, and optional validation.
+     * @deprecated Use the {@link #DefaultFullHttpRequest(HttpVersion, HttpMethod, String, ByteBuf,
+     * HttpHeadersFactory, HttpHeadersFactory)} constructor instead.
+     */
+    @Deprecated
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
                                   ByteBuf content, boolean validateHeaders) {
-        super(httpVersion, method, uri, validateHeaders);
-        this.content = checkNotNull(content, "content");
-        trailingHeader = new DefaultHttpHeaders(validateHeaders);
+        this(httpVersion, method, uri, content,
+                headersFactory().withValidation(validateHeaders),
+                trailersFactory().withValidation(validateHeaders));
     }
 
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, contents,
+     * and factories for creating headers and trailers.
+     * <p>
+     * The recommended default header factory is {@link DefaultHttpHeadersFactory#headersFactory()},
+     * and the recommended default trailer factory is {@link DefaultHttpHeadersFactory#trailersFactory()}.
+     */
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
+            ByteBuf content, HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
+        this(httpVersion, method, uri, content, headersFactory.newHeaders(), trailersFactory.newHeaders());
+    }
+
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, contents, and header and trailer objects.
+     */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
             ByteBuf content, HttpHeaders headers, HttpHeaders trailingHeader) {
         super(httpVersion, method, uri, headers);

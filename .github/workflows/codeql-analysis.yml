@@ -55,11 +55,12 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # Cache .m2/repository
     - name: Cache local Maven repository
       uses: actions/cache@v3
+      continue-on-error: true
       with:
         path: ~/.m2/repository
         key: ${{ runner.os }}-maven-${{ matrix.language }} ${{ hashFiles('**/pom.xml') }}

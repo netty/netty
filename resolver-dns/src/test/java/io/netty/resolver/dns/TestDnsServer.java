@@ -168,30 +168,37 @@ class TestDnsServer extends DnsServer {
 
                 @Override
                 public void encode(IoSession session, Object message, ProtocolEncoderOutput out) {
-                    IoBuffer buf = IoBuffer.allocate(1024);
+                    IoBuffer buf = IoBuffer.allocate(4096);
                     DnsMessage dnsMessage = filterMessage((DnsMessage) message);
                     if (dnsMessage != null) {
                         encoder.encode(buf, dnsMessage);
-                        for (ResourceRecord record : dnsMessage.getAnswerRecords()) {
-                            // This is a hack to allow to also test for AAAA resolution as DnsMessageEncoder
-                            // does not support it and it is hard to extend, because the interesting methods
-                            // are private...
-                            // In case of RecordType.AAAA we need to encode the RecordType by ourselves.
-                            if (record.getRecordType() == RecordType.AAAA) {
-                                try {
-                                    recordEncoder.put(buf, record);
-                                } catch (IOException e) {
-                                    // Should never happen
-                                    throw new IllegalStateException(e);
-                                }
-                            }
-                        }
+
+                        encodeAAAA(dnsMessage.getAnswerRecords(), buf);
+                        encodeAAAA(dnsMessage.getAuthorityRecords(), buf);
+                        encodeAAAA(dnsMessage.getAdditionalRecords(), buf);
                         buf.flip();
 
                         out.write(buf);
                     }
                 }
             };
+        }
+
+        private void encodeAAAA(List<ResourceRecord> records, IoBuffer out) {
+            for (ResourceRecord record : records) {
+                // This is a hack to allow to also test for AAAA resolution as DnsMessageEncoder
+                // does not support it and it is hard to extend, because the interesting methods
+                // are private...
+                // In case of RecordType.AAAA we need to encode the RecordType by ourselves.
+                if (record.getRecordType() == RecordType.AAAA) {
+                    try {
+                        recordEncoder.put(out, record);
+                    } catch (IOException e) {
+                        // Should never happen
+                        throw new IllegalStateException(e);
+                    }
+                }
+            }
         }
 
         @Override

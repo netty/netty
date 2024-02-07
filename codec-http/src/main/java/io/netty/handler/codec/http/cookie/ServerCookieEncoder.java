@@ -129,6 +129,9 @@ public final class ServerCookieEncoder extends CookieEncoder {
             if (c.sameSite() != null) {
                 add(buf, CookieHeaderNames.SAMESITE, c.sameSite().name());
             }
+            if (c.isPartitioned()) {
+                add(buf, CookieHeaderNames.PARTITIONED);
+            }
         }
 
         return stripTrailingSeparator(buf);

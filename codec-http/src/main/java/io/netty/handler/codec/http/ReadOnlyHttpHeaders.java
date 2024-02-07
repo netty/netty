@@ -29,7 +29,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import static io.netty.handler.codec.CharSequenceValueConverter.INSTANCE;
-import static io.netty.handler.codec.http.DefaultHttpHeaders.HttpNameValidator;
 import static io.netty.util.AsciiString.contentEquals;
 import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
 
@@ -69,7 +68,7 @@ public final class ReadOnlyHttpHeaders extends HttpHeaders {
 
     private static void validateHeaders(CharSequence... keyValuePairs) {
         for (int i = 0; i < keyValuePairs.length; i += 2) {
-            HttpNameValidator.validateName(keyValuePairs[i]);
+            DefaultHttpHeadersFactory.headersFactory().getNameValidator().validateName(keyValuePairs[i]);
         }
     }
 

@@ -44,7 +44,7 @@ import static io.netty.channel.epoll.LinuxSocket.newSocketDomainDgram;
 @UnstableApi
 public final class EpollDomainDatagramChannel extends AbstractEpollChannel implements DomainDatagramChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
 
     private static final String EXPECTED_TYPES =
             " (expected: " +

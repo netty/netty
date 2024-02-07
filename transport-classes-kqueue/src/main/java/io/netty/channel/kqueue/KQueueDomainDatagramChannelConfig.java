@@ -38,8 +38,7 @@ public final class KQueueDomainDatagramChannelConfig
     private boolean activeOnOpen;
 
     KQueueDomainDatagramChannelConfig(KQueueDomainDatagramChannel channel) {
-        super(channel);
-        setRecvByteBufAllocator(new FixedRecvByteBufAllocator(2048));
+        super(channel, new FixedRecvByteBufAllocator(2048));
     }
 
     @Override

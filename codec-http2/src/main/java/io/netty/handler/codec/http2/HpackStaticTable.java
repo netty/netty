@@ -31,6 +31,10 @@
  */
 package io.netty.handler.codec.http2;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import io.netty.util.AsciiString;
 import io.netty.util.internal.PlatformDependent;
 
@@ -46,75 +50,95 @@ final class HpackStaticTable {
     // Appendix A: Static Table
     // https://tools.ietf.org/html/rfc7541#appendix-A
     private static final List<HpackHeaderField> STATIC_TABLE = Arrays.asList(
-    /*  1 */ newEmptyHeaderField(":authority"),
-    /*  2 */ newHeaderField(":method", "GET"),
-    /*  3 */ newHeaderField(":method", "POST"),
-    /*  4 */ newHeaderField(":path", "/"),
-    /*  5 */ newHeaderField(":path", "/index.html"),
-    /*  6 */ newHeaderField(":scheme", "http"),
-    /*  7 */ newHeaderField(":scheme", "https"),
-    /*  8 */ newHeaderField(":status", "200"),
-    /*  9 */ newHeaderField(":status", "204"),
-    /* 10 */ newHeaderField(":status", "206"),
-    /* 11 */ newHeaderField(":status", "304"),
-    /* 12 */ newHeaderField(":status", "400"),
-    /* 13 */ newHeaderField(":status", "404"),
-    /* 14 */ newHeaderField(":status", "500"),
-    /* 15 */ newEmptyHeaderField("accept-charset"),
-    /* 16 */ newHeaderField("accept-encoding", "gzip, deflate"),
-    /* 17 */ newEmptyHeaderField("accept-language"),
-    /* 18 */ newEmptyHeaderField("accept-ranges"),
-    /* 19 */ newEmptyHeaderField("accept"),
-    /* 20 */ newEmptyHeaderField("access-control-allow-origin"),
-    /* 21 */ newEmptyHeaderField("age"),
-    /* 22 */ newEmptyHeaderField("allow"),
-    /* 23 */ newEmptyHeaderField("authorization"),
-    /* 24 */ newEmptyHeaderField("cache-control"),
-    /* 25 */ newEmptyHeaderField("content-disposition"),
-    /* 26 */ newEmptyHeaderField("content-encoding"),
-    /* 27 */ newEmptyHeaderField("content-language"),
-    /* 28 */ newEmptyHeaderField("content-length"),
-    /* 29 */ newEmptyHeaderField("content-location"),
-    /* 30 */ newEmptyHeaderField("content-range"),
-    /* 31 */ newEmptyHeaderField("content-type"),
-    /* 32 */ newEmptyHeaderField("cookie"),
-    /* 33 */ newEmptyHeaderField("date"),
-    /* 34 */ newEmptyHeaderField("etag"),
-    /* 35 */ newEmptyHeaderField("expect"),
-    /* 36 */ newEmptyHeaderField("expires"),
-    /* 37 */ newEmptyHeaderField("from"),
-    /* 38 */ newEmptyHeaderField("host"),
-    /* 39 */ newEmptyHeaderField("if-match"),
-    /* 40 */ newEmptyHeaderField("if-modified-since"),
-    /* 41 */ newEmptyHeaderField("if-none-match"),
-    /* 42 */ newEmptyHeaderField("if-range"),
-    /* 43 */ newEmptyHeaderField("if-unmodified-since"),
-    /* 44 */ newEmptyHeaderField("last-modified"),
+    /*  1 */ newEmptyPseudoHeaderField(PseudoHeaderName.AUTHORITY),
+    /*  2 */ newPseudoHeaderMethodField(HttpMethod.GET),
+    /*  3 */ newPseudoHeaderMethodField(HttpMethod.POST),
+    /*  4 */ newPseudoHeaderField(PseudoHeaderName.PATH, "/"),
+    /*  5 */ newPseudoHeaderField(PseudoHeaderName.PATH, "/index.html"),
+    /*  6 */ newPseudoHeaderField(PseudoHeaderName.SCHEME, "http"),
+    /*  7 */ newPseudoHeaderField(PseudoHeaderName.SCHEME, "https"),
+    /*  8 */ newPseudoHeaderField(PseudoHeaderName.STATUS, HttpResponseStatus.OK.codeAsText()),
+    /*  9 */ newPseudoHeaderField(PseudoHeaderName.STATUS, HttpResponseStatus.NO_CONTENT.codeAsText()),
+    /* 10 */ newPseudoHeaderField(PseudoHeaderName.STATUS, HttpResponseStatus.PARTIAL_CONTENT.codeAsText()),
+    /* 11 */ newPseudoHeaderField(PseudoHeaderName.STATUS, HttpResponseStatus.NOT_MODIFIED.codeAsText()),
+    /* 12 */ newPseudoHeaderField(PseudoHeaderName.STATUS, HttpResponseStatus.BAD_REQUEST.codeAsText()),
+    /* 13 */ newPseudoHeaderField(PseudoHeaderName.STATUS, HttpResponseStatus.NOT_FOUND.codeAsText()),
+    /* 14 */ newPseudoHeaderField(PseudoHeaderName.STATUS, HttpResponseStatus.INTERNAL_SERVER_ERROR.codeAsText()),
+    /* 15 */ newEmptyHeaderField(HttpHeaderNames.ACCEPT_CHARSET),
+    /* 16 */ newHeaderField(HttpHeaderNames.ACCEPT_ENCODING, "gzip, deflate"),
+    /* 17 */ newEmptyHeaderField(HttpHeaderNames.ACCEPT_LANGUAGE),
+    /* 18 */ newEmptyHeaderField(HttpHeaderNames.ACCEPT_RANGES),
+    /* 19 */ newEmptyHeaderField(HttpHeaderNames.ACCEPT),
+    /* 20 */ newEmptyHeaderField(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN),
+    /* 21 */ newEmptyHeaderField(HttpHeaderNames.AGE),
+    /* 22 */ newEmptyHeaderField(HttpHeaderNames.ALLOW),
+    /* 23 */ newEmptyHeaderField(HttpHeaderNames.AUTHORIZATION),
+    /* 24 */ newEmptyHeaderField(HttpHeaderNames.CACHE_CONTROL),
+    /* 25 */ newEmptyHeaderField(HttpHeaderNames.CONTENT_DISPOSITION),
+    /* 26 */ newEmptyHeaderField(HttpHeaderNames.CONTENT_ENCODING),
+    /* 27 */ newEmptyHeaderField(HttpHeaderNames.CONTENT_LANGUAGE),
+    /* 28 */ newEmptyHeaderField(HttpHeaderNames.CONTENT_LENGTH),
+    /* 29 */ newEmptyHeaderField(HttpHeaderNames.CONTENT_LOCATION),
+    /* 30 */ newEmptyHeaderField(HttpHeaderNames.CONTENT_RANGE),
+    /* 31 */ newEmptyHeaderField(HttpHeaderNames.CONTENT_TYPE),
+    /* 32 */ newEmptyHeaderField(HttpHeaderNames.COOKIE),
+    /* 33 */ newEmptyHeaderField(HttpHeaderNames.DATE),
+    /* 34 */ newEmptyHeaderField(HttpHeaderNames.ETAG),
+    /* 35 */ newEmptyHeaderField(HttpHeaderNames.EXPECT),
+    /* 36 */ newEmptyHeaderField(HttpHeaderNames.EXPIRES),
+    /* 37 */ newEmptyHeaderField(HttpHeaderNames.FROM),
+    /* 38 */ newEmptyHeaderField(HttpHeaderNames.HOST),
+    /* 39 */ newEmptyHeaderField(HttpHeaderNames.IF_MATCH),
+    /* 40 */ newEmptyHeaderField(HttpHeaderNames.IF_MODIFIED_SINCE),
+    /* 41 */ newEmptyHeaderField(HttpHeaderNames.IF_NONE_MATCH),
+    /* 42 */ newEmptyHeaderField(HttpHeaderNames.IF_RANGE),
+    /* 43 */ newEmptyHeaderField(HttpHeaderNames.IF_UNMODIFIED_SINCE),
+    /* 44 */ newEmptyHeaderField(HttpHeaderNames.LAST_MODIFIED),
     /* 45 */ newEmptyHeaderField("link"),
-    /* 46 */ newEmptyHeaderField("location"),
-    /* 47 */ newEmptyHeaderField("max-forwards"),
-    /* 48 */ newEmptyHeaderField("proxy-authenticate"),
-    /* 49 */ newEmptyHeaderField("proxy-authorization"),
-    /* 50 */ newEmptyHeaderField("range"),
-    /* 51 */ newEmptyHeaderField("referer"),
+    /* 46 */ newEmptyHeaderField(HttpHeaderNames.LOCATION),
+    /* 47 */ newEmptyHeaderField(HttpHeaderNames.MAX_FORWARDS),
+    /* 48 */ newEmptyHeaderField(HttpHeaderNames.PROXY_AUTHENTICATE),
+    /* 49 */ newEmptyHeaderField(HttpHeaderNames.PROXY_AUTHORIZATION),
+    /* 50 */ newEmptyHeaderField(HttpHeaderNames.RANGE),
+    /* 51 */ newEmptyHeaderField(HttpHeaderNames.REFERER),
     /* 52 */ newEmptyHeaderField("refresh"),
-    /* 53 */ newEmptyHeaderField("retry-after"),
-    /* 54 */ newEmptyHeaderField("server"),
-    /* 55 */ newEmptyHeaderField("set-cookie"),
+    /* 53 */ newEmptyHeaderField(HttpHeaderNames.RETRY_AFTER),
+    /* 54 */ newEmptyHeaderField(HttpHeaderNames.SERVER),
+    /* 55 */ newEmptyHeaderField(HttpHeaderNames.SET_COOKIE),
     /* 56 */ newEmptyHeaderField("strict-transport-security"),
-    /* 57 */ newEmptyHeaderField("transfer-encoding"),
-    /* 58 */ newEmptyHeaderField("user-agent"),
-    /* 59 */ newEmptyHeaderField("vary"),
-    /* 60 */ newEmptyHeaderField("via"),
-    /* 61 */ newEmptyHeaderField("www-authenticate")
+    /* 57 */ newEmptyHeaderField(HttpHeaderNames.TRANSFER_ENCODING),
+    /* 58 */ newEmptyHeaderField(HttpHeaderNames.USER_AGENT),
+    /* 59 */ newEmptyHeaderField(HttpHeaderNames.VARY),
+    /* 60 */ newEmptyHeaderField(HttpHeaderNames.VIA),
+    /* 61 */ newEmptyHeaderField(HttpHeaderNames.WWW_AUTHENTICATE)
     );
+
+    private static HpackHeaderField newEmptyHeaderField(AsciiString name) {
+        return new HpackHeaderField(name, AsciiString.EMPTY_STRING);
+    }
 
     private static HpackHeaderField newEmptyHeaderField(String name) {
         return new HpackHeaderField(AsciiString.cached(name), AsciiString.EMPTY_STRING);
     }
 
-    private static HpackHeaderField newHeaderField(String name, String value) {
-        return new HpackHeaderField(AsciiString.cached(name), AsciiString.cached(value));
+    private static HpackHeaderField newHeaderField(AsciiString name, String value) {
+        return new HpackHeaderField(name, AsciiString.cached(value));
+    }
+
+    private static HpackHeaderField newPseudoHeaderMethodField(HttpMethod method) {
+        return new HpackHeaderField(PseudoHeaderName.METHOD.value(), method.asciiName());
+    }
+
+    private static HpackHeaderField newPseudoHeaderField(PseudoHeaderName name, AsciiString value) {
+        return new HpackHeaderField(name.value(), value);
+    }
+
+    private static HpackHeaderField newPseudoHeaderField(PseudoHeaderName name, String value) {
+        return new HpackHeaderField(name.value(), AsciiString.cached(value));
+    }
+
+    private static HpackHeaderField newEmptyPseudoHeaderField(PseudoHeaderName name) {
+        return new HpackHeaderField(name.value(), AsciiString.EMPTY_STRING);
     }
 
     // The table size and bit shift are chosen so that each hash bucket contains a single header name.

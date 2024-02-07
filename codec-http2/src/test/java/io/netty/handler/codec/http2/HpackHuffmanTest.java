@@ -37,9 +37,11 @@ import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.Arrays;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -160,6 +162,39 @@ public class HpackHuffmanTest {
                 decode(buf);
             }
         });
+    }
+
+    @Test
+    public void testEncoderSanitizingMultiByteCharacters() throws Http2Exception {
+        final int inputLen = 500;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < inputLen; i++) {
+            // Starts with 0x4E01 because certain suboptimal sanitization could cause some problem with this input.
+            // For example, if a multibyte character C is sanitized by doing (C & OxFF), if C == 0x4E01, then
+            // (0x4E01 & OxFF) is greater than zero which indicates insufficient sanitization.
+            sb.append((char) (0x4E01 + i));
+        }
+        HpackHuffmanEncoder encoder = new HpackHuffmanEncoder();
+        String toBeEncoded = sb.toString();
+        ByteBuf buffer = Unpooled.buffer();
+        byte[] bytes;
+        try {
+            encoder.encode(buffer, toBeEncoded);
+            bytes = new byte[buffer.readableBytes()];
+            buffer.readBytes(bytes);
+        } finally {
+            buffer.release(); // Release as soon as possible.
+        }
+        byte[] actualBytes = decode(bytes);
+        String actualDecoded = new String(actualBytes);
+        char[] charArray = new char[inputLen];
+        Arrays.fill(charArray, '?');
+        String expectedDecoded = new String(charArray);
+        assertEquals(
+                expectedDecoded,
+                actualDecoded,
+                "Expect the decoded string to be sanitized and contains only '?' characters."
+        );
     }
 
     private static byte[] makeBuf(int ... bytes) {

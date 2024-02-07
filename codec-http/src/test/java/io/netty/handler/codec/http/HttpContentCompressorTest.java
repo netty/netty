@@ -973,6 +973,21 @@ public class HttpContentCompressorTest {
         assertTrue(ch.finishAndReleaseAll());
     }
 
+    @Test
+    public void testEmpty() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpContentCompressor());
+        assertTrue(ch.writeInbound(newRequest()));
+
+        DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        response.headers().add(HttpHeaderNames.CONTENT_LENGTH, 0);
+        assertTrue(ch.writeOutbound(response));
+        assertTrue(ch.writeOutbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
+        assertTrue(ch.writeOutbound(DefaultLastHttpContent.EMPTY_LAST_CONTENT));
+
+        ch.checkException();
+        ch.finishAndReleaseAll();
+    }
+
     private static FullHttpRequest newRequest() {
         FullHttpRequest req = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/");
         req.headers().set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
