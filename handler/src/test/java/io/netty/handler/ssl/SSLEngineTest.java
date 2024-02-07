@@ -3640,7 +3640,6 @@ public abstract class SSLEngineTest {
             }
         });
 
-
         clientSslCtx = wrapContext(param, clientContextBuilder
                                         .trustManager(tmf)
                                         .sslProvider(sslClientProvider())

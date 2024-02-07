@@ -2366,7 +2366,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         private volatile int applicationBufferSize = MAX_PLAINTEXT_LENGTH;
         private volatile Certificate[] localCertificateChain;
-        private volatile Map<String, Object> keyValueStorage = new ConcurrentHashMap<>();
+        private volatile Map<String, Object> keyValueStorage = new ConcurrentHashMap<String, Object>();
 
         DefaultOpenSslSession(OpenSslSessionContext sessionContext) {
             this.sessionContext = sessionContext;
@@ -2470,7 +2470,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             checkNotNull(name, "name");
             checkNotNull(value, "value");
 
-            final Object old = this.keyValueStorage.put(name, value);
+            final Object old = keyValueStorage.put(name, value);
             if (value instanceof SSLSessionBindingListener) {
                 // Use newSSLSessionBindingEvent so we always use the wrapper if needed.
                 ((SSLSessionBindingListener) value).valueBound(newSSLSessionBindingEvent(name));
@@ -2487,13 +2487,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         @Override
         public void removeValue(String name) {
             checkNotNull(name, "name");
-            final Object old = this.keyValueStorage.remove(name);
+            final Object old = keyValueStorage.remove(name);
             notifyUnbound(old, name);
         }
 
         @Override
         public String[] getValueNames() {
-            return this.keyValueStorage.keySet().toArray(EMPTY_STRINGS);
+            return keyValueStorage.keySet().toArray(EMPTY_STRINGS);
         }
 
         private void notifyUnbound(Object value, String name) {

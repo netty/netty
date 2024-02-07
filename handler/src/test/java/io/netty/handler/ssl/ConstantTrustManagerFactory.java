@@ -28,16 +28,18 @@ import javax.net.ssl.TrustManager;
 final class ConstantTrustManagerFactory extends SimpleTrustManagerFactory {
     private final TrustManager tm;
 
-    public ConstantTrustManagerFactory(TrustManager tm) {
+    ConstantTrustManagerFactory(TrustManager tm) {
         this.tm = ObjectUtil.checkNotNull(tm, "tm");
     }
 
     @Override
-    protected void engineInit(KeyStore keyStore) throws Exception {
+    protected void engineInit(KeyStore keyStore) {
+        // NOOP
     }
 
     @Override
-    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) throws Exception {
+    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {
+        // NOOP
     }
 
     @Override
