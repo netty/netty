@@ -60,6 +60,7 @@ public class HttpRequestDecoderTest {
                 "Upgrade: WebSocket" + lineDelimiter2 +
                 "Connection: Upgrade" + lineDelimiter +
                 "Host: localhost" + lineDelimiter2 +
+                "Accept: */*" + lineDelimiter +
                 "Origin: http://localhost:8080" + lineDelimiter +
                 "Sec-WebSocket-Key1: 10  28 8V7 8 48     0" + lineDelimiter2 +
                 "Sec-WebSocket-Key2: 8 Xt754O3Q3QW 0   _60" + lineDelimiter +
@@ -114,10 +115,11 @@ public class HttpRequestDecoderTest {
     }
 
     private static void checkHeaders(HttpHeaders headers) {
-        assertEquals(7, headers.names().size());
+        assertEquals(8, headers.names().size());
         checkHeader(headers, "Upgrade", "WebSocket");
         checkHeader(headers, "Connection", "Upgrade");
         checkHeader(headers, "Host", "localhost");
+        checkHeader(headers, "Accept", "*/*");
         checkHeader(headers, "Origin", "http://localhost:8080");
         checkHeader(headers, "Sec-WebSocket-Key1", "10  28 8V7 8 48     0");
         checkHeader(headers, "Sec-WebSocket-Key2", "8 Xt754O3Q3QW 0   _60");
