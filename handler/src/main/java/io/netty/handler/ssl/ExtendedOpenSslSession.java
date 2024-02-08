@@ -65,6 +65,11 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     }
 
     @Override
+    public void prepareHandshake() {
+        wrapped.prepareHandshake();
+    }
+
+    @Override
     public Map<String, Object> keyValueStorage() {
         return wrapped.keyValueStorage();
     }

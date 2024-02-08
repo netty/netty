@@ -1981,7 +1981,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         engineMap.add(this);
 
         if (!sessionSet) {
-            parentContext.sessionContext().setSessionFromCache(ssl, session, getPeerHost(), getPeerPort());
+            if (!parentContext.sessionContext().setSessionFromCache(ssl, session, getPeerHost(), getPeerPort())) {
+                // The session was not reused via the cache. Call prepareHandshake() to ensure we remove all previous
+                // stored key-value pairs.
+                session.prepareHandshake();
+            }
             sessionSet = true;
         }
 
@@ -2374,6 +2378,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         private SSLSessionBindingEvent newSSLSessionBindingEvent(String name) {
             return new SSLSessionBindingEvent(session, name);
+        }
+
+        @Override
+        public void prepareHandshake() {
+            keyValueStorage.clear();
         }
 
         @Override

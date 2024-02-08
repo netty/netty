@@ -26,6 +26,12 @@ import java.util.Map;
 interface OpenSslSession extends SSLSession {
 
     /**
+     * Called on a handshake session before being exposed to a {@link javax.net.ssl.TrustManager}.
+     * Session data must be cleared by this call.
+     */
+    void prepareHandshake();
+
+    /**
      * Return the {@link OpenSslSessionId} that can be used to identify this session.
      */
     OpenSslSessionId sessionId();

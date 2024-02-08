@@ -153,7 +153,7 @@ class OpenSslSessionCache implements SSLSessionCache {
         NativeSslSession session = new NativeSslSession(sslSession, engine.getPeerHost(), engine.getPeerPort(),
                 getSessionTimeout() * 1000L, openSslSession.keyValueStorage());
 
-        ((OpenSslSession) engine.getSession()).setSessionDetails(
+        openSslSession.setSessionDetails(
                 session.creationTime, session.lastAccessedTime, session.sessionId(), session.keyValueStorage);
         synchronized (this) {
             // Mimic what OpenSSL is doing and expunge every 255 new sessions
@@ -218,8 +218,9 @@ class OpenSslSessionCache implements SSLSessionCache {
         return session.session();
     }
 
-    void setSession(long ssl, OpenSslSession session, String host, int port) {
+    boolean setSession(long ssl, OpenSslSession session, String host, int port) {
         // Do nothing by default as this needs special handling for the client side.
+       return false;
     }
 
     /**
@@ -323,6 +324,11 @@ class OpenSslSessionCache implements SSLSessionCache {
         @Override
         public Map<String, Object> keyValueStorage() {
             return keyValueStorage;
+        }
+
+        @Override
+        public void prepareHandshake() {
+            throw new UnsupportedOperationException();
         }
 
         @Override

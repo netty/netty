@@ -3671,8 +3671,6 @@ public abstract class SSLEngineTest {
             assertEquals(Boolean.TRUE, clientEngine.getSession().getValue(key));
             serverEngine.getSession().putValue(key, Boolean.TRUE);
             assertEquals(Boolean.TRUE, serverEngine.getSession().getValue(key));
-            clientEngine.getSession().removeValue(key);
-            serverEngine.getSession().removeValue(key);
 
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
