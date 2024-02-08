@@ -216,8 +216,8 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
         return sessionCache.containsSessionWithId(id);
     }
 
-    void setSessionFromCache(long ssl, OpenSslSession session, String host, int port) {
-        sessionCache.setSession(ssl, session, host, port);
+    boolean setSessionFromCache(long ssl, OpenSslSession session, String host, int port) {
+        return sessionCache.setSession(ssl, session, host, port);
     }
 
     final void destroy() {

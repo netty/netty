@@ -55,10 +55,10 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
     }
 
     @Override
-    void setSession(long ssl, OpenSslSession session, String host, int port) {
+    boolean setSession(long ssl, OpenSslSession session, String host, int port) {
         HostPort hostPort = keyFor(host, port);
         if (hostPort == null) {
-            return;
+            return false;
         }
         final NativeSslSession nativeSslSession;
         final boolean reused;
@@ -66,11 +66,11 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
         synchronized (this) {
             nativeSslSession = sessions.get(hostPort);
             if (nativeSslSession == null) {
-                return;
+                return false;
             }
             if (!nativeSslSession.isValid()) {
                 removeSessionWithId(nativeSslSession.sessionId());
-                return;
+                return false;
             }
             // Try to set the session, if true is returned OpenSSL incremented the reference count
             // of the underlying SSL_SESSION*.
@@ -88,8 +88,9 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
             }
             nativeSslSession.setLastAccessedTime(System.currentTimeMillis());
             session.setSessionDetails(nativeSslSession.getCreationTime(), nativeSslSession.getLastAccessedTime(),
-                    nativeSslSession.sessionId());
+                    nativeSslSession.sessionId(), nativeSslSession.keyValueStorage);
         }
+        return reused;
     }
 
     private static HostPort keyFor(String host, int port) {

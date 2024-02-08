@@ -65,13 +65,24 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     }
 
     @Override
+    public void prepareHandshake() {
+        wrapped.prepareHandshake();
+    }
+
+    @Override
+    public Map<String, Object> keyValueStorage() {
+        return wrapped.keyValueStorage();
+    }
+
+    @Override
     public OpenSslSessionId sessionId() {
         return wrapped.sessionId();
     }
 
     @Override
-    public void setSessionDetails(long creationTime, long lastAccessedTime, OpenSslSessionId id) {
-        wrapped.setSessionDetails(creationTime, lastAccessedTime, id);
+    public void setSessionDetails(long creationTime, long lastAccessedTime, OpenSslSessionId id,
+                                  Map<String, Object> keyValueStorage) {
+        wrapped.setSessionDetails(creationTime, lastAccessedTime, id, keyValueStorage);
     }
 
     @Override
