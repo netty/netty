@@ -146,27 +146,25 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 if (readingHeaders && !preProcessFrame(input)) {
                     return;
                 }
-                verifyHeaderState();
                 // The header is complete, fall into the next case to process the payload.
                 // This is to ensure the proper handling of zero-length payloads. In this
                 // case, we don't want to loop around because there may be no more data
                 // available, causing us to exit the loop. Instead, we just want to perform
                 // the first pass at payload processing now.
-
                 // Wait until the entire payload has been read.
                 if (input.readableBytes() < payloadLength) {
                     return;
                 }
                 // Slice to work only on the frame being read
                 ByteBuf framePayload = input.readSlice(payloadLength);
+                // We have consumed the data for this frame, next time we read,
+                // we will be expecting to read a new frame header.
+                readingHeaders = true;
+                verifyHeaderState();
                 processPayloadState(ctx, framePayload, listener);
             } while (input.isReadable());
         } catch (Http2Exception e) {
             readError = !Http2Exception.isStreamError(e);
-            // Stream error found, reset to reading headers once again for next request coming in
-            if (!readError) {
-                readingHeaders = true;
-            }
             throw e;
         } catch (RuntimeException e) {
             readError = true;
@@ -192,13 +190,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             throw connectionError(FRAME_SIZE_ERROR, "Frame length: %d exceeds maximum: %d", payloadLength,
                                   maxFrameSize);
         }
+        readingHeaders = false;
         return true;
     }
 
     private void verifyHeaderState() throws Http2Exception {
-        if (!readingHeaders) { // Already verified headers, no need to do so again
-            return;
-        }
         switch (frameType) {
             case DATA:
                 verifyDataFrame();
@@ -235,7 +231,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 verifyUnknownFrame();
                 break;
         }
-        readingHeaders = false;
     }
 
     private void processPayloadState(ChannelHandlerContext ctx, ByteBuf in, Http2FrameListener listener)
@@ -243,10 +238,10 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         // Read the payload and fire the frame event to the listener.
         switch (frameType) {
             case DATA:
-                readDataFrame(ctx, in, payloadLength, listener);
+                readDataFrame(ctx, in, listener);
                 break;
             case HEADERS:
-                readHeadersFrame(ctx, in, payloadLength, listener);
+                readHeadersFrame(ctx, in, listener);
                 break;
             case PRIORITY:
                 readPriorityFrame(ctx, in, listener);
@@ -258,26 +253,24 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 readSettingsFrame(ctx, in, listener);
                 break;
             case PUSH_PROMISE:
-                readPushPromiseFrame(ctx, in, payloadLength, listener);
+                readPushPromiseFrame(ctx, in, listener);
                 break;
             case PING:
                 readPingFrame(ctx, in.readLong(), listener);
                 break;
             case GO_AWAY:
-                readGoAwayFrame(ctx, in, payloadLength, listener);
+                readGoAwayFrame(ctx, in, listener);
                 break;
             case WINDOW_UPDATE:
                 readWindowUpdateFrame(ctx, in, listener);
                 break;
             case CONTINUATION:
-                readContinuationFrame(in, payloadLength, listener);
+                readContinuationFrame(in, listener);
                 break;
             default:
-                readUnknownFrame(ctx, in, payloadLength, listener);
+                readUnknownFrame(ctx, in, listener);
                 break;
         }
-        // We have consumed the data, next time we read we will be expecting to read a frame header.
-        readingHeaders = true;
     }
 
     private void verifyDataFrame() throws Http2Exception {
@@ -399,20 +392,20 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         verifyNotProcessingHeaders();
     }
 
-    private void readDataFrame(ChannelHandlerContext ctx, ByteBuf payload, int payloadEndIndex,
+    private void readDataFrame(ChannelHandlerContext ctx, ByteBuf payload,
             Http2FrameListener listener) throws Http2Exception {
         int padding = readPadding(payload);
         verifyPadding(padding);
 
         // Determine how much data there is to read by removing the trailing
         // padding.
-        int dataLength = lengthWithoutTrailingPadding(payloadEndIndex - payload.readerIndex(), padding);
+        int dataLength = lengthWithoutTrailingPadding(payloadLength - payload.readerIndex(), padding);
 
         ByteBuf data = payload.readSlice(dataLength);
         listener.onDataRead(ctx, streamId, data, padding, flags.endOfStream());
     }
 
-    private void readHeadersFrame(final ChannelHandlerContext ctx, ByteBuf payload, int payloadEndIndex,
+    private void readHeadersFrame(final ChannelHandlerContext ctx, ByteBuf payload,
             Http2FrameListener listener) throws Http2Exception {
         final int headersStreamId = streamId;
         final Http2Flags headersFlags = flags;
@@ -425,11 +418,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             long word1 = payload.readUnsignedInt();
             final boolean exclusive = (word1 & 0x80000000L) != 0;
             final int streamDependency = (int) (word1 & 0x7FFFFFFFL);
-            final short weight = (short) (payload.readUnsignedByte() + 1);
             if (streamDependency == streamId) {
                 throw streamError(streamId, PROTOCOL_ERROR, "A stream cannot depend on itself.");
             }
-            final int lenToRead = lengthWithoutTrailingPadding(payloadEndIndex - payload.readerIndex(), padding);
+            final short weight = (short) (payload.readUnsignedByte() + 1);
+            final int lenToRead = lengthWithoutTrailingPadding(payloadLength - payload.readerIndex(), padding);
 
             // Create a handler that invokes the listener when the header block is complete.
             headersContinuation = new HeadersContinuation() {
@@ -477,7 +470,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         };
 
         // Process the initial fragment, invoking the listener's callback if end of headers.
-        int len = lengthWithoutTrailingPadding(payloadEndIndex - payload.readerIndex(), padding);
+        int len = lengthWithoutTrailingPadding(payloadLength - payload.readerIndex(), padding);
         headersContinuation.processFragment(flags.endOfHeaders(), payload, len, listener);
         resetHeadersContinuationIfEnd(flags.endOfHeaders());
     }
@@ -493,10 +486,10 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         long word1 = payload.readUnsignedInt();
         boolean exclusive = (word1 & 0x80000000L) != 0;
         int streamDependency = (int) (word1 & 0x7FFFFFFFL);
-        short weight = (short) (payload.readUnsignedByte() + 1);
         if (streamDependency == streamId) {
             throw streamError(streamId, PROTOCOL_ERROR, "A stream cannot depend on itself.");
         }
+        short weight = (short) (payload.readUnsignedByte() + 1);
         listener.onPriorityRead(ctx, streamId, streamDependency, weight, exclusive);
     }
 
@@ -530,7 +523,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         }
     }
 
-    private void readPushPromiseFrame(final ChannelHandlerContext ctx, ByteBuf payload, int payloadEndIndex,
+    private void readPushPromiseFrame(final ChannelHandlerContext ctx, ByteBuf payload,
             Http2FrameListener listener) throws Http2Exception {
         final int pushPromiseStreamId = streamId;
         final int padding = readPadding(payload);
@@ -556,7 +549,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         };
 
         // Process the initial fragment, invoking the listener's callback if end of headers.
-        int len = lengthWithoutTrailingPadding(payloadEndIndex - payload.readerIndex(), padding);
+        int len = lengthWithoutTrailingPadding(payloadLength - payload.readerIndex(), padding);
         headersContinuation.processFragment(flags.endOfHeaders(), payload, len, listener);
         resetHeadersContinuationIfEnd(flags.endOfHeaders());
     }
@@ -570,11 +563,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         }
     }
 
-    private static void readGoAwayFrame(ChannelHandlerContext ctx, ByteBuf payload, int payloadEndIndex,
+    private void readGoAwayFrame(ChannelHandlerContext ctx, ByteBuf payload,
             Http2FrameListener listener) throws Http2Exception {
         int lastStreamId = readUnsignedInt(payload);
         long errorCode = payload.readUnsignedInt();
-        ByteBuf debugData = payload.readSlice(payloadEndIndex - payload.readerIndex());
+        ByteBuf debugData = payload.readSlice(payloadLength - payload.readerIndex());
         listener.onGoAwayRead(ctx, lastStreamId, errorCode, debugData);
     }
 
@@ -588,17 +581,16 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
     }
 
-    private void readContinuationFrame(ByteBuf payload, int payloadEndIndex, Http2FrameListener listener)
+    private void readContinuationFrame(ByteBuf payload, Http2FrameListener listener)
             throws Http2Exception {
         // Process the initial fragment, invoking the listener's callback if end of headers.
         headersContinuation.processFragment(flags.endOfHeaders(), payload,
-                payloadEndIndex - payload.readerIndex(), listener);
+                payloadLength, listener);
         resetHeadersContinuationIfEnd(flags.endOfHeaders());
     }
 
     private void readUnknownFrame(ChannelHandlerContext ctx, ByteBuf payload,
-            int payloadEndIndex, Http2FrameListener listener) throws Http2Exception {
-        payload = payload.readSlice(payloadEndIndex - payload.readerIndex());
+            Http2FrameListener listener) throws Http2Exception {
         listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
     }
 

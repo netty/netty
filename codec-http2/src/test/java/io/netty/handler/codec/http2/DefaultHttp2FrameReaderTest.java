@@ -393,6 +393,11 @@ public class DefaultHttp2FrameReaderTest {
         try {
             // Write a malformed priority header causing a stream exception in reader
             writeFrameHeader(input, 4, PRIORITY, new Http2Flags(), priorityStreamId);
+            // Fill buffer with dummy payload to be properly read by reader
+            input.writeByte((byte) 0x80);
+            input.writeByte((byte) 0x00);
+            input.writeByte((byte) 0x00);
+            input.writeByte((byte) 0x7f);
             assertThrows(Http2Exception.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
