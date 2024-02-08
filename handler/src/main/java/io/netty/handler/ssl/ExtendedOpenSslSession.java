@@ -28,7 +28,6 @@ import java.security.Principal;
 import java.security.cert.Certificate;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Delegates all operations to a wrapped {@link OpenSslSession} except the methods defined by {@link ExtendedSSLSession}
@@ -236,6 +235,16 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     public void handshakeFinished(byte[] id, String cipher, String protocol, byte[] peerCertificate,
                                   byte[][] peerCertificateChain, long creationTime, long timeout) throws SSLException {
         wrapped.handshakeFinished(id, cipher, protocol, peerCertificate, peerCertificateChain, creationTime, timeout);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return wrapped.equals(o);
+    }
+
+    @Override
+    public int hashCode() {
+        return wrapped.hashCode();
     }
 
     @Override
