@@ -31,7 +31,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -148,10 +147,14 @@ class OpenSslSessionCache implements SSLSessionCache {
             // We couldn't find the engine itself.
             return false;
         }
+        OpenSslSession openSslSession = (OpenSslSession) engine.getSession();
+        // Create the native session that we will put into our cache. We will share the key-value storage
+        // with the already existing session instance.
         NativeSslSession session = new NativeSslSession(sslSession, engine.getPeerHost(), engine.getPeerPort(),
-                getSessionTimeout() * 1000L);
-        ((OpenSslSession) engine.getSession()).setSessionDetails(
-                session.creationTime, session.lastAccessedTime, session.sessionId());
+                getSessionTimeout() * 1000L, openSslSession.keyValueStorage());
+
+        openSslSession.setSessionDetails(
+                session.creationTime, session.lastAccessedTime, session.sessionId(), session.keyValueStorage);
         synchronized (this) {
             // Mimic what OpenSSL is doing and expunge every 255 new sessions
             // See https://www.openssl.org/docs/man1.0.2/man3/SSL_CTX_flush_sessions.html
@@ -209,14 +212,15 @@ class OpenSslSessionCache implements SSLSessionCache {
         if (engine != null) {
             OpenSslSession sslSession = (OpenSslSession) engine.getSession();
             sslSession.setSessionDetails(session.getCreationTime(),
-                    session.getLastAccessedTime(), session.sessionId());
+                    session.getLastAccessedTime(), session.sessionId(), session.keyValueStorage);
         }
 
         return session.session();
     }
 
-    void setSession(long ssl, OpenSslSession session, String host, int port) {
+    boolean setSession(long ssl, OpenSslSession session, String host, int port) {
         // Do nothing by default as this needs special handling for the client side.
+       return false;
     }
 
     /**
@@ -293,6 +297,9 @@ class OpenSslSessionCache implements SSLSessionCache {
         static final ResourceLeakDetector<NativeSslSession> LEAK_DETECTOR = ResourceLeakDetectorFactory.instance()
                 .newResourceLeakDetector(NativeSslSession.class);
         private final ResourceLeakTracker<NativeSslSession> leakTracker;
+
+        final Map<String, Object> keyValueStorage;
+
         private final long session;
         private final String peerHost;
         private final int peerPort;
@@ -303,17 +310,30 @@ class OpenSslSessionCache implements SSLSessionCache {
         private volatile boolean valid = true;
         private boolean freed;
 
-        NativeSslSession(long session, String peerHost, int peerPort, long timeout) {
+        NativeSslSession(long session, String peerHost, int peerPort, long timeout,
+                         Map<String, Object> keyValueStorage) {
             this.session = session;
             this.peerHost = peerHost;
             this.peerPort = peerPort;
             this.timeout = timeout;
-            id = new OpenSslSessionId(SSLSession.getSessionId(session));
+            this.id = new OpenSslSessionId(io.netty.internal.tcnative.SSLSession.getSessionId(session));
+            this.keyValueStorage = keyValueStorage;
             leakTracker = LEAK_DETECTOR.track(this);
         }
 
         @Override
-        public void setSessionDetails(long creationTime, long lastAccessedTime, OpenSslSessionId id) {
+        public Map<String, Object> keyValueStorage() {
+            return keyValueStorage;
+        }
+
+        @Override
+        public void prepareHandshake() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void setSessionDetails(long creationTime, long lastAccessedTime,
+                                      OpenSslSessionId id, Map<String, Object> keyValueStorage) {
             throw new UnsupportedOperationException();
         }
 
