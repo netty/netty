@@ -2714,6 +2714,23 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     ", id=" + id +
                     '}';
         }
+
+        @Override
+        public int hashCode() {
+            return sessionId().hashCode();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            // We trust all sub-types as we use different types but the interface is package-private
+            if (!(o instanceof OpenSslSession)) {
+                return false;
+            }
+            return sessionId().equals(((OpenSslSession) o).sessionId());
+        }
     }
 
     private interface NativeSslException {
