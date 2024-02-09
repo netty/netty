@@ -14,6 +14,8 @@
  */
 package io.netty.util.internal;
 
+import org.jctools.util.Pow2;
+
 /**
  * Math utility methods.
  */

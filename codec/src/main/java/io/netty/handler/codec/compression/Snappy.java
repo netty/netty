@@ -16,7 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import org.jctools.util.Pow2;
+import io.netty.util.internal.MathUtil;
 
 /**
  * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an
@@ -160,7 +160,7 @@ public final class Snappy {
      * @return An appropriately sized empty hashtable
      */
     private static short[] getHashTable(int inputSize) {
-        int hashTableSize = Pow2.roundToPowerOfTwo(inputSize);
+        int hashTableSize = MathUtil.findNextPositivePowerOfTwo(inputSize);
         return new short[Math.min(hashTableSize, MAX_HT_SIZE)];
     }
 
