@@ -113,7 +113,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     public void maxFrameSize(int max) throws Http2Exception {
         if (!isMaxFrameSizeValid(max)) {
             // SETTINGS frames affect the entire connection state and thus errors must be connection errors.
-            throw connectionError(FRAME_SIZE_ERROR,"Invalid MAX_FRAME_SIZE specified in sent settings: %d", max);
+            throw connectionError(FRAME_SIZE_ERROR, "Invalid MAX_FRAME_SIZE specified in sent settings: %d", max);
         }
         maxFrameSize = max;
     }
