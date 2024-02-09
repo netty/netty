@@ -31,7 +31,10 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     private static final short SNAPPY_SLICE_SIZE = Short.MAX_VALUE;
 
     /**
-     * Both 32767 and 65535 are valid lengths for the Snappy framing format
+     * Both
+     * {@value io.netty.handler.codec.compression.SnappyFrameEncoder#SNAPPY_SLICE_SIZE}
+     * and {@value io.netty.handler.codec.compression.SnappyFrameEncoder#SNAPPY_SLICE_JUMBO_SIZE}
+     * are valid lengths for the Snappy framing format
      */
     private static final int SNAPPY_SLICE_JUMBO_SIZE = 65535;
 
@@ -54,6 +57,11 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
         this(SNAPPY_SLICE_SIZE);
     }
 
+    /**
+     * Create a new instance with a
+     * {@value io.netty.handler.codec.compression.SnappyFrameEncoder#SNAPPY_SLICE_JUMBO_SIZE}
+     * chunk size.
+     */
     public static SnappyFrameEncoder snappyEncoderWithJumboFrames() {
         return new SnappyFrameEncoder(SNAPPY_SLICE_JUMBO_SIZE);
     }
