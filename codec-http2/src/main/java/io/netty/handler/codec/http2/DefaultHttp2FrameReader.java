@@ -113,6 +113,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     public void maxFrameSize(int max) throws Http2Exception {
         if (!isMaxFrameSizeValid(max)) {
             // SETTINGS frames affect the entire connection state and thus errors must be connection errors.
+            // See https://datatracker.ietf.org/doc/html/rfc9113#section-4.2 for details.
             throw connectionError(FRAME_SIZE_ERROR, "Invalid MAX_FRAME_SIZE specified in sent settings: %d", max);
         }
         maxFrameSize = max;
@@ -302,6 +303,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         if (payloadLength < requiredLength) {
             // HEADER frames carry a field_block and thus failure to process them results
             // in HPACK corruption and renders the connection unusable.
+            // See https://datatracker.ietf.org/doc/html/rfc9113#section-4.2 for details.
             throw connectionError(FRAME_SIZE_ERROR,
                     "Frame length %d too small for HEADERS frame with stream %d.", payloadLength, streamId);
         }
@@ -348,6 +350,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         if (payloadLength < minLength) {
             // PUSH_PROMISE frames carry a field_block and thus failure to process them results
             // in HPACK corruption and renders the connection unusable.
+            // See https://datatracker.ietf.org/doc/html/rfc9113#section-4.2 for details.
             throw connectionError(FRAME_SIZE_ERROR,
                     "Frame length %d too small for PUSH_PROMISE frame with stream id %d.", payloadLength, streamId);
         }
@@ -429,9 +432,10 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             final boolean exclusive = (word1 & 0x80000000L) != 0;
             final int streamDependency = (int) (word1 & 0x7FFFFFFFL);
             if (streamDependency == streamId) {
-                // RFC 7540 section 5.3.1 says this must be treated as a stream error of type PROTOCOL_ERROR
-                // but because we will not process the payload, a simple stream error could result in HPACK
-                // corruption. Therefor, we are elevating this to a connection error.
+                // Stream dependencies are deprecated in RFC 9113 but this behavior is defined in
+                // https://datatracker.ietf.org/doc/html/rfc7540#section-5.3.1 which says this must be treated as a
+                // stream error of type PROTOCOL_ERROR. However, because we will not process the payload, a stream
+                // error would result in HPACK corruption. Therefor, it is elevated to a connection error.
                 throw connectionError(
                         PROTOCOL_ERROR, "HEADERS frame for stream %d cannot depend on itself.", streamId);
             }
@@ -589,6 +593,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             Http2FrameListener listener) throws Http2Exception {
         int windowSizeIncrement = readUnsignedInt(payload);
         if (windowSizeIncrement == 0) {
+            // On the connection stream this must be a connection error but for request streams it is a stream error.
+            // See https://datatracker.ietf.org/doc/html/rfc9113#section-6.9 for details.
             if (streamId == CONNECTION_STREAM_ID) {
                 throw connectionError(PROTOCOL_ERROR,
                         "Received WINDOW_UPDATE with delta 0 for connection stream");
