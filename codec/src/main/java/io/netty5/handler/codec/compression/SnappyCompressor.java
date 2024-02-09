@@ -51,18 +51,41 @@ public final class SnappyCompressor implements Compressor {
         (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59
     };
 
+    private static final short SNAPPY_SLICE_SIZE = Short.MAX_VALUE;
+
+    /**
+     * Both
+     * {@value SnappyCompressor#SNAPPY_SLICE_SIZE}
+     * and {@value SnappyCompressor#SNAPPY_SLICE_JUMBO_SIZE}
+     * are valid lengths for the Snappy framing format
+     */
+    private static final int SNAPPY_SLICE_JUMBO_SIZE = 65535;
+
     private final Snappy snappy = new Snappy();
     private State state = State.Init;
 
-    private SnappyCompressor() { }
+    private final int sliceSize;
+
+    private SnappyCompressor(int sliceSize) {
+        this.sliceSize = sliceSize;
+    }
 
     /**
-     * Creates a new snappy compressor factory.
+     * Creates a new snappy compressor factory with a {@value SNAPPY_SLICE_SIZE} chunk size.
      *
      * @return  the new instance.
      */
     public static Supplier<SnappyCompressor> newFactory() {
-        return SnappyCompressor::new;
+        return () -> new SnappyCompressor(SNAPPY_SLICE_SIZE);
+    }
+
+    /**
+     * Creates a new snappy compressor factory with a {@value SNAPPY_SLICE_JUMBO_SIZE} chunk size.
+     *
+     * @return  the new instance.
+     */
+    public static Supplier<SnappyCompressor> newFactoryWithJumboFrames() {
+        return () -> new SnappyCompressor(SNAPPY_SLICE_JUMBO_SIZE);
     }
 
     @Override
@@ -95,12 +118,12 @@ public final class SnappyCompressor implements Compressor {
                             }
 
                             out.writeInt(0);
-                            if (dataLength > Short.MAX_VALUE) {
-                                try (Buffer slice = in.readSplit(Short.MAX_VALUE)) {
+                            if (dataLength > sliceSize) {
+                                try (Buffer slice = in.readSplit(sliceSize)) {
                                     calculateAndWriteChecksum(slice, out);
-                                    snappy.encode(slice, out, Short.MAX_VALUE);
+                                    snappy.encode(slice, out, sliceSize);
                                     setChunkLength(out, lengthIdx);
-                                    dataLength -= Short.MAX_VALUE;
+                                    dataLength -= sliceSize;
                                 }
                             } else {
                                 try (Buffer slice = in.readSplit(dataLength)) {

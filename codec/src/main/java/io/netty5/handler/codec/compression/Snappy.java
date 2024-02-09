@@ -17,6 +17,7 @@ package io.netty5.handler.codec.compression;
 
 import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.Buffer;
+import io.netty5.util.internal.MathUtil;
 
 /**
  * Uncompresses an input {@link Buffer} encoded with Snappy compression into an
@@ -96,7 +97,9 @@ public final class Snappy {
 
                     nextHash = hash(in, nextIndex, shift);
 
-                    candidate = baseIndex + table[hash];
+                    // equivalent to Short.toUnsignedInt
+                    // use unsigned short cast to avoid loss precision when 32767 <= length <= 65355
+                    candidate = baseIndex + ((int) table[hash]) & 0xffff;
 
                     table[hash] = (short) (inIndex - baseIndex);
                 }
@@ -158,11 +161,8 @@ public final class Snappy {
      * @return An appropriately sized empty hashtable
      */
     private static short[] getHashTable(int inputSize) {
-        int htSize = 256;
-        while (htSize < MAX_HT_SIZE && htSize < inputSize) {
-            htSize <<= 1;
-        }
-        return new short[htSize];
+        int hashTableSize = MathUtil.findNextPositivePowerOfTwo(inputSize);
+        return new short[Math.min(hashTableSize, MAX_HT_SIZE)];
     }
 
     /**
