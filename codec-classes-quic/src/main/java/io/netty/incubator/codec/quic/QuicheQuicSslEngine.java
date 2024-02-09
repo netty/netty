@@ -35,6 +35,7 @@ import javax.security.cert.X509Certificate;
 import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.security.cert.Certificate;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -564,6 +565,23 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         @Override
         public int getApplicationBufferSize() {
             return -1;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            QuicheQuicSslSession that = (QuicheQuicSslSession) o;
+            return Arrays.equals(getId(), that.getId());
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(getId());
         }
     }
 }
