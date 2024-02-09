@@ -32,5 +32,4 @@ export JAVA_HOME="$JAVA8_HOME"
 
 ./mvnw -Psonatype-oss-release,"$CROSS_COMPILE_PROFILE" clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId="$1" -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DskipTests=true
 ./mvnw -Psonatype-oss-release clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DstagingRepositoryId="$1" -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DskipTests=true -DstagingProgressTimeoutMinutes=10
-./mvnw -Psonatype-oss-release org.sonatype.plugins:nexus-staging-maven-plugin:rc-close  org.sonatype.plugins:nexus-staging-maven-plugin:rc-release -DstagingRepositoryId="$1" -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DskipTests=true -DstagingProgressTimeoutMinutes=10
 git checkout "$BRANCH"
