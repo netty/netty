@@ -20,10 +20,10 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.util.concurrent.ImmediateExecutor;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.jctools.util.Pow2;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -334,7 +334,7 @@ public class HashedWheelTimer implements Timer {
     }
 
     private static HashedWheelBucket[] createWheel(int ticksPerWheel) {
-        ticksPerWheel = Pow2.roundToPowerOfTwo(ticksPerWheel);
+        ticksPerWheel = MathUtil.findNextPositivePowerOfTwo(ticksPerWheel);
 
         HashedWheelBucket[] wheel = new HashedWheelBucket[ticksPerWheel];
         for (int i = 0; i < wheel.length; i ++) {
