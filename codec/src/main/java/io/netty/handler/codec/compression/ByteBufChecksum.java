@@ -33,14 +33,20 @@ import java.util.zip.Checksum;
  * byte array ({@link ByteBuf#hasArray()} is {@code true}) or not.
  */
 abstract class ByteBufChecksum implements Checksum {
-    private static final Method ADLER32_UPDATE_METHOD;
-    private static final Method CRC32_UPDATE_METHOD;
 
-    static {
-        // See if we can use fast-path when using ByteBuf that is not heap based as Adler32 and CRC32 added support
-        // for update(ByteBuffer) in JDK8.
-        ADLER32_UPDATE_METHOD = updateByteBuffer(new Adler32());
-        CRC32_UPDATE_METHOD = updateByteBuffer(new CRC32());
+    /**
+     * on OpenJDK Adler32 and CRC32 both calls ZipUtils.loadLibrary on class init.
+     */
+    private static class ZlibChecksumMethods {
+        private static final Method ADLER32_UPDATE_METHOD;
+        private static final Method CRC32_UPDATE_METHOD;
+
+        static {
+            // See if we can use fast-path when using ByteBuf that is not heap based as Adler32 and CRC32 added support
+            // for update(ByteBuffer) in JDK8.
+            ADLER32_UPDATE_METHOD = updateByteBuffer(new Adler32());
+            CRC32_UPDATE_METHOD = updateByteBuffer(new CRC32());
+        }
     }
 
     private final ByteProcessor updateProcessor = new ByteProcessor() {
@@ -69,11 +75,11 @@ abstract class ByteBufChecksum implements Checksum {
         if (checksum instanceof ByteBufChecksum) {
             return (ByteBufChecksum) checksum;
         }
-        if (checksum instanceof Adler32 && ADLER32_UPDATE_METHOD != null) {
-            return new ReflectiveByteBufChecksum(checksum, ADLER32_UPDATE_METHOD);
+        if (checksum instanceof Adler32 && ZlibChecksumMethods.ADLER32_UPDATE_METHOD != null) {
+            return new ReflectiveByteBufChecksum(checksum, ZlibChecksumMethods.ADLER32_UPDATE_METHOD);
         }
-        if (checksum instanceof CRC32 && CRC32_UPDATE_METHOD != null) {
-            return new ReflectiveByteBufChecksum(checksum, CRC32_UPDATE_METHOD);
+        if (checksum instanceof CRC32 && ZlibChecksumMethods.CRC32_UPDATE_METHOD != null) {
+            return new ReflectiveByteBufChecksum(checksum, ZlibChecksumMethods.CRC32_UPDATE_METHOD);
         }
         return new SlowByteBufChecksum(checksum);
     }
