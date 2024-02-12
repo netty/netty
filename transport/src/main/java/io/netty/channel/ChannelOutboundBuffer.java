@@ -125,6 +125,9 @@ public final class ChannelOutboundBuffer {
             unflushedEntry = entry;
         }
 
+        // Touch the message to make it easier to debug buffer leaks.
+        ReferenceCountUtil.touch(msg);
+
         // increment pending bytes after adding message to the unflushed arrays.
         // See https://github.com/netty/netty/issues/1619
         incrementPendingOutboundBytes(entry.pendingSize, false);

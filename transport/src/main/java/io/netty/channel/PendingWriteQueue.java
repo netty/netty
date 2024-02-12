@@ -119,6 +119,8 @@ public final class PendingWriteQueue {
         size ++;
         bytes += messageSize;
         tracker.incrementPendingOutboundBytes(write.size);
+        // Touch the message to make it easier to debug buffer leaks.
+        ReferenceCountUtil.touch(msg);
     }
 
     /**

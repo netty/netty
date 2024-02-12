@@ -17,6 +17,7 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -58,6 +59,9 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     private void addFirst(ByteBuf buf, ChannelFutureListener listener) {
+        // Touch the message to make it easier to debug buffer leaks.
+        ReferenceCountUtil.touch(buf);
+
         if (listener != null) {
             bufAndListenerPairs.addFirst(listener);
         }
@@ -91,6 +95,9 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param listener to notify when all the bytes have been consumed and written, can be {@code null}.
      */
     public final void add(ByteBuf buf, ChannelFutureListener listener) {
+        // Touch the message to make it easier to debug buffer leaks.
+        ReferenceCountUtil.touch(buf);
+
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
         bufAndListenerPairs.add(buf);
