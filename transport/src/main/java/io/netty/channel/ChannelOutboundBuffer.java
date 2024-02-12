@@ -130,7 +130,6 @@ public final class ChannelOutboundBuffer {
         // this save both checking against the ReferenceCounted interface
         // and makes better use of virtual calls vs interface ones
         if (msg instanceof AbstractReferenceCountedByteBuf) {
-            // release now as it is flushed.
             ((AbstractReferenceCountedByteBuf) msg).touch();
         } else {
             ReferenceCountUtil.touch(msg);
