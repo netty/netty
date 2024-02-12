@@ -679,6 +679,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         private void queueAndFailAll(Object msg, ChannelPromise promise, Throwable cause) {
+            // Touch the message to make things easier in terms of debugging buffer leaks.
+            ReferenceCountUtil.touch(msg);
+
             queue.add(msg, promise);
             queue.removeAndFailAll(cause);
         }
@@ -716,6 +719,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     promise.setSuccess();
                     mayNeedWritabilityUpdate = capacity == 0;
                 } else {
+                    // Touch the message to make things easier in terms of debugging buffer leaks.
+                    ReferenceCountUtil.touch(msg);
                     queue.add(msg, promise);
                     mayNeedWritabilityUpdate = true;
                 }
