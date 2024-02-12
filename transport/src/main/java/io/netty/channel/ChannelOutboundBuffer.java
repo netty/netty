@@ -126,7 +126,15 @@ public final class ChannelOutboundBuffer {
         }
 
         // Touch the message to make it easier to debug buffer leaks.
-        ReferenceCountUtil.touch(msg);
+
+        // this save both checking against the ReferenceCounted interface
+        // and makes better use of virtual calls vs interface ones
+        if (msg instanceof AbstractReferenceCountedByteBuf) {
+            // release now as it is flushed.
+            ((AbstractReferenceCountedByteBuf) msg).touch();
+        } else {
+            ReferenceCountUtil.touch(msg);
+        }
 
         // increment pending bytes after adding message to the unflushed arrays.
         // See https://github.com/netty/netty/issues/1619
