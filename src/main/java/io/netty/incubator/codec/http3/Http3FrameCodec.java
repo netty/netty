@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.PendingWriteQueue;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamFrame;
@@ -29,8 +30,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
 import java.net.SocketAddress;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -735,14 +734,14 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     private static final class WriteResumptionListener
             implements GenericFutureListener<Future<? super QuicStreamChannel>> {
         private static final Object FLUSH = new Object();
-        private final Deque<Object> buffer;
+        private final PendingWriteQueue queue;
         private final ChannelHandlerContext ctx;
         private final Http3FrameCodec codec;
 
         private WriteResumptionListener(ChannelHandlerContext ctx, Http3FrameCodec codec) {
             this.ctx = ctx;
             this.codec = codec;
-            buffer = new ArrayDeque<>(4); // assuming we will buffer header, data, trailer and a flush
+            queue = new PendingWriteQueue(ctx);
         }
 
         @Override
@@ -752,25 +751,31 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
         void enqueue(Object msg, ChannelPromise promise) {
             assert ctx.channel().eventLoop().inEventLoop();
-            buffer.addLast(new BufferedEntry(msg, promise));
+            // Touch the message to allow easier debugging of memory leaks
+            ReferenceCountUtil.touch(msg);
+            queue.add(msg, promise);
         }
 
         void enqueueFlush() {
             assert ctx.channel().eventLoop().inEventLoop();
-            buffer.addLast(FLUSH);
+            queue.add(FLUSH, ctx.voidPromise());
         }
 
         void drain() {
             assert ctx.channel().eventLoop().inEventLoop();
             boolean flushSeen = false;
             try {
-                for (Object entry = buffer.pollFirst(); entry != null; entry = buffer.pollFirst()) {
+                for (;;) {
+                    Object entry = queue.current();
+                    if (entry == null) {
+                        break;
+                    }
                     if (entry == FLUSH) {
                         flushSeen = true;
+                        queue.remove().trySuccess();
                     } else {
-                        assert entry instanceof BufferedEntry;
-                        BufferedEntry bufferedEntry = (BufferedEntry) entry;
-                        codec.write0(ctx, bufferedEntry.msg, bufferedEntry.promise);
+                        // Retain the entry as remove() will call release() as well.
+                        codec.write0(ctx, ReferenceCountUtil.retain(entry), queue.remove());
                     }
                 }
                 // indicate that writes do not need to be enqueued. As we are on the eventloop, no other writes can
@@ -788,16 +793,6 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             assert codec.qpackAttributes != null;
             codec.qpackAttributes.whenEncoderStreamAvailable(listener);
             return listener;
-        }
-
-        private static final class BufferedEntry {
-            private final Object msg;
-            private final ChannelPromise promise;
-
-            BufferedEntry(Object msg, ChannelPromise promise) {
-                this.msg = msg;
-                this.promise = promise;
-            }
         }
     }
 
