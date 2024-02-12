@@ -160,7 +160,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
                 // We have consumed the data for this frame, next time we read,
                 // we will be expecting to read a new frame header.
                 readingHeaders = true;
-                verifyHeaderState();
+                verifyFrameState();
                 processPayloadState(ctx, framePayload, listener);
             } while (input.isReadable());
         } catch (Http2Exception e) {
@@ -183,18 +183,18 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             return false;
         }
         payloadLength = in.readUnsignedMedium();
-        frameType = in.readByte();
-        flags = new Http2Flags(in.readUnsignedByte());
-        streamId = readUnsignedInt(in);
         if (payloadLength > maxFrameSize) {
             throw connectionError(FRAME_SIZE_ERROR, "Frame length: %d exceeds maximum: %d", payloadLength,
                                   maxFrameSize);
         }
+        frameType = in.readByte();
+        flags = new Http2Flags(in.readUnsignedByte());
+        streamId = readUnsignedInt(in);
         readingHeaders = false;
         return true;
     }
 
-    private void verifyHeaderState() throws Http2Exception {
+    private void verifyFrameState() throws Http2Exception {
         switch (frameType) {
             case DATA:
                 verifyDataFrame();
@@ -235,6 +235,9 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
     private void processPayloadState(ChannelHandlerContext ctx, ByteBuf in, Http2FrameListener listener)
                     throws Http2Exception {
+        // When this method is called, we ensure that the payload buffer passed in
+        // matches what we expect to be reading for payloadLength
+        assert in.readableBytes() == payloadLength;
         // Read the payload and fire the frame event to the listener.
         switch (frameType) {
             case DATA:
