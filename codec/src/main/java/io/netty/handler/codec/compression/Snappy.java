@@ -16,7 +16,14 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.MathUtil;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.util.Arrays;
+import java.util.Locale;
 
 /**
  * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an
@@ -25,6 +32,8 @@ import io.netty.util.internal.MathUtil;
  * See <a href="https://github.com/google/snappy/blob/master/format_description.txt">snappy format</a>.
  */
 public final class Snappy {
+
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Snappy.class);
 
     private static final int MAX_HT_SIZE = 1 << 14;
     private static final int MIN_COMPRESSIBLE_BYTES = 15;
@@ -39,9 +48,53 @@ public final class Snappy {
     private static final int COPY_2_BYTE_OFFSET = 2;
     private static final int COPY_4_BYTE_OFFSET = 3;
 
+    // Hash table used to compress, shared between subsequent call to .encode()
+    private static final FastThreadLocal<short[]> HASH_TABLE = new FastThreadLocal<short[]>();
+
+    private static final HashType DEFAULT_HASH_TABLE_TYPE;
+
+    static {
+        String hashTableTypeKey = "io.netty.handler.codec.compression.snappy.hashTableType";
+        String hashTableTypeProperty = SystemPropertyUtil.get(hashTableTypeKey, "newarray");
+
+        hashTableTypeProperty = hashTableTypeProperty.toLowerCase(Locale.US).trim();
+
+        HashType hashTableType;
+        if ("newarray".equals(hashTableTypeProperty)) {
+            hashTableType = HashType.NEW_ARRAY;
+            logger.debug("-D{}=\"{}\"", hashTableTypeKey, hashTableTypeProperty);
+        } else if ("reuse".equals(hashTableTypeProperty)) {
+            hashTableType = HashType.FAST_THREAD_LOCAL_ARRAY_FILL;
+            logger.debug("-D{}=\"{}\"", hashTableTypeKey, hashTableTypeProperty);
+        } else {
+            hashTableType = HashType.NEW_ARRAY;
+            logger.debug("-D{}=\"newarray\" (unknown: {})", hashTableTypeKey, hashTableTypeProperty);
+        }
+
+        DEFAULT_HASH_TABLE_TYPE = hashTableType;
+    }
+
+    public Snappy() {
+        this(DEFAULT_HASH_TABLE_TYPE);
+    }
+
+    Snappy(HashType hashTableType) {
+        this.hashTableType = hashTableType;
+    }
+
+    public static Snappy withHashTableReuse() {
+        return new Snappy(HashType.FAST_THREAD_LOCAL_ARRAY_FILL);
+    }
+
+    private final HashType hashTableType;
     private State state = State.READING_PREAMBLE;
     private byte tag;
     private int written;
+
+    public enum HashType {
+        NEW_ARRAY,
+        FAST_THREAD_LOCAL_ARRAY_FILL
+    }
 
     private enum State {
         READING_PREAMBLE,
@@ -71,8 +124,11 @@ public final class Snappy {
         int inIndex = in.readerIndex();
         final int baseIndex = inIndex;
 
-        final short[] table = getHashTable(length);
-        final int shift = Integer.numberOfLeadingZeros(table.length) + 1;
+        int hashTableSize = MathUtil.findNextPositivePowerOfTwo(length);
+        hashTableSize = Math.min(hashTableSize, MAX_HT_SIZE);
+        final short[] table = getHashTable(hashTableSize);
+
+        final int shift = Integer.numberOfLeadingZeros(hashTableSize) + 1;
 
         int nextEmit = inIndex;
 
@@ -154,14 +210,43 @@ public final class Snappy {
     }
 
     /**
-     * Creates an appropriately sized hashtable for the given input size
+     * Returns a short[] to be used as a hashtable
      *
-     * @param inputSize The size of our input, ie. the number of bytes we need to encode
+     * @param hashTableSize the size for the hashtable
      * @return An appropriately sized empty hashtable
      */
-    private static short[] getHashTable(int inputSize) {
-        int hashTableSize = MathUtil.findNextPositivePowerOfTwo(inputSize);
-        return new short[Math.min(hashTableSize, MAX_HT_SIZE)];
+    private short[] getHashTable(int hashTableSize) {
+        final short[] table;
+        switch (hashTableType) {
+        case FAST_THREAD_LOCAL_ARRAY_FILL:
+            table = getHashTableFastThreadLocalArrayFill(hashTableSize);
+            break;
+        case NEW_ARRAY:
+            table = new short[hashTableSize];
+            break;
+        default:
+            throw new RuntimeException("Need hash table type");
+        }
+        return table;
+    }
+
+    /**
+     * Returns a short[] from a FastThreadLocal, zeroing for correctness
+     * creating a new one and resizing it if necessary
+     *
+     * @return An appropriately sized empty hashtable
+     * @param hashTableSize
+     */
+    public static short[] getHashTableFastThreadLocalArrayFill(int hashTableSize) {
+        short[] hashTable = HASH_TABLE.get();
+        if (hashTable == null || hashTable.length < hashTableSize) {
+            hashTable = new short[hashTableSize];
+            HASH_TABLE.set(hashTable);
+            return hashTable;
+        }
+
+        Arrays.fill(hashTable, 0, hashTableSize, (short) 0);
+        return hashTable;
     }
 
     /**
