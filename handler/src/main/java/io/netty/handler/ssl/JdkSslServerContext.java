@@ -16,9 +16,11 @@
 
 package io.netty.handler.ssl;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
 
+import java.io.ByteArrayInputStream;
 import java.security.KeyStore;
 import java.security.Provider;
 import javax.net.ssl.KeyManager;
@@ -34,6 +36,9 @@ import java.io.File;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 
+import static io.netty.handler.ssl.SslUtils.PROBING_CERT;
+import static io.netty.handler.ssl.SslUtils.PROBING_KEY;
+
 /**
  * A server-side {@link SslContext} which uses JDK's SSL/TLS implementation.
  *
@@ -42,6 +47,34 @@ import java.security.cert.X509Certificate;
  */
 @Deprecated
 public final class JdkSslServerContext extends JdkSslContext {
+
+    private static final boolean WRAP_TRUST_MANAGER;
+    static {
+        boolean wrapTrustManager = false;
+        if (PlatformDependent.javaVersion() >= 7) {
+            try {
+                X509Certificate[] certs = toX509Certificates(
+                        new ByteArrayInputStream(PROBING_CERT.getBytes(CharsetUtil.US_ASCII)));
+                PrivateKey privateKey = toPrivateKey(new ByteArrayInputStream(
+                        PROBING_KEY.getBytes(CharsetUtil.UTF_8)), null);
+                char[] keyStorePassword = keyStorePassword(null);
+                KeyStore ks = buildKeyStore(certs, privateKey, keyStorePassword, null);
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                kmf.init(ks, keyStorePassword);
+
+                SSLContext ctx = SSLContext.getInstance("TLS");
+                TrustManagerFactory tm = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                TrustManager[] managers = tm.getTrustManagers();
+
+                ctx.init(kmf.getKeyManagers(), wrapTrustManagerIfNeeded(managers), null);
+                wrapTrustManager = true;
+            } catch (Throwable ignore) {
+                // Just don't wrap as we might not be able to do so because of FIPS:
+                // See https://github.com/netty/netty/issues/13840
+            }
+        }
+        WRAP_TRUST_MANAGER = wrapTrustManager;
+    }
 
     /**
      * Creates a new instance.
@@ -302,7 +335,7 @@ public final class JdkSslServerContext extends JdkSslContext {
 
     @SuppressJava6Requirement(reason = "Guarded by java version check")
     private static TrustManager[] wrapTrustManagerIfNeeded(TrustManager[] trustManagers) {
-        if (PlatformDependent.javaVersion() >= 7) {
+        if (WRAP_TRUST_MANAGER && PlatformDependent.javaVersion() >= 7) {
             for (int i = 0; i < trustManagers.length; i++) {
                 TrustManager tm = trustManagers[i];
                 if (tm instanceof X509ExtendedTrustManager) {
