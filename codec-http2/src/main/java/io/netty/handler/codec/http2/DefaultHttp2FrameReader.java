@@ -21,6 +21,7 @@ import io.netty.handler.codec.http2.Http2FrameReader.Configuration;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
+import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.INT_FIELD_LENGTH;
@@ -111,8 +112,9 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     @Override
     public void maxFrameSize(int max) throws Http2Exception {
         if (!isMaxFrameSizeValid(max)) {
-            throw streamError(streamId, FRAME_SIZE_ERROR,
-                    "Invalid MAX_FRAME_SIZE specified in sent settings: %d", max);
+            // SETTINGS frames affect the entire connection state and thus errors must be connection errors.
+            // See https://datatracker.ietf.org/doc/html/rfc9113#section-4.2 for details.
+            throw connectionError(FRAME_SIZE_ERROR, "Invalid MAX_FRAME_SIZE specified in sent settings: %d", max);
         }
         maxFrameSize = max;
     }
@@ -299,8 +301,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
 
         int requiredLength = flags.getPaddingPresenceFieldLength() + flags.getNumPriorityBytes();
         if (payloadLength < requiredLength) {
-            throw streamError(streamId, FRAME_SIZE_ERROR,
-                    "Frame length too small." + payloadLength);
+            // HEADER frames carry a field_block and thus failure to process them results
+            // in HPACK corruption and renders the connection unusable.
+            // See https://datatracker.ietf.org/doc/html/rfc9113#section-4.2 for details.
+            throw connectionError(FRAME_SIZE_ERROR,
+                    "Frame length %d too small for HEADERS frame with stream %d.", payloadLength, streamId);
         }
     }
 
@@ -343,8 +348,11 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         // rest of the payload (header block fragment + payload).
         int minLength = flags.getPaddingPresenceFieldLength() + INT_FIELD_LENGTH;
         if (payloadLength < minLength) {
-            throw streamError(streamId, FRAME_SIZE_ERROR,
-                    "Frame length %d too small.", payloadLength);
+            // PUSH_PROMISE frames carry a field_block and thus failure to process them results
+            // in HPACK corruption and renders the connection unusable.
+            // See https://datatracker.ietf.org/doc/html/rfc9113#section-4.2 for details.
+            throw connectionError(FRAME_SIZE_ERROR,
+                    "Frame length %d too small for PUSH_PROMISE frame with stream id %d.", payloadLength, streamId);
         }
     }
 
@@ -391,11 +399,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             throw connectionError(PROTOCOL_ERROR, "Continuation stream ID does not match pending headers. "
                     + "Expected %d, but received %d.", headersContinuation.getStreamId(), streamId);
         }
-
-        if (payloadLength < flags.getPaddingPresenceFieldLength()) {
-            throw streamError(streamId, FRAME_SIZE_ERROR,
-                    "Frame length %d too small for padding.", payloadLength);
-        }
     }
 
     private void verifyUnknownFrame() throws Http2Exception {
@@ -429,7 +432,12 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             final boolean exclusive = (word1 & 0x80000000L) != 0;
             final int streamDependency = (int) (word1 & 0x7FFFFFFFL);
             if (streamDependency == streamId) {
-                throw streamError(streamId, PROTOCOL_ERROR, "A stream cannot depend on itself.");
+                // Stream dependencies are deprecated in RFC 9113 but this behavior is defined in
+                // https://datatracker.ietf.org/doc/html/rfc7540#section-5.3.1 which says this must be treated as a
+                // stream error of type PROTOCOL_ERROR. However, because we will not process the payload, a stream
+                // error would result in HPACK corruption. Therefor, it is elevated to a connection error.
+                throw connectionError(
+                        PROTOCOL_ERROR, "HEADERS frame for stream %d cannot depend on itself.", streamId);
             }
             final short weight = (short) (payload.readUnsignedByte() + 1);
             final int lenToRead = lengthWithoutTrailingPadding(payloadEndIndex - payload.readerIndex(), padding);
@@ -585,8 +593,15 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             Http2FrameListener listener) throws Http2Exception {
         int windowSizeIncrement = readUnsignedInt(payload);
         if (windowSizeIncrement == 0) {
-            throw streamError(streamId, PROTOCOL_ERROR,
-                    "Received WINDOW_UPDATE with delta 0 for stream: %d", streamId);
+            // On the connection stream this must be a connection error but for request streams it is a stream error.
+            // See https://datatracker.ietf.org/doc/html/rfc9113#section-6.9 for details.
+            if (streamId == CONNECTION_STREAM_ID) {
+                throw connectionError(PROTOCOL_ERROR,
+                        "Received WINDOW_UPDATE with delta 0 for connection stream");
+            } else {
+                throw streamError(streamId, PROTOCOL_ERROR,
+                        "Received WINDOW_UPDATE with delta 0 for stream: %d", streamId);
+            }
         }
         listener.onWindowUpdateRead(ctx, streamId, windowSizeIncrement);
     }
