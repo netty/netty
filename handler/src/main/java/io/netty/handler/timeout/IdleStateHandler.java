@@ -124,7 +124,10 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     private Future<?> allIdleTimeout;
     private boolean firstAllIdleEvent = true;
 
-    private byte state; // 0 - none, 1 - initialized, 2 - destroyed
+    private byte state;
+    private static final byte ST_INITIALIZED = 1;
+    private static final byte ST_DESTROYED = 2;
+
     private boolean reading;
 
     private long lastChangeCheckTimeStamp;
@@ -305,6 +308,25 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     * Reset the read timeout. As this handler is not thread-safe, this method <b>must</b> be called on the event loop.
+     */
+    public void resetReadTimeout() {
+        if (readerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
+            lastReadTime = ticksInNanos();
+            reading = false;
+        }
+    }
+
+    /**
+     * Reset the write timeout. As this handler is not thread-safe, this method <b>must</b> be called on the event loop.
+     */
+    public void resetWriteTimeout() {
+        if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
+            lastWriteTime = ticksInNanos();
+        }
+    }
+
     private void initialize(ChannelHandlerContext ctx) {
         // Avoid the case where destroy() is called before scheduling timeouts.
         // See: https://github.com/netty/netty/issues/143
@@ -316,7 +338,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
              break;
         }
 
-        state = 1;
+        state = ST_INITIALIZED;
         initOutputChanged(ctx);
 
         lastReadTime = lastWriteTime = ticksInNanos();
@@ -349,7 +371,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     }
 
     private void destroy() {
-        state = 2;
+        state = ST_DESTROYED;
 
         if (readerIdleTimeout != null) {
             readerIdleTimeout.cancel(false);

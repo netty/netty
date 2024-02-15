@@ -51,6 +51,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -184,9 +185,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     };
 
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
-
-    // Updated once a new handshake is started and so the SSLSession reused.
-    private volatile long lastAccessed = -1;
 
     private String endPointIdentificationAlgorithm;
     // Store as object as AlgorithmConstraints only exists since java 7.
@@ -1983,12 +1981,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         engineMap.add(this);
 
         if (!sessionSet) {
-            parentContext.sessionContext().setSessionFromCache(getPeerHost(), getPeerPort(), ssl);
+            if (!parentContext.sessionContext().setSessionFromCache(ssl, session, getPeerHost(), getPeerPort())) {
+                // The session was not reused via the cache. Call prepareHandshake() to ensure we remove all previous
+                // stored key-value pairs.
+                session.prepareHandshake();
+            }
             sessionSet = true;
-        }
-
-        if (lastAccessed == -1) {
-            lastAccessed = System.currentTimeMillis();
         }
 
         int code = SSL.doHandshake(ssl);
@@ -2351,10 +2349,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
-    final void setSessionId(OpenSslSessionId id) {
-        session.setSessionId(id);
-    }
-
     private static final X509Certificate[] JAVAX_CERTS_NOT_SUPPORTED = new X509Certificate[0];
 
     private final class DefaultOpenSslSession implements OpenSslSession  {
@@ -2369,11 +2363,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         private String protocol;
         private String cipher;
         private OpenSslSessionId id = OpenSslSessionId.NULL_ID;
-        private volatile long creationTime;
+        private long creationTime;
+
+        // Updated once a new handshake is started and so the SSLSession reused.
+        private long lastAccessed = -1;
+
         private volatile int applicationBufferSize = MAX_PLAINTEXT_LENGTH;
         private volatile Certificate[] localCertificateChain;
-        // lazy init for memory reasons
-        private Map<String, Object> values;
+        private volatile Map<String, Object> keyValueStorage = new ConcurrentHashMap<String, Object>();
 
         DefaultOpenSslSession(OpenSslSessionContext sessionContext) {
             this.sessionContext = sessionContext;
@@ -2384,13 +2381,31 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         @Override
-        public void setSessionId(OpenSslSessionId sessionId) {
+        public void prepareHandshake() {
+            keyValueStorage.clear();
+        }
+
+        @Override
+        public void setSessionDetails(
+                long creationTime, long lastAccessedTime, OpenSslSessionId sessionId,
+                Map<String, Object> keyValueStorage) {
             synchronized (ReferenceCountedOpenSslEngine.this) {
                 if (this.id == OpenSslSessionId.NULL_ID) {
                     this.id = sessionId;
-                    creationTime = System.currentTimeMillis();
+                    this.creationTime = creationTime;
+                    this.lastAccessed = lastAccessedTime;
+
+                    // Update the key value storage. It's fine to just drop the previous stored values on the floor
+                    // as the JDK does the same in the sense that it will use a new SSLSessionImpl instance once the
+                    // handshake was done
+                    this.keyValueStorage = keyValueStorage;
                 }
             }
+        }
+
+        @Override
+        public Map<String, Object> keyValueStorage() {
+            return keyValueStorage;
         }
 
         @Override
@@ -2430,10 +2445,18 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         @Override
+        public void setLastAccessedTime(long time) {
+            synchronized (ReferenceCountedOpenSslEngine.this) {
+                this.lastAccessed = time;
+            }
+        }
+
+        @Override
         public long getLastAccessedTime() {
-            long lastAccessed = ReferenceCountedOpenSslEngine.this.lastAccessed;
             // if lastAccessed is -1 we will just return the creation time as the handshake was not started yet.
-            return lastAccessed == -1 ? getCreationTime() : lastAccessed;
+            synchronized (ReferenceCountedOpenSslEngine.this) {
+                return lastAccessed == -1 ? creationTime : lastAccessed;
+            }
         }
 
         @Override
@@ -2456,16 +2479,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             checkNotNull(name, "name");
             checkNotNull(value, "value");
 
-            final Object old;
-            synchronized (this) {
-                Map<String, Object> values = this.values;
-                if (values == null) {
-                    // Use size of 2 to keep the memory overhead small
-                    values = this.values = new HashMap<String, Object>(2);
-                }
-                old = values.put(name, value);
-            }
-
+            final Object old = keyValueStorage.put(name, value);
             if (value instanceof SSLSessionBindingListener) {
                 // Use newSSLSessionBindingEvent so we always use the wrapper if needed.
                 ((SSLSessionBindingListener) value).valueBound(newSSLSessionBindingEvent(name));
@@ -2476,39 +2490,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         @Override
         public Object getValue(String name) {
             checkNotNull(name, "name");
-            synchronized (this) {
-                if (values == null) {
-                    return null;
-                }
-                return values.get(name);
-            }
+            return keyValueStorage.get(name);
         }
 
         @Override
         public void removeValue(String name) {
             checkNotNull(name, "name");
-
-            final Object old;
-            synchronized (this) {
-                Map<String, Object> values = this.values;
-                if (values == null) {
-                    return;
-                }
-                old = values.remove(name);
-            }
-
+            final Object old = keyValueStorage.remove(name);
             notifyUnbound(old, name);
         }
 
         @Override
         public String[] getValueNames() {
-            synchronized (this) {
-                Map<String, Object> values = this.values;
-                if (values == null || values.isEmpty()) {
-                    return EMPTY_STRINGS;
-                }
-                return values.keySet().toArray(EMPTY_STRINGS);
-            }
+            return keyValueStorage.keySet().toArray(EMPTY_STRINGS);
         }
 
         private void notifyUnbound(Object value, String name) {
@@ -2528,9 +2522,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 throws SSLException {
             synchronized (ReferenceCountedOpenSslEngine.this) {
                 if (!isDestroyed()) {
-                    this.creationTime = creationTime;
                     if (this.id == OpenSslSessionId.NULL_ID) {
+                        // if the handshake finished and it was not a resumption let ensure we try to set the id
+
                         this.id = id == null ? OpenSslSessionId.NULL_ID : new OpenSslSessionId(id);
+                        // Once the handshake was done the lastAccessed and creationTime should be the same if we
+                        // did not set it earlier via setSessionDetails(...)
+                        this.creationTime = lastAccessed = creationTime;
                     }
                     this.cipher = toJavaCipherSuite(cipher);
                     this.protocol = protocol;
@@ -2715,6 +2713,23 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     "sessionContext=" + sessionContext +
                     ", id=" + id +
                     '}';
+        }
+
+        @Override
+        public int hashCode() {
+            return sessionId().hashCode();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            // We trust all sub-types as we use different types but the interface is package-private
+            if (!(o instanceof OpenSslSession)) {
+                return false;
+            }
+            return sessionId().equals(((OpenSslSession) o).sessionId());
         }
     }
 

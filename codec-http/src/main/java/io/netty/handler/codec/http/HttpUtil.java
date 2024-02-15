@@ -220,7 +220,7 @@ public final class HttpUtil {
      * Returns the content length of the specified web socket message. If the
      * specified message is not a web socket message, {@code -1} is returned.
      */
-    private static int getWebSocketContentLength(HttpMessage message) {
+    static int getWebSocketContentLength(HttpMessage message) {
         // WebSocket messages have constant content-lengths.
         HttpHeaders h = message.headers();
         if (message instanceof HttpRequest) {

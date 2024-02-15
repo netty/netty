@@ -58,6 +58,9 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     private void addFirst(ByteBuf buf, ChannelFutureListener listener) {
+        // Touch the message to make it easier to debug buffer leaks.
+        buf.touch();
+
         if (listener != null) {
             bufAndListenerPairs.addFirst(listener);
         }
@@ -91,6 +94,9 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param listener to notify when all the bytes have been consumed and written, can be {@code null}.
      */
     public final void add(ByteBuf buf, ChannelFutureListener listener) {
+        // Touch the message to make it easier to debug buffer leaks.
+        buf.touch();
+
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
         bufAndListenerPairs.add(buf);

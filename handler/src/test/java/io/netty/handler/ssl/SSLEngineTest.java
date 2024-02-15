@@ -50,6 +50,7 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import org.conscrypt.OpenSSLProvider;
+import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -127,6 +128,10 @@ import javax.net.ssl.X509TrustManager;
 import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.SslUtils.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -254,6 +259,15 @@ public abstract class SSLEngineTest {
 
         final List<String> ciphers() {
             return Collections.singletonList(protocolCipherCombo.cipher);
+        }
+
+        @Override
+        public String toString() {
+            return "SslEngineTestParam{" +
+                    "type=" + type() +
+                    ", protocolCipherCombo=" + combo() +
+                    ", delegate=" + delegate() +
+                    '}';
         }
     }
 
@@ -3241,8 +3255,8 @@ public abstract class SSLEngineTest {
             int serverSessions = currentSessionCacheSize(serverSslCtx.sessionContext());
             int nCSessions = clientSessions;
             int nSSessions = serverSessions;
-            boolean clientSessionReused = false;
-            boolean serverSessionReused = false;
+            SessionReusedState clientSessionReused = SessionReusedState.NOT_REUSED;
+            SessionReusedState serverSessionReused = SessionReusedState.NOT_REUSED;
             if (param.protocolCipherCombo == ProtocolCipherCombo.TLSV13) {
                 // Allocate something which is big enough for sure
                 ByteBuffer packetBuffer = allocateBuffer(param.type(), 32 * 1024);
@@ -3282,16 +3296,44 @@ public abstract class SSLEngineTest {
                     appBuffer.clear().position(4).flip();
                     nCSessions = currentSessionCacheSize(clientSslCtx.sessionContext());
                     nSSessions = currentSessionCacheSize(serverSslCtx.sessionContext());
-                    clientSessionReused = isSessionMaybeReused(clientEngine);
-                    serverSessionReused = isSessionMaybeReused(serverEngine);
-                } while ((reuse && (!clientSessionReused || !serverSessionReused))
+                    clientSessionReused = isSessionReused(clientEngine);
+                    serverSessionReused = isSessionReused(serverEngine);
+                } while ((reuse && (clientSessionReused == SessionReusedState.NOT_REUSED ||
+                        serverSessionReused == SessionReusedState.NOT_REUSED))
                         || (!reuse && (nCSessions < clientSessions ||
                         // server may use multiple sessions
                         nSSessions < serverSessions)));
             }
 
             assertSessionReusedForEngine(clientEngine, serverEngine, reuse);
+            String key = "key";
+            if (reuse) {
+                if (clientSessionReused != SessionReusedState.NOT_REUSED) {
+                    // We should see the previous stored value on session reuse.
+                    // This is broken in conscrypt.
+                    // TODO: Open an issue in the conscrypt project.
+                    if (!Conscrypt.isEngineSupported(clientEngine)) {
+                        assertEquals(Boolean.TRUE, clientEngine.getSession().getValue(key));
+                    }
 
+                    Matcher<Long> creationTimeMatcher;
+                    if (clientSessionReused == SessionReusedState.REUSED) {
+                        // If we know for sure it was reused so the accessedTime needs to be larger.
+                        creationTimeMatcher = greaterThan(clientEngine.getSession().getCreationTime());
+                    } else {
+                        creationTimeMatcher = greaterThanOrEqualTo(clientEngine.getSession().getCreationTime());
+                    }
+                    assertThat(clientEngine.getSession().getLastAccessedTime(),
+                            is(creationTimeMatcher));
+                }
+            } else {
+                // Ensure we sleep 1ms in between as getLastAccessedTime() abd getCreationTime() are in milliseconds.
+                // If we don't sleep and execution is very fast we will see test-failures once we go into the
+                // reuse branch.
+                Thread.sleep(1);
+
+                clientEngine.getSession().putValue(key, Boolean.TRUE);
+            }
             closeOutboundAndInbound(param.type(), clientEngine, serverEngine);
         } finally {
             cleanupClientSslEngine(clientEngine);
@@ -3299,8 +3341,25 @@ public abstract class SSLEngineTest {
         }
     }
 
-    protected boolean isSessionMaybeReused(SSLEngine engine) {
-        return true;
+    protected enum SessionReusedState {
+        /**
+         * We know for sure that the session was not reused
+         */
+        NOT_REUSED,
+
+        /**
+         * The session might have been reused.
+         */
+        MAYBE_REUSED,
+
+        /**
+         * The session was reused.
+         */
+        REUSED;
+    }
+
+    protected SessionReusedState isSessionReused(SSLEngine engine) {
+        return SessionReusedState.MAYBE_REUSED;
     }
 
     private static int currentSessionCacheSize(SSLSessionContext ctx) {
@@ -3563,8 +3622,34 @@ public abstract class SSLEngineTest {
                 clientContextBuilder.keyManager(ssc.key(), ssc.cert());
             }
         }
+
+        final String handshakeKey = "handshake";
+        TrustManagerFactory tmf = new ConstantTrustManagerFactory(new EmptyExtendedX509TrustManager() {
+            @Override
+            public void checkClientTrusted(java.security.cert.X509Certificate[] chain,
+                                           String authType, SSLEngine engine) {
+                // This is broken in conscrypt.
+                // TODO: Open an issue in the conscrypt project.
+                if (!Conscrypt.isEngineSupported(engine)) {
+                    assertEquals(0, engine.getHandshakeSession().getValueNames().length);
+                }
+                engine.getHandshakeSession().putValue(handshakeKey, Boolean.TRUE);
+            }
+
+            @Override
+            public void checkServerTrusted(java.security.cert.X509Certificate[] chain,
+                                           String authType, SSLEngine engine) {
+                // This is broken in conscrypt.
+                // TODO: Open an issue in the conscrypt project.
+                if (!Conscrypt.isEngineSupported(engine)) {
+                    assertEquals(0, engine.getHandshakeSession().getValueNames().length);
+                }
+                engine.getHandshakeSession().putValue(handshakeKey, Boolean.TRUE);
+            }
+        });
+
         clientSslCtx = wrapContext(param, clientContextBuilder
-                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                                        .trustManager(tmf)
                                         .sslProvider(sslClientProvider())
                                         .sslContextProvider(clientSslContextProvider())
                                         .protocols(param.protocols())
@@ -3577,7 +3662,7 @@ public abstract class SSLEngineTest {
         if (mutualAuth) {
             serverContextBuilder.clientAuth(ClientAuth.REQUIRE);
         }
-        serverSslCtx = wrapContext(param, serverContextBuilder.trustManager(InsecureTrustManagerFactory.INSTANCE)
+        serverSslCtx = wrapContext(param, serverContextBuilder.trustManager(tmf)
                                      .sslProvider(sslServerProvider())
                                      .sslContextProvider(serverSslContextProvider())
                                      .protocols(param.protocols())
@@ -3585,14 +3670,33 @@ public abstract class SSLEngineTest {
                                      .build());
         SSLEngine clientEngine = null;
         SSLEngine serverEngine = null;
+        String key = "key";
         try {
             clientEngine = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+            clientEngine.getSession().putValue(key, Boolean.TRUE);
+            assertEquals(Boolean.TRUE, clientEngine.getSession().getValue(key));
+            serverEngine.getSession().putValue(key, Boolean.TRUE);
+            assertEquals(Boolean.TRUE, serverEngine.getSession().getValue(key));
 
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             SSLSession clientSession = clientEngine.getSession();
             SSLSession serverSession = serverEngine.getSession();
+
+            // The values should not have been carried over.
+            // This is broken in conscrypt.
+            // TODO: Open an issue in the conscrypt project.
+            if (!Conscrypt.isEngineSupported(clientEngine)) {
+                assertNull(clientSession.getValue(key));
+            }
+            if (!Conscrypt.isEngineSupported(serverEngine)) {
+                assertNull(serverSession.getValue(key));
+            }
+
+            clientSession.removeValue(key);
+            serverSession.removeValue(key);
 
             assertNull(clientSession.getPeerHost());
             assertNull(serverSession.getPeerHost());
@@ -3604,6 +3708,9 @@ public abstract class SSLEngineTest {
 
             assertTrue(clientSession.getLastAccessedTime() > 0);
             assertTrue(serverSession.getLastAccessedTime() > 0);
+
+            assertEquals(clientSession.getCreationTime(), clientSession.getLastAccessedTime());
+            assertEquals(serverSession.getCreationTime(), serverSession.getLastAccessedTime());
 
             assertEquals(param.combo().protocol, clientSession.getProtocol());
             assertEquals(param.combo().protocol, serverSession.getProtocol());
@@ -3629,6 +3736,24 @@ public abstract class SSLEngineTest {
             }
 
             Object value = new Object();
+            // This is broken in conscrypt.
+            // TODO: Open an issue in the conscrypt project.
+            if (!Conscrypt.isEngineSupported(clientEngine)) {
+                assertEquals(1, clientSession.getValueNames().length);
+                assertEquals(clientSession.getValue(handshakeKey), Boolean.TRUE);
+                clientSession.removeValue(handshakeKey);
+            }
+
+            if (mutualAuth) {
+                // This is broken in conscrypt.
+                // TODO: Open an issue in the conscrypt project.
+                if (!Conscrypt.isEngineSupported(serverEngine)) {
+                    // Server trust manager factory is only called if server authenticates clients.
+                    assertEquals(1, serverSession.getValueNames().length);
+                    assertEquals(serverSession.getValue(handshakeKey), Boolean.TRUE);
+                    serverSession.removeValue(handshakeKey);
+                }
+            }
 
             assertEquals(0, clientSession.getValueNames().length);
             clientSession.putValue("test", value);
