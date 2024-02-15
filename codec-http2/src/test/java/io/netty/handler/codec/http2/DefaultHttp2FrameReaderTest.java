@@ -434,6 +434,45 @@ public class DefaultHttp2FrameReaderTest {
         }
     }
 
+    @Test
+    public void verifyValidRequestAfterMalformedPacketCausesStreamException() throws Http2Exception {
+        final ByteBuf input = Unpooled.buffer();
+        int priorityStreamId = 3, headerStreamId = 5;
+        try {
+            // Write a malformed priority header causing a stream exception in reader
+            writeFrameHeader(input, 4, PRIORITY, new Http2Flags(), priorityStreamId);
+            // Fill buffer with dummy payload to be properly read by reader
+            input.writeByte((byte) 0x80);
+            input.writeByte((byte) 0x00);
+            input.writeByte((byte) 0x00);
+            input.writeByte((byte) 0x7f);
+            assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    try {
+                        frameReader.readFrame(ctx, input, listener);
+                    } catch (Exception e) {
+                        if (e instanceof Http2Exception && Http2Exception.isStreamError((Http2Exception) e)) {
+                            throw e;
+                        }
+                    }
+                }
+            });
+            // Verify that after stream exception we accept new stream requests
+            Http2Headers headers = new DefaultHttp2Headers()
+                    .authority("foo")
+                    .method("get")
+                    .path("/")
+                    .scheme("https");
+            Http2Flags flags = new Http2Flags().endOfHeaders(true).endOfStream(true);
+            writeHeaderFrame(input, headerStreamId, headers, flags);
+            frameReader.readFrame(ctx, input, listener);
+            verify(listener).onHeadersRead(ctx, 5, headers, 0, true);
+        } finally {
+            input.release();
+        }
+    }
+
     private void writeHeaderFrame(
             ByteBuf output, int streamId, Http2Headers headers,
             Http2Flags flags) throws Http2Exception {
