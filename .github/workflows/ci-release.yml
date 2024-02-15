@@ -121,7 +121,7 @@ jobs:
           restore-keys: |
             staging-${{ matrix.setup }}-maven-cache-
 
-      - uses: s4u/maven-settings-action@v2.8.0
+      - uses: s4u/maven-settings-action@v3.0.0
         with:
           servers: |
             [{
@@ -224,7 +224,7 @@ jobs:
           restore-keys: |
             stage-release-windows-x86_64-maven-cache-
 
-      - uses: s4u/maven-settings-action@v2.8.0
+      - uses: s4u/maven-settings-action@v3.0.0
         with:
           servers: |
             [{
@@ -318,7 +318,7 @@ jobs:
           restore-keys: |
             deploy-staged-release-maven-cache-
 
-      - uses: s4u/maven-settings-action@v3
+      - uses: s4u/maven-settings-action@v3.0.0
         with:
           servers: |
             [{
