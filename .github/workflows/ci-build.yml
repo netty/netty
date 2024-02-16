@@ -112,7 +112,7 @@ jobs:
           targets: x86_64-pc-windows-msvc
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.3.1
+        uses: microsoft/setup-msbuild@v2
 
       - name: Configuring Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
