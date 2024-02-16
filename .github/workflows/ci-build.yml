@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
 
       # Cache .m2/repository
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -52,7 +52,7 @@ jobs:
       - name: Checking for test failures
         run: ./.github/scripts/check_build_result.sh build-leak.output
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
           name: target
