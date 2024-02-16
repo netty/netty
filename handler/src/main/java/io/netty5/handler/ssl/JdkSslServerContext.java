@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.ssl;
 
+import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
@@ -22,16 +23,60 @@ import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.Provider;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
 
 /**
  * A server-side {@link SslContext} which uses JDK's SSL/TLS implementation.
  */
 final class JdkSslServerContext extends JdkSslContext {
+
+    private static final boolean WRAP_TRUST_MANAGER;
+    static {
+        boolean wrapTrustManager = false;
+        try {
+            checkIfWrappingTrustManagerIsSupported();
+            wrapTrustManager = true;
+        } catch (Throwable ignore) {
+            // Just don't wrap as we might not be able to do so because of FIPS:
+            // See https://github.com/netty/netty/issues/13840
+        }
+        WRAP_TRUST_MANAGER = wrapTrustManager;
+    }
+
+    // Package-private for testing.
+    static void checkIfWrappingTrustManagerIsSupported() throws CertificateException,
+            InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchAlgorithmException,
+            InvalidKeySpecException, IOException, KeyException, KeyStoreException, UnrecoverableKeyException {
+        X509Certificate[] certs = toX509Certificates(
+                new ByteArrayInputStream(SslUtils.PROBING_CERT.getBytes(StandardCharsets.US_ASCII)));
+        PrivateKey privateKey = toPrivateKey(new ByteArrayInputStream(
+                SslUtils.PROBING_KEY.getBytes(StandardCharsets.US_ASCII)), null);
+        char[] keyStorePassword = keyStorePassword(null);
+        KeyStore ks = buildKeyStore(certs, privateKey, keyStorePassword, null);
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(ks, keyStorePassword);
+
+        SSLContext ctx = SSLContext.getInstance(PROTOCOL);
+        TrustManagerFactory tm = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tm.init((KeyStore) null);
+        TrustManager[] managers = tm.getTrustManagers();
+
+        ctx.init(kmf.getKeyManagers(), wrapTrustManagerIfNeeded(managers), null);
+    }
 
     // FIXME test only
     JdkSslServerContext(Provider provider,
@@ -118,12 +163,14 @@ final class JdkSslServerContext extends JdkSslContext {
     }
 
     private static TrustManager[] wrapTrustManagerIfNeeded(TrustManager[] trustManagers) {
-        for (int i = 0; i < trustManagers.length; i++) {
-            TrustManager tm = trustManagers[i];
-            if (tm instanceof X509ExtendedTrustManager) {
-                // Wrap the TrustManager to provide a better exception message for users to debug hostname
-                // validation failures.
-                trustManagers[i] = new EnhancingX509ExtendedTrustManager((X509ExtendedTrustManager) tm);
+        if (WRAP_TRUST_MANAGER) {
+            for (int i = 0; i < trustManagers.length; i++) {
+                TrustManager tm = trustManagers[i];
+                if (tm instanceof X509ExtendedTrustManager) {
+                    // Wrap the TrustManager to provide a better exception message for users to debug hostname
+                    // validation failures.
+                    trustManagers[i] = new EnhancingX509ExtendedTrustManager((X509ExtendedTrustManager) tm);
+                }
             }
         }
         return trustManagers;
