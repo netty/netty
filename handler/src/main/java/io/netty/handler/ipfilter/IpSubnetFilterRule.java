@@ -53,7 +53,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
             int cidrPrefix = Integer.parseInt(ipAndCidr[1]);
             filterRule = selectFilterRule(SocketUtils.addressByName(ipAddress), cidrPrefix, ruleType);
         } catch (UnknownHostException e) {
-            throw new IllegalArgumentException("ipAddress", e);
+            throw new IllegalArgumentException("ipAddressWithCidr", e);
         }
     }
 
