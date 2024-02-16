@@ -223,14 +223,17 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (!isOpen()) {
             // Seems like the Channel was closed in the meantime try to fail the promise to prevent any
             // cases where a future may not be notified otherwise.
-            if (promise.tryFailure(new ClosedChannelException())) {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Call this via the EventLoop as it is a MPSC queue.
-                        clearSpliceQueue();
-                    }
-                });
+            if (!promise.isDone()) {
+                final ClosedChannelException ex = new ClosedChannelException();
+                if (promise.tryFailure(ex)) {
+                    eventLoop().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Call this via the EventLoop as it is a MPSC queue.
+                            clearSpliceQueue(ex);
+                        }
+                    });
+                }
             }
         }
     }
@@ -673,17 +676,15 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         } finally {
             safeClosePipe(pipeIn);
             safeClosePipe(pipeOut);
-            clearSpliceQueue();
+            clearSpliceQueue(null);
         }
     }
 
-    private void clearSpliceQueue() {
+    private void clearSpliceQueue(ClosedChannelException exception) {
         Queue<SpliceInTask> sQueue = spliceQueue;
         if (sQueue == null) {
             return;
         }
-        ClosedChannelException exception = null;
-
         for (;;) {
             SpliceInTask task = sQueue.poll();
             if (task == null) {
@@ -891,7 +892,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (!future.isSuccess()) {
-                promise.setFailure(future.cause());
+                // Use tryFailure(...) as the promise might already be closed by spliceTo(...)
+                promise.tryFailure(future.cause());
             }
         }
 
@@ -899,7 +901,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         public boolean spliceIn(RecvByteBufAllocator.Handle handle) {
             assert ch.eventLoop().inEventLoop();
             if (len == 0) {
-                promise.setSuccess();
+                // Use trySuccess() as the promise might already be closed by spliceTo(...)
+                promise.trySuccess();
                 return true;
             }
             try {
@@ -947,7 +950,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
                 return len == 0;
             } catch (Throwable cause) {
-                promise.setFailure(cause);
+                // Use tryFailure(...) as the promise might already be closed by spliceTo(...)
+                promise.tryFailure(cause);
                 return true;
             }
         }
@@ -1003,7 +1007,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         public boolean spliceIn(RecvByteBufAllocator.Handle handle) {
             assert eventLoop().inEventLoop();
             if (len == 0) {
-                promise.setSuccess();
+                // Use trySuccess() as the promise might already be failed by spliceTo(...)
+                promise.trySuccess();
                 return true;
             }
 
@@ -1024,7 +1029,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                             splicedIn -= splicedOut;
                         } while (splicedIn > 0);
                         if (len == 0) {
-                            promise.setSuccess();
+                            // Use trySuccess() as the promise might already be failed by spliceTo(...)
+                            promise.trySuccess();
                             return true;
                         }
                     }
@@ -1034,7 +1040,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     safeClosePipe(pipeOut);
                 }
             } catch (Throwable cause) {
-                promise.setFailure(cause);
+                // Use tryFailure(...) as the promise might already be failed by spliceTo(...)
+                promise.tryFailure(cause);
                 return true;
             }
         }
