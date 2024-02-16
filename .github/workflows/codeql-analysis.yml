@@ -59,7 +59,7 @@ jobs:
 
     # Cache .m2/repository
     - name: Cache local Maven repository
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       continue-on-error: true
       with:
         path: ~/.m2/repository
