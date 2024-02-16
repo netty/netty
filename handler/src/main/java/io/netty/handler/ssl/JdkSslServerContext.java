@@ -21,8 +21,14 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
+import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.KeyManager;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -34,7 +40,10 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import java.io.File;
 import java.security.PrivateKey;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
 
 import static io.netty.handler.ssl.SslUtils.PROBING_CERT;
 import static io.netty.handler.ssl.SslUtils.PROBING_KEY;
@@ -53,20 +62,7 @@ public final class JdkSslServerContext extends JdkSslContext {
         boolean wrapTrustManager = false;
         if (PlatformDependent.javaVersion() >= 7) {
             try {
-                X509Certificate[] certs = toX509Certificates(
-                        new ByteArrayInputStream(PROBING_CERT.getBytes(CharsetUtil.US_ASCII)));
-                PrivateKey privateKey = toPrivateKey(new ByteArrayInputStream(
-                        PROBING_KEY.getBytes(CharsetUtil.UTF_8)), null);
-                char[] keyStorePassword = keyStorePassword(null);
-                KeyStore ks = buildKeyStore(certs, privateKey, keyStorePassword, null);
-                KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-                kmf.init(ks, keyStorePassword);
-
-                SSLContext ctx = SSLContext.getInstance("TLS");
-                TrustManagerFactory tm = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                TrustManager[] managers = tm.getTrustManagers();
-
-                ctx.init(kmf.getKeyManagers(), wrapTrustManagerIfNeeded(managers), null);
+                checkIfWrappingTrustManagerIsSupported();
                 wrapTrustManager = true;
             } catch (Throwable ignore) {
                 // Just don't wrap as we might not be able to do so because of FIPS:
@@ -74,6 +70,28 @@ public final class JdkSslServerContext extends JdkSslContext {
             }
         }
         WRAP_TRUST_MANAGER = wrapTrustManager;
+    }
+
+    // Package-private for testing.
+    @SuppressJava6Requirement(reason = "Guarded by java version check")
+    static void checkIfWrappingTrustManagerIsSupported() throws CertificateException,
+            InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchAlgorithmException,
+            InvalidKeySpecException, IOException, KeyException, KeyStoreException, UnrecoverableKeyException {
+        X509Certificate[] certs = toX509Certificates(
+                new ByteArrayInputStream(PROBING_CERT.getBytes(CharsetUtil.US_ASCII)));
+        PrivateKey privateKey = toPrivateKey(new ByteArrayInputStream(
+                PROBING_KEY.getBytes(CharsetUtil.UTF_8)), null);
+        char[] keyStorePassword = keyStorePassword(null);
+        KeyStore ks = buildKeyStore(certs, privateKey, keyStorePassword, null);
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(ks, keyStorePassword);
+
+        SSLContext ctx = SSLContext.getInstance(PROTOCOL);
+        TrustManagerFactory tm = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tm.init((KeyStore) null);
+        TrustManager[] managers = tm.getTrustManagers();
+
+        ctx.init(kmf.getKeyManagers(), wrapTrustManagerIfNeeded(managers), null);
     }
 
     /**
