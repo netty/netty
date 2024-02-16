@@ -34,7 +34,7 @@ jobs:
           ref: 4.1
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '8'
@@ -52,7 +52,7 @@ jobs:
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         continue-on-error: true
         with:
           path: ~/.m2/repository
@@ -95,7 +95,7 @@ jobs:
 
     steps:
       - name: Download release-workspace
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: prepare-release-workspace
           path: ./prepare-release-workspace/
