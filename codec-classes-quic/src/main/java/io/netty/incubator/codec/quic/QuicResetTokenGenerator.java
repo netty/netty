@@ -26,8 +26,8 @@ public interface QuicResetTokenGenerator {
 
     /**
      * Generate a reset token to use for the given connection id. The returned token MUST be of length 16.
-     * @param cid
-     * @return
+     * @param cid the connection id
+     * @return a newly generated reset token
      */
     ByteBuffer newResetToken(ByteBuffer cid);
 

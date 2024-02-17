@@ -41,8 +41,7 @@ interface BoringSSLPrivateKeyMethod {
      * @param ssl                   the SSL instance
      * @param signatureAlgorithm    the algorithm to use for signing
      * @param input                 the input itself
-     * @return                      the sign
-     * @throws Exception            thrown if an error accours while signing.
+     * @param callback              the callback provides the signed bytes and an error if such occurs while signing
      */
     void sign(long ssl, int signatureAlgorithm, byte[] input, BiConsumer<byte[], Throwable> callback);
 
@@ -51,8 +50,7 @@ interface BoringSSLPrivateKeyMethod {
      *
      * @param ssl                   the SSL instance
      * @param input                 the input which should be decrypted
-     * @return                      the decrypted data
-     * @throws Exception            thrown if an error accours while decrypting.
+     * @param callback              the callback provides the decrypted bytes and an error if such occurs while decrypting
      */
     void decrypt(long ssl, byte[] input, BiConsumer<byte[], Throwable> callback);
 }
