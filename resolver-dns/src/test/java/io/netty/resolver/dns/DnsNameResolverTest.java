@@ -50,6 +50,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -145,6 +146,10 @@ public class DnsNameResolverTest {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
     private static final long DEFAULT_TEST_TIMEOUT_MS = 30000;
+
+    static {
+        System.setProperty("io.netty.resolver.dns.trycnameonaddresslookups", "true");
+    }
 
     // Using the top-100 web sites ranked in Alexa.com (Oct 2014)
     // Please use the following series of shell commands to get this up-to-date:
@@ -3749,7 +3754,6 @@ public class DnsNameResolverTest {
         });
 
         dnsServer2.start();
-
         DnsNameResolver resolver = null;
         try {
             resolver = newNonCachedResolver(ResolvedAddressTypes.IPV4_PREFERRED)
