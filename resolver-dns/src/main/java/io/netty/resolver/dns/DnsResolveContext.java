@@ -70,7 +70,7 @@ abstract class DnsResolveContext<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsResolveContext.class);
     private static final String PROP_TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS =
             "io.netty.resolver.dns.trycnameonaddresslookups";
-    private static final boolean TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS;
+    static boolean TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS;
 
     static {
         TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS =

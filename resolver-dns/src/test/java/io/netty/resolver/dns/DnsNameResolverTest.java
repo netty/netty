@@ -118,6 +118,7 @@ import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
 import static io.netty.handler.codec.dns.DnsRecordType.NAPTR;
 import static io.netty.handler.codec.dns.DnsRecordType.SRV;
 import static io.netty.resolver.dns.DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
+import static io.netty.resolver.dns.DnsResolveContext.TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS;
 import static io.netty.resolver.dns.DnsServerAddresses.sequential;
 import static io.netty.resolver.dns.TestDnsServer.newARecord;
 import static java.util.Arrays.asList;
@@ -146,10 +147,6 @@ public class DnsNameResolverTest {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolver.class);
     private static final long DEFAULT_TEST_TIMEOUT_MS = 30000;
-
-    static {
-        System.setProperty("io.netty.resolver.dns.trycnameonaddresslookups", "true");
-    }
 
     // Using the top-100 web sites ranked in Alexa.com (Oct 2014)
     // Please use the following series of shell commands to get this up-to-date:
@@ -3739,7 +3736,7 @@ public class DnsNameResolverTest {
 
     @Test
     public void testCNAMEOnlyTriedOnAddressLookups() throws Exception {
-
+        TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS = true;
         final AtomicInteger cnameQueries = new AtomicInteger();
 
         TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
@@ -3753,9 +3750,9 @@ public class DnsNameResolverTest {
             }
         });
 
-        dnsServer2.start();
         DnsNameResolver resolver = null;
         try {
+            dnsServer2.start();
             resolver = newNonCachedResolver(ResolvedAddressTypes.IPV4_PREFERRED)
                     .maxQueriesPerResolve(4)
                     .searchDomains(Collections.<String>emptyList())
@@ -3792,6 +3789,7 @@ public class DnsNameResolverTest {
             if (resolver != null) {
                 resolver.close();
             }
+            TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS = false;
         }
     }
 
