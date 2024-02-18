@@ -23,6 +23,9 @@ services:
   build-leak-boringssl-static:
     image: netty:panama
 
+  build-boringssl-snapshot:
+    image: netty:panama
+
   build-unsafe-buffer:
     image: netty:panama
 

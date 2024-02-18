@@ -70,6 +70,10 @@ services:
     <<: *common
     command: /bin/bash -cl "./mvnw -PunsafeBuffer clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true -Dtcnative.classifier=linux-x86_64-fedora"
 
+  build-boringssl-snapshot:
+    <<: *common
+    command: /bin/bash -cl "./mvnw -B -ntp -phandler -Pboringssl-snapshot clean package -Dxml.skip=true"
+
   shell:
     <<: *common
     entrypoint: /bin/bash
