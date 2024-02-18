@@ -1363,7 +1363,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private void connectTransport(
             SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         assertEventLoop();
-        if (!promise.setUncancellable() || !ensureOpen(promise)) {
+        // Don't mark the connect promise as uncancellable as in fact we can cancel it as it is using
+        // non-blocking io.
+        if (promise.isDone() || !ensureOpen(promise)) {
             return;
         }
 
@@ -1415,6 +1417,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                 }
 
                 promise.asFuture().addListener(future -> {
+                    // If the connect future is cancelled we also cancel the timeout and close the
+                    // underlying socket.
                     if (future.isCancelled()) {
                         if (connectTimeoutFuture != null) {
                             connectTimeoutFuture.cancel();
