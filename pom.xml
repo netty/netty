@@ -447,6 +447,14 @@
       </properties>
     </profile>
     <profile>
+      <id>boringssl-snapshot</id>
+      <properties>
+        <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
+        <tcnative.version>2.0.63.Final-SNAPSHOT</tcnative.version>
+        <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
+      </properties>
+    </profile>
+    <profile>
       <id>leak</id>
       <properties>
         <argLine.leak>-Dio.netty5.leakDetection.level=paranoid -Dio.netty5.leakDetection.targetRecords=32 -Dio.netty5.buffer.lifecycleTracingEnabled=true</argLine.leak>
