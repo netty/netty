@@ -41,6 +41,7 @@ import static io.netty5.testsuite.transport.socket.SocketTestPermutation.BAD_POR
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -129,12 +130,8 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
             }
         }
 
-        if (future.cancel()) {
-            assertThat(future.isCancelled()).isTrue();
-        } else {
-            // Cancellation not supported by the transport.
-            future.asStage().get().close();
-        }
+        assertTrue(future.cancel());
+        assertThat(future.isCancelled()).isTrue();
     }
 
     private static class TestHandler implements ChannelHandler {
