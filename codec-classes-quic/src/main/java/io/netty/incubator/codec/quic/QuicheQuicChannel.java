@@ -147,8 +147,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private CloseData closeData;
     private QuicConnectionCloseEvent connectionCloseEvent;
     private QuicConnectionStats statsAtClose;
-    private InetSocketAddress local;
-    private InetSocketAddress remote;
     private boolean supportsDatagram;
     private boolean recvDatagramPending;
     private boolean datagramReadable;
@@ -156,7 +154,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean streamReadable;
     private boolean handshakeCompletionNotified;
     private boolean earlyDataReadyNotified;
-
     private int reantranceGuard = 0;
     private static final int IN_RECV = 1 << 1;
     private static final int IN_CONNECTION_SEND = 1 << 2;
@@ -165,6 +162,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile boolean timedOut;
     private volatile String traceId;
     private volatile QuicheQuicConnection connection;
+    private volatile InetSocketAddress local;
+    private volatile InetSocketAddress remote;
 
     private final ChannelFutureListener continueSendingListener = f -> {
         if (connectionSend(connection) != SendResult.NONE) {
@@ -513,30 +512,42 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     @Override
     @Nullable
-    protected SocketAddress localAddress0() {
+    protected QuicConnectionAddress localAddress0() {
         QuicheQuicConnection connection = this.connection;
         return connection == null ? null : connection.sourceId();
     }
 
     @Override
     @Nullable
-    protected SocketAddress remoteAddress0() {
+    protected QuicConnectionAddress remoteAddress0() {
         QuicheQuicConnection connection = this.connection;
         return connection == null ? null : connection.destinationId();
     }
 
     @Override
     @Nullable
-    public SocketAddress localAddress() {
+    public QuicConnectionAddress localAddress() {
         // Override so we never cache as the sourceId() can change over life-time.
         return localAddress0();
     }
 
     @Override
     @Nullable
-    public SocketAddress remoteAddress() {
+    public QuicConnectionAddress remoteAddress() {
         // Override so we never cache as the destinationId() can change over life-time.
         return remoteAddress0();
+    }
+
+    @Override
+    @Nullable
+    public SocketAddress localSocketAddress() {
+        return local;
+    }
+
+    @Override
+    @Nullable
+    public SocketAddress remoteSocketAddress() {
+        return remote;
     }
 
     @Override
@@ -608,7 +619,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     finBuffer.release();
                     finBuffer = null;
                 }
-
             } finally {
                 if (sendResult == SendResult.SOME) {
                     // As this is the close let us flush it asap.
@@ -621,6 +631,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     freeTask.accept(this);
                 }
                 timeoutHandler.cancel();
+
+                local = null;
+                remote = null;
             }
         }
     }

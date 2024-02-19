@@ -183,6 +183,48 @@ public interface QuicChannel extends Channel {
     QuicTransportParameters peerTransportParameters();
 
     /**
+     * Returns the local {@link QuicConnectionAddress}. This address might change over the life-time of the
+     * channel.
+     *
+     * @return  local   the local {@link QuicConnectionAddress} or {@code null} if none is assigned yet,
+     *                  or assigned anymore.
+     */
+    @Override
+    @Nullable
+    QuicConnectionAddress localAddress();
+
+    /**
+     * Returns the remote {@link QuicConnectionAddress}. This address might change over the life-time of the
+     * channel.
+     *
+     * @return  remote   the remote {@link QuicConnectionAddress} or {@code null} if none is assigned yet,
+     *                   or assigned anymore.
+     */
+    @Override
+    @Nullable
+    QuicConnectionAddress remoteAddress();
+
+    /**
+     * Returns the local {@link SocketAddress} of the underlying transport that received the data.
+     * This address might change over the life-time of the channel.
+     *
+     * @return  local   the local {@link SocketAddress} of the underlying transport or {@code null} if none is assigned
+     *                  yet, or assigned anymore.
+     */
+    @Nullable
+    SocketAddress localSocketAddress();
+
+    /**
+     * Returns the remote {@link SocketAddress} of the underlying transport to which the data is sent.
+     * This address might change over the life-time of the channel.
+     *
+     * @return  local   the remote {@link SocketAddress} of the underlying transport or {@code null} if none is assigned
+     *                  yet, or assigned anymore.
+     */
+    @Nullable
+    SocketAddress remoteSocketAddress();
+
+    /**
      * Creates a stream that is using this {@link QuicChannel} and notifies the {@link Future} once done.
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
