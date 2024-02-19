@@ -50,7 +50,6 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
