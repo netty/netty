@@ -47,7 +47,7 @@
     <boringsslRepository>https://boringssl.googlesource.com/boringssl</boringsslRepository>
     <!-- Lets use what we use in netty-tcnative-boringssl-static -->
     <boringsslBranch>chromium-stable</boringsslBranch>
-    <boringsslCommitSha>dd5219451c3ce26221762a15d867edf43b463bb2</boringsslCommitSha>
+    <boringsslCommitSha>1b7fdbd9101dedc3e0aa3fcf4ff74eacddb34ecc</boringsslCommitSha>
 
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
