@@ -537,16 +537,28 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         if (string instanceof AsciiString) {
             AsciiString rhs = (AsciiString) string;
             byte[] rhsValue = rhs.value;
-            for (int i = arrayOffset(), j = rhs.arrayOffset(), end = i + length(); i < end; ++i, ++j) {
-                if (!equalsIgnoreCase(value[i], rhsValue[j])) {
-                    return false;
+            if ((arrayOffset() | rhs.arrayOffset()) == 0) {
+                for (int i = 0; i < length; ++i) {
+                    if (!equalsIgnoreCase(value[i], rhsValue[i])) {
+                        return false;
+                    }
                 }
+                return true;
             }
-            return true;
+            return misalignedEqualsIgnoreCase(rhs, value, rhsValue);
         }
 
         for (int i = arrayOffset(), j = 0, end = length(); j < end; ++i, ++j) {
             if (!equalsIgnoreCase(b2c(value[i]), string.charAt(j))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean misalignedEqualsIgnoreCase(AsciiString rhs, byte[] value, byte[] rhsValue) {
+        for (int i = arrayOffset(), j = rhs.arrayOffset(), end = i + length(); i < end; ++i, ++j) {
+            if (!equalsIgnoreCase(value[i], rhsValue[j])) {
                 return false;
             }
         }
