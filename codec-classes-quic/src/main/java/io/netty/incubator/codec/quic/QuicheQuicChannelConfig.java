@@ -22,6 +22,7 @@ import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 
@@ -136,6 +137,7 @@ final class QuicheQuicChannelConfig extends DefaultChannelConfig implements Quic
         return this;
     }
 
+    @Nullable
     QLogConfiguration getQLogConfiguration() {
         return qLogConfiguration;
     }

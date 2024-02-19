@@ -85,5 +85,13 @@
       <!-- Let's mark as optional as it is not strictly needed -->
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+    </dependency>
   </dependencies>
 </project>

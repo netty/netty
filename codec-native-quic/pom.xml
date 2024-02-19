@@ -1235,5 +1235,13 @@
       <version>3.20.2</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+    </dependency>
   </dependencies>
 </project>

@@ -26,6 +26,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -74,7 +75,7 @@ public final class QuicChannelBootstrap {
      * @param <T>       the type of the value.
      * @return          this instance.
      */
-    public <T> QuicChannelBootstrap option(ChannelOption<T> option, T value) {
+    public <T> QuicChannelBootstrap option(ChannelOption<T> option, @Nullable T value) {
         Quic.updateOptions(options, option, value);
         return this;
     }
@@ -88,7 +89,7 @@ public final class QuicChannelBootstrap {
      * @param <T>       the type of the value.
      * @return          this instance.
      */
-    public <T> QuicChannelBootstrap attr(AttributeKey<T> key, T value) {
+    public <T> QuicChannelBootstrap attr(AttributeKey<T> key, @Nullable T value) {
         Quic.updateAttributes(attrs, key, value);
         return this;
     }
@@ -115,7 +116,7 @@ public final class QuicChannelBootstrap {
      * @param <T>       the type of the value.
      * @return          this instance.
      */
-    public <T> QuicChannelBootstrap streamOption(ChannelOption<T> option, T value) {
+    public <T> QuicChannelBootstrap streamOption(ChannelOption<T> option, @Nullable T value) {
         Quic.updateOptions(streamOptions, option, value);
         return this;
     }
@@ -129,7 +130,7 @@ public final class QuicChannelBootstrap {
      * @param <T>       the type of the value.
      * @return          this instance.
      */
-    public <T> QuicChannelBootstrap streamAttr(AttributeKey<T> key, T value) {
+    public <T> QuicChannelBootstrap streamAttr(AttributeKey<T> key, @Nullable T value) {
         Quic.updateAttributes(streamAttrs, key, value);
         return this;
     }

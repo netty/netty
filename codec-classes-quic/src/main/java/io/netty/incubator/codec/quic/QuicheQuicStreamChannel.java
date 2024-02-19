@@ -40,6 +40,7 @@ import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
@@ -807,6 +808,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         @Override
+        @Nullable
         public ChannelOutboundBuffer outboundBuffer() {
             return null;
         }
@@ -833,7 +835,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             }
         }
 
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause,
+        private void handleReadException(ChannelPipeline pipeline, @Nullable ByteBuf byteBuf, Throwable cause,
                                          @SuppressWarnings("deprecation") RecvByteBufAllocator.Handle allocHandle,
                                          boolean readFrames) {
             if (byteBuf != null) {

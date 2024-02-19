@@ -17,6 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.internal.EmptyArrays;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLException;
@@ -46,6 +47,7 @@ public class QuicSslContextTest {
             }
 
             @Override
+            @Nullable
             public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
                 return null;
             }
@@ -56,6 +58,7 @@ public class QuicSslContextTest {
             }
 
             @Override
+            @Nullable
             public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
                 return null;
             }
@@ -66,6 +69,7 @@ public class QuicSslContextTest {
             }
 
             @Override
+            @Nullable
             public PrivateKey getPrivateKey(String alias) {
                 return null;
             }

@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.util.AttributeKey;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -124,7 +125,7 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
     }
 
     private static void assertQuicStreamChannel(QuicStreamChannel channel, QuicStreamType expectedType,
-                                                Boolean expectedAutoRead, String expectedAttribute) {
+                                                Boolean expectedAutoRead, @Nullable String expectedAttribute) {
         assertEquals(expectedType, channel.type());
         assertEquals(expectedAutoRead, channel.config().getOption(ChannelOption.AUTO_READ));
         assertEquals(expectedAttribute, channel.attr(ATTRIBUTE_KEY).get());

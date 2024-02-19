@@ -45,6 +45,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
@@ -179,13 +180,13 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             AtomicLongFieldUpdater.newUpdater(QuicheQuicChannel.class, "bidiStreamsLeft");
     private volatile long bidiStreamsLeft;
 
-    private QuicheQuicChannel(Channel parent, boolean server, ByteBuffer key, InetSocketAddress local,
+    private QuicheQuicChannel(Channel parent, boolean server, @Nullable ByteBuffer key, InetSocketAddress local,
                               InetSocketAddress remote, boolean supportsDatagram, ChannelHandler streamHandler,
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
-                              Consumer<QuicheQuicChannel> freeTask,
-                              Executor sslTaskExecutor, QuicConnectionIdGenerator connectionIdAddressGenerator,
-                              QuicResetTokenGenerator resetTokenGenerator) {
+                              @Nullable Consumer<QuicheQuicChannel> freeTask,
+                              @Nullable Executor sslTaskExecutor, @Nullable QuicConnectionIdGenerator connectionIdAddressGenerator,
+                              @Nullable QuicResetTokenGenerator resetTokenGenerator) {
         super(parent);
         config = new QuicheQuicChannelConfig(this);
         this.freeTask = freeTask;
@@ -253,7 +254,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return connection == null ? null : connection.engine();
     }
 
-    private void notifyAboutHandshakeCompletionIfNeeded(QuicheQuicConnection conn, SSLHandshakeException cause) {
+    private void notifyAboutHandshakeCompletionIfNeeded(QuicheQuicConnection conn, @Nullable SSLHandshakeException cause) {
         if (handshakeCompletionNotified) {
             return;
         }
@@ -453,7 +454,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler,
+    public Future<QuicStreamChannel> createStream(QuicStreamType type, @Nullable ChannelHandler handler,
                                                   Promise<QuicStreamChannel> promise) {
         if (eventLoop().inEventLoop()) {
             ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise);
@@ -511,24 +512,28 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
+    @Nullable
     protected SocketAddress localAddress0() {
         QuicheQuicConnection connection = this.connection;
         return connection == null ? null : connection.sourceId();
     }
 
     @Override
+    @Nullable
     protected SocketAddress remoteAddress0() {
         QuicheQuicConnection connection = this.connection;
         return connection == null ? null : connection.destinationId();
     }
 
     @Override
+    @Nullable
     public SocketAddress localAddress() {
         // Override so we never cache as the sourceId() can change over life-time.
         return localAddress0();
     }
 
     @Override
+    @Nullable
     public SocketAddress remoteAddress() {
         // Override so we never cache as the destinationId() can change over life-time.
         return remoteAddress0();
@@ -753,7 +758,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         parent().flush();
     }
 
-    private static long connectionAddressChecked(QuicheQuicConnection conn) throws ClosedChannelException {
+    private static long connectionAddressChecked(@Nullable QuicheQuicConnection conn) throws ClosedChannelException {
         if (conn == null || conn.isFreed()) {
             throw new ClosedChannelException();
         }
@@ -1432,7 +1437,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     private final class QuicChannelUnsafe extends AbstractChannel.AbstractUnsafe {
 
-        void connectStream(QuicStreamType type, ChannelHandler handler,
+        void connectStream(QuicStreamType type, @Nullable ChannelHandler handler,
                            Promise<QuicStreamChannel> promise) {
             long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
             try {

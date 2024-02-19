@@ -23,6 +23,7 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -72,6 +73,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         this.flushStrategy = flushStrategy;
     }
 
+    @Nullable
     protected final QuicheQuicChannel getChannel(ByteBuffer key) {
         return connectionIdToChannel.get(key);
     }
@@ -220,6 +222,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
      * @return the {@link QuicheQuicChannel} that is mapped to the id.
      * @throws Exception  thrown if there is an error during processing.
      */
+    @Nullable
     protected abstract QuicheQuicChannel quicPacketRead(ChannelHandlerContext ctx, InetSocketAddress sender,
                                                         InetSocketAddress recipient, QuicPacketType type, int version,
                                                         ByteBuf scid, ByteBuf dcid, ByteBuf token,

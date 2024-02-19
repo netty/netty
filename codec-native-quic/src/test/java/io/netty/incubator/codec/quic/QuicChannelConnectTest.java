@@ -37,6 +37,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -528,10 +529,12 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             stream.writeAndFlush(Unpooled.directBuffer().writeZero(numBytes)).sync();
             clientLatch.await();
 
+            QuicheQuicSslEngine quicheQuicSslEngine = (QuicheQuicSslEngine) quicChannel.sslEngine();
+            assertNotNull(quicheQuicSslEngine);
             assertEquals(QuicTestUtils.PROTOS[0],
                     // Just do the cast as getApplicationProtocol() only exists in SSLEngine itself since Java9+ and
                     // we may run on an earlier version
-                    ((QuicheQuicSslEngine) quicChannel.sslEngine()).getApplicationProtocol());
+                    quicheQuicSslEngine.getApplicationProtocol());
             stream.close().sync();
             quicChannel.close().sync();
             ChannelFuture closeFuture = quicChannel.closeFuture().await();
@@ -964,6 +967,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     }
 
                     @Override
+                    @Nullable
                     public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
                         return null;
                     }
@@ -1433,6 +1437,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
     private static void assertSessionReused(QuicChannel channel, boolean reused) throws Exception {
         QuicheQuicSslEngine engine =  (QuicheQuicSslEngine) channel.sslEngine();
+        assertNotNull(engine);
         while (engine.getHandshakeStatus() != SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
             // Let's wait a bit and re-check if the handshake is done.
             Thread.sleep(50);

@@ -17,6 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.util.AsciiString;
 import io.netty.util.internal.SystemPropertyUtil;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -55,7 +56,7 @@ final class QuicClientSessionCache {
                 }
             };
 
-    void saveSession(String host, int port, long creationTime, long timeout, byte[] session, boolean isSingleUse) {
+    void saveSession(@Nullable String host, int port, long creationTime, long timeout, byte[] session, boolean isSingleUse) {
         HostPort hostPort = keyFor(host, port);
         if (hostPort != null) {
             synchronized (sessions) {
@@ -72,7 +73,7 @@ final class QuicClientSessionCache {
     }
 
     // Only used for testing.
-    boolean hasSession(String host, int port) {
+    boolean hasSession(@Nullable String host, int port) {
         HostPort hostPort = keyFor(host, port);
         if (hostPort != null) {
             synchronized (sessions) {
@@ -82,7 +83,7 @@ final class QuicClientSessionCache {
         return false;
     }
 
-    byte[] getSession(String host, int port) {
+    byte[] getSession(@Nullable String host, int port) {
         HostPort hostPort = keyFor(host, port);
         if (hostPort != null) {
             SessionHolder sessionHolder;
@@ -103,7 +104,7 @@ final class QuicClientSessionCache {
         return null;
     }
 
-    void removeSession(String host, int port) {
+    void removeSession(@Nullable String host, int port) {
         HostPort hostPort = keyFor(host, port);
         if (hostPort != null) {
             synchronized (sessions) {
@@ -167,7 +168,8 @@ final class QuicClientSessionCache {
         }
     }
 
-    private static HostPort keyFor(String host, int port) {
+    @Nullable
+    private static HostPort keyFor(@Nullable String host, int port) {
         if (host == null && port < 1) {
             return null;
         }

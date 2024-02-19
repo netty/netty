@@ -23,6 +23,7 @@ import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
@@ -356,6 +357,7 @@ final class Quiche {
      */
     static native void quiche_conn_free(long connAddr);
 
+    @Nullable
     static QuicConnectionCloseEvent quiche_conn_peer_error(long connAddr) {
         Object[] error =  quiche_conn_peer_error0(connAddr);
         if (error == null) {

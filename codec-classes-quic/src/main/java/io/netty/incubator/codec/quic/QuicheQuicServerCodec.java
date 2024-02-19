@@ -25,6 +25,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -101,6 +102,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     }
 
     @Override
+    @Nullable
     protected QuicheQuicChannel quicPacketRead(ChannelHandlerContext ctx, InetSocketAddress sender,
                                                InetSocketAddress recipient, QuicPacketType type, int version,
                                                ByteBuf scid, ByteBuf dcid, ByteBuf token,
@@ -122,6 +124,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         return channel;
     }
 
+    @Nullable
     private QuicheQuicChannel handleServer(ChannelHandlerContext ctx, InetSocketAddress sender,
                                            InetSocketAddress recipient,
                                            @SuppressWarnings("unused") QuicPacketType type, int version,

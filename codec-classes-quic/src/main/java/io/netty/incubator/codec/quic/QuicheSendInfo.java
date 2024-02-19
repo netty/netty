@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.util.concurrent.FastThreadLocal;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -50,14 +51,17 @@ final class QuicheSendInfo {
      * @param memory the memory of {@code quiche_send_info}.
      * @return the address that was read.
      */
+    @Nullable
     static InetSocketAddress getToAddress(ByteBuffer memory) {
         return getAddress(memory, Quiche.QUICHE_SEND_INFO_OFFSETOF_TO_LEN, Quiche.QUICHE_SEND_INFO_OFFSETOF_TO);
     }
 
+    @Nullable
     static InetSocketAddress getFromAddress(ByteBuffer memory) {
        return getAddress(memory, Quiche.QUICHE_SEND_INFO_OFFSETOF_FROM_LEN, Quiche.QUICHE_SEND_INFO_OFFSETOF_FROM);
     }
 
+    @Nullable
     private static InetSocketAddress getAddress(ByteBuffer memory, int lenOffset, int addressOffset) {
         int position = memory.position();
         try {

@@ -15,6 +15,8 @@
  */
 package io.netty.incubator.codec.quic;
 
+import org.jetbrains.annotations.Nullable;
+
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.KeyManagerFactorySpi;
@@ -148,6 +150,7 @@ public final class BoringSSLKeylessManagerFactory extends KeyManagerFactory {
                 private final Date creationDate = new Date();
 
                 @Override
+                @Nullable
                 public Key engineGetKey(String alias, char[] password) {
                     if (engineContainsAlias(alias)) {
                         return BoringSSLKeylessPrivateKey.INSTANCE;
@@ -161,11 +164,13 @@ public final class BoringSSLKeylessManagerFactory extends KeyManagerFactory {
                 }
 
                 @Override
+                @Nullable
                 public Certificate engineGetCertificate(String alias) {
                     return engineContainsAlias(alias)? certificateChain[0] : null;
                 }
 
                 @Override
+                @Nullable
                 public Date engineGetCreationDate(String alias) {
                     return engineContainsAlias(alias)? creationDate : null;
                 }
@@ -217,6 +222,7 @@ public final class BoringSSLKeylessManagerFactory extends KeyManagerFactory {
                 }
 
                 @Override
+                @Nullable
                 public String engineGetCertificateAlias(Certificate cert) {
                     if (cert instanceof X509Certificate) {
                         for (X509Certificate x509Certificate : certificateChain) {
@@ -234,7 +240,7 @@ public final class BoringSSLKeylessManagerFactory extends KeyManagerFactory {
                 }
 
                 @Override
-                public void engineLoad(InputStream stream, char[] password) {
+                public void engineLoad(@Nullable InputStream stream, char[] password) {
                     if (stream != null && password != null) {
                         throw new UnsupportedOperationException();
                     }

@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.handler.ssl.util.LazyX509Certificate;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -41,10 +42,10 @@ final class BoringSSL {
                                BoringSSLHandshakeCompleteCallback handshakeCompleteCallback,
                                BoringSSLCertificateCallback certificateCallback,
                                BoringSSLCertificateVerifyCallback verifyCallback,
-                               BoringSSLTlsextServernameCallback servernameCallback,
-                               BoringSSLKeylogCallback keylogCallback,
-                               BoringSSLSessionCallback sessionCallback,
-                               BoringSSLPrivateKeyMethod privateKeyMethod,
+                               @Nullable BoringSSLTlsextServernameCallback servernameCallback,
+                               @Nullable BoringSSLKeylogCallback keylogCallback,
+                               @Nullable BoringSSLSessionCallback sessionCallback,
+                               @Nullable BoringSSLPrivateKeyMethod privateKeyMethod,
                                BoringSSLSessionTicketCallback sessionTicketCallback,
                                int verifyMode,
                                byte[][] subjectNames) {
@@ -72,9 +73,9 @@ final class BoringSSL {
     private static native long SSLContext_new0(boolean server,
                                                byte[] applicationProtocols, Object handshakeCompleteCallback,
                                                Object certificateCallback, Object verifyCallback,
-                                               Object servernameCallback, Object keylogCallback,
-                                               Object sessionCallback,
-                                               Object privateKeyMethod,
+                                               @Nullable Object servernameCallback, @Nullable Object keylogCallback,
+                                               @Nullable Object sessionCallback,
+                                               @Nullable Object privateKeyMethod,
                                                Object sessionTicketCallback,
                                                int verifyDepth, byte[][] subjectNames);
     static native void SSLContext_set_early_data_enabled(long context, boolean enabled);
@@ -87,7 +88,7 @@ final class BoringSSL {
     static long SSL_new(long context, boolean server, String hostname) {
         return SSL_new0(context, server, tlsExtHostName(hostname));
     }
-    static native long SSL_new0(long context, boolean server, String hostname);
+    static native long SSL_new0(long context, boolean server, @Nullable String hostname);
     static native void SSL_free(long ssl);
 
     static native Runnable SSL_getTask(long ssl);
@@ -100,9 +101,11 @@ final class BoringSSL {
     static native long CRYPTO_BUFFER_stack_new(long ssl, byte[][] bytes);
     static native void CRYPTO_BUFFER_stack_free(long chain);
 
+    @Nullable
     static native String ERR_last_error();
 
-    private static String tlsExtHostName(String hostname) {
+    @Nullable
+    private static String tlsExtHostName(@Nullable String hostname) {
         if (hostname != null && hostname.endsWith(".")) {
             // Strip trailing dot if included.
             // See https://github.com/netty/netty-tcnative/issues/400

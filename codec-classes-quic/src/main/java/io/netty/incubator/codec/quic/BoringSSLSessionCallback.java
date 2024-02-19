@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -30,7 +31,7 @@ final class BoringSSLSessionCallback {
     private final QuicClientSessionCache sessionCache;
     private final QuicheQuicSslEngineMap engineMap;
 
-    BoringSSLSessionCallback(QuicheQuicSslEngineMap engineMap, QuicClientSessionCache sessionCache) {
+    BoringSSLSessionCallback(QuicheQuicSslEngineMap engineMap, @Nullable QuicClientSessionCache sessionCache) {
         this.engineMap = engineMap;
         this.sessionCache = sessionCache;
     }

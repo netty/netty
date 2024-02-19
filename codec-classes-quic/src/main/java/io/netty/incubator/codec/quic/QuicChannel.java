@@ -23,6 +23,7 @@ import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.SSLEngine;
 import java.net.SocketAddress;
@@ -154,6 +155,7 @@ public interface QuicChannel extends Channel {
      *
      * @return the engine.
      */
+    @Nullable
     SSLEngine sslEngine();
 
     /**
@@ -177,6 +179,7 @@ public interface QuicChannel extends Channel {
      *
      * @return peerTransportParams.
      */
+    @Nullable
     QuicTransportParameters peerTransportParameters();
 
     /**
@@ -189,7 +192,7 @@ public interface QuicChannel extends Channel {
      *                  {@link io.netty.channel.ChannelPipeline} during the stream creation.
      * @return          the {@link Future} that will be notified once the operation completes.
      */
-    default Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler) {
+    default Future<QuicStreamChannel> createStream(QuicStreamType type, @Nullable ChannelHandler handler) {
         return createStream(type, handler, eventLoop().newPromise());
     }
 
@@ -204,7 +207,7 @@ public interface QuicChannel extends Channel {
      * @param promise   the {@link ChannelPromise} that will be notified once the operation completes.
      * @return          the {@link Future} that will be notified once the operation completes.
      */
-    Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler,
+    Future<QuicStreamChannel> createStream(QuicStreamType type, @Nullable ChannelHandler handler,
                                            Promise<QuicStreamChannel> promise);
 
     /**

@@ -24,6 +24,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -60,7 +61,7 @@ public final class QuicStreamChannelBootstrap {
      * @param <T>       the type of the value.
      * @return          this instance.
      */
-    public <T> QuicStreamChannelBootstrap option(ChannelOption<T> option, T value) {
+    public <T> QuicStreamChannelBootstrap option(ChannelOption<T> option, @Nullable T value) {
         Quic.updateOptions(options, option, value);
         return this;
     }
@@ -74,7 +75,7 @@ public final class QuicStreamChannelBootstrap {
      * @param <T>       the type of the value.
      * @return          this instance.
      */
-    public <T> QuicStreamChannelBootstrap attr(AttributeKey<T> key, T value) {
+    public <T> QuicStreamChannelBootstrap attr(AttributeKey<T> key, @Nullable T value) {
         Quic.updateAttributes(attrs, key, value);
         return this;
     }

@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DuplexChannel;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.SocketAddress;
 
@@ -262,6 +263,7 @@ public interface QuicStreamChannel extends DuplexChannel {
      *
      * @return the priority if any was set.
      */
+    @Nullable
     QuicStreamPriority priority();
 
     /**

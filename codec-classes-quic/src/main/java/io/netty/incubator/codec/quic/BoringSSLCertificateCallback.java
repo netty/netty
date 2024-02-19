@@ -17,6 +17,7 @@ package io.netty.incubator.codec.quic;
 
 
 import io.netty.util.CharsetUtil;
+import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
@@ -90,7 +91,7 @@ final class BoringSSLCertificateCallback {
     private final X509ExtendedKeyManager keyManager;
     private final String password;
 
-    BoringSSLCertificateCallback(QuicheQuicSslEngineMap engineMap, X509ExtendedKeyManager keyManager, String password) {
+    BoringSSLCertificateCallback(QuicheQuicSslEngineMap engineMap, @Nullable X509ExtendedKeyManager keyManager, String password) {
         this.engineMap = engineMap;
         this.keyManager = keyManager;
         this.password = password;
@@ -222,11 +223,14 @@ final class BoringSSLCertificateCallback {
             return null;
         }
     }
+
+    @Nullable
     private String chooseClientAlias(QuicheQuicSslEngine engine,
                                      String[] keyTypes, X500Principal[] issuer) {
         return keyManager.chooseEngineClientAlias(keyTypes, issuer, engine);
     }
 
+    @Nullable
     private String chooseServerAlias(QuicheQuicSslEngine engine, String type) {
         return keyManager.chooseEngineServerAlias(type, null, engine);
     }
@@ -256,6 +260,7 @@ final class BoringSSLCertificateCallback {
         return result;
     }
 
+    @Nullable
     private static String clientKeyType(byte clientCertificateType) {
         // See also https://www.ietf.org/assignments/tls-parameters/tls-parameters.xml
         switch (clientCertificateType) {

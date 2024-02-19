@@ -21,6 +21,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -87,6 +88,7 @@ public final class Quic {
      *
      * @return the cause if unavailable. {@code null} if available.
      */
+    @Nullable
     public static Throwable unavailabilityCause() {
         return UNAVAILABILITY_CAUSE;
     }
@@ -131,7 +133,7 @@ public final class Quic {
      * Allow to specify a {@link ChannelOption} which is used for the {@link QuicStreamChannel} instances once they got
      * created. Use a value of {@code null} to remove a previous set {@link ChannelOption}.
      */
-    static <T> void updateOptions(Map<ChannelOption<?>, Object> options, ChannelOption<T> option, T value) {
+    static <T> void updateOptions(Map<ChannelOption<?>, Object> options, ChannelOption<T> option, @Nullable T value) {
         ObjectUtil.checkNotNull(option, "option");
         if (value == null) {
             options.remove(option);
@@ -144,7 +146,7 @@ public final class Quic {
      * Allow to specify an initial attribute of the newly created {@link QuicStreamChannel}. If the {@code value} is
      * {@code null}, the attribute of the specified {@code key} is removed.
      */
-    static <T> void updateAttributes(Map<AttributeKey<?>, Object> attributes, AttributeKey<T> key, T value) {
+    static <T> void updateAttributes(Map<AttributeKey<?>, Object> attributes, AttributeKey<T> key, @Nullable T value) {
         ObjectUtil.checkNotNull(key, "key");
         if (value == null) {
             attributes.remove(key);
@@ -154,7 +156,7 @@ public final class Quic {
     }
 
     static void setupChannel(Channel ch, Map.Entry<ChannelOption<?>, Object>[] options,
-                             Map.Entry<AttributeKey<?>, Object>[] attrs, ChannelHandler handler,
+                             Map.Entry<AttributeKey<?>, Object>[] attrs, @Nullable ChannelHandler handler,
                              InternalLogger logger) {
         Quic.setChannelOptions(ch, options, logger);
         Quic.setAttributes(ch, attrs);

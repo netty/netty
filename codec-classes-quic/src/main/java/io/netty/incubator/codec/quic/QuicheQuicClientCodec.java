@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -46,6 +47,7 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
     }
 
     @Override
+    @Nullable
     protected QuicheQuicChannel quicPacketRead(
             ChannelHandlerContext ctx, InetSocketAddress sender, InetSocketAddress recipient,
             QuicPacketType type, int version, ByteBuf scid, ByteBuf dcid,

@@ -22,6 +22,7 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.Mapping;
 import io.netty.util.ReferenceCounted;
+import org.jetbrains.annotations.Nullable;
 
 import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.KeyManager;
@@ -70,10 +71,10 @@ final class QuicheQuicSslContext extends QuicSslContext {
     final NativeSslContext nativeSslContext;
 
     QuicheQuicSslContext(boolean server, long sessionTimeout, long sessionCacheSize,
-                         ClientAuth clientAuth, TrustManagerFactory trustManagerFactory,
-                         KeyManagerFactory keyManagerFactory, String password,
-                         Mapping<? super String, ? extends QuicSslContext> mapping,
-                         Boolean earlyData, BoringSSLKeylog keylog,
+                         ClientAuth clientAuth, @Nullable TrustManagerFactory trustManagerFactory,
+                         @Nullable KeyManagerFactory keyManagerFactory, String password,
+                         @Nullable Mapping<? super String, ? extends QuicSslContext> mapping,
+                         @Nullable Boolean earlyData, @Nullable BoringSSLKeylog keylog,
                          String... applicationProtocols) {
         Quic.ensureAvailability();
         this.server = server;
@@ -157,11 +158,11 @@ final class QuicheQuicSslContext extends QuicSslContext {
         throw new IllegalArgumentException("No X509TrustManager included");
     }
 
-     static X509Certificate[] toX509Certificates0(File file) throws CertificateException {
+     static X509Certificate[] toX509Certificates0(@Nullable File file) throws CertificateException {
         return toX509Certificates(file);
     }
 
-    static PrivateKey toPrivateKey0(File keyFile, String keyPassword) throws NoSuchAlgorithmException,
+    static PrivateKey toPrivateKey0(@Nullable File keyFile, @Nullable String keyPassword) throws NoSuchAlgorithmException,
             NoSuchPaddingException, InvalidKeySpecException,
             InvalidAlgorithmParameterException,
             KeyException, IOException {
@@ -187,6 +188,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         }
     }
 
+    @Nullable
     QuicheQuicConnection createConnection(LongFunction<Long> connectionCreator, QuicheQuicSslEngine engine) {
         nativeSslContext.retain();
         long ssl = BoringSSL.SSL_new(nativeSslContext.address(), isServer(), engine.tlsHostName);
@@ -227,6 +229,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         engine.removeSessionFromCacheIfInvalid();
     }
 
+    @Nullable
     QuicClientSessionCache getSessionCache() {
         return sessionCache;
     }
@@ -374,6 +377,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         }
 
         @Override
+        @Nullable
         public SSLSession getSession(byte[] sessionId) {
             return null;
         }

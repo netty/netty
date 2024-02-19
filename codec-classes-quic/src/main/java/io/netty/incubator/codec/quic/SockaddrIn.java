@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.util.internal.PlatformDependent;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -136,6 +137,7 @@ final class SockaddrIn {
         }
     }
 
+    @Nullable
     static InetSocketAddress getIPv4(ByteBuffer memory, byte[] tmpArray) {
         assert tmpArray.length == IPV4_ADDRESS_LENGTH;
         int position = memory.position();
@@ -154,6 +156,7 @@ final class SockaddrIn {
         }
     }
 
+    @Nullable
     static InetSocketAddress getIPv6(ByteBuffer memory, byte[] ipv6Array, byte[] ipv4Array) {
         assert ipv6Array.length == IPV6_ADDRESS_LENGTH;
         assert ipv4Array.length == IPV4_ADDRESS_LENGTH;

@@ -30,6 +30,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.NetUtil;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executor;
@@ -148,7 +149,7 @@ final class QuicTestUtils {
     }
 
     private static Bootstrap newServerBootstrap(QuicServerCodecBuilder serverBuilder,
-                                                QuicTokenHandler tokenHandler, ChannelHandler handler,
+                                                QuicTokenHandler tokenHandler, @Nullable ChannelHandler handler,
                                                 ChannelHandler streamHandler) {
         serverBuilder.tokenHandler(tokenHandler)
                 .streamHandler(streamHandler);
@@ -180,7 +181,7 @@ final class QuicTestUtils {
         return newServer(sslTaskExecutor, InsecureQuicTokenHandler.INSTANCE, handler, streamHandler);
     }
 
-    static void closeIfNotNull(Channel channel) throws Exception {
+    static void closeIfNotNull(@Nullable Channel channel) throws Exception {
         if (channel != null) {
             channel.close().sync();
         }

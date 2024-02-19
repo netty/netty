@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -75,7 +76,7 @@ public class QuicTransportParametersTest extends AbstractQuicTest {
         }
     }
 
-    private static void assertTransportParameters(QuicTransportParameters parameters) {
+    private static void assertTransportParameters(@Nullable QuicTransportParameters parameters) {
         assertNotNull(parameters);
         assertThat(parameters.maxIdleTimeout(), greaterThanOrEqualTo(1L));
         assertThat(parameters.maxUdpPayloadSize(), greaterThanOrEqualTo(1L));

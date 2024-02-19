@@ -20,6 +20,7 @@ import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.util.KeyManagerFactoryWrapper;
 import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.Mapping;
+import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -56,6 +57,7 @@ public final class QuicSslContextBuilder {
         }
 
         @Override
+        @Nullable
         public String chooseClientAlias(String[] keyType, Principal[] issuers, Socket socket) {
             return null;
         }
@@ -66,6 +68,7 @@ public final class QuicSslContextBuilder {
         }
 
         @Override
+        @Nullable
         public String chooseServerAlias(String keyType, Principal[] issuers, Socket socket) {
             return null;
         }
@@ -76,6 +79,7 @@ public final class QuicSslContextBuilder {
         }
 
         @Override
+        @Nullable
         public PrivateKey getPrivateKey(String alias) {
             return null;
         }
@@ -98,7 +102,7 @@ public final class QuicSslContextBuilder {
      * @see #keyManager(File, String, File)
      */
     public static QuicSslContextBuilder forServer(
-            File keyFile, String keyPassword, File certChainFile) {
+            File keyFile, @Nullable String keyPassword, File certChainFile) {
         return new QuicSslContextBuilder(true).keyManager(keyFile, keyPassword, certChainFile);
     }
 
@@ -112,7 +116,7 @@ public final class QuicSslContextBuilder {
      * @see #keyManager(File, String, File)
      */
     public static QuicSslContextBuilder forServer(
-            PrivateKey key, String keyPassword, X509Certificate... certChain) {
+            PrivateKey key, @Nullable String keyPassword, X509Certificate... certChain) {
         return new QuicSslContextBuilder(true).keyManager(key, keyPassword, certChain);
     }
 
@@ -122,7 +126,7 @@ public final class QuicSslContextBuilder {
      * @param keyManagerFactory non-{@code null} factory for server's private key
      * @see #keyManager(KeyManagerFactory, String)
      */
-    public static QuicSslContextBuilder forServer(KeyManagerFactory keyManagerFactory, String password) {
+    public static QuicSslContextBuilder forServer(KeyManagerFactory keyManagerFactory, @Nullable String password) {
         return new QuicSslContextBuilder(true).keyManager(keyManagerFactory, password);
     }
 
@@ -134,7 +138,7 @@ public final class QuicSslContextBuilder {
      * @param keyPassword the password of the {@code keyFile}, or {@code null} if it's not
      *     password-protected
      */
-    public static QuicSslContextBuilder forServer(KeyManager keyManager, String keyPassword) {
+    public static QuicSslContextBuilder forServer(KeyManager keyManager, @Nullable String keyPassword) {
         return new QuicSslContextBuilder(true).keyManager(keyManager, keyPassword);
     }
 
@@ -198,7 +202,7 @@ public final class QuicSslContextBuilder {
      * <a href="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Key_Log_Format">
      *     NSS Key Log Format</a>. This is intended for debugging use with tools like Wireshark.
      */
-    public QuicSslContextBuilder keylog(BoringSSLKeylog keylog) {
+    public QuicSslContextBuilder keylog(@Nullable BoringSSLKeylog keylog) {
         this.keylog = keylog;
         return this;
     }
@@ -210,7 +214,7 @@ public final class QuicSslContextBuilder {
      * see <a href="https://www.oracle.com/java/technologies/javase/8u261-relnotes.html">
      *     JDK 8u261 Update Release Notes</a>
      */
-    public QuicSslContextBuilder trustManager(File trustCertCollectionFile) {
+    public QuicSslContextBuilder trustManager(@Nullable File trustCertCollectionFile) {
         try {
             return trustManager(QuicheQuicSslContext.toX509Certificates0(trustCertCollectionFile));
         } catch (Exception e) {
@@ -239,7 +243,7 @@ public final class QuicSslContextBuilder {
      * see <a href="https://www.oracle.com/java/technologies/javase/8u261-relnotes.html">
      *     JDK 8u261 Update Release Notes</a>
      */
-    public QuicSslContextBuilder trustManager(TrustManagerFactory trustManagerFactory) {
+    public QuicSslContextBuilder trustManager(@Nullable TrustManagerFactory trustManagerFactory) {
         this.trustManagerFactory = trustManagerFactory;
         return this;
     }
@@ -264,7 +268,7 @@ public final class QuicSslContextBuilder {
      *     password-protected
      * @param keyCertChainFile an X.509 certificate chain file in PEM format
      */
-    public QuicSslContextBuilder keyManager(File keyFile, String keyPassword, File keyCertChainFile) {
+    public QuicSslContextBuilder keyManager(@Nullable File keyFile, @Nullable String keyPassword, @Nullable File keyCertChainFile) {
         X509Certificate[] keyCertChain;
         PrivateKey key;
         try {
@@ -289,7 +293,7 @@ public final class QuicSslContextBuilder {
      *     password-protected
      * @param certChain an X.509 certificate chain
      */
-    public QuicSslContextBuilder keyManager(PrivateKey key, String keyPassword, X509Certificate... certChain) {
+    public QuicSslContextBuilder keyManager(@Nullable PrivateKey key, @Nullable String keyPassword, X509Certificate... certChain) {
         try {
             java.security.KeyStore ks = java.security.KeyStore.getInstance(KeyStore.getDefaultType());
             ks.load(null);
@@ -308,7 +312,7 @@ public final class QuicSslContextBuilder {
      * Identifying manager for this host. {@code keyManagerFactory} may be {@code null} for
      * client contexts, which disables mutual authentication.
      */
-    public QuicSslContextBuilder keyManager(KeyManagerFactory keyManagerFactory, String keyPassword) {
+    public QuicSslContextBuilder keyManager(@Nullable KeyManagerFactory keyManagerFactory, @Nullable String keyPassword) {
         this.keyPassword = keyPassword;
         this.keyManagerFactory = keyManagerFactory;
         return this;
@@ -321,7 +325,7 @@ public final class QuicSslContextBuilder {
      * {@link KeyManager} will be created, thus all the requirements specified in
      * {@link #keyManager(KeyManagerFactory, String)} also apply here.
      */
-    public QuicSslContextBuilder keyManager(KeyManager keyManager, String password) {
+    public QuicSslContextBuilder keyManager(KeyManager keyManager, @Nullable String password) {
         return keyManager(new KeyManagerFactoryWrapper(keyManager), password);
     }
 

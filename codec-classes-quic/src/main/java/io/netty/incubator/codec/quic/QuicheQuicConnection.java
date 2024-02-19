@@ -20,6 +20,7 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -115,6 +116,7 @@ final class QuicheQuicConnection {
         }
     }
 
+    @Nullable
     Runnable sslTask() {
         final Runnable task;
         synchronized (this) {
@@ -137,14 +139,17 @@ final class QuicheQuicConnection {
         };
     }
 
+    @Nullable
     QuicConnectionAddress sourceId() {
         return connectionId(() -> Quiche.quiche_conn_source_id(connection));
     }
 
+    @Nullable
     QuicConnectionAddress destinationId() {
         return connectionId(() -> Quiche.quiche_conn_destination_id(connection));
     }
 
+    @Nullable
     QuicConnectionAddress connectionId(Supplier<byte[]> idSupplier) {
         final byte[] id;
         synchronized (this) {
@@ -156,6 +161,7 @@ final class QuicheQuicConnection {
         return id == null ? QuicConnectionAddress.NULL_LEN : new QuicConnectionAddress(id);
     }
 
+    @Nullable
     QuicheQuicTransportParameters peerParameters() {
         final long[] ret;
         synchronized (this) {

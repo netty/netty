@@ -15,6 +15,8 @@
  */
 package io.netty.incubator.codec.quic;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.nio.channels.ClosedChannelException;
 
 /**
@@ -25,7 +27,7 @@ public final class QuicClosedChannelException extends ClosedChannelException {
 
     private final QuicConnectionCloseEvent event;
 
-    QuicClosedChannelException(QuicConnectionCloseEvent event) {
+    QuicClosedChannelException(@Nullable QuicConnectionCloseEvent event) {
         this.event = event;
     }
 
@@ -34,6 +36,7 @@ public final class QuicClosedChannelException extends ClosedChannelException {
      *
      * @return the event.
      */
+    @Nullable
     public QuicConnectionCloseEvent event() {
         return event;
     }

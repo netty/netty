@@ -16,6 +16,8 @@
 package io.netty.incubator.codec.quic;
 
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -23,10 +25,12 @@ final class QuicheQuicSslEngineMap {
 
     private final ConcurrentMap<Long, QuicheQuicSslEngine> engines = new ConcurrentHashMap<>();
 
+    @Nullable
     QuicheQuicSslEngine get(long ssl) {
         return engines.get(ssl);
     }
 
+    @Nullable
     QuicheQuicSslEngine remove(long ssl) {
         return engines.remove(ssl);
     }

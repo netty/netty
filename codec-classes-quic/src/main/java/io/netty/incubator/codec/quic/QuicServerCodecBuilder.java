@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -77,7 +78,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
      * @param <T>       the type of the value.
      * @return          this instance.
      */
-    public <T> QuicServerCodecBuilder option(ChannelOption<T> option, T value) {
+    public <T> QuicServerCodecBuilder option(ChannelOption<T> option, @Nullable T value) {
         Quic.updateOptions(options, option, value);
         return self();
     }
@@ -91,7 +92,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
      * @param <T>       the type of the value.
      * @return          this instance.
      */
-    public <T> QuicServerCodecBuilder attr(AttributeKey<T> key, T value) {
+    public <T> QuicServerCodecBuilder attr(AttributeKey<T> key, @Nullable T value) {
         Quic.updateAttributes(attrs, key, value);
         return self();
     }
@@ -118,7 +119,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
      * @param <T>       the type of the value.
      * @return          this instance.
      */
-    public <T> QuicServerCodecBuilder streamOption(ChannelOption<T> option, T value) {
+    public <T> QuicServerCodecBuilder streamOption(ChannelOption<T> option, @Nullable T value) {
         Quic.updateOptions(streamOptions, option, value);
         return self();
     }
@@ -132,7 +133,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
      * @param <T>       the type of the value.
      * @return          this instance.
      */
-    public <T> QuicServerCodecBuilder streamAttr(AttributeKey<T> key, T value) {
+    public <T> QuicServerCodecBuilder streamAttr(AttributeKey<T> key, @Nullable T value) {
         Quic.updateAttributes(streamAttrs, key, value);
         return self();
     }
@@ -169,7 +170,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
      * @param tokenHandler  the {@link QuicTokenHandler} to use.
      * @return              this instance.
      */
-    public QuicServerCodecBuilder tokenHandler(QuicTokenHandler tokenHandler) {
+    public QuicServerCodecBuilder tokenHandler(@Nullable QuicTokenHandler tokenHandler) {
         this.tokenHandler = tokenHandler;
         return self();
     }
@@ -181,7 +182,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
      * @param resetTokenGenerator  the {@link QuicResetTokenGenerator} to use.
      * @return                     this instance.
      */
-    public QuicServerCodecBuilder resetTokenGenerator(QuicResetTokenGenerator resetTokenGenerator) {
+    public QuicServerCodecBuilder resetTokenGenerator(@Nullable QuicResetTokenGenerator resetTokenGenerator) {
         this.resetTokenGenerator = resetTokenGenerator;
         return self();
     }

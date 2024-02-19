@@ -21,6 +21,7 @@ import io.netty.handler.ssl.util.LazyX509Certificate;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
+import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
@@ -58,7 +59,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
 
     volatile Consumer<String> sniSelectedCallback;
 
-    QuicheQuicSslEngine(QuicheQuicSslContext ctx, String peerHost, int peerPort) {
+    QuicheQuicSslEngine(QuicheQuicSslContext ctx, @Nullable String peerHost, int peerPort) {
         this.ctx = ctx;
         this.peerHost = peerHost;
         this.peerPort = peerPort;
@@ -84,6 +85,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         return added;
     }
 
+    @Nullable
     QuicheQuicConnection createConnection(LongFunction<Long> connectionCreator) {
         return ctx.createConnection(connectionCreator, this);
     }
@@ -95,7 +97,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     /**
      * Validate that the given hostname can be used in SNI extension.
      */
-    static boolean isValidHostNameForSNI(String hostname) {
+    static boolean isValidHostNameForSNI(@Nullable String hostname) {
         return hostname != null &&
                 hostname.indexOf('.') > 0 &&
                 !hostname.endsWith(".") &&
@@ -133,6 +135,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     }
 
     @Override
+    @Nullable
     public Runnable getDelegatedTask() {
         return null;
     }
@@ -194,6 +197,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     }
 
     @Override
+    @Nullable
     public SSLSession getHandshakeSession() {
         if (handshakeFinished) {
             return null;
@@ -443,6 +447,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         }
 
         @Override
+        @Nullable
         public Object getValue(String name) {
             ObjectUtil.checkNotNull(name, "name");
             synchronized (this) {
@@ -484,7 +489,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
             return new SSLSessionBindingEvent(session, name);
         }
 
-        private void notifyUnbound(Object value, String name) {
+        private void notifyUnbound(@Nullable Object value, String name) {
             if (value instanceof SSLSessionBindingListener) {
                 // Use newSSLSessionBindingEvent so we alway use the wrapper if needed.
                 ((SSLSessionBindingListener) value).valueUnbound(newSSLSessionBindingEvent(name));
@@ -529,6 +534,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         }
 
         @Override
+        @Nullable
         public Principal getLocalPrincipal() {
             Certificate[] local = localCertificateChain;
             if (local == null || local.length == 0) {
@@ -548,6 +554,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         }
 
         @Override
+        @Nullable
         public String getPeerHost() {
             return peerHost;
         }

@@ -15,18 +15,20 @@
  */
 package io.netty.incubator.codec.quic;
 
+import org.jetbrains.annotations.Nullable;
+
 final class QuicheConfig {
     private final boolean isDatagramSupported;
     private long config = -1;
 
-    QuicheConfig(int version, Boolean grease, Long maxIdleTimeout, Long maxSendUdpPayloadSize,
-                        Long maxRecvUdpPayloadSize, Long initialMaxData,
-                        Long initialMaxStreamDataBidiLocal, Long initialMaxStreamDataBidiRemote,
-                        Long initialMaxStreamDataUni, Long initialMaxStreamsBidi, Long initialMaxStreamsUni,
-                        Long ackDelayExponent, Long maxAckDelay, Boolean disableActiveMigration, Boolean enableHystart,
-                        QuicCongestionControlAlgorithm congestionControlAlgorithm,
-                 Integer recvQueueLen, Integer sendQueueLen,
-                 Long activeConnectionIdLimit, byte[] statelessResetToken) {
+    QuicheConfig(int version, @Nullable Boolean grease, @Nullable Long maxIdleTimeout, @Nullable Long maxSendUdpPayloadSize,
+                 @Nullable Long maxRecvUdpPayloadSize, @Nullable Long initialMaxData,
+                 @Nullable Long initialMaxStreamDataBidiLocal, @Nullable Long initialMaxStreamDataBidiRemote,
+                 @Nullable Long initialMaxStreamDataUni, @Nullable Long initialMaxStreamsBidi, @Nullable Long initialMaxStreamsUni,
+                 @Nullable Long ackDelayExponent, @Nullable Long maxAckDelay, @Nullable Boolean disableActiveMigration, @Nullable Boolean enableHystart,
+                 @Nullable QuicCongestionControlAlgorithm congestionControlAlgorithm,
+                 @Nullable Integer recvQueueLen, @Nullable Integer sendQueueLen,
+                 @Nullable Long activeConnectionIdLimit, byte[] statelessResetToken) {
         long config = Quiche.quiche_config_new(version);
         try {
             if (grease != null) {
