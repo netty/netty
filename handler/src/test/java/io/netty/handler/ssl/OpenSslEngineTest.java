@@ -67,6 +67,7 @@ import static java.lang.Integer.MAX_VALUE;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -1634,12 +1635,18 @@ public class OpenSslEngineTest extends SSLEngineTest {
         final SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
-            assertThrows(SSLHandshakeException.class, new Executable() {
+            SSLException e = assertThrows(SSLException.class, new Executable() {
                 @Override
                 public void execute() throws Throwable {
                     handshake(param.type(), param.delegate(), client, server);
                 }
             });
+            // In the case of TLS_v1_3 we might only generate the exception once the actual handshake is considered
+            // done. If other protocols this should be generasted during the handshake itself and so be of type
+            // SSLHandshakeException.
+            if (!SslProtocols.TLS_v1_3.equals(client.getSession().getProtocol())) {
+                assertInstanceOf(SSLHandshakeException.class, e);
+            }
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
