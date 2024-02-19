@@ -533,10 +533,12 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return false;
         }
 
+        byte[] value = this.value;
         if (string instanceof AsciiString) {
             AsciiString rhs = (AsciiString) string;
+            byte[] rhsValue = rhs.value;
             for (int i = arrayOffset(), j = rhs.arrayOffset(), end = i + length(); i < end; ++i, ++j) {
-                if (!equalsIgnoreCase(value[i], rhs.value[j])) {
+                if (!equalsIgnoreCase(value[i], rhsValue[j])) {
                     return false;
                 }
             }
