@@ -1067,7 +1067,7 @@ abstract class DnsResolveContext<T> {
             // .. and we could not find any expected records.
 
             // The following is of questionable benefit, but has been around for a while that
-            // it may be risky to remove.
+            // it may be risky to remove. Reference https://datatracker.ietf.org/doc/html/rfc8020
             // - If we receive NXDOMAIN we know the domain doesn't exist, any other lookup type is meaningless.
             // - If we receive SERVFAIL, and we attempt a CNAME that returns NOERROR with 0 answers, it may lead the
             //   call-site to invalidate previously advertised addresses.
