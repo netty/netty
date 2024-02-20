@@ -533,22 +533,23 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return false;
         }
 
-        byte[] value = this.value;
         if (string instanceof AsciiString) {
-            AsciiString rhs = (AsciiString) string;
-            byte[] rhsValue = rhs.value;
-            if ((offset | rhs.offset) == 0 && length == value.length) {
+            AsciiString other = (AsciiString) string;
+            byte[] value = this.value;
+            if (offset == 0 && other.offset == 0 && length == value.length) {
+                byte[] otherValue = other.value;
                 for (int i = 0; i < value.length; ++i) {
-                    if (!equalsIgnoreCase(value[i], rhsValue[i])) {
+                    if (!equalsIgnoreCase(value[i], otherValue[i])) {
                         return false;
                     }
                 }
                 return true;
             }
-            return misalignedEqualsIgnoreCase(rhs, value, rhsValue);
+            return misalignedEqualsIgnoreCase(other);
         }
 
-        for (int i = arrayOffset(), j = 0, end = length(); j < end; ++i, ++j) {
+        byte[] value = this.value;
+        for (int i = offset, j = 0; j < string.length(); ++i, ++j) {
             if (!equalsIgnoreCase(b2c(value[i]), string.charAt(j))) {
                 return false;
             }
@@ -556,9 +557,11 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
         return true;
     }
 
-    private boolean misalignedEqualsIgnoreCase(AsciiString rhs, byte[] value, byte[] rhsValue) {
-        for (int i = arrayOffset(), j = rhs.arrayOffset(), end = i + length(); i < end; ++i, ++j) {
-            if (!equalsIgnoreCase(value[i], rhsValue[j])) {
+    private boolean misalignedEqualsIgnoreCase(AsciiString other) {
+        byte[] value = this.value;
+        byte[] otherValue = other.value;
+        for (int i = offset, j = other.offset, end = offset + length; i < end; ++i, ++j) {
+            if (!equalsIgnoreCase(value[i], otherValue[j])) {
                 return false;
             }
         }
