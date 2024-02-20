@@ -3734,8 +3734,22 @@ public class DnsNameResolverTest {
     }
 
     @Test
+    public void testCNAMENotTriedOnAddressLookupsWhenDisabled() throws Exception {
+        TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS = false;
+        testFollowUpCNAME(false);
+    }
+
+    @Test
     public void testCNAMEOnlyTriedOnAddressLookups() throws Exception {
         TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS = true;
+        try {
+            testFollowUpCNAME(true);
+        } finally {
+            TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS = false;
+        }
+    }
+
+    private void testFollowUpCNAME(final boolean enabled) throws Exception {
         final AtomicInteger cnameQueries = new AtomicInteger();
 
         TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
@@ -3774,21 +3788,20 @@ public class DnsNameResolverTest {
 
             assertThat(resolver.resolveAll(new DefaultDnsQuestion("lookup-a.netty.io", A)).await().cause(),
                     instanceOf(UnknownHostException.class));
-            assertEquals(1, cnameQueries.getAndSet(0));
+            assertEquals(enabled ? 1 : 0, cnameQueries.getAndSet(0));
 
             assertThat(resolver.resolveAll(new DefaultDnsQuestion("lookup-aaaa.netty.io", AAAA)).await().cause(),
                     instanceOf(UnknownHostException.class));
-            assertEquals(1, cnameQueries.getAndSet(0));
+            assertEquals(enabled ? 1 : 0, cnameQueries.getAndSet(0));
 
             assertThat(resolver.resolveAll("lookup-address.netty.io").await().cause(),
                     instanceOf(UnknownHostException.class));
-            assertEquals(1, cnameQueries.getAndSet(0));
+            assertEquals(enabled ? 1 : 0, cnameQueries.getAndSet(0));
         } finally {
             dnsServer2.stop();
             if (resolver != null) {
                 resolver.close();
             }
-            TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS = false;
         }
     }
 
