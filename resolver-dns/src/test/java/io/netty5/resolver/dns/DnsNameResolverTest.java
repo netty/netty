@@ -117,10 +117,12 @@ import static io.netty5.handler.codec.dns.DnsRecordType.CNAME;
 import static io.netty5.handler.codec.dns.DnsRecordType.NAPTR;
 import static io.netty5.handler.codec.dns.DnsRecordType.SRV;
 import static io.netty5.resolver.dns.DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
+import static io.netty5.resolver.dns.DnsResolveContext.TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS;
 import static io.netty5.resolver.dns.DnsServerAddresses.sequential;
 import static io.netty5.resolver.dns.TestDnsServer.newARecord;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
+
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -3625,8 +3627,22 @@ public class DnsNameResolverTest {
     }
 
     @Test
-    public void testCNAMEOnlyTriedOnAddressLookups() throws Exception {
+    public void testCNAMENotTriedOnAddressLookupsWhenDisabled() throws Exception {
+        TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS = false;
+        testFollowUpCNAME(false);
+    }
 
+    @Test
+    public void testCNAMEOnlyTriedOnAddressLookups() throws Exception {
+        TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS = true;
+        try {
+            testFollowUpCNAME(true);
+        } finally {
+            TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS = false;
+        }
+    }
+
+    private void testFollowUpCNAME(final boolean enabled) throws Exception {
         final AtomicInteger cnameQueries = new AtomicInteger();
 
         TestDnsServer dnsServer2 = new TestDnsServer(new RecordStore() {
@@ -3640,10 +3656,9 @@ public class DnsNameResolverTest {
             }
         });
 
-        dnsServer2.start();
-
         DnsNameResolver resolver = null;
         try {
+            dnsServer2.start();
             resolver = newNonCachedResolver(ResolvedAddressTypes.IPV4_PREFERRED)
                     .maxQueriesPerResolve(4)
                     .searchDomains(Collections.emptyList())
@@ -3667,19 +3682,17 @@ public class DnsNameResolverTest {
                        instanceOf(UnknownHostException.class));
             assertEquals(1, cnameQueries.getAndSet(0));
 
-            assertThat(resolver.resolveAll(
-                    new DefaultDnsQuestion("lookup-a.netty.io", A)).asStage().getCause(),
-                       instanceOf(UnknownHostException.class));
-            assertEquals(1, cnameQueries.getAndSet(0));
-
-            assertThat(resolver.resolveAll(
-                    new DefaultDnsQuestion("lookup-aaaa.netty.io", AAAA)).asStage().getCause(),
+            assertThat(resolver.resolveAll("lookup-address.netty.io").asStage().getCause(),
                     instanceOf(UnknownHostException.class));
-            assertEquals(1, cnameQueries.getAndSet(0));
+            assertEquals(enabled ? 1 : 0, cnameQueries.getAndSet(0));
+
+            assertThat(resolver.resolveAll(new DefaultDnsQuestion("lookup-aaaa.netty.io", AAAA)).asStage().getCause(),
+                    instanceOf(UnknownHostException.class));
+            assertEquals(enabled ? 1 : 0, cnameQueries.getAndSet(0));
 
             assertThat(resolver.resolveAll("lookup-address.netty.io").asStage().getCause(),
-                       instanceOf(UnknownHostException.class));
-            assertEquals(1, cnameQueries.getAndSet(0));
+                    instanceOf(UnknownHostException.class));
+            assertEquals(enabled ? 1 : 0, cnameQueries.getAndSet(0));
         } finally {
             dnsServer2.stop();
             if (resolver != null) {

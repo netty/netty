@@ -38,10 +38,12 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SilentDispose;
 import io.netty5.util.internal.StringUtil;
+import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.ThrowableUtil;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -67,6 +69,18 @@ import static java.util.Objects.requireNonNull;
 
 abstract class DnsResolveContext<T> {
     private static final Logger logger = LoggerFactory.getLogger(DnsResolveContext.class);
+    private static final String PROP_TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS =
+            "io.netty5.resolver.dns.tryCnameOnAddressLookups";
+    static boolean TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS;
+
+    static {
+        TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS =
+                SystemPropertyUtil.getBoolean(PROP_TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS, false);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("-D{}: {}", PROP_TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS, TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS);
+        }
+    }
 
     private static final RuntimeException NXDOMAIN_QUERY_FAILED_EXCEPTION =
             DnsResolveContextException.newStatic("No answer found and NXDOMAIN response code returned",
@@ -655,9 +669,9 @@ abstract class DnsResolveContext<T> {
                 //                ....
                 if (!res.isAuthoritativeAnswer()) {
                     query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
-                            newDnsQueryLifecycleObserver(question), true, promise, null);
+                            newDnsQueryLifecycleObserver(question), true, promise, cause(code));
                 } else {
-                    // Failed with NX cause - distinction between an authoritative NXDOMAIN vs a timeout
+                    // Failed with NX cause - distinction between NXDOMAIN vs a timeout
                     tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question,
                             queryLifecycleObserver, promise, NXDOMAIN_CAUSE_QUERY_FAILED_EXCEPTION);
                 }
@@ -1035,16 +1049,29 @@ abstract class DnsResolveContext<T> {
 
             // .. and we could not find any expected records.
 
-            // If cause != null we know this was caused by a timeout / cancel / transport exception. In this case we
-            // won't try to resolve the CNAME as we only should do this if we could not get the expected records
-            // because they do not exist and the DNS server did probably signal it.
-            if (cause == null && !triedCNAME &&
-                    (question.type() == DnsRecordType.A || question.type() == DnsRecordType.AAAA)) {
-                // As the last resort, try to query CNAME, just in case the name server has it.
-                triedCNAME = true;
+            // The following is of questionable benefit, but has been around for a while that
+            // it may be risky to remove. Reference https://datatracker.ietf.org/doc/html/rfc8020
+            // - If we receive NXDOMAIN we know the domain doesn't exist, any other lookup type is meaningless.
+            // - If we receive SERVFAIL, and we attempt a CNAME that returns NOERROR with 0 answers, it may lead the
+            //   call-site to invalidate previously advertised addresses.
+            // Having said that, there is the case of DNS services that don't respect the protocol either
+            // - An A lookup could result in NXDOMAIN but a CNAME may succeed with answers.
+            // It's an imperfect world. Accept it.
+            // Guarding it with a system property, as an opt-in functionality.
+            if (TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS) {
+                // If cause != null we know this was caused by a timeout / cancel / transport exception. In this case we
+                // won't try to resolve the CNAME as we only should do this if we could not get the expected records
+                // because they do not exist and the DNS server did probably signal it.
+                final boolean isValidResponse =
+                        cause == NXDOMAIN_CAUSE_QUERY_FAILED_EXCEPTION || cause == SERVFAIL_QUERY_FAILED_EXCEPTION;
+                if ((cause == null || isValidResponse) && !triedCNAME &&
+                        (question.type() == DnsRecordType.A || question.type() == DnsRecordType.AAAA)) {
+                    // As the last resort, try to query CNAME, just in case the name server has it.
+                    triedCNAME = true;
 
-                query(hostname, DnsRecordType.CNAME, getNameServers(hostname), true, promise);
-                return;
+                    query(hostname, DnsRecordType.CNAME, getNameServers(hostname), true, promise);
+                    return;
+                }
             }
         } else {
             queryLifecycleObserver.queryCancelled(allowedQueries);
