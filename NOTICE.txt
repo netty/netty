@@ -129,7 +129,7 @@ This product optionally depends on 'zstd-jni', a zstd-jni Java compression
 and decompression library, which can be obtained at:
 
   * LICENSE:
-    * license/LICENSE.zstd-jni.txt (Apache License 2.0)
+    * license/LICENSE.zstd-jni.txt (BSD)
   * HOMEPAGE:
     * https://github.com/luben/zstd-jni
 
