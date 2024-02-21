@@ -3212,13 +3212,6 @@ public class DnsNameResolverTest {
 
     private static void testTruncated0(boolean tcpFallback, final boolean truncatedBecauseOfMtu) throws IOException {
         ServerSocket serverSocket = null;
-        if (tcpFallback) {
-            // If we are configured to use TCP as a fallback also bind a TCP socket
-            serverSocket = new ServerSocket();
-            serverSocket.setReuseAddress(true);
-            serverSocket.bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
-        }
-
         final String host = "somehost.netty.io";
         final String txt = "this is a txt record";
         final AtomicReference<DnsMessage> messageRef = new AtomicReference<DnsMessage>();
@@ -3262,8 +3255,8 @@ public class DnsNameResolverTest {
             };
             builder.channelFactory(channelFactory);
             if (tcpFallback) {
-                dnsServer2.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
-
+                // If we are configured to use TCP as a fallback also bind a TCP socket
+                serverSocket = startDnsServerAndCreateServerSocket(dnsServer2);
                 // If we are configured to use TCP as a fallback also bind a TCP socket
                 builder.socketChannelType(NioSocketChannel.class);
             } else {
@@ -3366,11 +3359,28 @@ public class DnsNameResolverTest {
         testTcpFallbackWhenTimeout(false);
     }
 
-    private void testTcpFallbackWhenTimeout(boolean tcpSuccess) throws IOException {
-        ServerSocket serverSocket = new ServerSocket();
-        serverSocket.setReuseAddress(true);
-        serverSocket.bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
+    private static ServerSocket startDnsServerAndCreateServerSocket(TestDnsServer dns) throws IOException {
+        for (int i = 0;; i++) {
+            ServerSocket serverSocket = new ServerSocket();
+            serverSocket.setReuseAddress(true);
+            serverSocket.bind(new InetSocketAddress(NetUtil.LOCALHOST4, 0));
+            try {
+                dns.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
+                return serverSocket;
+            } catch (IOException e) {
+                serverSocket.close();
+                if (i == 10) {
+                    // We tried 10 times without success
+                    throw new IllegalStateException(
+                            "Unable to bind TestDnsServer and ServerSocket to the same address", e);
+                }
+                // We could not start the DnsServer which is most likely because the localAddress was already used,
+                // let's retry
+            }
+        }
+    }
 
+    private void testTcpFallbackWhenTimeout(boolean tcpSuccess) throws IOException {
         final String host = "somehost.netty.io";
         final String txt = "this is a txt record";
         final AtomicReference<DnsMessage> messageRef = new AtomicReference<DnsMessage>();
@@ -3396,6 +3406,7 @@ public class DnsNameResolverTest {
             }
         };
         DnsNameResolver resolver = null;
+        ServerSocket serverSocket = null;
         try {
             DnsNameResolverBuilder builder = newResolver();
             final DatagramChannel datagramChannel = new NioDatagramChannel();
@@ -3406,7 +3417,7 @@ public class DnsNameResolverTest {
                 }
             };
             builder.channelFactory(channelFactory);
-            dnsServer2.start(null, (InetSocketAddress) serverSocket.getLocalSocketAddress());
+            serverSocket = startDnsServerAndCreateServerSocket(dnsServer2);
             // If we are configured to use TCP as a fallback also bind a TCP socket
             builder.socketChannelType(NioSocketChannel.class, true);
 
