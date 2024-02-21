@@ -279,7 +279,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         boolean success = false;
         try {
             boolean tlsv13Supported = OpenSsl.isTlsv13Supported();
-
+            boolean anyTlsv13Ciphers = false;
             try {
                 int protocolOpts = SSL.SSL_PROTOCOL_SSLV3 | SSL.SSL_PROTOCOL_TLSV1 |
                         SSL.SSL_PROTOCOL_TLSV1_1 | SSL.SSL_PROTOCOL_TLSV1_2;
@@ -311,8 +311,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     SSLContext.setCipherSuite(ctx, cipherBuilder.toString(), false);
                     if (tlsv13Supported) {
                         // Set TLSv1.3 ciphers.
-                        SSLContext.setCipherSuite(ctx,
-                                OpenSsl.checkTls13Ciphers(logger, cipherTLSv13Builder.toString()), true);
+                        String tlsv13Ciphers = OpenSsl.checkTls13Ciphers(logger, cipherTLSv13Builder.toString());
+                        SSLContext.setCipherSuite(ctx, tlsv13Ciphers, true);
+                        if (!tlsv13Ciphers.isEmpty()) {
+                            anyTlsv13Ciphers = true;
+                        }
                     }
                 }
             } catch (SSLException e) {
@@ -347,9 +350,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                         | SSL.SSL_OP_NO_TLSv1_1 | SSL.SSL_OP_NO_TLSv1_2;
             }
 
-            if (!tlsv13Supported) {
+            if (!tlsv13Supported || !anyTlsv13Ciphers) {
                 // Explicit disable TLSv1.3
-                // See https://github.com/netty/netty/issues/12968
+                // See:
+                //  - https://github.com/netty/netty/issues/12968
+                //  - https://github.com/netty/netty/issues/13810
                 options |= SSL.SSL_OP_NO_TLSv1_3;
             }
 
