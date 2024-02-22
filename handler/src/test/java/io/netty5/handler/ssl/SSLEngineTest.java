@@ -4283,6 +4283,7 @@ public abstract class SSLEngineTest {
             serverEngine = wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
 
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
+            fail();
         } catch (SSLHandshakeException expected) {
             // Expected
         } finally {
