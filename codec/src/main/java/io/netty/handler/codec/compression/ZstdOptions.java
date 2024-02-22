@@ -55,7 +55,8 @@ public class ZstdOptions implements CompressionOptions {
             throw new IllegalStateException("zstd-jni is not available", Zstd.cause());
         }
 
-        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, MIN_COMPRESSION_LEVEL, MAX_COMPRESSION_LEVEL, "compressionLevel");
+        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel,
+                MIN_COMPRESSION_LEVEL, MAX_COMPRESSION_LEVEL, "compressionLevel");
         this.blockSize = ObjectUtil.checkPositive(blockSize, "blockSize");
         this.maxEncodeSize = ObjectUtil.checkPositive(maxEncodeSize, "maxEncodeSize");
     }
