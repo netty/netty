@@ -22,7 +22,7 @@ final class ZstdConstants {
     /**
      * Default compression level
      */
-    static final int DEFAULT_COMPRESSION_LEVEL = 3;
+    static final int DEFAULT_COMPRESSION_LEVEL = Zstd.defaultCompressionLevel();
 
     /**
      * Min compression level
