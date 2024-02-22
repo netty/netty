@@ -153,6 +153,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final Certificate[] keyCertChain;
     final ClientAuth clientAuth;
     final String[] protocols;
+    final boolean hasTLSv13Cipher;
+
     final boolean enableOcsp;
     final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
     final ReadWriteLock ctxLock = new ReentrantReadWriteLock();
@@ -350,14 +352,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                         | SSL.SSL_OP_NO_TLSv1_1 | SSL.SSL_OP_NO_TLSv1_2;
             }
 
-            if (!tlsv13Supported || !anyTlsv13Ciphers) {
+            if (!tlsv13Supported) {
                 // Explicit disable TLSv1.3
                 // See:
                 //  - https://github.com/netty/netty/issues/12968
-                //  - https://github.com/netty/netty/issues/13810
                 options |= SSL.SSL_OP_NO_TLSv1_3;
             }
 
+            hasTLSv13Cipher = anyTlsv13Ciphers;
             SSLContext.setOptions(ctx, options);
 
             // We need to enable SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER as the memory address may change between

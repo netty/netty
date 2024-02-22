@@ -141,8 +141,8 @@ public final class OpenSsl {
         }
 
         UNAVAILABILITY_CAUSE = cause;
-        CLIENT_DEFAULT_PROTOCOLS = protocols("jdk.tls.client.protocols");
-        SERVER_DEFAULT_PROTOCOLS = protocols("jdk.tls.server.protocols");
+        CLIENT_DEFAULT_PROTOCOLS = defaultProtocols("jdk.tls.client.protocols");
+        SERVER_DEFAULT_PROTOCOLS = defaultProtocols("jdk.tls.server.protocols");
 
         if (cause == null) {
             logger.debug("netty-tcnative using native library: {}", SSL.versionString());
@@ -714,24 +714,24 @@ public final class OpenSsl {
         return false;
     }
 
-    private static Set<String> protocols(String property) {
+    private static Set<String> defaultProtocols(String property) {
         String protocolsString = SystemPropertyUtil.get(property, null);
+        Set<String> protocols = new HashSet<String>();
         if (protocolsString != null) {
-            Set<String> protocols = new HashSet<String>();
             for (String proto : protocolsString.split(",")) {
                 String p = proto.trim();
                 protocols.add(p);
             }
-            return protocols;
+        } else {
+            protocols.add(SslProtocols.TLS_v1_2);
+            protocols.add(SslProtocols.TLS_v1_3);
         }
-        return null;
+        return protocols;
     }
 
     static String[] defaultProtocols(boolean isClient) {
         final Collection<String> defaultProtocols = isClient ? CLIENT_DEFAULT_PROTOCOLS : SERVER_DEFAULT_PROTOCOLS;
-        if (defaultProtocols == null) {
-            return null;
-        }
+        assert defaultProtocols != null;
         List<String> protocols = new ArrayList<String>(defaultProtocols.size());
         for (String proto : defaultProtocols) {
             if (SUPPORTED_PROTOCOLS_SET.contains(proto)) {

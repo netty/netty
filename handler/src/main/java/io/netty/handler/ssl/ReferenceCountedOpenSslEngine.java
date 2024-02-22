@@ -45,7 +45,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -73,7 +72,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullArrayParam;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static java.lang.Integer.MAX_VALUE;
-import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.FINISHED;
 import static javax.net.ssl.SSLEngineResult.HandshakeStatus.NEED_TASK;
@@ -158,7 +156,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private volatile boolean destroyed;
     private volatile String applicationProtocol;
     private volatile boolean needTask;
-    private String[] explicitlyEnabledProtocols;
+    private boolean hasTLSv13Cipher;
     private boolean sessionSet;
 
     // Reference Counting
@@ -183,6 +181,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             parentContext.release();
         }
     };
+
+    private final Set<String> enabledProtocols = new LinkedHashSet<String>();
 
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
 
@@ -334,11 +334,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // needed JNI methods.
                 setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
 
-                if (context.protocols != null) {
-                    setEnabledProtocols0(context.protocols, true);
-                } else {
-                    this.explicitlyEnabledProtocols = getEnabledProtocols();
-                }
+                assert context.protocols != null;
+                this.hasTLSv13Cipher = context.hasTLSv13Cipher;
+
+                setEnabledProtocols(context.protocols);
 
                 // Use SNI if peerHost was specified and a valid hostname
                 // See https://github.com/netty/netty/issues/4746
@@ -1690,6 +1689,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             throw new IllegalArgumentException("TLSv1.3 is not supported by this java version.");
         }
         synchronized (this) {
+            hasTLSv13Cipher = !cipherSuiteSpecTLSv13.isEmpty();
             if (!isDestroyed()) {
                 try {
                     // Set non TLSv1.3 ciphers.
@@ -1701,8 +1701,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                     // We also need to update the enabled protocols to ensure we disable the protocol if there are
                     // no compatible ciphers left.
-                    Set<String> protocols = new HashSet<String>(explicitlyEnabledProtocols.length);
-                    Collections.addAll(protocols, explicitlyEnabledProtocols);
+                    Set<String> protocols = new HashSet<String>(enabledProtocols);
 
                     // We have no ciphers that are compatible with none-TLSv1.3, let us explicit disable all other
                     // protocols.
@@ -1720,7 +1719,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                     // Update the protocols but not cache the value. We only cache when we call it from the user
                     // code or when we construct the engine.
-                    setEnabledProtocols0(protocols.toArray(EMPTY_STRINGS), false);
+                    setEnabledProtocols0(protocols.toArray(EMPTY_STRINGS), !hasTLSv13Cipher);
                 } catch (Exception e) {
                     throw new IllegalStateException("failed to enable cipher suites: " + cipherSuiteSpec, e);
                 }
@@ -1737,37 +1736,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getEnabledProtocols() {
-        List<String> enabled = new ArrayList<String>(6);
-        // Seems like there is no way to explicit disable SSLv2Hello in openssl so it is always enabled
-        enabled.add(SslProtocols.SSL_v2_HELLO);
-
-        int opts;
-        synchronized (this) {
-            if (!isDestroyed()) {
-                opts = SSL.getOptions(ssl);
-            } else {
-                return enabled.toArray(EMPTY_STRINGS);
-            }
-        }
-        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1, SslProtocols.TLS_v1)) {
-            enabled.add(SslProtocols.TLS_v1);
-        }
-        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_1, SslProtocols.TLS_v1_1)) {
-            enabled.add(SslProtocols.TLS_v1_1);
-        }
-        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_2, SslProtocols.TLS_v1_2)) {
-            enabled.add(SslProtocols.TLS_v1_2);
-        }
-        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_TLSv1_3, SslProtocols.TLS_v1_3)) {
-            enabled.add(SslProtocols.TLS_v1_3);
-        }
-        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv2, SslProtocols.SSL_v2)) {
-            enabled.add(SslProtocols.SSL_v2);
-        }
-        if (isProtocolEnabled(opts, SSL.SSL_OP_NO_SSLv3, SslProtocols.SSL_v3)) {
-            enabled.add(SslProtocols.SSL_v3);
-        }
-        return enabled.toArray(EMPTY_STRINGS);
+        return enabledProtocols.toArray(EMPTY_STRINGS);
     }
 
     private static boolean isProtocolEnabled(int opts, int disableMask, String protocolString) {
@@ -1787,12 +1756,21 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      */
     @Override
     public final void setEnabledProtocols(String[] protocols) {
-        setEnabledProtocols0(protocols, true);
+        checkNotNullWithIAE(protocols, "protocols");
+        synchronized (this) {
+            enabledProtocols.clear();
+            // Seems like there is no way to explicit disable SSLv2Hello in openssl, so it is always enabled
+            enabledProtocols.add(SslProtocols.SSL_v2_HELLO);
+
+            Collections.addAll(enabledProtocols, protocols);
+
+            setEnabledProtocols0(protocols, !hasTLSv13Cipher);
+        }
     }
 
-    private void setEnabledProtocols0(String[] protocols, boolean cache) {
+    private void setEnabledProtocols0(String[] protocols, boolean explicitDisableTLSv13) {
+        assert Thread.holdsLock(this);
         // This is correct from the API docs
-        checkNotNullWithIAE(protocols, "protocols");
         int minProtocolIndex = OPENSSL_OP_NO_PROTOCOLS.length;
         int maxProtocolIndex = 0;
         for (String p: protocols) {
@@ -1834,7 +1812,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2) {
                     maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2;
                 }
-            } else if (p.equals(SslProtocols.TLS_v1_3)) {
+            } else if (!explicitDisableTLSv13 && p.equals(SslProtocols.TLS_v1_3)) {
                 if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3) {
                     minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3;
                 }
@@ -1843,29 +1821,24 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
             }
         }
-        synchronized (this) {
-            if (cache) {
-                this.explicitlyEnabledProtocols = protocols;
-            }
-            if (!isDestroyed()) {
-                // Clear out options which disable protocols
-                SSL.clearOptions(ssl, SSL.SSL_OP_NO_SSLv2 | SSL.SSL_OP_NO_SSLv3 | SSL.SSL_OP_NO_TLSv1 |
-                                      SSL.SSL_OP_NO_TLSv1_1 | SSL.SSL_OP_NO_TLSv1_2 | SSL.SSL_OP_NO_TLSv1_3);
+        if (!isDestroyed()) {
+            // Clear out options which disable protocols
+            SSL.clearOptions(ssl, SSL.SSL_OP_NO_SSLv2 | SSL.SSL_OP_NO_SSLv3 | SSL.SSL_OP_NO_TLSv1 |
+                    SSL.SSL_OP_NO_TLSv1_1 | SSL.SSL_OP_NO_TLSv1_2 | SSL.SSL_OP_NO_TLSv1_3);
 
-                int opts = 0;
-                for (int i = 0; i < minProtocolIndex; ++i) {
-                    opts |= OPENSSL_OP_NO_PROTOCOLS[i];
-                }
-                assert maxProtocolIndex != MAX_VALUE;
-                for (int i = maxProtocolIndex + 1; i < OPENSSL_OP_NO_PROTOCOLS.length; ++i) {
-                    opts |= OPENSSL_OP_NO_PROTOCOLS[i];
-                }
-
-                // Disable protocols we do not want
-                SSL.setOptions(ssl, opts);
-            } else {
-                throw new IllegalStateException("failed to enable protocols: " + Arrays.asList(protocols));
+            int opts = 0;
+            for (int i = 0; i < minProtocolIndex; ++i) {
+                opts |= OPENSSL_OP_NO_PROTOCOLS[i];
             }
+            assert maxProtocolIndex != MAX_VALUE;
+            for (int i = maxProtocolIndex + 1; i < OPENSSL_OP_NO_PROTOCOLS.length; ++i) {
+                opts |= OPENSSL_OP_NO_PROTOCOLS[i];
+            }
+
+            // Disable protocols we do not want
+            SSL.setOptions(ssl, opts);
+        } else {
+            throw new IllegalStateException("failed to enable protocols: " + Arrays.asList(protocols));
         }
     }
 
