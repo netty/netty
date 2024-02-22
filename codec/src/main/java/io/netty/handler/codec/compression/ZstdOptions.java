@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.util.internal.ObjectUtil;
 
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_COMPRESSION_LEVEL;
+import static io.netty.handler.codec.compression.ZstdConstants.MIN_COMPRESSION_LEVEL;
 import static io.netty.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_LEVEL;
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.ZstdConstants.MAX_BLOCK_SIZE;
@@ -54,7 +55,8 @@ public class ZstdOptions implements CompressionOptions {
             throw new IllegalStateException("zstd-jni is not available", Zstd.cause());
         }
 
-        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, MAX_COMPRESSION_LEVEL, "compressionLevel");
+        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel,
+                MIN_COMPRESSION_LEVEL, MAX_COMPRESSION_LEVEL, "compressionLevel");
         this.blockSize = ObjectUtil.checkPositive(blockSize, "blockSize");
         this.maxEncodeSize = ObjectUtil.checkPositive(maxEncodeSize, "maxEncodeSize");
     }
