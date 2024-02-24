@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.http2;
 
+import java.io.Closeable;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.UnstableApi;
@@ -24,7 +26,9 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 @UnstableApi
-public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2HeadersEncoder.Configuration {
+public class DefaultHttp2HeadersEncoder implements
+    Http2HeadersEncoder, Http2HeadersEncoder.Configuration, Closeable {
+
     private final HpackEncoder hpackEncoder;
     private final SensitivityDetector sensitivityDetector;
     private ByteBuf tableSizeChangeOutput;
@@ -105,5 +109,16 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
     @Override
     public Configuration configuration() {
         return this;
+    }
+
+    /**
+     * Close the encoder and release all its associated data.
+     */
+    @Override
+    public void close() {
+        if (tableSizeChangeOutput != null) {
+            tableSizeChangeOutput.release();
+            tableSizeChangeOutput = null;
+        }
     }
 }

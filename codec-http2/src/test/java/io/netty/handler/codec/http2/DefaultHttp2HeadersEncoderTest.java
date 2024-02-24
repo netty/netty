@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.AsciiString;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -37,6 +38,11 @@ public class DefaultHttp2HeadersEncoderTest {
     @BeforeEach
     public void setup() {
         encoder = new DefaultHttp2HeadersEncoder(Http2HeadersEncoder.NEVER_SENSITIVE, newTestEncoder());
+    }
+
+    @AfterEach
+    public void tearDown() {
+        encoder.close();
     }
 
     @Test
@@ -58,7 +64,12 @@ public class DefaultHttp2HeadersEncoderTest {
         assertThrows(StreamException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                encoder.encodeHeaders(3 /* randomly chosen */, headers, Unpooled.buffer());
+                ByteBuf buf = Unpooled.buffer();
+                try {
+                    encoder.encodeHeaders(3 /* randomly chosen */, headers, buf);
+                } finally {
+                    buf.release();
+                }
             }
         });
     }
