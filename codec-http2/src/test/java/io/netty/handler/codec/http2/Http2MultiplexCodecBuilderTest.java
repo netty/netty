@@ -118,7 +118,7 @@ public class Http2MultiplexCodecBuilderTest {
                     protected void initChannel(Channel ch) throws Exception {
                         fail("Should not be called for outbound streams");
                     }
-                }).build());
+                }).validateHeaders(false).build());
         clientChannel = cb.connect(serverAddress).sync().channel();
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }

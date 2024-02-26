@@ -79,6 +79,7 @@ import static org.mockito.Mockito.when;
  */
 public class DefaultHttp2ConnectionEncoderTest {
     private static final int STREAM_ID = 2;
+    private static final int CLIENT_STREAM_ID = 3;
     private static final int PUSH_STREAM_ID = 4;
 
     @Mock
@@ -229,7 +230,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         connection = new DefaultHttp2Connection(true);
         connection.remote().flowController(remoteFlow);
 
-        encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, false);
         encoder.lifecycleManager(lifecycleManager);
     }
 
@@ -331,6 +332,87 @@ public class DefaultHttp2ConnectionEncoderTest {
         // The promises won't be set since there are no listeners.
         assertFalse(promise1.isSuccess());
         assertFalse(promise2.isSuccess());
+    }
+
+    @Test
+    public void writeEmptyHeadersWithValidationShouldFail() throws Exception {
+        // To verify header validation, re-create encoder with validation enabled
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, true);
+        encoder.lifecycleManager(lifecycleManager);
+        createStream(STREAM_ID, false);
+        ChannelPromise promise = newPromise();
+        encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertThat(promise.cause(), instanceOf(IllegalArgumentException.class));
+    }
+
+    @Test
+    public void writeServerResponseHeadersWithValidation() throws Exception {
+        // To verify header validation, re-create encoder with validation enabled
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, true);
+        encoder.lifecycleManager(lifecycleManager);
+        writeAllFlowControlledFrames();
+        createStream(STREAM_ID, false);
+        ChannelPromise promise = newPromise();
+        Http2Headers headers = dummyResponseHeaders();
+        encoder.writeHeaders(ctx, STREAM_ID, headers, 0, true, promise);
+        assertTrue(promise.isDone());
+        assertTrue(promise.isSuccess());
+        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(headers),
+                eq(0), eq(true), eq(promise));
+    }
+
+    @Test
+    public void writeServerRequestHeadersWithValidationShouldFail() throws Exception {
+        // To verify header validation, re-create encoder with validation enabled
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, true);
+        encoder.lifecycleManager(lifecycleManager);
+        writeAllFlowControlledFrames();
+        createStream(STREAM_ID, false);
+        ChannelPromise promise = newPromise();
+        Http2Headers headers = dummyRequestHeaders();
+        encoder.writeHeaders(ctx, STREAM_ID, headers, 0, true, promise);
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertThat(promise.cause(), instanceOf(IllegalArgumentException.class));
+    }
+
+    @Test
+    public void writeClientRequestHeadersWithValidation() throws Exception {
+        // To mimic a client connection, recreate connection object for client
+        connection = new DefaultHttp2Connection(false);
+        connection.remote().flowController(remoteFlow);
+        // To verify header validation, re-create encoder with validation enabled
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, true);
+        encoder.lifecycleManager(lifecycleManager);
+        writeAllFlowControlledFrames();
+        createStream(CLIENT_STREAM_ID, false);
+        ChannelPromise promise = newPromise();
+        Http2Headers headers = dummyRequestHeaders();
+        encoder.writeHeaders(ctx, CLIENT_STREAM_ID, headers, 0, true, promise);
+        assertTrue(promise.isDone());
+        assertTrue(promise.isSuccess());
+        verify(writer).writeHeaders(eq(ctx), eq(CLIENT_STREAM_ID), eq(headers),
+                eq(0), eq(true), eq(promise));
+    }
+
+    @Test
+    public void writeClientResponseHeadersWithValidationShouldFail() throws Exception {
+        // To mimic a client connection, recreate connection object for client
+        connection = new DefaultHttp2Connection(false);
+        connection.remote().flowController(remoteFlow);
+        // To verify header validation, re-create encoder with validation enabled
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, true);
+        encoder.lifecycleManager(lifecycleManager);
+        writeAllFlowControlledFrames();
+        createStream(CLIENT_STREAM_ID, false);
+        ChannelPromise promise = newPromise();
+        Http2Headers headers = dummyResponseHeaders();
+        encoder.writeHeaders(ctx, CLIENT_STREAM_ID, headers, 0, true, promise);
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
+        assertThat(promise.cause(), instanceOf(IllegalArgumentException.class));
     }
 
     @Test
@@ -953,5 +1035,14 @@ public class DefaultHttp2ConnectionEncoderTest {
     private static ByteBuf dummyData() {
         // The buffer is purposely 8 bytes so it will even work for a ping frame.
         return wrappedBuffer("abcdefgh".getBytes(UTF_8));
+    }
+
+    private static Http2Headers dummyResponseHeaders() {
+        return new DefaultHttp2Headers().status("200");
+    }
+
+    private static Http2Headers dummyRequestHeaders() {
+        return new DefaultHttp2Headers().scheme("https")
+            .method("GET").path("/foo.txt");
     }
 }

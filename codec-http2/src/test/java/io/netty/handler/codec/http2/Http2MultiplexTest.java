@@ -706,10 +706,11 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertTrue(inboundHandler.isChannelActive());
 
         // Write to the child channel
-        Http2Headers headers = new DefaultHttp2Headers().scheme("https").method("GET").path("/foo.txt");
+        Http2Headers headers = new DefaultHttp2Headers().status("200");
+        // Write to initialize child channel
         childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
-
         // Read from the child channel
+        headers = new DefaultHttp2Headers().scheme("https").method("GET").path("/foo.txt");
         frameInboundWriter.writeInboundHeaders(childChannel.stream().id(), headers, 0, false);
 
         Http2HeadersFrame headersFrame = inboundHandler.readInbound();

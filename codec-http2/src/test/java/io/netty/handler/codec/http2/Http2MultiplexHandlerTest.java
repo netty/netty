@@ -33,7 +33,7 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
 
     @Override
     protected Http2FrameCodec newCodec(TestChannelInitializer childChannelInitializer, Http2FrameWriter frameWriter) {
-        return new Http2FrameCodecBuilder(true).frameWriter(frameWriter).build();
+        return new Http2FrameCodecBuilder(true).frameWriter(frameWriter).validateHeaders(false).build();
     }
 
     @Override
