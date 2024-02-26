@@ -213,7 +213,8 @@ public class Http2FrameCodecBuilder extends
                 frameWriter = new Http2OutboundFrameLogger(frameWriter, frameLogger());
                 frameReader = new Http2InboundFrameLogger(frameReader, frameLogger());
             }
-            Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
+            Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection,
+                    frameWriter, isValidateHeaders());
             if (encoderEnforceMaxConcurrentStreams()) {
                 encoder = new StreamBufferingEncoder(encoder);
             }

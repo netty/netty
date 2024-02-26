@@ -548,7 +548,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
             writer = new Http2OutboundFrameLogger(writer, frameLogger);
         }
 
-        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
+        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, writer, isValidateHeaders());
         boolean encoderEnforceMaxConcurrentStreams = encoderEnforceMaxConcurrentStreams();
 
         if (maxQueuedControlFrames != 0) {

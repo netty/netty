@@ -48,10 +48,18 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     // This initial capacity is plenty for SETTINGS traffic.
     private final Queue<Http2Settings> outstandingLocalSettingsQueue = new ArrayDeque<Http2Settings>(4);
     private Queue<Http2Settings> outstandingRemoteSettingsQueue;
+    private final boolean validateHeaders;
 
+    @Deprecated
     public DefaultHttp2ConnectionEncoder(Http2Connection connection, Http2FrameWriter frameWriter) {
+        this(connection, frameWriter, true);
+    }
+
+    public DefaultHttp2ConnectionEncoder(Http2Connection connection,
+            Http2FrameWriter frameWriter, boolean validateHeaders) {
         this.connection = checkNotNull(connection, "connection");
         this.frameWriter = checkNotNull(frameWriter, "frameWriter");
+        this.validateHeaders = validateHeaders;
         if (connection.remote().flowController() == null) {
             connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         }
@@ -166,22 +174,14 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
      * @return {@code true} if validation completed successfully, {@code false} if not
      */
     private boolean validatePseudoHeaders(Http2Headers headers) {
-        System.out.println("We got here!");
-        new Exception().printStackTrace();
         boolean isResponseHeaders = connection.isServer();
+        if (headers.names().isEmpty()) {
+            return false;
+        }
         for (CharSequence name : headers.names()) {
             if (Http2Headers.PseudoHeaderName.isPseudoHeader(name) &&
                 ((isResponseHeaders && Http2Headers.PseudoHeaderName.getPseudoHeader(name).isRequestOnly()) ||
                 (!isResponseHeaders && !Http2Headers.PseudoHeaderName.getPseudoHeader(name).isRequestOnly()))) {
-                System.out.println("Returning false because is response? " + isResponseHeaders);
-                System.out.println("Name of header: " + name);
-                System.out.println("Is PseudoHeader? " + Http2Headers.PseudoHeaderName.isPseudoHeader(name));
-                if (Http2Headers.PseudoHeaderName.getPseudoHeader(name) != null) {
-                    System.out.println("Is PseudoHeader request only? "
-                    + Http2Headers.PseudoHeaderName.getPseudoHeader(name).isRequestOnly());
-                } else {
-                    System.out.println("Found null PseudoHeader!? " + name);
-                }
                 return false;
             }
         }
@@ -249,7 +249,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                 }
             }
 
-            if (!validatePseudoHeaders(headers)) {
+            if (validateHeaders && !validatePseudoHeaders(headers)) {
                 promise.tryFailure(new IllegalArgumentException("Invalid Pseudo-Header found in response for: " +
                                                                 streamId));
                 return promise;
