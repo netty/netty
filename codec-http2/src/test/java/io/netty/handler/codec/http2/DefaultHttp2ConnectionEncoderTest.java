@@ -230,7 +230,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         connection = new DefaultHttp2Connection(true);
         connection.remote().flowController(remoteFlow);
 
-        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, false);
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
         encoder.lifecycleManager(lifecycleManager);
     }
 
@@ -335,23 +335,19 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     @Test
-    public void writeEmptyHeadersWithValidationShouldFail() throws Exception {
-        // To verify header validation, re-create encoder with validation enabled
-        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, true);
-        encoder.lifecycleManager(lifecycleManager);
+    public void writeEmptyHeadersWithValidation() throws Exception {
+        writeAllFlowControlledFrames();
         createStream(STREAM_ID, false);
         ChannelPromise promise = newPromise();
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);
         assertTrue(promise.isDone());
-        assertFalse(promise.isSuccess());
-        assertThat(promise.cause(), instanceOf(IllegalArgumentException.class));
+        assertTrue(promise.isSuccess());
+        verify(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE),
+                eq(0), eq(true), eq(promise));
     }
 
     @Test
     public void writeServerResponseHeadersWithValidation() throws Exception {
-        // To verify header validation, re-create encoder with validation enabled
-        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, true);
-        encoder.lifecycleManager(lifecycleManager);
         writeAllFlowControlledFrames();
         createStream(STREAM_ID, false);
         ChannelPromise promise = newPromise();
@@ -365,9 +361,6 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void writeServerRequestHeadersWithValidationShouldFail() throws Exception {
-        // To verify header validation, re-create encoder with validation enabled
-        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, true);
-        encoder.lifecycleManager(lifecycleManager);
         writeAllFlowControlledFrames();
         createStream(STREAM_ID, false);
         ChannelPromise promise = newPromise();
@@ -380,12 +373,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void writeClientRequestHeadersWithValidation() throws Exception {
-        // To mimic a client connection, recreate connection object for client
-        connection = new DefaultHttp2Connection(false);
-        connection.remote().flowController(remoteFlow);
-        // To verify header validation, re-create encoder with validation enabled
-        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, true);
-        encoder.lifecycleManager(lifecycleManager);
+        createClientConnection();
         writeAllFlowControlledFrames();
         createStream(CLIENT_STREAM_ID, false);
         ChannelPromise promise = newPromise();
@@ -399,12 +387,7 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     @Test
     public void writeClientResponseHeadersWithValidationShouldFail() throws Exception {
-        // To mimic a client connection, recreate connection object for client
-        connection = new DefaultHttp2Connection(false);
-        connection.remote().flowController(remoteFlow);
-        // To verify header validation, re-create encoder with validation enabled
-        encoder = new DefaultHttp2ConnectionEncoder(connection, writer, true);
-        encoder.lifecycleManager(lifecycleManager);
+        createClientConnection();
         writeAllFlowControlledFrames();
         createStream(CLIENT_STREAM_ID, false);
         ChannelPromise promise = newPromise();
@@ -1030,6 +1013,15 @@ public class DefaultHttp2ConnectionEncoderTest {
 
     private ChannelFuture newSucceededFuture() {
         return newPromise().setSuccess();
+    }
+
+    private void createClientConnection() {
+        // To mimic a client connection, recreate connection object for client
+        connection = new DefaultHttp2Connection(false);
+        connection.remote().flowController(remoteFlow);
+        // Re-create encoder with the client connection
+        encoder = new DefaultHttp2ConnectionEncoder(connection, writer);
+        encoder.lifecycleManager(lifecycleManager);
     }
 
     private static ByteBuf dummyData() {

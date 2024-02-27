@@ -166,14 +166,13 @@ public class Http2MultiplexTransportTest {
     @Test
     @Timeout(value = 10000, unit = MILLISECONDS)
     public void asyncSettingsAckWithMultiplexCodec() throws InterruptedException {
-        asyncSettingsAck0(new Http2MultiplexCodecBuilder(true, DISCARD_HANDLER)
-            .validateHeaders(false).build(), null);
+        asyncSettingsAck0(new Http2MultiplexCodecBuilder(true, DISCARD_HANDLER).build(), null);
     }
 
     @Test
     @Timeout(value = 10000, unit = MILLISECONDS)
     public void asyncSettingsAckWithMultiplexHandler() throws InterruptedException {
-        asyncSettingsAck0(new Http2FrameCodecBuilder(true).validateHeaders(false).build(),
+        asyncSettingsAck0(new Http2FrameCodecBuilder(true).build(),
                 new Http2MultiplexHandler(DISCARD_HANDLER));
     }
 
@@ -221,8 +220,8 @@ public class Http2MultiplexTransportTest {
         bs.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(Http2MultiplexCodecBuilder.forClient(DISCARD_HANDLER)
-                        .validateHeaders(false).autoAckSettingsFrame(false).build());
+                ch.pipeline().addLast(Http2MultiplexCodecBuilder
+                        .forClient(DISCARD_HANDLER).autoAckSettingsFrame(false).build());
                 ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -267,7 +266,7 @@ public class Http2MultiplexTransportTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new Http2FrameCodecBuilder(true).validateHeaders(false).build());
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInboundHandlerAdapter() {
                         @Override
                         public void channelRead(final ChannelHandlerContext ctx, Object msg) {
@@ -308,7 +307,7 @@ public class Http2MultiplexTransportTest {
             bs.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).validateHeaders(false).build());
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });
@@ -407,7 +406,7 @@ public class Http2MultiplexTransportTest {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(sslCtx.newHandler(ch.alloc()));
-                    ch.pipeline().addLast(new Http2FrameCodecBuilder(true).validateHeaders(false).build());
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });
@@ -440,7 +439,7 @@ public class Http2MultiplexTransportTest {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(clientCtx.newHandler(ch.alloc()));
-                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).validateHeaders(false).build());
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
@@ -549,7 +548,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new ApplicationProtocolNegotiationHandler(ApplicationProtocolNames.HTTP_1_1) {
                         @Override
                         protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
-                            ctx.pipeline().addLast(new Http2FrameCodecBuilder(true).validateHeaders(false).build());
+                            ctx.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
                             ctx.pipeline().addLast(new Http2MultiplexHandler(new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void channelRead(final ChannelHandlerContext ctx, Object msg) {
@@ -594,7 +593,7 @@ public class Http2MultiplexTransportTest {
                 @Override
                 protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(clientCtx.newHandler(ch.alloc()));
-                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).validateHeaders(false).build());
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
@@ -681,7 +680,7 @@ public class Http2MultiplexTransportTest {
                 protected void initChannel(Channel ch) {
                     // using a short sndbuf size will trigger writability events
                     ch.config().setOption(ChannelOption.SO_SNDBUF, 1);
-                    ch.pipeline().addLast(new Http2FrameCodecBuilder(true).validateHeaders(false).build());
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) {
@@ -701,7 +700,7 @@ public class Http2MultiplexTransportTest {
             bs.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).validateHeaders(false).build());
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });

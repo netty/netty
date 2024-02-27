@@ -25,6 +25,8 @@ import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregato
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
+import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.Queue;
 
 import static io.netty.handler.codec.http.HttpStatusClass.INFORMATIONAL;
@@ -170,19 +172,34 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
     /**
      * According to RFC 9113, "Pseudo-header fields defined for requests MUST NOT appear in responses;
-     * pseudo-header fields defined for responses MUST NOT appear in requests."
+     * pseudo-header fields defined for responses MUST NOT appear in requests." In the same section it also state
+     * "Endpoints MUST NOT generate pseudo-header fields other than those defined in this document"
      * @return {@code true} if validation completed successfully, {@code false} if not
      */
     private boolean validatePseudoHeaders(Http2Headers headers) {
-        boolean isResponseHeaders = connection.isServer();
+        // No pseudo headers to verify
         if (headers.names().isEmpty()) {
-            return false;
+            return true;
         }
-        for (CharSequence name : headers.names()) {
-            if (Http2Headers.PseudoHeaderName.isPseudoHeader(name) &&
-                ((isResponseHeaders && Http2Headers.PseudoHeaderName.getPseudoHeader(name).isRequestOnly()) ||
-                (!isResponseHeaders && !Http2Headers.PseudoHeaderName.getPseudoHeader(name).isRequestOnly()))) {
-                return false;
+        boolean isResponseHeaders = connection.isServer();
+        Iterator<Entry<CharSequence, CharSequence>> iterator = headers.iterator();
+        while (iterator.hasNext()) {
+            CharSequence name = iterator.next().getKey();
+            if (Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat(name)) {
+                Http2Headers.PseudoHeaderName pseudoHeader = Http2Headers.PseudoHeaderName.getPseudoHeader(name);
+                if (pseudoHeader == null) {
+                    // Found pseudo header not documented by HTTP2
+                    return false;
+                }
+                if ((isResponseHeaders && pseudoHeader.isRequestOnly()) ||
+                    (!isResponseHeaders && !pseudoHeader.isRequestOnly())) {
+                        // Found pseudo header where it should not have been
+                        return false;
+                }
+            } else {
+                // Found first header without pseudo header prefix. No need to continue since
+                // all pseudo header should be in the front of the iterator
+                break;
             }
         }
         return true;

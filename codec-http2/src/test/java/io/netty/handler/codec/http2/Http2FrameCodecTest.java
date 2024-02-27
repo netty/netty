@@ -103,7 +103,7 @@ public class Http2FrameCodecTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        setUp(Http2FrameCodecBuilder.forServer().validateHeaders(false), new Http2Settings());
+        setUp(Http2FrameCodecBuilder.forServer(), new Http2Settings());
     }
 
     @AfterEach
@@ -610,7 +610,7 @@ public class Http2FrameCodecTest {
 
     @Test
     public void newOutboundStreamsShouldBeBuffered() throws Exception {
-        setUp(Http2FrameCodecBuilder.forServer().encoderEnforceMaxConcurrentStreams(true).validateHeaders(false),
+        setUp(Http2FrameCodecBuilder.forServer().encoderEnforceMaxConcurrentStreams(true),
               new Http2Settings().maxConcurrentStreams(1));
 
         Http2FrameStream stream1 = frameCodec.newStream();
@@ -640,7 +640,7 @@ public class Http2FrameCodecTest {
     @Test
     public void multipleNewOutboundStreamsShouldBeBuffered() throws Exception {
         // We use a limit of 1 and then increase it step by step.
-        setUp(Http2FrameCodecBuilder.forServer().encoderEnforceMaxConcurrentStreams(true).validateHeaders(false),
+        setUp(Http2FrameCodecBuilder.forServer().encoderEnforceMaxConcurrentStreams(true),
                 new Http2Settings().maxConcurrentStreams(1));
 
         Http2FrameStream stream1 = frameCodec.newStream();
@@ -682,8 +682,7 @@ public class Http2FrameCodecTest {
 
     @Test
     public void doNotLeakOnFailedInitializationForChannels() throws Exception {
-        setUp(Http2FrameCodecBuilder.forServer().validateHeaders(false),
-                new Http2Settings().maxConcurrentStreams(2));
+        setUp(Http2FrameCodecBuilder.forServer(), new Http2Settings().maxConcurrentStreams(2));
 
         Http2FrameStream stream1 = frameCodec.newStream();
         Http2FrameStream stream2 = frameCodec.newStream();
@@ -766,7 +765,7 @@ public class Http2FrameCodecTest {
 
     @Test
     public void iterateActiveStreams() throws Exception {
-        setUp(Http2FrameCodecBuilder.forServer().encoderEnforceMaxConcurrentStreams(true).validateHeaders(false),
+        setUp(Http2FrameCodecBuilder.forServer().encoderEnforceMaxConcurrentStreams(true),
               new Http2Settings().maxConcurrentStreams(1));
 
         frameInboundWriter.writeInboundHeaders(3, request, 0, false);
@@ -804,8 +803,7 @@ public class Http2FrameCodecTest {
 
     @Test
     public void autoAckPingTrue() throws Exception {
-        setUp(Http2FrameCodecBuilder.forServer().autoAckPingFrame(true).validateHeaders(false),
-            new Http2Settings());
+        setUp(Http2FrameCodecBuilder.forServer().autoAckPingFrame(true), new Http2Settings());
         frameInboundWriter.writeInboundPing(false, 8);
         Http2PingFrame frame = inboundHandler.readInbound();
         assertFalse(frame.ack());
@@ -815,8 +813,7 @@ public class Http2FrameCodecTest {
 
     @Test
     public void autoAckPingFalse() throws Exception {
-        setUp(Http2FrameCodecBuilder.forServer().autoAckPingFrame(false).validateHeaders(false),
-            new Http2Settings());
+        setUp(Http2FrameCodecBuilder.forServer().autoAckPingFrame(false), new Http2Settings());
         frameInboundWriter.writeInboundPing(false, 8);
         verify(frameWriter, never()).writePing(eqFrameCodecCtx(), eq(true), eq(8L), anyChannelPromise());
         Http2PingFrame frame = inboundHandler.readInbound();

@@ -123,7 +123,7 @@ public class StreamBufferingEncoderTest {
         connection.local().flowController(new DefaultHttp2LocalFlowController(connection).frameWriter(writer));
 
         DefaultHttp2ConnectionEncoder defaultEncoder =
-                new DefaultHttp2ConnectionEncoder(connection, writer, false);
+                new DefaultHttp2ConnectionEncoder(connection, writer);
         encoder = new StreamBufferingEncoder(defaultEncoder);
         DefaultHttp2ConnectionDecoder decoder =
                 new DefaultHttp2ConnectionDecoder(connection, encoder, mock(Http2FrameReader.class));
