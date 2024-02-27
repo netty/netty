@@ -80,8 +80,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1003,7 +1001,7 @@ public class SslHandlerTest {
 
     @Test
     public void testHandshakeWithExecutorJDK() throws Throwable {
-        ExecutorService executorService = Executors.newCachedThreadPool();
+        DelayingExecutor executorService = new DelayingExecutor();
         try {
             testHandshakeWithExecutor(executorService, SslProvider.JDK, false);
         } finally {
@@ -1032,7 +1030,7 @@ public class SslHandlerTest {
     @Test
     public void testHandshakeWithExecutorOpenSsl() throws Throwable {
         OpenSsl.ensureAvailability();
-        ExecutorService executorService = Executors.newCachedThreadPool();
+        DelayingExecutor executorService = new DelayingExecutor();
         try {
             testHandshakeWithExecutor(executorService, SslProvider.OPENSSL, false);
         } finally {
@@ -1057,7 +1055,7 @@ public class SslHandlerTest {
 
     @Test
     public void testHandshakeMTLSWithExecutorJDK() throws Throwable {
-        ExecutorService executorService = Executors.newCachedThreadPool();
+        DelayingExecutor executorService = new DelayingExecutor();
         try {
             testHandshakeWithExecutor(executorService, SslProvider.JDK, true);
         } finally {
@@ -1086,7 +1084,7 @@ public class SslHandlerTest {
     @Test
     public void testHandshakeMTLSWithExecutorOpenSsl() throws Throwable {
         OpenSsl.ensureAvailability();
-        ExecutorService executorService = Executors.newCachedThreadPool();
+        DelayingExecutor executorService = new DelayingExecutor();
         try {
             testHandshakeWithExecutor(executorService, SslProvider.OPENSSL, true);
         } finally {
