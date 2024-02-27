@@ -15,6 +15,8 @@
 
 package io.netty.handler.codec.http2;
 
+import java.io.Closeable;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -96,6 +98,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         this(new DefaultHttp2HeadersEncoder(headersSensitivityDetector, ignoreMaxHeaderListSize));
     }
 
+    /**
+     * @param headersEncoder will be closed if it implements {@link Closeable}
+     */
     public DefaultHttp2FrameWriter(Http2HeadersEncoder headersEncoder) {
         this.headersEncoder = headersEncoder;
         maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
@@ -130,7 +135,15 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     }
 
     @Override
-    public void close() { }
+    public void close() {
+        if (headersEncoder instanceof Closeable) {
+            try {
+                ((Closeable) headersEncoder).close();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
 
     @Override
     public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
