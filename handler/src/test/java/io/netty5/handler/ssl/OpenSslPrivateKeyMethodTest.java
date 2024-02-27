@@ -57,8 +57,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -76,7 +74,7 @@ public class OpenSslPrivateKeyMethodTest {
     private static final String RFC_CIPHER_NAME = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
     private static EventLoopGroup GROUP;
     private static SelfSignedCertificate CERT;
-    private static ExecutorService EXECUTOR;
+    private static DelayingExecutor EXECUTOR;
 
     static Collection<Object[]> parameters() {
         List<Object[]> dst = new ArrayList<Object[]>();
@@ -102,7 +100,7 @@ public class OpenSslPrivateKeyMethodTest {
 
         GROUP = new MultithreadEventLoopGroup(LocalHandler.newFactory());
         CERT = new SelfSignedCertificate();
-        EXECUTOR = Executors.newCachedThreadPool(DelegateThread::new);
+        EXECUTOR = new DelayingExecutor(DelegateThread::new);
     }
 
     @AfterAll

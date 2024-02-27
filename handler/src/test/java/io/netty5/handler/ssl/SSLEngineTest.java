@@ -120,8 +120,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -289,7 +287,7 @@ public abstract class SSLEngineTest {
         return params;
     }
 
-    private ExecutorService delegatingExecutor;
+    private DelayingExecutor delegatingExecutor;
 
     protected ByteBuffer allocateBuffer(BufferType type, int len) {
         switch (type) {
@@ -358,7 +356,7 @@ public abstract class SSLEngineTest {
         MockitoAnnotations.initMocks(this);
         serverLatch = new CountDownLatch(1);
         clientLatch = new CountDownLatch(1);
-        delegatingExecutor = Executors.newCachedThreadPool();
+        delegatingExecutor = new DelayingExecutor();
     }
 
     @AfterEach
