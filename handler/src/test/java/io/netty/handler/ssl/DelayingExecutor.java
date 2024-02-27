@@ -24,14 +24,15 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 final class DelayingExecutor implements Executor {
+    private static final int CORE_POOL_SIZE = 10;
     private final ScheduledExecutorService service;
 
     DelayingExecutor() {
-        this.service = Executors.newScheduledThreadPool(10);
+        this.service = Executors.newScheduledThreadPool(CORE_POOL_SIZE);
     }
 
     DelayingExecutor(ThreadFactory threadFactory) {
-        this.service = Executors.newScheduledThreadPool(10, threadFactory);
+        this.service = Executors.newScheduledThreadPool(CORE_POOL_SIZE, threadFactory);
     }
 
     @Override
