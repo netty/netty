@@ -57,7 +57,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.AlgorithmConstraints;
 import java.security.Principal;
 import java.security.cert.Certificate;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -1469,16 +1468,20 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         }
     }
 
-    private synchronized void runAndResetNeedTask(Runnable task) {
-        try {
-            if (isDestroyed()) {
-                // The engine was destroyed in the meantime, just return.
-                return;
+    private void runAndResetNeedTask(Runnable task) {
+        // We need to synchronize on the ReferenceCountedOpenSslEngine, we are sure the SSL object
+        // will not be freed by the user calling for example shutdown() concurrently.
+        synchronized (ReferenceCountedOpenSslEngine.this) {
+            try {
+                if (isDestroyed()) {
+                    // The engine was destroyed in the meantime, just return.
+                    return;
+                }
+                task.run();
+            } finally {
+                // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
+                needTask = false;
             }
-            task.run();
-        } finally {
-            // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
-            needTask = false;
         }
     }
 
