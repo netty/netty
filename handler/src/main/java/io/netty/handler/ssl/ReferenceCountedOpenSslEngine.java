@@ -1531,6 +1531,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     return;
                 }
                 task.run();
+                if (handshakeState != HandshakeState.FINISHED && !isDestroyed()) {
+                    // Call SSL.doHandshake(...) If the handshake was not finished yet. This might be needed
+                    // to fill the application buffer and so have getHandshakeStatus() return the right value
+                    // in this case.
+                    if (SSL.doHandshake(ssl) <= 0) {
+                        SSL.clearError();
+                    }
+                }
             } finally {
                 // The task was run, reset needTask to false so getHandshakeStatus() returns the correct value.
                 needTask = false;
