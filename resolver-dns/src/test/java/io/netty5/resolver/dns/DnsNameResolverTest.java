@@ -3372,7 +3372,9 @@ public class DnsNameResolverTest {
             if (resolver != null) {
                 resolver.close();
             }
-            serverSocket.close();
+            if (serverSocket != null) {
+                serverSocket.close();
+            }
         }
     }
 
