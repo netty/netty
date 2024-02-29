@@ -4610,7 +4610,8 @@ public abstract class SSLEngineTest {
 
                         runDelegatedTasks(param.delegate(), clientResult, clientEngine);
                         assertEquals(sTOc.position() - sTOcPos, clientResult.bytesConsumed());
-                        assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos, clientResult.bytesProduced());
+                        assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos,
+                                clientResult.bytesProduced());
                         assertEquals(0, clientAppReadBuffer.position());
 
                         if (assertHandshakeStatus(clientEngine, clientResult)) {
@@ -4633,7 +4634,8 @@ public abstract class SSLEngineTest {
                         serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
                         runDelegatedTasks(param.delegate(), serverResult, serverEngine);
                         assertEquals(cTOs.position() - cTOsPos, serverResult.bytesConsumed());
-                        assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos, serverResult.bytesProduced());
+                        assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos,
+                                serverResult.bytesProduced());
                         assertEquals(0, serverAppReadBuffer.position());
 
                         serverHandshakeFinished = assertHandshakeStatus(serverEngine, serverResult);

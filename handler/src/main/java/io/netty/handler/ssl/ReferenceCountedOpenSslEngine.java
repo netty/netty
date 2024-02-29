@@ -1536,7 +1536,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     // to fill the application buffer and so have getHandshakeStatus() return the right value
                     // in this case.
                     if (SSL.doHandshake(ssl) <= 0) {
-                        SSL.clearError();x
+                        SSL.clearError();
                     }
                 }
             } finally {
