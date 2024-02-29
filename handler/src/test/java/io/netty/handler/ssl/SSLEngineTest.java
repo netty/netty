@@ -1631,6 +1631,8 @@ public abstract class SSLEngineTest {
         ByteBuffer serverAppReadBuffer = allocateBuffer(type, serverEngine.getSession().getApplicationBufferSize());
         ByteBuffer clientAppReadBuffer = allocateBuffer(type, clientEngine.getSession().getApplicationBufferSize());
 
+        assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, clientEngine.getHandshakeStatus());
+        assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, serverEngine.getHandshakeStatus());
         clientEngine.beginHandshake();
         serverEngine.beginHandshake();
 
@@ -1688,41 +1690,45 @@ public abstract class SSLEngineTest {
                 // After the handshake completes it is possible we have more data that was send by the server as
                 // the server will send session updates after the handshake. In this case continue to unwrap.
                 SslProtocols.TLS_v1_3.equals(clientEngine.getSession().getProtocol())) {
-                int clientAppReadBufferPos = clientAppReadBuffer.position();
-                clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
+                if (sTOc.hasRemaining()) {
+                    int clientAppReadBufferPos = clientAppReadBuffer.position();
+                    clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
 
-                runDelegatedTasks(delegate, clientResult, clientEngine);
-                assertEquals(sTOc.position() - sTOcPos, clientResult.bytesConsumed());
-                assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos, clientResult.bytesProduced());
-                assertEquals(0, clientAppReadBuffer.position());
+                    runDelegatedTasks(delegate, clientResult, clientEngine);
+                    assertEquals(sTOc.position() - sTOcPos, clientResult.bytesConsumed());
+                    assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos, clientResult.bytesProduced());
+                    assertEquals(0, clientAppReadBuffer.position());
 
-                if (isHandshakeFinished(clientResult)) {
-                    clientHandshakeFinished = true;
-                }
+                    if (isHandshakeFinished(clientResult)) {
+                        clientHandshakeFinished = true;
+                    }
 
-                if (clientResult.getStatus() == Status.BUFFER_OVERFLOW) {
-                    clientAppReadBuffer = increaseDstBuffer(
-                            clientEngine.getSession().getApplicationBufferSize(), type, clientAppReadBuffer);
+                    if (clientResult.getStatus() == Status.BUFFER_OVERFLOW) {
+                        clientAppReadBuffer = increaseDstBuffer(
+                                clientEngine.getSession().getApplicationBufferSize(), type, clientAppReadBuffer);
+                    }
                 }
             } else {
                 assertEquals(0, sTOc.remaining());
             }
 
             if (!serverHandshakeFinished) {
-                int serverAppReadBufferPos = serverAppReadBuffer.position();
-                serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
-                runDelegatedTasks(delegate, serverResult, serverEngine);
-                assertEquals(cTOs.position() - cTOsPos, serverResult.bytesConsumed());
-                assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos, serverResult.bytesProduced());
-                assertEquals(0, serverAppReadBuffer.position());
+                if (cTOs.hasRemaining()) {
+                    int serverAppReadBufferPos = serverAppReadBuffer.position();
+                    serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
+                    runDelegatedTasks(delegate, serverResult, serverEngine);
+                    assertEquals(cTOs.position() - cTOsPos, serverResult.bytesConsumed());
+                    assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos, serverResult.bytesProduced());
+                    assertEquals(0, serverAppReadBuffer.position());
 
-                if (isHandshakeFinished(serverResult)) {
-                    serverHandshakeFinished = true;
-                }
+                    if (isHandshakeFinished(serverResult)) {
+                        serverHandshakeFinished = true;
+                    }
 
-                if (serverResult.getStatus() == Status.BUFFER_OVERFLOW) {
-                    serverAppReadBuffer = increaseDstBuffer(
-                            serverEngine.getSession().getApplicationBufferSize(), type, serverAppReadBuffer);
+                    if (serverResult.getStatus() == Status.BUFFER_OVERFLOW) {
+                        serverAppReadBuffer = increaseDstBuffer(
+                                serverEngine.getSession().getApplicationBufferSize(), type, serverAppReadBuffer);
+                    }
                 }
             } else {
                 assertFalse(cTOs.hasRemaining());
