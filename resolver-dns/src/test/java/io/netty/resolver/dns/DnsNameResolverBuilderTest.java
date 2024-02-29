@@ -65,8 +65,7 @@ class DnsNameResolverBuilderTest {
 
         checkDefaultAuthoritativeDnsServerCache(
                 (DefaultAuthoritativeDnsServerCache) resolver.authoritativeDnsServerCache(), MAX_SUPPORTED_TTL_SECS, 0);
-
-        assertThat(resolver.queryDnsServerAddressStream()).isInstanceOf(ThreadLocalNameServerAddressStream.class);
+assertThat(resolver.queryDnsServerAddressStream()).isInstanceOf(ThreadLocalNameServerAddressStream.class);
     }
 
     @Test
@@ -258,7 +257,7 @@ class DnsNameResolverBuilderTest {
         assertThat(resolver.queryDnsServerAddressStream()).isSameAs(queryAddressStream);
     }
 
-    private static class TestQueryServerAddressStream implements DnsServerAddressStream {
+    private static final class TestQueryServerAddressStream implements DnsServerAddressStream {
 
         @Override
         public InetSocketAddress next() {
