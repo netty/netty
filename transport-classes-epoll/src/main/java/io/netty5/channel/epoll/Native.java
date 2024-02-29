@@ -28,6 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
 
@@ -51,7 +53,8 @@ import static io.netty5.channel.unix.Errors.newIOException;
  */
 public final class Native {
     private static final Logger logger;
-
+    static final InetAddress INET6_ANY;
+    static final InetAddress INET_ANY;
     static {
         logger = LoggerFactory.getLogger(Native.class);
         Selector selector = null;
@@ -63,6 +66,13 @@ public final class Native {
             selector = Selector.open();
         } catch (IOException ignore) {
             // Just ignore
+        }
+
+        try {
+            INET_ANY = InetAddress.getByName("0.0.0.0");
+            INET6_ANY = InetAddress.getByName("::");
+        } catch (UnknownHostException e) {
+            throw new ExceptionInInitializerError(e);
         }
 
         // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a

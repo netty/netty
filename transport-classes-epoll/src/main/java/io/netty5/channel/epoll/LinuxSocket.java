@@ -41,8 +41,6 @@ import static io.netty5.channel.unix.Errors.newIOException;
  */
 @UnstableApi
 public final class LinuxSocket extends Socket {
-    static final InetAddress INET6_ANY = unsafeInetAddrByName("::");
-    private static final InetAddress INET_ANY = unsafeInetAddrByName("0.0.0.0");
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
 
     LinuxSocket(int fd, SocketProtocolFamily family) {
@@ -74,7 +72,7 @@ public final class LinuxSocket extends Socket {
 
     void setNetworkInterface(NetworkInterface netInterface) throws IOException {
         InetAddress address = deriveInetAddress(netInterface, protocolFamily() == SocketProtocolFamily.INET6);
-        if (address.equals(protocolFamily() == SocketProtocolFamily.INET ? INET_ANY : INET6_ANY)) {
+        if (address.equals(protocolFamily() == SocketProtocolFamily.INET ? Native.INET_ANY : Native.INET6_ANY)) {
             throw new IOException("NetworkInterface does not support " + protocolFamily());
         }
         final NativeInetAddress nativeAddress = NativeInetAddress.newInstance(address);
@@ -349,7 +347,7 @@ public final class LinuxSocket extends Socket {
     }
 
     private static InetAddress deriveInetAddress(NetworkInterface netInterface, boolean ipv6) {
-        final InetAddress ipAny = ipv6 ? INET6_ANY : INET_ANY;
+        final InetAddress ipAny = ipv6 ? Native.INET6_ANY : Native.INET_ANY;
         if (netInterface != null) {
             final Enumeration<InetAddress> ias = netInterface.getInetAddresses();
             while (ias.hasMoreElements()) {
@@ -442,14 +440,6 @@ public final class LinuxSocket extends Socket {
 
     public static LinuxSocket newSocketDomainDgram() {
         return new LinuxSocket(newSocketDomainDgram0(), SocketProtocolFamily.UNIX);
-    }
-
-    private static InetAddress unsafeInetAddrByName(String inetName) {
-        try {
-            return InetAddress.getByName(inetName);
-        } catch (UnknownHostException uhe) {
-            throw new ChannelException(uhe);
-        }
     }
 
     private static native int newVSockStreamFd();
