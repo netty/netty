@@ -320,7 +320,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             if (socketAddress.getAddress().isAnyLocalAddress() &&
                     socketAddress.getAddress() instanceof Inet4Address) {
                 if (socket.family() == InternetProtocolFamily.IPv6) {
-                    localAddress = new InetSocketAddress(LinuxSocket.INET6_ANY, socketAddress.getPort());
+                    localAddress = new InetSocketAddress(Native.INET6_ANY, socketAddress.getPort());
                 }
             }
         }
