@@ -14,9 +14,9 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.resolver.dns.DnsNameResolver$4",
+    "name": "io.netty.resolver.dns.DnsNameResolver$3",
     "condition": {
-      "typeReachable": "io.netty.resolver.dns.DnsNameResolver$4"
+      "typeReachable": "io.netty.resolver.dns.DnsNameResolver$3"
     },
     "queryAllPublicMethods": true
   },
