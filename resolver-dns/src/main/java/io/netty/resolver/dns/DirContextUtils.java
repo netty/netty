@@ -54,8 +54,7 @@ final class DirContextUtils {
                 for (String server : servers) {
                     try {
                         URI uri = new URI(server);
-                        String host = new URI(server).getHost();
-
+                        String host = uri.getHost();
                         if (host == null || host.isEmpty()) {
                             logger.debug(
                                     "Skipping a nameserver URI as host portion could not be extracted: {}", server);
