@@ -70,6 +70,7 @@ public final class DnsNameResolverBuilder {
     private HostsFileEntriesResolver hostsFileEntriesResolver = HostsFileEntriesResolver.DEFAULT;
     private DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
             DnsServerAddressStreamProviders.platformDefault();
+    private DnsServerAddressStream queryDnsServerAddressStream;
     private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory =
             NoopDnsQueryLifecycleObserverFactory.INSTANCE;
     private String[] searchDomains;
@@ -461,6 +462,20 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
+    protected DnsServerAddressStream queryServerAddressStream() {
+        return this.queryDnsServerAddressStream;
+    }
+
+    /**
+     * Set the {@link DnsServerAddressStream} which provides the server address for DNS queries.
+     * @return {@code this}.
+     */
+    public DnsNameResolverBuilder queryServerAddressStream(DnsServerAddressStream queryServerAddressStream) {
+        this.queryDnsServerAddressStream =
+                requireNonNull(queryServerAddressStream, "queryServerAddressStream");
+        return this;
+    }
+
     /**
      * Set the list of search domains of the resolver.
      *
@@ -511,6 +526,11 @@ public final class DnsNameResolverBuilder {
                 // Let us use the sane ordering as DnsNameResolver will be used when returning
                 // nameservers from the cache.
                 new NameServerComparator(addressType(DnsNameResolver.preferredAddressType(resolvedAddressTypes))));
+    }
+
+    private DnsServerAddressStream newQueryServerAddressStream(
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
+        return new ThreadLocalNameServerAddressStream(dnsServerAddressStreamProvider);
     }
 
     private DnsCnameCache newCnameCache() {
@@ -570,6 +590,10 @@ public final class DnsNameResolverBuilder {
         DnsCnameCache cnameCache = this.cnameCache != null ? this.cnameCache : newCnameCache();
         AuthoritativeDnsServerCache authoritativeDnsServerCache = this.authoritativeDnsServerCache != null ?
                 this.authoritativeDnsServerCache : newAuthoritativeDnsServerCache();
+
+        DnsServerAddressStream queryDnsServerAddressStream = this.queryDnsServerAddressStream != null ?
+                this.queryDnsServerAddressStream : newQueryServerAddressStream(dnsServerAddressStreamProvider);
+
         return new DnsNameResolver(
                 eventLoop,
                 channelFactory,
@@ -588,6 +612,7 @@ public final class DnsNameResolverBuilder {
                 optResourceEnabled,
                 hostsFileEntriesResolver,
                 dnsServerAddressStreamProvider,
+                queryDnsServerAddressStream,
                 searchDomains,
                 ndots,
                 decodeIdn,
@@ -646,6 +671,10 @@ public final class DnsNameResolverBuilder {
 
         if (dnsServerAddressStreamProvider != null) {
             copiedBuilder.nameServerProvider(dnsServerAddressStreamProvider);
+        }
+
+        if (queryDnsServerAddressStream != null) {
+            copiedBuilder.queryServerAddressStream(queryDnsServerAddressStream);
         }
 
         if (searchDomains != null) {

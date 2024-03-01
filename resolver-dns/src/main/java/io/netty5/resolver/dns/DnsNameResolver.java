@@ -232,15 +232,7 @@ public class DnsNameResolver extends InetNameResolver {
     private final DnsCache resolveCache;
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private final DnsCnameCache cnameCache;
-
-    private final FastThreadLocal<DnsServerAddressStream> nameServerAddrStream =
-            new FastThreadLocal<>() {
-                @Override
-                protected DnsServerAddressStream initialValue() {
-                    return dnsServerAddressStreamProvider.nameServerAddressStream("");
-                }
-            };
-
+    private final DnsServerAddressStream queryDnsServerAddressStream;
     private final long queryTimeoutMillis;
     private final int maxQueriesPerResolve;
     private final ResolvedAddressTypes resolvedAddressTypes;
@@ -364,7 +356,8 @@ public class DnsNameResolver extends InetNameResolver {
                 NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache, null,
              dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
              maxQueriesPerResolve, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
-             dnsServerAddressStreamProvider, searchDomains, ndots, decodeIdn, false, 0);
+             dnsServerAddressStreamProvider, new ThreadLocalNameServerAddressStream(dnsServerAddressStreamProvider),
+                searchDomains, ndots, decodeIdn, false, 0);
     }
 
     DnsNameResolver(
@@ -385,6 +378,7 @@ public class DnsNameResolver extends InetNameResolver {
             boolean optResourceEnabled,
             HostsFileEntriesResolver hostsFileEntriesResolver,
             DnsServerAddressStreamProvider dnsServerAddressStreamProvider,
+            DnsServerAddressStream queryDnsServerAddressStream,
             String[] searchDomains,
             int ndots,
             boolean decodeIdn,
@@ -402,10 +396,12 @@ public class DnsNameResolver extends InetNameResolver {
         this.hostsFileEntriesResolver = requireNonNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
         this.dnsServerAddressStreamProvider =
                 requireNonNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
+        this.queryDnsServerAddressStream = requireNonNull(queryDnsServerAddressStream, "queryDnsServerAddressStream");
         this.resolveCache = requireNonNull(resolveCache, "resolveCache");
         this.cnameCache = requireNonNull(cnameCache, "cnameCache");
         this.dnsQueryLifecycleObserverFactory =
                 requireNonNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
+
         this.searchDomains = searchDomains != null ? searchDomains.clone() : DEFAULT_SEARCH_DOMAINS;
         this.ndots = ndots >= 0 ? ndots : DEFAULT_OPTIONS.ndots();
         this.decodeIdn = decodeIdn;
@@ -581,6 +577,13 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public long queryTimeoutMillis() {
         return queryTimeoutMillis;
+    }
+
+    /**
+     * Returns the dns server address stream used for DNS queries (not resolve).
+     */
+    public DnsServerAddressStream queryDnsServerAddressStream() {
+        return queryDnsServerAddressStream;
     }
 
     /**
@@ -1202,7 +1205,7 @@ public class DnsNameResolver extends InetNameResolver {
     }
 
     private InetSocketAddress nextNameServerAddress() {
-        return nameServerAddrStream.get().next();
+        return queryDnsServerAddressStream.next();
     }
 
     /**
