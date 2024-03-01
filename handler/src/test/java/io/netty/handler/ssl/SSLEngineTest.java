@@ -1686,7 +1686,9 @@ public abstract class SSLEngineTest {
                 // After the handshake completes it is possible we have more data that was send by the server as
                 // the server will send session updates after the handshake. In this case continue to unwrap.
                 SslProtocols.TLS_v1_3.equals(clientEngine.getSession().getProtocol())) {
-                if (sTOc.hasRemaining()) {
+                if (sTOc.hasRemaining() ||
+                        // We need to special case conscrypt due a bug.
+                        Conscrypt.isEngineSupported(clientEngine)) {
                     int clientAppReadBufferPos = clientAppReadBuffer.position();
                     clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
 
@@ -1707,7 +1709,9 @@ public abstract class SSLEngineTest {
             }
 
             if (!serverHandshakeFinished) {
-                if (cTOs.hasRemaining()) {
+                if (cTOs.hasRemaining() ||
+                        // We need to special case conscrypt due a bug.
+                        Conscrypt.isEngineSupported(serverEngine)) {
                     int serverAppReadBufferPos = serverAppReadBuffer.position();
                     serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
                     runDelegatedTasks(delegate, serverResult, serverEngine);
@@ -4603,7 +4607,9 @@ public abstract class SSLEngineTest {
                 sTOcPos = sTOc.position();
 
                 if (!clientHandshakeFinished) {
-                    if (sTOc.hasRemaining()) {
+                    if (sTOc.hasRemaining() ||
+                            // We need to special case conscrypt due a bug.
+                            Conscrypt.isEngineSupported(clientEngine)) {
                         int clientAppReadBufferPos = clientAppReadBuffer.position();
                         clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
 
@@ -4628,7 +4634,9 @@ public abstract class SSLEngineTest {
                 }
 
                 if (!serverHandshakeFinished) {
-                    if (cTOs.hasRemaining()) {
+                    if (cTOs.hasRemaining() ||
+                            // We need to special case conscrypt due a bug.
+                            Conscrypt.isEngineSupported(serverEngine)) {
                         int serverAppReadBufferPos = serverAppReadBuffer.position();
                         serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
                         runDelegatedTasks(param.delegate(), serverResult, serverEngine);
