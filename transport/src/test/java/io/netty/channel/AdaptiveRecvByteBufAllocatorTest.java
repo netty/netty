@@ -110,6 +110,15 @@ public class AdaptiveRecvByteBufAllocatorTest {
     }
 
     @Test
+    public void doesSetCorrectMinBounds() {
+        AdaptiveRecvByteBufAllocator recvByteBufAllocator = new AdaptiveRecvByteBufAllocator(81, 95, 95);
+        RecvByteBufAllocator.ExtendedHandle handle =
+                (RecvByteBufAllocator.ExtendedHandle) recvByteBufAllocator.newHandle();
+        handle.reset(config);
+        allocReadExpected(handle, alloc, 81);
+    }
+
+    @Test
     public void throwsIfInitialIsBiggerThenMaximum() {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
