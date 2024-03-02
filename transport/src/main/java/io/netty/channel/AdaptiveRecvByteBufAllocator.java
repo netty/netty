@@ -94,16 +94,20 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
     private final class HandleImpl extends MaxMessageHandle {
         private final int minIndex;
         private final int maxIndex;
+        private final int minCapacity;
+        private final int maxCapacity;
         private int index;
         private int nextReceiveBufferSize;
         private boolean decreaseNow;
 
-        HandleImpl(int minIndex, int maxIndex, int initial) {
+        HandleImpl(int minIndex, int maxIndex, int initialIndex, int minCapacity, int maxCapacity) {
             this.minIndex = minIndex;
             this.maxIndex = maxIndex;
 
-            index = getSizeTableIndex(initial);
-            nextReceiveBufferSize = SIZE_TABLE[index];
+            index = initialIndex;
+            nextReceiveBufferSize = max(SIZE_TABLE[index], minCapacity);
+            this.minCapacity = minCapacity;
+            this.maxCapacity = maxCapacity;
         }
 
         @Override
@@ -127,14 +131,14 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
             if (actualReadBytes <= SIZE_TABLE[max(0, index - INDEX_DECREMENT)]) {
                 if (decreaseNow) {
                     index = max(index - INDEX_DECREMENT, minIndex);
-                    nextReceiveBufferSize = SIZE_TABLE[index];
+                    nextReceiveBufferSize = max(SIZE_TABLE[index], minCapacity);
                     decreaseNow = false;
                 } else {
                     decreaseNow = true;
                 }
             } else if (actualReadBytes >= nextReceiveBufferSize) {
                 index = min(index + INDEX_INCREMENT, maxIndex);
-                nextReceiveBufferSize = SIZE_TABLE[index];
+                nextReceiveBufferSize = min(SIZE_TABLE[index], maxCapacity);
                 decreaseNow = false;
             }
         }
@@ -147,7 +151,9 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
 
     private final int minIndex;
     private final int maxIndex;
-    private final int initial;
+    private final int initialIndex;
+    private final int minCapacity;
+    private final int maxCapacity;
 
     /**
      * Creates a new predictor with the default parameters.  With the default
@@ -188,13 +194,20 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
             this.maxIndex = maxIndex;
         }
 
-        this.initial = initial;
+        int initialIndex = getSizeTableIndex(initial);
+        if (SIZE_TABLE[initialIndex] > initial) {
+            this.initialIndex = initialIndex - 1;
+        } else {
+            this.initialIndex = initialIndex;
+        }
+        this.minCapacity = minimum;
+        this.maxCapacity = maximum;
     }
 
     @SuppressWarnings("deprecation")
     @Override
     public Handle newHandle() {
-        return new HandleImpl(minIndex, maxIndex, initial);
+        return new HandleImpl(minIndex, maxIndex, initialIndex, minCapacity, maxCapacity);
     }
 
     @Override
