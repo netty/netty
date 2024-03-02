@@ -87,19 +87,24 @@ public class AdaptiveReadHandleFactory extends MaxMessagesReadHandleFactory {
     private static final class ReadHandleImpl extends MaxMessageReadHandle {
         private final int minIndex;
         private final int maxIndex;
+        private final int minCapacity;
+        private final int maxCapacity;
         private int index;
         private int nextReceiveBufferSize;
         private boolean decreaseNow;
 
         private int totalBytesRead;
 
-        ReadHandleImpl(int maxMessagesPerRead, int minIndex, int maxIndex, int initial) {
+        ReadHandleImpl(int maxMessagesPerRead, int minIndex, int maxIndex, int initialIndex,
+                       int minCapacity, int maxCapacity) {
             super(maxMessagesPerRead);
             this.minIndex = minIndex;
             this.maxIndex = maxIndex;
 
-            index = getSizeTableIndex(initial);
-            nextReceiveBufferSize = SIZE_TABLE[index];
+            index = initialIndex;
+            nextReceiveBufferSize = max(SIZE_TABLE[index], minCapacity);
+            this.minCapacity = minCapacity;
+            this.maxCapacity = maxCapacity;
         }
 
         @Override
@@ -126,14 +131,14 @@ public class AdaptiveReadHandleFactory extends MaxMessagesReadHandleFactory {
             if (actualReadBytes <= SIZE_TABLE[max(0, index - INDEX_DECREMENT)]) {
                 if (decreaseNow) {
                     index = max(index - INDEX_DECREMENT, minIndex);
-                    nextReceiveBufferSize = SIZE_TABLE[index];
+                    nextReceiveBufferSize = max(SIZE_TABLE[index], minCapacity);
                     decreaseNow = false;
                 } else {
                     decreaseNow = true;
                 }
             } else if (actualReadBytes >= nextReceiveBufferSize) {
                 index = min(index + INDEX_INCREMENT, maxIndex);
-                nextReceiveBufferSize = SIZE_TABLE[index];
+                nextReceiveBufferSize = min(SIZE_TABLE[index], maxCapacity);
                 decreaseNow = false;
             }
         }
@@ -152,7 +157,9 @@ public class AdaptiveReadHandleFactory extends MaxMessagesReadHandleFactory {
 
     private final int minIndex;
     private final int maxIndex;
-    private final int initial;
+    private final int initialIndex;
+    private final int minCapacity;
+    private final int maxCapacity;
 
     /**
      * Creates a new predictor with the default parameters.  With the default
@@ -206,11 +213,18 @@ public class AdaptiveReadHandleFactory extends MaxMessagesReadHandleFactory {
             this.maxIndex = maxIndex;
         }
 
-        this.initial = initial;
+        int initialIndex = getSizeTableIndex(initial);
+        if (SIZE_TABLE[initialIndex] > initial) {
+            this.initialIndex = initialIndex - 1;
+        } else {
+            this.initialIndex = initialIndex;
+        }
+        this.minCapacity = minimum;
+        this.maxCapacity = maximum;
     }
 
     @Override
     public MaxMessageReadHandle newMaxMessageHandle(int maxMessagesPerRead) {
-        return new ReadHandleImpl(maxMessagesPerRead, minIndex, maxIndex, initial);
+        return new ReadHandleImpl(maxMessagesPerRead, minIndex, maxIndex, initialIndex, minCapacity, maxCapacity);
     }
 }

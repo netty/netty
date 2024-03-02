@@ -18,8 +18,10 @@ package io.netty5.channel;
 import io.netty5.channel.ReadHandleFactory.ReadHandle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 public class AdaptiveReadHandleFactoryTest {
@@ -95,6 +97,51 @@ public class AdaptiveReadHandleFactoryTest {
         handle.readComplete();
 
         allocReadExpected(handle, 131072);
+    }
+
+    @Test
+    public void doesNotExceedMaximum() {
+        AdaptiveReadHandleFactory recvBufferAllocator = new AdaptiveReadHandleFactory(2, 64, 9000, 9000);
+        handle = recvBufferAllocator.newHandle(mock(Channel.class));
+        allocReadExpected(handle, 8192);
+    }
+
+    @Test
+    public void doesSetCorrectMinBounds() {
+        AdaptiveReadHandleFactory recvBufferAllocator = new AdaptiveReadHandleFactory(2, 81, 95, 95);
+        handle = recvBufferAllocator.newHandle(mock(Channel.class));
+
+        allocReadExpected(handle, 81);
+    }
+
+    @Test
+    public void throwsIfInitialIsBiggerThenMaximum() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new AdaptiveReadHandleFactory(2, 64, 4096 , 1024);
+            }
+        });
+    }
+
+    @Test
+    public void throwsIfInitialIsSmallerThenMinimum() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new AdaptiveReadHandleFactory(2, 512, 64 , 1024);
+            }
+        });
+    }
+
+    @Test
+    public void throwsIfMinimumIsBiggerThenMaximum() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new AdaptiveReadHandleFactory(2, 2048, 64 , 1024);
+            }
+        });
     }
 
     private static void allocReadExpected(ReadHandle handle, int expectedSize) {
