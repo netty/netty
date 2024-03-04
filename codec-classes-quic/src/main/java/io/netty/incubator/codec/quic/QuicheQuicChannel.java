@@ -1063,7 +1063,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                                 int capacity = Quiche.quiche_conn_stream_capacity(connAddr, streamId);
                                 if (capacity < 0) {
                                     // Let's close the channel if quiche_conn_stream_capacity(...) returns an error.
-                                    streamChannel.forceClose();
+                                    streamChannel.forceClose(capacity);
                                 } else if (streamChannel.writable(capacity)) {
                                     mayNeedWrite = true;
                                 }
