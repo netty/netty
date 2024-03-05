@@ -26,14 +26,14 @@ import java.util.List;
 /**
  * Looks up the {@code nameserver}s from the {@code /etc/resolv.conf} file, intended for Linux and macOS.
  */
-public final class ResolvConf {
+final class ResolvConf {
     private final List<InetSocketAddress> nameservers;
 
     /**
      * Reads from the given reader and extracts the {@code nameserver}s using the syntax of the
      * {@code /etc/resolv.conf} file, see {@code man resolv.conf}.
      */
-    public static ResolvConf fromReader(BufferedReader reader) throws IOException {
+    static ResolvConf fromReader(BufferedReader reader) throws IOException {
         return new ResolvConf(reader);
     }
 
@@ -41,7 +41,7 @@ public final class ResolvConf {
      * Reads the given file and extracts the {@code nameserver}s using the syntax of the
      * {@code /etc/resolv.conf} file, see {@code man resolv.conf}.
      */
-    public static ResolvConf fromFile(String file) throws IOException {
+    static ResolvConf fromFile(String file) throws IOException {
         FileReader fileReader = new FileReader(file);
         try {
             BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -55,7 +55,7 @@ public final class ResolvConf {
      * Returns the {@code nameserver}s from the {@code /etc/resolv.conf} file. The file is only read once
      * during the lifetime of this class.
      */
-    public static ResolvConf system() {
+    static ResolvConf system() {
         ResolvConf resolvConv = ResolvConfLazy.machineResolvConf;
         if (resolvConv != null) {
             return resolvConv;
@@ -80,7 +80,7 @@ public final class ResolvConf {
         this.nameservers = Collections.unmodifiableList(nameservers);
     }
 
-    public List<InetSocketAddress> getNameservers() {
+    List<InetSocketAddress> getNameservers() {
         return nameservers;
     }
 
