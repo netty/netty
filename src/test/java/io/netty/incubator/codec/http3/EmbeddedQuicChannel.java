@@ -31,6 +31,7 @@ import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicChannelConfig;
+import io.netty.incubator.codec.quic.QuicConnectionAddress;
 import io.netty.incubator.codec.quic.QuicConnectionStats;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
@@ -40,6 +41,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 import javax.net.ssl.SSLEngine;
+import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.Map;
@@ -81,6 +83,26 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         };
         arraycopy(handlers, 0, toReturn, 1, handlers.length);
         return toReturn;
+    }
+
+    @Override
+    public QuicConnectionAddress localAddress() {
+        return null;
+    }
+
+    @Override
+    public QuicConnectionAddress remoteAddress() {
+        return null;
+    }
+
+    @Override
+    public SocketAddress localSocketAddress() {
+        return null;
+    }
+
+    @Override
+    public SocketAddress remoteSocketAddress() {
+        return null;
     }
 
     @Override
