@@ -414,7 +414,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         if (!queue.isEmpty()) {
             QuicException err = new QuicException(QuicError.valueOf(error));
             if (error == QuicError.STREAM_STOPPED.code()) {
-                queue.removeAndFailAll(new ChannelOutputShutdownException("STREAM_STOPPED received", err));
+                queue.removeAndFailAll(new ChannelOutputShutdownException("STOP_SENDING frame received", err));
             } else {
                 queue.removeAndFailAll(err);
             }
@@ -660,7 +660,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                             // Once its signaled that the stream is stopped we can just fail everything.
                             // We can also force the close as quiche will generate a RESET_STREAM frame.
                             queue.removeAndFailAll(
-                                    new ChannelOutputShutdownException("STREAM_STOPPED received", e));
+                                    new ChannelOutputShutdownException("STOP_SENDING frame received", e));
                             forceClose();
                             break;
                         }
