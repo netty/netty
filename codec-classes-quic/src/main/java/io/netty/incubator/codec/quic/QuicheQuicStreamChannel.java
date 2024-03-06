@@ -350,7 +350,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     @Override
-    public Unsafe unsafe() {
+    public QuicStreamChannelUnsafe unsafe() {
         return unsafe;
     }
 
@@ -430,7 +430,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         // Mark as readable and if a read is pending execute it.
         readable = true;
         if (readPending) {
-            ((QuicStreamChannelUnsafe) unsafe()).recv();
+            unsafe().recv();
         }
     }
 
@@ -441,7 +441,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         unsafe().close(unsafe().voidPromise());
     }
 
-    private final class QuicStreamChannelUnsafe implements Unsafe {
+    final class QuicStreamChannelUnsafe implements Unsafe {
         private RecvByteBufAllocator.Handle recvHandle;
 
         private final ChannelPromise voidPromise = new VoidChannelPromise(
@@ -502,6 +502,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
         @Override
         public void close(ChannelPromise promise) {
+            close(null, promise);
+        }
+
+        void close(@Nullable ClosedChannelException writeFailCause, ChannelPromise promise) {
             assert eventLoop().inEventLoop();
             if (!active || closePromise.isDone()) {
                 if (promise.isVoid()) {
@@ -519,7 +523,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             } finally {
                 if (!queue.isEmpty()) {
                     // Only fail if the queue is non-empty.
-                    queue.removeAndFailAll(new ClosedChannelException());
+                    if (writeFailCause == null) {
+                        writeFailCause = new ClosedChannelException();
+                    }
+                    queue.removeAndFailAll(writeFailCause);
                 }
 
                 promise.trySuccess();
@@ -613,7 +620,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             assert eventLoop().inEventLoop();
             readPending = true;
             if (readable) {
-                ((QuicStreamChannelUnsafe) unsafe()).recv();
+                unsafe().recv();
 
                 // As the stream was readable, and we called recv() ourselves we also need to call
                 // connectionSendAndFlush(). This is needed as recv() might consume data and so a window update

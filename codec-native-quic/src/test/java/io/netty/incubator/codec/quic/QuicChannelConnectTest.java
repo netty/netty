@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -68,6 +69,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PSSParameterSpec;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -400,6 +402,98 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
     @Timeout(5)
     public void testConnectWithDroppedPacketsAndSignConnectionIdGenerator(Executor executor) throws Throwable {
         testConnectWithDroppedPackets(executor, 2, QuicConnectionIdGenerator.signGenerator());
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    @Timeout(5)
+    public void testTimedOut(Executor executor) throws Throwable {
+        final AtomicBoolean dropPackets = new AtomicBoolean();
+        final BlockingQueue<QuicStreamChannel> acceptedStreams = new LinkedBlockingQueue<>();
+        Channel server = QuicTestUtils.newServer(
+                QuicTestUtils.newQuicServerBuilder(executor).maxIdleTimeout(1, TimeUnit.MILLISECONDS),
+                NoQuicTokenHandler.INSTANCE,
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+                },
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public boolean isSharable() {
+                        return true;
+                    }
+
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) {
+                        acceptedStreams.add((QuicStreamChannel) ctx.channel());
+                        dropPackets.set(true);
+                        ctx.fireChannelActive();
+                    }
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                        // Server closes the stream whenever the client sends a FIN.
+                        if (evt instanceof ChannelInputShutdownEvent) {
+                            ctx.close();
+                        }
+                        ctx.fireUserEventTriggered(evt);
+                    }
+                });
+
+        // Have the server drop packets once we tell it to do so.
+        server.pipeline().addFirst(
+                new ChannelDuplexHandler() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        if (dropPackets.get()) {
+                            ReferenceCountUtil.release(msg);
+                        } else {
+                            ctx.fireChannelRead(msg);
+                        }
+                    }
+
+                    @Override
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                        if (dropPackets.get()) {
+                            ReferenceCountUtil.release(msg);
+                            promise.setSuccess();
+                        } else{
+                            ctx.write(msg, promise);
+                        }
+                    }
+                });
+
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor));
+        ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+        try {
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+
+            QuicStreamChannel quicStream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ChannelInboundHandlerAdapter()).get();
+
+            ByteBuf payload = Unpooled.wrappedBuffer("HELLO!".getBytes(StandardCharsets.US_ASCII));
+            quicStream.writeAndFlush(payload).sync();
+            assertTrue(quicStream.closeFuture().await().isSuccess());
+
+            QuicStreamChannel accepted = acceptedStreams.take();
+            accepted.closeFuture().sync();
+            assertTrue(accepted.parent().isTimedOut());
+
+            ChannelFuture closeFuture = channel.close().await();
+            assertTrue(closeFuture.isSuccess());
+        } finally {
+            clientQuicChannelHandler.assertState();
+            channel.close().sync();
+            server.close().sync();
+            shutdown(executor);
+        }
     }
 
     @ParameterizedTest
