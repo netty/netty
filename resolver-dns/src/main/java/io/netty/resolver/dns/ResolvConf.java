@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -32,6 +32,9 @@ final class ResolvConf {
     /**
      * Reads from the given reader and extracts the {@code nameserver}s using the syntax of the
      * {@code /etc/resolv.conf} file, see {@code man resolv.conf}.
+     *
+     * @param reader contents of {@code resolv.conf} are read from this {@link BufferedReader},
+     *              up to the caller to close it
      */
     static ResolvConf fromReader(BufferedReader reader) throws IOException {
         return new ResolvConf(reader);
@@ -84,7 +87,7 @@ final class ResolvConf {
         return nameservers;
     }
 
-    static final class ResolvConfLazy {
+    private static final class ResolvConfLazy {
         static final ResolvConf machineResolvConf;
 
         static {
