@@ -25,6 +25,8 @@ import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.Arrays;
+
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.COOKIE;
 import static io.netty.handler.codec.http.HttpHeaderNames.HOST;
@@ -188,6 +190,19 @@ public class HttpConversionUtilTest {
     }
 
     @Test
+    public void noSpace() {
+        final HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(COOKIE, "one=foo;two=bar");
+        final Http2Headers out = new DefaultHttp2Headers();
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                HttpConversionUtil.toHttp2Headers(inHeaders, out);
+            }
+        });
+    }
+
+    @Test
     public void handlesRequest() throws Exception {
         boolean validateHeaders = true;
         HttpRequest msg = new DefaultHttpRequest(
@@ -222,6 +237,20 @@ public class HttpConversionUtilTest {
 
     @Test
     public void addHttp2ToHttpHeadersCombinesCookies() throws Http2Exception {
+        Http2Headers inHeaders = new DefaultHttp2Headers();
+        inHeaders.add("yes", "no");
+        inHeaders.add(COOKIE, "foo=bar");
+        inHeaders.add(COOKIE, "bax=baz");
+
+        HttpHeaders outHeaders = new DefaultHttpHeaders();
+
+        HttpConversionUtil.addHttp2ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, false);
+        assertEquals("no", outHeaders.get("yes"));
+        assertEquals("foo=bar; bax=baz", outHeaders.get(COOKIE.toString()));
+    }
+
+    @Test
+    public void httpToHttp2Cookie() throws Http2Exception {
         Http2Headers inHeaders = new DefaultHttp2Headers();
         inHeaders.add("yes", "no");
         inHeaders.add(COOKIE, "foo=bar");
