@@ -545,7 +545,9 @@ public final class HttpConversionUtil {
                                 out.add(COOKIE, value.subSequence(start, index, false));
                                 // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
                                 if (index + 1 >= value.length() || value.charAt(index + 1) != ' ') {
-                                    throw new IllegalArgumentException("cookie value has a semicolon not followed by a space, counter to spec: " + value);
+                                    throw new IllegalArgumentException(
+                                            "cookie value has a semicolon not followed by a space, counter to spec: "
+                                                    + value);
                                 }
                                 start = index + 2;
                             } while (start < value.length() &&
