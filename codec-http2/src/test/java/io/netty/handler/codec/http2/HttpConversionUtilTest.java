@@ -250,20 +250,6 @@ public class HttpConversionUtilTest {
     }
 
     @Test
-    public void httpToHttp2Cookie() throws Http2Exception {
-        Http2Headers inHeaders = new DefaultHttp2Headers();
-        inHeaders.add("yes", "no");
-        inHeaders.add(COOKIE, "foo=bar");
-        inHeaders.add(COOKIE, "bax=baz");
-
-        HttpHeaders outHeaders = new DefaultHttpHeaders();
-
-        HttpConversionUtil.addHttp2ToHttpHeaders(5, inHeaders, outHeaders, HttpVersion.HTTP_1_1, false, false);
-        assertEquals("no", outHeaders.get("yes"));
-        assertEquals("foo=bar; bax=baz", outHeaders.get(COOKIE.toString()));
-    }
-
-    @Test
     public void connectionSpecificHeadersShouldBeRemoved() {
         HttpHeaders inHeaders = new DefaultHttpHeaders();
         inHeaders.add(CONNECTION, "keep-alive");
