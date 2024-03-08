@@ -50,7 +50,12 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
         if (!PlatformDependent.isAndroid()) {
             // Only try to use when not on Android as the classes not exists there:
             // See https://github.com/netty/netty/issues/8654
-            DirContextUtils.addNameServers(defaultNameServers, DNS_PORT);
+            if (!PlatformDependent.isWindows()) {
+                // /etc/resolv.conf exists on Linux + macOS, but not on Android
+                defaultNameServers.addAll(ResolvConf.system().getNameservers());
+            } else {
+                DirContextUtils.addNameServers(defaultNameServers, DNS_PORT);
+            }
         }
 
         if (!defaultNameServers.isEmpty()) {
