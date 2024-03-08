@@ -570,7 +570,7 @@ public class DefaultHttp2ConnectionTest {
     public void listenerThrowShouldNotPreventOtherListenersFromBeingNotified() throws Http2Exception {
         final boolean[] calledArray = new boolean[128];
         // The following setup will ensure that clientListener throws exceptions, and marks a value in an array
-        // such that clientListener2 will verify that is is set or fail the test.
+        // such that clientListener2 will verify that is set or fail the test.
         int methodIndex = 0;
         doAnswer(new ListenerExceptionThrower(calledArray, methodIndex))
             .when(clientListener).onStreamAdded(any(Http2Stream.class));
