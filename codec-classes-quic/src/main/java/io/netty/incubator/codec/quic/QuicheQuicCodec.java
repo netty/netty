@@ -73,6 +73,11 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
         this.flushStrategy = flushStrategy;
     }
 
+    @Override
+    public final boolean isSharable() {
+        return false;
+    }
+
     @Nullable
     protected final QuicheQuicChannel getChannel(ByteBuffer key) {
         return connectionIdToChannel.get(key);
