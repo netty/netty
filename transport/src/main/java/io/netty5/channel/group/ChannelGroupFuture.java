@@ -146,7 +146,7 @@ public interface ChannelGroupFuture extends Future<Void>, Iterable<Future<Void>>
     /**
      * Returns the {@link Iterator} that enumerates all {@link Future}s
      * which are associated with this future.  Please note that the returned
-     * {@link Iterator} is is unmodifiable, which means a {@link Future}
+     * {@link Iterator} is unmodifiable, which means a {@link Future}
      * cannot be removed from this future.
      */
     @Override
