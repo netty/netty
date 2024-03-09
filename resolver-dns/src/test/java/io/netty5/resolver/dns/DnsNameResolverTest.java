@@ -3318,8 +3318,6 @@ public class DnsNameResolverTest {
             DnsNameResolverBuilder builder = newResolver();
             builder.channelType(NioDatagramChannel.class);
             serverSocket = startDnsServerAndCreateServerSocket(dnsServer2);
-
-            serverSocket = startDnsServerAndCreateServerSocket(dnsServer2);
             // If we are configured to use TCP as a fallback also bind a TCP socket
             builder.socketChannelType(NioSocketChannel.class, true);
 
