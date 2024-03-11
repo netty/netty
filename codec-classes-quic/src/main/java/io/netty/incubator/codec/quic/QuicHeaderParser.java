@@ -106,6 +106,9 @@ public final class QuicHeaderParser implements AutoCloseable {
         dcidLenBuffer.setInt(0, Quiche.QUICHE_MAX_CONN_ID_LEN);
         tokenLenBuffer.setInt(0, maxTokenLength);
 
+        // TODO: Maybe we should implement this by ourself and just save the extra JNI call and memory copies.
+        //       Parsing should be relative straight forward.
+        //       See https://datatracker.ietf.org/doc/html/rfc9000#section-17
         int res = Quiche.quiche_header_info(
                 Quiche.readerMemoryAddress(packet), packet.readableBytes(),
                 localConnectionIdLength,
