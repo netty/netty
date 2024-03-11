@@ -44,6 +44,20 @@
           <classifier>${os.detected.classifier}</classifier>
         </dependency>
         <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${netty.version}</version>
+          <classifier>linux-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${netty.version}</version>
+          <classifier>linux-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
           <groupId>org.bouncycastle</groupId>
           <artifactId>bcpkix-jdk15on</artifactId>
           <scope>runtime</scope>
