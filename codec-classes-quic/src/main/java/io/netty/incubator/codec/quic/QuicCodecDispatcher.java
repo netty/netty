@@ -165,7 +165,7 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
     /**
      * Return the idx that was encoded into the connectionId via the {@link QuicConnectionIdGenerator} before,
      * or {@code -1} if decoding was not successful.
-     * <p/>
+     * <p>
      * Subclasses may override this. In this case {@link #newIdGenerator(int)} should be overridden as well
      * to implement the encoding scheme for the encoding side.
      *
@@ -256,7 +256,7 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
     /**
      * Returns a {@link QuicConnectionIdGenerator} that will encode the given index into all the
      * ids that it produces.
-     * <p/>
+     * <p>
      * Subclasses may override this. In this case {@link #decodeIndex(ByteBuf)} should be overridden as well
      * to implement the encoding scheme for the decoding side.
      *
