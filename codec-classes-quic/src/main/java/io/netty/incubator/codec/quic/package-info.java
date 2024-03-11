@@ -19,4 +19,3 @@
 @NotNullByDefault
 package io.netty.incubator.codec.quic;
 
-import io.netty.incubator.codec.quic.internal.NotNullByDefault;

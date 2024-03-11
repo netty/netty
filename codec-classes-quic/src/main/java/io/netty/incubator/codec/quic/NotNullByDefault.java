@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.incubator.codec.quic.internal;
+package io.netty.incubator.codec.quic;
 
 
 import org.jetbrains.annotations.NotNull;
@@ -39,5 +39,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.PACKAGE)
 @NotNull
-public @interface NotNullByDefault {
+@interface NotNullByDefault {
 }
