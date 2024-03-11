@@ -138,11 +138,19 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
         // Loop over all ChannelHandlerContextDispatchers and ensure fireChannelReadComplete() is called if required.
         // We use and old style for loop as CopyOnWriteArrayList implements RandomAccess and so we can
         // reduce the object creations.
+        boolean dispatchForOwnContextAlready = false;
         for (int i = 0; i < contextList.size(); i++) {
             ChannelHandlerContextDispatcher ctxDispatcher = contextList.get(i);
             if (ctxDispatcher != null) {
-                ctxDispatcher.fireChannelReadCompleteIfNeeded();
+                boolean fired = ctxDispatcher.fireChannelReadCompleteIfNeeded();
+                if (fired && !dispatchForOwnContextAlready) {
+                    // Check if we dispatched to ctx so if we didnt at the end we can do it manually.
+                    dispatchForOwnContextAlready = ctx.equals(ctxDispatcher.ctx);
+                }
             }
+        }
+        if (!dispatchForOwnContextAlready) {
+            ctx.fireChannelReadComplete();
         }
     }
 
@@ -188,9 +196,10 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
     static ByteBuf getDestinationConnectionId(ByteBuf buffer, int localConnectionIdLength) {
         if (buffer.readableBytes() > Byte.BYTES) {
             int offset = buffer.readerIndex();
-            boolean shortHeader = (buffer.getByte(offset) & 0x80) == 0;
-
+            boolean shortHeader = hasShortHeader(buffer);
             offset += Byte.BYTES;
+            // We are only interested in packets with short header as these the packets that
+            // are exchanged after the server did provide the connection id that the client should use.
             if (shortHeader) {
                 // See https://www.rfc-editor.org/rfc/rfc9000.html#section-17.3
                 // 1-RTT Packet {
@@ -207,33 +216,14 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
                 if (buffer.readableBytes() >= offset + localConnectionIdLength) {
                     return buffer.slice(offset, localConnectionIdLength);
                 }
-            } else {
-                // See https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2:
-                // Long Header Packet {
-                //   Header Form (1) = 1,
-                //   Fixed Bit (1) = 1,
-                //   Long Packet Type (2),
-                //   Type-Specific Bits (4),
-                //   Version (32),
-                //   Destination Connection ID Length (8),
-                //   Destination Connection ID (0..160),
-                //   Source Connection ID Length (8),
-                //   Source Connection ID (0..160),
-                //  Type-Specific Payload (..),
-                // }
-
-                // skip version
-                offset += Integer.BYTES;
-                if (buffer.readableBytes() >= offset) {
-                    int len = buffer.getUnsignedByte(offset);
-                    offset += Byte.BYTES;
-                    if (buffer.readableBytes() >= offset + len) {
-                        return buffer.slice(offset, len);
-                    }
-                }
             }
         }
         return null;
+    }
+
+    // Package-private for testing
+    static boolean hasShortHeader(ByteBuf buffer) {
+        return (buffer.getByte(buffer.readerIndex()) & 0x80) == 0;
     }
 
     // Package-private for testing
@@ -317,12 +307,14 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
             set(true);
         }
 
-        void fireChannelReadCompleteIfNeeded() {
+        boolean fireChannelReadCompleteIfNeeded() {
             if (getAndSet(false)) {
                 // There was a fireChannelRead() before, let's call fireChannelReadComplete()
                 // so the user is aware that we might be done with the reading loop.
                 ctx.fireChannelReadComplete();
+                return true;
             }
+            return false;
         }
     }
 }

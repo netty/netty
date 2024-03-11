@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class QuicCodecDispatcherTest {
 
@@ -67,9 +68,14 @@ public class QuicCodecDispatcherTest {
                         break;
                     }
                 try {
+                    boolean hasShortHeader = QuicCodecDispatcher.hasShortHeader(packet.content());
                     ByteBuf id = QuicCodecDispatcher.getDestinationConnectionId(packet.content(), localConnectionIdLength);
-                    assertNotNull(id);
-                    assertEquals(idx, QuicCodecDispatcher.decodeIdx(id));
+                    if (hasShortHeader) {
+                        assertNotNull(id);
+                        assertEquals(idx, QuicCodecDispatcher.decodeIdx(id));
+                    } else {
+                        assertNull(id);
+                    }
                     numPackets--;
                 } finally {
                     packet.release();
