@@ -69,6 +69,8 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PSSParameterSpec;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -831,6 +833,36 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             serverLatch.await();
             serverQuicChannelHandler.assertState();
 
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testConnectMultipleTimes(Executor executor) throws Throwable {
+        Channel server = QuicTestUtils.newServer(executor, QuicTestUtils.NOOP_HANDLER, QuicTestUtils.NOOP_HANDLER);
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(executor);
+        try {
+            QuicChannelBootstrap cb = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(QuicTestUtils.NOOP_HANDLER)
+                    .streamHandler(QuicTestUtils.NOOP_HANDLER)
+                    .remoteAddress(address);
+            List<QuicChannel> channels = new ArrayList<>();
+            for (int i = 0; i < 5; i++) {
+                channels.add(cb
+                        .connect()
+                        .get());
+            }
+
+            for (QuicChannel ch : channels) {
+                ch.close().sync();
+            }
+        } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
             channel.close().sync();
