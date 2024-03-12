@@ -63,7 +63,7 @@ public class DefaultHttp2PingFrame implements Http2PingFrame {
 
     @Override
     public int hashCode() {
-        int hash = super.hashCode();
+        int hash = (int) (content ^ (content >>> 32));
         hash = hash * 31 + (ack ? 1 : 0);
         return hash;
     }
