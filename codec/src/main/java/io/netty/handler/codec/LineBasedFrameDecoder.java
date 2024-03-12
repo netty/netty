@@ -34,7 +34,7 @@ import java.util.List;
  * For a more general delimiter-based decoder, see {@link DelimiterBasedFrameDecoder}.
  * <p>
  * Users should be aware that used as is, the lenient approach on lone "\n" might result on a parser diffenrencial on line based protocols
- * requiring the use of "\r\n" delimiters like SMTP and can result in attacks similar to SMTP smuggling (https://sec-consult.com/blog/detail/smtp-smuggling-spoofing-e-mails-worldwide/). 
+ * requiring the use of "\r\n" delimiters like SMTP and can result in attacks similar to < a href="https://sec-consult.com/blog/detail/smtp-smuggling-spoofing-e-mails-worldwide/">SMTP smuggling</a>. 
  * Validating afterward the end of line pattern can be a possible mitigation.
  */
 public class LineBasedFrameDecoder extends ByteToMessageDecoder {
