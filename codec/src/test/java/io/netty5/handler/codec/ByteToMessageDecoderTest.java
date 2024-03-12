@@ -475,19 +475,21 @@ public class ByteToMessageDecoderTest {
         }
     }
 
+    private static final class ReadInterceptingHandler implements ChannelHandler {
+        private int readsTriggered;
+
+        @Override
+        public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
+            readsTriggered++;
+            ctx.read(readBufferAllocator);
+        }
+    }
+
     @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("allocators")
     public void doesNotOverRead(BufferAllocator allocator, Cumulator cumulator) {
         this.allocator = allocator;
-        class ReadInterceptingHandler implements ChannelHandler {
-            private int readsTriggered;
 
-            @Override
-            public void read(ChannelHandlerContext ctx, ReadBufferAllocator readBufferAllocator) {
-                readsTriggered++;
-                ctx.read(readBufferAllocator);
-            }
-        }
         ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
 
         EmbeddedChannel channel = new EmbeddedChannel();
@@ -530,6 +532,38 @@ public class ByteToMessageDecoderTest {
             }
         }
         assertFalse(channel.finish());
+    }
+
+    @ParameterizedTest(name = PARAMETERIZED_NAME)
+    @MethodSource("allocators")
+    public void testDoesNotOverReadOnChannelReadComplete(BufferAllocator allocator, Cumulator cumulator) {
+        ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
+        EmbeddedChannel channel = new EmbeddedChannel(interceptor, new ByteToMessageDecoder(cumulator) {
+            @Override
+            protected void decode(ChannelHandlerContext ctx, Buffer in) {
+                // NOOP
+            }
+        });
+        channel.setOption(ChannelOption.AUTO_READ, false);
+        assertEquals(1, interceptor.readsTriggered);
+        channel.pipeline().fireChannelReadComplete();
+        assertEquals(1, interceptor.readsTriggered);
+        channel.pipeline().fireChannelRead(allocator.allocate(8).fill((byte) 8));
+        assertEquals(1, interceptor.readsTriggered);
+        // This should trigger a read() as we did not forward any message.
+        channel.pipeline().fireChannelReadComplete();
+        assertEquals(2, interceptor.readsTriggered);
+        // Explicit calling fireChannelReadComplete() again without calling fireChannelRead(...) before should
+        // not trigger another read()
+        channel.pipeline().fireChannelReadComplete();
+        assertEquals(2, interceptor.readsTriggered);
+        channel.pipeline().fireChannelRead(allocator.allocate(8).fill((byte) 8));
+        assertEquals(2, interceptor.readsTriggered);
+
+        // This should trigger a read() as we did not forward any message.
+        channel.pipeline().fireChannelReadComplete();
+        assertEquals(3, interceptor.readsTriggered);
+        channel.finishAndReleaseAll();
     }
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
