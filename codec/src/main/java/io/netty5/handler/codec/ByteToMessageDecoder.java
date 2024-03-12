@@ -97,6 +97,8 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
      * to consume more data when {@link ChannelOption#AUTO_READ} is {@code false}.
      */
     private boolean firedChannelRead;
+    private boolean selfFiredChannelRead;
+
     private int numReads;
     private ByteToMessageDecoderContext context;
 
@@ -191,6 +193,7 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof Buffer) {
+            selfFiredChannelRead = true;
             try {
                 Buffer data = (Buffer) msg;
                 first = cumulation == null;
@@ -232,10 +235,11 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         numReads = 0;
         discardSomeReadBytes();
-        if (!firedChannelRead && !ctx.channel().getOption(ChannelOption.AUTO_READ)) {
+        if (selfFiredChannelRead && !firedChannelRead && !ctx.channel().getOption(ChannelOption.AUTO_READ)) {
             ctx.read();
         }
         firedChannelRead = false;
+        selfFiredChannelRead = false;
         ctx.fireChannelReadComplete();
     }
 
