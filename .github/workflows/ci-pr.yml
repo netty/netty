@@ -85,9 +85,16 @@ jobs:
           path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: build-pr-${{ matrix.setup }}-jars
+          path: |
+            **/target/*.jar
+
+      - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
-          name: build-${{ matrix.setup }}-target
+          name: build-pr-${{ matrix.setup }}-target
           path: |
             **/target/surefire-reports/
             **/hs_err*.log
@@ -146,6 +153,13 @@ jobs:
         with:
           name: test-results-pr-windows-x86_64
           path: '**/target/surefire-reports/TEST-*.xml'
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: pr-windows-jars
+          path: |
+            **/target/*.jar
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
@@ -211,6 +225,14 @@ jobs:
 
       - name: Build project
         run: ./mvnw -B -ntp --file pom.xml clean package -Dandroid
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: build-pr-android-jars-aars
+          path: |
+            **/target/*.jar
+            **/target/*.aar
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
