@@ -569,7 +569,8 @@ public final class HttpConversionUtil {
                                     // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
                                     start = index + 2;
                                 } while (start < value.length() &&
-                                        (index = value.forEachByte(start, value.length() - start, FIND_SEMI_COLON)) != -1);
+                                        (index = value.forEachByte(start, value.length() - start, FIND_SEMI_COLON))
+                                                != -1);
                                 assert start < value.length();
                                 out.add(COOKIE, value.subSequence(start, value.length(), false));
                             } else {
