@@ -304,6 +304,10 @@ static jint netty_quiche_err_key_update(JNIEnv* env, jclass clazz) {
     return QUICHE_ERR_KEY_UPDATE;
 }
 
+static jint netty_quiche_err_crypto_buffer_exceeded(JNIEnv* env, jclass clazz) {
+    return QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED;
+}
+
 static jint netty_quiche_cc_reno(JNIEnv* env, jclass clazz) {
     return QUICHE_CC_RENO;
 }
@@ -1086,6 +1090,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "quiche_err_id_limit", "()I", (void *) netty_quiche_err_id_limit },
   { "quiche_err_out_of_identifiers", "()I", (void *) netty_quiche_err_out_of_identifiers },
   { "quiche_err_key_update", "()I", (void *) netty_quiche_err_key_update },
+  { "quiche_err_crypto_buffer_exceeded", "()I", (void *) netty_quiche_err_crypto_buffer_exceeded },
   { "quiche_cc_reno", "()I", (void *) netty_quiche_cc_reno },
   { "quiche_cc_cubic", "()I", (void *) netty_quiche_cc_cubic },
   { "quiche_cc_bbr", "()I", (void *) netty_quiche_cc_bbr },

@@ -273,6 +273,9 @@ final class Quiche {
     static final int QUICHE_ERR_KEY_UPDATE =
             QuicheNativeStaticallyReferencedJniMethods.quiche_err_key_update();
 
+    static final int QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED =
+            QuicheNativeStaticallyReferencedJniMethods.quiche_err_crypto_buffer_exceeded();
+
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L176">
      *     QUICHE_CC_RENO</a>.
@@ -290,7 +293,6 @@ final class Quiche {
      *     QUICHE_CC_BBR</a>.
      */
     static final int QUICHE_CC_BBR = QuicheNativeStaticallyReferencedJniMethods.quiche_cc_bbr();
-
 
     static final int QUICHE_PATH_EVENT_NEW = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_new();
     static final int QUICHE_PATH_EVENT_VALIDATED = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_validated();
