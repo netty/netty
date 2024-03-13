@@ -28,7 +28,7 @@ final class QuicheConfig {
                  @Nullable Long ackDelayExponent, @Nullable Long maxAckDelay, @Nullable Boolean disableActiveMigration, @Nullable Boolean enableHystart,
                  @Nullable QuicCongestionControlAlgorithm congestionControlAlgorithm,
                  @Nullable Integer recvQueueLen, @Nullable Integer sendQueueLen,
-                 @Nullable Long activeConnectionIdLimit, byte[] statelessResetToken) {
+                 @Nullable Long activeConnectionIdLimit, byte @Nullable [] statelessResetToken) {
         long config = Quiche.quiche_config_new(version);
         try {
             if (grease != null) {
