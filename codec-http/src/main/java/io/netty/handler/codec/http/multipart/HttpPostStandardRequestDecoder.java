@@ -426,7 +426,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                                 charset);
                         currentAttribute = factory.createAttribute(request, key);
                         firstpos = currentpos;
-                    } else if (read == '&' || !undecodedChunk.isReadable()) { // special empty FIELD
+                    } else if (read == '&' || (isLastChunk && !undecodedChunk.isReadable())) { // special empty FIELD
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = read == '&' ? currentpos - 1 : currentpos;
                         String key = decodeAttribute(
@@ -552,7 +552,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                                 charset);
                         currentAttribute = factory.createAttribute(request, key);
                         firstpos = currentpos;
-                    } else if (read == '&' || !undecodedChunk.isReadable()) { // special empty FIELD
+                    } else if (read == '&' || (isLastChunk && !undecodedChunk.isReadable())) { // special empty FIELD
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = read == '&' ? currentpos - 1 : currentpos;
                         String key = decodeAttribute(
