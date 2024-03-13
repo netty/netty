@@ -534,30 +534,47 @@ public final class HttpConversionUtil {
                 if (aName.contentEqualsIgnoreCase(TE)) {
                     toHttp2HeadersFilterTE(entry, out);
                 } else if (aName.contentEqualsIgnoreCase(COOKIE)) {
-                    AsciiString value = AsciiString.of(entry.getValue());
-                    // split up cookies to allow for better compression
-                    // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+                    CharSequence valueCs = entry.getValue();
                     try {
-                        int index = value.forEachByte(FIND_SEMI_COLON);
-                        if (index != -1) {
-                            int start = 0;
-                            do {
-                                out.add(COOKIE, value.subSequence(start, index, false));
-                                // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
-                                if (index + 1 >= value.length() || value.charAt(index + 1) != ' ') {
-                                    throw new IllegalArgumentException(
-                                            "cookie value has a semicolon not followed by a space, counter to spec: "
-                                                    + value);
+                        // validate
+                        boolean invalid = false;
+                        for (int i = 0; i < valueCs.length(); i++) {
+                            char c = valueCs.charAt(i);
+                            if (c == ';') {
+                                if (i + 1 >= valueCs.length() || valueCs.charAt(i + 1) != ' ') {
+                                    invalid = true;
+                                    break;
                                 }
-                                start = index + 2;
-                            } while (start < value.length() &&
-                                    (index = value.forEachByte(start, value.length() - start, FIND_SEMI_COLON)) != -1);
-                            if (start >= value.length()) {
-                                throw new IllegalArgumentException("cookie value is of unexpected format: " + value);
+                                i++; // skip space
+                            } else if (c > 255) {
+                                // not ascii, don't split
+                                invalid = true;
+                                break;
                             }
-                            out.add(COOKIE, value.subSequence(start, value.length(), false));
+                        }
+
+                        if (invalid) {
+                            out.add(COOKIE, valueCs);
                         } else {
-                            out.add(COOKIE, value);
+                            AsciiString value = AsciiString.of(valueCs);
+                            // split up cookies to allow for better compression
+                            // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+                            int index = value.forEachByte(FIND_SEMI_COLON);
+                            if (index != -1) {
+                                int start = 0;
+                                do {
+                                    out.add(COOKIE, value.subSequence(start, index, false));
+                                    assert index + 1 < value.length();
+                                    assert value.charAt(index + 1) == ' ';
+                                    // skip 2 characters "; " (see https://tools.ietf.org/html/rfc6265#section-4.2.1)
+                                    start = index + 2;
+                                } while (start < value.length() &&
+                                        (index = value.forEachByte(start, value.length() - start, FIND_SEMI_COLON)) != -1);
+                                assert start < value.length();
+                                out.add(COOKIE, value.subSequence(start, value.length(), false));
+                            } else {
+                                out.add(COOKIE, value);
+                            }
                         }
                     } catch (IllegalArgumentException e) {
                         throw e;
