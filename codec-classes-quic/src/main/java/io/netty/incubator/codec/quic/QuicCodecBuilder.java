@@ -501,7 +501,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      * @param flushStrategy         the {@link FlushStrategy}  that should be used.
      * @return                      the {@link ChannelHandler} which acts as codec.
      */
-    protected abstract ChannelHandler build(QuicheConfig config,
+    abstract ChannelHandler build(QuicheConfig config,
                                             Function<QuicChannel, ? extends QuicSslEngine> sslContextProvider,
                                             Executor sslTaskExecutor,
                                             int localConnIdLength, FlushStrategy flushStrategy);

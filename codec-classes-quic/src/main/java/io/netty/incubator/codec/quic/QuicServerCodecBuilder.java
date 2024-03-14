@@ -196,7 +196,7 @@ public final class QuicServerCodecBuilder extends QuicCodecBuilder<QuicServerCod
     }
 
     @Override
-    protected ChannelHandler build(QuicheConfig config,
+    ChannelHandler build(QuicheConfig config,
                                    Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider,
                                    Executor sslTaskExecutor,
                                    int localConnIdLength, FlushStrategy flushStrategy) {
