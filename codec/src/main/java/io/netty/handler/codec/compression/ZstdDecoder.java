@@ -26,6 +26,7 @@ import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.ObjectUtil;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -120,7 +121,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         return Math.max((int) decompressedSize, originalSize);
     }
 
-    private boolean decompressData(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws IOException {
+    private boolean decompressData(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)  {
         final int compressedLength = in.readableBytes();
         if (compressedLength > maxBlockSize) {
             in.skipBytes(compressedLength);
@@ -143,31 +144,39 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                             Zstd.getFrameContentSize(srcArray, offset, compressedLength),
                             compressedLength);
                 } else {
-                    throw new UnsupportedOperationException();
+                    throw new UnsupportedOperationException("in needs to be backed by direct memory our byte array");
                 }
                 if (decompressedSize == -1) {
+                    // Can't reat decompressedSize.
                     return false;
                 }
 
                 this.decompressedSize = decompressedSize;
-                // Let's start with the compressedLength * 2 as often we will not have everything
-                // we need in the in buffer and don't want to reserve too much memory.
-                int bufferSize = decompressedSize == 0 ? 0 : decompressedSize * 2;
-                outputStream = new ByteBufOutputStream(ctx.alloc().buffer(bufferSize));
             }
+
+            // Let's start with the compressedLength * 2 as often we will not have everything
+            // we need in the in buffer and don't want to reserve too much memory.
+            int bufferSize = decompressedSize == 0 ? 0 : compressedLength * 2;
+            outputStream = new ByteBufOutputStream(ctx.alloc().buffer(bufferSize));
 
             inputStream.current = in;
             copyStream(zstdIs, outputStream);
             int decompressedLength = outputStream.buffer().readableBytes();
-
-            // TODO: Use Zstd to check the compressed data when zstd library support this
-            if (decompressedLength == 0 ||  decompressedSize != decompressedLength) {
+            if (decompressedLength == 0) {
+                // Did not decompress anything, let's close the output and release the buffer.
+                closeOutputSilently(true);
                 return false;
             }
+            // We were able to decompress something, let's forward it to the next handler in the pipeline and adjust
+            // decompressedSize.
+            decompressedSize -= decompressedLength;
             out.add(outputStream.buffer());
-            decompressedSize = -1;
             closeOutputSilently(false);
-            return true;
+
+            // If we did read everything we can consider this decoder as finished.
+            return decompressedSize == 0;
+        } catch (IOException e) {
+            throw new DecompressionException(e);
         } catch (ZstdException e) {
             closeOutputSilently(true);
             throw new DecompressionException(e);
@@ -184,10 +193,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     @Override
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
         try {
-            if (zstdIs != null) {
-                zstdIs.close();
-                zstdIs = null;
-            }
+            closeSilently(zstdIs);
             closeOutputSilently(true);
         } finally {
             super.handlerRemoved0(ctx);
@@ -199,12 +205,18 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
             if (release) {
                 outputStream.buffer().release();
             }
+            closeSilently(outputStream);
+            outputStream = null;
+        }
+    }
+
+    private static void closeSilently(Closeable closeable) {
+        if (closeable != null) {
             try {
-                outputStream.close();
+                closeable.close();
             } catch (IOException ignore) {
                 // ignore
             }
-            outputStream = null;
         }
     }
 
