@@ -129,9 +129,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         try {
             if (decompressedSize == -1) {
                 final int decompressedSize;
-                boolean heapBuffer;
                 if (in.isDirect()) {
-                    heapBuffer = false;
                     ByteBuffer inNioBuffer = CompressionUtil.safeNioBuffer(
                             in, in.readerIndex(), compressedLength);
                     decompressedSize = validateDecompressedSize(
@@ -139,7 +137,6 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                                     inNioBuffer, inNioBuffer.position(), compressedLength),
                             compressedLength);
                 } else if (in.hasArray()) {
-                    heapBuffer = true;
                     byte[] srcArray = in.array();
                     int offset = in.arrayOffset() + in.readerIndex();
                     decompressedSize = validateDecompressedSize(
@@ -231,7 +228,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         }
 
         @Override
-        public int read(byte[] b, int off, int len) throws IOException {
+        public int read(byte[] b, int off, int len) {
             int available = available();
             if (available == 0) {
                 return -1;
