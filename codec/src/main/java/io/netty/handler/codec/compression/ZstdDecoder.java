@@ -37,7 +37,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     private final MutableByteBufInputStream inputStream = new MutableByteBufInputStream();
     private ZstdInputStreamNoFinalizer zstdIs;
 
-    private volatile State currentState = State.DECOMPRESS_DATA;
+    private State currentState = State.DECOMPRESS_DATA;
 
     /**
      * Creates a new Zstd decoder.
