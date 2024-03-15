@@ -1697,7 +1697,9 @@ public abstract class SSLEngineTest {
                     assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos, clientResult.bytesProduced());
                     assertEquals(0, clientAppReadBuffer.position());
 
-                    clientHandshakeFinished = assertHandshakeStatus(clientEngine, clientResult);
+                    if (assertHandshakeStatus(clientEngine, clientResult)) {
+                        clientHandshakeFinished = true;
+                    }
 
                     if (clientResult.getStatus() == Status.BUFFER_OVERFLOW) {
                         clientAppReadBuffer = increaseDstBuffer(
