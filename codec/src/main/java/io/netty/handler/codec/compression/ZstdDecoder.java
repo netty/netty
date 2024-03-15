@@ -19,45 +19,21 @@ import com.github.luben.zstd.ZstdInputStreamNoFinalizer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.internal.ObjectUtil;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_MAX_BLOCK_SIZE;
 
 /**
  * Decompresses a compressed block {@link ByteBuf} using the Zstandard algorithm.
  * See <a href="https://facebook.github.io/zstd">Zstandard</a>.
  */
 public final class ZstdDecoder extends ByteToMessageDecoder {
-    private final int maxBlockSize;
     private final MutableByteBufInputStream inputStream = new MutableByteBufInputStream();
     private ZstdInputStreamNoFinalizer zstdIs;
 
     private State currentState = State.DECOMPRESS_DATA;
-
-    /**
-     * Creates a new Zstd decoder.
-     *
-     * Please note that if you use the default constructor, the MAX_BLOCK_SIZE
-     * will be used. If you want to specify MAX_BLOCK_SIZE yourself,
-     * please use {@link ZstdDecoder(int)} constructor
-     */
-    public ZstdDecoder() {
-        this(DEFAULT_MAX_BLOCK_SIZE);
-    }
-
-    /**
-     * Creates a new Zstd decoder.
-     *  @param  maxBlockSize
-     *            specifies the max block size
-     */
-    public ZstdDecoder(int maxBlockSize) {
-        this.maxBlockSize = ObjectUtil.checkPositive(maxBlockSize, "maxBlockSize");
-    }
 
     /**
      * Current state of stream.
@@ -75,10 +51,6 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                 return;
             }
             final int compressedLength = in.readableBytes();
-            if (compressedLength > maxBlockSize) {
-                in.skipBytes(compressedLength);
-                throw new TooLongFrameException("too large message: " + compressedLength + " bytes");
-            }
 
             inputStream.current = in;
 
