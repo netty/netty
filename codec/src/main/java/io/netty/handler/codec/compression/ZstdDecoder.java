@@ -69,11 +69,11 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        if (currentState == State.CORRUPTED) {
-            in.skipBytes(in.readableBytes());
-            return;
-        }
         try {
+            if (currentState == State.CORRUPTED) {
+                in.skipBytes(in.readableBytes());
+                return;
+            }
             final int compressedLength = in.readableBytes();
             if (compressedLength > maxBlockSize) {
                 in.skipBytes(compressedLength);
@@ -114,6 +114,8 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         } catch (Exception e) {
             currentState = State.CORRUPTED;
             throw new DecompressionException(e);
+        } finally {
+            inputStream.current = null;
         }
     }
 
