@@ -17,7 +17,6 @@ package io.netty.handler.codec.compression;
 
 import com.github.luben.zstd.ZstdInputStreamNoFinalizer;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -26,7 +25,6 @@ import io.netty.util.internal.ObjectUtil;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.List;
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_MAX_BLOCK_SIZE;
 
@@ -35,11 +33,9 @@ import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_MAX_BLOCK
  * See <a href="https://facebook.github.io/zstd">Zstandard</a>.
  */
 public final class ZstdDecoder extends ByteToMessageDecoder {
-    private static final int COPY_BUF_SIZE = 8024;
     private final int maxBlockSize;
     private final MutableByteBufInputStream inputStream = new MutableByteBufInputStream();
     private ZstdInputStreamNoFinalizer zstdIs;
-    private ByteBufOutputStream outputStream;
 
     private volatile State currentState = State.DECOMPRESS_DATA;
 
@@ -86,33 +82,38 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
 
             inputStream.current = in;
 
-            // Let's start with the compressedLength * 2 as often we will not have everything
-            // we need in the in buffer and don't want to reserve too much memory.
-            outputStream = new ByteBufOutputStream(ctx.alloc().buffer(compressedLength * 2));
-
-            copyStream(zstdIs, outputStream);
-            int decompressedLength = outputStream.buffer().readableBytes();
-            if (decompressedLength == 0) {
-                // Did not decompress anything, let's close the output and release the buffer.
-                closeOutputSilently(true);
-                return;
+            ByteBuf outBuffer = null;
+            try {
+                int w = -1;
+                do {
+                    // Let's start with the compressedLength * 2 as often we will not have everything
+                    // we need in the in buffer and don't want to reserve too much memory.
+                    outBuffer = ctx.alloc().heapBuffer(compressedLength * 2);
+                    byte[] array = outBuffer.array();
+                    int writerOffset = outBuffer.arrayOffset() + outBuffer.writerIndex();
+                    int writableBytes = outBuffer.writableBytes();
+                    int written = 0;
+                    while (writableBytes > 0 && (w = zstdIs.read(array, writerOffset, writableBytes)) != -1) {
+                        writerOffset += w;
+                        writableBytes -= w;
+                        written += w;
+                    }
+                    outBuffer.writerIndex(outBuffer.writerIndex() + written);
+                    if (outBuffer.isReadable()) {
+                        out.add(outBuffer);
+                    } else {
+                        outBuffer.release();
+                    }
+                    outBuffer = null;
+                } while (w != -1);
+            } finally {
+                if (outBuffer != null) {
+                    outBuffer.release();
+                }
             }
-            // We were able to decompress something, let's forward it to the next handler in the pipeline and adjust
-            // decompressedSize.
-            out.add(outputStream.buffer());
-            closeOutputSilently(false);
         } catch (Exception e) {
-            closeOutputSilently(true);
             currentState = State.CORRUPTED;
             throw new DecompressionException(e);
-        }
-    }
-
-    private static void copyStream(final InputStream input, final OutputStream output) throws IOException {
-        final byte[] copyBuffer = new byte[COPY_BUF_SIZE];
-        int n;
-        while ((n = input.read(copyBuffer)) != -1) {
-            output.write(copyBuffer, 0, n);
         }
     }
 
@@ -127,19 +128,8 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
         try {
             closeSilently(zstdIs);
-            closeOutputSilently(true);
         } finally {
             super.handlerRemoved0(ctx);
-        }
-    }
-
-    private void closeOutputSilently(boolean release) {
-        if (outputStream != null) {
-            if (release) {
-                outputStream.buffer().release();
-            }
-            closeSilently(outputStream);
-            outputStream = null;
         }
     }
 
@@ -158,7 +148,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
 
         @Override
         public int read() {
-            if (current == null  || !current.isReadable()) {
+            if (current == null || !current.isReadable()) {
                 return -1;
             }
             return current.readByte() & 0xff;
