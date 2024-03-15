@@ -182,6 +182,33 @@ public class HttpConversionUtilTest {
     }
 
     @Test
+    public void cookieNoSpace() {
+        final HttpHeaders inHeaders = HttpHeaders.newHeaders();
+        inHeaders.add(COOKIE, "one=foo;two=bar");
+        final Http2Headers out = Http2Headers.newHeaders();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertEquals("one=foo;two=bar", out.get(COOKIE)); // not split
+    }
+
+    @Test
+    public void cookieTailSemicolon() {
+        final HttpHeaders inHeaders = HttpHeaders.newHeaders();
+        inHeaders.add(COOKIE, "one=foo;");
+        final Http2Headers out = Http2Headers.newHeaders();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertEquals("one=foo;", out.get(COOKIE)); // not split
+    }
+
+    @Test
+    public void cookieNonAscii() {
+        final HttpHeaders inHeaders = HttpHeaders.newHeaders();
+        inHeaders.add(COOKIE, "one=\uD83D\uDE43; two=ü");
+        final Http2Headers out = Http2Headers.newHeaders();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertSame("one=\uD83D\uDE43; two=ü", out.get(COOKIE)); // not split
+    }
+
+    @Test
     public void handlesRequest() throws Exception {
         HttpRequest msg = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "http://example.com/path/to/something");
