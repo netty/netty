@@ -23,6 +23,7 @@ import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
@@ -57,6 +58,24 @@ class HttpPostStandardRequestDecoderTest {
         ByteBuf buf = Unpooled.wrappedBuffer(requestBody.getBytes(CharsetUtil.UTF_8));
         DefaultHttpContent httpContent = new DefaultLastHttpContent(buf);
         decoder.offer(httpContent);
+
+        assertEquals(1, decoder.getBodyHttpDatas().size());
+        assertMemoryAttribute(decoder.getBodyHttpData("key1"), "");
+        decoder.destroy();
+    }
+
+    @Test
+    void testDecodeSingleAttributeWithNoValueEmptyLast() {
+        String requestBody = "key1";
+
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+
+        HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(httpDiskDataFactory(), request);
+        ByteBuf buf = Unpooled.wrappedBuffer(requestBody.getBytes(CharsetUtil.UTF_8));
+        DefaultHttpContent httpContent = new DefaultHttpContent(buf);
+        decoder.offer(httpContent);
+
+        decoder.offer(LastHttpContent.EMPTY_LAST_CONTENT);
 
         assertEquals(1, decoder.getBodyHttpDatas().size());
         assertMemoryAttribute(decoder.getBodyHttpData("key1"), "");
