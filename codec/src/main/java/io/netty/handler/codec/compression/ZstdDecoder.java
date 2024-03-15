@@ -15,14 +15,11 @@
  */
 package io.netty.handler.codec.compression;
 
-import com.github.luben.zstd.Zstd;
-import com.github.luben.zstd.ZstdException;
 import com.github.luben.zstd.ZstdInputStreamNoFinalizer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.ObjectUtil;
 
@@ -30,7 +27,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.util.List;
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_MAX_BLOCK_SIZE;
 
@@ -44,7 +40,6 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     private final MutableByteBufInputStream inputStream = new MutableByteBufInputStream();
     private ZstdInputStreamNoFinalizer zstdIs;
     private ByteBufOutputStream outputStream;
-    private int decompressedSize = -1;
 
     private volatile State currentState = State.DECOMPRESS_DATA;
 
@@ -73,113 +68,51 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
      */
     private enum State {
         DECOMPRESS_DATA,
-        FINISHED,
         CORRUPTED
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        try {
-            if (in.isReadable()) {
-                switch (currentState) {
-                    case DECOMPRESS_DATA:
-                        if (!decompressData(ctx, in, out)) {
-                            // Need more data.
-                            return;
-                        }
-                        currentState = State.FINISHED;
-                        break;
-                    case FINISHED:
-                    case CORRUPTED:
-                        in.skipBytes(in.readableBytes());
-                        break;
-                    default:
-                        throw new IllegalStateException();
-                }
-            }
-        } catch (Exception e) {
-            currentState = State.CORRUPTED;
-            throw e;
-        }
-    }
-
-    private void copyStream(final InputStream input, final OutputStream output) throws IOException {
-        final byte[] copyBuffer = new byte[COPY_BUF_SIZE];
-        int n;
-        while ((n = input.read(copyBuffer)) != -1) {
-            output.write(copyBuffer, 0, n);
-        }
-    }
-
-    private static int validateDecompressedSize(long decompressedSize, int originalSize) {
-        if (decompressedSize < Integer.MIN_VALUE || decompressedSize > Integer.MAX_VALUE) {
-            throw new CorruptedFrameException("Invalid decompressedSize: " + decompressedSize);
-        }
-        if (decompressedSize == -1) {
-            return -1;
-        }
-        return Math.max((int) decompressedSize, originalSize);
-    }
-
-    private boolean decompressData(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)  {
-        final int compressedLength = in.readableBytes();
-        if (compressedLength > maxBlockSize) {
-            in.skipBytes(compressedLength);
-            throw new TooLongFrameException("too large message: " + compressedLength + " bytes");
+        if (currentState == State.CORRUPTED) {
+            in.skipBytes(in.readableBytes());
+            return;
         }
         try {
-            if (decompressedSize == -1) {
-                final int decompressedSize;
-                if (in.isDirect()) {
-                    ByteBuffer inNioBuffer = CompressionUtil.safeNioBuffer(
-                            in, in.readerIndex(), compressedLength);
-                    decompressedSize = validateDecompressedSize(
-                            Zstd.getDirectByteBufferFrameContentSize(
-                                    inNioBuffer, inNioBuffer.position(), compressedLength),
-                            compressedLength);
-                } else if (in.hasArray()) {
-                    byte[] srcArray = in.array();
-                    int offset = in.arrayOffset() + in.readerIndex();
-                    decompressedSize = validateDecompressedSize(
-                            Zstd.getFrameContentSize(srcArray, offset, compressedLength),
-                            compressedLength);
-                } else {
-                    throw new UnsupportedOperationException("in needs to be backed by direct memory our byte array");
-                }
-                if (decompressedSize == -1) {
-                    // Can't reat decompressedSize.
-                    return false;
-                }
-
-                this.decompressedSize = decompressedSize;
+            final int compressedLength = in.readableBytes();
+            if (compressedLength > maxBlockSize) {
+                in.skipBytes(compressedLength);
+                throw new TooLongFrameException("too large message: " + compressedLength + " bytes");
             }
+
+            inputStream.current = in;
 
             // Let's start with the compressedLength * 2 as often we will not have everything
             // we need in the in buffer and don't want to reserve too much memory.
-            int bufferSize = decompressedSize == 0 ? 0 : compressedLength * 2;
-            outputStream = new ByteBufOutputStream(ctx.alloc().buffer(bufferSize));
+            outputStream = new ByteBufOutputStream(ctx.alloc().buffer(compressedLength * 2));
 
-            inputStream.current = in;
             copyStream(zstdIs, outputStream);
             int decompressedLength = outputStream.buffer().readableBytes();
             if (decompressedLength == 0) {
                 // Did not decompress anything, let's close the output and release the buffer.
                 closeOutputSilently(true);
-                return false;
+                return;
             }
             // We were able to decompress something, let's forward it to the next handler in the pipeline and adjust
             // decompressedSize.
-            decompressedSize -= decompressedLength;
             out.add(outputStream.buffer());
             closeOutputSilently(false);
-
-            // If we did read everything we can consider this decoder as finished.
-            return decompressedSize == 0;
-        } catch (IOException e) {
-            throw new DecompressionException(e);
-        } catch (ZstdException e) {
+        } catch (Exception e) {
             closeOutputSilently(true);
+            currentState = State.CORRUPTED;
             throw new DecompressionException(e);
+        }
+    }
+
+    private static void copyStream(final InputStream input, final OutputStream output) throws IOException {
+        final byte[] copyBuffer = new byte[COPY_BUF_SIZE];
+        int n;
+        while ((n = input.read(copyBuffer)) != -1) {
+            output.write(copyBuffer, 0, n);
         }
     }
 
@@ -218,14 +151,6 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                 // ignore
             }
         }
-    }
-
-    /**
-     * Returns {@code true} if and only if the end of the compressed stream
-     * has been reached.
-     */
-    public boolean isClosed() {
-        return currentState == State.FINISHED;
     }
 
     private static final class MutableByteBufInputStream extends InputStream {
