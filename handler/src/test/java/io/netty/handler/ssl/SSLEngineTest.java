@@ -1631,6 +1631,8 @@ public abstract class SSLEngineTest {
         ByteBuffer serverAppReadBuffer = allocateBuffer(type, serverEngine.getSession().getApplicationBufferSize());
         ByteBuffer clientAppReadBuffer = allocateBuffer(type, clientEngine.getSession().getApplicationBufferSize());
 
+        assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, clientEngine.getHandshakeStatus());
+        assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, serverEngine.getHandshakeStatus());
         clientEngine.beginHandshake();
         serverEngine.beginHandshake();
 
@@ -1654,9 +1656,7 @@ public abstract class SSLEngineTest {
                 assertEquals(empty.remaining(), clientResult.bytesConsumed());
                 assertEquals(cTOs.position() - cTOsPos,  clientResult.bytesProduced());
 
-                if (isHandshakeFinished(clientResult)) {
-                    clientHandshakeFinished = true;
-                }
+                clientHandshakeFinished = assertHandshakeStatus(clientEngine, clientResult);
 
                 if (clientResult.getStatus() == Status.BUFFER_OVERFLOW) {
                     cTOs = increaseDstBuffer(clientEngine.getSession().getPacketBufferSize(), type, cTOs);
@@ -1669,9 +1669,7 @@ public abstract class SSLEngineTest {
                 assertEquals(empty.remaining(), serverResult.bytesConsumed());
                 assertEquals(sTOc.position() - sTOcPos, serverResult.bytesProduced());
 
-                if (isHandshakeFinished(serverResult)) {
-                    serverHandshakeFinished = true;
-                }
+                serverHandshakeFinished = assertHandshakeStatus(serverEngine, serverResult);
 
                 if (serverResult.getStatus() == Status.BUFFER_OVERFLOW) {
                     sTOc = increaseDstBuffer(serverEngine.getSession().getPacketBufferSize(), type, sTOc);
@@ -1688,41 +1686,47 @@ public abstract class SSLEngineTest {
                 // After the handshake completes it is possible we have more data that was send by the server as
                 // the server will send session updates after the handshake. In this case continue to unwrap.
                 SslProtocols.TLS_v1_3.equals(clientEngine.getSession().getProtocol())) {
-                int clientAppReadBufferPos = clientAppReadBuffer.position();
-                clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
+                if (sTOc.hasRemaining() ||
+                        // We need to special case conscrypt due a bug.
+                        Conscrypt.isEngineSupported(clientEngine)) {
+                    int clientAppReadBufferPos = clientAppReadBuffer.position();
+                    clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
 
-                runDelegatedTasks(delegate, clientResult, clientEngine);
-                assertEquals(sTOc.position() - sTOcPos, clientResult.bytesConsumed());
-                assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos, clientResult.bytesProduced());
-                assertEquals(0, clientAppReadBuffer.position());
+                    runDelegatedTasks(delegate, clientResult, clientEngine);
+                    assertEquals(sTOc.position() - sTOcPos, clientResult.bytesConsumed());
+                    assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos, clientResult.bytesProduced());
+                    assertEquals(0, clientAppReadBuffer.position());
 
-                if (isHandshakeFinished(clientResult)) {
-                    clientHandshakeFinished = true;
-                }
+                    if (assertHandshakeStatus(clientEngine, clientResult)) {
+                        clientHandshakeFinished = true;
+                    }
 
-                if (clientResult.getStatus() == Status.BUFFER_OVERFLOW) {
-                    clientAppReadBuffer = increaseDstBuffer(
-                            clientEngine.getSession().getApplicationBufferSize(), type, clientAppReadBuffer);
+                    if (clientResult.getStatus() == Status.BUFFER_OVERFLOW) {
+                        clientAppReadBuffer = increaseDstBuffer(
+                                clientEngine.getSession().getApplicationBufferSize(), type, clientAppReadBuffer);
+                    }
                 }
             } else {
                 assertEquals(0, sTOc.remaining());
             }
 
             if (!serverHandshakeFinished) {
-                int serverAppReadBufferPos = serverAppReadBuffer.position();
-                serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
-                runDelegatedTasks(delegate, serverResult, serverEngine);
-                assertEquals(cTOs.position() - cTOsPos, serverResult.bytesConsumed());
-                assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos, serverResult.bytesProduced());
-                assertEquals(0, serverAppReadBuffer.position());
+                if (cTOs.hasRemaining() ||
+                        // We need to special case conscrypt due a bug.
+                        Conscrypt.isEngineSupported(serverEngine)) {
+                    int serverAppReadBufferPos = serverAppReadBuffer.position();
+                    serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
+                    runDelegatedTasks(delegate, serverResult, serverEngine);
+                    assertEquals(cTOs.position() - cTOsPos, serverResult.bytesConsumed());
+                    assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos, serverResult.bytesProduced());
+                    assertEquals(0, serverAppReadBuffer.position());
 
-                if (isHandshakeFinished(serverResult)) {
-                    serverHandshakeFinished = true;
-                }
+                    serverHandshakeFinished = assertHandshakeStatus(serverEngine, serverResult);
 
-                if (serverResult.getStatus() == Status.BUFFER_OVERFLOW) {
-                    serverAppReadBuffer = increaseDstBuffer(
-                            serverEngine.getSession().getApplicationBufferSize(), type, serverAppReadBuffer);
+                    if (serverResult.getStatus() == Status.BUFFER_OVERFLOW) {
+                        serverAppReadBuffer = increaseDstBuffer(
+                                serverEngine.getSession().getApplicationBufferSize(), type, serverAppReadBuffer);
+                    }
                 }
             } else {
                 assertFalse(cTOs.hasRemaining());
@@ -1733,14 +1737,6 @@ public abstract class SSLEngineTest {
 
             serverAppReadBuffer.clear();
             clientAppReadBuffer.clear();
-
-            if (clientEngine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
-                clientHandshakeFinished = true;
-            }
-
-            if (serverEngine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
-                serverHandshakeFinished = true;
-            }
         } while (!clientHandshakeFinished || !serverHandshakeFinished ||
                 // We need to ensure we feed all the data to the engine to not end up with a corrupted state.
                 // This is especially important with TLS1.3 which may produce sessions after the "main handshake" is
@@ -1767,8 +1763,12 @@ public abstract class SSLEngineTest {
         return tmpBuffer;
     }
 
-    private static boolean isHandshakeFinished(SSLEngineResult result) {
-        return result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED;
+    private static boolean assertHandshakeStatus(SSLEngine engine, SSLEngineResult result) {
+        if (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
+            assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, engine.getHandshakeStatus());
+            return true;
+        }
+        return false;
     }
 
     private void runDelegatedTasks(boolean delegate, SSLEngineResult result, SSLEngine engine) {
@@ -4563,6 +4563,8 @@ public abstract class SSLEngineTest {
             boolean clientHandshakeFinished = false;
             boolean serverHandshakeFinished = false;
 
+            assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, clientEngine.getHandshakeStatus());
+            assertEquals(SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, serverEngine.getHandshakeStatus());
             do {
                 int cTOsPos = cTOs.position();
                 int sTOcPos = sTOc.position();
@@ -4573,9 +4575,7 @@ public abstract class SSLEngineTest {
                     assertEquals(empty.remaining(), clientResult.bytesConsumed());
                     assertEquals(cTOs.position() - cTOsPos,  clientResult.bytesProduced());
 
-                    if (isHandshakeFinished(clientResult)) {
-                        clientHandshakeFinished = true;
-                    }
+                    clientHandshakeFinished = assertHandshakeStatus(clientEngine, clientResult);
 
                     if (clientResult.getStatus() == Status.BUFFER_OVERFLOW) {
                         cTOs = increaseDstBuffer(clientEngine.getSession().getPacketBufferSize(), param.type(), cTOs);
@@ -4588,7 +4588,7 @@ public abstract class SSLEngineTest {
                     assertEquals(empty.remaining(), serverResult.bytesConsumed());
                     assertEquals(sTOc.position() - sTOcPos, serverResult.bytesProduced());
 
-                    if (isHandshakeFinished(serverResult)) {
+                    if (assertHandshakeStatus(serverEngine, serverResult)) {
                         serverHandshakeFinished = true;
                         // We finished the handshake on the server side, lets add another record to the sTOc buffer
                         // so we can test that we will not unwrap extra data before we actually consider the handshake
@@ -4609,43 +4609,51 @@ public abstract class SSLEngineTest {
                 sTOcPos = sTOc.position();
 
                 if (!clientHandshakeFinished) {
-                    int clientAppReadBufferPos = clientAppReadBuffer.position();
-                    clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
+                    if (sTOc.hasRemaining() ||
+                            // We need to special case conscrypt due a bug.
+                            Conscrypt.isEngineSupported(clientEngine)) {
+                        int clientAppReadBufferPos = clientAppReadBuffer.position();
+                        clientResult = clientEngine.unwrap(sTOc, clientAppReadBuffer);
 
-                    runDelegatedTasks(param.delegate(), clientResult, clientEngine);
-                    assertEquals(sTOc.position() - sTOcPos, clientResult.bytesConsumed());
-                    assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos, clientResult.bytesProduced());
-                    assertEquals(0, clientAppReadBuffer.position());
+                        runDelegatedTasks(param.delegate(), clientResult, clientEngine);
+                        assertEquals(sTOc.position() - sTOcPos, clientResult.bytesConsumed());
+                        assertEquals(clientAppReadBuffer.position() - clientAppReadBufferPos,
+                                clientResult.bytesProduced());
+                        assertEquals(0, clientAppReadBuffer.position());
 
-                    if (isHandshakeFinished(clientResult)) {
-                        clientHandshakeFinished = true;
-                    } else {
-                        assertEquals(0, clientAppReadBuffer.position() - clientAppReadBufferPos);
-                    }
+                        if (assertHandshakeStatus(clientEngine, clientResult)) {
+                            clientHandshakeFinished = true;
+                        } else {
+                            assertEquals(0, clientAppReadBuffer.position() - clientAppReadBufferPos);
+                        }
 
-                    if (clientResult.getStatus() == Status.BUFFER_OVERFLOW) {
-                        clientAppReadBuffer = increaseDstBuffer(
-                                clientEngine.getSession().getApplicationBufferSize(),
-                                param.type(), clientAppReadBuffer);
+                        if (clientResult.getStatus() == Status.BUFFER_OVERFLOW) {
+                            clientAppReadBuffer = increaseDstBuffer(
+                                    clientEngine.getSession().getApplicationBufferSize(),
+                                    param.type(), clientAppReadBuffer);
+                        }
                     }
                 }
 
                 if (!serverHandshakeFinished) {
-                    int serverAppReadBufferPos = serverAppReadBuffer.position();
-                    serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
-                    runDelegatedTasks(param.delegate(), serverResult, serverEngine);
-                    assertEquals(cTOs.position() - cTOsPos, serverResult.bytesConsumed());
-                    assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos, serverResult.bytesProduced());
-                    assertEquals(0, serverAppReadBuffer.position());
+                    if (cTOs.hasRemaining() ||
+                            // We need to special case conscrypt due a bug.
+                            Conscrypt.isEngineSupported(serverEngine)) {
+                        int serverAppReadBufferPos = serverAppReadBuffer.position();
+                        serverResult = serverEngine.unwrap(cTOs, serverAppReadBuffer);
+                        runDelegatedTasks(param.delegate(), serverResult, serverEngine);
+                        assertEquals(cTOs.position() - cTOsPos, serverResult.bytesConsumed());
+                        assertEquals(serverAppReadBuffer.position() - serverAppReadBufferPos,
+                                serverResult.bytesProduced());
+                        assertEquals(0, serverAppReadBuffer.position());
 
-                    if (isHandshakeFinished(serverResult)) {
-                        serverHandshakeFinished = true;
-                    }
+                        serverHandshakeFinished = assertHandshakeStatus(serverEngine, serverResult);
 
-                    if (serverResult.getStatus() == Status.BUFFER_OVERFLOW) {
-                        serverAppReadBuffer = increaseDstBuffer(
-                                serverEngine.getSession().getApplicationBufferSize(),
-                                param.type(), serverAppReadBuffer);
+                        if (serverResult.getStatus() == Status.BUFFER_OVERFLOW) {
+                            serverAppReadBuffer = increaseDstBuffer(
+                                    serverEngine.getSession().getApplicationBufferSize(),
+                                    param.type(), serverAppReadBuffer);
+                        }
                     }
                 }
 
@@ -4654,14 +4662,6 @@ public abstract class SSLEngineTest {
 
                 serverAppReadBuffer.clear();
                 clientAppReadBuffer.clear();
-
-                if (clientEngine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
-                    clientHandshakeFinished = true;
-                }
-
-                if (serverEngine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
-                    serverHandshakeFinished = true;
-                }
             } while (!clientHandshakeFinished || !serverHandshakeFinished);
         } finally {
             cleanupClientSslEngine(clientEngine);
