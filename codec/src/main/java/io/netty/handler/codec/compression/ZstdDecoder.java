@@ -124,7 +124,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         @Override
         public int read(byte[] b, int off, int len) {
             int available = available();
-            if (current == null || available == 0) {
+            if (available == 0) {
                 return -1;
             }
 
