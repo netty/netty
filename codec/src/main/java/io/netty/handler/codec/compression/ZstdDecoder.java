@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -56,7 +56,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
 
             ByteBuf outBuffer = null;
             try {
-                int w = -1;
+                int w;
                 do {
                     if (outBuffer == null) {
                         // Let's start with the compressedLength * 2 as often we will not have everything
