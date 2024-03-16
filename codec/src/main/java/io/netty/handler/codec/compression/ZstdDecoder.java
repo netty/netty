@@ -35,6 +35,14 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
 
     private State currentState = State.DECOMPRESS_DATA;
 
+    static {
+        try {
+            Zstd.ensureAvailability();
+        } catch (Throwable throwable) {
+            throw new ExceptionInInitializerError(throwable);
+        }
+    }
+
     /**
      * Current state of stream.
      */
