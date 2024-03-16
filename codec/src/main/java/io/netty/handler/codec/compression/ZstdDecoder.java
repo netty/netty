@@ -63,16 +63,9 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                         // we need in the in buffer and don't want to reserve too much memory.
                         outBuffer = ctx.alloc().heapBuffer(compressedLength * 2);
                     }
-                    byte[] array = outBuffer.array();
-                    int writerOffset = outBuffer.arrayOffset() + outBuffer.writerIndex();
-                    int writableBytes = outBuffer.writableBytes();
-                    int written = 0;
-                    while (writableBytes > 0 && (w = zstdIs.read(array, writerOffset, writableBytes)) != -1) {
-                        writerOffset += w;
-                        writableBytes -= w;
-                        written += w;
-                    }
-                    outBuffer.writerIndex(outBuffer.writerIndex() + written);
+                    do {
+                        w = outBuffer.writeBytes(zstdIs, outBuffer.writableBytes());
+                    } while (w != -1 && outBuffer.isWritable());
                     if (outBuffer.isReadable()) {
                         out.add(outBuffer);
                         outBuffer = null;
