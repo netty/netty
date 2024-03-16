@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.compression;
 
-import com.github.luben.zstd.ZstdOutputStream;
+import com.github.luben.zstd.ZstdOutputStreamNoFinalizer;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import java.io.ByteArrayOutputStream;
@@ -33,7 +33,7 @@ public class ZstdDecoderTest extends AbstractDecoderTest {
     @Override
     protected byte[] compress(byte[] data) throws Exception {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
-        ZstdOutputStream zstdOs = new ZstdOutputStream(os);
+        ZstdOutputStreamNoFinalizer zstdOs = new ZstdOutputStreamNoFinalizer(os);
         zstdOs.write(data);
         zstdOs.close();
 
