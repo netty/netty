@@ -41,8 +41,7 @@ final class AsciiStringUtil {
             }
             fromIndex += Long.BYTES;
         }
-        final int byteCount = length & 7;
-        return unrolledFirstIndexOf(bytes, fromIndex, byteCount, value);
+        return unrolledFirstIndexOf(bytes, fromIndex, length & 7, value);
     }
 
     private static int linearFirstIndexOf(final byte[] bytes, final int fromIndex,
@@ -150,8 +149,7 @@ final class AsciiStringUtil {
             }
             index += Long.BYTES;
         }
-        final int byteCount = length & 7;
-        return unrolledConstainsUpperCase(bytes, index, byteCount);
+        return unrolledConstainsUpperCase(bytes, index, length & 7);
     }
 
     private static boolean linearContainsUpperCase(final byte[] bytes, final int index, final int length) {
@@ -165,7 +163,7 @@ final class AsciiStringUtil {
     }
 
     private static boolean unrolledConstainsUpperCase(final byte[] bytes, int index, final int byteCount) {
-        assert byteCount < 8;
+        assert byteCount >= 0 && byteCount < 8;
         if ((byteCount & 4) != 0) {
             final int word = PlatformDependent.getInt(bytes, index);
             if (SWARUtil.containsUpperCase(word)) {
@@ -219,7 +217,7 @@ final class AsciiStringUtil {
     }
 
     private static boolean unrolledContainsLowerCase(final byte[] bytes, int index, final int byteCount) {
-        assert byteCount < 8;
+        assert byteCount >= 0 && byteCount < 8;
         if ((byteCount & 4) != 0) {
             final int word = PlatformDependent.getInt(bytes, index);
             if (SWARUtil.containsLowerCase(word)) {
@@ -260,7 +258,7 @@ final class AsciiStringUtil {
             srcPos += Long.BYTES;
             destPos += Long.BYTES;
         }
-        unrollToLowerCase(src, srcPos, dest, destPos, length & 7);
+        unrolledToLowerCase(src, srcPos, dest, destPos, length & 7);
     }
 
     private static void linearToLowerCase(final byte[] src, int srcPos,
@@ -270,15 +268,16 @@ final class AsciiStringUtil {
         }
     }
 
-    private static void unrollToLowerCase(final byte[] src, int srcPos,
-                                          final byte[] dest, int destPos, final int length) {
-        if ((length & 4) != 0) {
+    private static void unrolledToLowerCase(final byte[] src, int srcPos,
+                                            final byte[] dest, int destPos, final int byteCount) {
+        assert byteCount >= 0 && byteCount < 8;
+        if ((byteCount & 4) != 0) {
             final int word = PlatformDependent.getInt(src, srcPos);
             PlatformDependent.putInt(dest, destPos, SWARUtil.toLowerCase(word));
             srcPos += Integer.BYTES;
             destPos += Integer.BYTES;
         }
-        if ((length & 2) != 0) {
+        if ((byteCount & 2) != 0) {
             PlatformDependent.putByte(dest, destPos,
                                       toLowerCase(PlatformDependent.getByte(src, srcPos)));
             PlatformDependent.putByte(dest, destPos + 1,
@@ -286,7 +285,7 @@ final class AsciiStringUtil {
             srcPos += 2;
             destPos += 2;
         }
-        if ((length & 1) != 0) {
+        if ((byteCount & 1) != 0) {
             PlatformDependent.putByte(dest, destPos,
                                       toLowerCase(PlatformDependent.getByte(src, srcPos)));
         }
@@ -310,8 +309,7 @@ final class AsciiStringUtil {
             destPos += Long.BYTES;
         }
 
-        final int byteCount = length & 7;
-        unrolltoUpperCase(src, srcPos, dest, destPos, byteCount);
+        unrolledtoUpperCase(src, srcPos, dest, destPos, length & 7);
     }
 
     private static void linearToUpperCase(final byte[] src, int srcPos,
@@ -321,15 +319,16 @@ final class AsciiStringUtil {
         }
     }
 
-    private static void unrolltoUpperCase(final byte[] src, int srcPos,
-                                          final byte[] dest, int destPos, final int length) {
-        if ((length & 4) != 0) {
+    private static void unrolledtoUpperCase(final byte[] src, int srcPos,
+                                            final byte[] dest, int destPos, final int byteCount) {
+        assert byteCount >= 0 && byteCount < 8;
+        if ((byteCount & 4) != 0) {
             final int word = PlatformDependent.getInt(src, srcPos);
             PlatformDependent.putInt(dest, destPos, SWARUtil.toUpperCase(word));
             srcPos += Integer.BYTES;
             destPos += Integer.BYTES;
         }
-        if ((length & 2) != 0) {
+        if ((byteCount & 2) != 0) {
             PlatformDependent.putByte(dest, destPos,
                                       toUpperCase(PlatformDependent.getByte(src, srcPos)));
             PlatformDependent.putByte(dest, destPos + 1,
@@ -337,7 +336,7 @@ final class AsciiStringUtil {
             srcPos += 2;
             destPos += 2;
         }
-        if ((length & 1) != 0) {
+        if ((byteCount & 1) != 0) {
             PlatformDependent.putByte(dest, destPos,
                                       toUpperCase(PlatformDependent.getByte(src, srcPos)));
         }
@@ -369,8 +368,7 @@ final class AsciiStringUtil {
                 rhsPos += Long.BYTES;
             }
         }
-        final int byteCount = length & 7;
-        return unrollEqualsIgnoreCase(lhs, lhsPos, rhs, rhsPos, byteCount);
+        return unrolledEqualsIgnoreCase(lhs, lhsPos, rhs, rhsPos, length & 7);
     }
 
     private static boolean linearEqualsIgnoreCase(final byte[] lhs, int lhsPos,
@@ -383,9 +381,10 @@ final class AsciiStringUtil {
         return true;
     }
 
-    private static boolean unrollEqualsIgnoreCase(final byte[] lhs, int lhsPos,
-                                                  final byte[] rhs, int rhsPos, final int length) {
-        if ((length & 4) != 0) {
+    private static boolean unrolledEqualsIgnoreCase(final byte[] lhs, int lhsPos,
+                                                    final byte[] rhs, int rhsPos, final int byteCount) {
+        assert byteCount >= 0 && byteCount < 8;
+        if ((byteCount & 4) != 0) {
             final int lWord = PlatformDependent.getInt(lhs, lhsPos);
             final int rWord = PlatformDependent.getInt(rhs, rhsPos);
             if (SWARUtil.toLowerCase(lWord) != SWARUtil.toLowerCase(rWord)) {
@@ -394,7 +393,7 @@ final class AsciiStringUtil {
             lhsPos += Integer.BYTES;
             rhsPos += Integer.BYTES;
         }
-        if ((length & 2) != 0) {
+        if ((byteCount & 2) != 0) {
             if (toLowerCase(PlatformDependent.getByte(lhs, lhsPos)) !=
                 toLowerCase(PlatformDependent.getByte(rhs, rhsPos))) {
                 return false;
@@ -406,7 +405,7 @@ final class AsciiStringUtil {
             lhsPos += 2;
             rhsPos += 2;
         }
-        if ((length & 1) != 0) {
+        if ((byteCount & 1) != 0) {
             return toLowerCase(PlatformDependent.getByte(lhs, lhsPos)) ==
                    toLowerCase(PlatformDependent.getByte(rhs, rhsPos));
         }
