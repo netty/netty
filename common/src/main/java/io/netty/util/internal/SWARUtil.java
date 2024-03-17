@@ -28,16 +28,6 @@ public final class SWARUtil {
     }
 
     /**
-     * Returns the index of the first occurrence of the specified pattern in the specified word.
-     * If no pattern is found, returns 8.
-     */
-    public static int firstAnyPattern(final long word, final long pattern, final boolean leading) {
-        long tmp = applyPattern(word, pattern);
-        final int binaryPosition = leading? Long.numberOfLeadingZeros(tmp) : Long.numberOfTrailingZeros(tmp);
-        return binaryPosition >>> 3;
-    }
-
-    /**
      * Applies a compiled pattern to given word.
      * Returns a word where each byte that matches the pattern has the highest bit set.
      */
