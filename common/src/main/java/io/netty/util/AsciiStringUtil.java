@@ -137,26 +137,26 @@ public final class AsciiStringUtil {
      * Returns true if the given byte array contains at least one upper case character. false otherwise.
      * This method utilizes SWAR technique to accelerate containsUpperCase operation.
      */
-    static boolean containsUpperCase(final byte[] bytes, int fromIndex, final int toIndex) {
+    static boolean containsUpperCase(final byte[] bytes, int index, final int length) {
         if (!PlatformDependent.isUnaligned()) {
-            return linearContainsUpperCase(bytes, fromIndex, toIndex);
+            return linearContainsUpperCase(bytes, index, length);
         }
 
-        final int length = toIndex - fromIndex;
         final int longCount = length >>> 3;
         for (int i = 0; i < longCount; ++i) {
-            final long word = PlatformDependent.getLong(bytes, fromIndex);
+            final long word = PlatformDependent.getLong(bytes, index);
             if (SWARUtil.containsUpperCase(word)) {
                 return true;
             }
-            fromIndex += Long.BYTES;
+            index += Long.BYTES;
         }
         final int byteCount = length & 7;
-        return unrolledConstainsUpperCase(bytes, fromIndex, byteCount);
+        return unrolledConstainsUpperCase(bytes, index, byteCount);
     }
 
-    private static boolean linearContainsUpperCase(final byte[] bytes, final int fromIndex, final int toIndex) {
-        for (int idx = fromIndex; idx < toIndex; ++idx) {
+    private static boolean linearContainsUpperCase(final byte[] bytes, final int index, final int length) {
+        final int end = index + length;
+        for (int idx = index; idx < end; ++idx) {
             if (isUpperCase(bytes[idx])) {
                 return true;
             }
@@ -164,25 +164,26 @@ public final class AsciiStringUtil {
         return false;
     }
 
-    private static boolean unrolledConstainsUpperCase(final byte[] bytes, int fromIndex, final int length) {
-        if ((length & 4) != 0) {
-            final int word = PlatformDependent.getInt(bytes, fromIndex);
+    private static boolean unrolledConstainsUpperCase(final byte[] bytes, int index, final int byteCount) {
+        assert byteCount < 8;
+        if ((byteCount & 4) != 0) {
+            final int word = PlatformDependent.getInt(bytes, index);
             if (SWARUtil.containsUpperCase(word)) {
                 return true;
             }
-            fromIndex += Integer.BYTES;
+            index += Integer.BYTES;
         }
-        if ((length & 2) != 0) {
-            if (isUpperCase(PlatformDependent.getByte(bytes, fromIndex))) {
+        if ((byteCount & 2) != 0) {
+            if (isUpperCase(PlatformDependent.getByte(bytes, index))) {
                 return true;
             }
-            if (isUpperCase(PlatformDependent.getByte(bytes, fromIndex + 1))) {
+            if (isUpperCase(PlatformDependent.getByte(bytes, index + 1))) {
                 return true;
             }
-            fromIndex += 2;
+            index += 2;
         }
-        if ((length & 1) != 0) {
-            return isUpperCase(PlatformDependent.getByte(bytes, fromIndex));
+        if ((byteCount & 1) != 0) {
+            return isUpperCase(PlatformDependent.getByte(bytes, index));
         }
         return false;
     }
@@ -191,25 +192,25 @@ public final class AsciiStringUtil {
      * Returns true if the given byte array contains at least one lower case character. false otherwise.
      * This method utilizes SWAR technique to accelerate containsLowerCase operation.
      */
-    static boolean containsLowerCase(final byte[] bytes, int fromIndex, final int toIndex) {
+    static boolean containsLowerCase(final byte[] bytes, int index, final int length) {
         if (!PlatformDependent.isUnaligned()) {
-            return linearContainsLowerCase(bytes, fromIndex, toIndex);
+            return linearContainsLowerCase(bytes, index, length);
         }
 
-        final int length = toIndex - fromIndex;
         final int longCount = length >>> 3;
         for (int i = 0; i < longCount; ++i) {
-            final long word = PlatformDependent.getLong(bytes, fromIndex);
+            final long word = PlatformDependent.getLong(bytes, index);
             if (SWARUtil.containsLowerCase(word)) {
                 return true;
             }
-            fromIndex += Long.BYTES;
+            index += Long.BYTES;
         }
-        return unrolledContainsLowerCase(bytes, fromIndex, length & 7);
+        return unrolledContainsLowerCase(bytes, index, length & 7);
     }
 
-    private static boolean linearContainsLowerCase(final byte[] bytes, final int fromIndex, final int toIndex) {
-        for (int idx = fromIndex; idx < toIndex; ++idx) {
+    private static boolean linearContainsLowerCase(final byte[] bytes, final int index, final int length) {
+        final int end = index + length;
+        for (int idx = index; idx < end; ++idx) {
             if (isLowerCase(bytes[idx])) {
                 return true;
             }
@@ -217,25 +218,26 @@ public final class AsciiStringUtil {
         return false;
     }
 
-    private static boolean unrolledContainsLowerCase(final byte[] bytes, int fromIndex, final int length) {
-        if ((length & 4) != 0) {
-            final int word = PlatformDependent.getInt(bytes, fromIndex);
+    private static boolean unrolledContainsLowerCase(final byte[] bytes, int index, final int byteCount) {
+        assert byteCount < 8;
+        if ((byteCount & 4) != 0) {
+            final int word = PlatformDependent.getInt(bytes, index);
             if (SWARUtil.containsLowerCase(word)) {
                 return true;
             }
-            fromIndex += Integer.BYTES;
+            index += Integer.BYTES;
         }
-        if ((length & 2) != 0) {
-            if (isLowerCase(PlatformDependent.getByte(bytes, fromIndex))) {
+        if ((byteCount & 2) != 0) {
+            if (isLowerCase(PlatformDependent.getByte(bytes, index))) {
                 return true;
             }
-            if (isLowerCase(PlatformDependent.getByte(bytes, fromIndex + 1))) {
+            if (isLowerCase(PlatformDependent.getByte(bytes, index + 1))) {
                 return true;
             }
-            fromIndex += 2;
+            index += 2;
         }
-        if ((length & 1) != 0) {
-            return isLowerCase(PlatformDependent.getByte(bytes, fromIndex));
+        if ((byteCount & 1) != 0) {
+            return isLowerCase(PlatformDependent.getByte(bytes, index));
         }
         return false;
     }

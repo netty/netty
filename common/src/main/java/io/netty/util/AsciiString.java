@@ -921,7 +921,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return a new string containing the lowercase characters equivalent to the characters in this string.
      */
     public AsciiString toLowerCase() {
-        if (!AsciiStringUtil.containsUpperCase(value, offset, offset + length)) {
+        if (!AsciiStringUtil.containsUpperCase(value, offset, length)) {
             return this;
         }
 
@@ -936,7 +936,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
      * @return a new string containing the uppercase characters equivalent to the characters in this string.
      */
     public AsciiString toUpperCase() {
-        if (!AsciiStringUtil.containsLowerCase(value, offset, offset + length)) {
+        if (!AsciiStringUtil.containsLowerCase(value, offset, length)) {
             return this;
         }
         final byte[] newValue = PlatformDependent.allocateUninitializedArray(length);
