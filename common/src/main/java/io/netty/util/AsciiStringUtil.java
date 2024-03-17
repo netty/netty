@@ -20,7 +20,7 @@ import io.netty.util.internal.SWARUtil;
 /**
  * A collection of utility methods that is related with handling {@link AsciiString}
  */
-public final class AsciiStringUtil {
+final class AsciiStringUtil {
 
     /**
      * Returns index of the first occurrence of the specified byte in the specified array.
