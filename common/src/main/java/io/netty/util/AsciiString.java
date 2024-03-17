@@ -535,7 +535,7 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
 
         if (string instanceof AsciiString) {
             AsciiString rhs = (AsciiString) string;
-            return AsciiStringUtil.equalsIgnoreCases(value, offset, rhs.value, rhs.offset, length());
+            return AsciiStringUtil.equalsIgnoreCases(value, offset, rhs.value, rhs.offset, length);
         }
 
         byte[] value = this.value;

@@ -15,6 +15,7 @@
 package io.netty.util;
 
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SWARUtil;
 
 /**
  * A collection of utility methods that is related with handling {@link AsciiString}
@@ -31,12 +32,12 @@ public final class AsciiStringUtil {
         }
         final int length = toIndex - fromIndex;
         final int longCount = length >>> 3;
-        final long pattern = SWARByteUtil.compilePattern(value);
+        final long pattern = SWARUtil.compilePattern(value);
         for (int i = 0; i < longCount; ++i) {
             final long word = PlatformDependent.getLong(bytes, fromIndex);
-            final long mask = SWARByteUtil.applyPattern(word, pattern);
+            final long mask = SWARUtil.applyPattern(word, pattern);
             if (mask != 0) {
-                return fromIndex + SWARByteUtil.getIndex(mask, PlatformDependent.BIG_ENDIAN_NATIVE_ORDER);
+                return fromIndex + SWARUtil.getIndex(mask, PlatformDependent.BIG_ENDIAN_NATIVE_ORDER);
             }
             fromIndex += Long.BYTES;
         }
@@ -145,7 +146,7 @@ public final class AsciiStringUtil {
         final int longCount = length >>> 3;
         for (int i = 0; i < longCount; ++i) {
             final long word = PlatformDependent.getLong(bytes, fromIndex);
-            if (SWARByteUtil.containsUpperCase(word)) {
+            if (SWARUtil.containsUpperCase(word)) {
                 return true;
             }
             fromIndex += Long.BYTES;
@@ -166,7 +167,7 @@ public final class AsciiStringUtil {
     private static boolean unrolledConstainsUpperCase(final byte[] bytes, int fromIndex, final int length) {
         if ((length & 4) != 0) {
             final int word = PlatformDependent.getInt(bytes, fromIndex);
-            if (SWARByteUtil.containsUpperCase(word)) {
+            if (SWARUtil.containsUpperCase(word)) {
                 return true;
             }
             fromIndex += Integer.BYTES;
@@ -199,7 +200,7 @@ public final class AsciiStringUtil {
         final int longCount = length >>> 3;
         for (int i = 0; i < longCount; ++i) {
             final long word = PlatformDependent.getLong(bytes, fromIndex);
-            if (SWARByteUtil.containsLowerCase(word)) {
+            if (SWARUtil.containsLowerCase(word)) {
                 return true;
             }
             fromIndex += Long.BYTES;
@@ -219,7 +220,7 @@ public final class AsciiStringUtil {
     private static boolean unrolledContainsLowerCase(final byte[] bytes, int fromIndex, final int length) {
         if ((length & 4) != 0) {
             final int word = PlatformDependent.getInt(bytes, fromIndex);
-            if (SWARByteUtil.containsLowerCase(word)) {
+            if (SWARUtil.containsLowerCase(word)) {
                 return true;
             }
             fromIndex += Integer.BYTES;
@@ -253,7 +254,7 @@ public final class AsciiStringUtil {
         final int longCount = length >>> 3;
         for (int i = 0; i < longCount; ++i) {
             final long word = PlatformDependent.getLong(src, srcPos);
-            PlatformDependent.putLong(dest, destPos, SWARByteUtil.toLowerCase(word));
+            PlatformDependent.putLong(dest, destPos, SWARUtil.toLowerCase(word));
             srcPos += Long.BYTES;
             destPos += Long.BYTES;
         }
@@ -271,7 +272,7 @@ public final class AsciiStringUtil {
                                           final byte[] dest, int destPos, final int length) {
         if ((length & 4) != 0) {
             final int word = PlatformDependent.getInt(src, srcPos);
-            PlatformDependent.putInt(dest, destPos, SWARByteUtil.toLowerCase(word));
+            PlatformDependent.putInt(dest, destPos, SWARUtil.toLowerCase(word));
             srcPos += Integer.BYTES;
             destPos += Integer.BYTES;
         }
@@ -302,7 +303,7 @@ public final class AsciiStringUtil {
         final int longCount = length >>> 3;
         for (int i = 0; i < longCount; ++i) {
             final long word = PlatformDependent.getLong(src, srcPos);
-            PlatformDependent.putLong(dest, destPos, SWARByteUtil.toUpperCase(word));
+            PlatformDependent.putLong(dest, destPos, SWARUtil.toUpperCase(word));
             srcPos += Long.BYTES;
             destPos += Long.BYTES;
         }
@@ -322,7 +323,7 @@ public final class AsciiStringUtil {
                                           final byte[] dest, int destPos, final int length) {
         if ((length & 4) != 0) {
             final int word = PlatformDependent.getInt(src, srcPos);
-            PlatformDependent.putInt(dest, destPos, SWARByteUtil.toUpperCase(word));
+            PlatformDependent.putInt(dest, destPos, SWARUtil.toUpperCase(word));
             srcPos += Integer.BYTES;
             destPos += Integer.BYTES;
         }
@@ -359,7 +360,7 @@ public final class AsciiStringUtil {
             for (int i = 0; i < longCount; ++i) {
                 final long lWord = PlatformDependent.getLong(lhs, lhsPos);
                 final long rWord = PlatformDependent.getLong(rhs, rhsPos);
-                if (SWARByteUtil.toLowerCase(lWord) != SWARByteUtil.toLowerCase(rWord)) {
+                if (SWARUtil.toLowerCase(lWord) != SWARUtil.toLowerCase(rWord)) {
                     return false;
                 }
                 lhsPos += Long.BYTES;
@@ -385,7 +386,7 @@ public final class AsciiStringUtil {
         if ((length & 4) != 0) {
             final int lWord = PlatformDependent.getInt(lhs, lhsPos);
             final int rWord = PlatformDependent.getInt(rhs, rhsPos);
-            if (SWARByteUtil.toLowerCase(lWord) != SWARByteUtil.toLowerCase(rWord)) {
+            if (SWARUtil.toLowerCase(lWord) != SWARUtil.toLowerCase(rWord)) {
                 return false;
             }
             lhsPos += Integer.BYTES;
@@ -408,169 +409,6 @@ public final class AsciiStringUtil {
                    toLowerCase(PlatformDependent.getByte(rhs, rhsPos));
         }
         return true;
-    }
-
-    /**
-     * A collection methods for performing operations using SWAR (SIMD within a register) techniques.
-     */
-    public static final class SWARByteUtil {
-
-        /**
-         * Compiles given byte into a long pattern suitable for SWAR operations.
-         */
-        public static long compilePattern(final byte byteToFind) {
-            return (byteToFind & 0xFFL) * 0x101010101010101L;
-        }
-
-        /**
-         * Returns the index of the first occurrence of the specified pattern in the specified word.
-         * If no pattern is found, returns 8.
-         */
-        public static int firstAnyPattern(final long word, final long pattern, final boolean leading) {
-            long tmp = applyPattern(word, pattern);
-            final int binaryPosition = leading? Long.numberOfLeadingZeros(tmp) : Long.numberOfTrailingZeros(tmp);
-            return binaryPosition >>> 3;
-        }
-
-        /**
-         * Applies a compiled pattern to given word.
-         * Returns a word where each byte that matches the pattern has the highest bit set.
-         */
-        private static long applyPattern(final long word, final long pattern) {
-            long input = word ^ pattern;
-            long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
-            return ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
-        }
-
-        /**
-         * Returns the index of the first occurrence of byte that specificied in the pattern.
-         * If no pattern is found, returns 8.
-         *
-         * @param word     the return value of {@link #applyPattern(long, long)}
-         * @param isNative if ture, if given word is big endian
-         *                 if false, if given word is little endian
-         * @return the index of the first occurrence of the specified pattern in the specified word.
-         * If no pattern is found, returns 8.
-         */
-        public static int getIndex(final long word, final boolean isNative) {
-            final int tmp = isNative? Long.numberOfLeadingZeros(word) : Long.numberOfTrailingZeros(word);
-            return tmp >>> 3;
-        }
-
-        /**
-         * Returns a word where each ASCII uppercase byte has the highest bit set.
-         */
-        private static long applyUpperCasePattern(final long word) {
-            long rotated = word & 0x7F7F7F7F7F7F7F7FL;
-            rotated += 0x2525252525252525L;
-            rotated &= 0x7F7F7F7F7F7F7F7FL;
-            rotated += 0x1A1A1A1A1A1A1A1AL;
-            rotated &= ~word;
-            rotated &= 0x8080808080808080L;
-            return rotated;
-        }
-
-        /**
-         * Returns a word where each ASCII uppercase byte has the highest bit set.
-         */
-        private static int applyUpperCasePattern(final int word) {
-            int rotated = word & 0x7F7F7F7F;
-            rotated += 0x25252525;
-            rotated &= 0x7F7F7F7F;
-            rotated += 0x1A1A1A1A;
-            rotated &= ~word;
-            rotated &= 0x80808080;
-            return rotated;
-        }
-
-        /**
-         * Returns a word where each ASCII lowercase byte has the highest bit set.
-         */
-        private static long applyLowerCasePattern(final long word) {
-            long rotated = word & 0x7F7F7F7F7F7F7F7FL;
-            rotated += 0x0505050505050505L;
-            rotated &= 0x7F7F7F7F7F7F7F7FL;
-            rotated += 0x1A1A1A1A1A1A1A1AL;
-            rotated &= ~word;
-            rotated &= 0x8080808080808080L;
-            return rotated;
-        }
-
-        /**
-         * Returns a word where each lowercase ASCII byte has the highest bit set.
-         */
-        private static int applyLowerCasePattern(final int word) {
-            int rotated = word & 0x7F7F7F7F;
-            rotated += 0x05050505;
-            rotated &= 0x7F7F7F7F;
-            rotated += 0x1A1A1A1A;
-            rotated &= ~word;
-            rotated &= 0x80808080;
-            return rotated;
-        }
-
-        /**
-         * Returns true if the given word contains at least one ASCII uppercase byte.
-         */
-        static boolean containsUpperCase(final long word) {
-            return applyUpperCasePattern(word) != 0;
-        }
-
-        /**
-         * Returns true if the given word contains at least one ASCII uppercase byte.
-         */
-        static boolean containsUpperCase(final int word) {
-            return applyUpperCasePattern(word) != 0;
-        }
-
-        /**
-         * Returns true if the given word contains at least one ASCII lowercase byte.
-         */
-        static boolean containsLowerCase(final long word) {
-            return applyLowerCasePattern(word) != 0;
-        }
-
-        /**
-         * Returns true if the given word contains at least one ASCII lowercase byte.
-         */
-        static boolean containsLowerCase(final int word) {
-            return applyLowerCasePattern(word) != 0;
-        }
-
-        /**
-         * Returns a word with all bytes converted to lowercase ASCII.
-         */
-        static long toLowerCase(final long word) {
-            final long mask = applyUpperCasePattern(word) >>> 2;
-            return word | mask;
-        }
-
-        /**
-         * Returns a word with all bytes converted to lowercase ASCII.
-         */
-        static int toLowerCase(final int word) {
-            final int mask = applyUpperCasePattern(word) >>> 2;
-            return word | mask;
-        }
-
-        /**
-         * Returns a word with all bytes converted to uppercase ASCII.
-         */
-        static long toUpperCase(final long word) {
-            final long mask = applyLowerCasePattern(word) >>> 2;
-            return word & ~mask;
-        }
-
-        /**
-         * Returns a word with all bytes converted to uppercase ASCII.
-         */
-        static int toUpperCase(final int word) {
-            final int mask = applyLowerCasePattern(word) >>> 2;
-            return word & ~mask;
-        }
-
-        private SWARByteUtil() {
-        }
     }
 
     private AsciiStringUtil() {

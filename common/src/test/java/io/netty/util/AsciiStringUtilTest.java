@@ -14,6 +14,7 @@
  */
 package io.netty.util;
 
+import io.netty.util.internal.SWARUtil;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,7 +35,7 @@ class AsciiStringUtilTest {
         // test 4 bytes
         for (int i = 0; i < eAsciiTable.length; i += 4) {
             final int word = getInt(eAsciiTable, i);
-            final int converted = AsciiStringUtil.SWARByteUtil.toLowerCase(word);
+            final int converted = SWARUtil.toLowerCase(word);
             for (int j = 0; j < Integer.BYTES; ++j) {
                 final byte expected = AsciiStringUtil.toLowerCase(eAsciiTable[i + j]);
                 final byte actual = getByte(converted, j);
@@ -45,7 +46,7 @@ class AsciiStringUtilTest {
         // test 8 bytes
         for (int i = 0; i < eAsciiTable.length; i += 8) {
             final long word = getLong(eAsciiTable, i);
-            final long converted = AsciiStringUtil.SWARByteUtil.toLowerCase(word);
+            final long converted = SWARUtil.toLowerCase(word);
             for (int j = 0; j < Long.BYTES; ++j) {
                 final byte expected = AsciiStringUtil.toLowerCase(eAsciiTable[i + j]);
                 final byte actual = getByte(converted, j);
@@ -68,7 +69,7 @@ class AsciiStringUtilTest {
         // test 4 bytes
         for (int i = 0; i < eAsciiTable.length; i += 4) {
             final int word = getInt(eAsciiTable, i);
-            final int converted = AsciiStringUtil.SWARByteUtil.toUpperCase(word);
+            final int converted = SWARUtil.toUpperCase(word);
             for (int j = 0; j < Integer.BYTES; ++j) {
                 final byte expected = AsciiStringUtil.toUpperCase(eAsciiTable[i + j]);
                 final byte actual = getByte(converted, j);
@@ -79,7 +80,7 @@ class AsciiStringUtilTest {
         // test 8 bytes
         for (int i = 0; i < eAsciiTable.length; i += 8) {
             final long word = getLong(eAsciiTable, i);
-            final long converted = AsciiStringUtil.SWARByteUtil.toUpperCase(word);
+            final long converted = SWARUtil.toUpperCase(word);
             for (int j = 0; j < Long.BYTES; ++j) {
                 final byte expected = AsciiStringUtil.toUpperCase(eAsciiTable[i + j]);
                 final byte actual = getByte(converted, j);
