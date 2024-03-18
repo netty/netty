@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.compression;
 
+import com.github.luben.zstd.BufferPool;
+import com.github.luben.zstd.NoPool;
 import com.github.luben.zstd.ZstdInputStreamNoFinalizer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -39,10 +41,28 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
         }
     }
 
-    private final MutableByteBufInputStream inputStream = new MutableByteBufInputStream();
+    private final MutableByteBufInputStream inputStream;
+    private final BufferPool bufferPool;
     private ZstdInputStreamNoFinalizer zstdIs;
+    private State currentState;
 
-    private State currentState = State.DECOMPRESS_DATA;
+    /**
+      * Create a new decoder with no buffer pool.
+      * This will allocate a new dedicated heap buffer when this handler is used.
+      */
+    public ZstdDecoder() {
+      this(NoPool.INSTANCE);
+    }
+
+    /**
+      * Create a new decoder with a specified {@link com.github.luben.zstd.BufferPool}.
+      * @param bufferPool a pool that provides internal buffers for zstd
+      */
+    public ZstdDecoder(BufferPool bufferPool) {
+      this.inputStream = new MutableByteBufInputStream();
+      this.bufferPool = bufferPool;
+      this.currentState  = State.DECOMPRESS_DATA;
+    }
 
     /**
      * Current state of stream.
@@ -96,7 +116,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         super.handlerAdded(ctx);
-        zstdIs = new ZstdInputStreamNoFinalizer(inputStream);
+        zstdIs = new ZstdInputStreamNoFinalizer(inputStream, bufferPool);
         zstdIs.setContinuous(true);
     }
 
