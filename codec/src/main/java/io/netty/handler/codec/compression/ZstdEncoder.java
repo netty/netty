@@ -35,7 +35,14 @@ import static io.netty.handler.codec.compression.ZstdConstants.MAX_BLOCK_SIZE;
  *  See <a href="https://facebook.github.io/zstd">Zstandard</a>.
  */
 public final class ZstdEncoder extends MessageToByteEncoder<ByteBuf> {
-
+    // Don't use static here as we want to still allow to load the classes.
+    {
+        try {
+            io.netty.handler.codec.compression.Zstd.ensureAvailability();
+        } catch (Throwable throwable) {
+            throw new ExceptionInInitializerError(throwable);
+        }
+    }
     private final int blockSize;
     private final int compressionLevel;
     private final int maxEncodeSize;
