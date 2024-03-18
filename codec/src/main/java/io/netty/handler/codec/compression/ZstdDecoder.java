@@ -30,18 +30,19 @@ import java.util.List;
  * See <a href="https://facebook.github.io/zstd">Zstandard</a>.
  */
 public final class ZstdDecoder extends ByteToMessageDecoder {
-    private final MutableByteBufInputStream inputStream = new MutableByteBufInputStream();
-    private ZstdInputStreamNoFinalizer zstdIs;
-
-    private State currentState = State.DECOMPRESS_DATA;
-
-    static {
+    // Don't use static here as we want to still allow to load the classes.
+    {
         try {
             Zstd.ensureAvailability();
         } catch (Throwable throwable) {
             throw new ExceptionInInitializerError(throwable);
         }
     }
+
+    private final MutableByteBufInputStream inputStream = new MutableByteBufInputStream();
+    private ZstdInputStreamNoFinalizer zstdIs;
+
+    private State currentState = State.DECOMPRESS_DATA;
 
     /**
      * Current state of stream.
