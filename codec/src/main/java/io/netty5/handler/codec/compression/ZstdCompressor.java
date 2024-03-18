@@ -35,6 +35,13 @@ import static io.netty5.handler.codec.compression.ZstdConstants.MIN_COMPRESSION_
  *  See <a href="https://facebook.github.io/zstd">Zstandard</a>.
  */
 public final class ZstdCompressor implements Compressor {
+    {
+        try {
+            io.netty5.handler.codec.compression.Zstd.ensureAvailability();
+        } catch (Throwable throwable) {
+            throw new ExceptionInInitializerError(throwable);
+        }
+    }
 
     private final int blockSize;
     private final int compressionLevel;
