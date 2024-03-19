@@ -21,6 +21,8 @@ import io.netty5.handler.codec.compression.Decompressor;
 import io.netty5.handler.codec.compression.SnappyDecompressor;
 import io.netty5.handler.codec.compression.ZlibDecompressor;
 import io.netty5.handler.codec.compression.ZlibWrapper;
+import io.netty5.handler.codec.compression.Zstd;
+import io.netty5.handler.codec.compression.ZstdDecompressor;
 
 import static io.netty5.handler.codec.http.HttpHeaderValues.BR;
 import static io.netty5.handler.codec.http.HttpHeaderValues.DEFLATE;
@@ -28,6 +30,7 @@ import static io.netty5.handler.codec.http.HttpHeaderValues.GZIP;
 import static io.netty5.handler.codec.http.HttpHeaderValues.SNAPPY;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_GZIP;
+import static io.netty5.handler.codec.http.HttpHeaderValues.ZSTD;
 
 /**
  * Decompresses an {@link HttpMessage} and an {@link HttpContent} compressed in
@@ -72,6 +75,10 @@ public class HttpContentDecompressor extends HttpContentDecoder {
 
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
             return SnappyDecompressor.newFactory().get();
+        }
+
+        if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
+            return ZstdDecompressor.newFactory().get();
         }
 
         // 'identity' or unsupported

@@ -23,6 +23,8 @@ import io.netty5.handler.codec.compression.Decompressor;
 import io.netty5.handler.codec.compression.SnappyDecompressor;
 import io.netty5.handler.codec.compression.ZlibDecompressor;
 import io.netty5.handler.codec.compression.ZlibWrapper;
+import io.netty5.handler.codec.compression.Zstd;
+import io.netty5.handler.codec.compression.ZstdDecompressor;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.internal.UnstableApi;
 
@@ -35,6 +37,7 @@ import static io.netty5.handler.codec.http.HttpHeaderValues.IDENTITY;
 import static io.netty5.handler.codec.http.HttpHeaderValues.SNAPPY;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_GZIP;
+import static io.netty5.handler.codec.http.HttpHeaderValues.ZSTD;
 import static io.netty5.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty5.handler.codec.http2.Http2Exception.streamError;
 import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -176,6 +179,9 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         }
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
             return SnappyDecompressor.newFactory().get();
+        }
+        if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
+            return ZstdDecompressor.newFactory().get();
         }
         // 'identity' or unsupported
         return null;

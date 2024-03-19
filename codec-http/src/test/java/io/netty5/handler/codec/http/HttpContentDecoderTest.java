@@ -32,6 +32,7 @@ import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -44,6 +45,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -65,6 +67,11 @@ public class HttpContentDecoderTest {
             -28, -23, 54, -101, 11, -106, -16, -32, -95, -61, -37, 94, -16, 97, -40, -93, -56, 18, 21, 86,
             -110, 82, -41, 102, -89, 20, 11, 10, -68, -31, 96, -116, -55, -80, -31, -91, 96, -64, 83, 51,
             -39, 13, -21, 92, -16, -119, 124, -31, 18, 78, -1, 91, 82, 105, -116, -95, -22, -11, -70, -45, 0};
+
+    private static final byte[] SAMPLE_ZSTD_BYTES = new byte[]{40, -75, 47, -3, 32, 73, 45, 2, 0, 2, -124, 14,
+            22, -112, -75, 109, 11, -112, 113, 101, -65, 53, 59, -25, -51, -51, -78, 40, -120, -69, -32, 110, -7,
+            -81, 28, -90, -112, 3, -23, -38, -89, -113, -98, 75, -32, -114, 1, 63, 38, 27, 97, -80, -23, -107, 66,
+            -119, 17, 47, -109, 9, 91, -80, -10, -122, -13, 108, 92, 22, -15, 69, 2, 0, 53, -27, 55, -125, 89, 6};
 
     @Test
     public void testBinaryDecompression() {
@@ -312,7 +319,75 @@ public class HttpContentDecoderTest {
         Object o = channel.readInbound();
         assertThat(o).isInstanceOf(FullHttpResponse.class);
         FullHttpResponse resp = (FullHttpResponse) o;
-        assertEquals(SAMPLE_STRING, resp.payload().toString(UTF_8),
+        assertEquals(SAMPLE_STRING, resp.payload().toString(StandardCharsets.UTF_8),
+                "Response body should match uncompressed string");
+        resp.close();
+
+        assertHasInboundMessages(channel, false);
+        assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish()); // assert that no messages are left in channel
+    }
+
+    @Test
+    public void testResponseZstdDecompression() throws Throwable {
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(Integer.MAX_VALUE);
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
+
+        String headers = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: " + SAMPLE_ZSTD_BYTES.length + "\r\n" +
+                "Content-Encoding: zstd\r\n" +
+                "\r\n";
+        Buffer buf = channel.bufferAllocator().allocate(headers.length() + SAMPLE_ZSTD_BYTES.length);
+        buf.writeBytes(headers.getBytes(StandardCharsets.US_ASCII)).writeBytes(SAMPLE_ZSTD_BYTES);
+        assertTrue(channel.writeInbound(buf));
+
+        Object o = channel.readInbound();
+        assertInstanceOf(FullHttpResponse.class, o);
+        FullHttpResponse resp = (FullHttpResponse) o;
+        assertNull(resp.headers().get(HttpHeaderNames.CONTENT_ENCODING), "Content-Encoding header should be removed");
+        assertEquals(SAMPLE_STRING, resp.payload().toString(StandardCharsets.UTF_8),
+                "Response body should match uncompressed string");
+        resp.close();
+
+        assertHasInboundMessages(channel, false);
+        assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish()); // assert that no messages are left in channel
+    }
+
+    @Test
+    public void testResponseChunksZstdDecompression() throws Throwable {
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(Integer.MAX_VALUE);
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
+
+        String headers = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: " + SAMPLE_ZSTD_BYTES.length + "\r\n" +
+                "Content-Encoding: zstd\r\n" +
+                "\r\n";
+
+        assertFalse(channel.writeInbound(channel.bufferAllocator().copyOf(
+                headers.getBytes(StandardCharsets.US_ASCII))));
+
+        int offset = 0;
+        while (offset < SAMPLE_ZSTD_BYTES.length) {
+            int len = Math.min(1500, SAMPLE_ZSTD_BYTES.length - offset);
+            boolean available = channel.writeInbound(channel.bufferAllocator()
+                    .allocate(len).writeBytes(SAMPLE_ZSTD_BYTES, offset, len));
+            offset += 1500;
+            if (offset < SAMPLE_ZSTD_BYTES.length) {
+                assertFalse(available);
+            } else {
+                assertTrue(available);
+            }
+        }
+
+        Object o = channel.readInbound();
+        assertInstanceOf(FullHttpResponse.class, o);
+        FullHttpResponse resp = (FullHttpResponse) o;
+        assertEquals(SAMPLE_STRING, resp.payload().toString(StandardCharsets.UTF_8),
           "Response body should match uncompressed string");
         resp.close();
 
