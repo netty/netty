@@ -51,42 +51,35 @@ public final class Snappy {
     // Hash table used to compress, shared between subsequent call to .encode()
     private static final FastThreadLocal<short[]> HASH_TABLE = new FastThreadLocal<short[]>();
 
-    private static final HashType DEFAULT_HASH_TABLE_TYPE;
+    private static final boolean DEFAULT_REUSE_HASHTABLE;
 
     static {
-        String hashTableTypeKey = "io.netty.handler.codec.compression.snappy.hashTableType";
-        String hashTableTypeProperty = SystemPropertyUtil.get(hashTableTypeKey, "newarray");
+        String hashTableTypeKey = "io.netty.handler.codec.compression.snappy.reuseHashTable";
+        String hashTableTypeProperty = SystemPropertyUtil.get(hashTableTypeKey, Boolean.FALSE.toString());
 
         hashTableTypeProperty = hashTableTypeProperty.toLowerCase(Locale.US).trim();
+        boolean reuseHashtable = Boolean.parseBoolean(hashTableTypeProperty);
 
-        HashType hashTableType;
-        if ("newarray".equals(hashTableTypeProperty)) {
-            hashTableType = HashType.NEW_ARRAY;
+        if (reuseHashtable) {
             logger.debug("-D{}=\"{}\"", hashTableTypeKey, hashTableTypeProperty);
-        } else if ("reuse".equals(hashTableTypeProperty)) {
-            hashTableType = HashType.FAST_THREAD_LOCAL_ARRAY_FILL;
-            logger.debug("-D{}=\"{}\"", hashTableTypeKey, hashTableTypeProperty);
-        } else {
-            hashTableType = HashType.NEW_ARRAY;
-            logger.debug("-D{}=\"newarray\" (unknown: {})", hashTableTypeKey, hashTableTypeProperty);
         }
 
-        DEFAULT_HASH_TABLE_TYPE = hashTableType;
+        DEFAULT_REUSE_HASHTABLE = reuseHashtable;
     }
 
     public Snappy() {
-        this(DEFAULT_HASH_TABLE_TYPE);
+        this(DEFAULT_REUSE_HASHTABLE);
     }
 
-    Snappy(HashType hashTableType) {
-        this.hashTableType = hashTableType;
+    Snappy(boolean reuseHashtable) {
+        this.reuseHashtable = reuseHashtable;
     }
 
     public static Snappy withHashTableReuse() {
-        return new Snappy(HashType.FAST_THREAD_LOCAL_ARRAY_FILL);
+        return new Snappy(true);
     }
 
-    private final HashType hashTableType;
+    private final boolean reuseHashtable;
     private State state = State.READING_PREAMBLE;
     private byte tag;
     private int written;
@@ -127,7 +120,6 @@ public final class Snappy {
         int hashTableSize = MathUtil.findNextPositivePowerOfTwo(length);
         hashTableSize = Math.min(hashTableSize, MAX_HT_SIZE);
         final short[] table = getHashTable(hashTableSize);
-
         final int shift = Integer.numberOfLeadingZeros(hashTableSize) + 1;
 
         int nextEmit = inIndex;
@@ -216,18 +208,11 @@ public final class Snappy {
      * @return An appropriately sized empty hashtable
      */
     private short[] getHashTable(int hashTableSize) {
-        final short[] table;
-        switch (hashTableType) {
-        case FAST_THREAD_LOCAL_ARRAY_FILL:
-            table = getHashTableFastThreadLocalArrayFill(hashTableSize);
-            break;
-        case NEW_ARRAY:
-            table = new short[hashTableSize];
-            break;
-        default:
-            throw new RuntimeException("Need hash table type");
+        if (reuseHashtable) {
+            return getHashTableFastThreadLocalArrayFill(hashTableSize);
+        } else {
+            return new short[hashTableSize];
         }
-        return table;
     }
 
     /**
