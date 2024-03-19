@@ -45,8 +45,8 @@ import java.util.Arrays;
 @Measurement(iterations = 3)
 public class SnappyDirectBenchmark extends AbstractMicrobenchmark {
 
-    @Param()
-    public Snappy.HashType hashType;
+    @Param({ "true", "false" })
+    public boolean reuseHashTable;
     private ByteBuf buffer;
     private Snappy snappy;
     private ByteBuf in;
@@ -72,13 +72,10 @@ public class SnappyDirectBenchmark extends AbstractMicrobenchmark {
         ByteBufAllocator allocator = UnpooledByteBufAllocator.DEFAULT;
         buffer = allocator.buffer(bufferSizeInBytes);
 
-        switch (hashType) {
-        case NEW_ARRAY:
-            snappy = new Snappy();
-            break;
-        case FAST_THREAD_LOCAL_ARRAY_FILL:
+        if (reuseHashTable) {
             snappy = Snappy.withHashTableReuse();
-            break;
+        } else {
+            snappy = new Snappy();
         }
 
         byte[] compressibleByteArray = new byte[buffer.writableBytes()];

@@ -84,11 +84,6 @@ public final class Snappy {
     private byte tag;
     private int written;
 
-    public enum HashType {
-        NEW_ARRAY,
-        FAST_THREAD_LOCAL_ARRAY_FILL
-    }
-
     private enum State {
         READING_PREAMBLE,
         READING_TAG,
