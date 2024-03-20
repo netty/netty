@@ -158,7 +158,7 @@ jobs:
           #
           # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |
-            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-${{ matrix.java_arch || matrix.arch }} ./mvnw -V -B -ntp -pl testsuite-native -am verify -Pfast -T1C -DskipNativeTestsuite=false -Dtcnative.classifier=
+            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-${{ matrix.java_arch || matrix.arch }} ./mvnw -V -B -ntp -pl testsuite-native -am package -Pfast -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
     runs-on: ubuntu-latest
