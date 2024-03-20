@@ -46,9 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class ResolveAddressHandlerTest {
-
-    private static final LocalAddress UNRESOLVED = new LocalAddress("unresolved-" + UUID.randomUUID());
-    private static final LocalAddress RESOLVED = new LocalAddress("resolved-" + UUID.randomUUID());
     private static final Exception ERROR = new UnknownHostException();
 
     private static EventLoopGroup group;
@@ -76,7 +73,9 @@ public class ResolveAddressHandlerTest {
     }
 
     private static void testResolve(boolean fail) throws Exception {
-        AddressResolverGroup<SocketAddress> resolverGroup = new TestResolverGroup(fail);
+        LocalAddress unresolved = new LocalAddress("unresolved-" + UUID.randomUUID());
+        LocalAddress resolved = new LocalAddress("resolved-" + UUID.randomUUID());
+        AddressResolverGroup<SocketAddress> resolverGroup = new TestResolverGroup(fail, resolved, unresolved);
         Bootstrap cb = new Bootstrap();
         cb.group(group).channel(LocalChannel.class).handler(new ResolveAddressHandler(resolverGroup));
 
@@ -91,8 +90,8 @@ public class ResolveAddressHandlerTest {
                 });
 
         // Start server
-        Channel sc = sb.bind(RESOLVED).asStage().get();
-        Future<Channel> future = cb.connect(UNRESOLVED).asStage().await().future();
+        Channel sc = sb.bind(resolved).asStage().get();
+        Future<Channel> future = cb.connect(unresolved).asStage().await().future();
         try {
             if (fail) {
                 assertSame(ERROR, future.cause());
@@ -108,9 +107,13 @@ public class ResolveAddressHandlerTest {
 
     private static final class TestResolverGroup extends AddressResolverGroup<SocketAddress> {
         private final boolean fail;
+        private final LocalAddress resolved;
+        private final LocalAddress unresolved;
 
-        TestResolverGroup(boolean fail) {
+        TestResolverGroup(boolean fail, LocalAddress resolved, LocalAddress unresolved) {
             this.fail = fail;
+            this.resolved = resolved;
+            this.unresolved = unresolved;
         }
 
         @Override
@@ -118,16 +121,16 @@ public class ResolveAddressHandlerTest {
             return new AbstractAddressResolver<SocketAddress>(executor) {
                 @Override
                 protected boolean doIsResolved(SocketAddress address) {
-                    return address == RESOLVED;
+                    return address == resolved;
                 }
 
                 @Override
                 protected void doResolve(SocketAddress unresolvedAddress, Promise<SocketAddress> promise) {
-                    assertSame(UNRESOLVED, unresolvedAddress);
+                    assertSame(unresolved, unresolvedAddress);
                     if (fail) {
                         promise.setFailure(ERROR);
                     } else {
-                        promise.setSuccess(RESOLVED);
+                        promise.setSuccess(resolved);
                     }
                 }
 
