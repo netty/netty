@@ -28,7 +28,6 @@ import io.netty5.handler.codec.compression.GzipOptions;
 import io.netty5.handler.codec.compression.StandardCompressionOptions;
 import io.netty5.handler.codec.compression.ZlibCompressor;
 import io.netty5.handler.codec.compression.ZlibWrapper;
-import io.netty5.handler.codec.compression.Zstd;
 import io.netty5.handler.codec.compression.ZstdCompressor;
 import io.netty5.handler.codec.compression.ZstdOptions;
 import io.netty5.handler.codec.compression.SnappyCompressor;
@@ -39,9 +38,6 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.PromiseCombiner;
 import io.netty5.util.internal.ObjectUtil;
 import io.netty5.util.internal.UnstableApi;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty5.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -54,6 +50,7 @@ import static io.netty5.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty5.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty5.handler.codec.http.HttpHeaderValues.ZSTD;
 import static java.util.Objects.requireNonNull;
+
 
 /**
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
@@ -102,7 +99,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 gzipCompressionOptions = (GzipOptions) compressionOptions;
             } else if (compressionOptions instanceof DeflateOptions) {
                 deflateOptions = (DeflateOptions) compressionOptions;
-            } else if (Zstd.isAvailable() && compressionOptions instanceof ZstdOptions) {
+            } else if (compressionOptions instanceof ZstdOptions) {
                 zstdOptions = (ZstdOptions) compressionOptions;
             } else if (compressionOptions instanceof SnappyOptions) {
                 snappyOptions = (SnappyOptions) compressionOptions;
@@ -127,17 +124,18 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     }
 
     private static CompressionOptions[] defaultCompressionOptions() {
-        List<CompressionOptions> compressionOptions = new ArrayList<>();
-        compressionOptions.add(StandardCompressionOptions.gzip());
-        compressionOptions.add(StandardCompressionOptions.deflate());
-        compressionOptions.add(StandardCompressionOptions.snappy());
         if (Brotli.isAvailable()) {
-            compressionOptions.add(StandardCompressionOptions.brotli());
+            return new CompressionOptions[] {
+                    StandardCompressionOptions.brotli(),
+                    StandardCompressionOptions.snappy(),
+                    StandardCompressionOptions.gzip(),
+                    StandardCompressionOptions.deflate() };
         }
-        if (Zstd.isAvailable()) {
-            compressionOptions.add(StandardCompressionOptions.zstd());
-        }
-        return compressionOptions.toArray(new CompressionOptions[0]);
+        return new CompressionOptions[] {
+                StandardCompressionOptions.snappy(),
+                StandardCompressionOptions.gzip(),
+                StandardCompressionOptions.deflate()
+        };
     }
 
     @Override
