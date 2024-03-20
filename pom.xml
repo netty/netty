@@ -561,6 +561,7 @@
         <japicmp.skip>true</japicmp.skip>
         <revapi.skip>true</revapi.skip>
         <xml.skip>true</xml.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
         <skipShadingTestsuite>true</skipShadingTestsuite>
         <skipDeploy>true</skipDeploy>
         <skipTests>true</skipTests>
