@@ -30,7 +30,6 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
-import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.compression.ZstdEncoder;
 import io.netty.handler.codec.compression.ZstdOptions;
 import io.netty.handler.codec.compression.SnappyFrameEncoder;
@@ -38,9 +37,6 @@ import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -86,17 +82,15 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
     }
 
     private static CompressionOptions[] defaultCompressionOptions() {
-        List<CompressionOptions> compressionOptions = new ArrayList<CompressionOptions>();
-        compressionOptions.add(StandardCompressionOptions.gzip());
-        compressionOptions.add(StandardCompressionOptions.deflate());
-        compressionOptions.add(StandardCompressionOptions.snappy());
         if (Brotli.isAvailable()) {
-            compressionOptions.add(StandardCompressionOptions.brotli());
+            return new CompressionOptions[] {
+                    StandardCompressionOptions.brotli(),
+                    StandardCompressionOptions.snappy(),
+                    StandardCompressionOptions.gzip(),
+                    StandardCompressionOptions.deflate() };
         }
-        if (Zstd.isAvailable()) {
-            compressionOptions.add(StandardCompressionOptions.zstd());
-        }
-        return compressionOptions.toArray(new CompressionOptions[0]);
+        return new CompressionOptions[] { StandardCompressionOptions.snappy(),
+                StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate() };
     }
 
     /**
