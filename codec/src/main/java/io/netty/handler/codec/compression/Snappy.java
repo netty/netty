@@ -191,9 +191,8 @@ public final class Snappy {
     private short[] getHashTable(int hashTableSize) {
         if (reuseHashtable) {
             return getHashTableFastThreadLocalArrayFill(hashTableSize);
-        } else {
-            return new short[hashTableSize];
         }
+        return new short[hashTableSize];
     }
 
     /**
