@@ -185,7 +185,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
      *             errors
      */
     public HttpPostMultipartRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset) {
-        this(factory, request, charset, HttpPostRequestDecoder.DEFAULT_MAX_FIELDS, HttpPostRequestDecoder.DEFAULT_MAX_BUFFERED_BYTES);
+        this(factory, request, charset, HttpPostRequestDecoder.DEFAULT_MAX_FIELDS,
+                HttpPostRequestDecoder.DEFAULT_MAX_BUFFERED_BYTES);
     }
 
     /**

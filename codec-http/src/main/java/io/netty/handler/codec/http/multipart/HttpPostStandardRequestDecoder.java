@@ -161,7 +161,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      *             errors
      */
     public HttpPostStandardRequestDecoder(HttpDataFactory factory, HttpRequest request, Charset charset) {
-        this(factory, request, charset, HttpPostRequestDecoder.DEFAULT_MAX_FIELDS, HttpPostRequestDecoder.DEFAULT_MAX_BUFFERED_BYTES);
+        this(factory, request, charset, HttpPostRequestDecoder.DEFAULT_MAX_FIELDS,
+                HttpPostRequestDecoder.DEFAULT_MAX_BUFFERED_BYTES);
     }
 
     /**
