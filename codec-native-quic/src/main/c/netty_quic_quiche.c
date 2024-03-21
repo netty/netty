@@ -723,6 +723,42 @@ static jobject netty_new_socket_address(JNIEnv* env, const struct sockaddr_stora
     return (*env)->NewObject(env, inetsocketaddress_class, inetsocketaddress_class_constructor, address, port);
 }
 
+static jobjectArray netty_quiche_conn_path_stats(JNIEnv* env, jclass clazz, jlong conn, jlong idx) {
+    quiche_path_stats stats = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    if (quiche_conn_path_stats((quiche_conn *) conn, idx, &stats) != 0) {
+        // The idx is not valid. 
+        return NULL;
+    }
+
+    jobject localAddr = netty_new_socket_address(env, &stats.local_addr);
+    if (localAddr == NULL) {
+        return NULL;
+    }
+    jobject peerAddr = netty_new_socket_address(env, &stats.peer_addr);
+    if (peerAddr == NULL) {
+        return NULL;
+    }
+
+    jobjectArray array = (*env)->NewObjectArray(env, 16, object_class, NULL);
+    (*env)->SetObjectArrayElement(env, array, 0, localAddr);
+    (*env)->SetObjectArrayElement(env, array, 1, peerAddr);
+    (*env)->SetObjectArrayElement(env, array, 2, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.validation_state));
+    (*env)->SetObjectArrayElement(env, array, 3, (*env)->CallStaticObjectMethod(env, boolean_class, boolean_class_valueof, stats.active ? JNI_TRUE : JNI_FALSE));
+    (*env)->SetObjectArrayElement(env, array, 4, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.recv));
+    (*env)->SetObjectArrayElement(env, array, 5, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.sent));
+    (*env)->SetObjectArrayElement(env, array, 6, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.lost));
+    (*env)->SetObjectArrayElement(env, array, 7, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.retrans));
+    (*env)->SetObjectArrayElement(env, array, 8, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.rtt));
+    (*env)->SetObjectArrayElement(env, array, 9, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.cwnd));
+    (*env)->SetObjectArrayElement(env, array, 10, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.sent_bytes));
+    (*env)->SetObjectArrayElement(env, array, 11, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.recv_bytes));
+    (*env)->SetObjectArrayElement(env, array, 12, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.lost_bytes));
+    (*env)->SetObjectArrayElement(env, array, 13, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.stream_retrans_bytes));
+    (*env)->SetObjectArrayElement(env, array, 14, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.pmtu));
+    (*env)->SetObjectArrayElement(env, array, 15, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.delivery_rate));
+    return array;
+}
+
 static jobjectArray netty_quiche_path_event_new(JNIEnv* env, jclass clazz, jlong ev) {
     struct sockaddr_storage local;
     socklen_t local_len;
@@ -1173,6 +1209,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "sockaddr_cmp", "(JJ)I", (void *) netty_sockaddr_cmp},
   { "quiche_conn_path_event_next", "(J)J", (void *) netty_quiche_conn_path_event_next },
   { "quiche_path_event_type", "(J)I", (void *) netty_quiche_path_event_type },
+  { "quiche_conn_path_stats", "(JJ)[Ljava/lang/Object;", (void *) netty_quiche_conn_path_stats },
   { "quiche_path_event_new", "(J)[Ljava/lang/Object;", (void *) netty_quiche_path_event_new },
   { "quiche_path_event_validated", "(J)[Ljava/lang/Object;", (void *) netty_quiche_path_event_validated },
   { "quiche_path_event_failed_validation", "(J)[Ljava/lang/Object;", (void *) netty_quiche_path_event_failed_validation },

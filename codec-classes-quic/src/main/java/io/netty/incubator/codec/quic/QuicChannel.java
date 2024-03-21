@@ -307,6 +307,23 @@ public interface QuicChannel extends Channel {
     Future<QuicConnectionStats> collectStats(Promise<QuicConnectionStats> promise);
 
     /**
+     * Collects statistics about the path of the connection and notifies the {@link Future} once done.
+     *
+     * @return the {@link Future} that is notified once the stats were collected.
+     */
+    default Future<QuicConnectionPathStats> collectPathStats(int pathIdx) {
+        return collectPathStats(pathIdx, eventLoop().newPromise());
+    }
+
+    /**
+     * Collects statistics about the path of the connection and notifies the {@link Promise} once done.
+     *
+     * @param   promise the {@link ChannelPromise} that is notified once the stats were collected.
+     * @return          the {@link Future} that is notified once the stats were collected.
+     */
+    Future<QuicConnectionPathStats> collectPathStats(int pathIdx, Promise<QuicConnectionPathStats> promise);
+
+    /**
      * Creates a new {@link QuicChannelBootstrap} that can be used to create and connect new {@link QuicChannel}s to
      * endpoints using the given {@link Channel} as transport layer.
      *

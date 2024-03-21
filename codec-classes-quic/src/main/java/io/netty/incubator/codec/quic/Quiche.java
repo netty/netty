@@ -516,6 +516,13 @@ final class Quiche {
      */
     static native void quiche_stream_iter_free(long iterAddr);
 
+
+    /**
+     * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.20.0/quiche/include/quiche.h#L672">quiche_conn_path_stats</a>.
+     */
+    static native Object[] quiche_conn_path_stats(long connAddr, long streamIdx);
+
     /**
      * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L358">
