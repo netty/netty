@@ -51,7 +51,8 @@ public final class Snappy {
     // Hash table used to compress, shared between subsequent call to .encode()
     private static final FastThreadLocal<short[]> HASH_TABLE = new FastThreadLocal<short[]>();
 
-    private static final boolean DEFAULT_REUSE_HASHTABLE = SystemPropertyUtil.getBoolean("io.netty.handler.codec.compression.snappy.reuseHashTable", false);
+    private static final boolean DEFAULT_REUSE_HASHTABLE =
+            SystemPropertyUtil.getBoolean("io.netty.handler.codec.compression.snappy.reuseHashTable", false);
 
     public Snappy() {
         this(DEFAULT_REUSE_HASHTABLE);
