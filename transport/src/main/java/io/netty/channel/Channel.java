@@ -158,7 +158,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      * this method returns {@code false} are queued until the I/O thread is
      * ready to process the queued write requests.
      *
-     * {@link WriteBufferWaterMark} can be used to configure on which coundition 
+     * {@link WriteBufferWaterMark} can be used to configure on which coundition
      * the write buffer would cause this channel to change writability.
      */
     boolean isWritable();
