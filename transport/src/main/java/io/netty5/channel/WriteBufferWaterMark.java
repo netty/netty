@@ -27,8 +27,16 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  * If the number of bytes queued in the write buffer exceeds the
  * {@linkplain #high high water mark} and then
  * dropped down below the {@linkplain #low low water mark},
+<<<<<<< HEAD:transport/src/main/java/io/netty5/channel/WriteBufferWaterMark.java
  * {@link Channel#writableBytes()} will start to return
  * a positive value again.
+=======
+ * {@link Channel#isWritable()} will start to return
+ * {@code true} again.
+ * <p>
+ * Note that messages needs to be handled by the {@link MessageSizeEstimator}
+ * used by the channel for {@link Channel#isWritable()} to provide accurate back-pressure.
+>>>>>>> eff43eaeb6 ([DOCUMENTATION] Make it clearer that MessageSizeEstimator is critical to get accurate backpressure (#13922)):transport/src/main/java/io/netty/channel/WriteBufferWaterMark.java
  */
 public final class WriteBufferWaterMark {
 

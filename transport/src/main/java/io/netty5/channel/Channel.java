@@ -225,6 +225,9 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      * requested flush operation immediately. Any write requests made when
      * this method returns {@code false} are queued until the I/O thread is
      * ready to process the queued write requests.
+     *
+     * {@link WriteBufferWaterMark} can be used to configure on which condition
+     * the write buffer would cause this channel to change writability.
      */
     default boolean isWritable() {
         return writableBytes() > 0;
@@ -234,6 +237,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      * Returns how many bytes can be written before the {@link Channel} becomes 'unwritable'.
      * Once a {@link Channel} becomes unwritable, all messages will be queued until the I/O thread is
      * ready to process the queued write requests.
+     *
+     * {@link WriteBufferWaterMark} can be used to define writability settings.
      *
      * @return the number of bytes that can be written before the {@link Channel} becomes unwritable.
      */
