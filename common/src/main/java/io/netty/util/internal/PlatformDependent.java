@@ -89,8 +89,8 @@ public final class PlatformDependent {
     private static final boolean DIRECT_BUFFER_PREFERRED;
     private static final long MAX_DIRECT_MEMORY = estimateMaxDirectMemory();
 
-    private static final int MPSC_CHUNK_SIZE =  1024;
-    private static final int MIN_MAX_MPSC_CAPACITY =  MPSC_CHUNK_SIZE * 2;
+    private static final int MPSC_CHUNK_SIZE = 1024;
+    private static final int MIN_MAX_MPSC_CAPACITY = MPSC_CHUNK_SIZE * 2;
     private static final int MAX_ALLOWED_MPSC_CAPACITY = Pow2.MAX_POW2;
 
     private static final long BYTE_ARRAY_BASE_OFFSET = byteArrayBaseOffset0();
