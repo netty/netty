@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.buffer.CompositeByteBuf.ByteWrapper;
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -580,7 +581,7 @@ public final class Unpooled {
     public static ByteBuf copiedBuffer(CharSequence string, Charset charset) {
         ObjectUtil.checkNotNull(string, "string");
         if (CharsetUtil.UTF_8.equals(charset)) {
-            return copiedBufferUtf8(string);
+            return copiedBufferUtf8(string, 0, string.length());
         }
         if (CharsetUtil.US_ASCII.equals(charset)) {
             return copiedBufferAscii(string);
@@ -592,12 +593,13 @@ public final class Unpooled {
         return copiedBuffer(CharBuffer.wrap(string), charset);
     }
 
-    private static ByteBuf copiedBufferUtf8(CharSequence string) {
+    private static ByteBuf copiedBufferUtf8(CharSequence seq, int start, int length) {
+        int capacity = ByteBufUtil.utf8MaxBytes(length);
         boolean release = true;
         // Mimic the same behavior as other copiedBuffer implementations.
-        ByteBuf buffer = ALLOC.heapBuffer(ByteBufUtil.utf8Bytes(string));
+        ByteBuf buffer = ALLOC.heapBuffer(capacity);
         try {
-            ByteBufUtil.writeUtf8(buffer, string);
+            ByteBufUtil.reserveAndWriteUtf8Seq(buffer, seq, start, start + length, capacity);
             release = false;
             return buffer;
         } finally {
@@ -622,6 +624,21 @@ public final class Unpooled {
         }
     }
 
+    private static ByteBuf copiedBufferAscii(CharSequence string, int start, int length) {
+        boolean release = true;
+        // Mimic the same behavior as other copiedBuffer implementations.
+        ByteBuf buffer = ALLOC.heapBuffer(length);
+        try {
+            ByteBufUtil.writeAscii(buffer, string, start, length);
+            release = false;
+            return buffer;
+        } finally {
+            if (release) {
+                buffer.release();
+            }
+        }
+    }
+
     /**
      * Creates a new big-endian buffer whose content is a subregion of
      * the specified {@code string} encoded in the specified {@code charset}.
@@ -631,17 +648,22 @@ public final class Unpooled {
     public static ByteBuf copiedBuffer(
             CharSequence string, int offset, int length, Charset charset) {
         ObjectUtil.checkNotNull(string, "string");
+        checkBounds(offset, length, string.length());
         if (length == 0) {
             return EMPTY_BUFFER;
         }
-
+        if (CharsetUtil.UTF_8.equals(charset)) {
+            return copiedBufferUtf8(string, offset, length);
+        }
+        if (CharsetUtil.US_ASCII.equals(charset)) {
+            return copiedBufferAscii(string, offset, length);
+        }
         if (string instanceof CharBuffer) {
             CharBuffer buf = (CharBuffer) string;
             if (buf.hasArray()) {
                 return copiedBuffer(
-                        buf.array(),
-                        buf.arrayOffset() + buf.position() + offset,
-                        length, charset);
+                        CharBuffer.wrap(buf.array(), buf.arrayOffset() + buf.position() + offset, length),
+                        charset);
             }
 
             buf = buf.slice();
@@ -661,7 +683,17 @@ public final class Unpooled {
      */
     public static ByteBuf copiedBuffer(char[] array, Charset charset) {
         ObjectUtil.checkNotNull(array, "array");
-        return copiedBuffer(array, 0, array.length, charset);
+        int length = array.length;
+        if (length == 0) {
+            return EMPTY_BUFFER;
+        }
+        if (CharsetUtil.UTF_8.equals(charset)) {
+            return copiedBufferUtf8(CharBuffer.wrap(array), 0, length);
+        }
+        if (CharsetUtil.US_ASCII.equals(charset)) {
+            return copiedBufferAscii(CharBuffer.wrap(array));
+        }
+        return copiedBuffer(CharBuffer.wrap(array), charset);
     }
 
     /**
@@ -672,14 +704,28 @@ public final class Unpooled {
      */
     public static ByteBuf copiedBuffer(char[] array, int offset, int length, Charset charset) {
         ObjectUtil.checkNotNull(array, "array");
+        checkBounds(offset, length, array.length);
         if (length == 0) {
             return EMPTY_BUFFER;
+        }
+        if (CharsetUtil.UTF_8.equals(charset)) {
+            return copiedBufferUtf8(CharBuffer.wrap(array), offset, length);
+        }
+        if (CharsetUtil.US_ASCII.equals(charset)) {
+            return copiedBufferAscii(CharBuffer.wrap(array), offset, length);
         }
         return copiedBuffer(CharBuffer.wrap(array, offset, length), charset);
     }
 
     private static ByteBuf copiedBuffer(CharBuffer buffer, Charset charset) {
         return ByteBufUtil.encodeString0(ALLOC, true, buffer, charset, 0);
+    }
+
+    private static void checkBounds(int start, int length, int capacity) {
+        if (MathUtil.isOutOfBounds(start, length, capacity)) {
+            throw new IndexOutOfBoundsException("expected: 0 <= start(" + start + ") <= start + length ("
+                                                + (start + length) + ") <= capacity(" + capacity + ')');
+        }
     }
 
     /**
