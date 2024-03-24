@@ -1059,6 +1059,7 @@ public class HttpPostRequestDecoderTest {
             assertTrue(num++ < 1024);
         }
         assertEquals(1024, num);
+        decoder.destroy();
     }
 
     @Test
@@ -1087,6 +1088,7 @@ public class HttpPostRequestDecoderTest {
             assertTrue(num++ < 1024);
         }
         assertEquals(1024, num);
+        decoder.destroy();
     }
 
     @Test
@@ -1101,6 +1103,7 @@ public class HttpPostRequestDecoderTest {
         } catch (DecoderException e) {
             assertEquals(HttpPostRequestDecoder.TooLongFormFieldException.class, e.getClass());
         }
+        decoder.destroy();
     }
 
     @Test
@@ -1110,6 +1113,7 @@ public class HttpPostRequestDecoderTest {
         HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, -1, 6);
 
         decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer("foo=bar".getBytes())));
+        decoder.destroy();
     }
 
     @Test
@@ -1125,6 +1129,7 @@ public class HttpPostRequestDecoderTest {
         } catch (DecoderException e) {
             assertEquals(HttpPostRequestDecoder.TooLongFormFieldException.class, e.getClass());
         }
+        decoder.destroy();
     }
 
     @Test
@@ -1142,5 +1147,6 @@ public class HttpPostRequestDecoderTest {
         HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, -1, bodyBytes.length - 1);
 
         decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyBytes)));
+        decoder.destroy();
     }
 }
