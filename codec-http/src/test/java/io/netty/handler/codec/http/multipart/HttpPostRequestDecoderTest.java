@@ -322,7 +322,8 @@ public class HttpPostRequestDecoderTest {
         DefaultHttpRequest defaultHttpRequest =
                 new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
 
-        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(defaultHttpRequest);
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(defaultHttpRequest,
+                140, HttpPostRequestDecoder.DEFAULT_MAX_BUFFERED_BYTES);
 
         int firstChunk = 10;
         int middleChunk = 1024;
