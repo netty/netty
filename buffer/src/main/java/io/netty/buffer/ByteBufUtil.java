@@ -594,9 +594,9 @@ public final class ByteBufUtil {
         for (int i = 0; i < longCount; i++) {
             // use the faster available getLong
             final long word = useLE? buffer._getLongLE(offset) : buffer._getLong(offset);
-            int index = SWARUtil.firstAnyPattern(word, pattern, isNative);
-            if (index < Long.BYTES) {
-                return offset + index;
+            final long result = SWARUtil.applyPattern(word, pattern);
+            if (result != 0) {
+                return offset + SWARUtil.getIndex(result, isNative);
             }
             offset += Long.BYTES;
         }
