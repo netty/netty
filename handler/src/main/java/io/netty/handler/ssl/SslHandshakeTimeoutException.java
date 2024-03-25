@@ -22,6 +22,8 @@ import javax.net.ssl.SSLHandshakeException;
  */
 public final class SslHandshakeTimeoutException extends SSLHandshakeException {
 
+    public static final SslHandshakeTimeoutException TEST_EXCEPTION =
+            new SslHandshakeTimeoutException("Simulated handshake timed out");
     SslHandshakeTimeoutException(String reason) {
         super(reason);
     }
