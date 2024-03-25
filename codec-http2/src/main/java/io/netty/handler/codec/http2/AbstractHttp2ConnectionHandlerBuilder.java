@@ -113,6 +113,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private int maxDecodedRstFramesSecondsPerWindow = 30;
     private Integer maxEncodedRstFramesPerWindow;
     private int maxEncodedRstFramesSecondsPerWindow = 30;
+    private int maxConsecutiveContinuationsFrames = 16;
+
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
      */
@@ -467,6 +469,29 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     }
 
     /**
+     * Returns the maximum number of consecutive CONTINUATION frames that are allowed before
+     * the connection is closed. This allows to protect against the remote peer flooding us with such frames.
+     *
+     * {@code 0} means no protection is in place.
+     */
+    protected int decoderEnforceMaxConsecutiveContinuationsFrames() {
+        return maxConsecutiveEmptyFrames;
+    }
+
+    /**
+     * Sets the maximum number of consecutive CONTINUATION frames that are allowed before
+     * the connection is closed. This allows to protect against the remote peer flooding us with such frames.
+     *
+     * {@code 0} means no protection should be applied.
+     */
+    protected B decoderEnforceMaxConsecutiveContinuationsFrames(int maxConsecutiveContinuationsFrames) {
+        enforceNonCodecConstraints("maxConsecutiveContinuationsFrames");
+        this.maxConsecutiveContinuationsFrames = checkPositiveOrZero(
+                maxConsecutiveContinuationsFrames, "maxConsecutiveContinuationsFrames");
+        return self();
+    }
+
+    /**
      * Determine if settings frame should automatically be acknowledged and applied.
      * @return this.
      */
@@ -571,7 +596,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         Long maxHeaderListSize = initialSettings.maxHeaderListSize();
         Http2FrameReader reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(isValidateHeaders(),
                 maxHeaderListSize == null ? DEFAULT_HEADER_LIST_SIZE : maxHeaderListSize,
-                /* initialHuffmanDecodeCapacity= */ -1));
+                /* initialHuffmanDecodeCapacity= */ -1), maxConsecutiveContinuationsFrames);
         Http2FrameWriter writer = encoderIgnoreMaxHeaderListSize == null ?
                 new DefaultHttp2FrameWriter(headerSensitivityDetector()) :
                 new DefaultHttp2FrameWriter(headerSensitivityDetector(), encoderIgnoreMaxHeaderListSize);

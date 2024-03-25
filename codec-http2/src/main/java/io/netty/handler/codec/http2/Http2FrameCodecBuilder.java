@@ -203,6 +203,17 @@ public class Http2FrameCodecBuilder extends
         return super.encoderEnforceMaxRstFramesPerWindow(maxRstFramesPerWindow, secondsPerWindow);
     }
 
+    @Override
+    public int decoderEnforceMaxConsecutiveContinuationsFrames() {
+        return super.decoderEnforceMaxConsecutiveContinuationsFrames();
+    }
+
+    @Override
+    public Http2FrameCodecBuilder decoderEnforceMaxConsecutiveContinuationsFrames(
+            int maxConsecutiveContinuationsFrames) {
+        return super.decoderEnforceMaxConsecutiveContinuationsFrames(maxConsecutiveContinuationsFrames);
+    }
+
     /**
      * Build a {@link Http2FrameCodec} object.
      */
@@ -216,7 +227,8 @@ public class Http2FrameCodecBuilder extends
             Long maxHeaderListSize = initialSettings().maxHeaderListSize();
             Http2FrameReader frameReader = new DefaultHttp2FrameReader(maxHeaderListSize == null ?
                     new DefaultHttp2HeadersDecoder(isValidateHeaders()) :
-                    new DefaultHttp2HeadersDecoder(isValidateHeaders(), maxHeaderListSize));
+                    new DefaultHttp2HeadersDecoder(isValidateHeaders(), maxHeaderListSize),
+                    decoderEnforceMaxConsecutiveContinuationsFrames());
 
             if (frameLogger() != null) {
                 frameWriter = new Http2OutboundFrameLogger(frameWriter, frameLogger());
