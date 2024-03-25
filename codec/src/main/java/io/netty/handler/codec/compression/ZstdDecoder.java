@@ -98,6 +98,9 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     }
 
     private static final class ZstdStream {
+        private static final ByteBuffer EMPTY_HEAP_BUFFER = ByteBuffer.allocate(0);
+        private static final ByteBuffer EMPTY_DIRECT_BUFFER = ByteBuffer.allocateDirect(0);
+
         private final boolean direct;
         private final int outCapacity;
         private final BaseZstdBufferDecompressingStreamNoFinalizer decompressingStream;
@@ -107,14 +110,14 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
             this.direct = direct;
             this.outCapacity = outCapacity;
             if (direct) {
-                decompressingStream = new ZstdDirectBufferDecompressingStreamNoFinalizer(ByteBuffer.allocateDirect(0)) {
+                decompressingStream = new ZstdDirectBufferDecompressingStreamNoFinalizer(EMPTY_DIRECT_BUFFER) {
                     @Override
                     protected ByteBuffer refill(ByteBuffer toRefill) {
                         return ZstdStream.this.refill(toRefill);
                     }
                 };
             } else {
-                decompressingStream = new ZstdBufferDecompressingStreamNoFinalizer(ByteBuffer.allocate(0)) {
+                decompressingStream = new ZstdBufferDecompressingStreamNoFinalizer(EMPTY_HEAP_BUFFER) {
                     @Override
                     protected ByteBuffer refill(ByteBuffer toRefill) {
                         return ZstdStream.this.refill(toRefill);
@@ -176,14 +179,13 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                 if (source != in) {
                     source.release();
                 }
+                ByteBuffer buffer = current;
+                current = null;
                 if (inPosition != -1) {
-                    int read = current.position() - inPosition;
-                    current = null;
+                    int read = buffer.position() - inPosition;
                     if (read > 0) {
                         in.skipBytes(read);
                     }
-                } else {
-                    current = null;
                 }
             }
             return null;
