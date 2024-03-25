@@ -18,13 +18,13 @@ package io.netty5.bootstrap;
 import io.netty5.util.internal.SystemPropertyUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.ServiceLoader;
 
 /**
@@ -53,9 +53,9 @@ abstract class ChannelInitializerExtensions {
                 String extensionProp = SystemPropertyUtil.get(ChannelInitializerExtension.EXTENSIONS_SYSTEM_PROPERTY);
                 logger.debug("-Dio.netty5.bootstrap.extensions: {}", extensionProp);
                 if ("serviceload".equalsIgnoreCase(extensionProp)) {
-                    impl = new ServiceLoadingExtensions(Level.DEBUG, true);
+                    impl = new ServiceLoadingExtensions(true);
                 } else if ("log".equalsIgnoreCase(extensionProp)) {
-                    impl = new ServiceLoadingExtensions(Level.INFO, false);
+                    impl = new ServiceLoadingExtensions(false);
                 } else {
                     impl = new EmptyExtensions();
                 }
@@ -78,14 +78,12 @@ abstract class ChannelInitializerExtensions {
     }
 
     private static final class ServiceLoadingExtensions extends ChannelInitializerExtensions {
-        private final Level logLevel;
         private final boolean loadAndCache;
 
         private WeakReference<ClassLoader> classLoader;
         private Collection<ChannelInitializerExtension> extensions;
 
-        ServiceLoadingExtensions(Level logLevel, boolean loadAndCache) {
-            this.logLevel = logLevel;
+        ServiceLoadingExtensions(boolean loadAndCache) {
             this.loadAndCache = loadAndCache;
         }
 
@@ -94,28 +92,30 @@ abstract class ChannelInitializerExtensions {
         synchronized Collection<ChannelInitializerExtension> extensions(ClassLoader cl) {
             ClassLoader configured = classLoader == null ? null : classLoader.get();
             if (configured == null || configured != cl) {
-                Collection<ChannelInitializerExtension> loaded = serviceLoadExtensions(logLevel, cl);
+                Collection<ChannelInitializerExtension> loaded = serviceLoadExtensions(loadAndCache, cl);
                 classLoader = new WeakReference<ClassLoader>(cl);
                 extensions = loadAndCache ? loaded : Collections.emptyList();
             }
             return extensions;
         }
 
-        private static Collection<ChannelInitializerExtension> serviceLoadExtensions(
-                Level logLevel, ClassLoader cl) {
-            ArrayList<ChannelInitializerExtension> extensions = new ArrayList<ChannelInitializerExtension>();
+        private static Collection<ChannelInitializerExtension> serviceLoadExtensions(boolean load, ClassLoader cl) {
+            List<ChannelInitializerExtension> extensions = new ArrayList<>();
 
             ServiceLoader<ChannelInitializerExtension> loader = ServiceLoader.load(
                     ChannelInitializerExtension.class, cl);
             for (ChannelInitializerExtension extension : loader) {
-                logger.atLevel(logLevel).log("Loaded extension: {}", extension.getClass());
                 extensions.add(extension);
             }
 
             if (!extensions.isEmpty()) {
                 extensions.sort(Comparator.comparingDouble(ChannelInitializerExtension::priority));
+                logger.info("ServiceLoader {}(s) {}: {}", ChannelInitializerExtension.class.getSimpleName(),
+                        load ? "registered" : "detected", extensions);
                 return Collections.unmodifiableList(extensions);
             }
+            logger.debug("ServiceLoader {}(s) {}: []", ChannelInitializerExtension.class.getSimpleName(),
+                    load ? "registered" : "detected");
             return Collections.emptyList();
         }
     }
