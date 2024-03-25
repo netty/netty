@@ -18,6 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2FrameReader.Configuration;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -32,6 +33,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.SETTING_ENTRY_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.headerListSizeExceeded;
 import static io.netty.handler.codec.http2.Http2CodecUtil.isMaxFrameSizeValid;
 import static io.netty.handler.codec.http2.Http2CodecUtil.readUnsignedInt;
+import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
 import static io.netty.handler.codec.http2.Http2Error.FLOW_CONTROL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.FRAME_SIZE_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -69,7 +71,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     private Http2Flags flags;
     private int payloadLength;
     private HeadersContinuation headersContinuation;
-    private int maxFrameSize;
+    private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+    private final int maxConsecutiveContinuationsFrames;
 
     /**
      * Create a new instance.
@@ -90,8 +93,13 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     }
 
     public DefaultHttp2FrameReader(Http2HeadersDecoder headersDecoder) {
-        this.headersDecoder = headersDecoder;
-        maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+        this(headersDecoder, 16);
+    }
+
+    public DefaultHttp2FrameReader(Http2HeadersDecoder headersDecoder, int maxConsecutiveContinuationsFrames) {
+        this.headersDecoder = ObjectUtil.checkNotNull(headersDecoder, "headersDecoder");
+        this.maxConsecutiveContinuationsFrames = ObjectUtil.checkPositiveOrZero(
+                maxConsecutiveContinuationsFrames, "maxConsecutiveContinuationsFrames");
     }
 
     @Override
@@ -392,6 +400,12 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             throw connectionError(PROTOCOL_ERROR, "Continuation stream ID does not match pending headers. "
                     + "Expected %d, but received %d.", headersContinuation.getStreamId(), streamId);
         }
+
+        if (headersContinuation.numFragments() >=  maxConsecutiveContinuationsFrames) {
+            throw connectionError(ENHANCE_YOUR_CALM,
+                    "Number of consecutive continuations frames %d exceeds maximum: %d",
+                    headersContinuation.numFragments(), maxConsecutiveContinuationsFrames);
+        }
     }
 
     private void verifyUnknownFrame() throws Http2Exception {
@@ -653,6 +667,15 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         abstract int getStreamId();
 
         /**
+         * Return the number of fragments that were used so far.
+         *
+         * @return the number of fragments
+         */
+        final int numFragments() {
+            return builder.numFragments();
+        }
+
+        /**
          * Processes the next fragment for the current header block.
          *
          * @param endOfHeaders whether the fragment is the last in the header block.
@@ -680,6 +703,7 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
      */
     protected class HeadersBlockBuilder {
         private ByteBuf headerBlock;
+        private int numFragments;
 
         /**
          * The local header size maximum has been exceeded while accumulating bytes.
@@ -688,6 +712,15 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         private void headerSizeExceeded() throws Http2Exception {
             close();
             headerListSizeExceeded(headersDecoder.configuration().maxHeaderListSizeGoAway());
+        }
+
+        /**
+         * Return the number of fragments that was used so far.
+         *
+         * @return number of fragments.
+         */
+        int numFragments() {
+            return numFragments;
         }
 
         /**
@@ -701,6 +734,8 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
          */
         final void addFragment(ByteBuf fragment, int len, ByteBufAllocator alloc,
                 boolean endOfHeaders) throws Http2Exception {
+            numFragments++;
+
             if (headerBlock == null) {
                 if (len > headersDecoder.configuration().maxHeaderListSizeGoAway()) {
                     headerSizeExceeded();
