@@ -313,6 +313,7 @@ public class AsciiStringCharacterTest {
         assertEquals(1, AsciiString.of("aabaabaa").indexOf('a', 1));
         assertEquals(3, AsciiString.of("aabaabaa").indexOf('a', 2));
         assertEquals(3, AsciiString.of("aabdabaa").indexOf('d', 1));
+        assertEquals(15, AsciiString.of("abcdefghijklmnop").indexOf('p', 0));
         assertEquals(1, new AsciiString("abcd", 1, 2).indexOf('c', 0));
         assertEquals(2, new AsciiString("abcd", 1, 3).indexOf('d', 2));
         assertEquals(0, new AsciiString("abcd", 1, 2).indexOf('b', 0));
@@ -432,5 +433,17 @@ public class AsciiStringCharacterTest {
         assertTrue(i3 + 1 < foo.length());
         int i4 = foo.indexOf(' ', i3 + 1);
         assertEquals(i4, -1);
+    }
+
+    @Test
+    public void testToLowerCase() {
+        AsciiString foo = AsciiString.of("This is a tesT");
+        assertEquals("this is a test", foo.toLowerCase().toString());
+    }
+
+    @Test
+    public void testToUpperCase() {
+        AsciiString foo = AsciiString.of("This is a tesT");
+        assertEquals("THIS IS A TEST", foo.toUpperCase().toString());
     }
 }
