@@ -1455,6 +1455,22 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
+    protected void notifyUnpooledMemoryReleased(int released) {
+        ByteBufAllocator alloc = alloc();
+        if (alloc instanceof AbstractByteBufAllocator) {
+            AbstractByteBufAllocator aalloc = (AbstractByteBufAllocator) alloc;
+            aalloc.notifyMemoryReleased0(released, isDirect());
+        }
+    }
+
+    protected void notifyUnpooledMemoryAllocated(int allocated) {
+        ByteBufAllocator alloc = alloc();
+        if (alloc instanceof AbstractByteBufAllocator) {
+            AbstractByteBufAllocator aalloc = (AbstractByteBufAllocator) alloc;
+            aalloc.notifyMemoryAllocated0(allocated, isDirect());
+        }
+    }
+
     final void setIndex0(int readerIndex, int writerIndex) {
         this.readerIndex = readerIndex;
         this.writerIndex = writerIndex;

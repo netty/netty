@@ -26,16 +26,23 @@ class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
     }
 
     @Override
-    protected ByteBuffer allocateDirect(int initialCapacity) {
+    protected ByteBuffer doAllocateDirect(int initialCapacity) {
         return PlatformDependent.allocateDirectNoCleaner(initialCapacity);
     }
 
-    ByteBuffer reallocateDirect(ByteBuffer oldBuffer, int initialCapacity) {
+    private ByteBuffer reallocateDirect(ByteBuffer oldBuffer, int initialCapacity) {
+        notifyUnpooledMemoryAllocated(initialCapacity);
+        ByteBuffer buffer = doReallocateDirect(oldBuffer, initialCapacity);
+        notifyUnpooledMemoryReleased(oldBuffer.capacity());
+        return buffer;
+    }
+
+    protected ByteBuffer doReallocateDirect(ByteBuffer oldBuffer, int initialCapacity) {
         return PlatformDependent.reallocateDirectNoCleaner(oldBuffer, initialCapacity);
     }
 
     @Override
-    protected void freeDirect(ByteBuffer buffer) {
+    protected void doFreeDirect(ByteBuffer buffer) {
         PlatformDependent.freeDirectNoCleaner(buffer);
     }
 

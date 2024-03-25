@@ -35,7 +35,7 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
     }
 
     @Override
-    protected byte[] allocateArray(int initialCapacity) {
+    protected byte[] doAllocateArray(int initialCapacity) {
         return PlatformDependent.allocateUninitializedArray(initialCapacity);
     }
 

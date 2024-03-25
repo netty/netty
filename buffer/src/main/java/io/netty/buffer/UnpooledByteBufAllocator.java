@@ -140,16 +140,16 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         }
 
         @Override
-        protected byte[] allocateArray(int initialCapacity) {
-            byte[] bytes = super.allocateArray(initialCapacity);
+        protected byte[] doAllocateArray(int initialCapacity) {
+            byte[] bytes = super.doAllocateArray(initialCapacity);
             ((UnpooledByteBufAllocator) alloc()).incrementHeap(bytes.length);
             return bytes;
         }
 
         @Override
-        protected void freeArray(byte[] array) {
+        protected void doFreeArray(byte[] array) {
             int length = array.length;
-            super.freeArray(array);
+            super.doFreeArray(array);
             ((UnpooledByteBufAllocator) alloc()).decrementHeap(length);
         }
     }
@@ -160,16 +160,16 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         }
 
         @Override
-        protected byte[] allocateArray(int initialCapacity) {
-            byte[] bytes = super.allocateArray(initialCapacity);
+        protected byte[] doAllocateArray(int initialCapacity) {
+            byte[] bytes = super.doAllocateArray(initialCapacity);
             ((UnpooledByteBufAllocator) alloc()).incrementHeap(bytes.length);
             return bytes;
         }
 
         @Override
-        protected void freeArray(byte[] array) {
+        protected void doFreeArray(byte[] array) {
             int length = array.length;
-            super.freeArray(array);
+            super.doFreeArray(array);
             ((UnpooledByteBufAllocator) alloc()).decrementHeap(length);
         }
     }
@@ -182,24 +182,24 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         }
 
         @Override
-        protected ByteBuffer allocateDirect(int initialCapacity) {
-            ByteBuffer buffer = super.allocateDirect(initialCapacity);
+        protected ByteBuffer doAllocateDirect(int initialCapacity) {
+            ByteBuffer buffer = super.doAllocateDirect(initialCapacity);
             ((UnpooledByteBufAllocator) alloc()).incrementDirect(buffer.capacity());
             return buffer;
         }
 
         @Override
-        ByteBuffer reallocateDirect(ByteBuffer oldBuffer, int initialCapacity) {
+        protected ByteBuffer doReallocateDirect(ByteBuffer oldBuffer, int initialCapacity) {
             int capacity = oldBuffer.capacity();
-            ByteBuffer buffer = super.reallocateDirect(oldBuffer, initialCapacity);
+            ByteBuffer buffer = super.doReallocateDirect(oldBuffer, initialCapacity);
             ((UnpooledByteBufAllocator) alloc()).incrementDirect(buffer.capacity() - capacity);
             return buffer;
         }
 
         @Override
-        protected void freeDirect(ByteBuffer buffer) {
+        protected void doFreeDirect(ByteBuffer buffer) {
             int capacity = buffer.capacity();
-            super.freeDirect(buffer);
+            super.doFreeDirect(buffer);
             ((UnpooledByteBufAllocator) alloc()).decrementDirect(capacity);
         }
     }
@@ -211,16 +211,16 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         }
 
         @Override
-        protected ByteBuffer allocateDirect(int initialCapacity) {
-            ByteBuffer buffer = super.allocateDirect(initialCapacity);
+        protected ByteBuffer doAllocateDirect(int initialCapacity) {
+            ByteBuffer buffer = super.doAllocateDirect(initialCapacity);
             ((UnpooledByteBufAllocator) alloc()).incrementDirect(buffer.capacity());
             return buffer;
         }
 
         @Override
-        protected void freeDirect(ByteBuffer buffer) {
+        protected void doFreeDirect(ByteBuffer buffer) {
             int capacity = buffer.capacity();
-            super.freeDirect(buffer);
+            super.doFreeDirect(buffer);
             ((UnpooledByteBufAllocator) alloc()).decrementDirect(capacity);
         }
     }
@@ -232,16 +232,16 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         }
 
         @Override
-        protected ByteBuffer allocateDirect(int initialCapacity) {
-            ByteBuffer buffer = super.allocateDirect(initialCapacity);
+        protected ByteBuffer doAllocateDirect(int initialCapacity) {
+            ByteBuffer buffer = super.doAllocateDirect(initialCapacity);
             ((UnpooledByteBufAllocator) alloc()).incrementDirect(buffer.capacity());
             return buffer;
         }
 
         @Override
-        protected void freeDirect(ByteBuffer buffer) {
+        protected void doFreeDirect(ByteBuffer buffer) {
             int capacity = buffer.capacity();
-            super.freeDirect(buffer);
+            super.doFreeDirect(buffer);
             ((UnpooledByteBufAllocator) alloc()).decrementDirect(capacity);
         }
     }

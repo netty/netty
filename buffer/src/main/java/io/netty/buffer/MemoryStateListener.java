@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2017 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,18 +15,8 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.PlatformDependent;
+public interface MemoryStateListener {
+    void memoryReleased(int released, boolean direct);
 
-import java.nio.ByteBuffer;
-
-final class WrappedUnpooledUnsafeDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
-
-    WrappedUnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, long memoryAddress, int size, boolean doFree) {
-        super(alloc, PlatformDependent.directBuffer(memoryAddress, size), size, doFree);
-    }
-
-    @Override
-    protected void doFreeDirect(ByteBuffer buffer) {
-        PlatformDependent.freeMemory(memoryAddress);
-    }
+    void memoryAllocated(int allocated, boolean direct);
 }
