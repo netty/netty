@@ -16,7 +16,6 @@
 package io.netty.handler.codec.compression;
 
 import com.github.luben.zstd.BaseZstdBufferDecompressingStreamNoFinalizer;
-import com.github.luben.zstd.ZstdBufferDecompressingStream;
 import com.github.luben.zstd.ZstdBufferDecompressingStreamNoFinalizer;
 import com.github.luben.zstd.ZstdDirectBufferDecompressingStreamNoFinalizer;
 import io.netty.buffer.ByteBuf;
@@ -37,7 +36,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
     {
         try {
             Zstd.ensureAvailability();
-            outCapacity = ZstdBufferDecompressingStream.recommendedTargetBufferSize();
+            outCapacity = ZstdBufferDecompressingStreamNoFinalizer.recommendedTargetBufferSize();
         } catch (Throwable throwable) {
             throw new ExceptionInInitializerError(throwable);
         }
@@ -191,11 +190,8 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
             return null;
         }
 
-        private ByteBuffer refill(ByteBuffer toRefill) {
-            if (toRefill != current) {
-                return current;
-            }
-            return toRefill;
+        private ByteBuffer refill(@SuppressWarnings("unused") ByteBuffer toRefill) {
+            return current;
         }
 
         void close() {
