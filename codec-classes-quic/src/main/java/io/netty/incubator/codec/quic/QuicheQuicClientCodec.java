@@ -68,8 +68,8 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
                     senderSockaddrMemory.internalNioBuffer(0, senderSockaddrMemory.capacity()),
                     recipientSockaddrMemory.internalNioBuffer(0, recipientSockaddrMemory.capacity()));
         } catch (Throwable cause) {
+            // Only fail the original promise. Cleanup will be done as part of the listener attached to it.
             promise.setFailure(cause);
-            channel.unsafe().closeForcibly();
             return;
         }
 
