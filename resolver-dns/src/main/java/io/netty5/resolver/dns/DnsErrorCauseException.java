@@ -17,7 +17,6 @@
 package io.netty5.resolver.dns;
 
 import io.netty5.handler.codec.dns.DnsResponseCode;
-import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.ThrowableUtil;
 
 import java.net.UnknownHostException;
@@ -33,14 +32,8 @@ public final class DnsErrorCauseException extends RuntimeException {
     private final DnsResponseCode code;
 
     private DnsErrorCauseException(String message, DnsResponseCode code) {
-        super(message);
-        this.code = code;
-    }
-
-    private DnsErrorCauseException(String message, DnsResponseCode code, boolean shared) {
         super(message, null, false, true);
         this.code = code;
-        assert shared;
     }
 
     // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
@@ -60,12 +53,6 @@ public final class DnsErrorCauseException extends RuntimeException {
     }
 
     static DnsErrorCauseException newStatic(String message, DnsResponseCode code, Class<?> clazz, String method) {
-        final DnsErrorCauseException exception;
-        if (PlatformDependent.javaVersion() >= 7) {
-            exception = new DnsErrorCauseException(message, code, true);
-        } else {
-            exception = new DnsErrorCauseException(message, code);
-        }
-        return ThrowableUtil.unknownStackTrace(exception, clazz, method);
+        return ThrowableUtil.unknownStackTrace(new DnsErrorCauseException(message, code), clazz, method);
     }
 }
