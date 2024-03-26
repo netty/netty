@@ -695,7 +695,25 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 queueAndFailAll(msg, promise, new ClosedChannelException());
             } else if (finSent) {
                 queueAndFailAll(msg, promise, new ChannelOutputShutdownException("Fin was sent already"));
+            } else if (!queue.isEmpty()) {
+                // If the queue is not empty we should just add the message to the queue as we will drain
+                // it later once the stream becomes writable again.
+                try {
+                    msg = filterMsg(msg);
+                } catch (UnsupportedOperationException e) {
+                    ReferenceCountUtil.release(msg);
+                    promise.setFailure(e);
+                    return;
+                }
+
+                // Touch the message to make things easier in terms of debugging buffer leaks.
+                ReferenceCountUtil.touch(msg);
+                queue.add(msg, promise);
+
+                // Try again to write queued messages.
+                writeQueued();
             } else {
+                assert queue.isEmpty();
                 writeWithoutCheckChannelState(msg, promise);
             }
         }
@@ -708,14 +726,14 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             queue.removeAndFailAll(cause);
         }
 
-        void writeWithoutCheckChannelState(Object msg, ChannelPromise promise) {
+        private Object filterMsg(Object msg) {
             if (msg instanceof ByteBuf) {
                 ByteBuf buffer = (ByteBuf)  msg;
                 if (!buffer.isDirect()) {
                     ByteBuf tmpBuffer = alloc().directBuffer(buffer.readableBytes());
                     tmpBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
                     buffer.release();
-                    msg = tmpBuffer;
+                    return tmpBuffer;
                 }
             } else if (msg instanceof QuicStreamFrame) {
                 QuicStreamFrame frame = (QuicStreamFrame) msg;
@@ -723,14 +741,23 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 if (!buffer.isDirect()) {
                     ByteBuf tmpBuffer = alloc().directBuffer(buffer.readableBytes());
                     tmpBuffer.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
-                    buffer.release();
-                    msg = frame.replace(tmpBuffer);
+                    QuicStreamFrame tmpFrame = frame.replace(tmpBuffer);
+                    frame.release();
+                    return tmpFrame;
                 }
             } else {
+                throw new UnsupportedOperationException(
+                        "unsupported message type: " + StringUtil.simpleClassName(msg));
+            }
+            return msg;
+        }
+
+        void writeWithoutCheckChannelState(Object msg, ChannelPromise promise) {
+            try {
+                msg = filterMsg(msg);
+            } catch (UnsupportedOperationException e) {
                 ReferenceCountUtil.release(msg);
-                promise.setFailure(new UnsupportedOperationException(
-                        "unsupported message type: " + StringUtil.simpleClassName(msg)));
-                return;
+                promise.setFailure(e);
             }
 
             boolean wasFinSent = QuicheQuicStreamChannel.this.finSent;
