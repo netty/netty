@@ -32,6 +32,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicChannel;
 import io.netty.incubator.codec.quic.QuicChannelConfig;
 import io.netty.incubator.codec.quic.QuicConnectionAddress;
+import io.netty.incubator.codec.quic.QuicConnectionPathStats;
 import io.netty.incubator.codec.quic.QuicConnectionStats;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
@@ -167,6 +168,12 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     public Future<QuicConnectionStats> collectStats(Promise<QuicConnectionStats> promise) {
         return promise.setFailure(
                 new UnsupportedOperationException("Collect stats not supported for embedded channel."));
+    }
+
+    @Override
+    public Future<QuicConnectionPathStats> collectPathStats(int i, Promise<QuicConnectionPathStats> promise) {
+        return promise.setFailure(
+                new UnsupportedOperationException("Collect path stats not supported for embedded channel."));
     }
 
     public EmbeddedQuicStreamChannel localControlStream() {
