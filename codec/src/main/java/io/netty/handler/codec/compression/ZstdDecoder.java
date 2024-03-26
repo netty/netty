@@ -146,7 +146,7 @@ public final class ZstdDecoder extends ByteToMessageDecoder {
                 assert inNioBuffer.hasRemaining();
                 current = inNioBuffer;
 
-                // allocate the outBuffer based on what we expect from the decompressingStrean.
+                // allocate the outBuffer based on what we expect from the decompressingStream.
                 if (direct) {
                     outBuffer = alloc.directBuffer(outCapacity);
                 } else {
