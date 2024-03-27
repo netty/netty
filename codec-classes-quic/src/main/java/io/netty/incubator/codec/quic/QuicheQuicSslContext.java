@@ -53,7 +53,6 @@ import java.util.function.BiConsumer;
 import java.util.function.LongFunction;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static java.util.Objects.requireNonNull;
 
 final class QuicheQuicSslContext extends QuicSslContext {
     final ClientAuth clientAuth;

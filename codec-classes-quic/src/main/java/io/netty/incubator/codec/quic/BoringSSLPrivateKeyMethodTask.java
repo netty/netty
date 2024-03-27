@@ -1,7 +1,6 @@
 package io.netty.incubator.codec.quic;
 
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 abstract class BoringSSLPrivateKeyMethodTask extends BoringSSLTask {
 

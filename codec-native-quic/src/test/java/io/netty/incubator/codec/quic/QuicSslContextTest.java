@@ -20,7 +20,6 @@ import io.netty.util.internal.EmptyArrays;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
-import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.X509ExtendedKeyManager;
 
