@@ -29,14 +29,31 @@ public final class SWARUtil {
 
     /**
      * Applies a compiled pattern to given word.
-     * Returns the index of the first occurrence of byte that specified in the pattern.
+     * Returns a word where each byte that matches the pattern has the highest bit set.
+     *
+     * @param word    the word to apply the pattern to
+     * @param pattern the pattern to apply
+     * @return a word where each byte that matches the pattern has the highest bit set
      */
-    public static int firstAnyPattern(long word, long pattern, boolean leading) {
+    public static long applyPattern(final long word, final long pattern) {
         long input = word ^ pattern;
         long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
-        tmp = ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
-        final int binaryPosition = leading? Long.numberOfLeadingZeros(tmp) : Long.numberOfTrailingZeros(tmp);
-        return binaryPosition >>> 3;
+        return ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
+    }
+
+    /**
+     * Returns the index of the first occurrence of byte that specificied in the pattern.
+     * If no pattern is found, returns 8.
+     *
+     * @param word     the return value of {@link #applyPattern(long, long)}
+     * @param isBigEndian if true, if given word is big endian
+     *                 if false, if given word is little endian
+     * @return the index of the first occurrence of the specified pattern in the specified word.
+     * If no pattern is found, returns 8.
+     */
+    public static int getIndex(final long word, final boolean isBigEndian) {
+        final int zeros = isBigEndian? Long.numberOfLeadingZeros(word) : Long.numberOfTrailingZeros(word);
+        return zeros >>> 3;
     }
 
     /**
