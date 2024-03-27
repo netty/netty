@@ -488,6 +488,25 @@ public class BootstrapTest {
         expectedChannel.close().sync();
     }
 
+    @Test
+    void mustNotCallInitializerExtensionsIfDisabled() throws Exception {
+        final Bootstrap cb = new Bootstrap();
+        cb.disableExtensions(true);
+
+        cb.group(groupA);
+        cb.handler(dummyHandler);
+        cb.channel(LocalChannel.class);
+
+        StubChannelInitializerExtension.clearThreadLocals();
+
+        ChannelFuture future = cb.register();
+        future.sync();
+        final Channel expectedChannel = future.channel();
+
+        assertNull(StubChannelInitializerExtension.lastSeenClientChannel.get());
+        expectedChannel.close().sync();
+    }
+
     private static final class DelayedEventLoopGroup extends DefaultEventLoop {
         @Override
         public ChannelFuture register(final Channel channel, final ChannelPromise promise) {

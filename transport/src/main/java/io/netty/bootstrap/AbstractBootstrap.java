@@ -68,6 +68,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     private final Map<AttributeKey<?>, Object> attrs = new ConcurrentHashMap<AttributeKey<?>, Object>();
     private volatile ChannelHandler handler;
     private volatile ClassLoader extensionsClassLoader;
+    private volatile boolean disableExtensionsLoading;
 
     AbstractBootstrap() {
         // Disallow extending from a different package.
@@ -83,6 +84,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
         attrs.putAll(bootstrap.attrs);
         extensionsClassLoader = bootstrap.extensionsClassLoader;
+        disableExtensionsLoading = bootstrap.disableExtensionsLoading;
     }
 
     /**
@@ -209,6 +211,20 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
      */
     public B extensionsClassLoader(ClassLoader classLoader) {
         extensionsClassLoader = classLoader;
+        return self();
+    }
+
+    /**
+     * Disable loading and invoking any {@link ChannelInitializerExtension}s.
+     * <p>
+     * By default, loading and use of extensions depend on the rules specified in {@link ChannelInitializerExtension}'s
+     * documentation. This method provides a way to prevent adding extensions to a particular {@link Bootstrap}.
+     *
+     * @param disableExtensions Whether to disable extensions use in this Bootstrap or not.
+     * @return This bootstrap.
+     */
+    public B disableExtensions(boolean disableExtensions) {
+        this.disableExtensionsLoading = disableExtensions;
         return self();
     }
 
@@ -360,6 +376,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     abstract void init(Channel channel) throws Exception;
 
     Collection<ChannelInitializerExtension> getInitializerExtensions() {
+        if (disableExtensionsLoading) {
+            return Collections.emptyList();
+        }
         ClassLoader loader = extensionsClassLoader;
         if (loader == null) {
             loader = getClass().getClassLoader();
