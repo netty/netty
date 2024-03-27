@@ -18,6 +18,9 @@ package io.netty5.buffer.tests;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.BufferClosedException;
+import io.netty5.buffer.LeakInfo;
+import io.netty5.buffer.internal.InternalBufferUtils;
+import io.netty5.buffer.internal.LeakDetection;
 import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
@@ -894,5 +897,18 @@ public class BufferLifeCycleTest extends BufferTestSupport {
         assertThrows(IllegalStateException.class, () -> allocator.constBufferSupplier(new byte[8]));
         // Existing const suppliers continue to work because they hold on to static memory allocation.
         supplier.get().close();
+    }
+
+    @ParameterizedTest
+    @MethodSource("initialCombinations")
+    void allocatingBuffersMustRecordLifecycleTrace(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator();
+             var ignoreLeakDetection = LeakDetection.onLeakDetected(info -> { }); // Ensure tracing is enabled.
+             Buffer buffer = allocator.allocate(32)) {
+            buffer.touch("Second lifecycle event.");
+            var tracePoints = InternalBufferUtils.collectLifecycleTrace((ResourceSupport<?, ?>) buffer);
+            var eventNames = tracePoints.stream().map(LeakInfo.TracePoint::eventName);
+            assertThat(eventNames).containsExactly("ALLOCATE", "TOUCH");
+        }
     }
 }

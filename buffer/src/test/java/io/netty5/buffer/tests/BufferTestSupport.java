@@ -22,6 +22,7 @@ import io.netty5.buffer.BufferClosedException;
 import io.netty5.buffer.CompositeBuffer;
 import io.netty5.buffer.MemoryManager;
 import io.netty5.buffer.SensitiveBufferAllocator;
+import io.netty5.buffer.adapt.AdaptivePoolingAllocator;
 import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.buffer.pool.PooledBufferAllocator;
 import io.netty5.buffer.tests.Fixture.Properties;
@@ -145,12 +146,14 @@ public abstract class BufferTestSupport {
                 new Fixture("sensitive", SensitiveBufferAllocator::sensitiveOffHeapAllocator, DIRECT, UNCLOSEABLE),
                 new Fixture("pooledHeap", BufferAllocator::onHeapPooled, POOLED, HEAP),
                 new Fixture("pooledDirect", BufferAllocator::offHeapPooled, POOLED, DIRECT),
-                new Fixture("pooledDirect", () ->
+                new Fixture("pooledDirectAlign", () ->
                         new PooledBufferAllocator(MemoryManager.instance(), true,
                                 PooledBufferAllocator.defaultNumDirectArena(), PooledBufferAllocator.defaultPageSize(),
                                 PooledBufferAllocator.defaultMaxOrder(), PooledBufferAllocator.defaultSmallCacheSize(),
                                 PooledBufferAllocator.defaultNormalCacheSize(), true, 64),
-                        POOLED, DIRECT)
+                        POOLED, DIRECT),
+                new Fixture("adaptiveHeap", () -> new AdaptivePoolingAllocator(false), POOLED, HEAP),
+                new Fixture("adaptiveDirect", () -> new AdaptivePoolingAllocator(true), POOLED, DIRECT)
         );
     }
 

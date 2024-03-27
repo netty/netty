@@ -222,6 +222,14 @@ public interface MemoryManager {
     void clearMemory(Object memory);
 
     /**
+     * Get the size, in bytes, of the given memory allocation.
+     *
+     * @param memory The opaque memory to get the size of.
+     * @return The size of the given memory, in bytes.
+     */
+    int sizeOf(Object memory);
+
+    /**
      * Get the name for this implementation, which can be used for finding this particular implementation via the
      * {@link #lookupImplementation(String)} method.
      *

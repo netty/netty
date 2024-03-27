@@ -18,66 +18,79 @@ package io.netty5.microbench.buffer;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.MemoryManager;
+import io.netty5.buffer.adapt.AdaptivePoolingAllocator;
 import io.netty5.buffer.pool.PooledBufferAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 
 /**
  * This class benchmarks different allocators with different allocation sizes.
  */
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
 public class BufferAllocatorBenchmark extends AbstractMicrobenchmark {
 
     private static final BufferAllocator unpooledAllocator = BufferAllocator.offHeapUnpooled();
     private static final BufferAllocator pooledAllocator = new PooledBufferAllocator(
             MemoryManager.instance(), true, 4, 8192, 9, 0, 0, true, 0); // Disable thread-local cache
+    private static final BufferAllocator adaptiveAllocator = new AdaptivePoolingAllocator(true);
 
     private static final int MAX_LIVE_BUFFERS = 8192;
     private static final Random rand = new Random();
-    private static final Buffer[] unpooledHeapBuffers = new Buffer[MAX_LIVE_BUFFERS];
-    private static final Buffer[] unpooledDirectBuffers = new Buffer[MAX_LIVE_BUFFERS];
-    private static final Buffer[] pooledHeapBuffers = new Buffer[MAX_LIVE_BUFFERS];
-    private static final Buffer[] pooledDirectBuffers = new Buffer[MAX_LIVE_BUFFERS];
-    private static final Buffer[] defaultPooledHeapBuffers = new Buffer[MAX_LIVE_BUFFERS];
-    private static final Buffer[] defaultPooledDirectBuffers = new Buffer[MAX_LIVE_BUFFERS];
+    private static final Buffer[] unpooledBuffers = new Buffer[MAX_LIVE_BUFFERS];
+    private static final Buffer[] pooledBuffers = new Buffer[MAX_LIVE_BUFFERS];
+    private static final Buffer[] pooledAdaptiveBuffers = new Buffer[MAX_LIVE_BUFFERS];
+    private static final Buffer[] defaultPooledBuffers = new Buffer[MAX_LIVE_BUFFERS];
 
     @Param({ "00000", "00256", "01024", "04096", "16384", "65536" })
     public int size;
 
     @Benchmark
     public void unpooledAllocAndFree() {
-        int idx = rand.nextInt(unpooledHeapBuffers.length);
-        Buffer oldBuf = unpooledHeapBuffers[idx];
+        int idx = rand.nextInt(unpooledBuffers.length);
+        Buffer oldBuf = unpooledBuffers[idx];
         if (oldBuf != null) {
             oldBuf.close();
         }
-        unpooledHeapBuffers[idx] = unpooledAllocator.allocate(size);
+        unpooledBuffers[idx] = unpooledAllocator.allocate(size);
     }
 
     @Benchmark
     public void pooledAllocAndFree() {
-        int idx = rand.nextInt(pooledHeapBuffers.length);
-        Buffer oldBuf = pooledHeapBuffers[idx];
+        int idx = rand.nextInt(pooledBuffers.length);
+        Buffer oldBuf = pooledBuffers[idx];
         if (oldBuf != null) {
             oldBuf.close();
         }
-        pooledHeapBuffers[idx] = pooledAllocator.allocate(size);
+        pooledBuffers[idx] = pooledAllocator.allocate(size);
+    }
+
+    @Benchmark
+    public void adaptiveAllocAndFree() {
+        int idx = rand.nextInt(pooledAdaptiveBuffers.length);
+        Buffer oldBuf = pooledAdaptiveBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.close();
+        }
+        pooledAdaptiveBuffers[idx] = adaptiveAllocator.allocate(size);
     }
 
     @Benchmark
     public void defaultPooledAllocAndFree() {
-        int idx = rand.nextInt(defaultPooledHeapBuffers.length);
-        Buffer oldBuf = defaultPooledHeapBuffers[idx];
+        int idx = rand.nextInt(defaultPooledBuffers.length);
+        Buffer oldBuf = defaultPooledBuffers[idx];
         if (oldBuf != null) {
             oldBuf.close();
         }
-        defaultPooledHeapBuffers[idx] = preferredAllocator().allocate(size);
+        defaultPooledBuffers[idx] = preferredAllocator().allocate(size);
     }
 }

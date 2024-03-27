@@ -99,11 +99,11 @@ public abstract class LifecycleTracer {
 
     /**
      * Attach a trace to both life-cycles, that a single life-cycle has been split into two.
-     *
+     * <p>
      * Such branches happen when two views are created to share a single underlying resource.
      * The most prominent example of this is the {@link Buffer#split()} method, where a buffer is broken into two that
      * each covers a non-overlapping region of the original memory.
-     *
+     * <p>
      * This method is called on the originating, or "parent" tracer, while the newly allocated "child" is given as an
      * argument.
      *
@@ -317,6 +317,20 @@ public abstract class LifecycleTracer {
         @Override
         public Throwable traceback() {
             return getTraceback(System.nanoTime(), true);
+        }
+
+        @Override
+        public String eventName() {
+            return type.name();
+        }
+
+        @Override
+        public String toString() {
+            Object hint = hint();
+            if (hint != null) {
+                return "Trace[" + type.name() + ", " + hint + ']';
+            }
+            return "Trace[" + type.name() + ']';
         }
 
         private Traceback getTraceback(long timestamp, boolean recurse) {

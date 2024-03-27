@@ -31,14 +31,15 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Base class for all JMH benchmarks.
  */
-@Warmup(iterations = AbstractMicrobenchmarkBase.DEFAULT_WARMUP_ITERATIONS)
-@Measurement(iterations = AbstractMicrobenchmarkBase.DEFAULT_MEASURE_ITERATIONS)
+@Warmup(iterations = AbstractMicrobenchmarkBase.DEFAULT_WARMUP_ITERATIONS, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = AbstractMicrobenchmarkBase.DEFAULT_MEASURE_ITERATIONS, time = 1, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
 public abstract class AbstractMicrobenchmarkBase {
     protected static final int DEFAULT_WARMUP_ITERATIONS = 10;
@@ -54,6 +55,11 @@ public abstract class AbstractMicrobenchmarkBase {
             "-Dio.netty5.leakDetection.level=disabled",
             "-Dio.netty5.buffer.leakDetectionEnabled=false",
             "-Dio.netty5.buffer.lifecycleTracingEnabled=false",
+            // Enable Unsafe-based buffer implementation:
+//            "-Dio.netty5.tryReflectionSetAccessible=true",
+//            "--add-opens", "java.base/java.nio=ALL-UNNAMED",
+//            "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
+//            "-Dio.netty5.buffer.api.MemoryManager=Unsafe"
     };
 
     static {

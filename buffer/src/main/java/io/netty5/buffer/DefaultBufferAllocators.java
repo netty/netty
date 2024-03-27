@@ -14,6 +14,7 @@
  */
 package io.netty5.buffer;
 
+import io.netty5.buffer.adapt.AdaptivePoolingAllocator;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import org.slf4j.Logger;
@@ -44,22 +45,25 @@ public final class DefaultBufferAllocators {
                 "io.netty5.allocator.type", PlatformDependent.isAndroid() ? "unpooled" : "pooled");
         allocType = allocType.toLowerCase(Locale.US).trim();
         boolean directBufferPreferred = directBufferPreferred();
+        String allocTypeForLogging = allocType;
 
         final BufferAllocator onHeap;
         final BufferAllocator offHeap;
         if ("unpooled".equals(allocType)) {
             onHeap = BufferAllocator.onHeapUnpooled();
             offHeap = BufferAllocator.offHeapUnpooled();
-            logger.debug("-Dio.netty5.allocator.type: {}", allocType);
         } else if ("pooled".equals(allocType)) {
             onHeap = BufferAllocator.onHeapPooled();
             offHeap = BufferAllocator.offHeapPooled();
-            logger.debug("-Dio.netty5.allocator.type: {}", allocType);
+        } else if ("adaptive".equals(allocType)) {
+            onHeap = new AdaptivePoolingAllocator(false);
+            offHeap = new AdaptivePoolingAllocator(true);
         } else {
             onHeap = BufferAllocator.onHeapPooled();
             offHeap = BufferAllocator.offHeapPooled();
-            logger.debug("-Dio.netty5.allocator.type: pooled (unknown: {})", allocType);
+            allocTypeForLogging = "pooled (unknown: " + allocType + ')';
         }
+        logger.debug("-Dio.netty5.allocator.type: {}", allocTypeForLogging);
         UncloseableBufferAllocator onHeapUnclosable = new UncloseableBufferAllocator(onHeap);
         UncloseableBufferAllocator offHeapUnclosable = new UncloseableBufferAllocator(offHeap);
         DEFAULT_PREFERRED_ALLOCATOR = directBufferPreferred? offHeapUnclosable : onHeapUnclosable;

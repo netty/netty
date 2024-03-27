@@ -15,9 +15,11 @@
  */
 package io.netty5.util.internal;
 
+import org.jctools.queues.MpmcArrayQueue;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.jctools.queues.MpscUnboundedArrayQueue;
+import org.jctools.queues.atomic.MpmcAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscChunkedAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
@@ -811,6 +813,17 @@ public final class PlatformDependent {
     }
 
     /**
+     * Get the ID of the given thread. This is {@code Thread.threadId()} on Java 19 and newer,
+     * or {@code Thread.getId()} on older Java versions.
+     *
+     * @param thread The thread to get the ID from.
+     * @return The ID of the given thread.
+     */
+    public static long threadId(Thread thread) {
+        return PlatformDependent0.threadId(thread);
+    }
+
+    /**
      * Compare two {@code byte} arrays for equality. For performance reasons no bounds checking on the
      * parameters is performed.
      *
@@ -932,8 +945,8 @@ public final class PlatformDependent {
         return hash;
     }
 
-    private static final class Mpsc {
-        private static final boolean USE_MPSC_CHUNKED_ARRAY_QUEUE;
+    private static final class QueueChoice {
+        private static final boolean USE_CHUNKED_ARRAY_QUEUES;
 
         static {
             Object unsafe = null;
@@ -949,10 +962,10 @@ public final class PlatformDependent {
 
             if (unsafe == null) {
                 logger.debug("org.jctools-core.MpscChunkedArrayQueue: unavailable");
-                USE_MPSC_CHUNKED_ARRAY_QUEUE = false;
+                USE_CHUNKED_ARRAY_QUEUES = false;
             } else {
                 logger.debug("org.jctools-core.MpscChunkedArrayQueue: available");
-                USE_MPSC_CHUNKED_ARRAY_QUEUE = true;
+                USE_CHUNKED_ARRAY_QUEUES = true;
             }
         }
 
@@ -965,13 +978,27 @@ public final class PlatformDependent {
         }
 
         static <T> Queue<T> newChunkedMpscQueue(final int chunkSize, final int capacity) {
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscChunkedArrayQueue<>(chunkSize, capacity)
-                    : new MpscChunkedAtomicArrayQueue<>(chunkSize, capacity);
+            return USE_CHUNKED_ARRAY_QUEUES ?
+                    new MpscChunkedArrayQueue<>(chunkSize, capacity) :
+                    new MpscChunkedAtomicArrayQueue<>(chunkSize, capacity);
+        }
+
+        static <T> Queue<T> newMpmcQueue(final int capacity) {
+            return hasUnsafe() ? new MpmcArrayQueue<>(capacity) : new MpmcAtomicArrayQueue<>(capacity);
         }
 
         static <T> Queue<T> newMpscQueue() {
-            return USE_MPSC_CHUNKED_ARRAY_QUEUE ? new MpscUnboundedArrayQueue<>(MPSC_CHUNK_SIZE)
-                                                : new MpscUnboundedAtomicArrayQueue<>(MPSC_CHUNK_SIZE);
+            return USE_CHUNKED_ARRAY_QUEUES ?
+                    new MpscUnboundedArrayQueue<>(MPSC_CHUNK_SIZE) :
+                    new MpscUnboundedAtomicArrayQueue<>(MPSC_CHUNK_SIZE);
+        }
+
+        static <T> Queue<T> newSpscQueue() {
+            return hasUnsafe() ? new SpscLinkedUnpaddedQueue<>() : new SpscLinkedAtomicQueue<>();
+        }
+
+        static <T> Queue<T> newFixedMpscQueue(int capacity) {
+            return hasUnsafe() ? new MpscArrayQueue<>(capacity) : new MpscAtomicArrayQueue<>(capacity);
         }
     }
 
@@ -981,7 +1008,7 @@ public final class PlatformDependent {
      * @return A MPSC queue which may be unbounded.
      */
     public static <T> Queue<T> newMpscQueue() {
-        return Mpsc.newMpscQueue();
+        return QueueChoice.newMpscQueue();
     }
 
     /**
@@ -989,7 +1016,7 @@ public final class PlatformDependent {
      * consumer (one thread!).
      */
     public static <T> Queue<T> newMpscQueue(final int maxCapacity) {
-        return Mpsc.newMpscQueue(maxCapacity);
+        return QueueChoice.newMpscQueue(maxCapacity);
     }
 
     /**
@@ -998,7 +1025,14 @@ public final class PlatformDependent {
      * The queue will grow and shrink its capacity in units of the given chunk size.
      */
     public static <T> Queue<T> newMpscQueue(final int chunkSize, final int maxCapacity) {
-        return Mpsc.newChunkedMpscQueue(chunkSize, maxCapacity);
+        return QueueChoice.newChunkedMpscQueue(chunkSize, maxCapacity);
+    }
+
+    /**
+     * Create a multi-producer, multi-consumer queue with the given capacity.
+     */
+    public static <T> Queue<T> newMpmcQueue(final int capacity) {
+        return QueueChoice.newMpmcQueue(capacity);
     }
 
     /**
@@ -1006,7 +1040,7 @@ public final class PlatformDependent {
      * consumer (one thread!).
      */
     public static <T> Queue<T> newSpscQueue() {
-        return hasUnsafe() ? new SpscLinkedUnpaddedQueue<>() : new SpscLinkedAtomicQueue<>();
+        return QueueChoice.newSpscQueue();
     }
 
     /**
@@ -1014,7 +1048,7 @@ public final class PlatformDependent {
      * consumer (one thread!) with the given fixes {@code capacity}.
      */
     public static <T> Queue<T> newFixedMpscQueue(int capacity) {
-        return hasUnsafe() ? new MpscArrayQueue<>(capacity) : new MpscAtomicArrayQueue<>(capacity);
+        return QueueChoice.newFixedMpscQueue(capacity);
     }
 
     /**

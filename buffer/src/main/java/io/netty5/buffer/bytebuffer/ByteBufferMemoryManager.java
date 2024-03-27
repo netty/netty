@@ -100,6 +100,12 @@ public final class ByteBufferMemoryManager implements MemoryManager {
     }
 
     @Override
+    public int sizeOf(Object memory) {
+        ByteBuffer buffer = (ByteBuffer) memory;
+        return buffer.capacity();
+    }
+
+    @Override
     public String implementationName() {
         return "ByteBuffer";
     }

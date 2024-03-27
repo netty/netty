@@ -20,9 +20,11 @@ import io.netty5.buffer.BufferClosedException;
 import io.netty5.buffer.BufferComponent;
 import io.netty5.buffer.BufferReadOnlyException;
 import io.netty5.buffer.Drop;
+import io.netty5.buffer.LeakInfo;
 import io.netty5.buffer.MemoryManager;
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.PlatformDependent;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -33,6 +35,7 @@ import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 
@@ -135,12 +138,22 @@ public interface InternalBufferUtils {
      */
     static void assertValidBufferSize(long size) {
         if (size < 0) {
-            throw new IllegalArgumentException("Buffer size must not be negative, but was " + size + '.');
+            throw bufferSizeNegative(size);
         }
         if (size > MAX_BUFFER_SIZE) {
-            throw new IllegalArgumentException(
-                    "Buffer size cannot be greater than " + MAX_BUFFER_SIZE + ", but was " + size + '.');
+            throw bufferSizeTooBig(size);
         }
+    }
+
+    @NotNull
+    private static IllegalArgumentException bufferSizeNegative(long size) {
+        return new IllegalArgumentException("Buffer size must not be negative, but was " + size + '.');
+    }
+
+    @NotNull
+    private static IllegalArgumentException bufferSizeTooBig(long size) {
+        return new IllegalArgumentException(
+                "Buffer size cannot be greater than " + MAX_BUFFER_SIZE + ", but was " + size + '.');
     }
 
     static void checkImplicitCapacity(int implicitCapacity, int currentCapacity) {
@@ -197,6 +210,7 @@ public interface InternalBufferUtils {
         return bbsliceFallback(buffer, fromOffset, length);
     }
 
+    @SuppressWarnings("DataFlowIssue")
     private static ByteBuffer bbsliceJdk13(ByteBuffer buffer, int fromOffset, int length) {
         try {
             return (ByteBuffer) BB_SLICE_OFFSETS.invokeExact(buffer, fromOffset, length);
@@ -325,6 +339,10 @@ public interface InternalBufferUtils {
 
     static <E extends Throwable> E attachTrace(ResourceSupport<?, ?> obj, E throwable) {
         return ResourceSupport.getTracer(obj).attachTrace(throwable);
+    }
+
+    static Collection<LeakInfo.TracePoint> collectLifecycleTrace(ResourceSupport<?, ?> obj) {
+        return ResourceSupport.getTracer(obj).collectTraces();
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
