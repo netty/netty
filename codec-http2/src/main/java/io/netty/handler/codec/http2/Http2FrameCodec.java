@@ -765,5 +765,28 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         public String toString() {
             return String.valueOf(id());
         }
+
+        @Override
+        public int hashCode() {
+            Http2Stream stream = this.stream;
+            if (stream == null) {
+                return id;
+            }
+            return stream.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            DefaultHttp2FrameStream that = (DefaultHttp2FrameStream) o;
+            Http2Stream stream = this.stream;
+            Http2Stream thatStream = that.stream;
+            return id == that.id && stream != null && stream.equals(thatStream);
+        }
     }
 }
