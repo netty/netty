@@ -32,6 +32,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.EncoderException;
+import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -85,6 +86,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -1068,5 +1070,14 @@ data.release();
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    @Test
+    public void testUnsupportedIncludeSomeDetails() {
+        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
+        UnsupportedMessageTypeException ex = assertThrows(
+                UnsupportedMessageTypeException.class, () -> ch.writeOutbound("unsupported"));
+        assertNotNull(ex.getMessage());
+        assertFalse(ch.finish());
     }
 }

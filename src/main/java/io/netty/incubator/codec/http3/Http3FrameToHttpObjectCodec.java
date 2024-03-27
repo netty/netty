@@ -134,7 +134,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (!(msg instanceof HttpObject)) {
-            throw new UnsupportedMessageTypeException();
+            throw new UnsupportedMessageTypeException(msg, HttpObject.class);
         }
         // 100-continue is typically a FullHttpResponse, but the decoded
         // Http3HeadersFrame should not handles as a end of stream.
