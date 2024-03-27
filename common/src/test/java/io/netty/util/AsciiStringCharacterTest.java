@@ -441,6 +441,12 @@ public class AsciiStringCharacterTest {
     }
 
     @Test
+    public void testToLowerCaseForOddLengths() {
+        AsciiString foo = AsciiString.of("This is a test!");
+        assertEquals("this is a test!", foo.toLowerCase().toString());
+    }
+
+    @Test
     public void testToUpperCase() {
         AsciiString foo = AsciiString.of("This is a tesT");
         assertEquals("THIS IS A TEST", foo.toUpperCase().toString());
