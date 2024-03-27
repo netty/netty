@@ -131,7 +131,7 @@ final class AsciiStringUtil {
             offset += Short.BYTES;
         }
 
-        // this is equivalent to byteCount >= Byte.BYTES
+        // this is equivalent to byteCount >= Byte.BYTES (i.e. whether byteCount is odd)
         if ((byteCount & Byte.BYTES) != 0) {
             PlatformDependent.putByte(dst, dstOffset + offset,
                                       toLowerCase(PlatformDependent.getByte(src, srcPos + offset)));
