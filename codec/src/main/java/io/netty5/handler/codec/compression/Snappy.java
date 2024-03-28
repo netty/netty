@@ -17,7 +17,11 @@ package io.netty5.handler.codec.compression;
 
 import io.netty5.buffer.BufferUtil;
 import io.netty5.buffer.Buffer;
+import io.netty5.util.concurrent.FastThreadLocal;
 import io.netty5.util.internal.MathUtil;
+import io.netty5.util.internal.SystemPropertyUtil;
+
+import java.util.Arrays;
 
 /**
  * Uncompresses an input {@link Buffer} encoded with Snappy compression into an
@@ -40,6 +44,25 @@ public final class Snappy {
     private static final int COPY_2_BYTE_OFFSET = 2;
     private static final int COPY_4_BYTE_OFFSET = 3;
 
+    // Hash table used to compress, shared between subsequent call to .encode()
+    private static final FastThreadLocal<short[]> HASH_TABLE = new FastThreadLocal<>();
+
+    private static final boolean DEFAULT_REUSE_HASHTABLE =
+            SystemPropertyUtil.getBoolean("io.netty5.handler.codec.compression.snappy.reuseHashTable", false);
+
+    public Snappy() {
+        this(DEFAULT_REUSE_HASHTABLE);
+    }
+
+    Snappy(boolean reuseHashtable) {
+        this.reuseHashtable = reuseHashtable;
+    }
+
+    public static Snappy withHashTableReuse() {
+        return new Snappy(true);
+    }
+
+    private final boolean reuseHashtable;
     private State state = State.READING_PREAMBLE;
     private byte tag;
     private int written;
@@ -72,8 +95,10 @@ public final class Snappy {
         int inIndex = in.readerOffset();
         final int baseIndex = inIndex;
 
-        final short[] table = getHashTable(length);
-        final int shift = Integer.numberOfLeadingZeros(table.length) + 1;
+        int hashTableSize = MathUtil.findNextPositivePowerOfTwo(length);
+        hashTableSize = Math.min(hashTableSize, MAX_HT_SIZE);
+        final short[] table = getHashTable(hashTableSize);
+        final int shift = Integer.numberOfLeadingZeros(hashTableSize) + 1;
 
         int nextEmit = inIndex;
 
@@ -155,14 +180,35 @@ public final class Snappy {
     }
 
     /**
-     * Creates an appropriately sized hashtable for the given input size
+     * Returns a short[] to be used as a hashtable
      *
-     * @param inputSize The size of our input, ie. the number of bytes we need to encode
+     * @param hashTableSize the size for the hashtable
      * @return An appropriately sized empty hashtable
      */
-    private static short[] getHashTable(int inputSize) {
-        int hashTableSize = MathUtil.findNextPositivePowerOfTwo(inputSize);
-        return new short[Math.min(hashTableSize, MAX_HT_SIZE)];
+    private short[] getHashTable(int hashTableSize) {
+        if (reuseHashtable) {
+            return getHashTableFastThreadLocalArrayFill(hashTableSize);
+        }
+        return new short[hashTableSize];
+    }
+
+    /**
+     * Returns a short[] from a FastThreadLocal, zeroing for correctness
+     * creating a new one and resizing it if necessary
+     *
+     * @return An appropriately sized empty hashtable
+     * @param hashTableSize
+     */
+    public static short[] getHashTableFastThreadLocalArrayFill(int hashTableSize) {
+        short[] hashTable = HASH_TABLE.get();
+        if (hashTable == null || hashTable.length < hashTableSize) {
+            hashTable = new short[hashTableSize];
+            HASH_TABLE.set(hashTable);
+            return hashTable;
+        }
+
+        Arrays.fill(hashTable, 0, hashTableSize, (short) 0);
+        return hashTable;
     }
 
     /**
