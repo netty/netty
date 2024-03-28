@@ -19,11 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Arrays;
-import java.util.Locale;
 
 /**
  * Uncompresses an input {@link ByteBuf} encoded with Snappy compression into an
@@ -32,8 +29,6 @@ import java.util.Locale;
  * See <a href="https://github.com/google/snappy/blob/master/format_description.txt">snappy format</a>.
  */
 public final class Snappy {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Snappy.class);
 
     private static final int MAX_HT_SIZE = 1 << 14;
     private static final int MIN_COMPRESSIBLE_BYTES = 15;
