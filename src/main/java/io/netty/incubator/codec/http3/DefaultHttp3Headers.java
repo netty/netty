@@ -19,6 +19,7 @@ import io.netty.handler.codec.CharSequenceValueConverter;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
+import org.jetbrains.annotations.Nullable;
 
 import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
@@ -35,7 +36,7 @@ public final class DefaultHttp3Headers
     };
     static final NameValidator<CharSequence> HTTP3_NAME_VALIDATOR = new NameValidator<CharSequence>() {
         @Override
-        public void validateName(CharSequence name) {
+        public void validateName(@Nullable CharSequence name) {
             if (name == null || name.length() == 0) {
                 throw new Http3HeadersValidationException(String.format("empty headers are not allowed [%s]", name));
             }

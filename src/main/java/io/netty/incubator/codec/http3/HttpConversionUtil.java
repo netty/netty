@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.AsciiString;
 import io.netty.util.internal.InternalThreadLocalMap;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
 import java.util.Iterator;
@@ -146,7 +147,7 @@ public final class HttpConversionUtil {
      * @return The HTTP/1.x status
      * @throws Http3Exception If there is a problem translating from HTTP/3 to HTTP/1.x
      */
-    private static HttpResponseStatus parseStatus(long streamId, CharSequence status) throws Http3Exception {
+    private static HttpResponseStatus parseStatus(long streamId, @Nullable CharSequence status) throws Http3Exception {
         HttpResponseStatus result;
         try {
             result = parseLine(status);
@@ -523,7 +524,7 @@ public final class HttpConversionUtil {
     }
 
     // package-private for testing only
-    static void setHttp3Authority(String authority, Http3Headers out) {
+    static void setHttp3Authority(@Nullable String authority, Http3Headers out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
         if (authority != null) {
             if (authority.isEmpty()) {
@@ -639,7 +640,8 @@ public final class HttpConversionUtil {
         }
     }
 
-    private static Http3Exception streamError(long streamId, Http3ErrorCode error, String msg, Throwable cause) {
+    private static Http3Exception streamError(long streamId, Http3ErrorCode error, String msg,
+                                              @Nullable Throwable cause) {
         return new Http3Exception(error, streamId + ": " + msg, cause);
     }
 }

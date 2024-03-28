@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.util.AsciiString;
+import org.jetbrains.annotations.Nullable;
 
 import static io.netty.incubator.codec.http3.QpackHeaderField.ENTRY_OVERHEAD;
 import static io.netty.incubator.codec.http3.QpackUtil.MAX_HEADER_TABLE_SIZE;
@@ -299,7 +300,7 @@ final class QpackEncoderDynamicTable {
      * exists, then the index is returned. If an entry with only matching name exists then {@code -index-1} is
      * returned.
      */
-    int getEntryIndex(CharSequence name, CharSequence value) {
+    int getEntryIndex(@Nullable CharSequence name, @Nullable CharSequence value) {
         if (tail != head && name != null && value != null) {
             int h = AsciiString.hashCode(name);
             int i = index(h);
@@ -334,7 +335,7 @@ final class QpackEncoderDynamicTable {
      * @return <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-required-insert-count">Required
      * insert count</a> if the passed entry has to be referenced in a header block.
      */
-    int addReferenceToEntry(CharSequence name, CharSequence value, int idx) {
+    int addReferenceToEntry(@Nullable CharSequence name, @Nullable CharSequence value, int idx) {
         if (tail != head && name != null && value != null) {
             int h = AsciiString.hashCode(name);
             int i = index(h);
@@ -466,7 +467,7 @@ final class QpackEncoderDynamicTable {
          */
         final int index;
 
-        HeaderEntry(int hash, CharSequence name, CharSequence value, int index, HeaderEntry nextSibling) {
+        HeaderEntry(int hash, CharSequence name, CharSequence value, int index, @Nullable HeaderEntry nextSibling) {
             super(name, value);
             this.index = index;
             this.hash = hash;

@@ -22,6 +22,7 @@ import io.netty.incubator.codec.quic.QuicException;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * {@link ChannelInboundHandlerAdapter} which makes it easy to handle
@@ -129,6 +130,7 @@ public abstract class Http3RequestStreamInboundHandler extends ChannelInboundHan
      * @param ctx           the {@link ChannelHandlerContext} of this handler.
      * @return              the control stream.
      */
+    @Nullable
     protected final QuicStreamChannel controlStream(ChannelHandlerContext ctx) {
         return Http3.getLocalControlStream(ctx.channel().parent());
     }

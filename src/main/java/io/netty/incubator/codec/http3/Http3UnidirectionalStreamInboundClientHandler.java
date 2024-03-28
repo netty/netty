@@ -19,6 +19,7 @@ package io.netty.incubator.codec.http3;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.incubator.codec.http3.Http3FrameCodec.Http3FrameCodecFactory;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
@@ -30,8 +31,8 @@ final class Http3UnidirectionalStreamInboundClientHandler extends Http3Unidirect
             Http3FrameCodecFactory codecFactory,
             Http3ControlStreamInboundHandler localControlStreamHandler,
             Http3ControlStreamOutboundHandler remoteControlStreamHandler,
-            LongFunction<ChannelHandler> unknownStreamHandlerFactory,
-            LongFunction<ChannelHandler> pushStreamHandlerFactory,
+            @Nullable LongFunction<ChannelHandler> unknownStreamHandlerFactory,
+            @Nullable LongFunction<ChannelHandler> pushStreamHandlerFactory,
             Supplier<ChannelHandler> qpackEncoderHandlerFactory, Supplier<ChannelHandler> qpackDecoderHandlerFactory) {
         super(codecFactory, localControlStreamHandler, remoteControlStreamHandler, unknownStreamHandlerFactory,
                 qpackEncoderHandlerFactory, qpackDecoderHandlerFactory);

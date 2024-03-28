@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.util.internal.ObjectUtil;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * An exception related to violate the HTTP3 spec.
@@ -29,7 +30,7 @@ public final class Http3Exception extends Exception {
      * @param errorCode the {@link Http3ErrorCode} that caused this exception.
      * @param message   the message to include.
      */
-    public Http3Exception(Http3ErrorCode errorCode, String message) {
+    public Http3Exception(Http3ErrorCode errorCode, @Nullable String message) {
         super(message);
         this.errorCode = ObjectUtil.checkNotNull(errorCode, "errorCode");
     }
@@ -41,7 +42,7 @@ public final class Http3Exception extends Exception {
      * @param message   the message to include.
      * @param cause     the {@link Throwable} to wrap.
      */
-    public Http3Exception(Http3ErrorCode errorCode, String message, Throwable cause) {
+    public Http3Exception(Http3ErrorCode errorCode, String message, @Nullable Throwable cause) {
         super(message, cause);
         this.errorCode = ObjectUtil.checkNotNull(errorCode, "errorCode");
     }

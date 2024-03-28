@@ -22,6 +22,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.AsciiString;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -517,7 +518,8 @@ public class QpackEncoderDecoderTest {
             this(other, null);
         }
 
-        ForwardWriteToReadOnOtherHandler(ChannelInboundHandler other, BlockingQueue<Callable<Void>> suspendQueue) {
+        ForwardWriteToReadOnOtherHandler(ChannelInboundHandler other,
+                                         @Nullable BlockingQueue<Callable<Void>> suspendQueue) {
             this.other = other;
             this.suspendQueue = suspendQueue;
         }

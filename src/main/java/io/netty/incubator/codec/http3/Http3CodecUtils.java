@@ -26,6 +26,7 @@ import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
+import org.jetbrains.annotations.Nullable;
 
 import static io.netty.channel.ChannelFutureListener.CLOSE_ON_FAILURE;
 import static io.netty.incubator.codec.http3.Http3ErrorCode.H3_INTERNAL_ERROR;
@@ -243,7 +244,7 @@ final class Http3CodecUtils {
      * @param fireException {@code true} if we should also fire the {@link Http3Exception} through the pipeline.
      */
     static void connectionError(ChannelHandlerContext ctx, Http3ErrorCode errorCode,
-                                String msg, boolean fireException) {
+                                @Nullable String msg, boolean fireException) {
          if (fireException) {
              ctx.fireExceptionCaught(new Http3Exception(errorCode, msg));
          }
@@ -270,7 +271,7 @@ final class Http3CodecUtils {
      * @param errorCode     the {@link Http3ErrorCode} that caused the error.
      * @param msg           the message that should be used as reason for the error, may be {@code null}.
      */
-    static void connectionError(Channel channel, Http3ErrorCode errorCode, String msg) {
+    static void connectionError(Channel channel, Http3ErrorCode errorCode, @Nullable String msg) {
         final QuicChannel quicChannel;
 
         if (channel instanceof QuicChannel) {
@@ -306,6 +307,7 @@ final class Http3CodecUtils {
      * @param ch for which the {@link Http3ConnectionHandler} is to be retrieved.
      * @return {@link Http3ConnectionHandler} if available, else close the connection and return {@code null}.
      */
+    @Nullable
     static Http3ConnectionHandler getConnectionHandlerOrClose(QuicChannel ch) {
         Http3ConnectionHandler connectionHandler = ch.pipeline().get(Http3ConnectionHandler.class);
         if (connectionHandler == null) {

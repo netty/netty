@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -140,7 +141,7 @@ public class Http3ServerPushStreamManagerTest {
         assertTrue(pushStreamHandler.framesWritten.get(0) instanceof Http3HeadersFrame);
     }
 
-    private void pushStreamWithBootstrapCreateAndClose(ChannelHandler pushStreamHandler) throws Exception {
+    private void pushStreamWithBootstrapCreateAndClose(@Nullable ChannelHandler pushStreamHandler) throws Exception {
         pushStreamCreateAndClose(pushId -> newPushStreamWithBootstrap(pushStreamHandler, pushId));
     }
 
@@ -160,11 +161,13 @@ public class Http3ServerPushStreamManagerTest {
         assertFalse(pushStream.isActive());
     }
 
-    private EmbeddedQuicStreamChannel newPushStream(ChannelHandler pushStreamHandler, long pushId) throws Exception {
+    private EmbeddedQuicStreamChannel newPushStream(@Nullable ChannelHandler pushStreamHandler,
+                                                    long pushId) throws Exception {
         return newPushStream(() -> (EmbeddedQuicStreamChannel) manager.newPushStream(pushId, pushStreamHandler).get());
     }
 
-    private EmbeddedQuicStreamChannel newPushStreamWithBootstrap(ChannelHandler pushStreamHandler, long pushId)
+    private EmbeddedQuicStreamChannel newPushStreamWithBootstrap(@Nullable ChannelHandler pushStreamHandler,
+                                                                 long pushId)
             throws Exception {
         return newPushStream(() -> {
             final Promise<QuicStreamChannel> promise = channel.eventLoop().newPromise();

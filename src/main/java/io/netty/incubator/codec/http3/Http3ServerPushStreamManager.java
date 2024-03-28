@@ -27,6 +27,7 @@ import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
@@ -139,7 +140,7 @@ public final class Http3ServerPushStreamManager {
      * @param handler the {@link ChannelHandler} to add. Can be {@code null}.
      * @return the {@link Future} that will be notified once the push-stream was opened.
      */
-    public Future<QuicStreamChannel> newPushStream(long pushId, ChannelHandler handler) {
+    public Future<QuicStreamChannel> newPushStream(long pushId, @Nullable ChannelHandler handler) {
         final Promise<QuicStreamChannel> promise = channel.eventLoop().newPromise();
         newPushStream(pushId, handler, promise);
         return promise;
@@ -154,7 +155,7 @@ public final class Http3ServerPushStreamManager {
      * @param handler the {@link ChannelHandler} to add. Can be {@code null}.
      * @param promise to indicate creation of the push stream.
      */
-    public void newPushStream(long pushId, ChannelHandler handler, Promise<QuicStreamChannel> promise) {
+    public void newPushStream(long pushId, @Nullable ChannelHandler handler, Promise<QuicStreamChannel> promise) {
         validatePushId(pushId);
         channel.createStream(QuicStreamType.UNIDIRECTIONAL, pushStreamInitializer(pushId, handler), promise);
         setupCancelPushIfStreamCreationFails(pushId, promise, channel);
@@ -170,7 +171,7 @@ public final class Http3ServerPushStreamManager {
      * @param bootstrapConfigurator {@link UnaryOperator} to configure the {@link QuicStreamChannelBootstrap} used.
      * @param promise to indicate creation of the push stream.
      */
-    public void newPushStream(long pushId, ChannelHandler handler,
+    public void newPushStream(long pushId, @Nullable ChannelHandler handler,
                               UnaryOperator<QuicStreamChannelBootstrap> bootstrapConfigurator,
                               Promise<QuicStreamChannel> promise) {
         validatePushId(pushId);
@@ -208,7 +209,7 @@ public final class Http3ServerPushStreamManager {
         }
     }
 
-    private Http3PushStreamServerInitializer pushStreamInitializer(long pushId, ChannelHandler handler) {
+    private Http3PushStreamServerInitializer pushStreamInitializer(long pushId, @Nullable ChannelHandler handler) {
         final Http3PushStreamServerInitializer initializer;
         if (handler instanceof Http3PushStreamServerInitializer) {
             initializer = (Http3PushStreamServerInitializer) handler;

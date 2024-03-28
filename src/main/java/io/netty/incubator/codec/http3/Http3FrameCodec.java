@@ -28,6 +28,7 @@ import io.netty.incubator.codec.quic.QuicStreamFrame;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.SocketAddress;
 import java.util.List;
@@ -349,6 +350,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         return in.readableBytes() >= payLoadLength;
     }
 
+    @Nullable
     private Http3SettingsFrame decodeSettings(ChannelHandlerContext ctx, ByteBuf in, int payLoadLength) {
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
         while (payLoadLength > 0) {

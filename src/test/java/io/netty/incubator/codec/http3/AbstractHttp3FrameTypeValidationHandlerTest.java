@@ -37,6 +37,7 @@ import static io.netty.incubator.codec.http3.Http3TestUtils.assertFrameSame;
 import static io.netty.incubator.codec.http3.Http3TestUtils.verifyClose;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -76,6 +77,7 @@ public abstract class AbstractHttp3FrameTypeValidationHandlerTest<T extends Http
     public void tearDown() {
         if (parent != null) {
             final QpackAttributes qpackAttributes = getQpackAttributes(parent);
+            assertNotNull(qpackAttributes);
             if (qpackAttributes.decoderStreamAvailable()) {
                 assertFalse(((EmbeddedQuicStreamChannel) qpackAttributes.decoderStream()).finish());
             }

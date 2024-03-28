@@ -26,6 +26,7 @@ import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.channels.ClosedChannelException;
 
@@ -50,7 +51,8 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     private Long receivedGoawayId;
     private Long receivedMaxPushId;
 
-    Http3ControlStreamInboundHandler(boolean server, ChannelHandler controlFrameHandler, QpackEncoder qpackEncoder,
+    Http3ControlStreamInboundHandler(boolean server, @Nullable ChannelHandler controlFrameHandler,
+                                     QpackEncoder qpackEncoder,
                                      Http3ControlStreamOutboundHandler remoteControlStreamHandler) {
         super(Http3ControlStreamFrame.class);
         this.server = server;

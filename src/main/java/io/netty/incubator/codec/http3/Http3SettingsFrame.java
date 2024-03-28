@@ -15,6 +15,8 @@
  */
 package io.netty.incubator.codec.http3;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Map;
 
 /**
@@ -49,6 +51,7 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
      * @param key   the key of the setting.
      * @return      the value of the setting or {@code null} if none was found with the given key.
      */
+    @Nullable
     Long get(long key);
 
     /**
@@ -70,5 +73,6 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
      * @param value     the value of the setting.
      * @return          the previous stored valued for the given key or {@code null} if none was stored before.
      */
+    @Nullable
     Long put(long key, Long value);
 }

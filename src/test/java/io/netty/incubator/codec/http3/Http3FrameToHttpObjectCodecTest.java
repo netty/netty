@@ -80,6 +80,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
@@ -1059,13 +1060,16 @@ data.release();
             stream.writeAndFlush(request);
 
             HttpResponse respHeaders = (HttpResponse) received.poll(20, TimeUnit.SECONDS);
+            assertThat(respHeaders, notNullValue());
             assertThat(respHeaders.status(), is(HttpResponseStatus.OK));
             assertThat(respHeaders, not(instanceOf(LastHttpContent.class)));
             HttpContent respBody = (HttpContent) received.poll(20, TimeUnit.SECONDS);
+            assertThat(respBody, notNullValue());
             assertThat(respBody.content().toString(CharsetUtil.UTF_8), is("foo"));
             respBody.release();
 
             LastHttpContent last = (LastHttpContent) received.poll(20, TimeUnit.SECONDS);
+            assertThat(last, notNullValue());
             last.release();
         } finally {
             group.shutdownGracefully();

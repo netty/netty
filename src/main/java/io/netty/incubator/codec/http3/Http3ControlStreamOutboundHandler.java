@@ -22,6 +22,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
+import org.jetbrains.annotations.Nullable;
 
 import static io.netty.incubator.codec.http3.Http3CodecUtils.closeOnFailure;
 
@@ -45,6 +46,7 @@ final class Http3ControlStreamOutboundHandler
      *
      * @return the id.
      */
+    @Nullable
     Long sentMaxPushId() {
         return sentMaxPushId;
     }

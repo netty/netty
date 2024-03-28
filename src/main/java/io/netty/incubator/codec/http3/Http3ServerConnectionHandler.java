@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.internal.ObjectUtil;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.LongFunction;
 
@@ -58,9 +59,9 @@ public final class Http3ServerConnectionHandler extends Http3ConnectionHandler {
      * @param disableQpackDynamicTable              If QPACK dynamic table should be disabled.
      */
     public Http3ServerConnectionHandler(ChannelHandler requestStreamHandler,
-                                        ChannelHandler inboundControlStreamHandler,
-                                        LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
-                                        Http3SettingsFrame localSettings, boolean disableQpackDynamicTable) {
+                                        @Nullable ChannelHandler inboundControlStreamHandler,
+                                        @Nullable LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
+                                        @Nullable Http3SettingsFrame localSettings, boolean disableQpackDynamicTable) {
         super(true, inboundControlStreamHandler, unknownInboundStreamHandlerFactory, localSettings,
                 disableQpackDynamicTable);
         this.requestStreamHandler = ObjectUtil.checkNotNull(requestStreamHandler, "requestStreamHandler");

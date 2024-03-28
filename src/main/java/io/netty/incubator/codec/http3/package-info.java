@@ -17,4 +17,7 @@
 /**
  * <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP/3</a> implementation.
  */
+
+@NotNullByDefault
 package io.netty.incubator.codec.http3;
+

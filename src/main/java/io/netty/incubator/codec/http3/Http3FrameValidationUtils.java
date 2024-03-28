@@ -19,6 +19,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
+import org.jetbrains.annotations.Nullable;
 
 final class Http3FrameValidationUtils {
 
@@ -44,6 +45,7 @@ final class Http3FrameValidationUtils {
      * @param <T> Expected type.
      * @return {@code msg} as expected frame type or {@code null} if it can not be converted to the expected type.
      */
+    @Nullable
     static <T> T validateFrameWritten(Class<T> expectedFrameType, Object msg) {
         if (isValid(expectedFrameType, msg)) {
             return cast(msg);
@@ -60,6 +62,7 @@ final class Http3FrameValidationUtils {
      * @param <T> Expected type.
      * @return {@code msg} as expected frame type or {@code null} if it can not be converted to the expected type.
      */
+    @Nullable
     static <T> T validateFrameRead(Class<T> expectedFrameType, Object msg) {
         if (isValid(expectedFrameType, msg)) {
             return cast(msg);

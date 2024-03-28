@@ -38,6 +38,7 @@ import io.netty.incubator.codec.quic.QuicStreamFrame;
 import io.netty.incubator.codec.quic.QuicStreamPriority;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.AttributeKey;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.SocketAddress;
 import java.util.Map;
@@ -57,7 +58,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
         this(null, false, QuicStreamType.BIDIRECTIONAL, 0, handlers);
     }
 
-    EmbeddedQuicStreamChannel(QuicChannel parent, boolean localCreated, QuicStreamType type,
+    EmbeddedQuicStreamChannel(@Nullable QuicChannel parent, boolean localCreated, QuicStreamType type,
                               long id, ChannelHandler... handlers) {
         super(parent, DefaultChannelId.newInstance(), true, false,
                 prependChannelConsumer(channel -> {
@@ -97,6 +98,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
+    @Nullable
     public QuicStreamPriority priority() {
         return null;
     }
@@ -107,11 +109,13 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
+    @Nullable
     public QuicStreamAddress localAddress() {
         return null;
     }
 
     @Override
+    @Nullable
     public QuicStreamAddress remoteAddress() {
         return null;
     }

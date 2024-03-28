@@ -16,13 +16,15 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.util.internal.ThrowableUtil;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Exception thrown if an error happens during QPACK processing.
  */
 public final class QpackException extends Exception {
 
-    private QpackException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+    private QpackException(String message, @Nullable Throwable cause, boolean enableSuppression,
+                           boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 

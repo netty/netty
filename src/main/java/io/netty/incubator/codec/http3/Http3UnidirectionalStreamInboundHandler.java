@@ -24,6 +24,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.incubator.codec.http3.Http3FrameCodec.Http3FrameCodecFactory;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.function.LongFunction;
@@ -55,7 +56,7 @@ abstract class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDeco
     Http3UnidirectionalStreamInboundHandler(Http3FrameCodecFactory codecFactory,
                                             Http3ControlStreamInboundHandler localControlStreamHandler,
                                             Http3ControlStreamOutboundHandler remoteControlStreamHandler,
-                                            LongFunction<ChannelHandler> unknownStreamHandlerFactory,
+                                            @Nullable LongFunction<ChannelHandler> unknownStreamHandlerFactory,
                                             Supplier<ChannelHandler> qpackEncoderHandlerFactory,
                                             Supplier<ChannelHandler> qpackDecoderHandlerFactory) {
         this.codecFactory = codecFactory;

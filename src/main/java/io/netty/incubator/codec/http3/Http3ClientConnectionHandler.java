@@ -18,6 +18,7 @@ package io.netty.incubator.codec.http3;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.LongFunction;
 
@@ -49,10 +50,10 @@ public final class Http3ClientConnectionHandler extends Http3ConnectionHandler {
      *                                              remote peer or {@code null} if the default settings should be used.
      * @param disableQpackDynamicTable              If QPACK dynamic table should be disabled.
      */
-    public Http3ClientConnectionHandler(ChannelHandler inboundControlStreamHandler,
-                                        LongFunction<ChannelHandler> pushStreamHandlerFactory,
-                                        LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
-                                        Http3SettingsFrame localSettings, boolean disableQpackDynamicTable) {
+    public Http3ClientConnectionHandler(@Nullable ChannelHandler inboundControlStreamHandler,
+                                        @Nullable LongFunction<ChannelHandler> pushStreamHandlerFactory,
+                                        @Nullable LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
+                                        @Nullable Http3SettingsFrame localSettings, boolean disableQpackDynamicTable) {
         super(false, inboundControlStreamHandler, unknownInboundStreamHandlerFactory, localSettings,
                 disableQpackDynamicTable);
         this.pushStreamHandlerFactory = pushStreamHandlerFactory;

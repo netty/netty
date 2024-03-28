@@ -21,6 +21,7 @@ import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.util.AsciiString;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -36,7 +37,7 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
     private final QpackDecoder qpackDecoder;
     private boolean discard;
 
-    QpackEncoderHandler(Long maxTableCapacity, QpackDecoder qpackDecoder) {
+    QpackEncoderHandler(@Nullable Long maxTableCapacity, QpackDecoder qpackDecoder) {
         checkInRange(maxTableCapacity == null ? 0 : maxTableCapacity, 0, MAX_UNSIGNED_INT, "maxTableCapacity");
         huffmanDecoder = new QpackHuffmanDecoder();
         this.qpackDecoder = qpackDecoder;
@@ -222,6 +223,7 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         connectionError(ctx, new Http3Exception(QPACK_ENCODER_STREAM_ERROR, message, cause), true);
     }
 
+    @Nullable
     private CharSequence decodeLiteralValue(ByteBuf in) throws QpackException {
         final boolean valueHuffEncoded = QpackUtil.firstByteEquals(in, (byte) 0b1000_0000);
         int valueLength = decodePrefixedIntegerAsInt(in, 7);

@@ -26,6 +26,7 @@ import io.netty.incubator.codec.quic.QuicStreamChannelBootstrap;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Contains utility methods that help to bootstrap server / clients with HTTP3 support.
@@ -53,6 +54,7 @@ public final class Http3 {
      * @param channel   the channel for the HTTP/3 connection.
      * @return          the control stream.
      */
+    @Nullable
     public static QuicStreamChannel getLocalControlStream(Channel channel) {
         return channel.attr(HTTP3_CONTROL_STREAM_KEY).get();
     }
@@ -78,6 +80,7 @@ public final class Http3 {
         channel.attr(HTTP3_CONTROL_STREAM_KEY).set(controlStreamChannel);
     }
 
+    @Nullable
     static QpackAttributes getQpackAttributes(Channel channel) {
         return channel.attr(QPACK_ATTRIBUTES_KEY).get();
     }

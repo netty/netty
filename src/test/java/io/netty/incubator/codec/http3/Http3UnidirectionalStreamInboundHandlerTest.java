@@ -25,6 +25,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -252,7 +253,8 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         return newChannel(server, null);
     }
 
-    private EmbeddedChannel newChannel(boolean server, LongFunction<ChannelHandler> unknownStreamHandlerFactory)
+    private EmbeddedChannel newChannel(boolean server,
+                                       @Nullable LongFunction<ChannelHandler> unknownStreamHandlerFactory)
             throws Exception {
         Http3UnidirectionalStreamInboundHandler handler =
                 newUniStreamInboundHandler(server, unknownStreamHandlerFactory);
@@ -260,7 +262,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
     }
 
     private Http3UnidirectionalStreamInboundHandler newUniStreamInboundHandler(boolean server,
-            LongFunction<ChannelHandler> unknownStreamHandlerFactory) {
+            @Nullable LongFunction<ChannelHandler> unknownStreamHandlerFactory) {
         return server ?
                 new Http3UnidirectionalStreamInboundServerHandler((v, __, ___) -> new CodecHandler(),
                         localControlStreamHandler, remoteControlStreamHandler, unknownStreamHandlerFactory,

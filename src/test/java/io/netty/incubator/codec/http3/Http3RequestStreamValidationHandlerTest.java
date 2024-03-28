@@ -25,6 +25,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.incubator.codec.quic.QuicStreamChannel;
 import io.netty.incubator.codec.quic.QuicStreamType;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -502,7 +503,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         assertFalse(channel.finish());
     }
 
-    private void testHeadersFrame(Http3HeadersFrame headersFrame, Http3ErrorCode code) throws Exception {
+    private void testHeadersFrame(Http3HeadersFrame headersFrame, @Nullable Http3ErrorCode code) throws Exception {
         EmbeddedQuicStreamChannel channel = newServerStream();
         try {
             assertTrue(channel.writeInbound(headersFrame));
