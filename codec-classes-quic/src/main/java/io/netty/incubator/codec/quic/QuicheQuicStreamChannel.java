@@ -394,7 +394,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     /**
      * Stream is writable.
      */
-    boolean writable(@SuppressWarnings("unused") int capacity) {
+    boolean writable(int capacity) {
         assert eventLoop().inEventLoop();
         this.capacity = capacity;
         boolean mayNeedWrite = unsafe().writeQueued();
@@ -442,6 +442,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     final class QuicStreamChannelUnsafe implements Unsafe {
+
+        @SuppressWarnings("deprecation")
         private RecvByteBufAllocator.Handle recvHandle;
 
         private final ChannelPromise voidPromise = new VoidChannelPromise(
@@ -904,7 +906,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         void recv() {
             assert eventLoop().inEventLoop();
             if (inRecv) {
-                // As the use may call read() we need to guard against re-entrancy here as otherwise it could
+                // As the use may call read() we need to guard against reentrancy here as otherwise it could
                 // be possible that we re-enter this method while still processing it.
                 return;
             }
