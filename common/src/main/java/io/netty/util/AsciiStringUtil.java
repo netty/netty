@@ -101,7 +101,7 @@ final class AsciiStringUtil {
         final int longCount = length >>> 3;
         int offset = 0;
         for (int i = 0; i < longCount; ++i) {
-            final long word = PlatformDependent.getLong(src, srcOffset);
+            final long word = PlatformDependent.getLong(src, srcOffset + offset);
             PlatformDependent.putLong(dst, offset, SWARUtil.toLowerCase(word));
             offset += Long.BYTES;
         }
@@ -216,7 +216,7 @@ final class AsciiStringUtil {
         final int longCount = length >>> 3;
         int offset = 0;
         for (int i = 0; i < longCount; ++i) {
-            final long word = PlatformDependent.getLong(src, srcOffset);
+            final long word = PlatformDependent.getLong(src, srcOffset + offset);
             PlatformDependent.putLong(dst, offset, SWARUtil.toUpperCase(word));
             offset += Long.BYTES;
         }
