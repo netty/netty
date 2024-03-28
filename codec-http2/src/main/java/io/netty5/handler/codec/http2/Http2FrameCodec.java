@@ -149,6 +149,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(Http2FrameCodec.class);
 
+    private static final Class<?>[] SUPPORTED_MESSAGES = new Class[] {
+            Http2DataFrame.class, Http2HeadersFrame.class, Http2WindowUpdateFrame.class, Http2ResetFrame.class,
+            Http2PingFrame.class, Http2SettingsFrame.class, Http2SettingsAckFrame.class, Http2GoAwayFrame.class,
+            Http2PushPromiseFrame.class, Http2PriorityFrame.class, Http2UnknownFrame.class };
+
     protected final PropertyKey streamKey;
     private final PropertyKey upgradeKey;
 
@@ -342,7 +347,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             return ctx.write(msg);
         } else {
             Resource.dispose(msg);
-            return ctx.newFailedFuture(new UnsupportedMessageTypeException(msg));
+            return ctx.newFailedFuture(new UnsupportedMessageTypeException(msg, SUPPORTED_MESSAGES));
         }
     }
 
