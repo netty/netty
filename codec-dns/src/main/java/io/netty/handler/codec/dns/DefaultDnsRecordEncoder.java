@@ -18,7 +18,6 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
-import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 
 /**
@@ -42,6 +41,10 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         out.writeShort(question.dnsClass());
     }
 
+    private static final Class<?>[] SUPPORTED_MESSAGES = new Class<?>[] {
+            DnsQuestion.class, DnsPtrRecord.class,
+            DnsOptEcsRecord.class, DnsOptPseudoRecord.class, DnsRawRecord.class };
+
     @Override
     public void encodeRecord(DnsRecord record, ByteBuf out) throws Exception {
         if (record instanceof DnsQuestion) {
@@ -55,7 +58,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         } else if (record instanceof DnsRawRecord) {
             encodeRawRecord((DnsRawRecord) record, out);
         } else {
-            throw new UnsupportedMessageTypeException(StringUtil.simpleClassName(record));
+            throw new UnsupportedMessageTypeException(record, SUPPORTED_MESSAGES);
         }
     }
 
