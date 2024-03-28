@@ -83,7 +83,7 @@ final class QuicClientSessionCache {
         return false;
     }
 
-    byte[] getSession(@Nullable String host, int port) {
+    byte @Nullable [] getSession(@Nullable String host, int port) {
         HostPort hostPort = keyFor(host, port);
         if (hostPort != null) {
             SessionHolder sessionHolder;
@@ -214,7 +214,7 @@ final class QuicClientSessionCache {
         private final String host;
         private final int port;
 
-        HostPort(String host, int port) {
+        HostPort(@Nullable String host, int port) {
             this.host = host;
             this.port = port;
             // Calculate a hashCode that does ignore case.

@@ -229,7 +229,7 @@ public final class QuicSslContextBuilder {
      * see <a href="https://www.oracle.com/java/technologies/javase/8u261-relnotes.html">
      *     JDK 8u261 Update Release Notes</a>
      */
-    public QuicSslContextBuilder trustManager(X509Certificate... trustCertCollection) {
+    public QuicSslContextBuilder trustManager(X509Certificate @Nullable ... trustCertCollection) {
         try {
             return trustManager(QuicheQuicSslContext.buildTrustManagerFactory0(trustCertCollection));
         } catch (Exception e) {
@@ -293,7 +293,7 @@ public final class QuicSslContextBuilder {
      *     password-protected
      * @param certChain an X.509 certificate chain
      */
-    public QuicSslContextBuilder keyManager(@Nullable PrivateKey key, @Nullable String keyPassword, X509Certificate... certChain) {
+    public QuicSslContextBuilder keyManager(@Nullable PrivateKey key, @Nullable String keyPassword, X509Certificate @Nullable ... certChain) {
         try {
             java.security.KeyStore ks = java.security.KeyStore.getInstance(KeyStore.getDefaultType());
             ks.load(null);
@@ -332,7 +332,7 @@ public final class QuicSslContextBuilder {
     /**
      * Application protocol negotiation configuration. {@code null} disables support.
      */
-    public QuicSslContextBuilder applicationProtocols(String... applicationProtocols) {
+    public QuicSslContextBuilder applicationProtocols(String @Nullable ... applicationProtocols) {
         this.applicationProtocols = applicationProtocols;
         return this;
     }

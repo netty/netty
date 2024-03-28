@@ -98,7 +98,7 @@ final class BoringSSLCertificateCallback {
     }
 
     @SuppressWarnings("unused")
-    long[] handle(long ssl, byte[] keyTypeBytes, byte[][] asn1DerEncodedPrincipals, String[] authMethods) {
+    long @Nullable [] handle(long ssl, byte[] keyTypeBytes, byte @Nullable [][] asn1DerEncodedPrincipals, String[] authMethods) {
         QuicheQuicSslEngine engine = engineMap.get(ssl);
         if (engine == null) {
             return null;
@@ -138,14 +138,14 @@ final class BoringSSLCertificateCallback {
         }
     }
 
-    private long[] removeMappingIfNeeded(long ssl, long[] result) {
+    private long @Nullable [] removeMappingIfNeeded(long ssl, long @Nullable [] result) {
         if (result == null) {
             engineMap.remove(ssl);
         }
         return result;
     }
 
-    private long[] selectKeyMaterialServerSide(long ssl, QuicheQuicSslEngine engine, String[] authMethods)
+    private long @Nullable [] selectKeyMaterialServerSide(long ssl, QuicheQuicSslEngine engine, String[] authMethods)
             throws SSLException {
         if (authMethods.length == 0) {
             throw new SSLHandshakeException("Unable to find key material");
@@ -168,8 +168,8 @@ final class BoringSSLCertificateCallback {
                 + Arrays.toString(authMethods));
     }
 
-    private long[] selectKeyMaterialClientSide(long ssl, QuicheQuicSslEngine engine, String[] keyTypes,
-                                               X500Principal[] issuer) {
+    private long @Nullable [] selectKeyMaterialClientSide(long ssl, QuicheQuicSslEngine engine, String[] keyTypes,
+                                               X500Principal @Nullable [] issuer) {
         String alias = chooseClientAlias(engine, keyTypes, issuer);
         // Only try to set the keymaterial if we have a match. This is also consistent with what OpenJDK does:
         // https://hg.openjdk.java.net/jdk/jdk11/file/76072a077ee1/
@@ -180,7 +180,7 @@ final class BoringSSLCertificateCallback {
         return NO_KEY_MATERIAL_CLIENT_SIDE;
     }
 
-    private long[] selectMaterial(long ssl, QuicheQuicSslEngine engine, String alias)  {
+    private long @Nullable [] selectMaterial(long ssl, QuicheQuicSslEngine engine, String alias)  {
         X509Certificate[] certificates = keyManager.getCertificateChain(alias);
         if (certificates == null || certificates.length == 0) {
             return null;
@@ -213,7 +213,7 @@ final class BoringSSLCertificateCallback {
         return new long[] { key,  chain };
     }
 
-    private static byte[] toPemEncoded(PrivateKey key) {
+    private static byte @Nullable [] toPemEncoded(PrivateKey key) {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             out.write(BEGIN_PRIVATE_KEY);
             out.write(Base64.getEncoder().encode(key.getEncoded()));
@@ -226,7 +226,7 @@ final class BoringSSLCertificateCallback {
 
     @Nullable
     private String chooseClientAlias(QuicheQuicSslEngine engine,
-                                     String[] keyTypes, X500Principal[] issuer) {
+                                     String[] keyTypes, X500Principal @Nullable [] issuer) {
         return keyManager.chooseEngineClientAlias(keyTypes, issuer, engine);
     }
 
@@ -243,7 +243,7 @@ final class BoringSSLCertificateCallback {
      * @return supported key types that can be used in {@code X509KeyManager.chooseClientAlias} and
      *         {@code X509ExtendedKeyManager.chooseEngineClientAlias}.
      */
-    private static Set<String> supportedClientKeyTypes(byte[] clientCertificateTypes) {
+    private static Set<String> supportedClientKeyTypes(byte @Nullable[] clientCertificateTypes) {
         if (clientCertificateTypes == null) {
             // Try all of the supported key types.
             return SUPPORTED_KEY_TYPES;

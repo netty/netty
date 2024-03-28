@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.handler.ssl.OpenSslCertificateException;
+import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
@@ -42,7 +43,7 @@ final class BoringSSLCertificateVerifyCallback {
     private final QuicheQuicSslEngineMap engineMap;
     private final X509TrustManager manager;
 
-    BoringSSLCertificateVerifyCallback(QuicheQuicSslEngineMap engineMap, X509TrustManager manager) {
+    BoringSSLCertificateVerifyCallback(QuicheQuicSslEngineMap engineMap, @Nullable X509TrustManager manager) {
         this.engineMap = engineMap;
         this.manager = manager;
     }

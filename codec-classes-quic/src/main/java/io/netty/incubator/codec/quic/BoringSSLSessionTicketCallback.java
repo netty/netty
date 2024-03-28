@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.util.internal.PlatformDependent;
+import org.jetbrains.annotations.Nullable;
 
 final class BoringSSLSessionTicketCallback {
 
@@ -23,7 +24,7 @@ final class BoringSSLSessionTicketCallback {
     private volatile byte[][] sessionKeys;
 
     // Accessed via JNI.
-    byte[] findSessionTicket(byte[] keyname) {
+    byte @Nullable [] findSessionTicket(byte @Nullable [] keyname) {
         byte[][] keys = this.sessionKeys;
         if (keys == null || keys.length == 0) {
             return null;
@@ -41,7 +42,7 @@ final class BoringSSLSessionTicketCallback {
         return null;
     }
 
-    void setSessionTicketKeys(SslSessionTicketKey[] keys) {
+    void setSessionTicketKeys(SslSessionTicketKey @Nullable [] keys) {
         if (keys != null && keys.length != 0) {
             byte[][] sessionKeys = new byte[keys.length][];
             for(int i = 0; i < keys.length; ++i) {

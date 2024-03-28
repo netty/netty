@@ -157,7 +157,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         throw new IllegalArgumentException("No X509TrustManager included");
     }
 
-     static X509Certificate[] toX509Certificates0(@Nullable File file) throws CertificateException {
+     static X509Certificate @Nullable [] toX509Certificates0(@Nullable File file) throws CertificateException {
         return toX509Certificates(file);
     }
 
@@ -169,7 +169,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
     }
 
     static TrustManagerFactory buildTrustManagerFactory0(
-            X509Certificate[] certCollection)
+            X509Certificate @Nullable [] certCollection)
             throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
         return buildTrustManagerFactory(certCollection, null, null);
     }
@@ -344,7 +344,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         }
     }
 
-    void setSessionTicketKeys(SslSessionTicketKey[] ticketKeys) {
+    void setSessionTicketKeys(SslSessionTicketKey @Nullable [] ticketKeys) {
         sessionTicketCallback.setSessionTicketKeys(ticketKeys);
         BoringSSL.SSLContext_setSessionTicketKeys(
                 nativeSslContext.address(), ticketKeys != null && ticketKeys.length != 0);
@@ -354,7 +354,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
     private static final class QuicheQuicApplicationProtocolNegotiator implements ApplicationProtocolNegotiator {
         private final List<String> protocols;
 
-        QuicheQuicApplicationProtocolNegotiator(String... protocols) {
+        QuicheQuicApplicationProtocolNegotiator(String @Nullable ... protocols) {
             if (protocols == null) {
                 this.protocols = Collections.emptyList();
             } else {
@@ -417,7 +417,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         }
 
         @Override
-        public void setTicketKeys(SslSessionTicketKey... keys) {
+        public void setTicketKeys(SslSessionTicketKey @Nullable ... keys) {
             context.setSessionTicketKeys(keys);
         }
     }

@@ -263,7 +263,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
     synchronized void handshakeFinished(byte[] id, String cipher, String protocol, byte[] peerCertificate,
                                         byte[][] peerCertificateChain,
                                         long creationTime, long timeout,
-                                        byte[] applicationProtocol, boolean sessionReused) {
+                                        byte @Nullable [] applicationProtocol, boolean sessionReused) {
         if (applicationProtocol == null) {
             this.applicationProtocol = null;
         } else {
@@ -296,10 +296,10 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         // lazy init for memory reasons
         private Map<String, Object> values;
 
-        private boolean isEmpty(Object[] arr) {
+        private boolean isEmpty(Object @Nullable [] arr) {
             return arr == null || arr.length == 0;
         }
-        private boolean isEmpty(byte[] arr) {
+        private boolean isEmpty(byte @Nullable [] arr) {
             return arr == null || arr.length == 0;
         }
 
@@ -507,7 +507,7 @@ final class QuicheQuicSslEngine extends QuicSslEngine {
         }
 
         @Override
-        public Certificate[] getLocalCertificates() {
+        public Certificate @Nullable [] getLocalCertificates() {
             Certificate[] localCerts = localCertificateChain;
             if (localCerts == null) {
                 return null;

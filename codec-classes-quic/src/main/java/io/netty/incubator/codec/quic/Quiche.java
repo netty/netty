@@ -304,6 +304,7 @@ final class Quiche {
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L105">quiche_version</a>.
      */
+    @Nullable
     static native String quiche_version();
 
     /**
@@ -368,7 +369,7 @@ final class Quiche {
         return new QuicConnectionCloseEvent((Boolean) error[0], (Integer) error[1], (byte[]) error[2]);
     }
 
-    private static native Object[] quiche_conn_peer_error0(long connAddr);
+    private static native Object @Nullable [] quiche_conn_peer_error0(long connAddr);
 
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L330">
@@ -394,7 +395,7 @@ final class Quiche {
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.7.0/include/quiche.h#L309">quiche_conn_trace_id</a>.
      */
-    static native byte[] quiche_conn_trace_id(long connAddr);
+    static native byte @Nullable [] quiche_conn_trace_id(long connAddr);
 
     static native byte[] quiche_conn_source_id(long connAddr);
 
@@ -466,14 +467,14 @@ final class Quiche {
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L340">quiche_stats</a> being numerical.
      * The assumption made allows passing primitive array rather than dealing with objects.
      */
-    static native long[] quiche_conn_stats(long connAddr);
+    static native long @Nullable [] quiche_conn_stats(long connAddr);
 
     /**
      * See
      * <a href="https://github.com/cloudflare/quiche/blob/master/quiche/include/quiche.h#L567C65-L567C88">
      *     quiche_conn_stats</a>.
      */
-    static native long[] quiche_conn_peer_transport_params(long connAddr);
+    static native long @Nullable [] quiche_conn_peer_transport_params(long connAddr);
 
     /**
      * See
@@ -521,7 +522,7 @@ final class Quiche {
      * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.20.0/quiche/include/quiche.h#L672">quiche_conn_path_stats</a>.
      */
-    static native Object[] quiche_conn_path_stats(long connAddr, long streamIdx);
+    static native Object @Nullable [] quiche_conn_path_stats(long connAddr, long streamIdx);
 
     /**
      * See
@@ -570,7 +571,7 @@ final class Quiche {
 
     static native long quiche_conn_new_scid(long connAddr, long scidAddr, int scidLen, byte[] resetToken, boolean retire_if_needed, long seq);
 
-    static native byte[] quiche_conn_retired_scid_next(long connAddr);
+    static native byte @Nullable [] quiche_conn_retired_scid_next(long connAddr);
 
     static native long quiche_conn_path_event_next(long connAddr);
     static native int quiche_path_event_type(long pathEvent);

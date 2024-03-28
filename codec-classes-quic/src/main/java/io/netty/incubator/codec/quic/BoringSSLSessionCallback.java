@@ -37,7 +37,7 @@ final class BoringSSLSessionCallback {
     }
 
     @SuppressWarnings("unused")
-    void newSession(long ssl, long creationTime, long timeout, byte[] session, boolean isSingleUse, byte[] peerParams) {
+    void newSession(long ssl, long creationTime, long timeout, byte[] session, boolean isSingleUse, byte @Nullable [] peerParams) {
         if (sessionCache == null) {
             return;
         }
@@ -66,7 +66,7 @@ final class BoringSSLSessionCallback {
     }
 
     // Mimic the encoding of quiche: https://github.com/cloudflare/quiche/blob/0.10.0/src/lib.rs#L1668
-    private static byte[] toQuicheQuicSession(byte[] sslSession, byte[] peerParams) {
+    private static byte @Nullable [] toQuicheQuicSession(byte @Nullable [] sslSession, byte @Nullable [] peerParams) {
         if (sslSession != null && peerParams != null) {
             try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
                  DataOutputStream dos = new DataOutputStream(bos)) {

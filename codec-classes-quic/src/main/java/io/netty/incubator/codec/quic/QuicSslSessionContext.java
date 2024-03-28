@@ -15,6 +15,8 @@
  */
 package io.netty.incubator.codec.quic;
 
+import org.jetbrains.annotations.Nullable;
+
 import javax.net.ssl.SSLSessionContext;
 
 /**
@@ -30,5 +32,5 @@ public interface QuicSslSessionContext extends SSLSessionContext {
      *
      * @param keys the tickets to use.
      */
-    void setTicketKeys(SslSessionTicketKey... keys);
+    void setTicketKeys(SslSessionTicketKey @Nullable ... keys);
 }

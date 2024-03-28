@@ -159,7 +159,7 @@ public final class BoringSSLKeylessManagerFactory extends KeyManagerFactory {
                 }
 
                 @Override
-                public Certificate[] engineGetCertificateChain(String alias) {
+                public Certificate @Nullable [] engineGetCertificateChain(String alias) {
                     return engineContainsAlias(alias)? certificateChain.clone() : null;
                 }
 
@@ -240,7 +240,7 @@ public final class BoringSSLKeylessManagerFactory extends KeyManagerFactory {
                 }
 
                 @Override
-                public void engineLoad(@Nullable InputStream stream, char[] password) {
+                public void engineLoad(@Nullable InputStream stream, char @Nullable [] password) {
                     if (stream != null && password != null) {
                         throw new UnsupportedOperationException();
                     }

@@ -2049,6 +2049,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         collectStats0(connection, promise);
     }
 
+    @Nullable
     private QuicConnectionStats collectStats0(QuicheQuicConnection connection, Promise<QuicConnectionStats> promise) {
         final long[] stats = Quiche.quiche_conn_stats(connection.address());
         if (stats == null) {

@@ -54,7 +54,7 @@ final class BoringSSL {
                 keylogCallback, sessionCallback, privateKeyMethod, sessionTicketCallback, verifyMode, subjectNames);
     }
 
-    private static byte[] toWireFormat(String[] applicationProtocols) {
+    private static byte @Nullable [] toWireFormat(String @Nullable [] applicationProtocols) {
         if (applicationProtocols == null) {
             return null;
         }
@@ -71,7 +71,7 @@ final class BoringSSL {
     }
 
     private static native long SSLContext_new0(boolean server,
-                                               byte[] applicationProtocols, Object handshakeCompleteCallback,
+                                               byte @Nullable [] applicationProtocols, Object handshakeCompleteCallback,
                                                Object certificateCallback, Object verifyCallback,
                                                @Nullable Object servernameCallback, @Nullable Object keylogCallback,
                                                @Nullable Object sessionCallback,
