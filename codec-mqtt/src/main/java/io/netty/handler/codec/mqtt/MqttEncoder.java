@@ -453,6 +453,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             return buf;
         } finally {
             propertiesBuf.release();
+            payload.release();
         }
     }
 
