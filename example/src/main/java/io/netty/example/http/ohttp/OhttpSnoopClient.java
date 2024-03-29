@@ -13,39 +13,32 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.http.snoop;
+package io.netty.example.http.ohttp;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.example.http.ohttp.OhttpSnoopClientInitializer;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.cookie.ClientCookieEncoder;
-import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
-/**
- * A simple HTTP client that prints out the content of the HTTP response to
- * {@link System#out} to test {@link HttpSnoopServer}.
- */
-public final class HttpSnoopClient {
+public class OhttpSnoopClient {
 
-    static final String URL = System.getProperty("url", "https://elvaquero.xyz/upload");
-//    static final String URL = System.getProperty("url",
-//                                             "https://cp4-canary.cloudflare.com/test?targetHost=elvaquero.xyz&targetPath=/upload");
+    private static final Logger logger = Logger.getLogger(OhttpSnoopClient.class.getName());
+
+    static final String URL = System.getProperty("url",
+                                                 "https://cp4-canary.cloudflare.com/test?targetHost=elvaquero.xyz&targetPath=/upload");
 
     public static void main(String[] args) throws Exception {
         URI uri = new URI(URL);
@@ -69,8 +62,7 @@ public final class HttpSnoopClient {
         final boolean ssl = "https".equalsIgnoreCase(scheme);
         final SslContext sslCtx;
         if (ssl) {
-            sslCtx = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+            sslCtx = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
         } else {
             sslCtx = null;
         }
@@ -83,29 +75,20 @@ public final class HttpSnoopClient {
              .channel(NioSocketChannel.class)
              .handler(new OhttpSnoopClientInitializer(sslCtx));
 
-            // Make the connection attempt.
             Channel ch = b.connect(host, port).sync().channel();
 
-            // Prepare the HTTP request.
-            HttpRequest request = new DefaultFullHttpRequest(
-                    HttpVersion.HTTP_1_1, HttpMethod.POST, uri.getRawPath(), Unpooled.EMPTY_BUFFER);
-            request.headers().set(HttpHeaderNames.HOST, host);
-            request.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-            request.headers().set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
+            HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/test?targetHost=elvaquero.xyz&targetPath=/upload");
             request.headers().set(HttpHeaderNames.CONTENT_TYPE, "message/ohttp-request");
 
-            // Set some example cookies.
-            request.headers().set(
-                    HttpHeaderNames.COOKIE,
-                    ClientCookieEncoder.STRICT.encode(
-                            new DefaultCookie("my-cookie", "foo"),
-                            new DefaultCookie("another-cookie", "bar")));
+            logger.info("In try loop in OhttpSnoopClient, sending request to " + host);
 
             // Send the HTTP request.
-            ch.writeAndFlush(request).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            ch.writeAndFlush(request);
+
+            logger.info("In try loop in OhttpSnoopClient 2, sending request to " + host);
 
             // Wait for the server to close the connection.
-            ch.closeFuture().sync();
+            ch.closeFuture().await(30, TimeUnit.SECONDS);
         } finally {
             // Shut down executor threads to exit.
             group.shutdownGracefully();

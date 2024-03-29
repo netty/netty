@@ -164,6 +164,31 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+
+
+    <!-- Adding oHTTP incubator library support -->
+    <dependency>
+      <groupId>io.netty.incubator</groupId>
+      <artifactId>netty-codec-ohttp</artifactId>
+      <version>0.0.8.Final-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty.incubator</groupId>
+      <artifactId>netty-incubator-codec-ohttp-hpke</artifactId>
+      <version>0.0.8.Final-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty.incubator</groupId>
+      <artifactId>netty-incubator-codec-bhttp</artifactId>
+      <version>0.0.8.Final-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty.incubator</groupId>
+      <artifactId>netty-incubator-codec-ohttp-hpke-bouncycastle</artifactId>
+      <version>0.0.8.Final-SNAPSHOT</version>
+    </dependency>
+    <!-- End oHTTP dependencies -->
+
   </dependencies>
 </project>
 

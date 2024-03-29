@@ -13,27 +13,28 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.example.http.snoop;
+package io.netty.example.http.ohttp;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.example.http.ohttp.OhttpSnoopClientHandler;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
 
 import java.util.logging.Logger;
 
-public class HttpSnoopClientHandler extends SimpleChannelInboundHandler<HttpObject> {
+public class OhttpSnoopClientHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     private static final Logger logger = Logger.getLogger(OhttpSnoopClientHandler.class.getName());
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) {
-        System.out.println("Received message: " + msg);
+
+        logger.info("inside channelRead0");
+
         if (msg instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) msg;
 
