@@ -276,6 +276,8 @@ public class MqttCodecTest {
     @Test
     public void testPublishMessage() throws Exception {
         final MqttPublishMessage message = createPublishMessage();
+        ByteBuf payload = message.payload().copy();
+
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
 
         mqttDecoder.channelRead(ctx, byteBuf);
@@ -285,7 +287,7 @@ public class MqttCodecTest {
         final MqttPublishMessage decodedMessage = (MqttPublishMessage) out.get(0);
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
         validatePublishVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
-        validatePublishPayload(message.payload(), decodedMessage.payload());
+        validatePublishPayload(payload, decodedMessage.payload());
     }
 
     @Test
@@ -600,6 +602,8 @@ public class MqttCodecTest {
         assertEquals(3,
                 ((MqttProperties.UserProperties) props.getProperty(USER_PROPERTY.value())).value.size());
         final MqttPublishMessage message = createPublishMessage(props);
+        ByteBuf payload = message.payload().copy();
+
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
 
         mqttDecoder.channelRead(ctx, byteBuf);
@@ -609,7 +613,7 @@ public class MqttCodecTest {
         final MqttPublishMessage decodedMessage = (MqttPublishMessage) out.get(0);
         validateFixedHeaders(message.fixedHeader(), decodedMessage.fixedHeader());
         validatePublishVariableHeader(message.variableHeader(), decodedMessage.variableHeader());
-        validatePublishPayload(message.payload(), decodedMessage.payload());
+        validatePublishPayload(payload, decodedMessage.payload());
     }
 
     @Test
