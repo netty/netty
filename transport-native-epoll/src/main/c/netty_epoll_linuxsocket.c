@@ -27,6 +27,7 @@
 #include <netinet/in.h>
 #include <netinet/udp.h> // SOL_UDP
 #include <sys/sendfile.h>
+#include <sys/types.h>
 #include <linux/tcp.h> // TCP_NOTSENT_LOWAT is a linux specific define
 #include "netty_epoll_linuxsocket.h"
 #include "netty_epoll_vmsocket.h"

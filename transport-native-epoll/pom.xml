@@ -160,6 +160,7 @@
                        under 'META-INF/native' rather than 'META-INF/native/${platform}'. -->
                   <platform>.</platform>
                   <configureArgs>
+                    <arg>CC=clang</arg>
                     <arg>${jni.compiler.args.ldflags}</arg>
                     <arg>${jni.compiler.args.libs}</arg>
                     <arg>${jni.compiler.args.cflags}</arg>

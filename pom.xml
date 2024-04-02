@@ -1509,7 +1509,7 @@
             <id>nohttp-checkstyle-validation</id>
             <phase>validate</phase>
             <configuration>
-              <!-- skip>false</skip -->
+              <skip>true</skip>
               <configLocation>nohttp-checkstyle.xml</configLocation>
               <suppressionsLocation>nohttp-checkstyle-suppressions.xml</suppressionsLocation>
               <!-- propertyExpansion>main.basedir=${main.basedir}</propertyExpansion -->

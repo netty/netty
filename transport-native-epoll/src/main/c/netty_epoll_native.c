@@ -87,7 +87,7 @@ extern int epoll_create1(int flags) __attribute__((weak));
 extern int epoll_pwait2(int epfd, struct epoll_event *events, int maxevents, const struct timespec *timeout, const sigset_t *sigmask) __attribute__((weak));
 
 #ifndef __USE_GNU
-struct mmsghdr {
+struct _mmsghdr {
     struct msghdr msg_hdr;  /* Message header */
     unsigned int  msg_len;  /* Number of bytes transmitted */
 };
@@ -373,7 +373,7 @@ static jint netty_epoll_native_epollCtlDel0(JNIEnv* env, jclass clazz, jint efd,
 }
 
 static jint netty_epoll_native_sendmmsg0(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jobjectArray packets, jint offset, jint len) {
-    struct mmsghdr msg[len];
+    struct _mmsghdr msg[len];
     struct sockaddr_storage addr[len];
     char controls[len][CMSG_SPACE(sizeof(uint16_t))];
 
@@ -501,7 +501,7 @@ static jint netty_epoll_native_recvmsg0(JNIEnv* env, jclass clazz, jint fd, jboo
 }
 
 static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jobjectArray packets, jint offset, jint len) {
-    struct mmsghdr msg[len];
+    struct _mmsghdr msg[len];
     memset(msg, 0, sizeof(msg));
     struct sockaddr_storage addr[len];
     int addrSize = sizeof(addr);
