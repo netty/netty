@@ -26,6 +26,7 @@ import io.netty5.buffer.Drop;
 import io.netty5.buffer.Owned;
 import io.netty5.buffer.internal.AdaptableBuffer;
 import io.netty5.buffer.internal.InternalBufferUtils;
+import io.netty5.util.internal.SWARUtil;
 
 import java.io.IOException;
 import java.lang.foreign.Arena;
@@ -454,20 +455,14 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
         final int end = woff;
 
         if (length > 7) {
-            final long pattern = (needle & 0xFFL) * 0x101010101010101L;
+            final long pattern = SWARUtil.compilePattern(needle);
             for (final int longEnd = offset + (length >>> 3) * Long.BYTES;
                  offset < longEnd;
                  offset += Long.BYTES) {
                 final long word = getLongAtOffset(seg, offset);
-
-                long input = word ^ pattern;
-                long tmp = (input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL;
-                tmp = ~(tmp | input | 0x7F7F7F7F7F7F7F7FL);
-                final int binaryPosition = Long.numberOfLeadingZeros(tmp);
-
-                int index = binaryPosition >>> 3;
-                if (index < Long.BYTES) {
-                    return offset + index - roff;
+                final long result = SWARUtil.applyPattern(word, pattern);
+                if (result != 0) {
+                    return offset - roff + SWARUtil.getIndex(result, true);
                 }
             }
         }

@@ -30,6 +30,7 @@ import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.buffer.internal.NotReadOnlyReadableComponent;
 import io.netty5.buffer.internal.InternalBufferUtils.UncheckedLoadByte;
 import io.netty5.util.internal.PlatformDependent;
+import io.netty5.util.internal.SWARUtil;
 import io.netty5.util.internal.UnsafeAccess;
 import sun.misc.Unsafe;
 
@@ -411,7 +412,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
             final long addr = address;
 
             if (length > 7) {
-                final long pattern = (needle & 0xFFL) * 0x101010101010101L;
+                final long pattern = SWARUtil.compilePattern(needle);
                 for (final int longEnd = offset + (length >>> 3) * Long.BYTES;
                      offset < longEnd;
                      offset += Long.BYTES) {
@@ -419,15 +420,9 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
                             PlatformDependent.getLong(base, addr + offset) :
                             loadLong(addr + offset);
 
-                    final long input = word ^ pattern;
-                    final long tmp =
-                            ~((input & 0x7F7F7F7F7F7F7F7FL) + 0x7F7F7F7F7F7F7F7FL | input | 0x7F7F7F7F7F7F7F7FL);
-                    final int binaryPosition = BYTES_BEFORE_USE_LITTLE_ENDIAN?
-                            Long.numberOfTrailingZeros(tmp) :
-                            Long.numberOfLeadingZeros(tmp);
-
-                    if (binaryPosition < Long.SIZE) {
-                        return offset + (binaryPosition >>> 3) - roff;
+                    final long result = SWARUtil.applyPattern(word, pattern);
+                    if (result != 0) {
+                        return offset - roff + SWARUtil.getIndex(result, !BYTES_BEFORE_USE_LITTLE_ENDIAN);
                     }
                 }
             }
