@@ -163,7 +163,7 @@ static void netty_epoll_linuxsocket_setTimeToLive(JNIEnv* env, jclass clazz, jin
 
 static void netty_epoll_linuxsocket_setIpMulticastLoop(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jint optval) {
     if (ipv6 == JNI_TRUE) {
-        unsigned int val = (u_int) optval;
+        unsigned int val = (unsigned int) optval;
         netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &val, sizeof(val));
     } else {
         unsigned char val = (unsigned char) optval;
