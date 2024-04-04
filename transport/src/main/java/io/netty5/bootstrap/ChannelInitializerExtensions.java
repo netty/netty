@@ -39,7 +39,7 @@ abstract class ChannelInitializerExtensions {
 
     /**
      * Get the configuration extensions, which is a no-op implementation by default,
-     * or a service-loading implementation if the {@code io.netty.bootstrap.extensions} system property is
+     * or a service-loading implementation if the {@code io.netty5.bootstrap.extensions} system property is
      * {@code serviceload}.
      */
     static ChannelInitializerExtensions getExtensions() {

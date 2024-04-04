@@ -61,7 +61,7 @@ public class AsciiStringCaseConversionBenchmark {
 
     @Setup(Level.Trial)
     public void init() {
-        System.setProperty("io.netty.noUnsafe", Boolean.valueOf(noUnsafe).toString());
+        System.setProperty("io.netty5.noUnsafe", Boolean.valueOf(noUnsafe).toString());
         final SplittableRandom random = new SplittableRandom(seed);
         permutations = 1 << logPermutations;
         ret = new byte[size];
