@@ -14,6 +14,6 @@
  * under the License.
  */
 /**
- * Benchmarks for Snappy ({@link io.netty.handler.codec.compression.Snappy}).
+ * Benchmarks for Snappy ({@link io.netty5.handler.codec.compression.Snappy}).
  */
 package io.netty5.microbench.snappy;

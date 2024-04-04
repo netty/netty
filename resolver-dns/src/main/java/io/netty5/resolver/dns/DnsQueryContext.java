@@ -54,8 +54,8 @@ abstract class DnsQueryContext {
 
     static {
         ID_REUSE_ON_TIMEOUT_DELAY_MILLIS =
-                SystemPropertyUtil.getLong("io.netty.resolver.dns.idReuseOnTimeoutDelayMillis", 10000);
-        logger.debug("-Dio.netty.resolver.dns.idReuseOnTimeoutDelayMillis: {}", ID_REUSE_ON_TIMEOUT_DELAY_MILLIS);
+                SystemPropertyUtil.getLong("io.netty5.resolver.dns.idReuseOnTimeoutDelayMillis", 10000);
+        logger.debug("-Dio.netty5.resolver.dns.idReuseOnTimeoutDelayMillis: {}", ID_REUSE_ON_TIMEOUT_DELAY_MILLIS);
     }
 
     private static final TcpDnsQueryEncoder TCP_ENCODER = new TcpDnsQueryEncoder();
