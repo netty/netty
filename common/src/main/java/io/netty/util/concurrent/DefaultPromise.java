@@ -59,6 +59,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private DefaultFutureListeners listeners;
     /**
      * Threading - synchronized(this). We are required to hold the monitor to use Java's underlying wait()/notifyAll().
+     * 当>0的时候，表示有人在等待
      */
     private short waiters;
 
@@ -629,10 +630,17 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return setValue0(new CauseHolder(checkNotNull(cause, "cause")));
     }
 
+    /**
+     * 设置结果
+     * @param objResult 设置的结果对象
+     * @return {@code true} 如果通过cas成功设置了结果
+     */
     private boolean setValue0(Object objResult) {
+        // cas保证设置为
         if (RESULT_UPDATER.compareAndSet(this, null, objResult) ||
             RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, objResult)) {
             if (checkNotifyWaiters()) {
+                // 如果有人在等待监听，会触发listeners
                 notifyListeners();
             }
             return true;

@@ -29,13 +29,27 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Abstract base class for {@link EventExecutorGroup} implementations that handles their tasks with multiple threads at
  * the same time.
+ *
+ * 每一个线程就对应了一个{@link EventExecutor}
  */
 public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
+    /**
+     * 有多少个线程就会有多少个children元素
+     */
     private final EventExecutor[] children;
+
+    /**
+     * 只读的{@link #children}
+     */
     private final Set<EventExecutor> readonlyChildren;
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
+
+    /**
+     * 这个选择器是干嘛的？
+     * 选择什么的？
+     */
     private final EventExecutorChooserFactory.EventExecutorChooser chooser;
 
     /**
@@ -78,6 +92,7 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
         children = new EventExecutor[nThreads];
 
+        // 初始化所有线程(EventExecutor)
         for (int i = 0; i < nThreads; i ++) {
             boolean success = false;
             try {
@@ -87,7 +102,9 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                 // TODO: Think about if this is a good exception type
                 throw new IllegalStateException("failed to create a child event loop", e);
             } finally {
+                // 如果创建EventExecutor的过程中发生了异常，要做一些处理
                 if (!success) {
+                    // 先将之前的EventExecutor关闭
                     for (int j = 0; j < i; j ++) {
                         children[j].shutdownGracefully();
                     }
@@ -113,12 +130,14 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
             @Override
             public void operationComplete(Future<Object> future) throws Exception {
+                // 如果所有children都关闭了，那么就将这个Promise设置为成功
                 if (terminatedChildren.incrementAndGet() == children.length) {
                     terminationFuture.setSuccess(null);
                 }
             }
         };
 
+        // 将每个children都添加一个terminationFuture
         for (EventExecutor e: children) {
             e.terminationFuture().addListener(terminationListener);
         }

@@ -39,10 +39,20 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
         }
     }
 
+    /**
+     * 是否是2的幂
+     * 怎么判断出来的？
+     *
+     * @param val
+     * @return
+     */
     private static boolean isPowerOfTwo(int val) {
         return (val & -val) == val;
     }
 
+    /**
+     * 2的幂事件执行选择器
+     */
     private static final class PowerOfTwoEventExecutorChooser implements EventExecutorChooser {
         private final AtomicInteger idx = new AtomicInteger();
         private final EventExecutor[] executors;
@@ -57,11 +67,19 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
         }
     }
 
+    /**
+     * 通用的事件执行选择器
+     */
     private static final class GenericEventExecutorChooser implements EventExecutorChooser {
         // Use a 'long' counter to avoid non-round-robin behaviour at the 32-bit overflow boundary.
         // The 64-bit long solves this by placing the overflow so far into the future, that no system
         // will encounter this in practice.
+        // 使用“long”计数器可避免在 32 位溢出边界处出现非循环行为。64 位长型通过将溢出放在如此遥远的未来来解决此问题，以至于没有系统在实践中会遇到这种情况。
+        // 大概意思是如果使用int容易出现32位溢出，虽然用了Math.abs处理了，但是依然可能不会以循环的方式执行
+        // 使用64位很大概率不会出现这个问题，因为64位太大了，可以以后处理
         private final AtomicLong idx = new AtomicLong();
+
+        // netty的eventExecutor
         private final EventExecutor[] executors;
 
         GenericEventExecutorChooser(EventExecutor[] executors) {
@@ -70,6 +88,7 @@ public final class DefaultEventExecutorChooserFactory implements EventExecutorCh
 
         @Override
         public EventExecutor next() {
+            // 通过循环的方式去拿选择器
             return executors[(int) Math.abs(idx.getAndIncrement() % executors.length)];
         }
     }

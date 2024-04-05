@@ -83,11 +83,13 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
 
     /**
      * Return the {@link EventLoop} this {@link Channel} was registered to.
+     * 返回此 {@link Channel} 注册到的 {@link EventLoop}。
      */
     EventLoop eventLoop();
 
     /**
      * Returns the parent of this channel.
+     * 返回此通道的父级。
      *
      * @return the parent channel.
      *         {@code null} if this channel does not have a parent channel.
@@ -96,6 +98,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
 
     /**
      * Returns the configuration of this channel.
+     * 返回此通道的配置。
      */
     ChannelConfig config();
 
