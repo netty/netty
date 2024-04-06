@@ -143,6 +143,7 @@ public class EpollEventLoop extends SingleThreadEventLoop {
             }
         }
     }
+
     private static void closeFileDescriptor(FileDescriptor fd) {
         if (fd != null) {
             try {
