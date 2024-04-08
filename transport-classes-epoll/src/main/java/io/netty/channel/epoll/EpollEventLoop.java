@@ -153,6 +153,7 @@ public class EpollEventLoop extends SingleThreadEventLoop {
             }
         }
     }
+
     private static Queue<Runnable> newTaskQueue(
             EventLoopTaskQueueFactory queueFactory) {
         if (queueFactory == null) {
