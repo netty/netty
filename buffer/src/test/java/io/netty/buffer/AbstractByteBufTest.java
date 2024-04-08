@@ -2293,11 +2293,51 @@ public abstract class AbstractByteBufTest {
         buffer.writeByte((byte) 2);
         buffer.writeByte((byte) 3);
         buffer.writeByte((byte) 4);
-        buffer.writeByte((byte) 1);
+        buffer.writeByte((byte) 1); // 15
         assertEquals(11, buffer.indexOf(0, 12, (byte) 1));
         assertEquals(12, buffer.indexOf(0, 16, (byte) 2));
         assertEquals(-1, buffer.indexOf(0, 11, (byte) 1));
         assertEquals(11, buffer.indexOf(0, 16, (byte) 1));
+
+        // lastIndexOf
+        assertEquals(15, buffer.indexOf(16, 0, (byte) 1));
+        assertEquals(12, buffer.indexOf(16, 0, (byte) 2));
+        assertEquals(11, buffer.indexOf(15, 0, (byte) 1));
+        assertEquals(-1, buffer.indexOf(11, 0, (byte) 1));
+        buffer.release();
+    }
+
+    @Test
+    public void testUnrolledSWARIndexOf() {
+        ByteBuf buffer = newBuffer(15);
+        buffer.clear();
+        // Ensure the buffer is completely zero'ed.
+        buffer.setZero(0, buffer.capacity());
+        buffer.writeByte((byte) 0); // 0
+        buffer.writeByte((byte) 1);
+        buffer.writeByte((byte) 2);
+        buffer.writeByte((byte) 3);
+        buffer.writeByte((byte) 4);
+        buffer.writeByte((byte) 5);
+        buffer.writeByte((byte) 6);
+        buffer.writeByte((byte) 7); // 7
+
+        buffer.writeByte((byte) 8); // 8
+        buffer.writeByte((byte) 9);
+        buffer.writeByte((byte) 10);
+        buffer.writeByte((byte) 11);
+        buffer.writeByte((byte) 12);
+        buffer.writeByte((byte) 13);
+        buffer.writeByte((byte) 14); // 14
+        assertEquals(15, buffer.capacity());
+        for (int i = 0; i < 14; ++i) {
+            assertEquals(i, buffer.indexOf(i, buffer.capacity(), (byte) i));
+        }
+
+        // lastIndexOf
+        for (int i = 0; i < 14; ++i) {
+            assertEquals(i, buffer.indexOf(buffer.capacity(), 0, (byte) i));
+        }
         buffer.release();
     }
 
