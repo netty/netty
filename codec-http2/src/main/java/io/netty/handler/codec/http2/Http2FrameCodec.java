@@ -403,12 +403,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     private void writeHeadersFrame(final ChannelHandlerContext ctx, Http2HeadersFrame headersFrame,
-                                   final ChannelPromise promise) {
+                                   ChannelPromise promise) {
 
         if (isStreamIdValid(headersFrame.stream().id())) {
             encoder().writeHeaders(ctx, headersFrame.stream().id(), headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
         } else if (initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise)) {
+            promise = promise.unvoid();
+
             final int streamId = headersFrame.stream().id();
 
             encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),
