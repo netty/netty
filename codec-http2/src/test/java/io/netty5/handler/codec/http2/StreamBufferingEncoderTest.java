@@ -530,8 +530,10 @@ public class StreamBufferingEncoderTest {
 
     private void testStreamId(int nextStreamId) throws Http2Exception {
         connection.local().createStream(nextStreamId, false);
-        Future<Void> channelFuture = encoder.writeData(ctx, nextStreamId, empty(), 0, false);
-        assertFalse(channelFuture.isFailed());
+        try (Buffer empty = empty()) {
+            Future<Void> channelFuture = encoder.writeData(ctx, nextStreamId, empty, 0, false);
+            assertFalse(channelFuture.isFailed());
+        }
     }
 
     private void setMaxConcurrentStreams(int newValue) {
