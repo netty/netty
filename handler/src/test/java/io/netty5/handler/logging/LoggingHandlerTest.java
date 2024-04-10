@@ -568,9 +568,10 @@ public class LoggingHandlerTest {
             channel.writeInbound(msg.copy());
             appender.verify(new RegexLogMatcher(".+READ: 0B", false));
 
-            Buffer handledMsg = channel.readInbound();
-            assertEquals(msg, handledMsg);
-            assertThat(channel.readInbound(), is(nullValue()));
+            try (Buffer handledMsg = channel.readInbound()) {
+                assertEquals(msg, handledMsg);
+                assertThat(channel.readInbound(), is(nullValue()));
+            }
         }
     }
 
