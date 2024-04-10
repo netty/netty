@@ -151,27 +151,19 @@ public class EpollHandler implements IoHandler {
             success = true;
         } finally {
             if (!success) {
-                if (epollFd != null) {
-                    try {
-                        epollFd.close();
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                }
-                if (eventFd != null) {
-                    try {
-                        eventFd.close();
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                }
-                if (timerFd != null) {
-                    try {
-                        timerFd.close();
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                }
+                closeFileDescriptor(epollFd);
+                closeFileDescriptor(eventFd);
+                closeFileDescriptor(timerFd);
+            }
+        }
+    }
+
+    private static void closeFileDescriptor(FileDescriptor fd) {
+        if (fd != null) {
+            try {
+                fd.close();
+            } catch (Exception e) {
+                // ignore
             }
         }
     }
