@@ -841,7 +841,7 @@ final class AdaptivePoolingAllocator {
             if (tmpNioBuf == null) {
                 this.tmpNioBuf = tmpNioBuf = rootParent.internalNioBuffer(adjustment, capacity()).slice();
             }
-            return tmpNioBuf.clear();
+            return (ByteBuffer) tmpNioBuf.clear();
         }
 
         @Override
