@@ -18,6 +18,7 @@ package io.netty.buffer;
 import io.netty.util.ByteProcessor;
 import io.netty.util.NettyRuntime;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SuppressJava6Requirement;
@@ -146,14 +147,17 @@ final class AdaptivePoolingAllocator {
             throw new IllegalStateException("This allocator has been closed.");
         }
         if (size <= MAX_CHUNK_SIZE) {
-            AdaptiveByteBuf buf = AdaptiveByteBuf.newInstance();
+            Thread currentThread = Thread.currentThread();
+            boolean willCleanupFastThreadLocals = FastThreadLocalThread.willCleanupFastThreadLocals(currentThread);
+            long threadId = currentThread.getId();
+            AdaptiveByteBuf buf = AdaptiveByteBuf.newInstance(willCleanupFastThreadLocals);
             int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
             Magazine[] mags;
             int expansions = 0;
             do {
                 mags = magazines;
                 int mask = mags.length - 1;
-                int index = (int) (Thread.currentThread().getId() & mask);
+                int index = (int) (threadId & mask);
                 for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
                     Magazine mag = mags[index + i & mask];
                     long writeLock = mag.tryWriteLock();
@@ -717,11 +721,14 @@ final class AdaptivePoolingAllocator {
                     }
                 });
 
-        static AdaptiveByteBuf newInstance() {
-            AdaptiveByteBuf buf = RECYCLER.get();
-            buf.resetRefCnt();
-            buf.discardMarks();
-            return buf;
+        static AdaptiveByteBuf newInstance(boolean useThreadLocal) {
+            if (useThreadLocal) {
+                AdaptiveByteBuf buf = RECYCLER.get();
+                buf.resetRefCnt();
+                buf.discardMarks();
+                return buf;
+            }
+            return new AdaptiveByteBuf(null);
         }
 
         private final ObjectPool.Handle<AdaptiveByteBuf> handle;
@@ -1236,7 +1243,9 @@ final class AdaptivePoolingAllocator {
             if (chunk != null) {
                 chunk.release();
             }
-            handle.recycle(this);
+            if (handle != null) {
+                handle.recycle(this);
+            }
         }
     }
 
