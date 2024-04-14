@@ -597,6 +597,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // otherwise we would have drained it from the queue and processed it during the read cycle.
             assert inboundBuffer == null || inboundBuffer.isEmpty();
             final RecvByteBufAllocator.Handle allocHandle = unsafe.recvBufAllocHandle();
+
             unsafe.doRead0(frame, allocHandle);
             // We currently don't need to check for readEOS because the parent channel and child channel are limited
             // to the same EventLoop thread. There are a limited number of frame types that may come after EOS is
@@ -634,6 +635,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         private boolean writeDoneAndNoFlush;
         private boolean closeInitiated;
         private boolean readEOS;
+
+        private boolean receivedEndOfStream;
+        private boolean sentEndOfStream;
 
         @Override
         public void connect(final SocketAddress remoteAddress,
@@ -731,7 +735,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
             // Only ever send a reset frame if the connection is still alive and if the stream was created before
             // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
-            if (parent().isActive() && !readEOS && isStreamIdValid(stream.id())) {
+            if (parent().isActive() && isStreamIdValid(stream.id()) &&
+                    // Also ensure the stream was never "closed" before.
+                    !readEOS && !(receivedEndOfStream && sentEndOfStream)) {
                 Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
                 write(resetFrame, unsafe().voidPromise());
                 flush();
@@ -953,7 +959,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             final int bytes;
             if (frame instanceof Http2DataFrame) {
                 bytes = ((Http2DataFrame) frame).initialFlowControlledBytes();
-
                 // It is important that we increment the flowControlledBytes before we call fireChannelRead(...)
                 // as it may cause a read() that will call updateLocalWindowIfNeeded() and we need to ensure
                 // in this case that we accounted for it.
@@ -963,6 +968,11 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             } else {
                 bytes = MIN_HTTP2_FRAME_SIZE;
             }
+
+            // Let's keep track of what we received as the stream state itself will only be updated once the frame
+            // was dispatched for reading which might cause problems if we try to close the channel in a write future.
+            receivedEndOfStream |= isEndOfStream(frame);
+
             // Update before firing event through the pipeline to be consistent with other Channel implementation.
             allocHandle.attemptedBytesRead(bytes);
             allocHandle.lastBytesRead(bytes);
@@ -1003,6 +1013,16 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
         }
 
+        private boolean isEndOfStream(Http2Frame frame) {
+            if (frame instanceof Http2HeadersFrame) {
+                return ((Http2HeadersFrame) frame).isEndStream();
+            }
+            if (frame instanceof Http2DataFrame) {
+                return ((Http2DataFrame) frame).isEndStream();
+            }
+            return false;
+        }
+
         private void writeHttp2StreamFrame(Http2StreamFrame frame, final ChannelPromise promise) {
             if (!firstFrameWritten && !isStreamIdValid(stream().id()) && !(frame instanceof Http2HeadersFrame)) {
                 ReferenceCountUtil.release(frame);
@@ -1019,6 +1039,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 firstWrite = firstFrameWritten = true;
             }
 
+            // Let's keep track of what we send as the stream state itself will only be updated once the frame
+            // was written which might cause problems if we try to close the channel in a write future.
+            sentEndOfStream |= isEndOfStream(frame);
             ChannelFuture f = write0(parentContext(), frame);
             if (f.isDone()) {
                 if (firstWrite) {
