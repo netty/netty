@@ -94,7 +94,7 @@ final class AdaptivePoolingAllocator {
      * 5 * {@link NettyRuntime#availableProcessors()} * {@link #MAX_CHUNK_SIZE} bytes.
      */
     private static final int CENTRAL_QUEUE_CAPACITY = SystemPropertyUtil.getInt(
-            "io.netty5.allocator.centralQueueCapacity", NettyRuntime.availableProcessors());
+            "io.netty.allocator.centralQueueCapacity", NettyRuntime.availableProcessors());
 
     private final ChunkAllocator chunkAllocator;
     private final Queue<ChunkByteBuf> centralQueue;
