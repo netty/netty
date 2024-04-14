@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -1146,43 +1147,58 @@ final class AdaptivePoolingAllocator {
         public ByteBuf getBytes(int index, OutputStream out, int length)
                 throws IOException {
             checkIndex(index, length);
-            rootParent.getBytes(idx(index), out, length);
+            if (length != 0) {
+                ByteBufUtil.readBytes(alloc(), internalNioBuffer().duplicate(), index, length, out);
+            }
             return this;
         }
 
         @Override
         public int getBytes(int index, GatheringByteChannel out, int length)
                 throws IOException {
-            checkIndex(index, length);
-            return rootParent.getBytes(idx(index), out, length);
+            return out.write(internalNioBuffer(index, length).duplicate());
         }
 
         @Override
         public int getBytes(int index, FileChannel out, long position, int length)
                 throws IOException {
-            checkIndex(index, length);
-            return rootParent.getBytes(idx(index), out, position, length);
+            return out.write(internalNioBuffer(index, length).duplicate(), position);
         }
 
         @Override
         public int setBytes(int index, InputStream in, int length)
                 throws IOException {
             checkIndex(index, length);
-            return rootParent.setBytes(idx(index), in, length);
+            if (rootParent.hasArray()) {
+                return rootParent.setBytes(idx(index), in, length);
+            }
+            byte[] tmp = ByteBufUtil.threadLocalTempArray(length);
+            int readBytes = in.read(tmp, 0, length);
+            if (readBytes <= 0) {
+                return readBytes;
+            }
+            setBytes(index, tmp, 0, readBytes);
+            return readBytes;
         }
 
         @Override
         public int setBytes(int index, ScatteringByteChannel in, int length)
                 throws IOException {
-            checkIndex(index, length);
-            return rootParent.setBytes(idx(index), in, length);
+            try {
+                return in.read(internalNioBuffer(index, length).duplicate());
+            } catch (ClosedChannelException ignored) {
+                return -1;
+            }
         }
 
         @Override
         public int setBytes(int index, FileChannel in, long position, int length)
                 throws IOException {
-            checkIndex(index, length);
-            return rootParent.setBytes(idx(index), in, position, length);
+            try {
+                return in.read(internalNioBuffer(index, length).duplicate(), position);
+            } catch (ClosedChannelException ignored) {
+                return -1;
+            }
         }
 
         @Override
@@ -1279,7 +1295,7 @@ final class AdaptivePoolingAllocator {
         @Override
         public ByteBuf duplicate() {
             ensureAccessible();
-            return new PooledNonRetainedDuplicateByteBuf(referenceCountDelegate, this);
+            return new PooledNonRetainedDuplicateByteBuf(referenceCountDelegate, unwrap());
         }
 
         @Override
@@ -1361,8 +1377,8 @@ final class AdaptivePoolingAllocator {
         @Override
         public ByteBuf duplicate() {
             ensureAccessible();
-            return new PooledNonRetainedDuplicateByteBuf(referenceCountDelegate, unwrap())
-                    .setIndex(idx(readerIndex()), idx(writerIndex()));
+            return new PooledNonRetainedSlicedByteBuf(referenceCountDelegate, unwrap(), idx(0), capacity())
+                    .setIndex(readerIndex(), writerIndex());
         }
 
         @Override
