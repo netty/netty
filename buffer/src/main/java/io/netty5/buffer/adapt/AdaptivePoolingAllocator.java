@@ -161,12 +161,13 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
         InternalBufferUtils.assertValidBufferSize(size);
         if (size <= MAX_CHUNK_SIZE) {
             int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
+            long threadId = threadId(Thread.currentThread());
             int expansions = 0;
             Magazine[] mags;
             do {
                 mags = magazines;
                 int mask = mags.length - 1;
-                int index = (int) (threadId(Thread.currentThread()) & mask);
+                int index = (int) (threadId & mask);
                 for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
                     Magazine mag = mags[index + i & mask];
                     long writeLock = mag.tryWriteLock();
