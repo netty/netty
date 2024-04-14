@@ -195,6 +195,8 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     private boolean writeDoneAndNoFlush;
     private boolean closeInitiated;
     private boolean readEOS;
+    private boolean receivedEndOfStream;
+    private boolean sentEndOfStream;
 
     DefaultHttp2StreamChannel(Http2MultiplexHandler handler, DefaultHttp2FrameStream stream, int id,
                                ChannelHandler inboundHandler) {
@@ -521,7 +523,9 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
         // Only ever send a reset frame if the connection is still alive and if the stream was created before
         // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
-        if (parent().isActive() && !readEOS && isStreamIdValid(stream.id())) {
+        if (parent().isActive() && isStreamIdValid(stream.id()) &&
+                // Also ensure the stream was never "closed" before.
+                !readEOS && !(receivedEndOfStream && sentEndOfStream)) {
             Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
             writeTransport(resetFrame, newPromise());
             flush();
@@ -817,6 +821,11 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         } else {
             bytes = MIN_HTTP2_FRAME_SIZE;
         }
+
+        // Let's keep track of what we received as the stream state itself will only be updated once the frame
+        // was dispatched for reading which might cause problems if we try to close the channel in a write future.
+        receivedEndOfStream |= isEndOfStream(frame);
+
         // Update before firing event through the pipeline to be consistent with other Channel implementation.
         boolean continueReading =  allocHandle.lastRead(bytes, bytes, 1);
 
@@ -826,6 +835,16 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             shutdownTransport(ChannelShutdownDirection.Inbound, newPromise());
         }
         return continueReading;
+    }
+
+    private boolean isEndOfStream(Http2Frame frame) {
+        if (frame instanceof Http2HeadersFrame) {
+            return ((Http2HeadersFrame) frame).isEndStream();
+        }
+        if (frame instanceof Http2DataFrame) {
+            return ((Http2DataFrame) frame).isEndStream();
+        }
+        return false;
     }
 
     private boolean isShutdownNeeded(Http2Frame frame) {
@@ -897,6 +916,10 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         } else {
             firstWrite = firstFrameWritten = true;
         }
+
+        // Let's keep track of what we send as the stream state itself will only be updated once the frame
+        // was written which might cause problems if we try to close the channel in a write future.
+        sentEndOfStream |= isEndOfStream(frame);
 
         Future<Void> f = handler.parentContext().write(frame);
         if (f.isDone()) {

@@ -15,6 +15,7 @@
 package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.Buffer;
+import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
@@ -23,6 +24,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.WriteBufferWaterMark;
 import io.netty5.channel.embedded.EmbeddedChannel;
+import io.netty5.handler.codec.UnsupportedMessageTypeException;
 import io.netty5.handler.codec.http.HttpHeaderNames;
 import io.netty5.handler.codec.http.HttpMethod;
 import io.netty5.handler.codec.http.HttpScheme;
@@ -35,10 +37,13 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import org.hamcrest.CoreMatchers;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -68,6 +73,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -252,6 +258,86 @@ public class Http2MultiplexTest {
         assertEqualsAndRelease(dataFrame2, inboundHandler.readInbound());
 
         assertNull(inboundHandler.readInbound());
+    }
+
+     enum RstFrameTestMode {
+        HEADERS_END_STREAM,
+        DATA_END_STREAM,
+        TRAILERS_END_STREAM;
+    }
+    @ParameterizedTest
+    @EnumSource(RstFrameTestMode.class)
+    void noRstFrameSentOnCloseViaListener(final RstFrameTestMode mode) throws Exception {
+        LastInboundHandler inboundHandler = new LastInboundHandler() {
+            private boolean headersReceived;
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                try {
+                    final boolean endStream;
+                    if (msg instanceof Http2HeadersFrame) {
+                        endStream = ((Http2HeadersFrame) msg).isEndStream();
+                        switch (mode) {
+                            case HEADERS_END_STREAM:
+                                assertFalse(headersReceived);
+                                assertTrue(endStream);
+                                break;
+                            case TRAILERS_END_STREAM:
+                                if (headersReceived) {
+                                    assertTrue(endStream);
+                                } else {
+                                    assertFalse(endStream);
+                                }
+                                break;
+                            case DATA_END_STREAM:
+                                assertFalse(endStream);
+                                break;
+                            default:
+                                fail();
+                        }
+                        headersReceived = true;
+                    } else if (msg instanceof Http2DataFrame) {
+                        endStream = ((Http2DataFrame) msg).isEndStream();
+                        switch (mode) {
+                            case HEADERS_END_STREAM:
+                                fail();
+                                break;
+                            case TRAILERS_END_STREAM:
+                                assertFalse(endStream);
+                                break;
+                            case DATA_END_STREAM:
+                                assertTrue(endStream);
+                                break;
+                            default:
+                                fail();
+                        }
+                    } else {
+                        throw new UnsupportedMessageTypeException(msg);
+                    }
+                    if (endStream) {
+                        ctx.writeAndFlush(new DefaultHttp2HeadersFrame(Http2Headers.newHeaders(), true, 0))
+                                .addListener(ctx, ChannelFutureListeners.CLOSE);
+                    }
+                } finally {
+                    Resource.dispose(msg);
+                }
+            }
+        };
+
+        Http2StreamChannel channel = newInboundStream(3, mode == RstFrameTestMode.HEADERS_END_STREAM, inboundHandler);
+        if (mode != RstFrameTestMode.HEADERS_END_STREAM) {
+            frameInboundWriter.writeInboundData(
+                    channel.stream().id(), bb("something"), 0, mode == RstFrameTestMode.DATA_END_STREAM);
+            if (mode != RstFrameTestMode.DATA_END_STREAM) {
+                frameInboundWriter.writeInboundHeaders(channel.stream().id(), Http2Headers.newHeaders(), 0, true);
+            }
+        }
+        channel.closeFuture().asStage().sync();
+
+        // We should never produce a RST frame in this case as we received the endOfStream before we write a frame
+        // with the endOfStream flag.
+        verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class),
+                eqStreamId(channel), anyLong());
+        inboundHandler.checkException();
     }
 
     @Test
