@@ -17,7 +17,6 @@ package io.netty.resolver.dns;
 
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.ThreadLocalRandom;
 
 import java.util.Random;
 
@@ -62,7 +61,7 @@ final class DnsQueryIdSpace {
                 }
             } else if (freeIdx == -1 ||
                     // Let's make it somehow random which free slot is used.
-                    ThreadLocalRandom.current().nextBoolean()) {
+                    PlatformDependent.threadLocalRandom().nextBoolean()) {
                     // We have a slot that we can use to create a new bucket if we need to.
                     freeIdx = bucketIdx;
             }
