@@ -53,7 +53,11 @@ public final class DefaultChannelId implements ChannelId {
      * Returns a new {@link DefaultChannelId} instance.
      */
     public static DefaultChannelId newInstance() {
-        return new DefaultChannelId();
+        return new DefaultChannelId(MACHINE_ID,
+                                    PROCESS_ID,
+                                    nextSequence.getAndIncrement(),
+                                    Long.reverse(System.nanoTime()) ^ System.currentTimeMillis(),
+                                    PlatformDependent.threadLocalRandom().nextInt());
     }
 
     static {
@@ -189,28 +193,31 @@ public final class DefaultChannelId implements ChannelId {
     private transient String shortValue;
     private transient String longValue;
 
-    private DefaultChannelId() {
-        final byte[] data = new byte[MACHINE_ID.length + PROCESS_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + RANDOM_LEN];
+    /**
+     * Visible for testing
+     */
+    DefaultChannelId(final byte[] machineId, final int processId, final int sequence,
+                             final long timestamp, final int random) {
+        final byte[] data = new byte[machineId.length + PROCESS_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + RANDOM_LEN];
         int i = 0;
 
         // machineId
-        System.arraycopy(MACHINE_ID, 0, data, i, MACHINE_ID.length);
-        i += MACHINE_ID.length;
+        System.arraycopy(machineId, 0, data, i, machineId.length);
+        i += machineId.length;
 
         // processId
-        writeInt(data, i, PROCESS_ID);
+        writeInt(data, i, processId);
         i += Integer.BYTES;
 
         // sequence
-        writeInt(data, i, nextSequence.getAndIncrement());
+        writeInt(data, i, sequence);
         i += Integer.BYTES;
 
         // timestamp (kind of)
-        writeLong(data, i, Long.reverse(System.nanoTime()) ^ System.currentTimeMillis());
+        writeLong(data, i, timestamp);
         i += Long.BYTES;
 
         // random
-        int random = PlatformDependent.threadLocalRandom().nextInt();
         writeInt(data, i, random);
         i += Integer.BYTES;
         assert i == data.length;
@@ -264,9 +271,10 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     private String newLongValue() {
-        StringBuilder buf = new StringBuilder(2 * data.length + 5);
+        final StringBuilder buf = new StringBuilder(2 * data.length + 5);
+        final int machineIdLen = data.length - PROCESS_ID_LEN - SEQUENCE_LEN - TIMESTAMP_LEN - RANDOM_LEN;
         int i = 0;
-        i = appendHexDumpField(buf, i, MACHINE_ID.length);
+        i = appendHexDumpField(buf, i, machineIdLen);
         i = appendHexDumpField(buf, i, PROCESS_ID_LEN);
         i = appendHexDumpField(buf, i, SEQUENCE_LEN);
         i = appendHexDumpField(buf, i, TIMESTAMP_LEN);
