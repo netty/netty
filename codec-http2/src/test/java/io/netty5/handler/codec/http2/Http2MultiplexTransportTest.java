@@ -30,6 +30,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.local.LocalAddress;
+import io.netty5.channel.local.LocalChannel;
 import io.netty5.channel.local.LocalHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.channel.nio.NioHandler;
@@ -789,7 +790,7 @@ public class Http2MultiplexTransportTest {
             serverChannel = sb.bind(serverAddress).asStage().get();
 
             Bootstrap cb = new Bootstrap()
-                    .channel(LocalServerChannel.class)
+                    .channel(LocalChannel.class)
                     .group(group)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
