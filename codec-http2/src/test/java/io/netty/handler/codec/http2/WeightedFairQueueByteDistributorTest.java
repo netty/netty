@@ -107,7 +107,7 @@ public class WeightedFairQueueByteDistributorTest extends AbstractWeightedFairQu
         // Block B, but it should still remain in the queue/tree structure.
         initState(STREAM_B, 0, false);
 
-        // Get the streams before the write, because they may be be closed.
+        // Get the streams before the write, because they may be closed.
         Http2Stream streamA = stream(STREAM_A);
         Http2Stream streamB = stream(STREAM_B);
         Http2Stream streamC = stream(STREAM_C);
