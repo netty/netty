@@ -189,7 +189,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
                             Math.min(addressInfoLen, header.readableBytes()) + " bytes (expected: 216+ bytes)");
             }
             int startIdx = header.readerIndex();
-            int addressEnd = header.forEachByte(startIdx, 108, ByteProcessor.FIND_NUL);
+            int addressEnd = header.indexOf(startIdx, startIdx + 108, (byte) 0); // FIND_NUL
             if (addressEnd == -1) {
                 addressLen = 108;
             } else {
@@ -199,7 +199,7 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
 
             startIdx += 108;
 
-            addressEnd = header.forEachByte(startIdx, 108, ByteProcessor.FIND_NUL);
+            addressEnd = header.indexOf(startIdx, startIdx + 108, (byte) 0); // FIND_NUL
             if (addressEnd == -1) {
                 addressLen = 108;
             } else {

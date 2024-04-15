@@ -172,7 +172,8 @@ public class LineBasedFrameDecoder extends ByteToMessageDecoder {
      */
     private int findEndOfLine(final ByteBuf buffer) {
         int totalLength = buffer.readableBytes();
-        int i = buffer.forEachByte(buffer.readerIndex() + offset, totalLength - offset, ByteProcessor.FIND_LF);
+        int i = buffer.indexOf(buffer.readerIndex() + offset,
+                               buffer.readerIndex() + totalLength, (byte) '\n');
         if (i >= 0) {
             offset = 0;
             if (i > 0 && buffer.getByte(i - 1) == '\r') {
