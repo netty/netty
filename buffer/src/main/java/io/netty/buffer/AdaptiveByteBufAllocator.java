@@ -21,6 +21,9 @@ import io.netty.util.internal.UnstableApi;
 /**
  * An auto-tuning pooling {@link ByteBufAllocator}, that follows an anti-generational hypothesis.
  * <p>
+ * <strong>Note:</strong> this allocator is <strong>experimental</strong>. It is recommended to roll out usage slowly,
+ * and to carefully monitor application performance in the process.
+ * <p>
  * See the {@link AdaptivePoolingAllocator} class documentation for implementation details.
  */
 @UnstableApi
