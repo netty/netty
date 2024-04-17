@@ -19,6 +19,7 @@ package io.netty5.channel;
 import io.netty5.util.internal.MacAddressUtil;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
+import org.jetbrains.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +49,13 @@ public final class DefaultChannelId implements ChannelId {
      * Returns a new {@link DefaultChannelId} instance.
      */
     public static DefaultChannelId newInstance() {
-        return new DefaultChannelId();
+        return new DefaultChannelId(
+                MACHINE_ID,
+                PROCESS_ID,
+                nextSequence.getAndIncrement(),
+                Long.reverse(System.nanoTime()) ^ System.currentTimeMillis(),
+                ThreadLocalRandom.current().nextInt()
+        );
     }
 
     static {
@@ -126,12 +133,15 @@ public final class DefaultChannelId implements ChannelId {
 
     private transient String longValue;
 
-    private DefaultChannelId() {
-        machineId = MACHINE_ID;
-        processId = PROCESS_ID;
-        sequenceId = nextSequence.getAndIncrement();
-        mixedTimeStampId = Long.reverse(System.nanoTime()) ^ System.currentTimeMillis();
-        randomId = ThreadLocalRandom.current().nextInt();
+    // Package-private for testing
+    @VisibleForTesting
+    DefaultChannelId(final byte[] machineId, final int processId, final int sequenceId,
+                             final long mixedTimeStampId, final int randomId) {
+        this.machineId = machineId;
+        this.processId = processId;
+        this.sequenceId = sequenceId;
+        this.mixedTimeStampId = mixedTimeStampId;
+        this.randomId = randomId;
         int hash = Arrays.hashCode(machineId);
         hash = hash * 31 + processId;
         hash = hash * 31 + sequenceId;
@@ -165,16 +175,17 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     private String newLongValue() {
+        final byte[] machineId = this.machineId;
+        final int machineIdLen = machineId.length;
         final StringBuilder buf = new StringBuilder(
                 (
-                        Long.BYTES + // max machienId length
-                        Integer.BYTES + // prcessId length
+                        machineIdLen + // machineId length
+                        Integer.BYTES + // processId length
                         Integer.BYTES +  // sequenceId length
                         Long.BYTES +  // mixedTimeStampId length
                         Integer.BYTES  // randomId length
                 ) * 2 + 4);
-        final byte[] machineId = this.machineId;
-        StringUtil.toHexStringPadded(buf, machineId, 0, machineId.length);
+        StringUtil.toHexStringPadded(buf, machineId, 0, machineIdLen);
         buf.append('-');
         intToHexStringPadded(buf, processId);
         buf.append('-');
