@@ -75,4 +75,34 @@ public class DefaultChannelIdTest {
         assertThat(a).isNotSameAs(b);
         assertThat(a.asLongText()).isEqualTo(b.asLongText());
     }
+
+    @Test
+    public void testDeserialization() {
+        // DefaultChannelId with 8 byte machineId
+        final DefaultChannelId c8 = new DefaultChannelId(
+                new byte[] {
+                        (byte) 0x01, (byte) 0x23, (byte) 0x45, (byte) 0x67,
+                        (byte) 0x89, (byte) 0xab, (byte) 0xcd, (byte) 0xef
+                },
+                0x000052af,
+                0x00000000,
+                0x06504f638eb4c386L,
+                0xd964df5e);
+
+        // DefaultChannelId with 6 byte machineId
+        final DefaultChannelId c6 =
+                new DefaultChannelId(
+                        new byte[] {
+                                (byte) 0x01, (byte) 0x23, (byte) 0x45, (byte) 0x67,
+                                (byte) 0x89, (byte) 0xab,
+                        },
+                        0xce005283,
+                        0x00000001,
+                        0x069e6dce9eb4516fL,
+                        0x721757b7);
+
+        assertThat(c8.asLongText()).isEqualTo("0123456789abcdef-000052af-00000000-06504f638eb4c386-d964df5e");
+        assertThat(c6.asLongText()).isEqualTo("0123456789ab-ce005283-00000001-069e6dce9eb4516f-721757b7");
+    }
+
 }
