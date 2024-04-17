@@ -388,18 +388,19 @@ final class AdaptivePoolingAllocator {
                 result = curr.readInitInto(buf, size, maxCapacity);
             } else if (curr.readableBytes() == size) {
                 result = curr.readInitInto(buf, size, maxCapacity);
+                curr.release();
                 current = null;
             } else {
-                ChunkByteBuf buffer = newChunkAllocation(size);
-                result = buffer.readInitInto(buf, size, maxCapacity);
+                ChunkByteBuf newChunk = newChunkAllocation(size);
+                result = newChunk.readInitInto(buf, size, maxCapacity);
                 if (curr.readableBytes() < RETIRE_CAPACITY) {
                     curr.release();
-                    current = buffer;
-                } else if (!(boolean) NEXT_IN_LINE.compareAndSet(this, null, buffer)) {
-                    if (!parent.offerToQueue(buffer)) {
+                    current = newChunk;
+                } else if (!(boolean) NEXT_IN_LINE.compareAndSet(this, null, newChunk)) {
+                    if (!parent.offerToQueue(newChunk)) {
                         // Next-in-line is occupied AND the central queue is full.
                         // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
-                        buffer.release();
+                        newChunk.release();
                     }
                 }
             }
