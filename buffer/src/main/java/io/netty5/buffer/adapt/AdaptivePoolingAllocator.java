@@ -101,6 +101,10 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
     private volatile Magazine[] magazines;
     private volatile boolean closed;
 
+    public AdaptivePoolingAllocator() {
+        this(PlatformDependent.directBufferPreferred());
+    }
+
     public AdaptivePoolingAllocator(boolean direct) {
         this(MemoryManager.instance(), direct);
     }
