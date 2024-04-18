@@ -32,6 +32,7 @@ import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.spi.SelectorProvider;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -69,7 +70,7 @@ public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTe
         ServerSocketChannel jdkChannel = NioDomainServerSocketChannel.newChannel(SelectorProvider.provider());
         NioDomainServerSocketChannel serverSocketChannel = new NioDomainServerSocketChannel(jdkChannel);
         EventLoopGroup group = new NioEventLoopGroup(1);
-        File file = File.createTempFile("netty-uds-", ".uds");
+        File file = new File(System.getProperty("java.io.tmpdir") + UUID.randomUUID());
         try {
             group.register(serverSocketChannel).syncUninterruptibly();
             serverSocketChannel.bind(newUnixDomainSocketAddress(file.getAbsolutePath()))
@@ -86,7 +87,7 @@ public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTe
     public void testIsActiveFalseAfterClose() throws Exception {
         NioDomainServerSocketChannel serverSocketChannel = new NioDomainServerSocketChannel();
         EventLoopGroup group = new NioEventLoopGroup(1);
-        File file = File.createTempFile("netty-uds-", ".uds");
+        File file = new File(System.getProperty("java.io.tmpdir") + UUID.randomUUID());
         try {
             group.register(serverSocketChannel).syncUninterruptibly();
             Channel channel = serverSocketChannel.bind(

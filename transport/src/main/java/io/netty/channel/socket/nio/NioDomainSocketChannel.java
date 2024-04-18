@@ -504,11 +504,11 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
 
         @Override
         public <T> boolean setOption(ChannelOption<T> option, T value) {
-            validate(option, value);
-
             if (option == SO_RCVBUF) {
+                validate(option, value);
                 setReceiveBufferSize((Integer) value);
             } else if (option == SO_SNDBUF) {
+                validate(option, value);
                 setSendBufferSize((Integer) value);
             } else if (option instanceof NioChannelOption) {
                 return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);

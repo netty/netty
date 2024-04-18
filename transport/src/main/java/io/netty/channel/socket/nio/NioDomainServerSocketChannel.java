@@ -227,12 +227,11 @@ public final class NioDomainServerSocketChannel extends AbstractNioMessageChanne
 
         @Override
         public <T> boolean setOption(ChannelOption<T> option, T value) {
-            validate(option, value);
 
             if (option == SO_BACKLOG) {
+                validate(option, value);
                 setBacklog((Integer) value);
             } else if (option instanceof NioChannelOption) {
-                //JDK16 defaultUnixDomainOptions only include StandardSocketOptions.SO_RCVBUF
                 return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);
             } else {
                 return super.setOption(option, value);
