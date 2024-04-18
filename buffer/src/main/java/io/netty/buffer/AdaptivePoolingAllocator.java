@@ -101,7 +101,6 @@ final class AdaptivePoolingAllocator {
     private final Queue<ChunkByteBuf> centralQueue;
     private final StampedLock magazineExpandLock;
     private volatile Magazine[] magazines;
-    private volatile boolean closed;
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator) {
         this.chunkAllocator = chunkAllocator;
@@ -142,10 +141,7 @@ final class AdaptivePoolingAllocator {
         return new LinkedBlockingQueue<ChunkByteBuf>(CENTRAL_QUEUE_CAPACITY);
     }
 
-    public ByteBuf allocate(int size, int maxCapacity) {
-        if (closed) {
-            throw new IllegalStateException("This allocator has been closed.");
-        }
+    ByteBuf allocate(int size, int maxCapacity) {
         if (size <= MAX_CHUNK_SIZE) {
             Thread currentThread = Thread.currentThread();
             boolean willCleanupFastThreadLocals = FastThreadLocalThread.willCleanupFastThreadLocals(currentThread);
@@ -178,7 +174,7 @@ final class AdaptivePoolingAllocator {
         return chunkAllocator.allocate(size, maxCapacity);
     }
 
-    public long usedMemory() {
+    long usedMemory() {
         long sum = 0;
         for (ByteBuf byteBuf : centralQueue) {
             sum += byteBuf.capacity();
@@ -212,39 +208,8 @@ final class AdaptivePoolingAllocator {
         return true;
     }
 
-    public void close() {
-        closed = true;
-        long magsExpandWriteLock = magazineExpandLock.writeLock();
-        try {
-            for (Magazine mag : magazines) {
-                long writeLock = mag.writeLock();
-                try {
-                    mag.close();
-                } finally {
-                    mag.unlockWrite(writeLock);
-                }
-            }
-        } finally {
-            magazineExpandLock.unlockWrite(magsExpandWriteLock);
-        }
-        drainCloseCentralQueue();
-    }
-
-    private void drainCloseCentralQueue() {
-        ByteBuf curr;
-        while ((curr = centralQueue.poll()) != null) {
-            curr.release();
-        }
-    }
-
     private boolean offerToQueue(ChunkByteBuf buffer) {
-        if (!centralQueue.offer(buffer)) {
-            return false;
-        }
-        if (closed) {
-            drainCloseCentralQueue();
-        }
-        return true;
+        return centralQueue.offer(buffer);
     }
 
     @SuppressJava6Requirement(reason = "Guarded by version check")
@@ -449,7 +414,7 @@ final class AdaptivePoolingAllocator {
             AdaptivePoolingAllocator parent = mag.parent;
             int chunkSize = mag.preferredChunkSize();
             int memSize = delegate.capacity();
-            if (parent.closed || memSize < chunkSize || memSize > chunkSize + (chunkSize >> 1)) {
+            if (memSize < chunkSize || memSize > chunkSize + (chunkSize >> 1)) {
                 // Drop the chunk if the parent allocator is closed, or if the chunk is smaller than the
                 // preferred chunk size, or over 50% larger than the preferred chunk size.
                 mag.usedMemory.getAndAdd(-capacity());
@@ -476,92 +441,92 @@ final class AdaptivePoolingAllocator {
 
         @Override
         protected byte _getByte(int index) {
-            return delegate.getByte(index);
+            return delegate._getByte(index);
         }
 
         @Override
         protected short _getShort(int index) {
-            return delegate.getShort(index);
+            return delegate._getShort(index);
         }
 
         @Override
         protected short _getShortLE(int index) {
-            return delegate.getShortLE(index);
+            return delegate._getShortLE(index);
         }
 
         @Override
         protected int _getUnsignedMedium(int index) {
-            return delegate.getUnsignedMedium(index);
+            return delegate._getUnsignedMedium(index);
         }
 
         @Override
         protected int _getUnsignedMediumLE(int index) {
-            return delegate.getUnsignedMediumLE(index);
+            return delegate._getUnsignedMediumLE(index);
         }
 
         @Override
         protected int _getInt(int index) {
-            return delegate.getInt(index);
+            return delegate._getInt(index);
         }
 
         @Override
         protected int _getIntLE(int index) {
-            return delegate.getIntLE(index);
+            return delegate._getIntLE(index);
         }
 
         @Override
         protected long _getLong(int index) {
-            return delegate.getLong(index);
+            return delegate._getLong(index);
         }
 
         @Override
         protected long _getLongLE(int index) {
-            return delegate.getLongLE(index);
+            return delegate._getLongLE(index);
         }
 
         @Override
         protected void _setByte(int index, int value) {
-            delegate.setByte(index, value);
+            delegate._setByte(index, value);
         }
 
         @Override
         protected void _setShort(int index, int value) {
-            delegate.setShort(index, value);
+            delegate._setShort(index, value);
         }
 
         @Override
         protected void _setShortLE(int index, int value) {
-            delegate.setShortLE(index, value);
+            delegate._setShortLE(index, value);
         }
 
         @Override
         protected void _setMedium(int index, int value) {
-            delegate.setMedium(index, value);
+            delegate._setMedium(index, value);
         }
 
         @Override
         protected void _setMediumLE(int index, int value) {
-            delegate.setMediumLE(index, value);
+            delegate._setMediumLE(index, value);
         }
 
         @Override
         protected void _setInt(int index, int value) {
-            delegate.setInt(index, value);
+            delegate._setInt(index, value);
         }
 
         @Override
         protected void _setIntLE(int index, int value) {
-            delegate.setIntLE(index, value);
+            delegate._setIntLE(index, value);
         }
 
         @Override
         protected void _setLong(int index, long value) {
-            delegate.setLong(index, value);
+            delegate._setLong(index, value);
         }
 
         @Override
         protected void _setLongLE(int index, long value) {
-            delegate.setLongLE(index, value);
+            delegate._setLongLE(index, value);
         }
 
         @Override
