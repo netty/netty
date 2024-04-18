@@ -18,54 +18,80 @@ package io.netty.channel.socket.nio;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
+import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.SocketAddress;
 import java.net.SocketOption;
-import java.net.StandardProtocolFamily;
 import java.net.StandardSocketOptions;
-import java.net.UnixDomainSocketAddress;
 import java.nio.channels.NetworkChannel;
 import java.nio.channels.ServerSocketChannel;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.channels.spi.SelectorProvider;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@EnabledForJreRange(min = JRE.JAVA_16)
 public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTest<NioDomainServerSocketChannel> {
+    private static final Method OF_METHOD;
 
-    static final Path TEST_DOMAIN_SOCKET_PATH = Path.of("/tmp/graalos/udx.socket");
-    @BeforeEach
-    public void setupBeforeEach() throws IOException {
-        Files.deleteIfExists(TEST_DOMAIN_SOCKET_PATH);
+    static {
+        Method method;
+        try {
+            Class<?> clazz = Class.forName("java.net.UnixDomainSocketAddress");
+            method = clazz.getMethod("of");
+        } catch (Throwable error) {
+            method = null;
+        }
+        OF_METHOD = method;
     }
 
-    @Test
-    public void testCloseOnError() throws Exception {
-        ServerSocketChannel jdkChannel = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
-        NioDomainServerSocketChannel serverSocketChannel = new NioDomainServerSocketChannel(jdkChannel);
-        EventLoopGroup group = new NioEventLoopGroup(1);
+    public static SocketAddress newUnixDomainSocketAddress(String path) {
+        if (OF_METHOD == null) {
+            throw new IllegalStateException();
+        }
         try {
-            group.register(serverSocketChannel).syncUninterruptibly();
-            serverSocketChannel.bind(UnixDomainSocketAddress.of(TEST_DOMAIN_SOCKET_PATH)).syncUninterruptibly();
-            assertFalse(serverSocketChannel.closeOnReadError(new IOException()));
-            serverSocketChannel.close().syncUninterruptibly();
-        } finally {
-            group.shutdownGracefully();
+            return (SocketAddress) OF_METHOD.invoke(null, path);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException(e);
+        } catch (InvocationTargetException e) {
+            throw new IllegalStateException(e);
         }
     }
 
     @Test
-    public void testIsActiveFalseAfterClose()  {
+    public void testCloseOnError() throws Exception {
+        ServerSocketChannel jdkChannel = NioDomainServerSocketChannel.newChannel(SelectorProvider.provider());
+        NioDomainServerSocketChannel serverSocketChannel = new NioDomainServerSocketChannel(jdkChannel);
+        EventLoopGroup group = new NioEventLoopGroup(1);
+        File file = File.createTempFile("netty-uds-", ".uds");
+        try {
+            group.register(serverSocketChannel).syncUninterruptibly();
+            serverSocketChannel.bind(newUnixDomainSocketAddress(file.getAbsolutePath()))
+                    .syncUninterruptibly();
+            assertFalse(serverSocketChannel.closeOnReadError(new IOException()));
+            serverSocketChannel.close().syncUninterruptibly();
+        } finally {
+            group.shutdownGracefully();
+            file.delete();
+        }
+    }
+
+    @Test
+    public void testIsActiveFalseAfterClose() throws Exception {
         NioDomainServerSocketChannel serverSocketChannel = new NioDomainServerSocketChannel();
         EventLoopGroup group = new NioEventLoopGroup(1);
+        File file = File.createTempFile("netty-uds-", ".uds");
         try {
             group.register(serverSocketChannel).syncUninterruptibly();
             Channel channel = serverSocketChannel.bind(
-                     UnixDomainSocketAddress.of(Path.of("/tmp/graalos/udx.socket"))).syncUninterruptibly().channel();
+                    newUnixDomainSocketAddress(file.getAbsolutePath()))
+                    .syncUninterruptibly().channel();
             assertTrue(channel.isActive());
             assertTrue(channel.isOpen());
             channel.close().syncUninterruptibly();
@@ -73,6 +99,7 @@ public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTe
             assertFalse(channel.isActive());
         } finally {
             group.shutdownGracefully();
+            file.delete();
         }
     }
 

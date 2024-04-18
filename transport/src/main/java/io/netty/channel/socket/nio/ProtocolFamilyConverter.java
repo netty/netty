@@ -16,7 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.channel.socket.UnixDomainProtocolFamily;
 import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.net.ProtocolFamily;
@@ -41,15 +40,6 @@ final class ProtocolFamilyConverter {
             return StandardProtocolFamily.INET;
         case IPv6:
             return StandardProtocolFamily.INET6;
-        default:
-            throw new IllegalArgumentException();
-        }
-    }
-
-    public static ProtocolFamily convert(UnixDomainProtocolFamily family) {
-        switch (family) {
-        case Unix:
-            return StandardProtocolFamily.valueOf("UNIX");
         default:
             throw new IllegalArgumentException();
         }

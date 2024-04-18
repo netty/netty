@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,6 +16,7 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
@@ -27,15 +28,12 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
+import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.AbstractNioByteChannel;
-import io.netty.channel.socket.DefaultDomainSocketChannelConfig;
-import io.netty.channel.socket.DefaultSocketChannelConfig;
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.DuplexChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
-import io.netty.channel.socket.UnixDomainProtocolFamily;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.SuppressJava6Requirement;
@@ -45,26 +43,28 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.net.SocketAddress;
-import java.net.StandardProtocolFamily;
-import java.net.UnixDomainSocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 
 /**
- * {@link io.netty.channel.socket.SocketChannel} which uses NIO selector based implementation.
+ * {@link io.netty.channel.socket.DuplexChannel} which uses NIO selector based implementation to support
+ * UNIX Domain Sockets. This is only supported when using Java 16+.
  */
-public class NioDomainSocketChannel extends AbstractNioByteChannel implements io.netty.channel.socket.DuplexChannel {
+public final class NioDomainSocketChannel extends AbstractNioByteChannel
+        implements io.netty.channel.socket.DuplexChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioDomainSocketChannel.class);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
@@ -75,11 +75,14 @@ public class NioDomainSocketChannel extends AbstractNioByteChannel implements io
     private final AtomicBoolean isInputShutdown;
     private final AtomicBoolean isOutputShutdown;
 
-    private static SocketChannel newChannel(SelectorProvider provider, UnixDomainProtocolFamily family) {
+    private static SocketChannel newChannel(SelectorProvider provider) {
         try {
-//            SocketChannel.open(StandardProtocolFamily.UNIX);
-            SocketChannel channel = SelectorProviderUtil.newChannel(OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
-            return channel == null ? provider.openSocketChannel(StandardProtocolFamily.UNIX) : channel;
+            SocketChannel channel = SelectorProviderUtil.newDomainSocketChannel(
+                    OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider);
+            if (channel == null) {
+                throw new ChannelException("Failed to open a socket.");
+            }
+            return channel;
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
@@ -96,14 +99,7 @@ public class NioDomainSocketChannel extends AbstractNioByteChannel implements io
      * Create a new instance using the given {@link SelectorProvider}.
      */
     public NioDomainSocketChannel(SelectorProvider provider) {
-        this(provider, null);
-    }
-
-    /**
-     * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
-     */
-    public NioDomainSocketChannel(SelectorProvider provider, UnixDomainProtocolFamily family) {
-        this(newChannel(provider, family));
+        this(newChannel(provider));
     }
 
     /**
@@ -162,26 +158,12 @@ public class NioDomainSocketChannel extends AbstractNioByteChannel implements io
         return isInputShutdown() && isOutputShutdown() || !isActive();
     }
 
-    @Override
-    public UnixDomainSocketAddress localAddress() {
-        return (UnixDomainSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public UnixDomainSocketAddress remoteAddress() {
-        return (UnixDomainSocketAddress) super.remoteAddress();
-    }
-
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @UnstableApi
     @Override
-    protected final void doShutdownOutput() throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            javaChannel().shutdownOutput();
-            isOutputShutdown.set(true);
-        } else {
-            throw new UnsupportedOperationException("jdk <=7 socket shutdown not supported");
-        }
+    protected void doShutdownOutput() throws Exception {
+        javaChannel().shutdownOutput();
+        isOutputShutdown.set(true);
     }
 
     @Override
@@ -294,51 +276,41 @@ public class NioDomainSocketChannel extends AbstractNioByteChannel implements io
 
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private void shutdownInput0() throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            javaChannel().shutdownInput();
-            isInputShutdown.set(true);
-        } else {
-            throw new UnsupportedOperationException("jdk <=7 socket shutdown not supported");
-        }
+        javaChannel().shutdownInput();
+        isInputShutdown.set(true);
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     protected SocketAddress localAddress0() {
         try {
             return javaChannel().getLocalAddress();
-        } catch (Exception e) {
-            logger.warn("javaChannel().getLocalAddress error {}", e);
+        } catch (Exception ignore) {
+            // ignore
         }
         return null;
     }
 
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     protected SocketAddress remoteAddress0() {
         try {
             return javaChannel().getRemoteAddress();
-        } catch (Exception e) {
-            logger.warn("javaChannel().getRemoteAddress error {}", e);
+        } catch (Exception ignore) {
+            // ignore
         }
         return null;
     }
 
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        doBind0(localAddress);
-    }
-
-    private void doBind0(SocketAddress localAddress) throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            SocketUtils.bind(javaChannel(), localAddress);
-        } else {
-            throw new UnsupportedOperationException("jdk <=7 socket shutdown not supported");
-        }
+        SocketUtils.bind(javaChannel(), localAddress);
     }
 
     @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (localAddress != null) {
-            doBind0(localAddress);
+            doBind(localAddress);
         }
 
         boolean success = false;
@@ -482,44 +454,178 @@ public class NioDomainSocketChannel extends AbstractNioByteChannel implements io
         }
     }
 
-    private final class NioDomainSocketChannelConfig extends DefaultDomainSocketChannelConfig {
+    private final class NioDomainSocketChannelConfig extends DefaultChannelConfig
+            implements DuplexChannelConfig {
+        private volatile boolean allowHalfClosure;
         private volatile int maxBytesPerGatheringWrite = Integer.MAX_VALUE;
         private final SocketChannel javaChannel;
         private NioDomainSocketChannelConfig(NioDomainSocketChannel channel, SocketChannel javaChannel) {
-            super(channel, javaChannel);
+            super(channel);
             this.javaChannel = javaChannel;
             calculateMaxBytesPerGatheringWrite();
         }
 
         @Override
-        protected void autoReadCleared() {
-            clearReadPending();
+        public boolean isAllowHalfClosure() {
+            return allowHalfClosure;
+        }
+
+        @Override
+        public NioDomainSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+            this.allowHalfClosure = allowHalfClosure;
+            return this;
+        }
+        @Override
+        public Map<ChannelOption<?>, Object> getOptions() {
+            List<ChannelOption<?>> options = new ArrayList<ChannelOption<?>>();
+            options.add(SO_RCVBUF);
+            options.add(SO_SNDBUF);
+            for (ChannelOption<?> opt : NioChannelOption.getOptions(jdkChannel())) {
+                options.add(opt);
+            }
+            return super.getOptions(super.getOptions(), options.toArray(new ChannelOption[0]));
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> T getOption(ChannelOption<T> option) {
+            if (option == SO_RCVBUF) {
+                return (T) Integer.valueOf(getReceiveBufferSize());
+            }
+            if (option == SO_SNDBUF) {
+                return (T) Integer.valueOf(getSendBufferSize());
+            }
+            if (option instanceof NioChannelOption) {
+                return NioChannelOption.getOption(jdkChannel(), (NioChannelOption<T>) option);
+            }
+
+            return super.getOption(option);
         }
 
         @Override
         public <T> boolean setOption(ChannelOption<T> option, T value) {
-            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
+            validate(option, value);
+
+            if (option == SO_RCVBUF) {
+                setReceiveBufferSize((Integer) value);
+            } else if (option == SO_SNDBUF) {
+                setSendBufferSize((Integer) value);
+            } else if (option instanceof NioChannelOption) {
                 return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);
+            } else {
+                return super.setOption(option, value);
             }
-            throw new UnsupportedOperationException("jdk < 7 or non-NioChannelOption are not supported");
+
+            return true;
+        }
+
+        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+        private int getReceiveBufferSize() {
+            try {
+                return javaChannel.getOption(StandardSocketOptions.SO_RCVBUF);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+        private NioDomainSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+            try {
+                javaChannel.<Integer>setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+            return this;
+        }
+
+        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+        private int getSendBufferSize() {
+            try {
+                return javaChannel.getOption(StandardSocketOptions.SO_SNDBUF);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+        private NioDomainSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+            try {
+                javaChannel.<Integer>setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+            return this;
         }
 
         @Override
-        public <T> T getOption(ChannelOption<T> option) {
-            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
-                return NioChannelOption.getOption(jdkChannel(), (NioChannelOption<T>) option);
-            }
-            logger.warn("jdk < 7 or non-NioChannelOption are not supported");
-            return null;
+        public NioDomainSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+            super.setConnectTimeoutMillis(connectTimeoutMillis);
+            return this;
         }
 
         @Override
-        public Map<ChannelOption<?>, Object> getOptions() {
-            if (PlatformDependent.javaVersion() >= 7) {
-                return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
-            }
-            logger.warn("jdk < 7 or non-NioChannelOption are not supported");
-            return new HashMap();
+        @Deprecated
+        public NioDomainSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+            super.setMaxMessagesPerRead(maxMessagesPerRead);
+            return this;
+        }
+
+        @Override
+        public NioDomainSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
+            super.setWriteSpinCount(writeSpinCount);
+            return this;
+        }
+
+        @Override
+        public NioDomainSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
+            super.setAllocator(allocator);
+            return this;
+        }
+
+        @Override
+        public NioDomainSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+            super.setRecvByteBufAllocator(allocator);
+            return this;
+        }
+
+        @Override
+        public NioDomainSocketChannelConfig setAutoRead(boolean autoRead) {
+            super.setAutoRead(autoRead);
+            return this;
+        }
+
+        @Override
+        public NioDomainSocketChannelConfig setAutoClose(boolean autoClose) {
+            super.setAutoClose(autoClose);
+            return this;
+        }
+
+        @Override
+        public NioDomainSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+            super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
+            return this;
+        }
+
+        @Override
+        public NioDomainSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+            super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
+            return this;
+        }
+
+        @Override
+        public NioDomainSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
+            super.setWriteBufferWaterMark(writeBufferWaterMark);
+            return this;
+        }
+
+        @Override
+        public NioDomainSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+            super.setMessageSizeEstimator(estimator);
+            return this;
+        }
+
+        @Override
+        protected void autoReadCleared() {
+            clearReadPending();
         }
 
         void setMaxBytesPerGatheringWrite(int maxBytesPerGatheringWrite) {

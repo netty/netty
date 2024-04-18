@@ -16,7 +16,6 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.channel.socket.UnixDomainProtocolFamily;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
@@ -25,6 +24,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.StandardProtocolFamily;
 import java.nio.channels.Channel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
@@ -45,8 +45,8 @@ final class SelectorProviderUtil {
     }
 
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
-    static <C extends Channel> C newChannel(Method method, SelectorProvider provider,
-                                                    InternetProtocolFamily family) throws IOException {
+    private static <C extends Channel> C newChannel(Method method, SelectorProvider provider,
+                                            Object family) throws IOException {
         /**
          *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
          *  {@link SelectorProvider#provider()} which is called by each SocketChannel.open() otherwise.
@@ -56,8 +56,7 @@ final class SelectorProviderUtil {
         if (family != null && method != null) {
             try {
                 @SuppressWarnings("unchecked")
-                C channel = (C) method.invoke(
-                        provider, ProtocolFamilyConverter.convert(family));
+                C channel = (C) method.invoke(provider, family);
                 return channel;
             } catch (InvocationTargetException e) {
                 throw new IOException(e);
@@ -70,26 +69,16 @@ final class SelectorProviderUtil {
 
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     static <C extends Channel> C newChannel(Method method, SelectorProvider provider,
-                                            UnixDomainProtocolFamily family) throws IOException {
-        /**
-         *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
-         *  {@link SelectorProvider#provider()} which is called by each SocketChannel.open() otherwise.
-         *
-         *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
-         */
-        if (family != null && method != null) {
-            try {
-                @SuppressWarnings("unchecked")
-                C channel = (C) method.invoke(
-                        provider, io.netty.channel.socket.nio.ProtocolFamilyConverter.convert(family));
-                return channel;
-            } catch (InvocationTargetException e) {
-                throw new IOException(e);
-            } catch (IllegalAccessException e) {
-                throw new IOException(e);
-            }
+                                                    InternetProtocolFamily family) throws IOException {
+        if (family != null) {
+            return newChannel(method, provider, ProtocolFamilyConverter.convert(family));
         }
         return null;
+    }
+
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+    static <C extends Channel> C newDomainSocketChannel(Method method, SelectorProvider provider) throws IOException {
+        return newChannel(method, provider, StandardProtocolFamily.valueOf("UNIX"));
     }
 
     private SelectorProviderUtil() { }
