@@ -15,26 +15,29 @@
  */
 package io.netty.incubator.codec.quic;
 
-import java.io.IOException;
-
 /**
  * Exception produced while processing {@code QUIC}.
  */
-public final class QuicException extends IOException {
+public final class QuicException extends Exception {
 
-    private final QuicError error;
+    private final QuicTransportError error;
 
-    QuicException(QuicError error) {
-        super(error.message());
+    public QuicException(QuicTransportError error) {
+        super(error.name());
+        this.error = error;
+    }
+
+    public QuicException(String message, QuicTransportError error) {
+        super(message);
         this.error = error;
     }
 
     /**
-     * Returns the {@link QuicError} which was the cause of the {@link QuicException}.
+     * Returns the {@link QuicTransportError} which was the cause of the {@link QuicException}.
      *
-     * @return  the {@link QuicError} that caused this {@link QuicException}.
+     * @return  the {@link QuicTransportError} that caused this {@link QuicException}.
      */
-    public QuicError error() {
+    public QuicTransportError error() {
         return error;
     }
 }

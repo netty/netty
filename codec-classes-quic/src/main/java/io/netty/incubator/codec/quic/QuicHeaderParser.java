@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 
 import java.net.InetSocketAddress;
 
+import static io.netty.incubator.codec.quic.Quiche.QUICHE_ERR_DONE;
 import static io.netty.incubator.codec.quic.Quiche.allocateNativeOrder;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
@@ -131,8 +132,8 @@ public final class QuicHeaderParser implements AutoCloseable {
                     scidBuffer.setIndex(0, scidLen),
                     dcidBuffer.setIndex(0, dcidLen),
                     tokenBuffer.setIndex(0, tokenLen));
-        } else {
-            throw Quiche.newException(res);
+        } else if (res != QUICHE_ERR_DONE) {
+            throw Quiche.convertToException(res);
         }
     }
 

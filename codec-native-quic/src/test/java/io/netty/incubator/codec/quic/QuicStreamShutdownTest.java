@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.socket.ChannelOutputShutdownException;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -46,8 +47,7 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                         @Override
                         public void operationComplete(ChannelFuture channelFuture) {
                             Throwable cause = channelFuture.cause();
-                            if (cause instanceof QuicException &&
-                                    ((QuicException) cause).error() == QuicError.STREAM_STOPPED) {
+                            if (cause instanceof ChannelOutputShutdownException) {
                                 latch.countDown();
                             }
                         }

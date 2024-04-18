@@ -160,7 +160,7 @@ public interface QuicChannel extends Channel {
 
     /**
      * Returns the number of streams that can be created before stream creation will fail
-     * with {@link QuicError#STREAM_LIMIT} error.
+     * with {@link QuicTransportError#STREAM_LIMIT_ERROR} error.
      *
      * @param type the stream type.
      * @return the number of streams left.

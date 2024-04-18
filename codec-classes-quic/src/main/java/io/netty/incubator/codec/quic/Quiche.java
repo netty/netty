@@ -17,7 +17,7 @@ package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.internal.ClassInitializerUtil;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
@@ -33,9 +33,10 @@ import java.nio.ByteOrder;
 final class Quiche {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Quiche.class);
     private static final boolean DEBUG_LOGGING_ENABLED = logger.isDebugEnabled();
+    private static final IntObjectHashMap<QuicTransportErrorHolder> ERROR_MAPPINGS = new IntObjectHashMap<>();
 
     static {
-        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possiblity of a
+        // Preload all classes that will be used in the OnLoad(...) function of JNI to eliminate the possibility of a
         // class-loader deadlock. This is a workaround for https://github.com/netty/netty/issues/11209.
 
         // This needs to match all the classes that are loaded via NETTY_JNI_UTIL_LOAD_CLASS or looked up via
@@ -787,47 +788,8 @@ final class Quiche {
         return PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? buffer : buffer.order(ByteOrder.LITTLE_ENDIAN);
     }
 
-    static Exception newException(int err) {
-        final QuicError error = QuicError.valueOf(err);
-        final QuicException reason = new QuicException(error);
-        if (err == QUICHE_ERR_TLS_FAIL) {
-            String lastSslError = BoringSSL.ERR_last_error();
-            final String message;
-            if (lastSslError != null) {
-                message = error.message() + ": " + lastSslError;
-            } else {
-                message = error.message();
-            }
-            final SSLHandshakeException sslExc = new SSLHandshakeException(message);
-            sslExc.initCause(reason);
-            return sslExc;
-        }
-        if (err == QUICHE_ERR_CRYPTO_FAIL) {
-            return new SSLException(error.message(), reason);
-        }
-        return reason;
-    }
-
     static boolean shouldClose(int res)  {
         return res == Quiche.QUICHE_ERR_CRYPTO_FAIL || res == Quiche.QUICHE_ERR_TLS_FAIL;
-    }
-
-    static boolean throwIfError(int res) throws Exception {
-        if (res < 0) {
-             if (res == Quiche.QUICHE_ERR_DONE) {
-                 return true;
-             }
-            throw Quiche.newException(res);
-        }
-        return false;
-    }
-
-    static void notifyPromise(int res, ChannelPromise promise) {
-        if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
-            promise.setFailure(Quiche.newException(res));
-        } else {
-            promise.setSuccess();
-        }
     }
 
     /**
@@ -875,6 +837,71 @@ final class Quiche {
                 return memory.getLong(offset);
             default:
                 throw new IllegalStateException();
+        }
+    }
+
+    // See https://github.com/cloudflare/quiche/commit/1d00ee1bb2256dfd99ba0cb2dfac72fe1e59407f
+    static {
+        ERROR_MAPPINGS.put(QUICHE_ERR_DONE,
+                new QuicTransportErrorHolder(QuicTransportError.NO_ERROR, "QUICHE_ERR_DONE"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_FRAME,
+                new QuicTransportErrorHolder(QuicTransportError.FRAME_ENCODING_ERROR, "QUICHE_ERR_INVALID_FRAME"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_STREAM_STATE,
+                new QuicTransportErrorHolder(QuicTransportError.STREAM_STATE_ERROR, "QUICHE_ERR_INVALID_STREAM_STATE"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_TRANSPORT_PARAM,
+                new QuicTransportErrorHolder(QuicTransportError.TRANSPORT_PARAMETER_ERROR, "QUICHE_ERR_INVALID_TRANSPORT_PARAM"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_FLOW_CONTROL,
+                new QuicTransportErrorHolder(QuicTransportError.FLOW_CONTROL_ERROR, "QUICHE_ERR_FLOW_CONTROL"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_STREAM_LIMIT,
+                new QuicTransportErrorHolder(QuicTransportError.STREAM_LIMIT_ERROR, "QUICHE_ERR_STREAM_LIMIT"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_ID_LIMIT,
+                new QuicTransportErrorHolder(QuicTransportError.CONNECTION_ID_LIMIT_ERROR, "QUICHE_ERR_ID_LIMIT"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_FINAL_SIZE,
+                new QuicTransportErrorHolder(QuicTransportError.FINAL_SIZE_ERROR, "QUICHE_ERR_FINAL_SIZE"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED,
+                new QuicTransportErrorHolder(QuicTransportError.CRYPTO_BUFFER_EXCEEDED, "QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_KEY_UPDATE,
+                new QuicTransportErrorHolder(QuicTransportError.KEY_UPDATE_ERROR, "QUICHE_ERR_KEY_UPDATE"));
+
+        // Should the code be something different ?
+        ERROR_MAPPINGS.put(QUICHE_ERR_TLS_FAIL,
+                new QuicTransportErrorHolder(QuicTransportError.valueOf(0x0100), "QUICHE_ERR_TLS_FAIL"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_CRYPTO_FAIL,
+                new QuicTransportErrorHolder(QuicTransportError.valueOf(0x0100), "QUICHE_ERR_CRYPTO_FAIL"));
+
+        ERROR_MAPPINGS.put(QUICHE_ERR_BUFFER_TOO_SHORT,
+                new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_BUFFER_TOO_SHORT"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_UNKNOWN_VERSION, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_UNKNOWN_VERSION"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_PACKET, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_INVALID_PACKET"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_STATE, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_INVALID_STATE"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_CONGESTION_CONTROL, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_CONGESTION_CONTROL"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_STREAM_STOPPED, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_STREAM_STOPPED"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_OUT_OF_IDENTIFIERS, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_OUT_OF_IDENTIFIERS"));
+    }
+
+    static Exception convertToException(int result) {
+        QuicTransportErrorHolder holder = ERROR_MAPPINGS.get(result);
+        assert holder != null;
+        Exception exception = new QuicException(holder.error + ": " + holder.quicheErrorName, holder.error);
+        if (result == QUICHE_ERR_TLS_FAIL) {
+            String lastSslError = BoringSSL.ERR_last_error();
+            final SSLHandshakeException sslExc = new SSLHandshakeException(lastSslError);
+            sslExc.initCause(exception);
+            return sslExc;
+        }
+        if (result == QUICHE_ERR_CRYPTO_FAIL) {
+            return new SSLException(exception);
+        }
+        return exception;
+    }
+
+    private static final class QuicTransportErrorHolder {
+        private final QuicTransportError error;
+        private final String quicheErrorName;
+
+        QuicTransportErrorHolder(QuicTransportError error, String quicheErrorName) {
+            this.error = error;
+            this.quicheErrorName = quicheErrorName;
         }
     }
 

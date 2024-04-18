@@ -53,6 +53,7 @@ import java.io.File;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
@@ -597,8 +598,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
         failPendingConnectPromise();
         try {
-            Quiche.throwIfError(Quiche.quiche_conn_close(conn.address(), app, err,
-                    Quiche.readerMemoryAddress(reason), reason.readableBytes()));
+            int res = Quiche.quiche_conn_close(conn.address(), app, err,
+                    Quiche.readerMemoryAddress(reason), reason.readableBytes());
+            if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
+                throw Quiche.convertToException(res);
+            }
             // As we called quiche_conn_close(...) we need to ensure we will call quiche_conn_send(...) either
             // now or we will do so once we see the channelReadComplete event.
             //
@@ -696,11 +700,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 } else {
                     if (res == Quiche.QUICHE_ERR_BUFFER_TOO_SHORT) {
                         retry = false;
-                        channelOutboundBuffer.remove(Quiche.newException(res));
+                        channelOutboundBuffer.remove(new BufferUnderflowException());
                     } else if (res == Quiche.QUICHE_ERR_INVALID_STATE) {
-                        throw new UnsupportedOperationException("Remote peer does not support Datagram extension",
-                                Quiche.newException(res));
-                    } else if (Quiche.throwIfError(res)) {
+                        throw new UnsupportedOperationException("Remote peer does not support Datagram extension");
+                    } else if (res == Quiche.QUICHE_ERR_DONE) {
                         if (retry) {
                             // We already retried and it didn't work. Let's drop the datagrams on the floor.
                             for (;;) {
@@ -719,6 +722,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         }
                         // Let's try again to write the message.
                         retry = true;
+                    } else {
+                        throw Quiche.convertToException(res);
                     }
                 }
             }
@@ -810,8 +815,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     void streamPriority(long streamId, byte priority, boolean incremental) throws Exception {
-       Quiche.throwIfError(Quiche.quiche_conn_stream_priority(connectionAddressChecked(connection), streamId,
-               priority, incremental));
+       int res = Quiche.quiche_conn_stream_priority(connectionAddressChecked(connection), streamId,
+               priority, incremental);
+       if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
+           throw Quiche.convertToException(res);
+       }
     }
 
     void streamClosed(long streamId) {
@@ -851,14 +859,21 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             // Force the flush so the shutdown can be seen asap.
             forceFlushParent();
         }
-        Quiche.notifyPromise(res, promise);
+        if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
+            promise.setFailure(Quiche.convertToException(res));
+        } else {
+            promise.setSuccess();
+        }
     }
 
     void streamSendFin(long streamId) throws Exception {
         QuicheQuicConnection conn = connection;
         try {
             // Just write an empty buffer and set fin to true.
-            Quiche.throwIfError(streamSend0(conn, streamId, Unpooled.EMPTY_BUFFER, true));
+            int res = streamSend0(conn, streamId, Unpooled.EMPTY_BUFFER, true);
+            if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
+                throw Quiche.convertToException(res);
+            }
         } finally {
             // As we called quiche_conn_stream_send(...) we need to ensure we will call quiche_conn_send(...) either
             // now or we will do so once we see the channelReadComplete event.
@@ -927,10 +942,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         int writerIndex = buffer.writerIndex();
         int recvLen = Quiche.quiche_conn_stream_recv(connAddr, streamId,
                 Quiche.writerMemoryAddress(buffer), buffer.writableBytes(), Quiche.writerMemoryAddress(finBuffer));
-        if (Quiche.throwIfError(recvLen)) {
+        if (recvLen == Quiche.QUICHE_ERR_DONE) {
             return StreamRecvResult.DONE;
+        } else if (recvLen < 0) {
+            throw Quiche.convertToException(recvLen);
         }
-
         buffer.writerIndex(writerIndex + recvLen);
         return finBuffer.getBoolean(0) ? StreamRecvResult.FIN : StreamRecvResult.OK;
     }
@@ -1189,7 +1205,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 ByteBuffer sendInfo = conn.nextSendInfo();
                 InetSocketAddress sendToAddress = this.remote;
 
-                boolean done;
                 int writerIndex = out.writerIndex();
                 int written = Quiche.quiche_conn_send(
                         connAddr, Quiche.writerMemoryAddress(out), out.writableBytes(),
@@ -1199,16 +1214,19 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     // No need to create a new datagram packet. Just try again.
                     continue;
                 }
-
-                try {
-                    done = Quiche.throwIfError(written);
-                } catch (Exception e) {
+                final boolean done;
+                if (written < 0) {
                     done = true;
-                    close = Quiche.shouldClose(written);
-                    if (!tryFailConnectPromise(e)) {
-                        // Only fire through the pipeline if this does not fail the connect promise.
-                        fireExceptionEvents(conn, e);
+                    if (written != Quiche.QUICHE_ERR_DONE) {
+                        close = Quiche.shouldClose(written);
+                        Exception e = Quiche.convertToException(written);
+                        if (!tryFailConnectPromise(e)) {
+                            // Only fire through the pipeline if this does not fail the connect promise.
+                            fireExceptionEvents(conn, e);
+                        }
                     }
+                } else {
+                    done = false;
                 }
                 int size = bufferList.size();
                 if (done) {
@@ -1329,24 +1347,22 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     connAddr, Quiche.writerMemoryAddress(out), out.writableBytes(),
                     Quiche.memoryAddressWithPosition(sendInfo));
 
-            try {
-                if (Quiche.throwIfError(written)) {
-                    out.release();
-                    break;
-                }
-            } catch (Exception e) {
-                close = Quiche.shouldClose(written);
-                out.release();
-                if (!tryFailConnectPromise(e)) {
-                    fireExceptionEvents(conn, e);
-                }
-                break;
-            }
-
             if (written == 0) {
                 // No need to create a new datagram packet. Just release and try again.
                 out.release();
                 continue;
+            }
+            if (written < 0) {
+                out.release();
+                if (written != Quiche.QUICHE_ERR_DONE) {
+                    close = Quiche.shouldClose(written);
+
+                    Exception e = Quiche.convertToException(written);
+                    if (!tryFailConnectPromise(e)) {
+                        fireExceptionEvents(conn, e);
+                    }
+                }
+                break;
             }
             if (conn.isSendInfoChanged()) {
                 // Change the cached address
@@ -1463,8 +1479,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         void connectStream(QuicStreamType type, @Nullable ChannelHandler handler,
                            Promise<QuicStreamChannel> promise) {
             long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
+
             try {
-                Quiche.throwIfError(streamSend0(connection, streamId, Unpooled.EMPTY_BUFFER, false));
+                int res = streamSend0(connection, streamId, Unpooled.EMPTY_BUFFER, false);
+                if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
+                    throw Quiche.convertToException(res);
+                }
             } catch (Exception e) {
                 promise.setFailure(e);
                 return;
@@ -1594,18 +1614,20 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         // Call quiche_conn_recv(...) until we consumed all bytes or we did receive some error.
                         int res = Quiche.quiche_conn_recv(conn.address(), memoryAddress, bufferReadable,
                                 Quiche.memoryAddressWithPosition(recvInfo));
-                        boolean done;
-                        try {
-                            done = Quiche.throwIfError(res);
-                        } catch (Exception e) {
+                        final boolean done;
+                        if (res < 0) {
                             done = true;
-                            close = Quiche.shouldClose(res);
-                            if (tryFailConnectPromise(e)) {
-                                break;
+                            if (res != Quiche.QUICHE_ERR_DONE) {
+                                close = Quiche.shouldClose(res);
+                                Exception e = Quiche.convertToException(res);
+                                if (tryFailConnectPromise(e)) {
+                                    break;
+                                }
+                                fireExceptionEvents(conn, e);
                             }
-                            fireExceptionEvents(conn, e);
+                        } else {
+                            done = false;
                         }
-
                         // Process / schedule all tasks that were created.
                         Runnable task = conn.sslTask();
                         if (task != null) {
@@ -1852,16 +1874,14 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                     int written = Quiche.quiche_conn_dgram_recv(connAddr,
                             memoryAddress, datagramBuffer.writableBytes());
-                    try {
-                        if (Quiche.throwIfError(written)) {
-                            datagramBuffer.release();
+                    if (written < 0) {
+                        datagramBuffer.release();
+                        if (written == Quiche.QUICHE_ERR_DONE) {
                             // We did consume all datagram packets.
                             datagramReadable = false;
                             break;
                         }
-                    } catch (Exception e) {
-                        datagramBuffer.release();
-                        pipeline().fireExceptionCaught(e);
+                        pipeline().fireExceptionCaught(Quiche.convertToException(written));
                     }
                     recvHandle.lastBytesRead(written);
                     recvHandle.incMessagesRead(1);

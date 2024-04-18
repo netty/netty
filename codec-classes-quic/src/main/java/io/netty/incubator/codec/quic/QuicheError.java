@@ -22,7 +22,7 @@ import io.netty.util.collection.IntObjectMap;
  * All QUIC error codes identified by Quiche.
  * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/src/lib.rs#L335-L380">Error</a>
  */
-public enum QuicError {
+enum QuicheError {
     BUFFER_TOO_SHORT(Quiche.QUICHE_ERR_BUFFER_TOO_SHORT, "QUICHE_ERR_BUFFER_TOO_SHORT"),
     UNKNOWN_VERSION(Quiche.QUICHE_ERR_UNKNOWN_VERSION, "QUICHE_ERR_UNKNOWN_VERSION"),
     INVALID_FRAME(Quiche.QUICHE_ERR_INVALID_FRAME, "QUICHE_ERR_INVALID_FRAME"),
@@ -43,10 +43,10 @@ public enum QuicError {
     KEY_UPDATE(Quiche.QUICHE_ERR_KEY_UPDATE, "KEY_UPDATE"),
     CRYPTO_BUFFER_EXCEEDED(Quiche.QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED, "QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED");
 
-    private static final IntObjectMap<QuicError> ERROR_MAP = new IntObjectHashMap<>();
+    private static final IntObjectMap<QuicheError> ERROR_MAP = new IntObjectHashMap<>();
 
     static {
-        for (QuicError errorCode : QuicError.values()) {
+        for (QuicheError errorCode : QuicheError.values()) {
             ERROR_MAP.put(errorCode.code(), errorCode);
         }
     }
@@ -54,7 +54,7 @@ public enum QuicError {
     private final int code;
     private final String message;
 
-    QuicError(int code, String message) {
+    QuicheError(int code, String message) {
         this.code = code;
         this.message = message;
     }
@@ -72,11 +72,13 @@ public enum QuicError {
         return String.format("QuicError{code=%d, message=%s}", code, message);
     }
 
-    static QuicError valueOf(int code) {
-        final QuicError errorCode = ERROR_MAP.get(code);
+    static QuicheError valueOf(int code) {
+        final QuicheError errorCode = ERROR_MAP.get(code);
         if (errorCode == null) {
-            throw new IllegalArgumentException("unknown " + QuicError.class.getSimpleName() + " code: " + code);
+            throw new IllegalArgumentException("unknown " + QuicheError.class.getSimpleName() + " code: " + code);
         }
         return errorCode;
     }
+
+
 }

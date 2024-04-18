@@ -102,7 +102,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
             // Second stream creation should fail.
             Throwable cause = quicChannel.createStream(
                     type, new ChannelInboundHandlerAdapter()).await().cause();
-            assertThat(cause, CoreMatchers.instanceOf(IOException.class));
+            assertThat(cause, CoreMatchers.instanceOf(QuicException.class));
             stream.close().sync();
             latch2.await();
 
@@ -178,7 +178,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
                     .connect().get();
             streamPromise.sync();
             // Second stream creation should fail.
-            assertThat(stream2Promise.get(), CoreMatchers.instanceOf(IOException.class));
+            assertThat(stream2Promise.get(), CoreMatchers.instanceOf(QuicException.class));
             quicChannel.close().sync();
 
             serverHandler.assertState();

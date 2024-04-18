@@ -144,7 +144,9 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                     Quiche.writerMemoryAddress(out), out.writableBytes());
             if (res < 0) {
                 out.release();
-                Quiche.throwIfError(res);
+                if (res != Quiche.QUICHE_ERR_DONE) {
+                    throw Quiche.convertToException(res);
+                }
             } else {
                 ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + res), sender));
             }
@@ -176,7 +178,9 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
 
                 if (written < 0) {
                     out.release();
-                    Quiche.throwIfError(written);
+                    if (written != Quiche.QUICHE_ERR_DONE) {
+                        throw Quiche.convertToException(written);
+                    }
                 } else {
                     ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + written), sender));
                 }

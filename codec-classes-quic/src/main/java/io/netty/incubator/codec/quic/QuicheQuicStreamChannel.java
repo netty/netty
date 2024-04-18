@@ -412,11 +412,12 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     void forceClose(int error) {
         if (!queue.isEmpty()) {
-            QuicException err = new QuicException(QuicError.valueOf(error));
-            if (error == QuicError.STREAM_STOPPED.code()) {
-                queue.removeAndFailAll(new ChannelOutputShutdownException("STOP_SENDING frame received", err));
-            } else {
-                queue.removeAndFailAll(err);
+            if (error != Quiche.QUICHE_ERR_DONE) {
+                if (error == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+                    queue.removeAndFailAll(new ChannelOutputShutdownException("STOP_SENDING frame received"));
+                } else {
+                    queue.removeAndFailAll(Quiche.convertToException(error));
+                }
             }
         }
         forceClose();
@@ -660,24 +661,25 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         break;
                     }
                     try {
-                        if (!write0(msg)) {
-                            return written;
-                        }
-                    } catch (Exception e) {
-                        if (e instanceof QuicException && (
-                                (QuicException) e).error() == QuicError.STREAM_STOPPED) {
+                        int res = write0(msg);
+                        if (res == 1) {
+                            queue.remove().setSuccess();
+                            written = true;
+                        } else if (res == 0 || res == Quiche.QUICHE_ERR_DONE) {
+                            break;
+                        } else if (res == Quiche.QUICHE_ERR_STREAM_STOPPED) {
                             // Once its signaled that the stream is stopped we can just fail everything.
                             // We can also force the close as quiche will generate a RESET_STREAM frame.
                             queue.removeAndFailAll(
-                                    new ChannelOutputShutdownException("STOP_SENDING frame received", e));
+                                    new ChannelOutputShutdownException("STOP_SENDING frame received"));
                             forceClose();
                             break;
+                        } else {
+                            queue.remove().setFailure(Quiche.convertToException(res));
                         }
+                    } catch (Exception e) {
                         queue.remove().setFailure(e);
-                        continue;
                     }
-                    queue.remove().setSuccess();
-                    written = true;
                 }
                 updateWritabilityIfNeeded(true);
                 return written;
@@ -765,15 +767,20 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             boolean wasFinSent = QuicheQuicStreamChannel.this.finSent;
             boolean mayNeedWritabilityUpdate = false;
             try {
-                if (write0(msg)) {
+                int res = write0(msg);
+                if (res > 0) {
                     ReferenceCountUtil.release(msg);
                     promise.setSuccess();
                     mayNeedWritabilityUpdate = capacity == 0;
-                } else {
+                } else if (res == 0 || res == Quiche.QUICHE_ERR_DONE ) {
                     // Touch the message to make things easier in terms of debugging buffer leaks.
                     ReferenceCountUtil.touch(msg);
                     queue.add(msg, promise);
                     mayNeedWritabilityUpdate = true;
+                } else if (res == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+                    throw new ChannelOutputShutdownException("STOP_SENDING frame received");
+                } else {
+                    throw Quiche.convertToException(res);
                 }
             } catch (Exception e) {
                 ReferenceCountUtil.release(msg);
@@ -787,7 +794,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             }
         }
 
-        private boolean write0(Object msg) throws Exception {
+        private int write0(Object msg) throws Exception {
             if (type() == QuicStreamType.UNIDIRECTIONAL && !isLocalCreated()) {
                 throw new UnsupportedOperationException(
                         "Writes on non-local created streams that are unidirectional are not supported");
@@ -809,7 +816,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
             boolean readable = buffer.isReadable();
             if (!fin && !readable) {
-                return true;
+                return 1;
             }
 
             boolean sendSomething = false;
@@ -822,8 +829,11 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     if (cap >= 0) {
                         capacity = cap;
                     }
-                    if (Quiche.throwIfError(res) || (readable && res == 0)) {
-                        return false;
+                    if (res < 0) {
+                        return res;
+                    }
+                    if (readable && res == 0) {
+                        return 0;
                     }
                     sendSomething = true;
                     buffer.skipBytes(res);
@@ -833,7 +843,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     finSent = true;
                     outputShutdown = true;
                 }
-                return true;
+                return 1;
             } finally {
                 // As we called quiche_conn_stream_send(...) we need to ensure we will call quiche_conn_send(...) either
                 // now or we will do so once we see the channelReadComplete event.
