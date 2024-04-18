@@ -54,11 +54,11 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * A {@link io.netty.channel.ServerChannel} implementation which uses
  * NIO selector based implementation to support UNIX Domain Sockets. This is only supported when using Java 16+.
  */
-public final class NioDomainServerSocketChannel extends AbstractNioMessageChannel
+public final class NioServerDomainSocketChannel extends AbstractNioMessageChannel
         implements io.netty.channel.ServerChannel {
     private static final Method OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY =
             SelectorProviderUtil.findOpenMethod("openServerSocketChannel");
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioDomainServerSocketChannel.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerDomainSocketChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
     private final ChannelConfig config;
@@ -89,21 +89,21 @@ public final class NioDomainServerSocketChannel extends AbstractNioMessageChanne
     /**
      * Create a new instance
      */
-    public NioDomainServerSocketChannel() {
+    public NioServerDomainSocketChannel() {
         this(DEFAULT_SELECTOR_PROVIDER);
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider}.
      */
-    public NioDomainServerSocketChannel(SelectorProvider provider) {
+    public NioServerDomainSocketChannel(SelectorProvider provider) {
         this(newChannel(provider));
     }
 
     /**
      * Create a new instance using the given {@link ServerSocketChannel}.
      */
-    public NioDomainServerSocketChannel(ServerSocketChannel channel) {
+    public NioServerDomainSocketChannel(ServerSocketChannel channel) {
         super(null, channel, SelectionKey.OP_ACCEPT);
         if (PlatformDependent.javaVersion() < 16) {
             throw new UnsupportedOperationException("Only supported with Java 16+");
@@ -193,7 +193,7 @@ public final class NioDomainServerSocketChannel extends AbstractNioMessageChanne
 
         private volatile int backlog = NetUtil.SOMAXCONN;
 
-        private NioDomainServerSocketChannelConfig(NioDomainServerSocketChannel channel) {
+        private NioDomainServerSocketChannelConfig(NioServerDomainSocketChannel channel) {
             super(channel, new ServerChannelRecvByteBufAllocator());
         }
 
@@ -312,7 +312,7 @@ public final class NioDomainServerSocketChannel extends AbstractNioMessageChanne
         }
 
         private ServerSocketChannel jdkChannel() {
-            return ((NioDomainServerSocketChannel) channel).javaChannel();
+            return ((NioServerDomainSocketChannel) channel).javaChannel();
         }
     }
 

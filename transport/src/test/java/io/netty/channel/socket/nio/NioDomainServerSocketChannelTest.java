@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @EnabledForJreRange(min = JRE.JAVA_16)
-public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTest<NioDomainServerSocketChannel> {
+public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTest<NioServerDomainSocketChannel> {
     private static final Method OF_METHOD;
 
     static {
@@ -67,8 +67,8 @@ public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTe
 
     @Test
     public void testCloseOnError() throws Exception {
-        ServerSocketChannel jdkChannel = NioDomainServerSocketChannel.newChannel(SelectorProvider.provider());
-        NioDomainServerSocketChannel serverSocketChannel = new NioDomainServerSocketChannel(jdkChannel);
+        ServerSocketChannel jdkChannel = NioServerDomainSocketChannel.newChannel(SelectorProvider.provider());
+        NioServerDomainSocketChannel serverSocketChannel = new NioServerDomainSocketChannel(jdkChannel);
         EventLoopGroup group = new NioEventLoopGroup(1);
         File file = new File(System.getProperty("java.io.tmpdir") + UUID.randomUUID());
         try {
@@ -85,7 +85,7 @@ public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTe
 
     @Test
     public void testIsActiveFalseAfterClose() throws Exception {
-        NioDomainServerSocketChannel serverSocketChannel = new NioDomainServerSocketChannel();
+        NioServerDomainSocketChannel serverSocketChannel = new NioServerDomainSocketChannel();
         EventLoopGroup group = new NioEventLoopGroup(1);
         File file = new File(System.getProperty("java.io.tmpdir") + UUID.randomUUID());
         try {
@@ -105,12 +105,12 @@ public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTe
     }
 
     @Override
-    protected NioDomainServerSocketChannel newNioChannel() {
-        return new NioDomainServerSocketChannel();
+    protected NioServerDomainSocketChannel newNioChannel() {
+        return new NioServerDomainSocketChannel();
     }
 
     @Override
-    protected NetworkChannel jdkChannel(NioDomainServerSocketChannel channel) {
+    protected NetworkChannel jdkChannel(NioServerDomainSocketChannel channel) {
         return channel.javaChannel();
     }
 
