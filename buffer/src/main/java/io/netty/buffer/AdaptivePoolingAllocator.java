@@ -332,7 +332,11 @@ final class AdaptivePoolingAllocator {
             if (curr != null && curr.readableBytes() >= size) {
                 if (curr.readableBytes() == size) {
                     current = null;
-                    return curr.readInitInto(buf, size, maxCapacity);
+                    try {
+                        return curr.readInitInto(buf, size, maxCapacity);
+                    } finally {
+                        curr.release();
+                    }
                 }
                 return curr.readInitInto(buf, size, maxCapacity);
             }

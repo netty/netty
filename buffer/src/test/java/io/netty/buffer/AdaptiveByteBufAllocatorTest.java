@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -54,5 +55,28 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assertInstanceOf(heapBuffer, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
         assertFalse(heapBuffer.isDirect());
         heapBuffer.release();
+    }
+
+    @Test
+    void chunkMustDeallocateOrReuseWthBufferRelease() throws Exception {
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+        ByteBuf a = allocator.heapBuffer(8192);
+        assertEquals(128 * 1024, allocator.usedHeapMemory());
+        ByteBuf b = allocator.heapBuffer(120 * 1024);
+        assertEquals(128 * 1024, allocator.usedHeapMemory());
+        b.release();
+        a.release();
+        assertEquals(128 * 1024, allocator.usedHeapMemory());
+        a = allocator.heapBuffer(8192);
+        assertEquals(128 * 1024, allocator.usedHeapMemory());
+        b = allocator.heapBuffer(120 * 1024);
+        assertEquals(128 * 1024, allocator.usedHeapMemory());
+        a.release();
+        ByteBuf c = allocator.heapBuffer(8192);
+        assertEquals(2 * 128 * 1024, allocator.usedHeapMemory());
+        c.release();
+        assertEquals(2 * 128 * 1024, allocator.usedHeapMemory());
+        b.release();
+        assertEquals(2 * 128 * 1024, allocator.usedHeapMemory());
     }
 }
