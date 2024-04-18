@@ -44,7 +44,7 @@ public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTe
         Method method;
         try {
             Class<?> clazz = Class.forName("java.net.UnixDomainSocketAddress");
-            method = clazz.getMethod("of");
+            method = clazz.getMethod("of", String.class);
         } catch (Throwable error) {
             method = null;
         }
