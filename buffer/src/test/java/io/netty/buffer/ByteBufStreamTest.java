@@ -345,12 +345,10 @@ public class ByteBufStreamTest {
         } finally {
             out.close();
         }
-        int i = ReferenceCountUtil.refCnt(out.buffer());
-        assertEquals(1, i);
+        assertEquals(1, out.buffer().refCnt());
 
         // When releaseOnClose is not set or releaseOnClose is false, ByteBuf must be released manually.
         out.buffer().release();
-        i = ReferenceCountUtil.refCnt(out.buffer());
-        assertEquals(0, i);
+        assertEquals(0, out.buffer().refCnt());
     }
 }
