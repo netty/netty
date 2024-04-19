@@ -326,8 +326,7 @@ public class ByteBufStreamTest {
         }
         // When releaseOnClose is set to true, ByteBuf will be automatically released after calling the close method of
         // ByteBufOutputStream.
-        int i = ReferenceCountUtil.refCnt(out.buffer());
-        assertEquals(0, i);
+        assertEquals(0, out.buffer().refCnt());
     }
 
     @Test
