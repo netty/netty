@@ -109,7 +109,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
 
     @ParameterizedTest
     @ValueSource(booleans = { false, true })
-    public void testCreateChannelFromAlreadyJdkChannel(boolean bindJdkChannel) throws Exception {
+    public void testCreateChannelFromJdkChannel(boolean bindJdkChannel) throws Exception {
         File file = new File(System.getProperty("java.io.tmpdir") + UUID.randomUUID());
         EventLoopGroup group = new NioEventLoopGroup(1);
         try {
