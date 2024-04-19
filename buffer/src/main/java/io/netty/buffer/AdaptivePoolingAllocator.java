@@ -21,6 +21,7 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
@@ -138,7 +139,7 @@ final class AdaptivePoolingAllocator {
      * @return A new multi-producer, multi-consumer queue.
      */
     private static Queue<ChunkByteBuf> createSharedChunkQueue() {
-        return new LinkedBlockingQueue<ChunkByteBuf>(CENTRAL_QUEUE_CAPACITY);
+        return PlatformDependent.newFixedMpmcQueue(CENTRAL_QUEUE_CAPACITY);
     }
 
     ByteBuf allocate(int size, int maxCapacity) {
