@@ -61,7 +61,7 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerDomainSocketChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
-    private final ChannelConfig config;
+    private final NioDomainServerSocketChannelConfig config;
     private volatile boolean bound;
 
     // Package-private for testing.
@@ -103,12 +103,19 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
     /**
      * Create a new instance using the given {@link ServerSocketChannel}.
      */
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     public NioServerDomainSocketChannel(ServerSocketChannel channel) {
         super(null, channel, SelectionKey.OP_ACCEPT);
         if (PlatformDependent.javaVersion() < 16) {
             throw new UnsupportedOperationException("Only supported with Java 16+");
         }
         config = new NioDomainServerSocketChannelConfig(this);
+        try {
+            // Check if we already have an local address bound.
+            bound = channel.getLocalAddress() != null;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
@@ -131,7 +138,7 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        javaChannel().bind(localAddress, config.getOption(ChannelOption.SO_BACKLOG));
+        javaChannel().bind(localAddress, config.getBacklog());
         bound = true;
     }
 

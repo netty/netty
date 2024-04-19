@@ -21,6 +21,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,11 +36,12 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @EnabledForJreRange(min = JRE.JAVA_16)
-public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTest<NioServerDomainSocketChannel> {
+public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTest<NioServerDomainSocketChannel> {
     private static final Method OF_METHOD;
 
     static {
@@ -98,6 +101,32 @@ public class NioDomainServerSocketChannelTest extends AbstractNioDomainChannelTe
             channel.close().syncUninterruptibly();
             assertFalse(channel.isOpen());
             assertFalse(channel.isActive());
+        } finally {
+            group.shutdownGracefully();
+            file.delete();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    public void testCreateChannelFromAlreadyJdkChannel(boolean bindJdkChannel) throws Exception {
+        File file = new File(System.getProperty("java.io.tmpdir") + UUID.randomUUID());
+        EventLoopGroup group = new NioEventLoopGroup(1);
+        try {
+            SocketAddress localAddress = newUnixDomainSocketAddress(file.getAbsolutePath());
+            ServerSocketChannel jdkChannel = NioServerDomainSocketChannel.newChannel(SelectorProvider.provider());
+            if (bindJdkChannel) {
+                jdkChannel.bind(localAddress);
+            }
+            NioServerDomainSocketChannel serverSocketChannel = new NioServerDomainSocketChannel(jdkChannel);
+            group.register(serverSocketChannel).syncUninterruptibly();
+            assertTrue(serverSocketChannel.isOpen());
+
+            assertEquals(bindJdkChannel, serverSocketChannel.isActive());
+
+            serverSocketChannel.close().syncUninterruptibly();
+            assertFalse(serverSocketChannel.isOpen());
+            assertFalse(serverSocketChannel.isActive());
         } finally {
             group.shutdownGracefully();
             file.delete();
