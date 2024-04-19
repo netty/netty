@@ -38,7 +38,6 @@ import java.nio.channels.ScatteringByteChannel;
 import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.StampedLock;
@@ -146,33 +145,55 @@ final class AdaptivePoolingAllocator {
         if (size <= MAX_CHUNK_SIZE) {
             Thread currentThread = Thread.currentThread();
             boolean willCleanupFastThreadLocals = FastThreadLocalThread.willCleanupFastThreadLocals(currentThread);
-            long threadId = currentThread.getId();
             AdaptiveByteBuf buf = AdaptiveByteBuf.newInstance(willCleanupFastThreadLocals);
-            int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
-            Magazine[] mags;
-            int expansions = 0;
-            do {
-                mags = magazines;
-                int mask = mags.length - 1;
-                int index = (int) (threadId & mask);
-                for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
-                    Magazine mag = mags[index + i & mask];
-                    long writeLock = mag.tryWriteLock();
-                    if (writeLock != 0) {
-                        try {
-                            return mag.allocate(size, sizeBucket, maxCapacity, buf);
-                        } finally {
-                            mag.unlockWrite(writeLock);
-                        }
-                    }
-                }
-                expansions++;
-            } while (expansions <= 3 && tryExpandMagazines(mags.length));
+            AdaptiveByteBuf result = allocate(size, maxCapacity, currentThread, buf);
+            if (result != null) {
+                return result;
+            }
             // Return the buffer we pulled from the recycler but didn't use.
             buf.release();
         }
         // The magazines failed us, or the buffer is too big to be pooled.
         return chunkAllocator.allocate(size, maxCapacity);
+    }
+
+    private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
+        long threadId = currentThread.getId();
+        int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
+        Magazine[] mags;
+        int expansions = 0;
+        do {
+            mags = magazines;
+            int mask = mags.length - 1;
+            int index = (int) (threadId & mask);
+            for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
+                Magazine mag = mags[index + i & mask];
+                long writeLock = mag.tryWriteLock();
+                if (writeLock != 0) {
+                    try {
+                        return mag.allocate(size, sizeBucket, maxCapacity, buf);
+                    } finally {
+                        mag.unlockWrite(writeLock);
+                    }
+                }
+            }
+            expansions++;
+        } while (expansions <= 3 && tryExpandMagazines(mags.length));
+        return null;
+    }
+
+    /**
+     * Allocate into the given buffer. Used by {@link AdaptiveByteBuf#capacity(int)}.
+     */
+    void allocate(int size, int maxCapacity, AdaptiveByteBuf into) {
+        Magazine magazine = into.chunk.magazine;
+        AdaptiveByteBuf result = allocate(size, maxCapacity, Thread.currentThread(), into);
+        if (result == null) {
+            // Create a one-off chunk for this allocation.
+            AbstractByteBuf innerChunk = (AbstractByteBuf) chunkAllocator.allocate(size, maxCapacity);
+            ChunkByteBuf chunk = new ChunkByteBuf(innerChunk, magazine, false);
+            chunk.readInitInto(into, size, maxCapacity);
+        }
     }
 
     long usedMemory() {
@@ -380,8 +401,7 @@ final class AdaptivePoolingAllocator {
         private ChunkByteBuf newChunkAllocation(int promptingSize) {
             int size = Math.max(promptingSize * BUFS_PER_CHUNK, preferredChunkSize());
             ChunkAllocator chunkAllocator = parent.chunkAllocator;
-            usedMemory.getAndAdd(size);
-            ChunkByteBuf chunk = new ChunkByteBuf((AbstractByteBuf) chunkAllocator.allocate(size, size), this);
+            ChunkByteBuf chunk = new ChunkByteBuf((AbstractByteBuf) chunkAllocator.allocate(size, size), this, true);
             chunk.writerIndex(size);
             return chunk;
         }
@@ -389,28 +409,19 @@ final class AdaptivePoolingAllocator {
         boolean trySetNextInLine(ChunkByteBuf buffer) {
             return NEXT_IN_LINE.compareAndSet(this, null, buffer);
         }
-
-        void close() {
-            ByteBuf curr = current;
-            if (curr != null) {
-                current = null;
-                curr.release();
-            }
-            curr = NEXT_IN_LINE.getAndSet(this, null);
-            if (curr != null) {
-                curr.release();
-            }
-        }
     }
 
     private static final class ChunkByteBuf extends AbstractReferenceCountedByteBuf {
         private final AbstractByteBuf delegate;
         private final Magazine magazine;
+        private final boolean pooled;
 
-        ChunkByteBuf(AbstractByteBuf delegate, Magazine magazine) {
+        ChunkByteBuf(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             super(delegate.maxCapacity());
             this.delegate = delegate;
             this.magazine = magazine;
+            this.pooled = pooled;
+            magazine.usedMemory.getAndAdd(capacity());
         }
 
         @Override
@@ -419,7 +430,7 @@ final class AdaptivePoolingAllocator {
             AdaptivePoolingAllocator parent = mag.parent;
             int chunkSize = mag.preferredChunkSize();
             int memSize = delegate.capacity();
-            if (memSize < chunkSize || memSize > chunkSize + (chunkSize >> 1)) {
+            if (!pooled || memSize < chunkSize || memSize > chunkSize + (chunkSize >> 1)) {
                 // Drop the chunk if the parent allocator is closed, or if the chunk is smaller than the
                 // preferred chunk size, or over 50% larger than the preferred chunk size.
                 mag.usedMemory.getAndAdd(-capacity());
@@ -724,6 +735,7 @@ final class AdaptivePoolingAllocator {
             maxCapacity(maxCapacity);
             setIndex0(readerIndex, writerIndex);
             rootParent = unwrapped;
+            tmpNioBuf = rootParent.internalNioBuffer(adjustment, capacity).slice();
         }
 
         @Override
@@ -745,25 +757,20 @@ final class AdaptivePoolingAllocator {
             }
 
             // Reallocation required.
+            ByteBuffer data = tmpNioBuf;
+            data.clear();
             tmpNioBuf = null;
+            ChunkByteBuf chunk = this.chunk;
             Magazine magazine = chunk.magazine;
             AdaptivePoolingAllocator allocator = magazine.parent;
-            AbstractByteBuf newBuf = (AbstractByteBuf) allocator.allocate(newCapacity, maxCapacity());
-            newBuf.setBytes(0, this, 0, capacity());
+            int readerIndex = this.readerIndex;
+            int writerIndex = this.writerIndex;
+            allocator.allocate(newCapacity, maxCapacity(), this);
+            tmpNioBuf.put(data);
+            tmpNioBuf.clear();
             chunk.release();
-            if (newBuf instanceof AdaptiveByteBuf) {
-                AdaptiveByteBuf buf = (AdaptiveByteBuf) newBuf;
-                init(buf.rootParent, buf.chunk, readerIndex(), writerIndex(),
-                        buf.adjustment, buf.length, maxCapacity());
-                buf.release();
-            } else {
-                AbstractByteBuf unwrap = (AbstractByteBuf) newBuf.unwrap();
-                if (unwrap == null) {
-                    unwrap = newBuf;
-                }
-                ChunkByteBuf tempChunk = new ChunkByteBuf(newBuf, magazine);
-                init(unwrap, tempChunk, readerIndex(), writerIndex(), 0, newCapacity, maxCapacity());
-            }
+            this.readerIndex = readerIndex;
+            this.writerIndex = writerIndex;
             return this;
         }
 
@@ -816,10 +823,6 @@ final class AdaptivePoolingAllocator {
         }
 
         private ByteBuffer internalNioBuffer() {
-            ByteBuffer tmpNioBuf = this.tmpNioBuf;
-            if (tmpNioBuf == null) {
-                this.tmpNioBuf = tmpNioBuf = rootParent.internalNioBuffer(adjustment, capacity()).slice();
-            }
             return (ByteBuffer) tmpNioBuf.clear();
         }
 
