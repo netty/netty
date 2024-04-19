@@ -27,6 +27,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoHandleEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
@@ -40,6 +41,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -49,6 +51,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
+
+    final AbstractNioChannelProcessor nioProcessor = new AbstractNioChannelProcessor();
 
     private final SelectableChannel ch;
     protected final int readInterestOp;
@@ -106,11 +110,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     protected SelectableChannel javaChannel() {
         return ch;
-    }
-
-    @Override
-    public NioEventLoop eventLoop() {
-        return (NioEventLoop) super.eventLoop();
     }
 
     /**
@@ -374,41 +373,27 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof NioEventLoop;
+        if (loop instanceof IoHandleEventLoop) {
+            return ((IoHandleEventLoop) loop).isCompatible(this.getClass());
+        }
+        return false;
     }
 
     @Override
     protected void doRegister() throws Exception {
-        boolean selected = false;
-        for (;;) {
-            try {
-                selectionKey = javaChannel().register(eventLoop().unwrappedSelector(), 0, this);
-                return;
-            } catch (CancelledKeyException e) {
-                if (!selected) {
-                    // Force the Selector to select now as the "canceled" SelectionKey may still be
-                    // cached and not removed because no Select.select(..) operation was called yet.
-                    eventLoop().selectNow();
-                    selected = true;
-                } else {
-                    // We forced a select operation on the selector before but the SelectionKey is still cached
-                    // for whatever reason. JDK bug ?
-                    throw e;
-                }
-            }
-        }
+        ((IoHandleEventLoop) eventLoop()).registerForIo(this);
     }
 
     @Override
     protected void doDeregister() throws Exception {
-        eventLoop().cancel(selectionKey());
+        ((IoHandleEventLoop) eventLoop()).deregisterForIo(this);
     }
 
     @Override
     protected void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
         final SelectionKey selectionKey = this.selectionKey;
-        if (!selectionKey.isValid()) {
+        if (selectionKey == null || !selectionKey.isValid()) {
             return;
         }
 
@@ -512,6 +497,83 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         if (future != null) {
             future.cancel(false);
             connectTimeoutFuture = null;
+        }
+    }
+
+    final AbstractNioChannelProcessor nioProcessor() {
+        return nioProcessor;
+    }
+
+    final class AbstractNioChannelProcessor implements NioProcessor {
+        @Override
+        public void register(Selector selector) throws ClosedChannelException {
+            int interestOps;
+            SelectionKey key = selectionKey;
+            if (key != null) {
+                interestOps = key.interestOps();
+                key.cancel();
+            } else {
+                interestOps = 0;
+            }
+            selectionKey = javaChannel().register(selector, interestOps, this);
+        }
+
+        @Override
+        public void deregister() {
+            SelectionKey key = selectionKey;
+            if (key != null) {
+                key.cancel();
+                selectionKey = null;
+            }
+        }
+
+        @Override
+        public void handle(SelectionKey k) {
+            if (!k.isValid()) {
+
+                // close the channel if the key is not valid anymore
+                unsafe().close(voidPromise());
+                return;
+            }
+
+            try {
+                int readyOps = k.readyOps();
+                // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
+                // the NIO JDK channel implementation may throw a NotYetConnectedException.
+                if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+                    // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
+                    // See https://github.com/netty/netty/issues/924
+                    int ops = k.interestOps();
+                    ops &= ~SelectionKey.OP_CONNECT;
+                    k.interestOps(ops);
+
+                    unsafe().finishConnect();
+                }
+
+                // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
+                if ((readyOps & SelectionKey.OP_WRITE) != 0) {
+                    // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to
+                    // write
+                    unsafe().forceFlush();
+                }
+
+                // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
+                // to a spin loop
+                if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
+                    unsafe().read();
+                }
+            } catch (CancelledKeyException ignored) {
+                unsafe().close(voidPromise());
+            }
+        }
+
+        @Override
+        public void close() {
+            unsafe().close(voidPromise());
+        }
+
+        AbstractNioChannel channel() {
+            return AbstractNioChannel.this;
         }
     }
 }

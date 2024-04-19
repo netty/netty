@@ -20,7 +20,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
 import io.netty.util.internal.UnstableApi;
 
@@ -42,11 +41,6 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
     @Override
     public ChannelMetadata metadata() {
         return METADATA;
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof KQueueEventLoop;
     }
 
     @Override

@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoHandleEventLoop;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.SingleThreadEventLoop;
@@ -48,7 +49,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 /**
  * A {@link Channel} for the local transport.
  */
-public class LocalChannel extends AbstractChannel {
+public class LocalChannel extends AbstractChannel implements LocalChannelIoHandle {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannel.class);
     @SuppressWarnings({ "rawtypes" })
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
@@ -157,6 +158,26 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doRegister() throws Exception {
+        EventLoop loop = eventLoop();
+        if (loop instanceof IoHandleEventLoop) {
+            ((IoHandleEventLoop) loop).registerForIo(this);
+        } else {
+            registerNow();
+        }
+    }
+
+    @Override
+    protected void doDeregister() throws Exception {
+        EventLoop loop = eventLoop();
+        if (loop instanceof IoHandleEventLoop) {
+            ((IoHandleEventLoop) loop).deregisterForIo(this);
+        } else {
+            deregisterNow();
+        }
+    }
+
+    @Override
+    public void registerNow() {
         // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
         // This is needed as a peer may not be null also if a LocalChannel was connected before and
         // deregistered / registered later again.
@@ -283,9 +304,14 @@ public class LocalChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    public void deregisterNow() {
         // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
         ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+    }
+
+    @Override
+    public void closeNow() {
+        unsafe().close(voidPromise());
     }
 
     private void readInbound() {

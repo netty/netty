@@ -30,6 +30,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoHandleEventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
@@ -69,6 +70,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
+
+    private EpollRegistration registration;
 
     protected int flags = Native.EPOLLET;
     boolean inputClosedSeenErrorOnRead;
@@ -204,7 +207,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EpollEventLoop;
+        if (loop instanceof IoHandleEventLoop) {
+            return ((IoHandleEventLoop) loop).isCompatible(getClass());
+        }
+        return false;
     }
 
     @Override
@@ -212,9 +218,23 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         return socket.isOpen();
     }
 
+    final void register0(EpollRegistration registration) {
+        // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
+        // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
+        // new EventLoop.
+        epollInReadyRunnablePending = false;
+        this.registration = registration;
+    }
+
+    final void deregister0() throws Exception {
+        if (registration != null) {
+            registration.remove();
+        }
+    }
+
     @Override
     protected void doDeregister() throws Exception {
-        ((EpollEventLoop) eventLoop()).remove(this);
+        ((IoHandleEventLoop) eventLoop()).deregisterForIo(this);
     }
 
     @Override
@@ -275,17 +295,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     private void modifyEvents() throws IOException {
         if (isOpen() && isRegistered()) {
-            ((EpollEventLoop) eventLoop()).modify(this);
+            ((EpollHandler) eventLoop()).modify(this);
         }
     }
 
     @Override
     protected void doRegister() throws Exception {
-        // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
-        // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
-        // new EventLoop.
-        epollInReadyRunnablePending = false;
-        ((EpollEventLoop) eventLoop()).add(this);
+        ((IoHandleEventLoop) eventLoop()).registerForIo(this);
     }
 
     @Override
@@ -394,7 +410,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         if (data.nioBufferCount() > 1) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
+            IovArray array = ((EpollHandler) eventLoop()).cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;

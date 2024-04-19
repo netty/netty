@@ -30,6 +30,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoHandleEventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
@@ -66,6 +67,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private SocketAddress requestedRemoteAddress;
 
     final BsdSocket socket;
+    private KQueueRegistration registration;
     private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
     boolean readReadyRunnablePending;
@@ -104,6 +106,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
+    protected final KQueueRegistration registration() {
+        assert registration != null;
+        return registration;
+    }
+
     @Override
     public final FileDescriptor fd() {
         return socket;
@@ -140,7 +147,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof KQueueEventLoop;
+        if (loop instanceof IoHandleEventLoop) {
+            return ((IoHandleEventLoop) loop).isCompatible(this.getClass());
+        }
+        return false;
     }
 
     @Override
@@ -150,12 +160,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     @Override
     protected void doDeregister() throws Exception {
-        ((KQueueEventLoop) eventLoop()).remove(this);
-
-        // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
-        // to false to ensure a consistent state in all cases.
-        readFilterEnabled = false;
-        writeFilterEnabled = false;
+        ((IoHandleEventLoop) eventLoop()).deregisterForIo(this);
     }
 
     void unregisterFilters() throws Exception {
@@ -187,14 +192,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
-    @Override
-    protected void doRegister() throws Exception {
+    final void register0(KQueueRegistration registration)  {
+        this.registration = registration;
         // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
         // make sure the readReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
         readReadyRunnablePending = false;
-
-        ((KQueueEventLoop) eventLoop()).add(this);
 
         // Add the write event first so we get notified of connection refused on the client side!
         if (writeFilterEnabled) {
@@ -204,6 +207,18 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             evSet0(Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE);
         }
         evSet0(Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP);
+    }
+
+    final void deregister0() {
+        // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
+        // to false to ensure a consistent state in all cases.
+        readFilterEnabled = false;
+        writeFilterEnabled = false;
+    }
+
+    @Override
+    protected void doRegister() throws Exception {
+        ((IoHandleEventLoop) eventLoop()).registerForIo(this);
     }
 
     @Override
@@ -364,7 +379,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private void evSet0(short filter, short flags, int fflags) {
         // Only try to add to changeList if the FD is still open, if not we already closed it in the meantime.
         if (isOpen()) {
-            ((KQueueEventLoop) eventLoop()).evSet(this, filter, flags, fflags);
+            registration.evSet(filter, flags, fflags);
         }
     }
 

@@ -20,6 +20,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoHandleEventLoop;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
@@ -34,7 +35,7 @@ import java.util.Queue;
 /**
  * A {@link ServerChannel} for the local transport which allows in VM communication.
  */
-public class LocalServerChannel extends AbstractServerChannel {
+public class LocalServerChannel extends AbstractServerChannel implements LocalChannelIoHandle {
 
     private final ChannelConfig config =
             new DefaultChannelConfig(this, new ServerChannelRecvByteBufAllocator()) { };
@@ -91,7 +92,12 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected void doRegister() throws Exception {
-        ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+        EventLoop loop = eventLoop();
+        if (loop instanceof IoHandleEventLoop) {
+            ((IoHandleEventLoop) loop).registerForIo(this);
+        } else {
+            registerNow();
+        }
     }
 
     @Override
@@ -114,7 +120,12 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+        EventLoop loop = eventLoop();
+        if (loop instanceof IoHandleEventLoop) {
+            ((IoHandleEventLoop) loop).deregisterForIo(this);
+        } else {
+            deregisterNow();
+        }
     }
 
     @Override
@@ -177,5 +188,20 @@ public class LocalServerChannel extends AbstractServerChannel {
 
             readInbound();
         }
+    }
+
+    @Override
+    public void registerNow() {
+        ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+    }
+
+    @Override
+    public void deregisterNow() {
+        ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+    }
+
+    @Override
+    public void closeNow() {
+        unsafe().close(voidPromise());
     }
 }

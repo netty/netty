@@ -18,6 +18,7 @@ package io.netty.channel.kqueue;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.IoHandleEventLoop;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -118,7 +119,7 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
                     // because we try to read or write until the actual close happens which may be later due
                     // SO_LINGER handling.
                     // See https://github.com/netty/netty/issues/4449
-                    ((KQueueEventLoop) eventLoop()).remove(KQueueSocketChannel.this);
+                    ((IoHandleEventLoop) eventLoop()).deregisterForIo(KQueueSocketChannel.this);
                     return GlobalEventExecutor.INSTANCE;
                 }
             } catch (Throwable ignore) {

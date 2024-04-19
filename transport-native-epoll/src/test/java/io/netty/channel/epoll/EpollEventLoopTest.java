@@ -24,7 +24,6 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.junit.jupiter.api.Test;
 
@@ -65,15 +64,14 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
         final AtomicReference<Throwable> capture = new AtomicReference<Throwable>();
 
         final EventLoopGroup group = new EpollEventLoop(null,
-                new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())), 0,
-                DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy(), RejectedExecutionHandlers.reject(),
-                null, null) {
+                new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())), new EpollHandler(0,
+                DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy()) {
             @Override
             void handleLoopException(Throwable t) {
                 capture.set(t);
                 super.handleLoopException(t);
             }
-        };
+        });
 
         try {
             final EventLoop eventLoop = group.next();

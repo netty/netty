@@ -15,20 +15,22 @@
  */
 package io.netty.channel.local;
 
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.MultiThreadIoHandleEventLoopGroup;
 
 import java.util.concurrent.ThreadFactory;
 
 /**
- * @deprecated Use {@link DefaultEventLoopGroup} instead.
+ * @deprecated Use {@link MultiThreadIoHandleEventLoopGroup} instead.
  */
 @Deprecated
-public class LocalEventLoopGroup extends DefaultEventLoopGroup {
+public class LocalEventLoopGroup extends MultiThreadIoHandleEventLoopGroup {
 
     /**
      * Create a new instance with the default number of threads.
      */
-    public LocalEventLoopGroup() { }
+    public LocalEventLoopGroup() {
+        this(0);
+    }
 
     /**
      * Create a new instance
@@ -36,7 +38,7 @@ public class LocalEventLoopGroup extends DefaultEventLoopGroup {
      * @param nThreads          the number of threads to use
      */
     public LocalEventLoopGroup(int nThreads) {
-        super(nThreads);
+        this(nThreads, null);
     }
 
     /**
@@ -45,7 +47,7 @@ public class LocalEventLoopGroup extends DefaultEventLoopGroup {
      * @param threadFactory     the {@link ThreadFactory} or {@code null} to use the default
      */
     public LocalEventLoopGroup(ThreadFactory threadFactory) {
-        super(0, threadFactory);
+        this(0, threadFactory);
     }
 
     /**
@@ -55,6 +57,6 @@ public class LocalEventLoopGroup extends DefaultEventLoopGroup {
      * @param threadFactory     the {@link ThreadFactory} or {@code null} to use the default
      */
     public LocalEventLoopGroup(int nThreads, ThreadFactory threadFactory) {
-        super(nThreads, threadFactory);
+        super(nThreads, threadFactory, LocalIoHandler.newFactory());
     }
 }
