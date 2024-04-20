@@ -73,7 +73,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
         ServerSocketChannel jdkChannel = NioServerDomainSocketChannel.newChannel(SelectorProvider.provider());
         NioServerDomainSocketChannel serverSocketChannel = new NioServerDomainSocketChannel(jdkChannel);
         EventLoopGroup group = new NioEventLoopGroup(1);
-        File file = new File(System.getProperty("java.io.tmpdir") + UUID.randomUUID());
+        File file = newRandomTmpFile();
         try {
             group.register(serverSocketChannel).syncUninterruptibly();
             serverSocketChannel.bind(newUnixDomainSocketAddress(file.getAbsolutePath()))
@@ -90,7 +90,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
     public void testIsActiveFalseAfterClose() throws Exception {
         NioServerDomainSocketChannel serverSocketChannel = new NioServerDomainSocketChannel();
         EventLoopGroup group = new NioEventLoopGroup(1);
-        File file = new File(System.getProperty("java.io.tmpdir") + UUID.randomUUID());
+        File file = newRandomTmpFile();
         try {
             group.register(serverSocketChannel).syncUninterruptibly();
             Channel channel = serverSocketChannel.bind(
@@ -110,7 +110,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
     @ParameterizedTest
     @ValueSource(booleans = { false, true })
     public void testCreateChannelFromJdkChannel(boolean bindJdkChannel) throws Exception {
-        File file = new File(System.getProperty("java.io.tmpdir") + UUID.randomUUID());
+        File file = newRandomTmpFile();
         EventLoopGroup group = new NioEventLoopGroup(1);
         try {
             SocketAddress localAddress = newUnixDomainSocketAddress(file.getAbsolutePath());
@@ -146,5 +146,9 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
     @Override
     protected SocketOption<?> newInvalidOption() {
         return StandardSocketOptions.IP_MULTICAST_IF;
+    }
+
+    private static File newRandomTmpFile() {
+        return new File(System.getProperty("java.io.tmpdir", UUID.randomUUID().toString()));
     }
 }

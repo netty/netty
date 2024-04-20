@@ -30,6 +30,7 @@ import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -149,7 +150,7 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
 
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
-        SocketChannel ch = javaChannel().accept();
+        SocketChannel ch = SocketUtils.accept(javaChannel());
         try {
             if (ch != null) {
                 buf.add(new NioDomainSocketChannel(this, ch));
@@ -216,7 +217,7 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
             for (ChannelOption<?> opt : NioChannelOption.getOptions(jdkChannel())) {
                 options.add(opt);
             }
-            return super.getOptions(super.getOptions(), options.toArray(new ChannelOption[0]));
+            return getOptions(super.getOptions(), options.toArray(new ChannelOption[0]));
         }
 
         @SuppressWarnings("unchecked")
@@ -234,7 +235,6 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
 
         @Override
         public <T> boolean setOption(ChannelOption<T> option, T value) {
-
             if (option == SO_BACKLOG) {
                 validate(option, value);
                 setBacklog((Integer) value);

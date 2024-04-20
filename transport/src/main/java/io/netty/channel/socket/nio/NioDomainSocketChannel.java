@@ -32,9 +32,9 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.AbstractNioByteChannel;
+import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.socket.DuplexChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.UnstableApi;
@@ -52,19 +52,17 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 
 /**
- * {@link io.netty.channel.socket.DuplexChannel} which uses NIO selector based implementation to support
+ * {@link DuplexChannel} which uses NIO selector based implementation to support
  * UNIX Domain Sockets. This is only supported when using Java 16+.
  */
 public final class NioDomainSocketChannel extends AbstractNioByteChannel
-        implements io.netty.channel.socket.DuplexChannel {
+        implements DuplexChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioDomainSocketChannel.class);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
@@ -72,8 +70,8 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
             SelectorProviderUtil.findOpenMethod("openSocketChannel");
 
     private final ChannelConfig config;
-    private final AtomicBoolean isInputShutdown;
-    private final AtomicBoolean isOutputShutdown;
+    private volatile boolean isInputShutdown;
+    private volatile boolean isOutputShutdown;
 
     private static SocketChannel newChannel(SelectorProvider provider) {
         try {
@@ -118,8 +116,6 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
     public NioDomainSocketChannel(Channel parent, SocketChannel socket) {
         super(parent, socket);
         config = new NioDomainSocketChannelConfig(this, socket);
-        isInputShutdown = new AtomicBoolean(false);
-        isOutputShutdown = new AtomicBoolean(false);
     }
 
     @Override
@@ -145,12 +141,12 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
 
     @Override
     public boolean isOutputShutdown() {
-        return isOutputShutdown.get() || !isActive();
+        return isOutputShutdown || !isActive();
     }
 
     @Override
     public boolean isInputShutdown() {
-        return isInputShutdown.get() || !isActive();
+        return isInputShutdown || !isActive();
     }
 
     @Override
@@ -163,7 +159,7 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
     @Override
     protected void doShutdownOutput() throws Exception {
         javaChannel().shutdownOutput();
-        isOutputShutdown.set(true);
+        isOutputShutdown = true;
     }
 
     @Override
@@ -277,7 +273,7 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private void shutdownInput0() throws Exception {
         javaChannel().shutdownInput();
-        isInputShutdown.set(true);
+        isInputShutdown = true;
     }
 
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
@@ -447,11 +443,7 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
     }
 
     private final class NioSocketChannelUnsafe extends NioByteUnsafe {
-        @Override
-        protected Executor prepareToClose() {
-            // no-op. Unix Domain does not support so_linger
-            return null;
-        }
+        // Only extending it so we create a new instance in newUnsafe() and return it.
     }
 
     private final class NioDomainSocketChannelConfig extends DefaultChannelConfig
@@ -483,7 +475,7 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
             for (ChannelOption<?> opt : NioChannelOption.getOptions(jdkChannel())) {
                 options.add(opt);
             }
-            return super.getOptions(super.getOptions(), options.toArray(new ChannelOption[0]));
+            return getOptions(super.getOptions(), options.toArray(new ChannelOption[0]));
         }
 
         @SuppressWarnings("unchecked")
