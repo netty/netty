@@ -18,10 +18,12 @@ package io.netty.util.internal;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jctools.queues.MpmcArrayQueue;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.jctools.queues.MpscUnboundedArrayQueue;
 import org.jctools.queues.SpscLinkedQueue;
+import org.jctools.queues.atomic.MpmcAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscChunkedAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
@@ -1072,6 +1074,14 @@ public final class PlatformDependent {
      */
     public static <T> Queue<T> newFixedMpscQueue(int capacity) {
         return hasUnsafe() ? new MpscArrayQueue<T>(capacity) : new MpscAtomicArrayQueue<T>(capacity);
+    }
+
+    /**
+     * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and multiple
+     * consumers with the given fixes {@code capacity}.
+     */
+    public static <T> Queue<T> newFixedMpmcQueue(int capacity) {
+        return hasUnsafe() ? new MpmcArrayQueue<T>(capacity) : new MpmcAtomicArrayQueue<T>(capacity);
     }
 
     /**
