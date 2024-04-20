@@ -447,7 +447,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
          */
         void shutdownInput(boolean readEOF) {
             // We need to take special care of calling finishConnect() if readEOF is true and we not
-            // fullfilled the connectPromise yet. If we fail to do so the connectPromise will be failed
+            // fulfilled the connectPromise yet. If we fail to do so the connectPromise will be failed
             // with a ClosedChannelException as a close() will happen and so the FD is closed before we
             // have a chance to call finishConnect() later on. Calling finishConnect() here will ensure
             // we observe the correct exception in case of a connect failure.
