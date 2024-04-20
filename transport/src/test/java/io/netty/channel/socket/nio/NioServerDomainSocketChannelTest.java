@@ -149,6 +149,6 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
     }
 
     private static File newRandomTmpFile() {
-        return new File(System.getProperty("java.io.tmpdir", UUID.randomUUID().toString()));
+        return new File(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString());
     }
 }
