@@ -146,14 +146,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        if (loop instanceof IoHandleEventLoop) {
-            return ((IoHandleEventLoop) loop).isCompatible(this.getClass());
-        }
-        return false;
-    }
-
-    @Override
     public boolean isOpen() {
         return socket.isOpen();
     }

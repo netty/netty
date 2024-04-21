@@ -143,7 +143,7 @@ public class LocalChannel extends AbstractChannel implements LocalChannelIoHandl
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SingleThreadEventLoop;
+        return super.isCompatible(loop) || loop instanceof SingleThreadEventLoop;
     }
 
     @Override

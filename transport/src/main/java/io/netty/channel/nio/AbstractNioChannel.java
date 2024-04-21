@@ -372,14 +372,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        if (loop instanceof IoHandleEventLoop) {
-            return ((IoHandleEventLoop) loop).isCompatible(this.getClass());
-        }
-        return false;
-    }
-
-    @Override
     protected void doRegister() throws Exception {
         ((IoHandleEventLoop) eventLoop()).registerForIo(this);
     }

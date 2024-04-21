@@ -206,14 +206,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        if (loop instanceof IoHandleEventLoop) {
-            return ((IoHandleEventLoop) loop).isCompatible(getClass());
-        }
-        return false;
-    }
-
-    @Override
     public boolean isOpen() {
         return socket.isOpen();
     }

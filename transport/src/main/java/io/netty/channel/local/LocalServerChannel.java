@@ -82,7 +82,7 @@ public class LocalServerChannel extends AbstractServerChannel implements LocalCh
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SingleThreadEventLoop;
+        return super.isCompatible(loop) || loop instanceof SingleThreadEventLoop;
     }
 
     @Override
