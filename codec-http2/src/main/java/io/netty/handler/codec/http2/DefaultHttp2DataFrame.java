@@ -88,6 +88,11 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
     }
 
     @Override
+    public byte frameType() {
+        return Http2FrameTypes.DATA;
+    }
+
+    @Override
     public String name() {
         return "DATA";
     }

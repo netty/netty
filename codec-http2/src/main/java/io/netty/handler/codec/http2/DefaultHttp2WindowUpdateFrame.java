@@ -37,6 +37,11 @@ public class DefaultHttp2WindowUpdateFrame extends AbstractHttp2StreamFrame impl
     }
 
     @Override
+    public byte frameType() {
+        return Http2FrameTypes.WINDOW_UPDATE;
+    }
+
+    @Override
     public String name() {
         return "WINDOW_UPDATE";
     }

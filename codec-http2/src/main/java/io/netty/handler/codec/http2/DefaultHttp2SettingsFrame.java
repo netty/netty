@@ -38,6 +38,11 @@ public class DefaultHttp2SettingsFrame implements Http2SettingsFrame {
     }
 
     @Override
+    public byte frameType() {
+        return Http2FrameTypes.SETTINGS;
+    }
+
+    @Override
     public String name() {
         return "SETTINGS";
     }

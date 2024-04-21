@@ -21,6 +21,12 @@ import io.netty.util.internal.StringUtil;
  * The default {@link Http2SettingsAckFrame} implementation.
  */
 final class DefaultHttp2SettingsAckFrame implements Http2SettingsAckFrame {
+
+    @Override
+    public byte frameType() {
+        return Http2FrameTypes.SETTINGS;
+    }
+
     @Override
     public String name() {
         return "SETTINGS(ACK)";

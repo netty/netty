@@ -1323,6 +1323,12 @@
                   <new>method io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder::decoderEnforceMaxRstFramesPerWindow(int, int)</new>
                   <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.addedToInterface</code>
+                  <new>method byte io.netty.handler.codec.http2.Http2Frame::frameType()</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>

@@ -84,6 +84,11 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
     }
 
     @Override
+    public byte frameType() {
+        return Http2FrameTypes.GO_AWAY;
+    }
+
+    @Override
     public String name() {
         return "GOAWAY";
     }

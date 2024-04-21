@@ -85,6 +85,11 @@ public final class DefaultHttp2PushPromiseFrame implements Http2PushPromiseFrame
     }
 
     @Override
+    public byte frameType() {
+        return Http2FrameTypes.PUSH_PROMISE;
+    }
+
+    @Override
     public String name() {
         return "PUSH_PROMISE_FRAME";
     }
