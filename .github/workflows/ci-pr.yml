@@ -28,6 +28,7 @@ env:
 jobs:
   build-pr:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - setup: linux-x86_64-java8
