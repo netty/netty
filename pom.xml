@@ -1534,6 +1534,21 @@
                   <old>class io.netty.channel.epoll.EpollEventLoop</old>
                   <new>class io.netty.channel.epoll.EpollEventLoop</new>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.channel.epoll.EpollRegistration io.netty.channel.epoll.AbstractEpollChannel::registration() @ io.netty.channel.epoll.AbstractEpollServerChannel</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.channel.epoll.EpollRegistration io.netty.channel.epoll.AbstractEpollChannel::registration() @ io.netty.channel.epoll.AbstractEpollStreamChannel</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonPublicPartOfAPI</code>
+                  <new>interface io.netty.channel.epoll.EpollRegistration</new>
+                </item>
 
                 <item>
                   <ignore>true</ignore>

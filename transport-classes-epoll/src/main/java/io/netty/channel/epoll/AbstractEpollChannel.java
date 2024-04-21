@@ -127,6 +127,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
     }
 
+    protected final EpollRegistration registration() {
+        assert registration != null;
+        return registration;
+    }
+
     boolean isFlagSet(int flag) {
         return (flags & flag) != 0;
     }
@@ -286,8 +291,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     private void modifyEvents() throws IOException {
-        if (isOpen() && isRegistered()) {
-            ((EpollHandler) eventLoop()).modify(this);
+        if (isOpen() && isRegistered() && registration != null) {
+            registration.update();
         }
     }
 
@@ -402,7 +407,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         if (data.nioBufferCount() > 1) {
-            IovArray array = ((EpollHandler) eventLoop()).cleanIovArray();
+            IovArray array = registration().cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;

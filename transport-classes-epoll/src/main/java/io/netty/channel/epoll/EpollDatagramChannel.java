@@ -774,6 +774,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     private NativeDatagramPacketArray cleanDatagramPacketArray() {
-        return ((EpollHandler) eventLoop()).cleanDatagramPacketArray();
+        return registration().cleanDatagramPacketArray();
     }
 }
