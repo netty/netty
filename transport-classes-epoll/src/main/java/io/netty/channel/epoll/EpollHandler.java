@@ -118,6 +118,7 @@ public class EpollHandler implements IoHandler {
         };
     }
 
+    // Package-private for testing
     EpollHandler(int maxEvents, SelectStrategy strategy) {
         selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
         if (maxEvents == 0) {

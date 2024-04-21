@@ -25,7 +25,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.locks.LockSupport;
 
-final class LocalIoHandler implements IoHandler {
+public final class LocalIoHandler implements IoHandler {
     private final Set<LocalChannelIoHandle> registeredChannels = new HashSet<LocalChannelIoHandle>(64);
     private volatile Thread executionThread;
 

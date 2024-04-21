@@ -131,7 +131,7 @@ public final class NioHandler implements IoHandler {
     private int cancelledKeys;
     private boolean needsToSelectAgain;
 
-    NioHandler(SelectorProvider selectorProvider,
+    private NioHandler(SelectorProvider selectorProvider,
                SelectStrategy strategy) {
         this.provider = ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
         this.selectStrategy = ObjectUtil.checkNotNull(strategy, "selectStrategy");

@@ -18,24 +18,19 @@ package io.netty.channel.kqueue;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.IoExecutionContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.kqueue.AbstractKQueueChannel.AbstractKQueueUnsafe;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -44,10 +39,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static java.lang.Math.min;
@@ -109,7 +101,7 @@ final class KQueueHandler implements IoHandler {
         };
     }
 
-    KQueueHandler(int maxEvents, SelectStrategy strategy) {
+    private KQueueHandler(int maxEvents, SelectStrategy strategy) {
         this.selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
         this.kqueueFd = Native.newKQueue();
         if (maxEvents == 0) {
