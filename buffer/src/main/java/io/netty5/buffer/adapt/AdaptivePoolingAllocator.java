@@ -457,6 +457,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
     }
 
     private static final class PoolDrop implements Drop<Buffer> {
+        private static final Object DEALLOCATE = new Object();
         private final Drop<Buffer> drop;
         private final Magazine magazine;
         private Object memory;
@@ -468,6 +469,10 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
 
         @Override
         public void drop(Buffer obj) {
+            if (memory == DEALLOCATE) {
+                drop.drop(obj);
+                return;
+            }
             Magazine mag = magazine;
             AdaptivePoolingAllocator parent = mag.parent;
             MemoryManager manager = parent.manager;
@@ -478,12 +483,14 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 // preferred chunk size, or over 50% larger than the preferred chunk size.
                 drop.drop(obj);
             } else {
-                Buffer buffer = manager.recoverMemory(
-                        parent.allocatorControl, memory, CleanerDrop.wrap(ArcDrop.wrap(this), manager));
+                Drop<Buffer> recoveredMemoryDrop = CleanerDrop.wrap(ArcDrop.wrap(this), manager);
+                Buffer buffer = manager.recoverMemory(parent.allocatorControl, memory, recoveredMemoryDrop);
                 if (!mag.trySetNextInLine(buffer)) {
                     if (!parent.offerToQueue(buffer)) {
-                        // The central queue is full. Drop the memory with the original Drop instance.
-                        drop.drop(obj);
+                        // The central queue is full. Drop the memory through the Buffer we created.
+                        // Mark this PoolDrop for deallocation to avoid infinite recursion.
+                        memory = DEALLOCATE;
+                        buffer.close();
                     }
                 }
             }
