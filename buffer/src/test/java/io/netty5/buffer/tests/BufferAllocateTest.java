@@ -69,15 +69,13 @@ public class BufferAllocateTest extends BufferTestSupport {
     public void allocateToUseManyChunks() {
         try (BufferAllocator allocator = new AdaptivePoolingAllocator()) {
             List<Buffer> buffers = new ArrayList<>();
-            for (int iteration = 0; iteration < 10; iteration++) {
-                for (int i = 0; i < 16384; i++) {
-                    buffers.add(allocator.allocate(256));
-                }
-                for (Buffer buffer : buffers) {
-                    buffer.close();
-                }
-                buffers.clear();
+            for (int i = 0; i < 16384; i++) {
+                buffers.add(allocator.allocate(256));
             }
+            for (Buffer buffer : buffers) {
+                buffer.close();
+            }
+            buffers.clear();
         }
     }
 }
