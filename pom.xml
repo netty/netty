@@ -1536,12 +1536,12 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
-                  <code>java.class.finalMethodAddedToNonFinalClass</code>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
                   <new>method io.netty.channel.epoll.EpollRegistration io.netty.channel.epoll.AbstractEpollChannel::registration() @ io.netty.channel.epoll.AbstractEpollServerChannel</new>
                 </item>
                 <item>
                   <ignore>true</ignore>
-                  <code>java.class.finalMethodAddedToNonFinalClass</code>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
                   <new>method io.netty.channel.epoll.EpollRegistration io.netty.channel.epoll.AbstractEpollChannel::registration() @ io.netty.channel.epoll.AbstractEpollStreamChannel</new>
                 </item>
                 <item>
