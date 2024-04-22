@@ -635,19 +635,5 @@
       "typeReachable": "io.netty.handler.traffic.GlobalTrafficShapingHandler"
     },
     "queryAllPublicMethods": true
-  },
-  {
-    "name": "org.bouncycastle.jcajce.provider.BouncyCastleProvider",
-    "condition": {
-      "typeReachable": "org.bouncycastle.jcajce.provider.BouncyCastleProvider"
-    },
-    "allPublicConstructors": true
-  },
-  {
-    "name": "org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider",
-    "condition": {
-      "typeReachable": "org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider"
-    },
-    "allPublicConstructors": true
   }
 ]
