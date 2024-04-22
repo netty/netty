@@ -633,7 +633,14 @@ public final class NioHandler implements IoHandler {
     }
 
     int selectNow() throws IOException {
-        return selector.selectNow();
+        try {
+            return selector.selectNow();
+        } finally {
+            // restore wakeup state if needed
+            if (wakenUp.get()) {
+                selector.wakeup();
+            }
+        }
     }
 
     private Selector selectRebuildSelector(int selectCnt) throws IOException {
