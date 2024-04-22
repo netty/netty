@@ -30,24 +30,12 @@ import java.util.concurrent.ThreadFactory;
 
 public class EpollEventLoop extends SingleThreadIoHandleEventLoop {
 
-    private int ioRatio;
-
     EpollEventLoop(IoHandleEventLoopGroup parent, ThreadFactory threadFactory, IoHandler ioHandler) {
         super(parent, threadFactory, ioHandler);
     }
 
     EpollEventLoop(IoHandleEventLoopGroup parent, Executor executor, IoHandler ioHandler) {
         super(parent, executor, ioHandler);
-    }
-
-    EpollEventLoop(IoHandleEventLoopGroup parent, ThreadFactory threadFactory, IoHandler ioHandler,
-                          int maxPendingTasks, RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, threadFactory, ioHandler, maxPendingTasks, rejectedExecutionHandler);
-    }
-
-    EpollEventLoop(IoHandleEventLoopGroup parent, Executor executor, IoHandler ioHandler,
-                          int maxPendingTasks, RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, ioHandler, maxPendingTasks, rejectedExecutionHandler);
     }
 
     EpollEventLoop(IoHandleEventLoopGroup parent, Executor executor, IoHandler ioHandler,
@@ -88,22 +76,15 @@ public class EpollEventLoop extends SingleThreadIoHandleEventLoop {
     }
 
     /**
-     * Returns the percentage of the desired amount of time spent for I/O in the event loop.
+     * Returns 0.
      */
     public int getIoRatio() {
-        return ioRatio;
+        return 0;
     }
 
     /**
-     * Sets the percentage of the desired amount of time spent for I/O in the event loop. Value range from 1-100.
-     * The default value is {@code 50}, which means the event loop will try to spend the same amount of time for I/O
-     * as for non-I/O tasks. The lower the number the more time can be spent on non-I/O tasks. If value set to
-     * {@code 100}, this feature will be disabled and event loop will not attempt to balance I/O and non-I/O tasks.
+     * This method does nothing.
      */
     public void setIoRatio(int ioRatio) {
-        if (ioRatio <= 0 || ioRatio > 100) {
-            throw new IllegalArgumentException("ioRatio: " + ioRatio + " (expected: 0 < ioRatio <= 100)");
-        }
-        this.ioRatio = ioRatio;
     }
 }

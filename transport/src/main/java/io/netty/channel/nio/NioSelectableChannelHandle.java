@@ -1,10 +1,3 @@
-
-package io.netty.channel.nio;
-
-
-import io.netty.channel.IoHandle;
-import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.logging.InternalLogger;
 /*
  * Copyright 2024 The Netty Project
  *
@@ -20,6 +13,12 @@ import io.netty.util.internal.logging.InternalLogger;
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.channel.nio;
+
+
+import io.netty.channel.IoHandle;
+import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
