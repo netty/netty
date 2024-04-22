@@ -943,7 +943,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         // Write was not done which means the target channel was not writable. In this case we need to
                         // disable reading until we are done with splicing to the target channel because:
                         //
-                        // - The user may want to to trigger another splice operation once the splicing was complete.
+                        // - The user may want to trigger another splice operation once the splicing was complete.
                         config().setAutoRead(false);
                     }
                 }

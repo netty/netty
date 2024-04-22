@@ -149,7 +149,7 @@ public class KQueueServerChannelConfig extends KQueueChannelConfig implements Se
      * Enables TCP FastOpen on the server channel. If the underlying os doesn't support TCP_FASTOPEN setting this has no
      * effect. This has to be set before doing listen on the socket otherwise this takes no effect.
      *
-     * @param enableTcpFastOpen {@code true} if TCP FastOpen should be enabled for incomming connections.
+     * @param enableTcpFastOpen {@code true} if TCP FastOpen should be enabled for incoming connections.
      *
      * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
      */

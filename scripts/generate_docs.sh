@@ -16,7 +16,7 @@
 # ----------------------------------------------------------------------------
 set -e
 # Adjust for different branch if needed
-VERSION=4.1
+VERSION=4.2
 
 if [ "$#" -ne 2 ]; then
     echo "Expected netty-website directory and tag"
