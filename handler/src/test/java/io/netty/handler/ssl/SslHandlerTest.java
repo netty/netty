@@ -770,7 +770,7 @@ public class SslHandlerTest {
                 .trustManager(new SelfSignedCertificate().cert())
                 .build();
 
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new DefaultEventLoopGroup(1);
         Channel sc = null;
         Channel cc = null;
         try {
