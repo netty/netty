@@ -26,8 +26,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
@@ -36,37 +34,13 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.UUID;
 
+import static io.netty.channel.socket.nio.NioDomainSocketUtil.newUnixDomainSocketAddress;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @EnabledForJreRange(min = JRE.JAVA_16)
 public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTest<NioServerDomainSocketChannel> {
-    private static final Method OF_METHOD;
-
-    static {
-        Method method;
-        try {
-            Class<?> clazz = Class.forName("java.net.UnixDomainSocketAddress");
-            method = clazz.getMethod("of", String.class);
-        } catch (Throwable error) {
-            method = null;
-        }
-        OF_METHOD = method;
-    }
-
-    public static SocketAddress newUnixDomainSocketAddress(String path) {
-        if (OF_METHOD == null) {
-            throw new IllegalStateException();
-        }
-        try {
-            return (SocketAddress) OF_METHOD.invoke(null, path);
-        } catch (IllegalAccessException e) {
-            throw new IllegalStateException(e);
-        } catch (InvocationTargetException e) {
-            throw new IllegalStateException(e);
-        }
-    }
 
     @Test
     public void testCloseOnError() throws Exception {

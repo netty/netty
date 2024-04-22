@@ -43,6 +43,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -177,6 +178,13 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
     @Override
     protected void doClose() throws Exception {
         javaChannel().close();
+        SocketAddress local = localAddress();
+        if (local != null) {
+            Path path = NioDomainSocketUtil.getPath(local);
+            if (path != null) {
+                path.toFile().delete();
+            }
+        }
     }
 
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
