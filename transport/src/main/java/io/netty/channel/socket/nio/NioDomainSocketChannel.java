@@ -49,7 +49,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -343,10 +342,7 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
         javaChannel().close();
         SocketAddress local = localAddress();
         if (local != null) {
-            Path path = NioDomainSocketUtil.getPath(local);
-            if (path != null) {
-                path.toFile().delete();
-            }
+            NioDomainSocketUtil.deleteSocketFile(local);
         }
     }
 

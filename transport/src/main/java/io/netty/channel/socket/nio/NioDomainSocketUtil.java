@@ -15,6 +15,8 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.util.internal.SuppressJava6Requirement;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.SocketAddress;
@@ -54,12 +56,16 @@ final class NioDomainSocketUtil {
         }
     }
 
-    static Path getPath(SocketAddress address) {
+    @SuppressJava6Requirement(reason = "Guarded by version check")
+    static void deleteSocketFile(SocketAddress address) {
         if (GET_PATH_METHOD == null) {
             throw new IllegalStateException();
         }
         try {
-            return (Path) GET_PATH_METHOD.invoke(address);
+            Path path = (Path) GET_PATH_METHOD.invoke(address);
+            if (path != null) {
+                path.toFile().delete();
+            }
         } catch (IllegalAccessException e) {
             throw new IllegalStateException(e);
         } catch (InvocationTargetException e) {
