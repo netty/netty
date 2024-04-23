@@ -17,16 +17,11 @@ package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.DefaultHttpContent;
-import io.netty.handler.codec.http.DefaultHttpRequest;
-import io.netty.handler.codec.http.DefaultLastHttpContent;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.*;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static org.junit.jupiter.api.Assertions.*;
 
 class HttpPostStandardRequestDecoderTest {
@@ -52,7 +47,8 @@ class HttpPostStandardRequestDecoderTest {
     void testDecodeSingleAttributeWithNoValue() {
         String requestBody = "key1";
 
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+                headersFactory().newHeaders().add("Content-Type", "application/x-www-form-urlencoded"));
 
         HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(httpDiskDataFactory(), request);
         ByteBuf buf = Unpooled.wrappedBuffer(requestBody.getBytes(CharsetUtil.UTF_8));
@@ -68,7 +64,8 @@ class HttpPostStandardRequestDecoderTest {
     void testDecodeSingleAttributeWithNoValueEmptyLast() {
         String requestBody = "key1";
 
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+                headersFactory().newHeaders().add("Content-Type", "application/x-www-form-urlencoded"));
 
         HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(httpDiskDataFactory(), request);
         ByteBuf buf = Unpooled.wrappedBuffer(requestBody.getBytes(CharsetUtil.UTF_8));
@@ -86,7 +83,8 @@ class HttpPostStandardRequestDecoderTest {
     void testDecodeEndAttributeWithNoValue() {
         String requestBody = "key1=value1&key2";
 
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+                headersFactory().newHeaders().add("Content-Type", "application/x-www-form-urlencoded"));
 
         HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(httpDiskDataFactory(), request);
         ByteBuf buf = Unpooled.wrappedBuffer(requestBody.getBytes(CharsetUtil.UTF_8));
@@ -96,6 +94,37 @@ class HttpPostStandardRequestDecoderTest {
         assertEquals(2, decoder.getBodyHttpDatas().size());
         assertMemoryAttribute(decoder.getBodyHttpData("key1"), "value1");
         assertMemoryAttribute(decoder.getBodyHttpData("key2"), "");
+        decoder.destroy();
+    }
+
+    @Test
+    void testDecodeJsonAttributeAsEmpty() {
+        String requestBody = "{\"iAm\": \" a JSON!\"}";
+
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+                headersFactory().newHeaders().add("Content-Type", "application/json"));
+
+        HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(httpDiskDataFactory(), request);
+        ByteBuf buf = Unpooled.wrappedBuffer(requestBody.getBytes(CharsetUtil.UTF_8));
+        DefaultHttpContent httpContent = new DefaultLastHttpContent(buf);
+        decoder.offer(httpContent);
+
+        assertEquals(0, decoder.getBodyHttpDatas().size());
+        decoder.destroy();
+    }
+
+    @Test
+    void testDecodeJsonAttributeAsEmptyAndNoHeaders() {
+        String requestBody = "{\"iAm\": \" a JSON!\"}";
+
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+
+        HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(httpDiskDataFactory(), request);
+        ByteBuf buf = Unpooled.wrappedBuffer(requestBody.getBytes(CharsetUtil.UTF_8));
+        DefaultHttpContent httpContent = new DefaultLastHttpContent(buf);
+        decoder.offer(httpContent);
+
+        assertEquals(0, decoder.getBodyHttpDatas().size());
         decoder.destroy();
     }
 
@@ -120,7 +149,8 @@ class HttpPostStandardRequestDecoderTest {
     void testDecodeMultipleAttributesWithNoValue() {
         String requestBody = "key1&key2&key3";
 
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload");
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/upload",
+                headersFactory().newHeaders().add("Content-Type", "application/x-www-form-urlencoded"));
 
         HttpPostStandardRequestDecoder decoder = new HttpPostStandardRequestDecoder(httpDiskDataFactory(), request);
         ByteBuf buf = Unpooled.wrappedBuffer(requestBody.getBytes(CharsetUtil.UTF_8));
