@@ -70,6 +70,11 @@ public final class DefaultHttp2HeadersFrame extends AbstractHttp2StreamFrame imp
     }
 
     @Override
+    public byte frameType() {
+        return Http2FrameTypes.HEADERS;
+    }
+
+    @Override
     public String name() {
         return "HEADERS";
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2020 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,24 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.http2;
 
-import io.netty.util.NotImplementedYetException;
-import io.netty.util.internal.UnstableApi;
+package io.netty.util;
 
-/** An HTTP/2 frame. */
-@UnstableApi
-public interface Http2Frame {
-
-    /**
-     * Returns the type of the HTTP/2 frame e.g. DATA, GOAWAY, etc.
-     */
-    default byte frameType() {
-        throw new NotImplementedYetException();
+public final class NotImplementedYetException extends RuntimeException {
+    public NotImplementedYetException(String message) {
+        super(message);
     }
 
-    /**
-     * Returns the name of the HTTP/2 frame e.g. DATA, GOAWAY, etc.
-     */
-    String name();
+    public NotImplementedYetException() {
+        super("Not implemented yet.");
+    }
 }

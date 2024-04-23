@@ -43,6 +43,11 @@ public class DefaultHttp2PingFrame implements Http2PingFrame {
     }
 
     @Override
+    public byte frameType() {
+        return Http2FrameTypes.PING;
+    }
+
+    @Override
     public String name() {
         return "PING";
     }

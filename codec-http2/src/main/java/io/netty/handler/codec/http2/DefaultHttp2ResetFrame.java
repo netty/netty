@@ -53,6 +53,11 @@ public final class DefaultHttp2ResetFrame extends AbstractHttp2StreamFrame imple
     }
 
     @Override
+    public byte frameType() {
+        return Http2FrameTypes.RST_STREAM;
+    }
+
+    @Override
     public String name() {
         return "RST_STREAM";
     }

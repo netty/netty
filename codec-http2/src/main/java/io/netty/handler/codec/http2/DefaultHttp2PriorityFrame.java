@@ -55,6 +55,11 @@ public final class DefaultHttp2PriorityFrame extends AbstractHttp2StreamFrame im
     }
 
     @Override
+    public byte frameType() {
+        return Http2FrameTypes.PRIORITY;
+    }
+
+    @Override
     public String name() {
         return "PRIORITY_FRAME";
     }
