@@ -28,7 +28,7 @@ import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.SilentDispose;
 
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -75,7 +75,7 @@ import static org.mockito.Mockito.when;
 @SuppressWarnings("unchecked")
 public class StreamBufferingEncoderTest {
     private static final Logger logger = LoggerFactory.getLogger(StreamBufferingEncoderTest.class);
-
+    @AutoClose
     private StreamBufferingEncoder encoder;
 
     private Http2Connection connection;
@@ -150,12 +150,6 @@ public class StreamBufferingEncoderTest {
                 new WriteBufferWaterMark(1024, Integer.MAX_VALUE));
         when(channel.getOption(ChannelOption.MESSAGE_SIZE_ESTIMATOR)).thenReturn(DefaultMessageSizeEstimator.DEFAULT);
         handler.handlerAdded(ctx);
-    }
-
-    @AfterEach
-    public void teardown() {
-        // Close and release any buffered frames.
-        encoder.close();
     }
 
     @Test

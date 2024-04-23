@@ -17,8 +17,8 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -36,6 +36,7 @@ public class HpackEncoderTest {
     private HpackDecoder hpackDecoder;
     private HpackEncoder hpackEncoder;
     private Http2Headers mockHeaders;
+    @AutoClose
     private Buffer buf;
 
     @BeforeEach
@@ -44,11 +45,6 @@ public class HpackEncoderTest {
         hpackDecoder = new HpackDecoder(DEFAULT_HEADER_LIST_SIZE);
         mockHeaders = mock(Http2Headers.class);
         buf = onHeapAllocator().allocate(256);
-    }
-
-    @AfterEach
-    public void teardown() {
-        buf.close();
     }
 
     @Test

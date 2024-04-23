@@ -15,7 +15,7 @@
  */
 package io.netty5.util.concurrent;
 
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -40,8 +40,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class FutureCompletionStageTest {
-
+    @AutoClose("shutdownGracefully")
     private static EventExecutorGroup group;
+    @AutoClose("shutdownGracefully")
     private static EventExecutorGroup asyncExecutorGroup;
     private static final IllegalStateException EXPECTED_EXCEPTION = new IllegalStateException();
     private static final Integer EXPECTED_INTEGER = 1;
@@ -52,12 +53,6 @@ public class FutureCompletionStageTest {
     public static void setup() {
         group = new MultithreadEventExecutorGroup(1, Executors.defaultThreadFactory());
         asyncExecutorGroup = new MultithreadEventExecutorGroup(1, Executors.defaultThreadFactory());
-    }
-
-    @AfterAll
-    public static void destroy() {
-        group.shutdownGracefully();
-        asyncExecutorGroup.shutdownGracefully();
     }
 
     private static EventExecutor executor() {
