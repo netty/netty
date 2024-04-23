@@ -1599,6 +1599,12 @@
                 <binaryCompatible>true</binaryCompatible>
                 <semanticVersionLevel>PATCH</semanticVersionLevel>
               </overrideCompatibilityChangeParameter>
+              <overrideCompatibilityChangeParameter>
+                <compatibilityChange>METHOD_NOW_FINAL</compatibilityChange>
+                <sourceCompatible>true</sourceCompatible>
+                <binaryCompatible>true</binaryCompatible>
+                <semanticVersionLevel>PATCH</semanticVersionLevel>
+              </overrideCompatibilityChangeParameter>
             </overrideCompatibilityChangeParameters>
           </parameter>
         </configuration>
