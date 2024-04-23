@@ -30,7 +30,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
-import io.netty.channel.IoHandleEventLoop;
+import io.netty.channel.IoEventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
@@ -231,7 +231,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doDeregister() throws Exception {
-        ((IoHandleEventLoop) eventLoop()).deregisterForIo(this);
+        ((IoEventLoop) eventLoop()).deregisterForIo(this);
     }
 
     @Override
@@ -298,7 +298,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doRegister() throws Exception {
-        ((IoHandleEventLoop) eventLoop()).registerForIo(this);
+        ((IoEventLoop) eventLoop()).registerForIo(this);
     }
 
     @Override

@@ -21,7 +21,7 @@ import io.netty.util.concurrent.Future;
 /**
  * {@link EventLoop} that allows to register / deregister {@link IoHandle} instances.
  */
-public interface IoHandleEventLoop extends EventLoop, IoHandleEventLoopGroup {
+public interface IoEventLoop extends EventLoop, IoEventLoopGroup {
 
     // We only not return IoHandleEventLoopGroup here as this could break compat for people
     // that extend EventLoopGroup implementations that now implement IoHandleEventLoop (for example NioEventLoop).

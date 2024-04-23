@@ -27,10 +27,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * {@link IoHandleEventLoop} implementation that execute all its submitted tasks in a single thread using the provided
+ * {@link IoEventLoop} implementation that execute all its submitted tasks in a single thread using the provided
  * {@link IoHandler}.
  */
-public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop implements IoHandleEventLoop {
+public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements IoEventLoop {
 
     // TODO: Is this a sensible default ?
     protected static final int DEFAULT_MAX_TASKS_PER_RUN = Math.max(1,
@@ -47,13 +47,13 @@ public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop impleme
         @Override
         public long delayNanos(long currentTimeNanos) {
             assert inEventLoop();
-            return SingleThreadIoHandleEventLoop.this.delayNanos(currentTimeNanos);
+            return SingleThreadIoEventLoop.this.delayNanos(currentTimeNanos);
         }
 
         @Override
         public long deadlineNanos() {
             assert inEventLoop();
-            return SingleThreadIoHandleEventLoop.this.deadlineNanos();
+            return SingleThreadIoEventLoop.this.deadlineNanos();
         }
     };
 
@@ -62,12 +62,12 @@ public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop impleme
     /**
      *  Creates a new instance
      *
-     * @param parent            the parent that holds this {@link IoHandleEventLoop}.
+     * @param parent            the parent that holds this {@link IoEventLoop}.
      * @param ioHandler         the {@link IoHandler} used to run all IO.
      * @param threadFactory     the {@link ThreadFactory} that is used to create the underlying {@link Thread}.
      */
-    public SingleThreadIoHandleEventLoop(IoHandleEventLoopGroup parent, ThreadFactory threadFactory,
-                                         IoHandler ioHandler) {
+    public SingleThreadIoEventLoop(IoEventLoopGroup parent, ThreadFactory threadFactory,
+                                   IoHandler ioHandler) {
         super(parent, threadFactory, false);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
@@ -75,11 +75,11 @@ public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop impleme
     /**
      *  Creates a new instance
      *
-     * @param parent            the parent that holds this {@link IoHandleEventLoop}.
+     * @param parent            the parent that holds this {@link IoEventLoop}.
      * @param executor          the {@link Executor} that is used for dispatching the work.
      * @param ioHandler         the {@link IoHandler} used to run all IO.
      */
-    public SingleThreadIoHandleEventLoop(IoHandleEventLoopGroup parent, Executor executor, IoHandler ioHandler) {
+    public SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor, IoHandler ioHandler) {
         super(parent, executor, false);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
@@ -87,7 +87,7 @@ public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop impleme
     /**
      *  Creates a new instance
      *
-     * @param parent                    the parent that holds this {@link IoHandleEventLoop}.
+     * @param parent                    the parent that holds this {@link IoEventLoop}.
      * @param threadFactory             the {@link ThreadFactory} that is used to create the underlying {@link Thread}.
      * @param ioHandler                 the {@link IoHandler} used to run all IO.
      * @param maxPendingTasks           the maximum pending tasks that are allowed before
@@ -96,9 +96,9 @@ public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop impleme
      * @param rejectedExecutionHandler  the {@link RejectedExecutionHandler} that handles when more tasks are added
      *                                  then allowed per {@code maxPendingTasks}.
      */
-    public SingleThreadIoHandleEventLoop(IoHandleEventLoopGroup parent, ThreadFactory threadFactory,
-                                         IoHandler ioHandler, int maxPendingTasks,
-                                         RejectedExecutionHandler rejectedExecutionHandler) {
+    public SingleThreadIoEventLoop(IoEventLoopGroup parent, ThreadFactory threadFactory,
+                                   IoHandler ioHandler, int maxPendingTasks,
+                                   RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, threadFactory, false, maxPendingTasks, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
@@ -106,7 +106,7 @@ public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop impleme
     /**
      *  Creates a new instance
      *
-     * @param parent                    the parent that holds this {@link IoHandleEventLoop}.
+     * @param parent                    the parent that holds this {@link IoEventLoop}.
      * @param ioHandler                 the {@link IoHandler} used to run all IO.
      * @param executor                  the {@link Executor} that is used for dispatching the work.
      * @param maxPendingTasks           the maximum pending tasks that are allowed before
@@ -115,9 +115,9 @@ public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop impleme
      * @param rejectedExecutionHandler  the {@link RejectedExecutionHandler} that handles when more tasks are added
      *                                  then allowed per {@code maxPendingTasks}.
      */
-    public SingleThreadIoHandleEventLoop(IoHandleEventLoopGroup parent, Executor executor,
-                                         IoHandler ioHandler, int maxPendingTasks,
-                                         RejectedExecutionHandler rejectedExecutionHandler) {
+    public SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor,
+                                   IoHandler ioHandler, int maxPendingTasks,
+                                   RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, executor, false, maxPendingTasks, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
@@ -126,7 +126,7 @@ public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop impleme
      *
      *  Creates a new instance
      *
-     * @param parent                    the parent that holds this {@link IoHandleEventLoop}.
+     * @param parent                    the parent that holds this {@link IoEventLoop}.
      * @param executor                  the {@link Executor} that is used for dispatching the work.
      * @param ioHandler                 the {@link IoHandler} used to run all IO.
      * @param taskQueue                 the {@link Queue} used for storing pending tasks.
@@ -134,11 +134,11 @@ public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop impleme
      * @param rejectedExecutionHandler  the {@link RejectedExecutionHandler} that handles when more tasks are added
      *                                  then allowed.
      */
-    protected SingleThreadIoHandleEventLoop(IoHandleEventLoopGroup parent, Executor executor,
-                                            IoHandler ioHandler, Queue<Runnable> taskQueue,
-                                            Queue<Runnable> tailTaskQueue,
+    protected SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor,
+                                      IoHandler ioHandler, Queue<Runnable> taskQueue,
+                                      Queue<Runnable> tailTaskQueue,
 
-                                            RejectedExecutionHandler rejectedExecutionHandler) {
+                                      RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, executor, false, taskQueue, tailTaskQueue, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
@@ -160,7 +160,7 @@ public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop impleme
     }
 
     /**
-     * Called when IO will be processed for all the {@link IoHandle}s on this {@link SingleThreadIoHandleEventLoop}.
+     * Called when IO will be processed for all the {@link IoHandle}s on this {@link SingleThreadIoEventLoop}.
      * This method returns the number of {@link IoHandle}s for which IO was processed.
      *
      * This method must be called from the {@link EventLoop} thread.
@@ -171,7 +171,7 @@ public class SingleThreadIoHandleEventLoop extends SingleThreadEventLoop impleme
     }
 
     @Override
-    public IoHandleEventLoop next() {
+    public IoEventLoop next() {
         return this;
     }
 

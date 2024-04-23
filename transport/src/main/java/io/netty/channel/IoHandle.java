@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 /**
- * A handle that can be registered to a {@link IoHandleEventLoop}.
+ * A handle that can be registered to a {@link IoEventLoop}.
  */
 public interface IoHandle {
 

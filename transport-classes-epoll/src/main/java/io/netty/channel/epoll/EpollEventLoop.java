@@ -17,9 +17,9 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopTaskQueueFactory;
-import io.netty.channel.IoHandleEventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.IoHandler;
-import io.netty.channel.SingleThreadIoHandleEventLoop;
+import io.netty.channel.SingleThreadIoEventLoop;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.PlatformDependent;
 
@@ -28,20 +28,20 @@ import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
-public class EpollEventLoop extends SingleThreadIoHandleEventLoop {
+public class EpollEventLoop extends SingleThreadIoEventLoop {
 
-    EpollEventLoop(IoHandleEventLoopGroup parent, ThreadFactory threadFactory, IoHandler ioHandler) {
+    EpollEventLoop(IoEventLoopGroup parent, ThreadFactory threadFactory, IoHandler ioHandler) {
         super(parent, threadFactory, ioHandler);
     }
 
-    EpollEventLoop(IoHandleEventLoopGroup parent, Executor executor, IoHandler ioHandler) {
+    EpollEventLoop(IoEventLoopGroup parent, Executor executor, IoHandler ioHandler) {
         super(parent, executor, ioHandler);
     }
 
-    EpollEventLoop(IoHandleEventLoopGroup parent, Executor executor, IoHandler ioHandler,
+    EpollEventLoop(IoEventLoopGroup parent, Executor executor, IoHandler ioHandler,
                    EventLoopTaskQueueFactory taskQueueFactory,
                    EventLoopTaskQueueFactory tailTaskQueueFactory,
-                          RejectedExecutionHandler rejectedExecutionHandler) {
+                   RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, executor, ioHandler, newTaskQueue(taskQueueFactory), newTaskQueue(tailTaskQueueFactory),
                 rejectedExecutionHandler);
     }

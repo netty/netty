@@ -1059,7 +1059,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Return {@code true} if the given {@link EventLoop} is compatible with this instance.
      */
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof IoHandleEventLoop && ((IoHandleEventLoop) loop).isCompatible(getClass());
+        return loop instanceof IoEventLoop && ((IoEventLoop) loop).isCompatible(getClass());
     }
 
     /**

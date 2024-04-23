@@ -20,7 +20,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
-import io.netty.channel.IoHandleEventLoop;
+import io.netty.channel.IoEventLoop;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
@@ -93,8 +93,8 @@ public class LocalServerChannel extends AbstractServerChannel implements LocalCh
     @Override
     protected void doRegister() throws Exception {
         EventLoop loop = eventLoop();
-        if (loop instanceof IoHandleEventLoop) {
-            ((IoHandleEventLoop) loop).registerForIo(this);
+        if (loop instanceof IoEventLoop) {
+            ((IoEventLoop) loop).registerForIo(this);
         } else {
             registerNow();
         }
@@ -121,8 +121,8 @@ public class LocalServerChannel extends AbstractServerChannel implements LocalCh
     @Override
     protected void doDeregister() throws Exception {
         EventLoop loop = eventLoop();
-        if (loop instanceof IoHandleEventLoop) {
-            ((IoHandleEventLoop) loop).deregisterForIo(this);
+        if (loop instanceof IoEventLoop) {
+            ((IoEventLoop) loop).deregisterForIo(this);
         } else {
             deregisterNow();
         }

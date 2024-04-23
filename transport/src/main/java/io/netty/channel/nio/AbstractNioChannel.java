@@ -27,7 +27,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
-import io.netty.channel.IoHandleEventLoop;
+import io.netty.channel.IoEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
@@ -373,12 +373,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doRegister() throws Exception {
-        ((IoHandleEventLoop) eventLoop()).registerForIo(this);
+        ((IoEventLoop) eventLoop()).registerForIo(this);
     }
 
     @Override
     protected void doDeregister() throws Exception {
-        ((IoHandleEventLoop) eventLoop()).deregisterForIo(this);
+        ((IoEventLoop) eventLoop()).deregisterForIo(this);
     }
 
     @Override

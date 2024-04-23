@@ -15,15 +15,15 @@
  */
 package io.netty.channel.local;
 
-import io.netty.channel.MultiThreadIoHandleEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 
 import java.util.concurrent.ThreadFactory;
 
 /**
- * @deprecated Use {@link MultiThreadIoHandleEventLoopGroup} instead.
+ * @deprecated Use {@link MultiThreadIoEventLoopGroup} instead.
  */
 @Deprecated
-public class LocalEventLoopGroup extends MultiThreadIoHandleEventLoopGroup {
+public class LocalEventLoopGroup extends MultiThreadIoEventLoopGroup {
 
     /**
      * Create a new instance with the default number of threads.

@@ -18,13 +18,13 @@ package io.netty.channel.kqueue;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoopTaskQueueFactory;
-import io.netty.channel.IoHandleEventLoop;
-import io.netty.channel.IoHandleEventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoHandler;
-import io.netty.channel.MultiThreadIoHandleEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.channel.SingleThreadIoHandleEventLoop;
+import io.netty.channel.SingleThreadIoEventLoop;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
@@ -37,7 +37,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 @UnstableApi
-public final class KQueueEventLoopGroup extends MultiThreadIoHandleEventLoopGroup {
+public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
 
     // This does not use static by design to ensure the class can be loaded and only do the check when its actually
     // instanced.
@@ -178,7 +178,7 @@ public final class KQueueEventLoopGroup extends MultiThreadIoHandleEventLoopGrou
     }
 
     @Override
-    protected IoHandleEventLoop newChild(Executor executor, IoHandler handler, Object... args) {
+    protected IoEventLoop newChild(Executor executor, IoHandler handler, Object... args) {
         RejectedExecutionHandler rejectedExecutionHandler = null;
         EventLoopTaskQueueFactory taskQueueFactory = null;
         EventLoopTaskQueueFactory tailTaskQueueFactory = null;
@@ -198,10 +198,10 @@ public final class KQueueEventLoopGroup extends MultiThreadIoHandleEventLoopGrou
                 rejectedExecutionHandler);
     }
 
-    private static final class KQueueEventLoop extends SingleThreadIoHandleEventLoop {
-        KQueueEventLoop(IoHandleEventLoopGroup parent, Executor executor, IoHandler ioHandler,
-                               Queue<Runnable> taskQueue, Queue<Runnable> tailTaskQueue,
-                               RejectedExecutionHandler rejectedExecutionHandler) {
+    private static final class KQueueEventLoop extends SingleThreadIoEventLoop {
+        KQueueEventLoop(IoEventLoopGroup parent, Executor executor, IoHandler ioHandler,
+                        Queue<Runnable> taskQueue, Queue<Runnable> tailTaskQueue,
+                        RejectedExecutionHandler rejectedExecutionHandler) {
             super(parent, executor, ioHandler, taskQueue, tailTaskQueue, rejectedExecutionHandler);
         }
 

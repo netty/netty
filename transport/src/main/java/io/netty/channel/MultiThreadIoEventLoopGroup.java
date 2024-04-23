@@ -25,27 +25,27 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * {@link IoHandleEventLoopGroup} implementation that will handle its tasks with multiple threads.
+ * {@link IoEventLoopGroup} implementation that will handle its tasks with multiple threads.
  */
-public class MultiThreadIoHandleEventLoopGroup extends MultithreadEventLoopGroup implements IoHandleEventLoopGroup {
+public class MultiThreadIoEventLoopGroup extends MultithreadEventLoopGroup implements IoEventLoopGroup {
 
     /**
-     * Creates a new instance of the {@link MultiThreadIoHandleEventLoopGroup} using the default number
+     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup} using the default number
      * of threads and default {@link ThreadFactory}.
      */
-    public MultiThreadIoHandleEventLoopGroup(IoHandlerFactory ioHandlerFactory) {
+    public MultiThreadIoEventLoopGroup(IoHandlerFactory ioHandlerFactory) {
         this(0, ioHandlerFactory);
     }
 
     /**
      /**
-     * Creates a new instance of the {@link MultiThreadIoHandleEventLoopGroup} using the default {@link ThreadFactory}.
+     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup} using the default {@link ThreadFactory}.
      *
      * @param nThreads          the number of threads and so {@link EventLoop}s that are created.
      * @param ioHandlerFactory  the {@link IoHandlerFactory} that will be used to create {@link IoHandler} for handling
      *                          IO.
      */
-    public MultiThreadIoHandleEventLoopGroup(int nThreads, IoHandlerFactory ioHandlerFactory) {
+    public MultiThreadIoEventLoopGroup(int nThreads, IoHandlerFactory ioHandlerFactory) {
         this(nThreads, (Executor) null, ioHandlerFactory);
     }
 
@@ -56,68 +56,68 @@ public class MultiThreadIoHandleEventLoopGroup extends MultithreadEventLoopGroup
      * @param ioHandlerFactory  the {@link IoHandlerFactory} that will be used to create {@link IoHandler} for handling
      *                          IO.
      */
-    public MultiThreadIoHandleEventLoopGroup(ThreadFactory threadFactory, IoHandlerFactory ioHandlerFactory) {
+    public MultiThreadIoEventLoopGroup(ThreadFactory threadFactory, IoHandlerFactory ioHandlerFactory) {
         this(0, threadFactory, ioHandlerFactory);
     }
 
     /**
-     * Creates a new instance of the {@link MultiThreadIoHandleEventLoopGroup} using the default number
+     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup} using the default number
      * of threads.
      *
      * @param executor          the {@link Executor} that is used.
      * @param ioHandlerFactory  the {@link IoHandlerFactory} that will be used to create {@link IoHandler} for handling
      *                          IO.
      */
-    public MultiThreadIoHandleEventLoopGroup(Executor executor,
-                                             IoHandlerFactory ioHandlerFactory) {
+    public MultiThreadIoEventLoopGroup(Executor executor,
+                                       IoHandlerFactory ioHandlerFactory) {
         super(0, executor, ioHandlerFactory);
     }
 
     /**
-     * Creates a new instance of the {@link MultiThreadIoHandleEventLoopGroup}.
+     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup}.
      *
      * @param nThreads          the number of threads and so {@link EventLoop}s that are created.
      * @param executor          the {@link Executor} that is used.
      * @param ioHandlerFactory  the {@link IoHandlerFactory} that will be used to create {@link IoHandler} for handling
      *                          IO.
      */
-    public MultiThreadIoHandleEventLoopGroup(int nThreads, Executor executor,
-                                             IoHandlerFactory ioHandlerFactory) {
+    public MultiThreadIoEventLoopGroup(int nThreads, Executor executor,
+                                       IoHandlerFactory ioHandlerFactory) {
         super(nThreads, executor, ioHandlerFactory);
     }
 
     /**
-     * Creates a new instance of the {@link MultiThreadIoHandleEventLoopGroup}.
+     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup}.
      *
      * @param nThreads          the number of threads and so {@link EventLoop}s that are created.
      * @param threadFactory     the {@link ThreadFactory} that is used.
      * @param ioHandlerFactory  the {@link IoHandlerFactory} that will be used to create {@link IoHandler} for handling
      *                          IO.
      */
-    public MultiThreadIoHandleEventLoopGroup(int nThreads, ThreadFactory threadFactory,
-                                             IoHandlerFactory ioHandlerFactory) {
+    public MultiThreadIoEventLoopGroup(int nThreads, ThreadFactory threadFactory,
+                                       IoHandlerFactory ioHandlerFactory) {
         super(nThreads, threadFactory, ioHandlerFactory);
     }
 
     /**
-     * Creates a new instance of the {@link MultiThreadIoHandleEventLoopGroup}.
+     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup}.
      *
      * @param nThreads          the number of threads and so {@link EventLoop}s that are created.
      * @param executor          the {@link Executor} that is used.
      * @param chooserFactory    the {@link EventExecutorChooserFactory} that is used to choose the
-     *                          {@link IoHandleEventLoop} when {@link MultiThreadIoHandleEventLoopGroup#next()} is
+     *                          {@link IoEventLoop} when {@link MultiThreadIoEventLoopGroup#next()} is
      *                          called.
      * @param ioHandlerFactory  the {@link IoHandlerFactory} that will be used to create {@link IoHandler} for handling
      *                          IO.
      */
-    public MultiThreadIoHandleEventLoopGroup(int nThreads, Executor executor,
-                                             EventExecutorChooserFactory chooserFactory,
-                                             IoHandlerFactory ioHandlerFactory) {
+    public MultiThreadIoEventLoopGroup(int nThreads, Executor executor,
+                                       EventExecutorChooserFactory chooserFactory,
+                                       IoHandlerFactory ioHandlerFactory) {
         super(nThreads, executor, chooserFactory, ioHandlerFactory);
     }
 
     /**
-     * Creates a new instance of the {@link MultiThreadIoHandleEventLoopGroup}.
+     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup}.
      *
      * @param nThreads          the number of threads and so {@link EventLoop}s that are created.
      * @param executor          the {@link Executor} that is used.
@@ -125,13 +125,13 @@ public class MultiThreadIoHandleEventLoopGroup extends MultithreadEventLoopGroup
      *                          IO.
      * @param args              extra args that are passed to {@link #newChild(Executor, Object...)} method.
      */
-    protected MultiThreadIoHandleEventLoopGroup(int nThreads, Executor executor,
-                                             IoHandlerFactory ioHandlerFactory, Object... args) {
+    protected MultiThreadIoEventLoopGroup(int nThreads, Executor executor,
+                                          IoHandlerFactory ioHandlerFactory, Object... args) {
         super(nThreads, executor, combine(ioHandlerFactory, args));
     }
 
     /**
-     * Creates a new instance of the {@link MultiThreadIoHandleEventLoopGroup}.
+     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup}.
      *
      * @param nThreads          the number of threads and so {@link EventLoop}s that are created.
      * @param threadFactory     the {@link ThreadFactory} that is used.
@@ -139,13 +139,13 @@ public class MultiThreadIoHandleEventLoopGroup extends MultithreadEventLoopGroup
      *                          IO.
      * @param args              extra args that are passed to {@link #newChild(Executor, Object...)} method.
      */
-    protected MultiThreadIoHandleEventLoopGroup(int nThreads, ThreadFactory threadFactory,
-                                             IoHandlerFactory ioHandlerFactory, Object... args) {
+    protected MultiThreadIoEventLoopGroup(int nThreads, ThreadFactory threadFactory,
+                                          IoHandlerFactory ioHandlerFactory, Object... args) {
         super(nThreads, threadFactory, combine(ioHandlerFactory, args));
     }
 
     /**
-     * Creates a new instance of the {@link MultiThreadIoHandleEventLoopGroup}.
+     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup}.
      *
      * @param nThreads          the number of threads and so {@link EventLoop}s that are created.
      * @param threadFactory     the {@link ThreadFactory} that is used.
@@ -154,15 +154,15 @@ public class MultiThreadIoHandleEventLoopGroup extends MultithreadEventLoopGroup
      * @param chooserFactory    the {@link EventExecutorChooserFactory} that is used to choose the
      * @param args              extra args that are passed to {@link #newChild(Executor, Object...)} method.
      */
-    protected MultiThreadIoHandleEventLoopGroup(int nThreads, ThreadFactory threadFactory,
-                                                IoHandlerFactory ioHandlerFactory,
-                                                EventExecutorChooserFactory chooserFactory,
-                                                Object... args) {
+    protected MultiThreadIoEventLoopGroup(int nThreads, ThreadFactory threadFactory,
+                                          IoHandlerFactory ioHandlerFactory,
+                                          EventExecutorChooserFactory chooserFactory,
+                                          Object... args) {
         super(nThreads, threadFactory, chooserFactory, combine(ioHandlerFactory, args));
     }
 
     /**
-     * Creates a new instance of the {@link MultiThreadIoHandleEventLoopGroup}.
+     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup}.
      *
      * @param nThreads          the number of threads and so {@link EventLoop}s that are created.
      * @param executor          the {@link Executor} that is used.
@@ -171,10 +171,10 @@ public class MultiThreadIoHandleEventLoopGroup extends MultithreadEventLoopGroup
      * @param chooserFactory    the {@link EventExecutorChooserFactory} that is used to choose the
      * @param args              extra args that are passed to {@link #newChild(Executor, Object...)} method.
      */
-    protected MultiThreadIoHandleEventLoopGroup(int nThreads, Executor executor,
-                                                IoHandlerFactory ioHandlerFactory,
-                                                EventExecutorChooserFactory chooserFactory,
-                                                Object... args) {
+    protected MultiThreadIoEventLoopGroup(int nThreads, Executor executor,
+                                          IoHandlerFactory ioHandlerFactory,
+                                          EventExecutorChooserFactory chooserFactory,
+                                          Object... args) {
         super(nThreads, executor, chooserFactory, combine(ioHandlerFactory, args));
     }
 
@@ -199,21 +199,21 @@ public class MultiThreadIoHandleEventLoopGroup extends MultithreadEventLoopGroup
     }
 
     /**
-     * Creates a new {@link IoHandleEventLoop} to use with the given {@link Executor} and {@link IoHandler}.
+     * Creates a new {@link IoEventLoop} to use with the given {@link Executor} and {@link IoHandler}.
      *
      * @param executor      the {@link Executor} that should be used to handle execution of tasks and IO.
      * @param ioHandler     the {@link IoHandler} that should be used to handle IO.
      * @param args          extra arguments that are based by the constructor.
-     * @return              the created {@link IoHandleEventLoop}.
+     * @return              the created {@link IoEventLoop}.
      */
-    protected IoHandleEventLoop newChild(Executor executor, IoHandler ioHandler,
-                                         @SuppressWarnings("unused") Object... args) {
-        return new SingleThreadIoHandleEventLoop(this, executor, ioHandler);
+    protected IoEventLoop newChild(Executor executor, IoHandler ioHandler,
+                                   @SuppressWarnings("unused") Object... args) {
+        return new SingleThreadIoEventLoop(this, executor, ioHandler);
     }
 
     @Override
-    public IoHandleEventLoop next() {
-        return (IoHandleEventLoop) super.next();
+    public IoEventLoop next() {
+        return (IoEventLoop) super.next();
     }
 
     private static Object[] combine(IoHandlerFactory handlerFactory, Object... args) {

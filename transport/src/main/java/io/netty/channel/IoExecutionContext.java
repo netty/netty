@@ -17,7 +17,7 @@ package io.netty.channel;
 
 /**
  * The execution context for an {@link IoHandler}.
- * All methods must be called from the {@link IoHandleEventLoop} thread.
+ * All methods must be called from the {@link IoEventLoop} thread.
  */
 public interface IoExecutionContext {
     /**

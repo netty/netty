@@ -19,7 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.IoHandler;
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.channel.SingleThreadIoHandleEventLoop;
+import io.netty.channel.SingleThreadIoEventLoop;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -42,7 +42,7 @@ import java.util.concurrent.Executor;
  * {@link Selector} and so does the multi-plexing of these in the event loop.
  *
  */
-public final class NioEventLoop extends SingleThreadIoHandleEventLoop {
+public final class NioEventLoop extends SingleThreadIoEventLoop {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
 

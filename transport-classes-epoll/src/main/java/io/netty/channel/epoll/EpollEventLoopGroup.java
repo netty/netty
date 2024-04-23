@@ -18,9 +18,9 @@ package io.netty.channel.epoll;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.EventLoopTaskQueueFactory;
-import io.netty.channel.IoHandleEventLoop;
+import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoHandler;
-import io.netty.channel.MultiThreadIoHandleEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
@@ -34,7 +34,7 @@ import java.util.concurrent.ThreadFactory;
  * {@link EventLoopGroup} which uses epoll under the covers. Because of this
  * it only works on linux.
  */
-public final class EpollEventLoopGroup extends MultiThreadIoHandleEventLoopGroup {
+public final class EpollEventLoopGroup extends MultiThreadIoEventLoopGroup {
 
     // This does not use static by design to ensure the class can be loaded and only do the check when its actually
     // instanced.
@@ -174,7 +174,7 @@ public final class EpollEventLoopGroup extends MultiThreadIoHandleEventLoopGroup
     }
 
     @Override
-    protected IoHandleEventLoop newChild(Executor executor, IoHandler handler, Object... args) {
+    protected IoEventLoop newChild(Executor executor, IoHandler handler, Object... args) {
         RejectedExecutionHandler rejectedExecutionHandler = (RejectedExecutionHandler) args[0];
         EventLoopTaskQueueFactory taskQueueFactory = null;
         EventLoopTaskQueueFactory tailTaskQueueFactory = null;

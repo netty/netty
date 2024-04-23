@@ -16,9 +16,9 @@
 package io.netty.channel;
 
 /**
- * Handles IO dispatching for an {@link IoHandleEventLoop}
+ * Handles IO dispatching for an {@link IoEventLoop}
  * All operations except {@link #wakeup(boolean)} and {@link #isCompatible(Class)} <strong>MUST</strong> be executed
- * on the {@link IoHandleEventLoop} thread and should never be called from the user-directly.
+ * on the {@link IoEventLoop} thread and should never be called from the user-directly.
  */
 public interface IoHandler {
     /**

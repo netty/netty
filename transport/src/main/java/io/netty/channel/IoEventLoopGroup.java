@@ -16,12 +16,12 @@
 package io.netty.channel;
 
 /**
- * {@link EventLoopGroup} for {@link IoHandleEventLoop}s.
+ * {@link EventLoopGroup} for {@link IoEventLoop}s.
  */
-public interface IoHandleEventLoopGroup extends EventLoopGroup {
+public interface IoEventLoopGroup extends EventLoopGroup {
 
     @Override
-    IoHandleEventLoop next();
+    IoEventLoop next();
 
     /**
      * Returns {@code true} if the given type is compatible with this {@link EventLoopGroup} and so can be registered

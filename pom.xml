@@ -1316,14 +1316,14 @@
                   <code>java.class.nonFinalClassInheritsFromNewClass</code>
                   <old>class io.netty.channel.nio.NioEventLoopGroup</old>
                   <new>class io.netty.channel.nio.NioEventLoopGroup</new>
-                  <superClass>io.netty.channel.MultiThreadIoHandleEventLoopGroup</superClass>
+                  <superClass>io.netty.channel.MultiThreadIoEventLoopGroup</superClass>
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.returnTypeChangedCovariantly</code>
                   <old>method io.netty.channel.EventLoop io.netty.channel.SingleThreadEventLoop::next() @ io.netty.channel.nio.NioEventLoop</old>
-                  <new>method io.netty.channel.IoHandleEventLoop io.netty.channel.SingleThreadIoHandleEventLoop::next() @ io.netty.channel.nio.NioEventLoop</new>
+                  <new>method io.netty.channel.IoEventLoop io.netty.channel.SingleThreadIoEventLoop::next() @ io.netty.channel.nio.NioEventLoop</new>
                   <justification>Acceptable incompatibility for required change, as it's a new sub-interface</justification>
                 </item>
                 <item>
@@ -1426,7 +1426,7 @@
                   <ignore>true</ignore>
                   <code>java.method.returnTypeChangedCovariantly</code>
                   <old>method io.netty.channel.EventLoop io.netty.channel.MultithreadEventLoopGroup::next() @ io.netty.channel.kqueue.KQueueEventLoopGroup</old>
-                  <new>method io.netty.channel.IoHandleEventLoop io.netty.channel.MultiThreadIoHandleEventLoopGroup::next() @ io.netty.channel.kqueue.KQueueEventLoopGroup</new>
+                  <new>method io.netty.channel.IoEventLoop io.netty.channel.MultiThreadIoEventLoopGroup::next() @ io.netty.channel.kqueue.KQueueEventLoopGroup</new>
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
                 <item>
@@ -1440,7 +1440,7 @@
                   <ignore>true</ignore>
                   <code>java.method.nowFinal</code>
                   <old>method void io.netty.channel.epoll.EpollEventLoop::cleanup()</old>
-                  <new>method void io.netty.channel.SingleThreadIoHandleEventLoop::cleanup() @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <new>method void io.netty.channel.SingleThreadIoEventLoop::cleanup() @ io.netty.channel.epoll.EpollEventLoop</new>
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
                 <item>
@@ -1451,18 +1451,18 @@
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.finalMethodAddedToNonFinalClass</code>
-                  <new>method io.netty.util.concurrent.Future&lt;java.lang.Void&gt; io.netty.channel.SingleThreadIoHandleEventLoop::deregisterForIo(io.netty.channel.IoHandle) @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <new>method io.netty.util.concurrent.Future&lt;java.lang.Void&gt; io.netty.channel.SingleThreadIoEventLoop::deregisterForIo(io.netty.channel.IoHandle) @ io.netty.channel.epoll.EpollEventLoop</new>
                 </item>
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.finalMethodAddedToNonFinalClass</code>
-                  <new>method io.netty.channel.IoHandler io.netty.channel.SingleThreadIoHandleEventLoop::ioHandler() @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <new>method io.netty.channel.IoHandler io.netty.channel.SingleThreadIoEventLoop::ioHandler() @ io.netty.channel.epoll.EpollEventLoop</new>
                 </item>
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.returnTypeChangedCovariantly</code>
                   <old>method io.netty.channel.EventLoop io.netty.channel.SingleThreadEventLoop::next() @ io.netty.channel.epoll.EpollEventLoop</old>
-                  <new>method io.netty.channel.IoHandleEventLoop io.netty.channel.SingleThreadIoHandleEventLoop::next() @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <new>method io.netty.channel.IoEventLoop io.netty.channel.SingleThreadIoEventLoop::next() @ io.netty.channel.epoll.EpollEventLoop</new>
                 </item>
                 <item>
                   <ignore>true</ignore>
@@ -1472,13 +1472,13 @@
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.finalMethodAddedToNonFinalClass</code>
-                  <new>method io.netty.util.concurrent.Future&lt;java.lang.Void&gt; io.netty.channel.SingleThreadIoHandleEventLoop::registerForIo(io.netty.channel.IoHandle) @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <new>method io.netty.util.concurrent.Future&lt;java.lang.Void&gt; io.netty.channel.SingleThreadIoEventLoop::registerForIo(io.netty.channel.IoHandle) @ io.netty.channel.epoll.EpollEventLoop</new>
                 </item>
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.nowFinal</code>
                   <old>method void io.netty.channel.epoll.EpollEventLoop::wakeup(boolean)</old>
-                  <new>method void io.netty.channel.SingleThreadIoHandleEventLoop::wakeup(boolean) @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <new>method void io.netty.channel.SingleThreadIoEventLoop::wakeup(boolean) @ io.netty.channel.epoll.EpollEventLoop</new>
                 </item>
                 <item>
                   <ignore>true</ignore>
@@ -1490,7 +1490,7 @@
                   <ignore>true</ignore>
                   <code>java.method.returnTypeChangedCovariantly</code>
                   <old>method io.netty.channel.EventLoop io.netty.channel.MultithreadEventLoopGroup::next() @ io.netty.channel.epoll.EpollEventLoopGroup</old>
-                  <new>method io.netty.channel.IoHandleEventLoop io.netty.channel.MultiThreadIoHandleEventLoopGroup::next() @ io.netty.channel.epoll.EpollEventLoopGroup</new>
+                  <new>method io.netty.channel.IoEventLoop io.netty.channel.MultiThreadIoEventLoopGroup::next() @ io.netty.channel.epoll.EpollEventLoopGroup</new>
                 </item>
                 <item>
                   <ignore>true</ignore>
