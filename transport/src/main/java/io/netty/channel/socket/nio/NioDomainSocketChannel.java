@@ -35,6 +35,7 @@ import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.socket.DuplexChannelConfig;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.UnstableApi;
@@ -74,6 +75,9 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
     private volatile boolean isOutputShutdown;
 
     private static SocketChannel newChannel(SelectorProvider provider) {
+        if (PlatformDependent.javaVersion() < 16) {
+            throw new UnsupportedOperationException("Only supported on java 16+");
+        }
         try {
             SocketChannel channel = SelectorProviderUtil.newDomainSocketChannel(
                     OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider);
@@ -115,6 +119,9 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
      */
     public NioDomainSocketChannel(Channel parent, SocketChannel socket) {
         super(parent, socket);
+        if (PlatformDependent.javaVersion() < 16) {
+            throw new UnsupportedOperationException("Only supported on java 16+");
+        }
         config = new NioDomainSocketChannelConfig(this, socket);
     }
 

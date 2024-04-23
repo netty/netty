@@ -112,7 +112,7 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
         }
         config = new NioDomainServerSocketChannelConfig(this);
         try {
-            // Check if we already have an local address bound.
+            // Check if we already have a local address bound.
             bound = channel.getLocalAddress() != null;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -258,67 +258,6 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
         private NioDomainServerSocketChannelConfig setBacklog(int backlog) {
             checkPositiveOrZero(backlog, "backlog");
             this.backlog = backlog;
-            return this;
-        }
-
-        @Override
-        public NioDomainServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-            super.setConnectTimeoutMillis(connectTimeoutMillis);
-            return this;
-        }
-
-        @Override
-        @Deprecated
-        public NioDomainServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-            super.setMaxMessagesPerRead(maxMessagesPerRead);
-            return this;
-        }
-
-        @Override
-        public NioDomainServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-            super.setWriteSpinCount(writeSpinCount);
-            return this;
-        }
-
-        @Override
-        public NioDomainServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-            super.setAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public NioDomainServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-            super.setRecvByteBufAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public NioDomainServerSocketChannelConfig setAutoRead(boolean autoRead) {
-            super.setAutoRead(autoRead);
-            return this;
-        }
-
-        @Override
-        public NioDomainServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-            super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-            return this;
-        }
-
-        @Override
-        public NioDomainServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-            super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-            return this;
-        }
-
-        @Override
-        public NioDomainServerSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-            super.setWriteBufferWaterMark(writeBufferWaterMark);
-            return this;
-        }
-
-        @Override
-        public NioDomainServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-            super.setMessageSizeEstimator(estimator);
             return this;
         }
 
