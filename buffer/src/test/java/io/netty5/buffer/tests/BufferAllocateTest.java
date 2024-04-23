@@ -17,9 +17,14 @@ package io.netty5.buffer.tests;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.adapt.AdaptivePoolingAllocator;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -57,6 +62,20 @@ public class BufferAllocateTest extends BufferTestSupport {
              Buffer buf2 = allocator.allocate(size)) {
             assertThat(buf.capacity()).isGreaterThanOrEqualTo(size);
             assertThat(buf2.capacity()).isGreaterThanOrEqualTo(size);
+        }
+    }
+
+    @Test
+    public void allocateToUseManyChunks() {
+        try (BufferAllocator allocator = new AdaptivePoolingAllocator()) {
+            List<Buffer> buffers = new ArrayList<>();
+            for (int i = 0; i < 16384; i++) {
+                buffers.add(allocator.allocate(256));
+            }
+            for (Buffer buffer : buffers) {
+                buffer.close();
+            }
+            buffers.clear();
         }
     }
 }

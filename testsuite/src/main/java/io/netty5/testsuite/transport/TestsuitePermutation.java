@@ -17,13 +17,15 @@ package io.netty5.testsuite.transport;
 
 import io.netty5.bootstrap.AbstractBootstrap;
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.adapt.AdaptivePoolingAllocator;
 
 import java.util.List;
 
 public final class TestsuitePermutation {
     private static final List<AllocatorConfig> ALLOCATOR_CONFIGS = List.of(
             new AllocatorConfig(BufferAllocator.offHeapUnpooled()),
-            new AllocatorConfig(BufferAllocator.offHeapPooled()));
+            new AllocatorConfig(BufferAllocator.offHeapPooled()),
+            new AllocatorConfig(new AdaptivePoolingAllocator()));
 
     public static List<AllocatorConfig> allocator() {
         return ALLOCATOR_CONFIGS;

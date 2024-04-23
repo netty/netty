@@ -16,28 +16,41 @@
 package io.netty5.microbench.buffer;
 
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.adapt.AdaptivePoolingAllocator;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
-import org.openjdk.jmh.annotations.Warmup;
 
+import java.util.concurrent.TimeUnit;
+
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
-@Warmup(iterations = 5)
-@Measurement(iterations = 10)
 @Threads(8)
 public class BufferAllocatorConcurrentBenchmark extends AbstractMicrobenchmark {
 
     private static final BufferAllocator unpooledAllocator = BufferAllocator.offHeapUnpooled();
+    private static final BufferAllocator pooledAllocator = BufferAllocator.offHeapPooled();
+    private static final BufferAllocator adaptiveAllocator = new AdaptivePoolingAllocator(true);
 
-    @Param({ "00064", "00256", "01024", "04096" })
+    @Param({ "00064"/*, "00256", "01024", "04096"*/ })
     public int size;
 
     @Benchmark
-    public void allocateRelease() {
+    public void allocateReleaseUnpooled() {
         unpooledAllocator.allocate(size).close();
+    }
+
+    @Benchmark
+    public void allocateReleasePooled() {
+        pooledAllocator.allocate(size).close();
+    }
+
+    @Benchmark
+    public void allocateReleaseAdaptive() {
+        adaptiveAllocator.allocate(size).close();
     }
 }
