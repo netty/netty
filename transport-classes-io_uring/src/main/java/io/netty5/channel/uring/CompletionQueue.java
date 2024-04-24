@@ -62,9 +62,9 @@ final class CompletionQueue implements IntSupplier {
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
 
-        this.ringEntries = PlatformDependent.getIntVolatile(kRingEntriesAddress);
-        this.ringMask = PlatformDependent.getIntVolatile(kRingMaskAddress);
-        this.ringHead = PlatformDependent.getIntVolatile(kHeadAddress);
+        ringEntries = PlatformDependent.getIntVolatile(kRingEntriesAddress);
+        ringMask = PlatformDependent.getIntVolatile(kRingMaskAddress);
+        ringHead = PlatformDependent.getIntVolatile(kHeadAddress);
     }
 
     /**
@@ -108,9 +108,26 @@ final class CompletionQueue implements IntSupplier {
                 logger.trace("completed(ring {}): {}(fd={}, res={})",
                         ringFd, Native.opToStr(UserData.decodeOp(udata)), UserData.decodeFd(udata), res);
             }
-            decode(res, flags, udata, callback);
+            try {
+                decode(res, flags, udata, callback);
+            } catch (Error e) {
+                throw e;
+            } catch (Throwable throwable) {
+                handleLoopException(throwable);
+            }
         }
         return i;
+    }
+
+    private static void handleLoopException(Throwable throwable) {
+        logger.warn("Unexpected exception in the IO event loop.", throwable);
+
+        // Prevent possible consecutive immediate failures that lead to
+        // excessive CPU consumption.
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException ignore) {
+        }
     }
 
     @Override
@@ -134,7 +151,7 @@ final class CompletionQueue implements IntSupplier {
     void ioUringWaitCqe() {
         int ret = Native.ioUringEnter(ringFd, 0, 1, Native.IORING_ENTER_GETEVENTS);
         if (logger.isTraceEnabled()) {
-            logger.trace("completed(ring {}): {}", ringFd, toString());
+            logger.trace("completed(ring {}): {}", ringFd, this);
         }
         if (ret < 0) {
             throw new RuntimeException("ioUringEnter syscall returned " + ret);
