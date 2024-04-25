@@ -51,6 +51,7 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.ObjLongConsumer;
 
 import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
@@ -60,6 +61,7 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         implements UnixChannel {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractIOUringChannel.class);
     private static final int MAX_READ_AHEAD_PACKETS = 8;
+    private static final AtomicInteger CONNECT_ID_COUNTER = new AtomicInteger();
 
     static final FutureContextListener<Buffer, Void> CLOSE_BUFFER = (b, f) -> SilentDispose.dispose(b, LOGGER);
 
@@ -88,6 +90,8 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
     private boolean scheduledRdHup;
     private boolean receivedRdHup;
     private boolean submittedClose;
+
+    private short lastConnectId;
 
     protected AbstractIOUringChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
                                      ReadHandleFactory defaultReadHandleFactory,
@@ -392,13 +396,31 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         try (var itr = addrBuf.forEachComponent()) {
             var cmp = itr.firstWritable();
             SockaddrIn.write(socket.isIpv6(), cmp.writableNativeAddress(), remoteSocketAddr);
+            lastConnectId = nextConnectId();
             submissionQueue.addConnect(fd().intValue(), cmp.writableNativeAddress(),
-                    Native.SIZEOF_SOCKADDR_STORAGE, (short) 0);
+                    Native.SIZEOF_SOCKADDR_STORAGE, lastConnectId);
         }
         connectRemoteAddressMem = addrBuf;
     }
 
+    private static short nextConnectId() {
+        // Compute the next connect id, but skip 0, because that's the default value for lastConnectId.
+        short result;
+        do {
+            result = (short) CONNECT_ID_COUNTER.incrementAndGet();
+        } while (result == 0);
+        return result;
+    }
+
     void connectComplete(int res, long udata) {
+        short connectId = UserData.decodeData(udata);
+        if (connectId != lastConnectId) {
+            // This can happen with file descriptor reuse, where the connect completion was for a now-closed channel.
+            logger().debug("Ignoring connect completion for unrecognized connect call id: " +
+                            "{} for fd {} (last connect id: {})",
+                    connectId, fd().intValue(), lastConnectId);
+            return;
+        }
         currentCompletionResult = res;
         if (connectRemoteAddressMem != null) { // Can be null if we connected with TCP Fast Open.
             SilentDispose.dispose(connectRemoteAddressMem, logger());
@@ -486,6 +508,11 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
     protected Future<Executor> prepareToClose() {
         // Prevent more operations from being submitted.
         active = false;
+        // Cancel any pending connect.
+        if (isConnectPending()) {
+            submissionQueue.addCancel(fd().intValue(),
+                    UserData.encode(fd().intValue(), Native.IORING_OP_CONNECT, lastConnectId));
+        }
         // Cancel all pending reads.
         doClearScheduledRead();
         // Cancel any RDHUP poll
