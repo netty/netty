@@ -620,6 +620,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
     <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
+    <bouncycastle.version>1.78.1</bouncycastle.version>
     <jetty.alpnAgent.version>2.0.10</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.common>
@@ -810,8 +811,8 @@
       -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk15on</artifactId>
-        <version>1.69</version>
+        <artifactId>bcpkix-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -822,8 +823,8 @@
       -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk15on</artifactId>
-        <version>1.69</version>
+        <artifactId>bcprov-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -833,8 +834,8 @@
       -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bctls-jdk15on</artifactId>
-        <version>1.69</version>
+        <artifactId>bctls-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
