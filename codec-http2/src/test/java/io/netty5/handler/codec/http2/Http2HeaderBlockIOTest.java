@@ -17,7 +17,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.AsciiString;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class Http2HeaderBlockIOTest {
 
     private DefaultHttp2HeadersDecoder decoder;
+    @AutoClose
     private DefaultHttp2HeadersEncoder encoder;
+    @AutoClose
     private Buffer buffer;
 
     @BeforeEach
@@ -39,12 +41,6 @@ public class Http2HeaderBlockIOTest {
         encoder = new DefaultHttp2HeadersEncoder();
         decoder = new DefaultHttp2HeadersDecoder(false);
         buffer = onHeapAllocator().allocate(256);
-    }
-
-    @AfterEach
-    public void teardown() {
-        encoder.close();
-        buffer.close();
     }
 
     @Test

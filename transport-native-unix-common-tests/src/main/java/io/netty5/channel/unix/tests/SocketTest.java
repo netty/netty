@@ -19,7 +19,7 @@ import io.netty5.channel.unix.Buffer;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.Socket;
 import io.netty5.util.internal.PlatformDependent;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -39,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class SocketTest<T extends Socket> {
+    @AutoClose
     protected T socket;
 
     protected abstract T newSocket();
@@ -46,11 +47,6 @@ public abstract class SocketTest<T extends Socket> {
     @BeforeEach
     public void setup() {
         socket = newSocket();
-    }
-
-    @AfterEach
-    public void tearDown() throws IOException {
-        socket.close();
     }
 
     @Test

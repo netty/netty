@@ -21,8 +21,8 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioHandler;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.handler.codec.dns.DnsRecord;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +34,7 @@ import static io.netty5.resolver.dns.Cache.MAX_SUPPORTED_TTL_SECS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DnsNameResolverBuilderTest {
+    @AutoClose("shutdownGracefully")
     private static final EventLoopGroup GROUP = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
 
     private DnsNameResolverBuilder builder;
@@ -49,11 +50,6 @@ class DnsNameResolverBuilderTest {
         if (resolver != null) {
             resolver.close();
         }
-    }
-
-    @AfterAll
-    static void shutdownEventLoopGroup() {
-        GROUP.shutdownGracefully();
     }
 
     @Test

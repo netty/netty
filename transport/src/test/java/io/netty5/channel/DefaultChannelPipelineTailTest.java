@@ -16,7 +16,7 @@
 package io.netty5.channel;
 
 import io.netty5.buffer.Buffer;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class DefaultChannelPipelineTailTest {
     private static final long TIMEOUT_SEC = 10L;
 
+    @AutoClose("shutdownGracefully")
     private static EventLoopGroup group;
 
     @BeforeAll
@@ -86,11 +87,6 @@ public class DefaultChannelPipelineTailTest {
                 return MyChannel.class.isAssignableFrom(handleType);
             }
         });
-    }
-
-    @AfterAll
-    public static void destroy() {
-        group.shutdownGracefully();
     }
 
     @Test

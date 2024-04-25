@@ -21,7 +21,7 @@ import io.netty5.handler.codec.http2.headers.Http2Headers;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -45,12 +45,13 @@ import static org.mockito.Mockito.when;
  * Tests for {@link DefaultHttp2FrameWriter}.
  */
 public class DefaultHttp2FrameWriterTest {
+    @AutoClose
     private DefaultHttp2FrameWriter frameWriter;
-
+    @AutoClose
     private Buffer outbound;
-
+    @AutoClose
     private Buffer expectedOutbound;
-
+    @AutoClose
     private Http2HeadersEncoder http2HeadersEncoder;
 
     @Mock
@@ -86,16 +87,6 @@ public class DefaultHttp2FrameWriterTest {
         when(ctx.channel()).thenReturn(channel);
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);
         when(ctx.newPromise()).thenReturn(ImmediateEventExecutor.INSTANCE.newPromise());
-    }
-
-    @AfterEach
-    public void tearDown() throws Exception {
-        outbound.close();
-        if (expectedOutbound != null) {
-            expectedOutbound.close();
-        }
-        http2HeadersEncoder.close();
-        frameWriter.close();
     }
 
     @Test

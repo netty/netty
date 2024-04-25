@@ -24,7 +24,7 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -82,7 +82,7 @@ public class Http2FrameRoundtripTest {
 
     @Mock
     private Channel channel;
-
+    @AutoClose
     private Http2FrameWriter writer;
     private Http2FrameReader reader;
 
@@ -100,11 +100,6 @@ public class Http2FrameRoundtripTest {
 
         writer = new DefaultHttp2FrameWriter(new DefaultHttp2HeadersEncoder(NEVER_SENSITIVE, newTestEncoder()));
         reader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(false, false, newTestDecoder()));
-    }
-
-    @AfterEach
-    public void tearDown() {
-        writer.close();
     }
 
     @Test

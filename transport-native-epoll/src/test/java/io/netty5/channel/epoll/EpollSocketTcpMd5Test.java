@@ -23,8 +23,8 @@ import io.netty5.channel.ConnectTimeoutException;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.util.NetUtil;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,17 +40,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class EpollSocketTcpMd5Test {
     private static final byte[] SERVER_KEY = "abc".getBytes(StandardCharsets.US_ASCII);
     private static final byte[] BAD_KEY = "def".getBytes(StandardCharsets.US_ASCII);
+    @AutoClose("shutdownGracefully")
     private static EventLoopGroup GROUP;
     private EpollServerSocketChannel server;
 
     @BeforeAll
     public static void beforeClass() {
         GROUP = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
-    }
-
-    @AfterAll
-    public static void afterClass() {
-        GROUP.shutdownGracefully();
     }
 
     @BeforeEach

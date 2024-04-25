@@ -34,7 +34,7 @@ import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.timeout.IdleStateEvent;
 import io.netty5.handler.timeout.IdleStateHandler;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -57,16 +57,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class FlowControlHandlerTest {
+    @AutoClose("shutdownGracefully")
     private static EventLoopGroup eventLoopGroup;
 
     @BeforeAll
     public static void init() {
         eventLoopGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
-    }
-
-    @AfterAll
-    public static void destroy() {
-        eventLoopGroup.shutdownGracefully();
     }
 
     /**

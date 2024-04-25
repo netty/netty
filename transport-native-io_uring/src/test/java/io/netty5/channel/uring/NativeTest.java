@@ -19,7 +19,7 @@ import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.unix.FileDescriptor;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,16 +41,12 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class NativeTest {
+    @AutoClose("shutdown")
     private ExecutorService executor;
 
     @BeforeEach
     void createExecutor() {
         executor = Executors.newCachedThreadPool();
-    }
-
-    @AfterEach
-    void shutDownExecutor() {
-        executor.shutdown();
     }
 
     @BeforeAll

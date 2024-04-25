@@ -17,7 +17,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.handler.codec.http2.headers.Http2Headers;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -57,6 +57,7 @@ public class DefaultHttp2FrameReaderTest {
     @Mock
     private ChannelHandlerContext ctx;
 
+    @AutoClose
     private DefaultHttp2FrameReader frameReader;
 
     // Used to generate frame
@@ -70,11 +71,6 @@ public class DefaultHttp2FrameReaderTest {
 
         frameReader = new DefaultHttp2FrameReader();
         hpackEncoder = new HpackEncoder();
-    }
-
-    @AfterEach
-    public void tearDown() {
-        frameReader.close();
     }
 
     @Test

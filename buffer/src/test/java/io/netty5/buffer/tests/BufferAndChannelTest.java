@@ -20,7 +20,7 @@ import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.BufferClosedException;
 import io.netty5.buffer.BufferReadOnlyException;
 import io.netty5.buffer.DefaultBufferAllocators;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -51,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Execution(ExecutionMode.SAME_THREAD)
 public class BufferAndChannelTest extends BufferTestSupport {
     private static FileChannel closedChannel;
+    @AutoClose
     private static FileChannel channel;
 
     @BeforeAll
@@ -58,11 +59,6 @@ public class BufferAndChannelTest extends BufferTestSupport {
         closedChannel = tempFileChannel(parentDirectory);
         closedChannel.close();
         channel = tempFileChannel(parentDirectory);
-    }
-
-    @AfterAll
-    static void tearDownChannels() throws IOException {
-        channel.close();
     }
 
     @ParameterizedTest
