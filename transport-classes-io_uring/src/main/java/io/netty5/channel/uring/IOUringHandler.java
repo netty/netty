@@ -106,7 +106,7 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
             return;
         }
         if (op == Native.IORING_OP_ASYNC_CANCEL) {
-            // We don't care about the result of async cancels; they are best effort.
+            // We don't care about the result of async cancels; they are best-effort.
             return;
         }
         AbstractIOUringChannel<?> ch = channels.get(fd);
