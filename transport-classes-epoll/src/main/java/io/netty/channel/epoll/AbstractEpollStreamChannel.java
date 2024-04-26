@@ -91,21 +91,18 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     }
 
     AbstractEpollStreamChannel(Channel parent, LinuxSocket fd) {
-        super(parent, fd, true);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        flags |= Native.EPOLLRDHUP;
+        super(parent, fd, true, EpollIoOpt.EPOLLRDHUP);
     }
 
     protected AbstractEpollStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
-        super(parent, fd, remote);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        flags |= Native.EPOLLRDHUP;
+        super(parent, fd, remote, EpollIoOpt.EPOLLRDHUP);
     }
 
     protected AbstractEpollStreamChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, active);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        flags |= Native.EPOLLRDHUP;
+        super(null, fd, active, EpollIoOpt.EPOLLRDHUP);
     }
 
     @Override
@@ -504,7 +501,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
         final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
-        IovArray array = registration().cleanIovArray();
+        IovArray array = ((EpollInternalRegistration) registration()).cleanIovArray();
         array.maxBytes(maxBytesPerGatheringWrite);
         in.forEachFlushedMessage(array);
 

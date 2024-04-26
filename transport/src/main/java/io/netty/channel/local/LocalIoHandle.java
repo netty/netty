@@ -13,19 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.channel.local;
+
+import io.netty.channel.IoHandle;
 
 /**
- * A handle that can be registered to a {@link IoEventLoop}.
- * All methods must be called from the {@link IoEventLoop} thread.
+ * {@link IoHandle} sub-type that is used by the local transport internally.
  */
-public interface IoHandle extends AutoCloseable {
-
-    /**
-     * Be called once there is something to handle.
-     *
-     * @param registration  the {@link IoRegistration} for this {@link IoHandle}.
-     * @param readyOpt      the {@link IoOpt} that must be handled.
-     */
-    void handle(IoRegistration registration, IoOpt readyOpt);
+interface LocalIoHandle extends IoHandle {
+    void registerNow();
+    void deregisterNow();
+    void closeNow();
 }

@@ -15,19 +15,13 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.IoRegistration;
 import io.netty.channel.unix.IovArray;
 
 /**
- * Registration with an {@link KQueueHandler}.
+ * Registration with an {@link KQueueIoHandler}.
  */
-interface KQueueRegistration {
-    /**
-     * Update the event-set for the registration.
-     */
-    void evSet(short filter, short flags, int fflags);
+public interface KQueueRegistration extends IoRegistration {
 
-    /**
-     * Returns an {@link IovArray} that can be used for {@code writev}.
-     */
-    IovArray cleanArray();
+    void addOpt(KQueueEventIoOpt opt);
 }

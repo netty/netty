@@ -17,27 +17,21 @@ package io.netty.channel.nio;
 
 
 import io.netty.channel.IoHandle;
+import io.netty.channel.IoOpt;
+import io.netty.channel.IoRegistration;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 
 /**
  * Allows to create an {@link IoHandle} for a {@link SelectableChannel}, not necessarily created by Netty. This
- * {@link IoHandle} can be used together with {@link NioHandler} and so have events dispatched for
+ * {@link IoHandle} can be used together with {@link NioIoHandler} and so have events dispatched for
  * the {@link SelectableChannel}.
  */
-public abstract class NioSelectableChannelHandle<S extends SelectableChannel> implements IoHandle {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSelectableChannelHandle.class);
-
+public abstract class NioSelectableChannelHandle<S extends SelectableChannel> implements IoHandle, NioHandle {
     private final S channel;
-    private final int interestOps;
-    private volatile SelectionKey selectionKey;
+    final int interestOps;
 
     public NioSelectableChannelHandle(S channel, int interestOps) {
         if ((interestOps & ~channel.validOps()) != 0) {
@@ -49,49 +43,19 @@ public abstract class NioSelectableChannelHandle<S extends SelectableChannel> im
     }
 
     @Override
-    public boolean isRegistered() {
-        return channel.isRegistered();
+    public void handle(IoRegistration registration, IoOpt ioEvent) {
+        SelectionKey key = ((NioRegistration) registration).selectionKey();
+        NioSelectableChannelHandle.this.handle(channel, key);
     }
 
-    private final NioProcessor nioProcessor = new NioProcessor() {
-        @Override
-        public void register(Selector selector) throws ClosedChannelException {
-            int interestOps;
-            SelectionKey key = selectionKey;
-            if (key != null) {
-                interestOps = key.interestOps();
-                key.cancel();
-            } else {
-                interestOps = NioSelectableChannelHandle.this.interestOps;
-            }
-            selectionKey = channel.register(selector, interestOps, this);
-        }
+    @Override
+    public void close() throws Exception {
+        channel.close();
+    }
 
-        @Override
-        public void deregister() {
-            SelectionKey key = selectionKey;
-            if (key != null) {
-                key.cancel();
-            }
-        }
-
-        @Override
-        public void handle(SelectionKey key) {
-            NioSelectableChannelHandle.this.handle(channel, key);
-        }
-
-        @Override
-        public void close() {
-            try {
-                channel.close();
-            } catch (IOException e) {
-                logger.warn("Unexpected exception while closing underlying channel", e);
-            }
-        }
-    };
-
-    NioProcessor nioProcessor() {
-        return nioProcessor;
+    @Override
+    public SelectableChannel selectableChannel() {
+        return channel;
     }
 
     protected abstract void handle(S channel, SelectionKey key);

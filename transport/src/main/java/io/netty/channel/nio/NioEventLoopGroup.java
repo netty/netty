@@ -87,7 +87,7 @@ public class NioEventLoopGroup extends MultiThreadIoEventLoopGroup implements Io
 
     public NioEventLoopGroup(int nThreads, ThreadFactory threadFactory,
         final SelectorProvider selectorProvider, final SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, threadFactory, NioHandler.newFactory(selectorProvider, selectStrategyFactory),
+        super(nThreads, threadFactory, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory),
                 RejectedExecutionHandlers.reject());
     }
 
@@ -98,14 +98,14 @@ public class NioEventLoopGroup extends MultiThreadIoEventLoopGroup implements Io
 
     public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider selectorProvider,
                              final SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, executor, NioHandler.newFactory(selectorProvider, selectStrategyFactory),
+        super(nThreads, executor, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory),
                 RejectedExecutionHandlers.reject());
     }
 
     public NioEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
                              final SelectorProvider selectorProvider,
                              final SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, executor, NioHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
+        super(nThreads, executor, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
                 RejectedExecutionHandlers.reject());
     }
 
@@ -113,7 +113,7 @@ public class NioEventLoopGroup extends MultiThreadIoEventLoopGroup implements Io
                              final SelectorProvider selectorProvider,
                              final SelectStrategyFactory selectStrategyFactory,
                              final RejectedExecutionHandler rejectedExecutionHandler) {
-        super(nThreads, executor, NioHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
+        super(nThreads, executor, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
                 rejectedExecutionHandler);
     }
 
@@ -122,7 +122,7 @@ public class NioEventLoopGroup extends MultiThreadIoEventLoopGroup implements Io
                              final SelectStrategyFactory selectStrategyFactory,
                              final RejectedExecutionHandler rejectedExecutionHandler,
                              final EventLoopTaskQueueFactory taskQueueFactory) {
-        super(nThreads, executor, NioHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
+        super(nThreads, executor, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
                 rejectedExecutionHandler, taskQueueFactory);
     }
 
@@ -146,7 +146,7 @@ public class NioEventLoopGroup extends MultiThreadIoEventLoopGroup implements Io
                              RejectedExecutionHandler rejectedExecutionHandler,
                              EventLoopTaskQueueFactory taskQueueFactory,
                              EventLoopTaskQueueFactory tailTaskQueueFactory) {
-        super(nThreads, executor, NioHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
+        super(nThreads, executor, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
                 rejectedExecutionHandler, taskQueueFactory, tailTaskQueueFactory);
     }
 

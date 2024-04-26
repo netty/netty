@@ -16,16 +16,9 @@
 package io.netty.channel;
 
 /**
- * A handle that can be registered to a {@link IoEventLoop}.
- * All methods must be called from the {@link IoEventLoop} thread.
+ * An IO opt that is used when register an {@link IoHandle} to an {@link IoEventLoop}.
+ * Concrete {@link IoHandle} implementations support different concrete {@link IoOpt} implementations.
  */
-public interface IoHandle extends AutoCloseable {
-
-    /**
-     * Be called once there is something to handle.
-     *
-     * @param registration  the {@link IoRegistration} for this {@link IoHandle}.
-     * @param readyOpt      the {@link IoOpt} that must be handled.
-     */
-    void handle(IoRegistration registration, IoOpt readyOpt);
+public interface IoOpt {
+    // Marker interface.
 }

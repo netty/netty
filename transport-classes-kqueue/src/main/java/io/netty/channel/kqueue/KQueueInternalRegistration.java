@@ -13,19 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.channel.kqueue;
 
-/**
- * A handle that can be registered to a {@link IoEventLoop}.
- * All methods must be called from the {@link IoEventLoop} thread.
- */
-public interface IoHandle extends AutoCloseable {
+import io.netty.channel.unix.IovArray;
+
+interface KQueueInternalRegistration extends KQueueRegistration {
 
     /**
-     * Be called once there is something to handle.
-     *
-     * @param registration  the {@link IoRegistration} for this {@link IoHandle}.
-     * @param readyOpt      the {@link IoOpt} that must be handled.
+     * Returns an {@link IovArray} that can be used for {@code writev}.
      */
-    void handle(IoRegistration registration, IoOpt readyOpt);
+    IovArray cleanArray();
 }

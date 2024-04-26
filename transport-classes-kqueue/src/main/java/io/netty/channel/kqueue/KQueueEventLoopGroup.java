@@ -117,25 +117,25 @@ public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
     @Deprecated
     public KQueueEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce,
                                SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, threadFactory, KQueueHandler.newFactory(maxEventsAtOnce, selectStrategyFactory),
+        super(nThreads, threadFactory, KQueueIoHandler.newFactory(maxEventsAtOnce, selectStrategyFactory),
                 RejectedExecutionHandlers.reject());
     }
 
     public KQueueEventLoopGroup(int nThreads, Executor executor, SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, executor, KQueueHandler.newFactory(0, selectStrategyFactory),
+        super(nThreads, executor, KQueueIoHandler.newFactory(0, selectStrategyFactory),
                 RejectedExecutionHandlers.reject());
     }
 
     public KQueueEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
                                SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, executor, KQueueHandler.newFactory(0, selectStrategyFactory),
+        super(nThreads, executor, KQueueIoHandler.newFactory(0, selectStrategyFactory),
                 chooserFactory, RejectedExecutionHandlers.reject());
     }
 
     public KQueueEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
                                SelectStrategyFactory selectStrategyFactory,
                                RejectedExecutionHandler rejectedExecutionHandler) {
-        super(nThreads, executor,  KQueueHandler.newFactory(0, selectStrategyFactory), chooserFactory,
+        super(nThreads, executor,  KQueueIoHandler.newFactory(0, selectStrategyFactory), chooserFactory,
                 rejectedExecutionHandler);
     }
 
@@ -143,7 +143,7 @@ public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
                                 SelectStrategyFactory selectStrategyFactory,
                                 RejectedExecutionHandler rejectedExecutionHandler,
                                 EventLoopTaskQueueFactory queueFactory) {
-        super(nThreads, executor, KQueueHandler.newFactory(0, selectStrategyFactory), chooserFactory,
+        super(nThreads, executor, KQueueIoHandler.newFactory(0, selectStrategyFactory), chooserFactory,
                 rejectedExecutionHandler, queueFactory);
     }
 
@@ -165,7 +165,7 @@ public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
                                RejectedExecutionHandler rejectedExecutionHandler,
                                EventLoopTaskQueueFactory taskQueueFactory,
                                EventLoopTaskQueueFactory tailTaskQueueFactory) {
-        super(nThreads, executor, KQueueHandler.newFactory(0, selectStrategyFactory), chooserFactory,
+        super(nThreads, executor, KQueueIoHandler.newFactory(0, selectStrategyFactory), chooserFactory,
                 rejectedExecutionHandler, taskQueueFactory, tailTaskQueueFactory);
     }
 
@@ -222,13 +222,13 @@ public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
         @Override
         public int registeredChannels() {
             assert inEventLoop();
-            return ((KQueueHandler) ioHandler()).numRegisteredChannels();
+            return ((KQueueIoHandler) ioHandler()).numRegisteredChannels();
         }
 
         @Override
         public Iterator<Channel> registeredChannelsIterator() {
             assert inEventLoop();
-            return ((KQueueHandler) ioHandler()).registeredChannelsList().iterator();
+            return ((KQueueIoHandler) ioHandler()).registeredChannelsList().iterator();
         }
     }
 }

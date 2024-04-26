@@ -15,17 +15,24 @@
  */
 package io.netty.channel;
 
+import java.io.IOException;
+
 /**
- * A handle that can be registered to a {@link IoEventLoop}.
- * All methods must be called from the {@link IoEventLoop} thread.
+ * A registration for IO.
+ *
  */
-public interface IoHandle extends AutoCloseable {
+public interface IoRegistration {
 
     /**
-     * Be called once there is something to handle.
+     * Returns {@code true} if the registration is still valid. Once {@link #cancel()} is called this
+     * will return {@code false}.
      *
-     * @param registration  the {@link IoRegistration} for this {@link IoHandle}.
-     * @param readyOpt      the {@link IoOpt} that must be handled.
+     * @return  valid.
      */
-    void handle(IoRegistration registration, IoOpt readyOpt);
+    boolean isValid();
+
+    /**
+     * Cancel the registration.
+     */
+    void cancel() throws IOException;
 }

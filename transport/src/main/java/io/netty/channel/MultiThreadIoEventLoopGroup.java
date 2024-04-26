@@ -178,11 +178,6 @@ public class MultiThreadIoEventLoopGroup extends MultithreadEventLoopGroup imple
         super(nThreads, executor, chooserFactory, combine(ioHandlerFactory, args));
     }
 
-    @Override
-    public boolean isCompatible(Class<? extends IoHandle> handleType) {
-        return next().isCompatible(handleType);
-    }
-
     // The return type should be IoHandleEventLoop but we choose EventLoop to allow us to introduce the IoHandle
     // concept without breaking API.
     @Override

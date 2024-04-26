@@ -67,7 +67,7 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
      * Returns the {@link SelectorProvider} used by this {@link NioEventLoop} to obtain the {@link Selector}.
      */
     public SelectorProvider selectorProvider() {
-        return ((NioHandler) ioHandler()).selectorProvider();
+        return ((NioIoHandler) ioHandler()).selectorProvider();
     }
 
     @Override
@@ -123,25 +123,30 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
     }
 
     private void register0(final SelectableChannel ch, int interestOps, final NioTask<SelectableChannel> task) {
-        registerForIo(new NioSelectableChannelHandle<SelectableChannel>(ch, interestOps) {
-            @Override
-            protected void handle(SelectableChannel channel, SelectionKey key) {
-                try {
-                    task.channelReady(channel, key);
-                } catch (Exception e) {
-                    logger.warn("Unexpected exception while running NioTask.channelReady(...)", e);
-                }
-            }
+        try {
+            register(
+                    new NioSelectableChannelHandle<SelectableChannel>(ch, interestOps) {
+                        @Override
+                        protected void handle(SelectableChannel channel, SelectionKey key) {
+                            try {
+                                task.channelReady(channel, key);
+                            } catch (Exception e) {
+                                logger.warn("Unexpected exception while running NioTask.channelReady(...)", e);
+                            }
+                        }
 
-            @Override
-            protected void deregister(SelectableChannel channel) {
-                try {
-                    task.channelUnregistered(channel, null);
-                } catch (Exception e) {
-                    logger.warn("Unexpected exception while running NioTask.channelUnregistered(...)", e);
-                }
-            }
-        });
+                        @Override
+                        protected void deregister(SelectableChannel channel) {
+                            try {
+                                task.channelUnregistered(channel, null);
+                            } catch (Exception e) {
+                                logger.warn("Unexpected exception while running NioTask.channelUnregistered(...)", e);
+                            }
+                        }
+                    }, NioOpt.valueOf(interestOps)).get();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /**
@@ -173,23 +178,23 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
             execute(new Runnable() {
                 @Override
                 public void run() {
-                    ((NioHandler) ioHandler()).rebuildSelector0();
+                    ((NioIoHandler) ioHandler()).rebuildSelector0();
                 }
             });
             return;
         }
-        ((NioHandler) ioHandler()).rebuildSelector0();
+        ((NioIoHandler) ioHandler()).rebuildSelector0();
     }
 
     @Override
     public int registeredChannels() {
-        return ((NioHandler) ioHandler()).numRegistered();
+        return ((NioIoHandler) ioHandler()).numRegistered();
     }
 
     @Override
     public Iterator<Channel> registeredChannelsIterator() {
         assert inEventLoop();
-        final Set<SelectionKey> keys =  ((NioHandler) ioHandler()).selector().keys();
+        final Set<SelectionKey> keys =  ((NioIoHandler) ioHandler()).registeredSet();
         if (keys.isEmpty()) {
             return ChannelsReadOnlyIterator.empty();
         }
@@ -240,8 +245,11 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
                     SelectionKey key = it.next();
                     if (key.isValid()) {
                         Object attachment = key.attachment();
-                        if (attachment instanceof AbstractNioChannel.AbstractNioChannelProcessor) {
-                            return ((AbstractNioChannel.AbstractNioChannelProcessor) attachment).channel();
+                        if (attachment instanceof NioIoHandler.DefaultNioRegistration) {
+                            NioHandle handle =  ((NioIoHandler.DefaultNioRegistration) attachment).handle();
+                            if (handle instanceof AbstractNioChannel.AbstractNioUnsafe) {
+                                return ((AbstractNioChannel.AbstractNioUnsafe) handle).channel();
+                            }
                         }
                     }
                 }
@@ -252,6 +260,6 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
     }
 
     Selector unwrappedSelector() {
-        return ((NioHandler) ioHandler()).unwrappedSelector();
+        return ((NioIoHandler) ioHandler()).unwrappedSelector();
     }
 }

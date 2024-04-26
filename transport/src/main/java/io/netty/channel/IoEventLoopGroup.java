@@ -30,5 +30,7 @@ public interface IoEventLoopGroup extends EventLoopGroup {
      * @param handleType    the type of the {@link IoHandle}.
      * @return              if compatible of not.
      */
-    boolean isCompatible(Class<? extends IoHandle> handleType);
+    default boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return next().isCompatible(handleType);
+    }
 }

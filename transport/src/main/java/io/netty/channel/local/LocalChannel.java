@@ -26,6 +26,8 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEventLoop;
+import io.netty.channel.IoOpt;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.SingleThreadEventLoop;
@@ -49,7 +51,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 /**
  * A {@link Channel} for the local transport.
  */
-public class LocalChannel extends AbstractChannel implements LocalChannelIoHandle {
+public class LocalChannel extends AbstractChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(LocalChannel.class);
     @SuppressWarnings({ "rawtypes" })
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
@@ -78,6 +80,8 @@ public class LocalChannel extends AbstractChannel implements LocalChannelIoHandl
             unsafe().close(unsafe().voidPromise());
         }
     };
+
+    private IoRegistration registration;
 
     private volatile State state;
     private volatile LocalChannel peer;
@@ -143,7 +147,8 @@ public class LocalChannel extends AbstractChannel implements LocalChannelIoHandl
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return super.isCompatible(loop) || loop instanceof SingleThreadEventLoop;
+        return loop instanceof SingleThreadEventLoop ||
+                (loop instanceof IoEventLoop && ((IoEventLoop) loop).isCompatible(LocalUnsafe.class));
     }
 
     @Override
@@ -157,12 +162,25 @@ public class LocalChannel extends AbstractChannel implements LocalChannelIoHandl
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected void doRegister(ChannelPromise promise) {
         EventLoop loop = eventLoop();
         if (loop instanceof IoEventLoop) {
-            ((IoEventLoop) loop).registerForIo(this);
+            assert registration == null;
+            ((IoEventLoop) loop).register((LocalUnsafe) unsafe(), LocalIoOpt.DEFAULT).addListener(f -> {
+               if (f.isSuccess()) {
+                   registration = (IoRegistration) f.getNow();
+                   promise.setSuccess();
+               } else {
+                   promise.setFailure(f.cause());
+               }
+            });
         } else {
-            registerNow();
+            try {
+                ((LocalUnsafe) unsafe()).registerNow();
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+            }
+            promise.setSuccess();
         }
     }
 
@@ -170,46 +188,14 @@ public class LocalChannel extends AbstractChannel implements LocalChannelIoHandl
     protected void doDeregister() throws Exception {
         EventLoop loop = eventLoop();
         if (loop instanceof IoEventLoop) {
-            ((IoEventLoop) loop).deregisterForIo(this);
+            IoRegistration registration = this.registration;
+            if (registration != null) {
+                this.registration = null;
+                registration.cancel();
+            }
         } else {
-            deregisterNow();
+            ((LocalUnsafe) unsafe()).deregisterNow();
         }
-    }
-
-    @Override
-    public void registerNow() {
-        // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
-        // This is needed as a peer may not be null also if a LocalChannel was connected before and
-        // deregistered / registered later again.
-        //
-        // See https://github.com/netty/netty/issues/2400
-        if (peer != null && parent() != null) {
-            // Store the peer in a local variable as it may be set to null if doClose() is called.
-            // See https://github.com/netty/netty/issues/2144
-            final LocalChannel peer = this.peer;
-            state = State.CONNECTED;
-
-            peer.remoteAddress = parent() == null ? null : parent().localAddress();
-            peer.state = State.CONNECTED;
-
-            // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
-            // This ensures that if both channels are on the same event loop, the peer's channelActive
-            // event is triggered *after* this channel's channelRegistered event, so that this channel's
-            // pipeline is fully initialized by ChannelInitializer before any channelRead events.
-            peer.eventLoop().execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelPromise promise = peer.connectPromise;
-
-                    // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
-                    // connectPromise may be set to null if doClose() was called in the meantime.
-                    if (promise != null && promise.trySuccess()) {
-                        peer.pipeline().fireChannelActive();
-                    }
-                }
-            });
-        }
-        ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
     }
 
     @Override
@@ -301,17 +287,6 @@ public class LocalChannel extends AbstractChannel implements LocalChannelIoHandl
         } else {
             releaseInboundBuffers();
         }
-    }
-
-    @Override
-    public void deregisterNow() {
-        // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
-        ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
-    }
-
-    @Override
-    public void closeNow() {
-        unsafe().close(voidPromise());
     }
 
     private void readInbound() {
@@ -496,7 +471,64 @@ public class LocalChannel extends AbstractChannel implements LocalChannelIoHandl
         }
     }
 
-    private class LocalUnsafe extends AbstractUnsafe {
+    private class LocalUnsafe extends AbstractUnsafe implements LocalIoHandle {
+
+        @Override
+        public void close() {
+            close(voidPromise());
+        }
+
+        @Override
+        public void handle(IoRegistration registration, IoOpt readyOpt) {
+            // NOOP
+        }
+
+        @Override
+        public void registerNow() {
+            // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
+            // This is needed as a peer may not be null also if a LocalChannel was connected before and
+            // deregistered / registered later again.
+            //
+            // See https://github.com/netty/netty/issues/2400
+            if (peer != null && parent() != null) {
+                // Store the peer in a local variable as it may be set to null if doClose() is called.
+                // See https://github.com/netty/netty/issues/2144
+                final LocalChannel peer = LocalChannel.this.peer;
+                state = State.CONNECTED;
+
+                peer.remoteAddress = parent() == null ? null : parent().localAddress();
+                peer.state = State.CONNECTED;
+
+                // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
+                // This ensures that if both channels are on the same event loop, the peer's channelActive
+                // event is triggered *after* this channel's channelRegistered event, so that this channel's
+                // pipeline is fully initialized by ChannelInitializer before any channelRead events.
+                peer.eventLoop().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        ChannelPromise promise = peer.connectPromise;
+
+                        // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
+                        // connectPromise may be set to null if doClose() was called in the meantime.
+                        if (promise != null && promise.trySuccess()) {
+                            peer.pipeline().fireChannelActive();
+                        }
+                    }
+                });
+            }
+            ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+        }
+
+        @Override
+        public void deregisterNow() {
+            // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
+            ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+        }
+
+        @Override
+        public void closeNow() {
+            close(voidPromise());
+        }
 
         @Override
         public void connect(final SocketAddress remoteAddress,

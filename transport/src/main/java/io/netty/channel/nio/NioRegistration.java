@@ -13,19 +13,37 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.epoll;
+package io.netty.channel.nio;
 
 import io.netty.channel.IoRegistration;
-import io.netty.channel.unix.IovArray;
 
-import java.io.IOException;
+import java.nio.channels.SelectionKey;
 
 /**
- * Registration with an {@link EpollIoHandler}.
+ * {@link IoRegistration} implementation that is used by {@link NioIoHandler}.
  */
-public interface EpollRegistration extends IoRegistration {
+public interface NioRegistration extends IoRegistration {
+    /**
+     * The underlying {@link SelectionKey}
+     *
+     * @return  the selection key.
+     */
+    SelectionKey selectionKey();
 
-    void updateInterestOpt(EpollIoOpt opt) throws IOException;
+    /**
+     * Update the {@link NioOpt} for this registration.
+     *
+     * @param opt   the {@link NioOpt} to use.
+     */
+    void updateInterestOpt(NioOpt opt);
 
-    EpollIoOpt interestOpt();
+    /**
+     * The used {@link NioOpt} for this registration.
+     *
+     * @return  opt.
+     */
+    NioOpt interestOpt();
+
+    @Override
+    void cancel();
 }

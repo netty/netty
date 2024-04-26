@@ -67,12 +67,12 @@ public class EpollEventLoop extends SingleThreadIoEventLoop {
 
     @Override
     public int registeredChannels() {
-        return ((EpollHandler) ioHandler()).numRegisteredChannels();
+        return ((EpollIoHandler) ioHandler()).numRegisteredChannels();
     }
 
     @Override
     public Iterator<Channel> registeredChannelsIterator() {
-        return ((EpollHandler) ioHandler()).registeredChannelsList().iterator();
+        return ((EpollIoHandler) ioHandler()).registeredChannelsList().iterator();
     }
 
     /**

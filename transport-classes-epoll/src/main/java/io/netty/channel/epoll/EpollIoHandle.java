@@ -13,12 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.local;
+package io.netty.channel.epoll;
 
 import io.netty.channel.IoHandle;
+import io.netty.channel.unix.FileDescriptor;
 
-interface LocalChannelIoHandle extends IoHandle {
-    void registerNow();
-    void deregisterNow();
-    void closeNow();
+/**
+ * {@link IoHandle} implementation which is using epoll.
+ */
+public interface EpollIoHandle extends IoHandle {
+    /**
+     * Returns the {@link FileDescriptor} that used by this {@link IoHandle}.
+     *
+     * @return fd
+     */
+    FileDescriptor fd();
 }

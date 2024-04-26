@@ -38,25 +38,20 @@ public interface IoHandler {
     void prepareToDestroy();
 
     /**
-     * Destroy the {@link IoHandler} and free all its resources.
+     * Destroy the {@link IoHandler} and free all its resources. Once destroyed using the {@link IoHandler} will
+     * cause undefined behaviour.
      */
     void destroy();
 
     /**
      * Register a {@link IoHandle} for IO.
      *
-     * @param handle the {@link IoHandle} to register.
-     * @throws Exception thrown if an error happens during registration.
+     * @param eventLoop     the {@link IoEventLoop} that did issue the registration.
+     * @param handle        the {@link IoHandle} to register.
+     * @param opt           the {@link IoOpt} which should be used during registration.
+     * @throws Exception    thrown if an error happens during registration.
      */
-    void register(IoHandle handle) throws Exception;
-
-    /**
-     * Deregister a {@link IoHandle} for IO.
-     *
-     * @param handle the {@link IoHandle} to deregister.
-     * @throws Exception thrown if an error happens during de-registration.
-     */
-    void deregister(IoHandle handle) throws Exception;
+    IoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOpt opt) throws Exception;
 
     /**
      * Wakeup the {@link IoHandler}, which means if any operation blocks it should be unblocked and

@@ -23,17 +23,24 @@ public interface IoExecutionContext {
     /**
      * Returns {@code true} if blocking for IO is allowed or if we should try to do a non-blocking request for IO to be
      * ready.
+     *
+     * @return {@code true} if allowed, {@code false} otherwise.
      */
     boolean canBlock();
 
     /**
      * Returns the amount of time left until the scheduled task with the closest deadline should run.
+     *
+     * @param currentTimeNanos  the current nanos.
+     * @return                  nanos
      */
     long delayNanos(long currentTimeNanos);
 
     /**
      * Returns the absolute point in time at which the next
      * closest scheduled task should run or {@code -1} if nothing is scheduled to run.
+     *
+     * @return deadline.
      */
     long deadlineNanos();
 }

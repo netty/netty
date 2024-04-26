@@ -1451,11 +1451,6 @@
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.finalMethodAddedToNonFinalClass</code>
-                  <new>method io.netty.util.concurrent.Future&lt;java.lang.Void&gt; io.netty.channel.SingleThreadIoEventLoop::deregisterForIo(io.netty.channel.IoHandle) @ io.netty.channel.epoll.EpollEventLoop</new>
-                </item>
-                <item>
-                  <ignore>true</ignore>
-                  <code>java.method.finalMethodAddedToNonFinalClass</code>
                   <new>method io.netty.channel.IoHandler io.netty.channel.SingleThreadIoEventLoop::ioHandler() @ io.netty.channel.epoll.EpollEventLoop</new>
                 </item>
                 <item>
@@ -1472,8 +1467,9 @@
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.finalMethodAddedToNonFinalClass</code>
-                  <new>method io.netty.util.concurrent.Future&lt;java.lang.Void&gt; io.netty.channel.SingleThreadIoEventLoop::registerForIo(io.netty.channel.IoHandle) @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <new>method io.netty.util.concurrent.Future&lt;io.netty.channel.IoRegistration&gt; io.netty.channel.SingleThreadIoEventLoop::register(io.netty.channel.IoHandle, io.netty.channel.IoOpt) @ io.netty.channel.epoll.EpollEventLoop</new>
                 </item>
+
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.nowFinal</code>
@@ -1512,6 +1508,51 @@
                   <ignore>true</ignore>
                   <code>java.class.nonPublicPartOfAPI</code>
                   <new>interface io.netty.channel.epoll.EpollRegistration</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.AbstractEpollServerChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.AbstractEpollStreamChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollDatagramChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollDomainDatagramChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollDomainSocketChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollDomainSocketChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollServerDomainSocketChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollServerSocketChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollSocketChannel</old>
                 </item>
 
                 <item>
@@ -1601,6 +1642,12 @@
               </overrideCompatibilityChangeParameter>
               <overrideCompatibilityChangeParameter>
                 <compatibilityChange>METHOD_NOW_FINAL</compatibilityChange>
+                <sourceCompatible>true</sourceCompatible>
+                <binaryCompatible>true</binaryCompatible>
+                <semanticVersionLevel>PATCH</semanticVersionLevel>
+              </overrideCompatibilityChangeParameter>
+              <overrideCompatibilityChangeParameter>
+                <compatibilityChange>METHOD_ADDED_TO_INTERFACE</compatibilityChange>
                 <sourceCompatible>true</sourceCompatible>
                 <binaryCompatible>true</binaryCompatible>
                 <semanticVersionLevel>PATCH</semanticVersionLevel>

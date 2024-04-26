@@ -29,6 +29,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
+import io.netty.channel.nio.NioOpt;
 import io.netty.channel.sctp.DefaultSctpChannelConfig;
 import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
@@ -231,7 +232,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         try {
             boolean connected = javaChannel().connect(remoteAddress);
             if (!connected) {
-                selectionKey().interestOps(SelectionKey.OP_CONNECT);
+                registration().updateInterestOpt(NioOpt.CONNECT);
             }
             success = true;
             return connected;

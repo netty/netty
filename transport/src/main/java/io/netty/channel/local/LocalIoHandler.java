@@ -15,18 +15,22 @@
  */
 package io.netty.channel.local;
 
+import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoExecutionContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.IoOpt;
+import io.netty.channel.IoRegistration;
 import io.netty.util.internal.StringUtil;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 
 public final class LocalIoHandler implements IoHandler {
-    private final Set<LocalChannelIoHandle> registeredChannels = new HashSet<LocalChannelIoHandle>(64);
+    private final Set<LocalIoHandle> registeredChannels = new HashSet<LocalIoHandle>(64);
     private volatile Thread executionThread;
 
     private LocalIoHandler() { }
@@ -43,9 +47,9 @@ public final class LocalIoHandler implements IoHandler {
         };
     }
 
-    private static LocalChannelIoHandle cast(IoHandle handle) {
-        if (handle instanceof LocalChannelIoHandle) {
-            return (LocalChannelIoHandle) handle;
+    private static LocalIoHandle cast(IoHandle handle) {
+        if (handle instanceof LocalIoHandle) {
+            return (LocalIoHandle) handle;
         }
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
@@ -75,7 +79,7 @@ public final class LocalIoHandler implements IoHandler {
 
     @Override
     public void prepareToDestroy() {
-        for (LocalChannelIoHandle handle : registeredChannels) {
+        for (LocalIoHandle handle : registeredChannels) {
             handle.closeNow();
         }
         registeredChannels.clear();
@@ -86,23 +90,55 @@ public final class LocalIoHandler implements IoHandler {
     }
 
     @Override
-    public void register(IoHandle handle) {
-        LocalChannelIoHandle localHandle = cast(handle);
+    public IoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOpt initialOpt) {
+        LocalIoHandle localHandle = cast(handle);
+        if (initialOpt != LocalIoOpt.DEFAULT) {
+            throw new IllegalArgumentException(
+                    "IoOpt of type " + StringUtil.simpleClassName(initialOpt) + " not supported");
+        }
         if (registeredChannels.add(localHandle)) {
+            LocalIoRegistration registration = new LocalIoRegistration(eventLoop, localHandle);
             localHandle.registerNow();
+            return registration;
         }
-    }
-
-    @Override
-    public void deregister(IoHandle handle) {
-        LocalChannelIoHandle unsafe = cast(handle);
-        if (registeredChannels.remove(unsafe)) {
-            unsafe.deregisterNow();
-        }
+        throw new IllegalStateException();
     }
 
     @Override
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
-        return LocalChannelIoHandle.class.isAssignableFrom(handleType);
+        return LocalIoHandle.class.isAssignableFrom(handleType);
+    }
+
+    private final class LocalIoRegistration extends AtomicBoolean implements IoRegistration {
+        private final IoEventLoop eventLoop;
+        private final LocalIoHandle handle;
+
+        LocalIoRegistration(IoEventLoop eventLoop, LocalIoHandle handle) {
+            this.eventLoop = eventLoop;
+            this.handle = handle;
+        }
+
+        @Override
+        public boolean isValid() {
+            return !get();
+        }
+
+        @Override
+        public void cancel() {
+            if (getAndSet(true)) {
+                return;
+            }
+            if (eventLoop.inEventLoop()) {
+                cancel0();
+            } else {
+                eventLoop.execute(this::cancel0);
+            }
+        }
+
+        private void cancel0() {
+            if (registeredChannels.remove(handle)) {
+                handle.deregisterNow();
+            }
+        }
     }
 }

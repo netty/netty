@@ -18,9 +18,13 @@ package io.netty.channel.local;
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEventLoop;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.IoOpt;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
@@ -35,7 +39,7 @@ import java.util.Queue;
 /**
  * A {@link ServerChannel} for the local transport which allows in VM communication.
  */
-public class LocalServerChannel extends AbstractServerChannel implements LocalChannelIoHandle {
+public class LocalServerChannel extends AbstractServerChannel {
 
     private final ChannelConfig config =
             new DefaultChannelConfig(this, new ServerChannelRecvByteBufAllocator()) { };
@@ -46,6 +50,8 @@ public class LocalServerChannel extends AbstractServerChannel implements LocalCh
             unsafe().close(unsafe().voidPromise());
         }
     };
+
+    private IoRegistration registration;
 
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
@@ -82,7 +88,8 @@ public class LocalServerChannel extends AbstractServerChannel implements LocalCh
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return super.isCompatible(loop) || loop instanceof SingleThreadEventLoop;
+        return loop instanceof SingleThreadEventLoop ||
+                (loop instanceof IoEventLoopGroup && ((IoEventLoopGroup) loop).isCompatible(LocalServerUnsafe.class));
     }
 
     @Override
@@ -91,12 +98,20 @@ public class LocalServerChannel extends AbstractServerChannel implements LocalCh
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected void doRegister(ChannelPromise promise) {
         EventLoop loop = eventLoop();
         if (loop instanceof IoEventLoop) {
-            ((IoEventLoop) loop).registerForIo(this);
+            assert registration == null;
+            ((IoEventLoop) loop).register((LocalServerUnsafe) unsafe(), LocalIoOpt.DEFAULT).addListener(f -> {
+                if (f.isSuccess()) {
+                    registration = (IoRegistration) f.getNow();
+                    promise.setSuccess();
+                } else {
+                    promise.setFailure(f.cause());
+                }
+            });
         } else {
-            registerNow();
+            ((LocalServerUnsafe) unsafe()).registerNow();
         }
     }
 
@@ -122,9 +137,13 @@ public class LocalServerChannel extends AbstractServerChannel implements LocalCh
     protected void doDeregister() throws Exception {
         EventLoop loop = eventLoop();
         if (loop instanceof IoEventLoop) {
-            ((IoEventLoop) loop).deregisterForIo(this);
+            IoRegistration registration = this.registration;
+            if (registration != null) {
+                this.registration = null;
+                registration.cancel();
+            }
         } else {
-            deregisterNow();
+            ((LocalServerUnsafe) unsafe()).deregisterNow();
         }
     }
 
@@ -191,17 +210,39 @@ public class LocalServerChannel extends AbstractServerChannel implements LocalCh
     }
 
     @Override
-    public void registerNow() {
-        ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+    protected AbstractUnsafe newUnsafe() {
+        return new LocalServerUnsafe();
     }
 
-    @Override
-    public void deregisterNow() {
-        ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
-    }
+    private class LocalServerUnsafe extends AbstractUnsafe implements LocalIoHandle {
+        @Override
+        public void close() {
+            close(voidPromise());
+        }
 
-    @Override
-    public void closeNow() {
-        unsafe().close(voidPromise());
+        @Override
+        public void handle(IoRegistration registration, IoOpt readyOpt) {
+            // NOOP
+        }
+
+        @Override
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            safeSetFailure(promise, new UnsupportedOperationException());
+        }
+
+        @Override
+        public void registerNow() {
+            ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+        }
+
+        @Override
+        public void deregisterNow() {
+            ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+        }
+
+        @Override
+        public void closeNow() {
+            close(voidPromise());
+        }
     }
 }

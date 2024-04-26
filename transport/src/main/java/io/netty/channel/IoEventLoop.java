@@ -26,16 +26,18 @@ public interface IoEventLoop extends EventLoop, IoEventLoopGroup {
     // We only not return IoHandleEventLoopGroup here as this could break compat for people
     // that extend EventLoopGroup implementations that now implement IoHandleEventLoop (for example NioEventLoop).
     @Override
-    EventLoopGroup parent();
+    default EventLoopGroup parent() {
+        return this;
+    }
     /**
-     * @deprecated Use {@link #registerForIo(IoHandle)}.
+     * @deprecated Use {@link #register(IoHandle, IoOpt)}
      */
     @Deprecated
     @Override
     ChannelFuture register(Channel channel);
 
     /**
-     * @deprecated Use {@link #registerForIo(IoHandle)}.
+     * @deprecated Use {@link #register(IoHandle, IoOpt)}
      */
     @Deprecated
     @Override
@@ -44,16 +46,13 @@ public interface IoEventLoop extends EventLoop, IoEventLoopGroup {
     /**
      * Register the {@link IoHandle} to the {@link EventLoop} for I/O processing.
      *
-     * @param handle   the {@link IoHandle} to register.
-     * @return          the {@link Future} that is notified once the operations completes.
+     * @param handle        the {@link IoHandle} to register.
+     * @param initialOpt    the initial {@link IoOpt} to use.
+     * @return              the {@link Future} that is notified once the operations completes.
      */
-    Future<Void> registerForIo(IoHandle handle);
+    Future<IoRegistration> register(IoHandle handle,
+                                                                    IoOpt initialOpt);
 
-    /**
-     * Deregister the {@link Channel} from the {@link EventLoop} for I/O processing.
-     *
-     * @param handle   the {@link IoHandle} to deregister.
-     * @return          the {@link Future} that is notified once the operations completes.
-     */
-    Future<Void> deregisterForIo(IoHandle handle);
+    @Override
+    boolean isCompatible(Class<? extends IoHandle> handleType);
 }

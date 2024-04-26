@@ -18,13 +18,15 @@ package io.netty.channel.kqueue;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoExecutionContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.IoOpt;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
-import io.netty.channel.kqueue.AbstractKQueueChannel.AbstractKQueueUnsafe;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
@@ -37,9 +39,9 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static java.lang.Math.min;
@@ -47,10 +49,10 @@ import static java.lang.Math.min;
 /**
  * {@link EventLoop} which uses kqueue under the covers. Only works on BSD!
  */
-final class KQueueHandler implements IoHandler {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueHandler.class);
-    private static final AtomicIntegerFieldUpdater<KQueueHandler> WAKEN_UP_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(KQueueHandler.class, "wakenUp");
+final class KQueueIoHandler implements IoHandler {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueIoHandler.class);
+    private static final AtomicIntegerFieldUpdater<KQueueIoHandler> WAKEN_UP_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(KQueueIoHandler.class, "wakenUp");
     private static final int KQUEUE_WAKE_UP_IDENT = 0;
     // `kqueue()` may return EINVAL when a large number such as Integer.MAX_VALUE is specified as timeout.
     // 24 hours would be a large enough value.
@@ -67,6 +69,7 @@ final class KQueueHandler implements IoHandler {
     private final FileDescriptor kqueueFd;
     private final KQueueEventArray changeList;
     private final KQueueEventArray eventList;
+    private final KQueueEventIoOpt[] eventIoOpts;
     private final SelectStrategy selectStrategy;
     private final IovArray iovArray = new IovArray();
     private final IntSupplier selectNowSupplier = new IntSupplier() {
@@ -75,19 +78,20 @@ final class KQueueHandler implements IoHandler {
             return kqueueWaitNow();
         }
     };
-    private final IntObjectMap<AbstractKQueueChannel> channels = new IntObjectHashMap<AbstractKQueueChannel>(4096);
+    private final IntObjectMap<DefaultKqueueRegistration> registrations = new IntObjectHashMap<>(4096);
+    private int numChannels;
 
     private volatile int wakenUp;
 
     /**
-     * Returns a new {@link IoHandlerFactory} that creates {@link KQueueHandler} instances.
+     * Returns a new {@link IoHandlerFactory} that creates {@link KQueueIoHandler} instances.
      */
     public static IoHandlerFactory newFactory() {
         return newFactory(0, DefaultSelectStrategyFactory.INSTANCE);
     }
 
     /**
-     * Returns a new {@link IoHandlerFactory} that creates {@link KQueueHandler} instances.
+     * Returns a new {@link IoHandlerFactory} that creates {@link KQueueIoHandler} instances.
      */
     public static IoHandlerFactory newFactory(final int maxEvents,
                                               final SelectStrategyFactory selectStrategyFactory) {
@@ -96,12 +100,12 @@ final class KQueueHandler implements IoHandler {
         return new IoHandlerFactory() {
             @Override
             public IoHandler newHandler() {
-                return new KQueueHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
+                return new KQueueIoHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
             }
         };
     }
 
-    private KQueueHandler(int maxEvents, SelectStrategy strategy) {
+    private KQueueIoHandler(int maxEvents, SelectStrategy strategy) {
         this.selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
         this.kqueueFd = Native.newKQueue();
         if (maxEvents == 0) {
@@ -112,6 +116,11 @@ final class KQueueHandler implements IoHandler {
         }
         this.changeList = new KQueueEventArray(maxEvents);
         this.eventList = new KQueueEventArray(maxEvents);
+        // Pre-create the KQueueEventIoOpt array to reuse these and so reduce object creation.
+        this.eventIoOpts = new KQueueEventIoOpt[maxEvents];
+        for (int i = 0; i < eventIoOpts.length; i++) {
+            eventIoOpts[i] = new KQueueEventIoOpt();
+        }
         int result = Native.keventAddUserEvent(kqueueFd.intValue(), KQUEUE_WAKE_UP_IDENT);
         if (result < 0) {
             destroy();
@@ -169,42 +178,26 @@ final class KQueueHandler implements IoHandler {
         for (int i = 0; i < ready; ++i) {
             final short filter = eventList.filter(i);
             final short flags = eventList.flags(i);
-            final int fd = eventList.fd(i);
+            final int ident = eventList.ident(i);
             if (filter == Native.EVFILT_USER || (flags & Native.EV_ERROR) != 0) {
                 // EV_ERROR is returned if the FD is closed synchronously (which removes from kqueue) and then
                 // we later attempt to delete the filters from kqueue.
                 assert filter != Native.EVFILT_USER ||
-                        (filter == Native.EVFILT_USER && fd == KQUEUE_WAKE_UP_IDENT);
+                        (filter == Native.EVFILT_USER && ident == KQUEUE_WAKE_UP_IDENT);
                 continue;
             }
 
-            AbstractKQueueChannel channel = channels.get(fd);
-            if (channel == null) {
+            DefaultKqueueRegistration registration = registrations.get(ident);
+            if (registration == null) {
                 // This may happen if the channel has already been closed, and it will be removed from kqueue anyways.
                 // We also handle EV_ERROR above to skip this even early if it is a result of a referencing a closed and
                 // thus removed from kqueue FD.
-                logger.warn("events[{}]=[{}, {}] had no channel!", i, eventList.fd(i), filter);
+                logger.warn("events[{}]=[{}, {}] had no registration!", i, ident, filter);
                 continue;
             }
-
-            AbstractKQueueUnsafe unsafe = (AbstractKQueueUnsafe) channel.unsafe();
-            // First check for EPOLLOUT as we may need to fail the connect ChannelPromise before try
-            // to read from the file descriptor.
-            if (filter == Native.EVFILT_WRITE) {
-                unsafe.writeReady();
-            } else if (filter == Native.EVFILT_READ) {
-                // Check READ before EOF to ensure all data is read before shutting down the input.
-                unsafe.readReady(eventList.data(i));
-            } else if (filter == Native.EVFILT_SOCK && (eventList.fflags(i) & Native.NOTE_RDHUP) != 0) {
-                unsafe.readEOF();
-            }
-
-            // Check if EV_EOF was set, this will notify us for connection-reset in which case
-            // we may close the channel directly or try to read more data depending on the state of the
-            // Channel and also depending on the AbstractKQueueChannel subtype.
-            if ((flags & Native.EV_EOF) != 0) {
-                unsafe.readEOF();
-            }
+            KQueueEventIoOpt eventIoOpt = eventIoOpts[i];
+            eventIoOpt.update(ident, filter, flags, eventList.fflags(i), eventList.data(i));
+            registration.handle.handle(registration, eventIoOpt);
         }
     }
 
@@ -276,19 +269,23 @@ final class KQueueHandler implements IoHandler {
     }
 
     int numRegisteredChannels() {
-        return channels.size();
+        return numChannels;
     }
 
     List<Channel> registeredChannelsList() {
-        IntObjectMap<AbstractKQueueChannel> ch = channels;
+        IntObjectMap<DefaultKqueueRegistration> ch = registrations;
         if (ch.isEmpty()) {
             return Collections.emptyList();
         }
 
-        Collection<? extends Channel> values = ch.values();
-        List<Channel> copy = new ArrayList<Channel>(values.size());
-        copy.addAll(values);
-        return Collections.unmodifiableList(copy);
+        List<Channel> channels = new ArrayList<>(ch.size());
+
+        for (DefaultKqueueRegistration registration : ch.values()) {
+            if (registration.handle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe) {
+                channels.add(((AbstractKQueueChannel.AbstractKQueueUnsafe) registration.handle).channel());
+            }
+        }
+        return Collections.unmodifiableList(channels);
     }
 
     private static void handleLoopException(Throwable t) {
@@ -313,10 +310,15 @@ final class KQueueHandler implements IoHandler {
 
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
-        AbstractKQueueChannel[] localChannels = channels.values().toArray(new AbstractKQueueChannel[0]);
+        DefaultKqueueRegistration[] copy = registrations.values().toArray(new DefaultKqueueRegistration[0]);
 
-        for (AbstractKQueueChannel ch: localChannels) {
-            ch.unsafe().close(ch.unsafe().voidPromise());
+        for (DefaultKqueueRegistration reg: copy) {
+            reg.cancel();
+            try {
+                reg.handle.close();
+            } catch (Exception e) {
+                logger.debug("Exception during closing " + reg.handle, e);
+            }
         }
     }
 
@@ -336,59 +338,110 @@ final class KQueueHandler implements IoHandler {
     }
 
     @Override
-    public void register(IoHandle handle) {
-        final AbstractKQueueChannel kQueueChannel = cast(handle);
-        final int id = kQueueChannel.fd().intValue();
-        AbstractKQueueChannel old = channels.put(id, kQueueChannel);
-        // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
-        // closed.
-        assert old == null || !old.isOpen();
-
-        kQueueChannel.register0(new KQueueRegistration() {
-            @Override
-            public void evSet(short filter, short flags, int fflags) {
-                changeList.evSet(kQueueChannel, filter, flags, fflags);
-            }
-
-            @Override
-            public IovArray cleanArray() {
-                return KQueueHandler.this.cleanArray();
-            }
-        });
-    }
-
-    @Override
-    public void deregister(IoHandle handle) throws Exception {
-        AbstractKQueueChannel kQueueChannel = cast(handle);
-        int fd = kQueueChannel.fd().intValue();
-
-        AbstractKQueueChannel old = channels.remove(fd);
-        if (old != null && old != kQueueChannel) {
-            // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
-            channels.put(fd, old);
-
-            // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
-            assert !kQueueChannel.isOpen();
-        } else if (kQueueChannel.isOpen()) {
-            // Remove the filters. This is only needed if it's still open as otherwise it will be automatically
-            // removed once the file-descriptor is closed.
-            //
-            // See also https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
-            kQueueChannel.unregisterFilters();
+    public IoRegistration register(IoEventLoop eventLoop, IoHandle handle,
+                                                                   IoOpt initialOpts) {
+        final KQueueIoHandle kqueueHandle = cast(handle);
+        if (kqueueHandle.ident() == KQUEUE_WAKE_UP_IDENT) {
+            throw new IllegalArgumentException("ident " + KQUEUE_WAKE_UP_IDENT + " is reserved for internal usage");
+        }
+        KQueueEventIoOpt eventIoOpt = cast(initialOpts);
+        DefaultKqueueRegistration registration = new DefaultKqueueRegistration(
+                eventLoop, kqueueHandle);
+        DefaultKqueueRegistration old = registrations.put(kqueueHandle.ident(), registration);
+        if (old != null) {
+            // restore old mapping and throw exception
+            registrations.put(kqueueHandle.ident(), old);
+            throw new IllegalStateException("registration for the KQueueIoHandle.ident() already exists");
         }
 
-        kQueueChannel.deregister0();
+        registration.addOpt(eventIoOpt);
+        if (kqueueHandle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe) {
+            numChannels++;
+        }
+        return registration;
     }
 
-    private static AbstractKQueueChannel cast(IoHandle handle) {
-        if (handle instanceof AbstractKQueueChannel) {
-            return (AbstractKQueueChannel) handle;
+    private static KQueueIoHandle cast(IoHandle handle) {
+        if (handle instanceof KQueueIoHandle) {
+            return (KQueueIoHandle) handle;
         }
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
+    private static KQueueEventIoOpt cast(IoOpt opt) {
+        if (opt instanceof KQueueEventIoOpt) {
+            return (KQueueEventIoOpt) opt;
+        }
+        throw new IllegalArgumentException("IoOpt of type " + StringUtil.simpleClassName(opt) + " not supported");
+    }
+
     @Override
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
-        return AbstractKQueueChannel.class.isAssignableFrom(handleType);
+        return KQueueIoHandle.class.isAssignableFrom(handleType);
+    }
+
+    private final class DefaultKqueueRegistration extends AtomicBoolean implements KQueueInternalRegistration {
+        final KQueueIoHandle handle;
+
+        private final IoEventLoop eventLoop;
+
+        DefaultKqueueRegistration(IoEventLoop eventLoop, KQueueIoHandle handle) {
+            this.eventLoop = eventLoop;
+            this.handle = handle;
+        }
+
+        @Override
+        public void addOpt(KQueueEventIoOpt opt) {
+            if (opt.ident() != handle.ident()) {
+                throw new IllegalArgumentException("ident does not match KQueueIoHandle.ident()");
+            }
+            if (!isValid()) {
+                return;
+            }
+            if (eventLoop.inEventLoop()) {
+                evSet(opt.filter(), opt.flags(), opt.fflags());
+            } else {
+                eventLoop.execute(() -> evSet(opt.filter(), opt.flags(), opt.fflags()));
+            }
+        }
+
+        @Override
+        public IovArray cleanArray() {
+            return KQueueIoHandler.this.cleanArray();
+        }
+
+        private void evSet(short filter, short flags, int fflags) {
+            changeList.evSet(handle.ident(), filter, flags, fflags);
+        }
+
+        @Override
+        public boolean isValid() {
+            return !get();
+        }
+
+        @Override
+        public void cancel() {
+            if (getAndSet(true)) {
+                return;
+            }
+            if (eventLoop.inEventLoop()) {
+                cancel0();
+            } else {
+                eventLoop.execute(this::cancel0);
+            }
+        }
+
+        private void cancel0() {
+            int ident = handle.ident();
+            DefaultKqueueRegistration old = registrations.remove(ident);
+            if (old != null) {
+                if (old != this) {
+                    // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
+                    registrations.put(ident, old);
+                } else if (old.handle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe) {
+                    numChannels--;
+                }
+            }
+        }
     }
 }
