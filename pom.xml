@@ -206,6 +206,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -225,6 +226,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -245,6 +247,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -265,6 +268,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -285,6 +289,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -304,6 +309,7 @@
 
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -324,6 +330,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -344,6 +351,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <!-- JDK14 -->
@@ -363,6 +371,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <!-- JDK13 -->
@@ -382,6 +391,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -402,6 +412,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -422,6 +433,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java11 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -442,6 +454,7 @@
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -458,6 +471,7 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
       <activation>
         <jdk>9</jdk>
