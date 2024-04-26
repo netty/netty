@@ -38,6 +38,11 @@ import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
+
+/**
+ * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link KQueueIoHandler}.
+ */
+@Deprecated
 @UnstableApi
 public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
 

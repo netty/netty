@@ -30,6 +30,10 @@ import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
+/**
+ * @deprecated Use {@link SingleThreadIoEventLoop} with {@link EpollIoHandler}
+ */
+@Deprecated
 public class EpollEventLoop extends SingleThreadIoEventLoop {
 
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(EpollEventLoop.class);

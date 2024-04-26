@@ -22,7 +22,6 @@ import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.IoHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.EventExecutor;
@@ -38,8 +37,11 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * {@link MultithreadEventLoopGroup} implementations which is used for NIO {@link Selector} based {@link Channel}s.
+ * {@link MultiThreadIoEventLoopGroup} implementation which is used for NIO {@link Selector} based {@link Channel}s.
+ *
+ * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link io.netty.channel.nio.NioIoHandler}.
  */
+@Deprecated
 public class NioEventLoopGroup extends MultiThreadIoEventLoopGroup implements IoEventLoopGroup {
 
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(NioEventLoopGroup.class);

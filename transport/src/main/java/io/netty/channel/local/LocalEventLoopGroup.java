@@ -20,7 +20,7 @@ import io.netty.channel.MultiThreadIoEventLoopGroup;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * @deprecated Use {@link MultiThreadIoEventLoopGroup} instead.
+ * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link io.netty.channel.local.LocalIoHandler}.
  */
 @Deprecated
 public class LocalEventLoopGroup extends MultiThreadIoEventLoopGroup {

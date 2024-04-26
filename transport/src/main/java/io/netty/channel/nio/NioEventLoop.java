@@ -38,10 +38,12 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 
 /**
- * {@link SingleThreadEventLoop} implementation which register the {@link Channel}'s to a
+ * {@link SingleThreadIoEventLoop} implementation which register the {@link Channel}'s to a
  * {@link Selector} and so does the multi-plexing of these in the event loop.
  *
+ * @deprecated Use {@link SingleThreadIoEventLoop} with {@link NioIoHandler}
  */
+@Deprecated
 public final class NioEventLoop extends SingleThreadIoEventLoop {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
