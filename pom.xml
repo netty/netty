@@ -213,7 +213,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -230,7 +229,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -247,7 +245,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -264,7 +261,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -281,7 +277,6 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -597,7 +592,7 @@
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
     <conscrypt.version>2.5.2</conscrypt.version>
     <conscrypt.classifier />
-    <bouncycastle.version>1.71.1</bouncycastle.version>
+    <bouncycastle.version>1.78.1</bouncycastle.version>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
@@ -750,8 +745,8 @@
       -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bctls-jdk15on</artifactId>
-        <version>1.69</version>
+        <artifactId>bctls-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -1014,12 +1009,12 @@
       <plugin>
         <groupId>org.revapi</groupId>
         <artifactId>revapi-maven-plugin</artifactId>
-        <version>0.14.6</version>
+        <version>0.15.0</version>
         <dependencies>
           <dependency>
             <groupId>org.revapi</groupId>
             <artifactId>revapi-java</artifactId>
-            <version>0.26.1</version>
+            <version>0.28.1</version>
           </dependency>
         </dependencies>
         <configuration>
