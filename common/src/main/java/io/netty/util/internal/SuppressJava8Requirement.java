@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,12 +22,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation to suppress the Java 6 source code requirement checks for a method.
+ * Annotation to suppress the Java 8 source code requirement checks for a method.
  */
-@Deprecated
 @Retention(RetentionPolicy.CLASS)
 @Target({ ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.TYPE })
-public @interface SuppressJava6Requirement {
+public @interface SuppressJava8Requirement {
 
     String reason();
 }

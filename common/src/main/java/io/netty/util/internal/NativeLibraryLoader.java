@@ -29,6 +29,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
 import java.security.AccessController;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -399,22 +401,14 @@ public final class NativeLibraryLoader {
             if (suppressed != null) {
                 ThrowableUtil.addSuppressed(nsme, suppressed);
             }
-            rethrowWithMoreDetailsIfPossible(name, nsme);
+            throw new LinkageError(
+                    "Possible multiple incompatible native libraries on the classpath for '" + name + "'?", nsme);
         } catch (UnsatisfiedLinkError ule) {
             if (suppressed != null) {
                 ThrowableUtil.addSuppressed(ule, suppressed);
             }
             throw ule;
         }
-    }
-
-    @SuppressJava6Requirement(reason = "Guarded by version check")
-    private static void rethrowWithMoreDetailsIfPossible(String name, NoSuchMethodError error) {
-        if (PlatformDependent.javaVersion() >= 7) {
-            throw new LinkageError(
-                    "Possible multiple incompatible native libraries on the classpath for '" + name + "'?", error);
-        }
-        throw error;
     }
 
     private static void loadLibraryByHelper(final Class<?> helper, final String name, final boolean absolute)
@@ -543,14 +537,7 @@ public final class NativeLibraryLoader {
 
     private static final class NoexecVolumeDetector {
 
-        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
         private static boolean canExecuteExecutable(File file) throws IOException {
-            if (PlatformDependent.javaVersion() < 7) {
-                // Pre-JDK7, the Java API did not directly support POSIX permissions; instead of implementing a custom
-                // work-around, assume true, which disables the check.
-                return true;
-            }
-
             // If we can already execute, there is nothing to do.
             if (file.canExecute()) {
                 return true;
@@ -560,21 +547,18 @@ public final class NativeLibraryLoader {
             // The File#canExecute() method honors this behavior, probaby via parsing the noexec flag when initializing
             // the UnixFileStore, though the flag is not exposed via a public API.  To find out if library is being
             // loaded off a volume with noexec, confirm or add executalbe permissions, then check File#canExecute().
-
-            // Note: We use FQCN to not break when netty is used in java6
-            Set<java.nio.file.attribute.PosixFilePermission> existingFilePermissions =
-                    java.nio.file.Files.getPosixFilePermissions(file.toPath());
-            Set<java.nio.file.attribute.PosixFilePermission> executePermissions =
-                    EnumSet.of(java.nio.file.attribute.PosixFilePermission.OWNER_EXECUTE,
-                            java.nio.file.attribute.PosixFilePermission.GROUP_EXECUTE,
-                            java.nio.file.attribute.PosixFilePermission.OTHERS_EXECUTE);
+            Set<PosixFilePermission> existingFilePermissions = Files.getPosixFilePermissions(file.toPath());
+            Set<PosixFilePermission> executePermissions =
+                    EnumSet.of(PosixFilePermission.OWNER_EXECUTE,
+                            PosixFilePermission.GROUP_EXECUTE,
+                            PosixFilePermission.OTHERS_EXECUTE);
             if (existingFilePermissions.containsAll(executePermissions)) {
                 return false;
             }
 
-            Set<java.nio.file.attribute.PosixFilePermission> newPermissions = EnumSet.copyOf(existingFilePermissions);
+            Set<PosixFilePermission> newPermissions = EnumSet.copyOf(existingFilePermissions);
             newPermissions.addAll(executePermissions);
-            java.nio.file.Files.setPosixFilePermissions(file.toPath(), newPermissions);
+            Files.setPosixFilePermissions(file.toPath(), newPermissions);
             return file.canExecute();
         }
 

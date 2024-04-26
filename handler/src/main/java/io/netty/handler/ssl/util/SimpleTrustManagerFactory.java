@@ -18,19 +18,17 @@ package io.netty.handler.ssl.util;
 
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.Provider;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.TrustManagerFactorySpi;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.Provider;
 
 /**
  * Helps to implement a custom {@link TrustManagerFactory}.
@@ -135,15 +133,12 @@ public abstract class SimpleTrustManagerFactory extends TrustManagerFactory {
             TrustManager[] trustManagers = this.trustManagers;
             if (trustManagers == null) {
                 trustManagers = parent.engineGetTrustManagers();
-                if (PlatformDependent.javaVersion() >= 7) {
-                    wrapIfNeeded(trustManagers);
-                }
+                wrapIfNeeded(trustManagers);
                 this.trustManagers = trustManagers;
             }
             return trustManagers.clone();
         }
 
-        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
         private static void wrapIfNeeded(TrustManager[] trustManagers) {
             for (int i = 0; i < trustManagers.length; i++) {
                 final TrustManager tm = trustManagers[i];

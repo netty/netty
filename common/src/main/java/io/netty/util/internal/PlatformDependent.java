@@ -57,7 +57,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -116,7 +116,6 @@ public final class PlatformDependent {
     private static final boolean USE_DIRECT_BUFFER_NO_CLEANER;
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
-    private static final ThreadLocalRandomProvider RANDOM_PROVIDER;
     private static final Cleaner CLEANER;
     private static final int UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD;
     // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
@@ -133,23 +132,6 @@ public final class PlatformDependent {
     };
 
     static {
-        if (javaVersion() >= 7) {
-            RANDOM_PROVIDER = new ThreadLocalRandomProvider() {
-                @Override
-                @SuppressJava6Requirement(reason = "Usage guarded by java version check")
-                public Random current() {
-                    return java.util.concurrent.ThreadLocalRandom.current();
-                }
-            };
-        } else {
-            RANDOM_PROVIDER = new ThreadLocalRandomProvider() {
-                @Override
-                public Random current() {
-                    return ThreadLocalRandom.current();
-                }
-            };
-        }
-
         // Here is how the system property is used:
         //
         // * <  0  - Don't use cleaner, and inherit max direct memory from java. In this case the
@@ -479,11 +461,7 @@ public final class PlatformDependent {
      * Creates a new fastest {@link LongCounter} implementation for the current platform.
      */
     public static LongCounter newLongCounter() {
-        if (javaVersion() >= 8) {
-            return new LongAdderCounter();
-        } else {
-            return new AtomicLongCounter();
-        }
+        return new LongAdderCounter();
     }
 
     /**
@@ -1108,20 +1086,15 @@ public final class PlatformDependent {
     /**
      * Returns a new concurrent {@link Deque}.
      */
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     public static <C> Deque<C> newConcurrentDeque() {
-        if (javaVersion() < 7) {
-            return new LinkedBlockingDeque<C>();
-        } else {
-            return new ConcurrentLinkedDeque<C>();
-        }
+        return new ConcurrentLinkedDeque<C>();
     }
 
     /**
      * Return a {@link Random} which is not-threadsafe and so can only be used from the same thread.
      */
     public static Random threadLocalRandom() {
-        return RANDOM_PROVIDER.current();
+        return ThreadLocalRandom.current();
     }
 
     private static boolean isWindows0() {
@@ -1505,29 +1478,11 @@ public final class PlatformDependent {
         return LINUX_OS_CLASSIFIERS;
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by version check")
     public static File createTempFile(String prefix, String suffix, File directory) throws IOException {
-        if (javaVersion() >= 7) {
-            if (directory == null) {
-                return Files.createTempFile(prefix, suffix).toFile();
-            }
-            return Files.createTempFile(directory.toPath(), prefix, suffix).toFile();
-        }
-        final File file;
         if (directory == null) {
-            file = File.createTempFile(prefix, suffix);
-        } else {
-            file = File.createTempFile(prefix, suffix, directory);
+            return Files.createTempFile(prefix, suffix).toFile();
         }
-
-        // Try to adjust the perms, if this fails there is not much else we can do...
-        if (!file.setReadable(false, false)) {
-            throw new IOException("Failed to set permissions on temporary file " + file);
-        }
-        if (!file.setReadable(true, true)) {
-            throw new IOException("Failed to set permissions on temporary file " + file);
-        }
-        return file;
+        return Files.createTempFile(directory.toPath(), prefix, suffix).toFile();
     }
 
     /**

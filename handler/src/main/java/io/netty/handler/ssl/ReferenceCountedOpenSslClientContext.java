@@ -16,22 +16,19 @@
 package io.netty.handler.ssl;
 
 import io.netty.internal.tcnative.CertificateCallback;
-import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
+import io.netty.util.internal.EmptyArrays;
 
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
@@ -188,7 +185,6 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         }
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by java version check")
     private static void setVerifyCallback(long ctx, OpenSslEngineMap engineMap, X509TrustManager manager) {
         // Use this to prevent an error when running on java < 7
         if (useExtendedTrustManager(manager)) {
@@ -220,7 +216,6 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         }
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private static final class ExtendedTrustManagerVerifyCallback extends AbstractCertificateVerifier {
         private final X509ExtendedTrustManager manager;
 

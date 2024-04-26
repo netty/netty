@@ -16,23 +16,20 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.SuppressJava6Requirement;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
 
 import java.nio.ByteBuffer;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLException;
 
-import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
 import static io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelectionListener;
 import static io.netty.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
+import static io.netty.handler.ssl.SslUtils.toSSLHandshakeException;
 
-@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 class JdkAlpnSslEngine extends JdkSslEngine {
     private final ProtocolSelectionListener selectionListener;
     private final AlpnSelector alpnSelector;
@@ -189,18 +186,22 @@ class JdkAlpnSslEngine extends JdkSslEngine {
 
     // These methods will override the methods defined by Java 8u251 and later. As we may compile with an earlier
     // java8 version we don't use @Override annotations here.
+    @SuppressWarnings("override")
     public String getApplicationProtocol() {
         return JdkAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
     }
 
+    @SuppressWarnings("override")
     public String getHandshakeApplicationProtocol() {
         return JdkAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
     }
 
+    @SuppressWarnings("override")
     public void setHandshakeApplicationProtocolSelector(BiFunction<SSLEngine, List<String>, String> selector) {
         JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
     }
 
+    @SuppressWarnings("override")
     public BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector() {
         return JdkAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
     }

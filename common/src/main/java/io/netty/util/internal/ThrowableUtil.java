@@ -54,15 +54,12 @@ public final class ThrowableUtil {
         }
     }
 
+    @Deprecated
     public static boolean haveSuppressed() {
-        return PlatformDependent.javaVersion() >= 7;
+        return true;
     }
 
-    @SuppressJava6Requirement(reason = "Throwable addSuppressed is only available for >= 7. Has check for < 7.")
     public static void addSuppressed(Throwable target, Throwable suppressed) {
-        if (!haveSuppressed()) {
-            return;
-        }
         target.addSuppressed(suppressed);
     }
 
@@ -77,11 +74,7 @@ public final class ThrowableUtil {
         }
     }
 
-    @SuppressJava6Requirement(reason = "Throwable getSuppressed is only available for >= 7. Has check for < 7.")
     public static Throwable[] getSuppressed(Throwable source) {
-        if (!haveSuppressed()) {
-            return EmptyArrays.EMPTY_THROWABLES;
-        }
         return source.getSuppressed();
     }
 }

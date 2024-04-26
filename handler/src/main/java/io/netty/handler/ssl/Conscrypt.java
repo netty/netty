@@ -17,9 +17,9 @@ package io.netty.handler.ssl;
 
 import io.netty.util.internal.PlatformDependent;
 
-import javax.net.ssl.SSLEngine;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import javax.net.ssl.SSLEngine;
 
 /**
  * Contains methods that can be used to detect if conscrypt is usable.
@@ -32,10 +32,9 @@ final class Conscrypt {
     static {
         Method isConscryptSSLEngine = null;
 
-        if ((PlatformDependent.javaVersion() >= 8 &&
-                // Only works on Java14 and earlier for now
-                // See https://github.com/google/conscrypt/issues/838
-                PlatformDependent.javaVersion() < 15) || PlatformDependent.isAndroid()) {
+        // Only works on Java14 and earlier for now
+        // See https://github.com/google/conscrypt/issues/838
+        if (PlatformDependent.javaVersion() < 15 || PlatformDependent.isAndroid()) {
             try {
                 Class<?> providerClass = Class.forName("org.conscrypt.OpenSSLProvider", true,
                         PlatformDependent.getClassLoader(ConscryptAlpnSslEngine.class));

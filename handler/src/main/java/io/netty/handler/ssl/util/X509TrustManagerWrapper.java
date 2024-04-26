@@ -15,18 +15,15 @@
  */
 package io.netty.handler.ssl.util;
 
-import io.netty.util.internal.SuppressJava6Requirement;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.X509ExtendedTrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.net.Socket;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.X509ExtendedTrustManager;
+import javax.net.ssl.X509TrustManager;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class X509TrustManagerWrapper extends X509ExtendedTrustManager {
 
     private final X509TrustManager delegate;

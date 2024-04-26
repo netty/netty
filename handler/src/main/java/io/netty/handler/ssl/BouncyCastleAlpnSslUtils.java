@@ -15,15 +15,11 @@
  */
 package io.netty.handler.ssl;
 
-
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -31,10 +27,11 @@ import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.function.BiFunction;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 
 import static io.netty.handler.ssl.SslUtils.getSSLContext;
 
-@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class BouncyCastleAlpnSslUtils {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastleAlpnSslUtils.class);
     private static final Method SET_PARAMETERS;

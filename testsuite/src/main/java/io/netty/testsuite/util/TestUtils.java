@@ -17,7 +17,6 @@ package io.netty.testsuite.util;
 
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.TestInfo;
@@ -105,7 +104,6 @@ public final class TestUtils {
     /**
      * Returns the method name of the current test.
      */
-    @SuppressJava6Requirement(reason = "Test only")
     public static String testMethodName(TestInfo testInfo) {
         String testMethodName = testInfo.getTestMethod().map(new Function<Method, String>() {
             @Override

@@ -22,7 +22,6 @@ import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -41,8 +40,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.StampedLock;
-
-import static io.netty.util.internal.PlatformDependent.javaVersion;
 
 /**
  * An auto-tuning pooling allocator, that follows an anti-generational hypothesis.
@@ -70,7 +67,6 @@ import static io.netty.util.internal.PlatformDependent.javaVersion;
  * magazine, to be shared with other magazines.
  * The {@link #createSharedChunkQueue()} method can be overridden to customize this queue.
  */
-@SuppressJava6Requirement(reason = "Guarded by version check")
 @UnstableApi
 final class AdaptivePoolingAllocator {
     private static final int RETIRE_CAPACITY = 4 * 1024;
@@ -104,10 +100,6 @@ final class AdaptivePoolingAllocator {
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator) {
         this.chunkAllocator = chunkAllocator;
-        if (javaVersion() < 8) {
-            // The implementation uses StampedLock, which was introduced in Java 8.
-            throw new IllegalStateException("This allocator require Java 8 or newer.");
-        }
         centralQueue = ObjectUtil.checkNotNull(createSharedChunkQueue(), "centralQueue");
         magazineExpandLock = new StampedLock();
         Magazine[] mags = new Magazine[4];
@@ -234,7 +226,6 @@ final class AdaptivePoolingAllocator {
         return centralQueue.offer(buffer);
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by version check")
     @SuppressWarnings("checkstyle:finalclass") // Checkstyle mistakenly believes this class should be final.
     private static class AllocationStatistics extends StampedLock {
         private static final long serialVersionUID = -8319929980932269688L;

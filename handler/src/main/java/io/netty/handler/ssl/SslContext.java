@@ -27,25 +27,8 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 
 import java.io.BufferedInputStream;
-import java.security.Provider;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.crypto.Cipher;
-import javax.crypto.EncryptedPrivateKeyInfo;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSessionContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -58,6 +41,7 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -67,6 +51,20 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import javax.crypto.Cipher;
+import javax.crypto.EncryptedPrivateKeyInfo;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSessionContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 
 /**
  * A secure socket protocol implementation which acts as a factory for {@link SSLEngine} and {@link SslHandler}.
@@ -1101,8 +1099,7 @@ public abstract class SslContext {
         String algName = encryptedPrivateKeyInfo.getAlgName();
         // Java 8 ~ 16 returns OID_PKCS5_PBES2
         // Java 17+ returns PBES2
-        if (PlatformDependent.javaVersion() >= 8 && parameters != null &&
-                (OID_PKCS5_PBES2.equals(algName) || PBES2.equals(algName))) {
+        if (parameters != null && (OID_PKCS5_PBES2.equals(algName) || PBES2.equals(algName))) {
             /*
              * This should be "PBEWith<prf>And<encryption>".
              * Relying on the toString() implementation is potentially

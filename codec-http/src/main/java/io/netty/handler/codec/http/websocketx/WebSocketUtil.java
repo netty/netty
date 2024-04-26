@@ -15,16 +15,12 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.base64.Base64;
-import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 
 /**
  * A utility class mainly for use by web sockets
@@ -95,24 +91,8 @@ final class WebSocketUtil {
      * @param data The data to encode
      * @return An encoded string containing the data
      */
-    @SuppressJava6Requirement(reason = "Guarded with java version check")
     static String base64(byte[] data) {
-        if (PlatformDependent.javaVersion() >= 8) {
-            return java.util.Base64.getEncoder().encodeToString(data);
-        }
-        String encodedString;
-        ByteBuf encodedData = Unpooled.wrappedBuffer(data);
-        try {
-            ByteBuf encoded = Base64.encode(encodedData);
-            try {
-                encodedString = encoded.toString(CharsetUtil.UTF_8);
-            } finally {
-                encoded.release();
-            }
-        } finally {
-            encodedData.release();
-        }
-        return encodedString;
+        return Base64.getEncoder().encodeToString(data);
     }
 
     /**

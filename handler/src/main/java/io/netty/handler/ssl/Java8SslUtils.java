@@ -15,20 +15,18 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.CharsetUtil;
 
-import javax.net.ssl.SNIHostName;
-import javax.net.ssl.SNIMatcher;
-import javax.net.ssl.SNIServerName;
-import javax.net.ssl.SSLParameters;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIMatcher;
+import javax.net.ssl.SNIServerName;
+import javax.net.ssl.SSLParameters;
 
-@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class Java8SslUtils {
 
     private Java8SslUtils() { }
@@ -64,7 +62,7 @@ final class Java8SslUtils {
         }
     }
 
-    static List getSniHostNames(List<String> names) {
+    static List<SNIServerName> getSniHostNames(List<String> names) {
         if (names == null || names.isEmpty()) {
             return Collections.emptyList();
         }
@@ -75,7 +73,7 @@ final class Java8SslUtils {
         return sniServerNames;
     }
 
-    static List getSniHostName(byte[] hostname) {
+    static List<SNIServerName> getSniHostName(byte[] hostname) {
         if (hostname == null || hostname.length == 0) {
             return Collections.emptyList();
         }

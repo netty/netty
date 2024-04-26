@@ -1072,7 +1072,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testSNIMatchersDoesNotThrow(SSLEngineTestParam param) throws Exception {
-        assumeTrue(PlatformDependent.javaVersion() >= 8);
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                                         .sslProvider(sslServerProvider())
@@ -1094,7 +1093,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testSNIMatchersWithSNINameWithUnderscore(SSLEngineTestParam param) throws Exception {
-        assumeTrue(PlatformDependent.javaVersion() >= 8);
         byte[] name = "rb8hx3pww30y3tvw0mwy.v1_1".getBytes(CharsetUtil.UTF_8);
         SelfSignedCertificate ssc = new SelfSignedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
@@ -1499,10 +1497,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Override
     protected SSLEngine wrapEngine(SSLEngine engine) {
-        if (PlatformDependent.javaVersion() >= 8) {
-            return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
-        }
-        return engine;
+        return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
     }
 
     ReferenceCountedOpenSslEngine unwrapEngine(SSLEngine engine) {

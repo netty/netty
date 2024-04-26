@@ -17,20 +17,23 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.Provider;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
 import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.KeyManager;
-
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
@@ -38,12 +41,6 @@ import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
-import java.io.File;
-import java.security.PrivateKey;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.security.spec.InvalidKeySpecException;
 
 import static io.netty.handler.ssl.SslUtils.PROBING_CERT;
 import static io.netty.handler.ssl.SslUtils.PROBING_KEY;
@@ -60,20 +57,17 @@ public final class JdkSslServerContext extends JdkSslContext {
     private static final boolean WRAP_TRUST_MANAGER;
     static {
         boolean wrapTrustManager = false;
-        if (PlatformDependent.javaVersion() >= 7) {
-            try {
-                checkIfWrappingTrustManagerIsSupported();
-                wrapTrustManager = true;
-            } catch (Throwable ignore) {
-                // Just don't wrap as we might not be able to do so because of FIPS:
-                // See https://github.com/netty/netty/issues/13840
-            }
+        try {
+            checkIfWrappingTrustManagerIsSupported();
+            wrapTrustManager = true;
+        } catch (Throwable ignore) {
+            // Just don't wrap as we might not be able to do so because of FIPS:
+            // See https://github.com/netty/netty/issues/13840
         }
         WRAP_TRUST_MANAGER = wrapTrustManager;
     }
 
     // Package-private for testing.
-    @SuppressJava6Requirement(reason = "Guarded by java version check")
     static void checkIfWrappingTrustManagerIsSupported() throws CertificateException,
             InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchAlgorithmException,
             InvalidKeySpecException, IOException, KeyException, KeyStoreException, UnrecoverableKeyException {
@@ -351,9 +345,8 @@ public final class JdkSslServerContext extends JdkSslContext {
         }
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by java version check")
     private static TrustManager[] wrapTrustManagerIfNeeded(TrustManager[] trustManagers) {
-        if (WRAP_TRUST_MANAGER && PlatformDependent.javaVersion() >= 7) {
+        if (WRAP_TRUST_MANAGER) {
             for (int i = 0; i < trustManagers.length; i++) {
                 TrustManager tm = trustManagers[i];
                 if (tm instanceof X509ExtendedTrustManager) {
