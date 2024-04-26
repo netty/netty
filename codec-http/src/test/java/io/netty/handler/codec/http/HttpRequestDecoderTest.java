@@ -23,7 +23,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -705,7 +704,7 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
-    void reentrantClose() throws Exception {
+    void reentrantClose() {
         String requestStr = "GET / HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
                 "Content-Length: 0\r\n" +
@@ -715,23 +714,22 @@ public class HttpRequestDecoderTest {
                 "Content-Length: 0\r\n" +
                 "\r\n";
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(), new ChannelInboundHandlerAdapter() {
-            int i = 0;
+            private int i;
 
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 if (i == 0) {
-                    Assertions.assertInstanceOf(HttpRequest.class, msg);
+                    assertInstanceOf(HttpRequest.class, msg);
                 } else if (i == 1) {
-                    Assertions.assertInstanceOf(LastHttpContent.class, msg);
+                    assertInstanceOf(LastHttpContent.class, msg);
                 } else if (i == 2) {
-                    Assertions.assertInstanceOf(HttpRequest.class, msg);
+                    assertInstanceOf(HttpRequest.class, msg);
                 } else if (i == 3) {
-                    Assertions.assertInstanceOf(LastHttpContent.class, msg);
+                    assertInstanceOf(LastHttpContent.class, msg);
                 }
                 ReferenceCountUtil.release(msg);
-                i++;
 
-                if (i == 1) {
+                if (++i == 1) {
                     // first request
                     ctx.close();
                 }
