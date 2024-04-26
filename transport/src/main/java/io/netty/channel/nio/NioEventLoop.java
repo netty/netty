@@ -46,8 +46,6 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
 
-    private volatile int ioRatio = 50;
-
     NioEventLoop(NioEventLoopGroup parent, Executor executor, IoHandler ioHandler,
                  EventLoopTaskQueueFactory taskQueueFactory,
                  EventLoopTaskQueueFactory tailTaskQueueFactory, RejectedExecutionHandler rejectedExecutionHandler) {
@@ -150,23 +148,20 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
     }
 
     /**
-     * Returns the percentage of the desired amount of time spent for I/O in the event loop.
+     * Always return 0.
      */
     public int getIoRatio() {
-        return ioRatio;
+        return 0;
     }
 
     /**
-     * Sets the percentage of the desired amount of time spent for I/O in the event loop. Value range from 1-100.
-     * The default value is {@code 50}, which means the event loop will try to spend the same amount of time for I/O
-     * as for non-I/O tasks. The lower the number the more time can be spent on non-I/O tasks. If value set to
-     * {@code 100}, this feature will be disabled and event loop will not attempt to balance I/O and non-I/O tasks.
+     * This method is a no-op.
+     *
+     * @deprecated
      */
+    @Deprecated
     public void setIoRatio(int ioRatio) {
-        if (ioRatio <= 0 || ioRatio > 100) {
-            throw new IllegalArgumentException("ioRatio: " + ioRatio + " (expected: 0 < ioRatio <= 100)");
-        }
-        this.ioRatio = ioRatio;
+        logger.debug("NioEventLoop.setIoRatio(int) logic was removed, this is a no-op");
     }
 
     /**

@@ -22,6 +22,8 @@ import io.netty.channel.IoHandler;
 import io.netty.channel.SingleThreadIoEventLoop;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Iterator;
 import java.util.Queue;
@@ -29,6 +31,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 public class EpollEventLoop extends SingleThreadIoEventLoop {
+
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(EpollEventLoop.class);
 
     EpollEventLoop(IoEventLoopGroup parent, ThreadFactory threadFactory, IoHandler ioHandler) {
         super(parent, threadFactory, ioHandler);
@@ -83,8 +87,12 @@ public class EpollEventLoop extends SingleThreadIoEventLoop {
     }
 
     /**
-     * This method does nothing.
+     * This method is a no-op.
+     *
+     * @deprecated
      */
+    @Deprecated
     public void setIoRatio(int ioRatio) {
+        LOGGER.debug("EpollEventLoop.setIoRatio(int) logic was removed, this is a no-op");
     }
 }

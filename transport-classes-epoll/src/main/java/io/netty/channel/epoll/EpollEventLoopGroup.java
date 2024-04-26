@@ -26,6 +26,8 @@ import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -42,6 +44,7 @@ public final class EpollEventLoopGroup extends MultiThreadIoEventLoopGroup {
         // Ensure JNI is initialized by the time this class is loaded.
         Epoll.ensureAvailability();
     }
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(EpollEventLoopGroup.class);
 
     /**
      * Create a new instance using the default number of threads and the default {@link ThreadFactory}.
@@ -167,10 +170,13 @@ public final class EpollEventLoopGroup extends MultiThreadIoEventLoopGroup {
     }
 
     /**
-     * This methods does nothing.
+     * This method is a no-op.
+     *
+     * @deprecated
      */
+    @Deprecated
     public void setIoRatio(int ioRatio) {
-        // NOOP
+        LOGGER.debug("EpollEventLoopGroup.setIoRatio(int) logic was removed, this is a no-op");
     }
 
     @Override

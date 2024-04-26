@@ -30,6 +30,8 @@ import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Iterator;
 import java.util.Queue;
@@ -45,6 +47,9 @@ public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
         // Ensure JNI is initialized by the time this class is loaded by this time!
         KQueue.ensureAvailability();
     }
+
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(KQueueEventLoopGroup.class);
+
     /**
      * Create a new instance using the default number of threads and the default {@link ThreadFactory}.
      */
@@ -170,11 +175,13 @@ public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
     }
 
     /**
-     * Sets the percentage of the desired amount of time spent for I/O in the child event loops.  The default value is
-     * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
+     * This method is a no-op.
+     *
+     * @deprecated
      */
+    @Deprecated
     public void setIoRatio(int ioRatio) {
-        // noop
+        LOGGER.debug("EpollEventLoopGroup.setIoRatio(int) logic was removed, this is a no-op");
     }
 
     @Override
