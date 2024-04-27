@@ -50,8 +50,7 @@ public interface IoEventLoop extends EventLoop, IoEventLoopGroup {
      * @param initialOpt    the initial {@link IoOpt} to use.
      * @return              the {@link Future} that is notified once the operations completes.
      */
-    Future<IoRegistration> register(IoHandle handle,
-                                                                    IoOpt initialOpt);
+    Future<IoRegistration> register(IoHandle handle, IoOpt initialOpt);
 
     @Override
     boolean isCompatible(Class<? extends IoHandle> handleType);
