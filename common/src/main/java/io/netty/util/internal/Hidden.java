@@ -35,7 +35,6 @@ class Hidden {
      * and SHOULD NOT be considered a public API.
      */
     @UnstableApi
-    @SuppressJava6Requirement(reason = "BlockHound is Java 8+, but this class is only loaded by it's SPI")
     public static final class NettyBlockHoundIntegration implements BlockHoundIntegration {
 
         @Override
@@ -171,7 +170,6 @@ class Hidden {
                 public Predicate<Thread> apply(final Predicate<Thread> p) {
                     return new Predicate<Thread>() {
                         @Override
-                        @SuppressJava6Requirement(reason = "Predicate#test")
                         public boolean test(Thread thread) {
                             return p.test(thread) ||
                                     thread instanceof FastThreadLocalThread &&

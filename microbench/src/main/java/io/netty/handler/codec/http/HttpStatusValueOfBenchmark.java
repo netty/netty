@@ -14,8 +14,8 @@
  * under the License.
  */
 package io.netty.handler.codec.http;
+
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.internal.SuppressJava6Requirement;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -32,6 +32,7 @@ import org.openjdk.jmh.profile.ProfilerException;
 import org.openjdk.jmh.profile.ProfilerFactory;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.ProfilerConfig;
+
 import java.text.DecimalFormat;
 import java.util.SplittableRandom;
 import java.util.concurrent.TimeUnit;
@@ -40,7 +41,6 @@ import java.util.concurrent.TimeUnit;
 @Warmup(iterations = 10, time = 1)
 @Measurement(iterations = 10, time = 1)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-@SuppressJava6Requirement(reason = "suppress")
 public class HttpStatusValueOfBenchmark extends AbstractMicrobenchmark {
     private static final SplittableRandom random = new SplittableRandom();
     private static final DecimalFormat df = new DecimalFormat("##.##%");

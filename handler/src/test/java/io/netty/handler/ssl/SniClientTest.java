@@ -25,31 +25,27 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.TrustManagerFactory;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManagerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SniClientTest {
     private static final String PARAMETERIZED_NAME = "{index}: serverSslProvider = {0}, clientSslProvider = {1}";
@@ -74,7 +70,6 @@ public class SniClientTest {
     @MethodSource("parameters")
     public void testSniSNIMatcherMatchesClient(SslProvider serverProvider, SslProvider clientProvider)
             throws Exception {
-        assumeTrue(PlatformDependent.javaVersion() >= 8);
         SniClientJava8TestUtil.testSniClient(serverProvider, clientProvider, true);
     }
 
@@ -83,7 +78,6 @@ public class SniClientTest {
     @MethodSource("parameters")
     public void testSniSNIMatcherDoesNotMatchClient(
             final SslProvider serverProvider, final SslProvider clientProvider) {
-        assumeTrue(PlatformDependent.javaVersion() >= 8);
         assertThrows(SSLException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -113,11 +107,7 @@ public class SniClientTest {
                                                     .build();
             } else {
                 // The used OpenSSL version does support a KeyManagerFactory, so use it.
-                KeyManagerFactory kmf = PlatformDependent.javaVersion() >= 8 ?
-                        SniClientJava8TestUtil.newSniX509KeyManagerFactory(cert, sniHostName) :
-                        SslContext.buildKeyManagerFactory(
-                                new X509Certificate[] { cert.cert() }, null,
-                                cert.key(), null, null, null);
+                KeyManagerFactory kmf = SniClientJava8TestUtil.newSniX509KeyManagerFactory(cert, sniHostName);
 
                sslServerContext = SslContextBuilder.forServer(kmf)
                                                    .sslProvider(sslServerProvider)
@@ -140,9 +130,7 @@ public class SniClientTest {
                 }
             }).bind(address).syncUninterruptibly().channel();
 
-            TrustManagerFactory tmf = PlatformDependent.javaVersion() >= 8 ?
-                    SniClientJava8TestUtil.newSniX509TrustmanagerFactory(sniHostName) :
-                    InsecureTrustManagerFactory.INSTANCE;
+            TrustManagerFactory tmf = SniClientJava8TestUtil.newSniX509TrustmanagerFactory(sniHostName);
             sslClientContext = SslContextBuilder.forClient().trustManager(tmf)
                                                      .sslProvider(sslClientProvider).build();
             Bootstrap cb = new Bootstrap();
@@ -157,10 +145,8 @@ public class SniClientTest {
             handler.handshakeFuture().syncUninterruptibly();
             assertNull(handler.engine().getHandshakeSession());
 
-            if (PlatformDependent.javaVersion() >= 8) {
-                SniClientJava8TestUtil.assertSSLSession(
-                        handler.engine().getUseClientMode(), handler.engine().getSession(), sniHostName);
-            }
+            SniClientJava8TestUtil.assertSSLSession(
+                    handler.engine().getUseClientMode(), handler.engine().getSession(), sniHostName);
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();

@@ -19,13 +19,11 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.socket.InternetProtocolFamily;
-import io.netty.util.internal.SocketUtils;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
+import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.ServerSocketChannelConfig;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -134,14 +132,9 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         return SocketUtils.localSocketAddress(javaChannel().socket());
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            javaChannel().bind(localAddress, config.getBacklog());
-        } else {
-            javaChannel().socket().bind(localAddress, config.getBacklog());
-        }
+        javaChannel().bind(localAddress, config.getBacklog());
     }
 
     @Override
@@ -215,7 +208,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
         @Override
         public <T> boolean setOption(ChannelOption<T> option, T value) {
-            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
+            if (option instanceof NioChannelOption) {
                 return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);
             }
             return super.setOption(option, value);
@@ -223,7 +216,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
         @Override
         public <T> T getOption(ChannelOption<T> option) {
-            if (PlatformDependent.javaVersion() >= 7 && option instanceof NioChannelOption) {
+            if (option instanceof NioChannelOption) {
                 return NioChannelOption.getOption(jdkChannel(), (NioChannelOption<T>) option);
             }
             return super.getOption(option);
@@ -231,10 +224,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
         @Override
         public Map<ChannelOption<?>, Object> getOptions() {
-            if (PlatformDependent.javaVersion() >= 7) {
-                return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
-            }
-            return super.getOptions();
+            return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
         }
 
         private ServerSocketChannel jdkChannel() {

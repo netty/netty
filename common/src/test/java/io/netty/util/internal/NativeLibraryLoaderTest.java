@@ -46,9 +46,7 @@ class NativeLibraryLoaderTest {
             fail();
         } catch (UnsatisfiedLinkError error) {
             assertTrue(error.getCause() instanceof FileNotFoundException);
-            if (PlatformDependent.javaVersion() >= 7) {
-                verifySuppressedException(error, UnsatisfiedLinkError.class);
-            }
+            verifySuppressedException(error, UnsatisfiedLinkError.class);
         }
     }
 
@@ -59,9 +57,7 @@ class NativeLibraryLoaderTest {
             fail();
         } catch (UnsatisfiedLinkError error) {
             assertTrue(error.getCause() instanceof FileNotFoundException);
-            if (PlatformDependent.javaVersion() >= 7) {
-                verifySuppressedException(error, ClassNotFoundException.class);
-            }
+            verifySuppressedException(error, ClassNotFoundException.class);
         }
     }
 
@@ -110,7 +106,6 @@ class NativeLibraryLoaderTest {
         assertTrue(true);
     }
 
-    @SuppressJava6Requirement(reason = "uses Java 7+ Throwable#getSuppressed but is guarded by version checks")
     private static void verifySuppressedException(UnsatisfiedLinkError error,
             Class<?> expectedSuppressedExceptionClass) {
         try {

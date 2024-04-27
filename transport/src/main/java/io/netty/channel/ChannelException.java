@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.UnstableApi;
 
@@ -55,29 +53,18 @@ public class ChannelException extends RuntimeException {
     }
 
     @UnstableApi
-    @SuppressJava6Requirement(reason = "uses Java 7+ RuntimeException.<init>(String, Throwable, boolean, boolean)" +
-            " but is guarded by version checks")
     protected ChannelException(String message, Throwable cause, boolean shared) {
         super(message, cause, false, true);
         assert shared;
     }
 
     static ChannelException newStatic(String message, Class<?> clazz, String method) {
-        ChannelException exception;
-        if (PlatformDependent.javaVersion() >= 7) {
-            exception = new StacklessChannelException(message, null, true);
-        } else {
-            exception = new StacklessChannelException(message, null);
-        }
+        ChannelException exception = new StacklessChannelException(message, null, true);
         return ThrowableUtil.unknownStackTrace(exception, clazz, method);
     }
 
     private static final class StacklessChannelException extends ChannelException {
         private static final long serialVersionUID = -6384642137753538579L;
-
-        StacklessChannelException(String message, Throwable cause) {
-            super(message, cause);
-        }
 
         StacklessChannelException(String message, Throwable cause, boolean shared) {
             super(message, cause, shared);

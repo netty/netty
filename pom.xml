@@ -206,6 +206,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -225,6 +226,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -245,6 +247,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -265,6 +268,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -285,6 +289,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -304,6 +309,7 @@
 
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -324,6 +330,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -344,6 +351,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <!-- JDK14 -->
@@ -363,6 +371,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <!-- JDK13 -->
@@ -382,6 +391,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -402,6 +412,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -422,6 +433,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java11 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -442,6 +454,7 @@
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -458,6 +471,7 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
       <activation>
         <jdk>9</jdk>
@@ -1214,6 +1228,10 @@
                   </item>
                   <item>
                     <matcher>java-package</matcher>
+                    <match>/.*\.internal/</match>
+                  </item>
+                  <item>
+                    <matcher>java-package</matcher>
                     <match>/org\.openjdk\.jmh\..*/</match>
                   </item>
                   <item>
@@ -1486,6 +1504,103 @@
                   <newVisibility>private</newVisibility>
                   <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
                 </item>
+                <!-- Removal of "@SuppressJava6Requirement" annocation from classes and methods. -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.ChannelException::&lt;init&gt;(java.lang.String, java.lang.Throwable, boolean)</old>
+                  <new>method void io.netty.channel.ChannelException::&lt;init&gt;(java.lang.String, java.lang.Throwable, boolean)</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "uses Java 7+ RuntimeException.&lt;init&gt;(String, Throwable, boolean, boolean) but is guarded by version checks")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>class io.netty.channel.socket.nio.NioChannelOption&lt;T&gt;</old>
+                  <new>class io.netty.channel.socket.nio.NioChannelOption&lt;T&gt;</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage explicit by the user")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::block(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</old>
+                  <new>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::block(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::joinGroup(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</old>
+                  <new>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::joinGroup(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::leaveGroup(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</old>
+                  <new>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::leaveGroup(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.socket.nio.NioServerSocketChannel::doBind(java.net.SocketAddress) throws java.lang.Exception</old>
+                  <new>method void io.netty.channel.socket.nio.NioServerSocketChannel::doBind(java.net.SocketAddress) throws java.lang.Exception</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.socket.nio.NioSocketChannel::doShutdownOutput() throws java.lang.Exception</old>
+                  <new>method void io.netty.channel.socket.nio.NioSocketChannel::doShutdownOutput() throws java.lang.Exception</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method javax.net.ssl.SSLParameters io.netty.handler.ssl.ReferenceCountedOpenSslEngine::getSSLParameters() @ io.netty.handler.ssl.OpenSslEngine</old>
+                  <new>method javax.net.ssl.SSLParameters io.netty.handler.ssl.ReferenceCountedOpenSslEngine::getSSLParameters() @ io.netty.handler.ssl.OpenSslEngine</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.handler.ssl.ReferenceCountedOpenSslEngine::setSSLParameters(javax.net.ssl.SSLParameters) @ io.netty.handler.ssl.OpenSslEngine</old>
+                  <new>method void io.netty.handler.ssl.ReferenceCountedOpenSslEngine::setSSLParameters(javax.net.ssl.SSLParameters) @ io.netty.handler.ssl.OpenSslEngine</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method javax.net.ssl.SSLParameters io.netty.handler.ssl.ReferenceCountedOpenSslEngine::getSSLParameters()</old>
+                  <new>method javax.net.ssl.SSLParameters io.netty.handler.ssl.ReferenceCountedOpenSslEngine::getSSLParameters()</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.handler.ssl.ReferenceCountedOpenSslEngine::setSSLParameters(javax.net.ssl.SSLParameters)</old>
+                  <new>method void io.netty.handler.ssl.ReferenceCountedOpenSslEngine::setSSLParameters(javax.net.ssl.SSLParameters)</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.handler.ssl.util.LazyX509Certificate::verify(java.security.PublicKey, java.security.Provider) throws java.security.cert.CertificateException, java.security.NoSuchAlgorithmException, java.security.InvalidKeyException, java.security.SignatureException</old>
+                  <new>method void io.netty.handler.ssl.util.LazyX509Certificate::verify(java.security.PublicKey, java.security.Provider) throws java.security.cert.CertificateException, java.security.NoSuchAlgorithmException, java.security.InvalidKeyException, java.security.SignatureException</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Can only be called from Java8 as class is package-private")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
@@ -1597,22 +1712,22 @@
         </configuration>
       </plugin>
       <plugin>
-        <!-- ensure that only methods available in java 1.6 can
-             be used even when compiling with java 1.7+ -->
+        <!-- ensure that only methods available in java 1.8 can
+             be used even when compiling with java 9+ -->
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.16</version>
+        <version>1.23</version>
         <configuration>
           <signature>
             <groupId>org.codehaus.mojo.signature</groupId>
-            <artifactId>java16</artifactId>
-            <version>1.1</version>
+            <artifactId>java18</artifactId>
+            <version>1.0</version>
           </signature>
           <ignores>
             <ignore>java.nio.ByteBuffer</ignore>
           </ignores>
           <annotations>
-            <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>
+            <annotation>io.netty.util.internal.SuppressJava8Requirement</annotation>
           </annotations>
         </configuration>
         <executions>

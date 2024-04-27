@@ -70,6 +70,8 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -108,8 +110,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
 
 import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
@@ -129,7 +129,6 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -1425,10 +1424,7 @@ public class DnsNameResolverTest {
             }
         };
 
-        // Java7 will strip of the "." so we need to adjust the expected dnsname. Both are valid in terms of the RFC
-        // so its ok.
-        String expectedDnsName = PlatformDependent.javaVersion() == 7 ?
-                "dns4.some.record.netty.io" : "dns4.some.record.netty.io.";
+        String expectedDnsName = "dns4.some.record.netty.io.";
 
         try {
             resolver.resolveAll(hostname).syncUninterruptibly();

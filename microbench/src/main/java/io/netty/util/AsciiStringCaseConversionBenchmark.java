@@ -15,7 +15,6 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.SuppressJava6Requirement;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -61,7 +60,6 @@ public class AsciiStringCaseConversionBenchmark {
     private boolean noUnsafe;
 
     @Setup(Level.Trial)
-    @SuppressJava6Requirement(reason = "using SplittableRandom to reliably produce data")
     public void init() {
         System.setProperty("io.netty.noUnsafe", Boolean.valueOf(noUnsafe).toString());
         final SplittableRandom random = new SplittableRandom(seed);

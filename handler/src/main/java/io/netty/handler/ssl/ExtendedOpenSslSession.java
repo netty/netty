@@ -16,25 +16,24 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.SuppressJava6Requirement;
 
-import javax.net.ssl.ExtendedSSLSession;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.SSLSessionBindingEvent;
-import javax.net.ssl.SSLSessionBindingListener;
-import javax.security.cert.X509Certificate;
 import java.security.Principal;
 import java.security.cert.Certificate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import javax.net.ssl.ExtendedSSLSession;
+import javax.net.ssl.SNIServerName;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSessionBindingEvent;
+import javax.net.ssl.SSLSessionBindingListener;
+import javax.security.cert.X509Certificate;
 
 /**
  * Delegates all operations to a wrapped {@link OpenSslSession} except the methods defined by {@link ExtendedSSLSession}
  * itself.
  */
-@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements OpenSslSession {
 
     // TODO: use OpenSSL API to actually fetch the real data but for now just do what Conscrypt does:
@@ -52,10 +51,8 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
         this.wrapped = wrapped;
     }
 
-    // Use rawtypes an unchecked override to be able to also work on java7.
     @Override
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public abstract List getRequestedServerNames();
+    public abstract List<SNIServerName> getRequestedServerNames();
 
     // Do not mark as override so we can compile on java8.
     public List<byte[]> getStatusResponses() {

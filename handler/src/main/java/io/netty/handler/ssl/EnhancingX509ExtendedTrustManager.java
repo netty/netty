@@ -16,23 +16,19 @@
 
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.SuppressJava6Requirement;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.X509ExtendedTrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.net.Socket;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.List;
-
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.X509ExtendedTrustManager;
+import javax.net.ssl.X509TrustManager;
 
 /**
  * Wraps an existing {@link X509ExtendedTrustManager} and enhances the {@link CertificateException} that is thrown
  * because of hostname validation.
  */
-@SuppressJava6Requirement(reason = "Usage guarded by java version check")
 final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
     private final X509ExtendedTrustManager wrapped;
 

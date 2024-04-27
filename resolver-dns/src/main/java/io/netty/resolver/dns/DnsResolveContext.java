@@ -39,7 +39,6 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -144,12 +143,6 @@ abstract class DnsResolveContext<T> {
 
         private static final long serialVersionUID = 1209303419266433003L;
 
-        private DnsResolveContextException(String message) {
-            super(message);
-        }
-
-        @SuppressJava6Requirement(reason = "uses Java 7+ Exception.<init>(String, Throwable, boolean, boolean)" +
-                " but is guarded by version checks")
         private DnsResolveContextException(String message, boolean shared) {
             super(message, null, false, true);
             assert shared;
@@ -163,12 +156,7 @@ abstract class DnsResolveContext<T> {
         }
 
         static DnsResolveContextException newStatic(String message, Class<?> clazz, String method) {
-            final DnsResolveContextException exception;
-            if (PlatformDependent.javaVersion() >= 7) {
-                exception = new DnsResolveContextException(message, true);
-            } else {
-                exception = new DnsResolveContextException(message);
-            }
+            final DnsResolveContextException exception = new DnsResolveContextException(message, true);
             return ThrowableUtil.unknownStackTrace(exception, clazz, method);
         }
     }
@@ -544,8 +532,7 @@ abstract class DnsResolveContext<T> {
                                            final DnsQueryLifecycleObserver queryLifecycleObserver,
                                            final Promise<List<T>> promise,
                                            final Throwable cause) {
-        final String nameServerName = PlatformDependent.javaVersion() >= 7 ?
-                nameServerAddr.getHostString() : nameServerAddr.getHostName();
+        final String nameServerName = nameServerAddr.getHostString();
         assert nameServerName != null;
 
         // Placeholder so we will not try to finish the original query yet.
@@ -602,7 +589,7 @@ abstract class DnsResolveContext<T> {
         private final AuthoritativeDnsServerCache wrapped;
 
         RedirectAuthoritativeDnsServerCache(AuthoritativeDnsServerCache authoritativeDnsServerCache) {
-            this.wrapped = authoritativeDnsServerCache;
+            wrapped = authoritativeDnsServerCache;
         }
 
         @Override

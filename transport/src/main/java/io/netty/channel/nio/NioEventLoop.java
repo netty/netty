@@ -35,9 +35,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.Selector;
 import java.nio.channels.SelectionKey;
-
+import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -81,24 +80,6 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     // - https://bugs.openjdk.java.net/browse/JDK-6527572 for JDK prior to 5.0u15-rev and 6u10
     // - https://github.com/netty/netty/issues/203
     static {
-        if (PlatformDependent.javaVersion() < 7) {
-            final String key = "sun.nio.ch.bugLevel";
-            final String bugLevel = SystemPropertyUtil.get(key);
-            if (bugLevel == null) {
-                try {
-                    AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                        @Override
-                        public Void run() {
-                            System.setProperty(key, "");
-                            return null;
-                        }
-                    });
-                } catch (final SecurityException e) {
-                    logger.debug("Unable to get/set System Property: " + key, e);
-                }
-            }
-        }
-
         int selectorAutoRebuildThreshold = SystemPropertyUtil.getInt("io.netty.selectorAutoRebuildThreshold", 512);
         if (selectorAutoRebuildThreshold < MIN_PREMATURE_SELECTOR_RETURNS) {
             selectorAutoRebuildThreshold = 0;

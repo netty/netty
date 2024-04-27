@@ -15,10 +15,7 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.SuppressJava6Requirement;
-
 import java.nio.ByteBuffer;
-
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
@@ -147,7 +144,6 @@ class JdkSslEngine extends SSLEngine implements ApplicationProtocolAccessor {
         engine.setEnabledProtocols(strings);
     }
 
-    @SuppressJava6Requirement(reason = "Can only be called when running on JDK7+")
     @Override
     public SSLSession getHandshakeSession() {
         return engine.getHandshakeSession();

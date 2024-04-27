@@ -16,7 +16,6 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -43,17 +42,15 @@ public final class UnixChannelUtil {
 
     public static InetSocketAddress computeRemoteAddr(InetSocketAddress remoteAddr, InetSocketAddress osRemoteAddr) {
         if (osRemoteAddr != null) {
-            if (PlatformDependent.javaVersion() >= 7) {
-                try {
-                    // Only try to construct a new InetSocketAddress if we using java >= 7 as getHostString() does not
-                    // exists in earlier releases and so the retrieval of the hostname could block the EventLoop if a
-                    // reverse lookup would be needed.
-                    return new InetSocketAddress(InetAddress.getByAddress(remoteAddr.getHostString(),
-                            osRemoteAddr.getAddress().getAddress()),
-                            osRemoteAddr.getPort());
-                } catch (UnknownHostException ignore) {
-                    // Should never happen but fallback to osRemoteAddr anyway.
-                }
+            try {
+                // Only try to construct a new InetSocketAddress if we using java >= 7 as getHostString() does not
+                // exists in earlier releases and so the retrieval of the hostname could block the EventLoop if a
+                // reverse lookup would be needed.
+                return new InetSocketAddress(InetAddress.getByAddress(remoteAddr.getHostString(),
+                        osRemoteAddr.getAddress().getAddress()),
+                        osRemoteAddr.getPort());
+            } catch (UnknownHostException ignore) {
+                // Should never happen but fallback to osRemoteAddr anyway.
             }
             return osRemoteAddr;
         }
