@@ -22,7 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.nio.NioOpt;
+import io.netty.channel.nio.NioIoOpt;
 import io.netty.channel.nio.NioRegistration;
 import io.netty.util.internal.SocketUtils;
 import io.netty.channel.nio.AbstractNioMessageChannel;
@@ -63,7 +63,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
     }
 
     public NioUdtMessageConnectorChannel(final Channel parent, final SocketChannelUDT channelUDT) {
-        super(parent, channelUDT, NioOpt.READ);
+        super(parent, channelUDT, NioIoOpt.READ);
         try {
             channelUDT.configureBlocking(false);
             switch (channelUDT.socketUDT().status()) {
@@ -117,7 +117,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
             final boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
             if (!connected) {
                 NioRegistration registration = registration();
-                registration.updateInterestOpt(registration.interestOpt().with(NioOpt.CONNECT));
+                registration.updateInterestOpt(registration.interestOpt().with(NioIoOpt.CONNECT));
             }
             success = true;
             return connected;
@@ -137,7 +137,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
     protected void doFinishConnect() throws Exception {
         if (javaChannel().finishConnect()) {
             NioRegistration registration = registration();
-            registration.updateInterestOpt(registration.interestOpt().without(NioOpt.CONNECT));
+            registration.updateInterestOpt(registration.interestOpt().without(NioIoOpt.CONNECT));
         } else {
             throw new Error(
                     "Provider error: failed to finish connect. Provider library should be upgraded.");

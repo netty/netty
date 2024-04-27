@@ -330,9 +330,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         if (!registration.isValid()) {
             return;
         }
-        final NioOpt opt = registration.interestOpt();
-        if (!opt.contains(NioOpt.WRITE)) {
-            registration.updateInterestOpt(opt.with(NioOpt.WRITE));
+        final NioIoOpt opt = registration.interestOpt();
+        if (!opt.contains(NioIoOpt.WRITE)) {
+            registration.updateInterestOpt(opt.with(NioIoOpt.WRITE));
         }
     }
 
@@ -344,6 +344,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         if (!registration.isValid()) {
             return;
         }
-        registration.updateInterestOpt(registration.interestOpt().without(NioOpt.WRITE));
+        registration.updateInterestOpt(registration.interestOpt().without(NioIoOpt.WRITE));
     }
 }

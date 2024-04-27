@@ -16,7 +16,6 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.IoRegistration;
-import io.netty.channel.unix.IovArray;
 
 import java.io.IOException;
 
@@ -24,8 +23,20 @@ import java.io.IOException;
  * Registration with an {@link EpollIoHandler}.
  */
 public interface EpollRegistration extends IoRegistration {
-
+    /**
+     * Update the {@link EpollIoOpt} for this registration.
+     *
+     * @param opt   the {@link EpollIoOpt} to use.
+     */
     void updateInterestOpt(EpollIoOpt opt) throws IOException;
 
+    /**
+     * The used {@link EpollIoOpt} for this registration.
+     *
+     * @return  opt.
+     */
     EpollIoOpt interestOpt();
+
+    @Override
+    void cancel() throws IOException;
 }

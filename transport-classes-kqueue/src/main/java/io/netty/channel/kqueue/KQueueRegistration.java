@@ -16,12 +16,16 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.IoRegistration;
-import io.netty.channel.unix.IovArray;
 
 /**
  * Registration with an {@link KQueueIoHandler}.
  */
 public interface KQueueRegistration extends IoRegistration {
 
+    /**
+     * Add the {@link KQueueEventIoOpt} to the registration.
+     *
+     * @param opt   the {@link KQueueEventIoOpt} to use.
+     */
     void addOpt(KQueueEventIoOpt opt);
 }

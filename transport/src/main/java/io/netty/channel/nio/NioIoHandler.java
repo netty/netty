@@ -310,9 +310,9 @@ public final class NioIoHandler implements IoHandler {
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
-    private static NioOpt cast(IoOpt opt) {
-        if (opt instanceof NioOpt) {
-            return (NioOpt) opt;
+    private static NioIoOpt cast(IoOpt opt) {
+        if (opt instanceof NioIoOpt) {
+            return (NioIoOpt) opt;
         }
         throw new IllegalArgumentException("IoOpt of type " + StringUtil.simpleClassName(opt) + " not supported");
     }
@@ -321,7 +321,7 @@ public final class NioIoHandler implements IoHandler {
         private final NioHandle handle;
         private volatile SelectionKey key;
 
-        DefaultNioRegistration(NioHandle handle, NioOpt initialOpt, Selector selector) throws IOException {
+        DefaultNioRegistration(NioHandle handle, NioIoOpt initialOpt, Selector selector) throws IOException {
             this.handle = handle;
             key = handle.selectableChannel().register(selector, initialOpt.value, this);
         }
@@ -331,7 +331,7 @@ public final class NioIoHandler implements IoHandler {
         }
 
         void register(Selector selector) throws IOException {
-            NioOpt opts = interestOpt();
+            NioIoOpt opts = interestOpt();
             SelectionKey newKey = handle.selectableChannel().register(selector, opts.value, this);
             key.cancel();
             key = newKey;
@@ -348,13 +348,13 @@ public final class NioIoHandler implements IoHandler {
         }
 
         @Override
-        public void updateInterestOpt(NioOpt opt) {
+        public void updateInterestOpt(NioIoOpt opt) {
             key.interestOps(opt.value);
         }
 
         @Override
-        public NioOpt interestOpt() {
-            return NioOpt.valueOf(key.interestOps());
+        public NioIoOpt interestOpt() {
+            return NioIoOpt.valueOf(key.interestOps());
         }
 
         @Override
@@ -372,7 +372,7 @@ public final class NioIoHandler implements IoHandler {
     public IoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOpt initialOpt)
             throws Exception {
         NioHandle nioHandle = nioHandle(handle);
-        NioOpt opt = cast(initialOpt);
+        NioIoOpt opt = cast(initialOpt);
         boolean selected = false;
         for (;;) {
             try {
@@ -558,7 +558,7 @@ public final class NioIoHandler implements IoHandler {
             }
             return;
         }
-        registration.handle.handle(registration, NioOpt.valueOf(k.readyOps()));
+        registration.handle.handle(registration, NioIoOpt.valueOf(k.readyOps()));
     }
 
     @Override

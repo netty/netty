@@ -27,7 +27,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioByteChannel;
-import io.netty.channel.nio.NioOpt;
+import io.netty.channel.nio.NioIoOpt;
 import io.netty.channel.nio.NioRegistration;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.InternetProtocolFamily;
@@ -323,7 +323,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
             if (!connected) {
                 NioRegistration registration = registration();
-                registration.updateInterestOpt(registration.interestOpt().with(NioOpt.CONNECT));
+                registration.updateInterestOpt(registration.interestOpt().with(NioIoOpt.CONNECT));
             }
             success = true;
             return connected;

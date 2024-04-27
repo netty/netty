@@ -18,7 +18,6 @@ package io.netty.channel.nio;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.IoHandler;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.SingleThreadIoEventLoop;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
@@ -143,7 +142,7 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
                                 logger.warn("Unexpected exception while running NioTask.channelUnregistered(...)", e);
                             }
                         }
-                    }, NioOpt.valueOf(interestOps)).get();
+                    }, NioIoOpt.valueOf(interestOps)).get();
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

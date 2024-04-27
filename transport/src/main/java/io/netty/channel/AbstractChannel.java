@@ -1078,15 +1078,21 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
+     * Subclasses may override this method
      *
-     * Sub-classes may override this method
-     *
+     * @deprecated use {@link #doRegister(ChannelPromise)}
      */
     @Deprecated
     protected void doRegister() throws Exception {
         // NOOP
     }
 
+    /**
+     * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
+     * Subclasses may override this method
+     *
+     * @param promise {@link ChannelPromise} that must be notified once done to continue the registration.
+     */
     protected void doRegister(ChannelPromise promise) {
         try {
             doRegister();

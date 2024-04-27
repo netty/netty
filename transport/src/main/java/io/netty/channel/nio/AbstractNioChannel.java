@@ -57,7 +57,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     private final SelectableChannel ch;
     protected final int readInterestOp;
-    protected final NioOpt readOpt;
+    protected final NioIoOpt readOpt;
 
     volatile NioRegistration registration;
     boolean readPending;
@@ -84,9 +84,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * @param readInterestOp    the ops to set to receive data from the {@link SelectableChannel}
      */
     protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
-        this(parent, ch, NioOpt.valueOf(readInterestOp));
+        this(parent, ch, NioIoOpt.valueOf(readInterestOp));
     }
-    protected AbstractNioChannel(Channel parent, SelectableChannel ch, NioOpt readOpt) {
+    protected AbstractNioChannel(Channel parent, SelectableChannel ch, NioIoOpt readOpt) {
         super(parent);
         this.ch = ch;
         this.readInterestOp = ObjectUtil.checkNotNull(readOpt, "readOpt").value;
@@ -391,26 +391,26 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         private boolean isFlushPending() {
             NioRegistration registration = registration();
-            return registration.isValid() && registration.interestOpt().contains(NioOpt.WRITE);
+            return registration.isValid() && registration.interestOpt().contains(NioIoOpt.WRITE);
         }
 
         @Override
         public void handle(IoRegistration registration, IoOpt readyOpt) {
             try {
                 NioRegistration nioRegistration = (NioRegistration) registration;
-                NioOpt nioReadyOpt = (NioOpt) readyOpt;
+                NioIoOpt nioReadyOpt = (NioIoOpt) readyOpt;
                 // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
                 // the NIO JDK channel implementation may throw a NotYetConnectedException.
-                if (nioReadyOpt.contains(NioOpt.CONNECT)) {
+                if (nioReadyOpt.contains(NioIoOpt.CONNECT)) {
                     // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                     // See https://github.com/netty/netty/issues/924
-                    nioRegistration.updateInterestOpt(nioRegistration.interestOpt().without(NioOpt.CONNECT));
+                    nioRegistration.updateInterestOpt(nioRegistration.interestOpt().without(NioIoOpt.CONNECT));
 
                     unsafe().finishConnect();
                 }
 
                 // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
-                if (nioReadyOpt.contains(NioOpt.WRITE)) {
+                if (nioReadyOpt.contains(NioIoOpt.WRITE)) {
                     // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to
                     // write
                     forceFlush();
@@ -418,7 +418,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
                 // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
                 // to a spin loop
-                if (nioReadyOpt.contains(NioOpt.READ_AND_ACCEPT) || nioReadyOpt.equals(NioOpt.NONE)) {
+                if (nioReadyOpt.contains(NioIoOpt.READ_AND_ACCEPT) || nioReadyOpt.equals(NioIoOpt.NONE)) {
                     read();
                 }
             } catch (CancelledKeyException ignored) {
@@ -436,7 +436,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     protected void doRegister(ChannelPromise promise) {
         assert registration == null;
-        ((IoEventLoop) eventLoop()).register((AbstractNioUnsafe) unsafe(), NioOpt.NONE).addListener(f -> {
+        ((IoEventLoop) eventLoop()).register((AbstractNioUnsafe) unsafe(), NioIoOpt.NONE).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (NioRegistration) f.getNow();
                 promise.setSuccess();

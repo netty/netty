@@ -19,7 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 
@@ -42,7 +41,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         super(parent, ch, readInterestOp);
     }
 
-    protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, NioOpt readOpt) {
+    protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, NioIoOpt readOpt) {
         super(parent, ch, readOpt);
     }
 
@@ -133,7 +132,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         final NioRegistration registration = registration();
-        final NioOpt opt = registration.interestOpt();
+        final NioIoOpt opt = registration.interestOpt();
 
         int maxMessagesPerWrite = maxMessagesPerWrite();
         while (maxMessagesPerWrite > 0) {
@@ -167,10 +166,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         }
         if (in.isEmpty()) {
             // Wrote all messages.
-            registration.updateInterestOpt(opt.without(NioOpt.WRITE));
+            registration.updateInterestOpt(opt.without(NioIoOpt.WRITE));
         } else {
             // Did not write all messages.
-            registration.updateInterestOpt(opt.with(NioOpt.WRITE));
+            registration.updateInterestOpt(opt.with(NioIoOpt.WRITE));
         }
     }
 

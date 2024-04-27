@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import java.io.IOException;
-
 /**
  * A registration for IO.
  *
@@ -34,5 +32,5 @@ public interface IoRegistration {
     /**
      * Cancel the registration.
      */
-    void cancel() throws IOException;
+    void cancel() throws Exception;
 }
