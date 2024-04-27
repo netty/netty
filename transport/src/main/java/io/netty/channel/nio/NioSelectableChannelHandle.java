@@ -44,7 +44,7 @@ public abstract class NioSelectableChannelHandle<S extends SelectableChannel> im
 
     @Override
     public void handle(IoRegistration registration, IoOpt ioEvent) {
-        SelectionKey key = ((NioRegistration) registration).selectionKey();
+        SelectionKey key = ((NioIoRegistration) registration).selectionKey();
         NioSelectableChannelHandle.this.handle(channel, key);
     }
 

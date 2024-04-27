@@ -52,9 +52,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * {@link IoHandler} implementation which register the {@link IoHandle}'s to a
- * {@link Selector}.
- *
+ * {@link IoHandler} implementation which register the {@link IoHandle}'s to a {@link Selector}.
  */
 public final class NioIoHandler implements IoHandler {
 
@@ -317,7 +315,7 @@ public final class NioIoHandler implements IoHandler {
         throw new IllegalArgumentException("IoOpt of type " + StringUtil.simpleClassName(opt) + " not supported");
     }
 
-    final class DefaultNioRegistration implements NioRegistration {
+    final class DefaultNioRegistration implements NioIoRegistration {
         private final NioHandle handle;
         private volatile SelectionKey key;
 

@@ -15,28 +15,16 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.IoRegistration;
-
-import java.io.IOException;
-
-/**
- * Registration with an {@link EpollIoHandler}.
- */
-public interface EpollRegistration extends IoRegistration {
-    /**
-     * Update the {@link EpollIoOpt} for this registration.
-     *
-     * @param opt   the {@link EpollIoOpt} to use.
-     */
-    void updateInterestOpt(EpollIoOpt opt) throws IOException;
+import io.netty.channel.unix.IovArray;
+interface EpollInternalIoRegistration extends EpollIoRegistration {
 
     /**
-     * The used {@link EpollIoOpt} for this registration.
-     *
-     * @return  opt.
+     * Returns an {@link IovArray} that can be used for {@code writev}.
      */
-    EpollIoOpt interestOpt();
+    IovArray cleanIovArray();
 
-    @Override
-    void cancel() throws IOException;
+    /**
+     * Returns a {@link NativeDatagramPacketArray} that can used for {@code sendmmsg}.
+     */
+    NativeDatagramPacketArray cleanDatagramPacketArray();
 }

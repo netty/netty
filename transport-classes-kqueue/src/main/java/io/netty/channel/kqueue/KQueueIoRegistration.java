@@ -13,37 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.nio;
+package io.netty.channel.kqueue;
 
 import io.netty.channel.IoRegistration;
 
-import java.nio.channels.SelectionKey;
-
 /**
- * {@link IoRegistration} implementation that is used by {@link NioIoHandler}.
+ * Registration with an {@link KQueueIoHandler}.
  */
-public interface NioRegistration extends IoRegistration {
-    /**
-     * The underlying {@link SelectionKey}
-     *
-     * @return  the selection key.
-     */
-    SelectionKey selectionKey();
+public interface KQueueIoRegistration extends IoRegistration {
 
     /**
-     * Update the {@link NioIoOpt} for this registration.
+     * Add the {@link KQueueEventIoOpt} to the registration.
      *
-     * @param opt   the {@link NioIoOpt} to use.
+     * @param opt   the {@link KQueueEventIoOpt} to use.
      */
-    void updateInterestOpt(NioIoOpt opt);
-
-    /**
-     * The used {@link NioIoOpt} for this registration.
-     *
-     * @return  opt.
-     */
-    NioIoOpt interestOpt();
-
-    @Override
-    void cancel();
+    void addOpt(KQueueEventIoOpt opt);
 }

@@ -23,7 +23,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.nio.NioIoOpt;
-import io.netty.channel.nio.NioRegistration;
+import io.netty.channel.nio.NioIoRegistration;
 import io.netty.util.internal.SocketUtils;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
@@ -116,7 +116,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
         try {
             final boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
             if (!connected) {
-                NioRegistration registration = registration();
+                NioIoRegistration registration = registration();
                 registration.updateInterestOpt(registration.interestOpt().with(NioIoOpt.CONNECT));
             }
             success = true;
@@ -136,7 +136,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
     @Override
     protected void doFinishConnect() throws Exception {
         if (javaChannel().finishConnect()) {
-            NioRegistration registration = registration();
+            NioIoRegistration registration = registration();
             registration.updateInterestOpt(registration.interestOpt().without(NioIoOpt.CONNECT));
         } else {
             throw new Error(

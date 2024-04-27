@@ -131,7 +131,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        final NioRegistration registration = registration();
+        final NioIoRegistration registration = registration();
         final NioIoOpt opt = registration.interestOpt();
 
         int maxMessagesPerWrite = maxMessagesPerWrite();

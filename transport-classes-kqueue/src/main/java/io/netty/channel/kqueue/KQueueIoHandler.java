@@ -78,7 +78,7 @@ final class KQueueIoHandler implements IoHandler {
             return kqueueWaitNow();
         }
     };
-    private final IntObjectMap<DefaultKqueueRegistration> registrations = new IntObjectHashMap<>(4096);
+    private final IntObjectMap<DefaultKqueueIoRegistration> registrations = new IntObjectHashMap<>(4096);
     private int numChannels;
 
     private volatile int wakenUp;
@@ -187,7 +187,7 @@ final class KQueueIoHandler implements IoHandler {
                 continue;
             }
 
-            DefaultKqueueRegistration registration = registrations.get(ident);
+            DefaultKqueueIoRegistration registration = registrations.get(ident);
             if (registration == null) {
                 // This may happen if the channel has already been closed, and it will be removed from kqueue anyways.
                 // We also handle EV_ERROR above to skip this even early if it is a result of a referencing a closed and
@@ -273,14 +273,14 @@ final class KQueueIoHandler implements IoHandler {
     }
 
     List<Channel> registeredChannelsList() {
-        IntObjectMap<DefaultKqueueRegistration> ch = registrations;
+        IntObjectMap<DefaultKqueueIoRegistration> ch = registrations;
         if (ch.isEmpty()) {
             return Collections.emptyList();
         }
 
         List<Channel> channels = new ArrayList<>(ch.size());
 
-        for (DefaultKqueueRegistration registration : ch.values()) {
+        for (DefaultKqueueIoRegistration registration : ch.values()) {
             if (registration.handle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe) {
                 channels.add(((AbstractKQueueChannel.AbstractKQueueUnsafe) registration.handle).channel());
             }
@@ -310,9 +310,9 @@ final class KQueueIoHandler implements IoHandler {
 
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
-        DefaultKqueueRegistration[] copy = registrations.values().toArray(new DefaultKqueueRegistration[0]);
+        DefaultKqueueIoRegistration[] copy = registrations.values().toArray(new DefaultKqueueIoRegistration[0]);
 
-        for (DefaultKqueueRegistration reg: copy) {
+        for (DefaultKqueueIoRegistration reg: copy) {
             reg.cancel();
             try {
                 reg.handle.close();
@@ -345,9 +345,9 @@ final class KQueueIoHandler implements IoHandler {
             throw new IllegalArgumentException("ident " + KQUEUE_WAKE_UP_IDENT + " is reserved for internal usage");
         }
         KQueueEventIoOpt eventIoOpt = cast(initialOpts);
-        DefaultKqueueRegistration registration = new DefaultKqueueRegistration(
+        DefaultKqueueIoRegistration registration = new DefaultKqueueIoRegistration(
                 eventLoop, kqueueHandle);
-        DefaultKqueueRegistration old = registrations.put(kqueueHandle.ident(), registration);
+        DefaultKqueueIoRegistration old = registrations.put(kqueueHandle.ident(), registration);
         if (old != null) {
             // restore old mapping and throw exception
             registrations.put(kqueueHandle.ident(), old);
@@ -380,12 +380,12 @@ final class KQueueIoHandler implements IoHandler {
         return KQueueIoHandle.class.isAssignableFrom(handleType);
     }
 
-    private final class DefaultKqueueRegistration extends AtomicBoolean implements KQueueInternalRegistration {
+    private final class DefaultKqueueIoRegistration extends AtomicBoolean implements KQueueInternalIoRegistration {
         final KQueueIoHandle handle;
 
         private final IoEventLoop eventLoop;
 
-        DefaultKqueueRegistration(IoEventLoop eventLoop, KQueueIoHandle handle) {
+        DefaultKqueueIoRegistration(IoEventLoop eventLoop, KQueueIoHandle handle) {
             this.eventLoop = eventLoop;
             this.handle = handle;
         }
@@ -433,7 +433,7 @@ final class KQueueIoHandler implements IoHandler {
 
         private void cancel0() {
             int ident = handle.ident();
-            DefaultKqueueRegistration old = registrations.remove(ident);
+            DefaultKqueueIoRegistration old = registrations.remove(ident);
             if (old != null) {
                 if (old != this) {
                     // The Channel mapping was already replaced due FD reuse, put back the stored Channel.

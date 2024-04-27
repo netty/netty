@@ -69,7 +69,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private SocketAddress requestedRemoteAddress;
 
     final BsdSocket socket;
-    private KQueueRegistration registration;
+    private KQueueIoRegistration registration;
     private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
 
@@ -129,7 +129,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
-    protected final KQueueRegistration registration() {
+    protected final KQueueIoRegistration registration() {
         assert registration != null;
         return registration;
     }
@@ -182,7 +182,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         writeFilter(false);
         clearRdHup0();
 
-        KQueueRegistration registration = this.registration;
+        KQueueIoRegistration registration = this.registration;
         if (registration != null) {
             registration.cancel();
         }
@@ -217,7 +217,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 fd().intValue(), Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP);
         ((IoEventLoop) eventLoop()).register((AbstractKQueueUnsafe) unsafe(), initialOpt).addListener(f -> {
             if (f.isSuccess()) {
-                this.registration = (KQueueRegistration) f.getNow();
+                this.registration = (KQueueIoRegistration) f.getNow();
                 // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old
                 // EventLoop make sure the readReadyRunnablePending variable is reset so we will be able to execute
                 // the Runnable on the new EventLoop.

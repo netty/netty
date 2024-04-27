@@ -323,7 +323,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
 
     protected final void setOpWrite() {
-        final NioRegistration registration = registration();
+        final NioIoRegistration registration = registration();
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop
         // See https://github.com/netty/netty/issues/2104
@@ -337,7 +337,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     protected final void clearOpWrite() {
-        final NioRegistration registration = registration();
+        final NioIoRegistration registration = registration();
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop
         // See https://github.com/netty/netty/issues/2104

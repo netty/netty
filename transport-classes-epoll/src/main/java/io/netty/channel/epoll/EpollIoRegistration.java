@@ -13,14 +13,30 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.kqueue;
+package io.netty.channel.epoll;
 
-import io.netty.channel.unix.IovArray;
+import io.netty.channel.IoRegistration;
 
-interface KQueueInternalRegistration extends KQueueRegistration {
+import java.io.IOException;
+
+/**
+ * Registration with an {@link EpollIoHandler}.
+ */
+public interface EpollIoRegistration extends IoRegistration {
+    /**
+     * Update the {@link EpollIoOpt} for this registration.
+     *
+     * @param opt   the {@link EpollIoOpt} to use.
+     */
+    void updateInterestOpt(EpollIoOpt opt) throws IOException;
 
     /**
-     * Returns an {@link IovArray} that can be used for {@code writev}.
+     * The used {@link EpollIoOpt} for this registration.
+     *
+     * @return  opt.
      */
-    IovArray cleanArray();
+    EpollIoOpt interestOpt();
+
+    @Override
+    void cancel() throws IOException;
 }

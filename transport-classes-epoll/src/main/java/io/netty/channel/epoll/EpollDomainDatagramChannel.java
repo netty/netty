@@ -183,7 +183,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                         remoteAddress.path().getBytes(CharsetUtil.UTF_8));
             }
         } else if (data.nioBufferCount() > 1) {
-            IovArray array = ((EpollInternalRegistration) registration()).cleanIovArray();
+            IovArray array = ((EpollInternalIoRegistration) registration()).cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;

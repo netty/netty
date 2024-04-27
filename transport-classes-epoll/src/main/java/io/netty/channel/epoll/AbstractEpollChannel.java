@@ -72,7 +72,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    private EpollRegistration registration;
+    private EpollIoRegistration registration;
     boolean inputClosedSeenErrorOnRead;
     boolean epollInReadyRunnablePending;
     volatile EpollIoOpt initialOpts;
@@ -112,7 +112,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     protected void setFlag(int flag) throws IOException {
         if (isRegistered()) {
-            EpollRegistration registration = registration();
+            EpollIoRegistration registration = registration();
             registration.updateInterestOpt(registration.interestOpt().with(EpollIoOpt.valueOf(flag)));
         } else {
             initialOpts = initialOpts.with(EpollIoOpt.valueOf(flag));
@@ -120,12 +120,12 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     void clearFlag(int flag) throws IOException {
-        EpollRegistration registration = registration();
+        EpollIoRegistration registration = registration();
         registration.updateInterestOpt(
                 registration.interestOpt().without(EpollIoOpt.valueOf(flag)));
     }
 
-    protected final EpollRegistration registration() {
+    protected final EpollIoRegistration registration() {
         assert registration != null;
         return registration;
     }
@@ -215,7 +215,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doDeregister() throws Exception {
-        EpollRegistration registration = this.registration;
+        EpollIoRegistration registration = this.registration;
         if (registration != null) {
             registration.cancel();
         }
@@ -290,7 +290,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         epollInReadyRunnablePending = false;
         ((IoEventLoop) eventLoop()).register((AbstractEpollUnsafe) unsafe(), initialOpts).addListener(f -> {
             if (f.isSuccess()) {
-                registration = (EpollRegistration) f.getNow();
+                registration = (EpollIoRegistration) f.getNow();
                 promise.setSuccess();
             } else {
                 promise.setFailure(f.cause());
@@ -404,7 +404,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         if (data.nioBufferCount() > 1) {
-            IovArray array = ((EpollInternalRegistration) registration()).cleanIovArray();
+            IovArray array = ((EpollInternalIoRegistration) registration()).cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
@@ -639,7 +639,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             assert eventLoop().inEventLoop();
             try {
                 readPending = false;
-                EpollRegistration registration = registration();
+                EpollIoRegistration registration = registration();
                 registration.updateInterestOpt(registration.interestOpt().without(EpollIoOpt.EPOLLIN));
             } catch (IOException e) {
                 // When this happens there is something completely wrong with either the filedescriptor or epoll,

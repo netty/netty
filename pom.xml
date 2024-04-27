@@ -1413,13 +1413,13 @@
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.finalMethodAddedToNonFinalClass</code>
-                  <new>method io.netty.channel.kqueue.KQueueRegistration io.netty.channel.kqueue.AbstractKQueueChannel::registration() @ io.netty.channel.kqueue.AbstractKQueueServerChannel</new>
+                  <new>method io.netty.channel.kqueue.KQueueIoRegistration io.netty.channel.kqueue.AbstractKQueueChannel::registration() @ io.netty.channel.kqueue.AbstractKQueueServerChannel</new>
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.finalMethodAddedToNonFinalClass</code>
-                  <new>method io.netty.channel.kqueue.KQueueRegistration io.netty.channel.kqueue.AbstractKQueueChannel::registration() @ io.netty.channel.kqueue.AbstractKQueueStreamChannel</new>
+                  <new>method io.netty.channel.kqueue.KQueueIoRegistration io.netty.channel.kqueue.AbstractKQueueChannel::registration() @ io.netty.channel.kqueue.AbstractKQueueStreamChannel</new>
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
                 <item>
@@ -1432,7 +1432,7 @@
                 <item>
                   <ignore>true</ignore>
                   <code>java.class.nonPublicPartOfAPI</code>
-                  <new>interface io.netty.channel.kqueue.KQueueRegistration</new>
+                  <new>interface io.netty.channel.kqueue.KQueueIoRegistration</new>
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
 
@@ -1497,17 +1497,17 @@
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.finalMethodAddedToNonFinalClass</code>
-                  <new>method io.netty.channel.epoll.EpollRegistration io.netty.channel.epoll.AbstractEpollChannel::registration() @ io.netty.channel.epoll.AbstractEpollServerChannel</new>
+                  <new>method io.netty.channel.epoll.EpollIoRegistration io.netty.channel.epoll.AbstractEpollChannel::registration() @ io.netty.channel.epoll.AbstractEpollServerChannel</new>
                 </item>
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.finalMethodAddedToNonFinalClass</code>
-                  <new>method io.netty.channel.epoll.EpollRegistration io.netty.channel.epoll.AbstractEpollChannel::registration() @ io.netty.channel.epoll.AbstractEpollStreamChannel</new>
+                  <new>method io.netty.channel.epoll.EpollIoRegistration io.netty.channel.epoll.AbstractEpollChannel::registration() @ io.netty.channel.epoll.AbstractEpollStreamChannel</new>
                 </item>
                 <item>
                   <ignore>true</ignore>
                   <code>java.class.nonPublicPartOfAPI</code>
-                  <new>interface io.netty.channel.epoll.EpollRegistration</new>
+                  <new>interface io.netty.channel.epoll.EpollIoRegistration</new>
                 </item>
                 <item>
                   <ignore>true</ignore>

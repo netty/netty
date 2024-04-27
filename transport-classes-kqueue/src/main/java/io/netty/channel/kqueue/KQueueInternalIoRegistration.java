@@ -13,18 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.epoll;
+package io.netty.channel.kqueue;
 
 import io.netty.channel.unix.IovArray;
-interface EpollInternalRegistration extends EpollRegistration {
+
+interface KQueueInternalIoRegistration extends KQueueIoRegistration {
 
     /**
      * Returns an {@link IovArray} that can be used for {@code writev}.
      */
-    IovArray cleanIovArray();
-
-    /**
-     * Returns a {@link NativeDatagramPacketArray} that can used for {@code sendmmsg}.
-     */
-    NativeDatagramPacketArray cleanDatagramPacketArray();
+    IovArray cleanArray();
 }

@@ -59,7 +59,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected final int readInterestOp;
     protected final NioIoOpt readOpt;
 
-    volatile NioRegistration registration;
+    volatile NioIoRegistration registration;
     boolean readPending;
     private final Runnable clearReadPendingRunnable = new Runnable() {
         @Override
@@ -130,7 +130,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @SuppressWarnings("unchecked")
-    protected NioRegistration registration() {
+    protected NioIoRegistration registration() {
         assert registration != null;
         return registration;
     }
@@ -239,7 +239,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         protected final void removeReadOp() {
-            NioRegistration registration = registration();
+            NioIoRegistration registration = registration();
             // Check first if the key is still valid as it may be canceled as part of the deregistration
             // from the EventLoop
             // See https://github.com/netty/netty/issues/2104
@@ -390,14 +390,14 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         private boolean isFlushPending() {
-            NioRegistration registration = registration();
+            NioIoRegistration registration = registration();
             return registration.isValid() && registration.interestOpt().contains(NioIoOpt.WRITE);
         }
 
         @Override
         public void handle(IoRegistration registration, IoOpt readyOpt) {
             try {
-                NioRegistration nioRegistration = (NioRegistration) registration;
+                NioIoRegistration nioRegistration = (NioIoRegistration) registration;
                 NioIoOpt nioReadyOpt = (NioIoOpt) readyOpt;
                 // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
                 // the NIO JDK channel implementation may throw a NotYetConnectedException.
@@ -438,7 +438,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         assert registration == null;
         ((IoEventLoop) eventLoop()).register((AbstractNioUnsafe) unsafe(), NioIoOpt.NONE).addListener(f -> {
             if (f.isSuccess()) {
-                registration = (NioRegistration) f.getNow();
+                registration = (NioIoRegistration) f.getNow();
                 promise.setSuccess();
             } else {
                 promise.setFailure(f.cause());
@@ -448,7 +448,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        NioRegistration registration = registration();
+        NioIoRegistration registration = registration();
         if (registration != null) {
             this.registration = null;
             registration.cancel();
@@ -458,7 +458,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     protected void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
-        NioRegistration registration = registration();
+        NioIoRegistration registration = registration();
         if (registration == null || !registration.isValid()) {
             return;
         }

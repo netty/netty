@@ -18,8 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.channel.IoOpt;
 
 /**
- * Implementation of {@link IoOpt} for
- * that is used by {@link EpollIoHandler} and so for epoll based transports.
+ * Implementation of {@link IoOpt} that is used by {@link EpollIoHandler} and so for epoll based transports.
  */
 public final class EpollIoOpt implements IoOpt {
 

@@ -50,7 +50,7 @@ import static java.lang.Math.min;
 import static java.lang.System.nanoTime;
 
 /**
- * {@link EventLoop} which uses epoll under the covers. Only works on Linux!
+ * {@link IoHandler} which uses epoll under the covers. Only works on Linux!
  */
 public class EpollIoHandler implements IoHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollIoHandler.class);
@@ -68,7 +68,7 @@ public class EpollIoHandler implements IoHandler {
     private FileDescriptor epollFd;
     private FileDescriptor eventFd;
     private FileDescriptor timerFd;
-    private final IntObjectMap<DefaultEpollRegistration> registrations = new IntObjectHashMap<>(4096);
+    private final IntObjectMap<DefaultEpollIoRegistration> registrations = new IntObjectHashMap<>(4096);
     private final boolean allowGrowing;
     private final EpollEventArray events;
 
@@ -232,9 +232,9 @@ public class EpollIoHandler implements IoHandler {
     public void prepareToDestroy() {
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
-        DefaultEpollRegistration[] copy = registrations.values().toArray(new DefaultEpollRegistration[0]);
+        DefaultEpollIoRegistration[] copy = registrations.values().toArray(new DefaultEpollIoRegistration[0]);
 
-        for (DefaultEpollRegistration reg: copy) {
+        for (DefaultEpollIoRegistration reg: copy) {
             try {
                 reg.cancel();
             } catch (Exception e) {
@@ -266,13 +266,13 @@ public class EpollIoHandler implements IoHandler {
         }
     }
 
-    private final class DefaultEpollRegistration extends AtomicBoolean implements EpollInternalRegistration {
+    private final class DefaultEpollIoRegistration extends AtomicBoolean implements EpollInternalIoRegistration {
         private final IoEventLoop eventLoop;
         final EpollIoHandle handle;
 
         private volatile EpollIoOpt currentOpt;
 
-        DefaultEpollRegistration(IoEventLoop eventLoop, EpollIoHandle handle, EpollIoOpt initialOpt) {
+        DefaultEpollIoRegistration(IoEventLoop eventLoop, EpollIoHandle handle, EpollIoOpt initialOpt) {
             this.eventLoop = eventLoop;
             this.handle = handle;
             this.currentOpt = initialOpt;
@@ -334,7 +334,7 @@ public class EpollIoHandler implements IoHandler {
 
         private void cancel0() {
             int fd = handle.fd().intValue();
-            DefaultEpollRegistration old = registrations.remove(fd);
+            DefaultEpollIoRegistration old = registrations.remove(fd);
             if (old != null) {
                 if (old != this) {
                     // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
@@ -352,10 +352,10 @@ public class EpollIoHandler implements IoHandler {
             throws Exception {
         final EpollIoHandle epollHandle = cast(handle);
         EpollIoOpt opt = cast(initialOpt);
-        DefaultEpollRegistration registration = new DefaultEpollRegistration(eventLoop, epollHandle, opt);
+        DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(eventLoop, epollHandle, opt);
         int fd = epollHandle.fd().intValue();
         Native.epollCtlAdd(epollFd.intValue(), fd, registration.interestOpt().value);
-        DefaultEpollRegistration old = registrations.put(fd, registration);
+        DefaultEpollIoRegistration old = registrations.put(fd, registration);
 
         // We either expect to have no registration in the map with the same FD or that the FD of the old registration
         // is already closed.
@@ -377,13 +377,13 @@ public class EpollIoHandler implements IoHandler {
     }
 
     List<Channel> registeredChannelsList() {
-        IntObjectMap<DefaultEpollRegistration> ch = registrations;
+        IntObjectMap<DefaultEpollIoRegistration> ch = registrations;
         if (ch.isEmpty()) {
             return Collections.emptyList();
         }
 
         List<Channel> channels = new ArrayList<>(ch.size());
-        for (DefaultEpollRegistration registration : ch.values()) {
+        for (DefaultEpollIoRegistration registration : ch.values()) {
             if (registration.handle instanceof AbstractEpollChannel.AbstractEpollUnsafe) {
                 channels.add(((AbstractEpollChannel.AbstractEpollUnsafe) registration.handle).channel());
             }
@@ -524,7 +524,7 @@ public class EpollIoHandler implements IoHandler {
             } else {
                 final long ev = events.events(i);
 
-                DefaultEpollRegistration registration = registrations.get(fd);
+                DefaultEpollIoRegistration registration = registrations.get(fd);
                 if (registration != null) {
                     registration.handle.handle(registration, EpollIoOpt.valueOf((int) ev));
                 } else {

@@ -501,7 +501,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
         final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
-        IovArray array = ((EpollInternalRegistration) registration()).cleanIovArray();
+        IovArray array = ((EpollInternalIoRegistration) registration()).cleanIovArray();
         array.maxBytes(maxBytesPerGatheringWrite);
         in.forEachFlushedMessage(array);
 
