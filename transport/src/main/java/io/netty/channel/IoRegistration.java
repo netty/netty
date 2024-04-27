@@ -33,4 +33,11 @@ public interface IoRegistration {
      * Cancel the registration.
      */
     void cancel() throws Exception;
+
+    /**
+     * The {@link IoHandler} to which this {@link IoRegistration} belongs too.
+     *
+     * @return  ioHandler.
+     */
+    IoHandler ioHandler();
 }

@@ -39,4 +39,7 @@ public interface EpollIoRegistration extends IoRegistration {
 
     @Override
     void cancel() throws IOException;
+
+    @Override
+    EpollIoHandler ioHandler();
 }

@@ -28,4 +28,7 @@ public interface KQueueIoRegistration extends IoRegistration {
      * @param opt   the {@link KQueueEventIoOpt} to use.
      */
     void addOpt(KQueueEventIoOpt opt);
+
+    @Override
+    KQueueIoHandler ioHandler();
 }

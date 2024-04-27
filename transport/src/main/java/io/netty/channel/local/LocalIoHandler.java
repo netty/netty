@@ -140,5 +140,10 @@ public final class LocalIoHandler implements IoHandler {
                 handle.deregisterNow();
             }
         }
+
+        @Override
+        public IoHandler ioHandler() {
+            return LocalIoHandler.this;
+        }
     }
 }

@@ -23,7 +23,6 @@ import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOpt;
-import io.netty.channel.IoRegistration;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.IntSupplier;
@@ -377,10 +376,15 @@ public final class NioIoHandler implements IoHandler {
         void handle(int ready) {
             handle.handle(this, NioIoOpt.valueOf(ready));
         }
+
+        @Override
+        public NioIoHandler ioHandler() {
+            return NioIoHandler.this;
+        }
     }
 
     @Override
-    public IoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOpt initialOpt)
+    public NioIoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOpt initialOpt)
             throws Exception {
         NioHandle nioHandle = nioHandle(handle);
         NioIoOpt opt = cast(initialOpt);

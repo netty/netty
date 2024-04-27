@@ -404,7 +404,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         if (data.nioBufferCount() > 1) {
-            IovArray array = ((EpollInternalIoRegistration) registration()).cleanIovArray();
+            IovArray array = registration().ioHandler().cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;

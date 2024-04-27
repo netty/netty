@@ -46,4 +46,7 @@ public interface NioIoRegistration extends IoRegistration {
 
     @Override
     void cancel();
+
+    @Override
+    NioIoHandler ioHandler();
 }

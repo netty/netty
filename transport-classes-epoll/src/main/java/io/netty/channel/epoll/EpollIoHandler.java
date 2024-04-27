@@ -24,7 +24,6 @@ import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOpt;
-import io.netty.channel.IoRegistration;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.unix.FileDescriptor;
@@ -257,7 +256,7 @@ public class EpollIoHandler implements IoHandler {
         }
     }
 
-    private final class DefaultEpollIoRegistration extends AtomicBoolean implements EpollInternalIoRegistration {
+    private final class DefaultEpollIoRegistration extends AtomicBoolean implements EpollIoRegistration {
         private final IoEventLoop eventLoop;
         final EpollIoHandle handle;
 
@@ -267,18 +266,6 @@ public class EpollIoHandler implements IoHandler {
             this.eventLoop = eventLoop;
             this.handle = handle;
             this.currentOpt = initialOpt;
-        }
-
-        @Override
-        public IovArray cleanIovArray() {
-            assert eventLoop.inEventLoop();
-            return EpollIoHandler.this.cleanIovArray();
-        }
-
-        @Override
-        public NativeDatagramPacketArray cleanDatagramPacketArray() {
-            assert eventLoop.inEventLoop();
-            return EpollIoHandler.this.cleanDatagramPacketArray();
         }
 
         @Override
@@ -299,6 +286,11 @@ public class EpollIoHandler implements IoHandler {
         @Override
         public EpollIoOpt interestOpt() {
             return currentOpt;
+        }
+
+        @Override
+        public EpollIoHandler ioHandler() {
+            return EpollIoHandler.this;
         }
 
         @Override
@@ -355,8 +347,8 @@ public class EpollIoHandler implements IoHandler {
     }
 
     @Override
-    public IoRegistration register(IoEventLoop eventLoop, IoHandle handle,
-                                                                   IoOpt initialOpt)
+    public EpollIoRegistration register(IoEventLoop eventLoop, IoHandle handle,
+                                      IoOpt initialOpt)
             throws Exception {
         final EpollIoHandle epollHandle = cast(handle);
         EpollIoOpt opt = cast(initialOpt);

@@ -47,9 +47,9 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import static java.lang.Math.min;
 
 /**
- * {@link EventLoop} which uses kqueue under the covers. Only works on BSD!
+ * {@link IoHandler} which uses kqueue under the covers. Only works on BSD!
  */
-final class KQueueIoHandler implements IoHandler {
+public final class KQueueIoHandler implements IoHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueIoHandler.class);
     private static final AtomicIntegerFieldUpdater<KQueueIoHandler> WAKEN_UP_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(KQueueIoHandler.class, "wakenUp");
@@ -125,7 +125,7 @@ final class KQueueIoHandler implements IoHandler {
     /**
      * Return a cleared {@link IovArray} that can be used for writes in this {@link EventLoop}.
      */
-    private IovArray cleanArray() {
+    IovArray cleanArray() {
         iovArray.clear();
         return iovArray;
     }
@@ -325,8 +325,7 @@ final class KQueueIoHandler implements IoHandler {
     }
 
     @Override
-    public IoRegistration register(IoEventLoop eventLoop, IoHandle handle,
-                                                                   IoOpt initialOpts) {
+    public KQueueIoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOpt initialOpts) {
         final KQueueIoHandle kqueueHandle = cast(handle);
         if (kqueueHandle.ident() == KQUEUE_WAKE_UP_IDENT) {
             throw new IllegalArgumentException("ident " + KQUEUE_WAKE_UP_IDENT + " is reserved for internal usage");
@@ -367,8 +366,8 @@ final class KQueueIoHandler implements IoHandler {
         return KQueueIoHandle.class.isAssignableFrom(handleType);
     }
 
-    private final class DefaultKqueueIoRegistration extends AtomicBoolean implements KQueueInternalIoRegistration {
-        private final KQueueEventIoOpt readyEventIoOpt = new KQueueEventIoOpt();;
+    private final class DefaultKqueueIoRegistration extends AtomicBoolean implements KQueueIoRegistration {
+        private final KQueueEventIoOpt readyEventIoOpt = new KQueueEventIoOpt();
 
         final KQueueIoHandle handle;
 
@@ -395,8 +394,8 @@ final class KQueueIoHandler implements IoHandler {
         }
 
         @Override
-        public IovArray cleanArray() {
-            return KQueueIoHandler.this.cleanArray();
+        public KQueueIoHandler ioHandler() {
+            return KQueueIoHandler.this;
         }
 
         void handle(int ident, short filter, short flags, int fflags, long data) {

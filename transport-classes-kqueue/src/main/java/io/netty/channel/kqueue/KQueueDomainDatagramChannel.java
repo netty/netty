@@ -137,7 +137,7 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
                         remoteAddress.path().getBytes(CharsetUtil.UTF_8));
             }
         } else if (data.nioBufferCount() > 1) {
-            IovArray array = ((KQueueInternalIoRegistration) registration()).cleanArray();
+            IovArray array = registration().ioHandler().cleanArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
