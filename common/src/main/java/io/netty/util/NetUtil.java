@@ -1073,13 +1073,12 @@ public final class NetUtil {
     }
 
     /**
-     * Returns {@link InetSocketAddress#getHostString()} if Java >= 7,
-     * or {@link InetSocketAddress#getHostName()} otherwise.
+     * Returns {@link InetSocketAddress#getHostString()}.
      * @param addr The address
      * @return the host string
      */
     public static String getHostname(InetSocketAddress addr) {
-        return PlatformDependent.javaVersion() >= 7 ? addr.getHostString() : addr.getHostName();
+        return addr.getHostString();
     }
 
     /**

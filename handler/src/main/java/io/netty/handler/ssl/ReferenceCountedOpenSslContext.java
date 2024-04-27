@@ -35,7 +35,6 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -58,7 +57,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
@@ -71,8 +69,8 @@ import javax.net.ssl.X509TrustManager;
 
 import static io.netty.handler.ssl.OpenSsl.DEFAULT_CIPHERS;
 import static io.netty.handler.ssl.OpenSsl.availableJavaCipherSuites;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -666,14 +664,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     protected static X509TrustManager chooseTrustManager(TrustManager[] managers) {
         for (TrustManager m : managers) {
             if (m instanceof X509TrustManager) {
-                X509TrustManager tm = (X509TrustManager) m;
-                if (PlatformDependent.javaVersion() >= 7) {
-                    tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
-                    if (useExtendedTrustManager(tm)) {
-                        // Wrap the TrustManager to provide a better exception message for users to debug hostname
-                        // validation failures.
-                        tm = new EnhancingX509ExtendedTrustManager(tm);
-                    }
+                X509TrustManager tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
+                if (useExtendedTrustManager(tm)) {
+                    // Wrap the TrustManager to provide a better exception message for users to debug hostname
+                    // validation failures.
+                    tm = new EnhancingX509ExtendedTrustManager(tm);
                 }
                 return tm;
             }
@@ -734,9 +729,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by java version check")
     static boolean useExtendedTrustManager(X509TrustManager trustManager) {
-        return PlatformDependent.javaVersion() >= 7 && trustManager instanceof X509ExtendedTrustManager;
+        return trustManager instanceof X509ExtendedTrustManager;
     }
 
     @Override
@@ -812,16 +806,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 if (cause instanceof CertificateNotYetValidException) {
                     return CertificateVerifier.X509_V_ERR_CERT_NOT_YET_VALID;
                 }
-                if (PlatformDependent.javaVersion() >= 7) {
-                    return translateToError(cause);
-                }
-
-                // Could not detect a specific error code to use, so fallback to a default code.
-                return CertificateVerifier.X509_V_ERR_UNSPECIFIED;
+                return translateToError(cause);
             }
         }
 
-        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
         private static int translateToError(Throwable cause) {
             if (cause instanceof CertificateRevokedException) {
                 return CertificateVerifier.X509_V_ERR_CERT_REVOKED;

@@ -16,9 +16,7 @@
 package io.netty.handler.ssl.util;
 
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.SuppressJava6Requirement;
 
-import javax.security.auth.x500.X500Principal;
 import java.io.ByteArrayInputStream;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
@@ -39,6 +37,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import javax.security.auth.x500.X500Principal;
 
 public final class LazyX509Certificate extends X509Certificate {
 
@@ -96,8 +95,7 @@ public final class LazyX509Certificate extends X509Certificate {
         return unwrap().getIssuerAlternativeNames();
     }
 
-    // No @Override annotation as it was only introduced in Java8.
-    @SuppressJava6Requirement(reason = "Can only be called from Java8 as class is package-private")
+    @Override
     public void verify(PublicKey key, Provider sigProvider)
             throws CertificateException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         unwrap().verify(key, sigProvider);

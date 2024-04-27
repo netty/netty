@@ -17,7 +17,6 @@
 package io.netty.handler.ssl.util;
 
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import sun.security.x509.AlgorithmId;
@@ -34,16 +33,16 @@ import sun.security.x509.X509CertInfo;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.Date;
 import java.math.BigInteger;
+import java.security.AccessController;
 import java.security.KeyPair;
 import java.security.PrivateKey;
+import java.security.PrivilegedAction;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
+import java.util.Date;
 
-import static io.netty.handler.ssl.util.SelfSignedCertificate.*;
+import static io.netty.handler.ssl.util.SelfSignedCertificate.newSelfSignedCertificate;
 
 /**
  * Generates a self-signed certificate using {@code sun.security.x509} package provided by OpenJDK.
@@ -158,7 +157,6 @@ final class OpenJdkSelfSignedCertGenerator {
         CERT_IMPL_SIGN_METHOD = certImplSignMethod;
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by dependency check")
     static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter,
                              String algorithm) throws Exception {
         if (CERT_INFO_SET_METHOD == null || ISSUER_NAME_CONSTRUCTOR == null ||

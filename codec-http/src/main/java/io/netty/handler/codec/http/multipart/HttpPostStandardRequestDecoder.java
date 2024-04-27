@@ -17,12 +17,13 @@ package io.netty.handler.codec.http.multipart;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
@@ -471,7 +472,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                                 charset);
                         currentAttribute = factory.createAttribute(request, key);
                         firstpos = currentpos;
-                    } else if (read == '&' || (isLastChunk && !undecodedChunk.isReadable())) { // special empty FIELD
+                    } else if (read == '&' ||
+                            (isLastChunk && !undecodedChunk.isReadable() && hasFormBody())) { // special empty FIELD
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = read == '&' ? currentpos - 1 : currentpos;
                         String key = decodeAttribute(
@@ -597,7 +599,8 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                                 charset);
                         currentAttribute = factory.createAttribute(request, key);
                         firstpos = currentpos;
-                    } else if (read == '&' || (isLastChunk && !undecodedChunk.isReadable())) { // special empty FIELD
+                    } else if (read == '&' ||
+                            (isLastChunk && !undecodedChunk.isReadable() && hasFormBody())) { // special empty FIELD
                         currentStatus = MultiPartStatus.DISPOSITION;
                         ampersandpos = read == '&' ? currentpos - 1 : currentpos;
                         String key = decodeAttribute(
@@ -781,6 +784,18 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
         checkDestroyed();
 
         factory.removeHttpDataFromClean(request, data);
+    }
+
+    /**
+     * Check if request has headers indicating that it contains form body
+     */
+    private boolean hasFormBody() {
+        String contentHeaderValue = request.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        if (contentHeaderValue == null) {
+            return false;
+        }
+        return HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.contentEquals(contentHeaderValue)
+                || HttpHeaderValues.MULTIPART_FORM_DATA.contentEquals(contentHeaderValue);
     }
 
     private static final class UrlEncodedDetector implements ByteProcessor {

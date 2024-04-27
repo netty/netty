@@ -248,26 +248,18 @@ public class UnpooledUnsafeHeapByteBuf extends UnpooledHeapByteBuf {
 
     @Override
     public ByteBuf setZero(int index, int length) {
-        if (PlatformDependent.javaVersion() >= 7) {
-            // Only do on java7+ as the needed Unsafe call was only added there.
-            checkIndex(index, length);
-            UnsafeByteBufUtil.setZero(array, index, length);
-            return this;
-        }
-        return super.setZero(index, length);
+        checkIndex(index, length);
+        UnsafeByteBufUtil.setZero(array, index, length);
+        return this;
     }
 
     @Override
     public ByteBuf writeZero(int length) {
-        if (PlatformDependent.javaVersion() >= 7) {
-            // Only do on java7+ as the needed Unsafe call was only added there.
-            ensureWritable(length);
-            int wIndex = writerIndex;
-            UnsafeByteBufUtil.setZero(array, wIndex, length);
-            writerIndex = wIndex + length;
-            return this;
-        }
-        return super.writeZero(length);
+        ensureWritable(length);
+        int wIndex = writerIndex;
+        UnsafeByteBufUtil.setZero(array, wIndex, length);
+        writerIndex = wIndex + length;
+        return this;
     }
 
     @Override

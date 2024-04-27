@@ -16,7 +16,6 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.internal.PlatformDependent;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
@@ -24,7 +23,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
-import static io.netty.util.internal.ObjectUtil.*;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Default implementation of {@link AuthoritativeDnsServerCache}, backed by a {@link ConcurrentMap}.
@@ -42,10 +43,7 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
 
         @Override
         protected boolean equals(InetSocketAddress entry, InetSocketAddress otherEntry) {
-            if (PlatformDependent.javaVersion() >= 7) {
-                return entry.getHostString().equalsIgnoreCase(otherEntry.getHostString());
-            }
-            return entry.getHostName().equalsIgnoreCase(otherEntry.getHostName());
+            return entry.getHostString().equalsIgnoreCase(otherEntry.getHostString());
         }
 
         @Override
@@ -99,7 +97,7 @@ public class DefaultAuthoritativeDnsServerCache implements AuthoritativeDnsServe
         checkNotNull(address, "address");
         checkNotNull(loop, "loop");
 
-        if (PlatformDependent.javaVersion() >= 7 && address.getHostString() == null) {
+        if (address.getHostString() == null) {
             // We only cache addresses that have also a host string as we will need it later when trying to replace
             // unresolved entries in the cache.
             return;

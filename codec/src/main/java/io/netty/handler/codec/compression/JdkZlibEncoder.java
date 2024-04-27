@@ -23,8 +23,6 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -344,26 +342,12 @@ public class JdkZlibEncoder extends ZlibEncoder {
         return ctx.writeAndFlush(footer, promise);
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private void deflate(ByteBuf out) {
-        if (PlatformDependent.javaVersion() < 7) {
-            deflateJdk6(out);
-        }
         int numBytes;
         do {
             int writerIndex = out.writerIndex();
             numBytes = deflater.deflate(
                     out.array(), out.arrayOffset() + writerIndex, out.writableBytes(), Deflater.SYNC_FLUSH);
-            out.writerIndex(writerIndex + numBytes);
-        } while (numBytes > 0);
-    }
-
-    private void deflateJdk6(ByteBuf out) {
-        int numBytes;
-        do {
-            int writerIndex = out.writerIndex();
-            numBytes = deflater.deflate(
-                    out.array(), out.arrayOffset() + writerIndex, out.writableBytes());
             out.writerIndex(writerIndex + numBytes);
         } while (numBytes > 0);
     }

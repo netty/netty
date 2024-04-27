@@ -78,12 +78,12 @@
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcpkix-jdk15on</artifactId>
+      <artifactId>bcpkix-jdk18on</artifactId>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bctls-jdk15on</artifactId>
+      <artifactId>bctls-jdk18on</artifactId>
       <optional>true</optional>
     </dependency>
     <dependency>

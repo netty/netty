@@ -18,12 +18,10 @@ package io.netty.handler.codec.spdy;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.util.zip.Deflater;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_DICT;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
@@ -73,17 +71,11 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
         }
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by java version check")
     private boolean compressInto(ByteBuf compressed) {
         byte[] out = compressed.array();
         int off = compressed.arrayOffset() + compressed.writerIndex();
         int toWrite = compressed.writableBytes();
-        final int numBytes;
-        if (PlatformDependent.javaVersion() >= 7) {
-            numBytes = compressor.deflate(out, off, toWrite, Deflater.SYNC_FLUSH);
-        } else {
-            numBytes = compressor.deflate(out, off, toWrite);
-        }
+        final int numBytes = compressor.deflate(out, off, toWrite, Deflater.SYNC_FLUSH);
         compressed.writerIndex(compressed.writerIndex() + numBytes);
         return numBytes == toWrite;
     }

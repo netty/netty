@@ -21,7 +21,6 @@ import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
@@ -40,7 +39,25 @@ import static io.netty.handler.ssl.util.SelfSignedCertificate.newSelfSignedCerti
  */
 final class BouncyCastleSelfSignedCertGenerator {
 
-    private static final Provider PROVIDER = new BouncyCastleProvider();
+    private static final Provider PROVIDER;
+
+    static {
+        Class<?> providerClass;
+        try {
+            providerClass = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
+        } catch (ClassNotFoundException e) {
+            try {
+                providerClass = Class.forName("org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider");
+            } catch (ClassNotFoundException ignore) {
+                throw new RuntimeException("Neither BouncyCastleProvider nor BouncyCastleFipsProvider found");
+            }
+        }
+        try {
+            PROVIDER = (Provider) providerClass.newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to instantiate BouncyCastle provider", e);
+        }
+    }
 
     static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter,
                              String algorithm) throws Exception {

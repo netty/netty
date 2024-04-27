@@ -21,8 +21,6 @@ import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.internal.tcnative.SniHostNameMatcher;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -170,13 +168,10 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                     }
                 }
 
-                if (PlatformDependent.javaVersion() >= 8) {
-                    // Only do on Java8+ as SNIMatcher is not supported in earlier releases.
-                    // IMPORTANT: The callbacks set for hostname matching must be static to prevent memory leak as
-                    //            otherwise the context can never be collected. This is because the JNI code holds
-                    //            a global reference to the matcher.
-                    SSLContext.setSniHostnameMatcher(ctx, new OpenSslSniHostnameMatcher(engineMap));
-                }
+                // IMPORTANT: The callbacks set for hostname matching must be static to prevent memory leak as
+                //            otherwise the context can never be collected. This is because the JNI code holds
+                //            a global reference to the matcher.
+                SSLContext.setSniHostnameMatcher(ctx, new OpenSslSniHostnameMatcher(engineMap));
             } catch (SSLException e) {
                 throw e;
             } catch (Exception e) {
@@ -204,7 +199,6 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
         }
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by java version check")
     private static void setVerifyCallback(long ctx, OpenSslEngineMap engineMap, X509TrustManager manager) {
         // Use this to prevent an error when running on java < 7
         if (useExtendedTrustManager(manager)) {
@@ -261,7 +255,6 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
         }
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private static final class ExtendedTrustManagerVerifyCallback extends AbstractCertificateVerifier {
         private final X509ExtendedTrustManager manager;
 

@@ -32,10 +32,9 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.SuppressJava6Requirement;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -78,38 +77,29 @@ public final class NioDatagramChannel
 
     private Map<InetAddress, List<MembershipKey>> memberships;
 
+    /**
+     *  Use the {@link SelectorProvider} to open {@link DatagramChannel} and so remove condition in
+     *  {@link SelectorProvider#provider()} which is called by each DatagramChannel.open() otherwise.
+     * <p>
+     *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
+     */
     private static DatagramChannel newSocket(SelectorProvider provider) {
         try {
-            /**
-             *  Use the {@link SelectorProvider} to open {@link SocketChannel} and so remove condition in
-             *  {@link SelectorProvider#provider()} which is called by each DatagramChannel.open() otherwise.
-             *
-             *  See <a href="https://github.com/netty/netty/issues/2308">#2308</a>.
-             */
             return provider.openDatagramChannel();
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private static DatagramChannel newSocket(SelectorProvider provider, InternetProtocolFamily ipFamily) {
         if (ipFamily == null) {
             return newSocket(provider);
         }
 
-        checkJavaVersion();
-
         try {
             return provider.openDatagramChannel(ProtocolFamilyConverter.convert(ipFamily));
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
-        }
-    }
-
-    private static void checkJavaVersion() {
-        if (PlatformDependent.javaVersion() < 7) {
-            throw new UnsupportedOperationException("Only supported on java 7+.");
         }
     }
 
@@ -198,11 +188,7 @@ public final class NioDatagramChannel
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
-        if (PlatformDependent.javaVersion() >= 7) {
-            SocketUtils.bind(javaChannel(), localAddress);
-        } else {
-            javaChannel().socket().bind(localAddress);
-        }
+        SocketUtils.bind(javaChannel(), localAddress);
     }
 
     @Override
@@ -410,13 +396,10 @@ public final class NioDatagramChannel
         return joinGroup(multicastAddress, networkInterface, source, newPromise());
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     public ChannelFuture joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress source, ChannelPromise promise) {
-
-        checkJavaVersion();
 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
@@ -486,12 +469,10 @@ public final class NioDatagramChannel
         return leaveGroup(multicastAddress, networkInterface, source, newPromise());
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     public ChannelFuture leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
             ChannelPromise promise) {
-        checkJavaVersion();
 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
@@ -536,12 +517,10 @@ public final class NioDatagramChannel
     /**
      * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface
      */
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     public ChannelFuture block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock, ChannelPromise promise) {
-        checkJavaVersion();
 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(sourceToBlock, "sourceToBlock");

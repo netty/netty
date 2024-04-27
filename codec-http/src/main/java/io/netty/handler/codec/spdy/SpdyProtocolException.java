@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.ThrowableUtil;
 
 public class SpdyProtocolException extends Exception {
@@ -50,17 +48,10 @@ public class SpdyProtocolException extends Exception {
     }
 
     static SpdyProtocolException newStatic(String message, Class<?> clazz, String method) {
-        final SpdyProtocolException exception;
-        if (PlatformDependent.javaVersion() >= 7) {
-            exception = new StacklessSpdyProtocolException(message, true);
-        } else {
-            exception = new StacklessSpdyProtocolException(message);
-        }
+        final SpdyProtocolException exception = new StacklessSpdyProtocolException(message, true);
         return ThrowableUtil.unknownStackTrace(exception, clazz, method);
     }
 
-    @SuppressJava6Requirement(reason = "uses Java 7+ Exception.<init>(String, Throwable, boolean, boolean)" +
-            " but is guarded by version checks")
     private SpdyProtocolException(String message, boolean shared) {
         super(message, null, false, true);
         assert shared;
@@ -68,10 +59,6 @@ public class SpdyProtocolException extends Exception {
 
     private static final class StacklessSpdyProtocolException extends SpdyProtocolException {
         private static final long serialVersionUID = -6302754207557485099L;
-
-        StacklessSpdyProtocolException(String message) {
-            super(message);
-        }
 
         StacklessSpdyProtocolException(String message, boolean shared) {
             super(message, shared);

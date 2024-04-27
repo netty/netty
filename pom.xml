@@ -206,6 +206,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -225,6 +226,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -245,6 +247,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -265,6 +268,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -285,6 +289,7 @@
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <profile>
@@ -304,6 +309,7 @@
 
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -324,6 +330,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -344,6 +351,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <!-- JDK14 -->
@@ -363,6 +371,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
     <!-- JDK13 -->
@@ -382,6 +391,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -402,6 +412,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -422,6 +433,7 @@
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
         <!-- pax-exam does not work on latest Java11 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -442,6 +454,7 @@
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
     </profile>
 
@@ -458,6 +471,7 @@
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
+        <animal.sniffer.skip>true</animal.sniffer.skip>
       </properties>
       <activation>
         <jdk>9</jdk>
@@ -620,6 +634,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
     <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
+    <bouncycastle.version>1.78.1</bouncycastle.version>
     <jetty.alpnAgent.version>2.0.10</jetty.alpnAgent.version>
     <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.common>
@@ -810,8 +825,8 @@
       -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk15on</artifactId>
-        <version>1.69</version>
+        <artifactId>bcpkix-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -822,8 +837,8 @@
       -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk15on</artifactId>
-        <version>1.69</version>
+        <artifactId>bcprov-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -833,8 +848,8 @@
       -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bctls-jdk15on</artifactId>
-        <version>1.69</version>
+        <artifactId>bctls-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
       </dependency>
@@ -1194,12 +1209,12 @@
       <plugin>
         <groupId>org.revapi</groupId>
         <artifactId>revapi-maven-plugin</artifactId>
-        <version>0.14.6</version>
+        <version>0.15.0</version>
         <dependencies>
           <dependency>
             <groupId>org.revapi</groupId>
             <artifactId>revapi-java</artifactId>
-            <version>0.26.1</version>
+            <version>0.28.1</version>
           </dependency>
         </dependencies>
         <configuration>
@@ -1210,6 +1225,10 @@
                   <item>
                     <matcher>java-package</matcher>
                     <match>/.*\.internal\..*/</match>
+                  </item>
+                  <item>
+                    <matcher>java-package</matcher>
+                    <match>/.*\.internal/</match>
                   </item>
                   <item>
                     <matcher>java-package</matcher>
@@ -1569,6 +1588,265 @@
                   <new>method io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder::decoderEnforceMaxRstFramesPerWindow(int, int)</new>
                   <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
                 </item>
+                <!-- New issues found by revapi upgrade -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method int io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::decoderEnforceMaxConsecutiveEmptyDataFrames() @ io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder</old>
+                  <new>method int io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder::decoderEnforceMaxConsecutiveEmptyDataFrames()</new>
+                  <oldVisibility>protected</oldVisibility>
+                  <newVisibility>public</newVisibility>
+                  <justification>Acceptable incompatibility</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method B io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::decoderEnforceMaxConsecutiveEmptyDataFrames(int) @ io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder</old>
+                  <new>method io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder::decoderEnforceMaxConsecutiveEmptyDataFrames(int)</new>
+                  <oldVisibility>protected</oldVisibility>
+                  <newVisibility>public</newVisibility>
+                  <justification>Acceptable incompatibility</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method B io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::decoderEnforceMaxRstFramesPerWindow(int, int) @ io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder</old>
+                  <new>method io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder::decoderEnforceMaxRstFramesPerWindow(int, int)</new>
+                  <oldVisibility>protected</oldVisibility>
+                  <newVisibility>public</newVisibility>
+                  <justification>Acceptable incompatibility</justification>
+                </item>
+                <!-- BouncyCastle upgrade -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class org.bouncycastle.asn1.ASN1BitString</new>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.bouncycastle.asn1.ASN1BitStringParser</new>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class org.bouncycastle.asn1.ASN1Object</new>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.bouncycastle.asn1.ASN1TaggedObjectParser</new>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityReduced</code>
+                  <old>method void org.bouncycastle.asn1.ASN1TaggedObject::&lt;init&gt;(boolean, int, org.bouncycastle.asn1.ASN1Encodable)</old>
+                  <new>method void org.bouncycastle.asn1.ASN1TaggedObject::&lt;init&gt;(boolean, int, org.bouncycastle.asn1.ASN1Encodable)</new>
+                  <oldVisibility>public</oldVisibility>
+                  <oldVisibility>protected</oldVisibility>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.nowFinal</code>
+                  <old>method org.bouncycastle.asn1.ASN1Primitive org.bouncycastle.asn1.ASN1TaggedObject::getLoadedObject()</old>
+                  <new>method org.bouncycastle.asn1.ASN1Primitive org.bouncycastle.asn1.ASN1TaggedObject::getLoadedObject()</new>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method org.bouncycastle.asn1.ASN1Primitive org.bouncycastle.asn1.ASN1TaggedObject::getObject()</old>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method org.bouncycastle.asn1.ASN1Encodable org.bouncycastle.asn1.ASN1TaggedObject::getObjectParser(int, boolean) throws java.io.IOException</old>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field org.bouncycastle.asn1.ASN1BitString.data @ org.bouncycastle.asn1.DERBitString</old>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field org.bouncycastle.asn1.ASN1BitString.padBits @ org.bouncycastle.asn1.DERBitString</old>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method org.bouncycastle.asn1.DERBitString org.bouncycastle.asn1.DERBitString::getInstance(java.lang.Object)</old>
+                  <new>method org.bouncycastle.asn1.ASN1BitString org.bouncycastle.asn1.ASN1BitString::getInstance(java.lang.Object) @ org.bouncycastle.asn1.DERBitString</new>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method org.bouncycastle.asn1.DERBitString org.bouncycastle.asn1.DERBitString::getInstance(org.bouncycastle.asn1.ASN1TaggedObject, boolean)</old>
+                  <new>method org.bouncycastle.asn1.ASN1BitString org.bouncycastle.asn1.ASN1BitString::getInstance(org.bouncycastle.asn1.ASN1TaggedObject, boolean) @ org.bouncycastle.asn1.DERBitString</new>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityReduced</code>
+                  <old>method void org.bouncycastle.asn1.ocsp.ResponseBytes::&lt;init&gt;(org.bouncycastle.asn1.ASN1Sequence)</old>
+                  <new>method void org.bouncycastle.asn1.ocsp.ResponseBytes::&lt;init&gt;(org.bouncycastle.asn1.ASN1Sequence)</new>
+                  <oldVisibility>public</oldVisibility>
+                  <newVisibility>protected</newVisibility>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method org.bouncycastle.asn1.DERBitString org.bouncycastle.asn1.x509.Certificate::getSignature()</old>
+                  <new>method org.bouncycastle.asn1.ASN1BitString org.bouncycastle.asn1.x509.Certificate::getSignature()</new>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method org.bouncycastle.asn1.DERBitString org.bouncycastle.asn1.x509.SubjectPublicKeyInfo::getPublicKeyData()</old>
+                  <new>method org.bouncycastle.asn1.ASN1BitString org.bouncycastle.asn1.x509.SubjectPublicKeyInfo::getPublicKeyData()</new>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method org.bouncycastle.asn1.DERBitString org.bouncycastle.asn1.x509.TBSCertificate::getIssuerUniqueId()</old>
+                  <new>method org.bouncycastle.asn1.ASN1BitString org.bouncycastle.asn1.x509.TBSCertificate::getIssuerUniqueId()</new>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method org.bouncycastle.asn1.DERBitString org.bouncycastle.asn1.x509.TBSCertificate::getSubjectUniqueId()</old>
+                  <new>method org.bouncycastle.asn1.ASN1BitString org.bouncycastle.asn1.x509.TBSCertificate::getSubjectUniqueId()</new>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method void org.bouncycastle.asn1.DERBitString::&lt;init&gt;(byte, int)</old>
+                  <new>method void org.bouncycastle.asn1.DERBitString::&lt;init&gt;(byte, int)</new>
+                  <oldVisibility>protected</oldVisibility>
+                  <newVisibility>public</newVisibility>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityReduced</code>
+                  <old>method void org.bouncycastle.asn1.ocsp.ResponseBytes::&lt;init&gt;(org.bouncycastle.asn1.ASN1Sequence)</old>
+                  <new>method void org.bouncycastle.asn1.ocsp.ResponseBytes::&lt;init&gt;(org.bouncycastle.asn1.ASN1Sequence)</new>
+                  <oldVisibility>public</oldVisibility>
+                  <newVisibility>private</newVisibility>
+                  <justification>Necessary compatibility break for BouncyCastle upgrade</justification>
+                </item>
+                <!-- Removal of "@SuppressJava6Requirement" annocation from classes and methods. -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.ChannelException::&lt;init&gt;(java.lang.String, java.lang.Throwable, boolean)</old>
+                  <new>method void io.netty.channel.ChannelException::&lt;init&gt;(java.lang.String, java.lang.Throwable, boolean)</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "uses Java 7+ RuntimeException.&lt;init&gt;(String, Throwable, boolean, boolean) but is guarded by version checks")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>class io.netty.channel.socket.nio.NioChannelOption&lt;T&gt;</old>
+                  <new>class io.netty.channel.socket.nio.NioChannelOption&lt;T&gt;</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage explicit by the user")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::block(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</old>
+                  <new>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::block(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::joinGroup(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</old>
+                  <new>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::joinGroup(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::leaveGroup(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</old>
+                  <new>method io.netty.channel.ChannelFuture io.netty.channel.socket.nio.NioDatagramChannel::leaveGroup(java.net.InetAddress, java.net.NetworkInterface, java.net.InetAddress, io.netty.channel.ChannelPromise)</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.socket.nio.NioServerSocketChannel::doBind(java.net.SocketAddress) throws java.lang.Exception</old>
+                  <new>method void io.netty.channel.socket.nio.NioServerSocketChannel::doBind(java.net.SocketAddress) throws java.lang.Exception</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.socket.nio.NioSocketChannel::doShutdownOutput() throws java.lang.Exception</old>
+                  <new>method void io.netty.channel.socket.nio.NioSocketChannel::doShutdownOutput() throws java.lang.Exception</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method javax.net.ssl.SSLParameters io.netty.handler.ssl.ReferenceCountedOpenSslEngine::getSSLParameters() @ io.netty.handler.ssl.OpenSslEngine</old>
+                  <new>method javax.net.ssl.SSLParameters io.netty.handler.ssl.ReferenceCountedOpenSslEngine::getSSLParameters() @ io.netty.handler.ssl.OpenSslEngine</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.handler.ssl.ReferenceCountedOpenSslEngine::setSSLParameters(javax.net.ssl.SSLParameters) @ io.netty.handler.ssl.OpenSslEngine</old>
+                  <new>method void io.netty.handler.ssl.ReferenceCountedOpenSslEngine::setSSLParameters(javax.net.ssl.SSLParameters) @ io.netty.handler.ssl.OpenSslEngine</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method javax.net.ssl.SSLParameters io.netty.handler.ssl.ReferenceCountedOpenSslEngine::getSSLParameters()</old>
+                  <new>method javax.net.ssl.SSLParameters io.netty.handler.ssl.ReferenceCountedOpenSslEngine::getSSLParameters()</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.handler.ssl.ReferenceCountedOpenSslEngine::setSSLParameters(javax.net.ssl.SSLParameters)</old>
+                  <new>method void io.netty.handler.ssl.ReferenceCountedOpenSslEngine::setSSLParameters(javax.net.ssl.SSLParameters)</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.handler.ssl.util.LazyX509Certificate::verify(java.security.PublicKey, java.security.Provider) throws java.security.cert.CertificateException, java.security.NoSuchAlgorithmException, java.security.InvalidKeyException, java.security.SignatureException</old>
+                  <new>method void io.netty.handler.ssl.util.LazyX509Certificate::verify(java.security.PublicKey, java.security.Provider) throws java.security.cert.CertificateException, java.security.NoSuchAlgorithmException, java.security.InvalidKeyException, java.security.SignatureException</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Can only be called from Java8 as class is package-private")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
@@ -1585,7 +1863,7 @@
       <plugin>
         <groupId>com.github.siom79.japicmp</groupId>
         <artifactId>japicmp-maven-plugin</artifactId>
-        <version>0.15.7</version>
+        <version>0.21.0</version>
         <configuration>
           <parameter>
             <ignoreMissingOldVersion>true</ignoreMissingOldVersion>
@@ -1724,22 +2002,22 @@
         </configuration>
       </plugin>
       <plugin>
-        <!-- ensure that only methods available in java 1.6 can
-             be used even when compiling with java 1.7+ -->
+        <!-- ensure that only methods available in java 1.8 can
+             be used even when compiling with java 9+ -->
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.16</version>
+        <version>1.23</version>
         <configuration>
           <signature>
             <groupId>org.codehaus.mojo.signature</groupId>
-            <artifactId>java16</artifactId>
-            <version>1.1</version>
+            <artifactId>java18</artifactId>
+            <version>1.0</version>
           </signature>
           <ignores>
             <ignore>java.nio.ByteBuffer</ignore>
           </ignores>
           <annotations>
-            <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>
+            <annotation>io.netty.util.internal.SuppressJava8Requirement</annotation>
           </annotations>
         </configuration>
         <executions>
