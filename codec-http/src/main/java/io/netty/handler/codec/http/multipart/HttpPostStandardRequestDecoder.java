@@ -22,6 +22,8 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.multipart.HttpPostBodyUtil.SeekAheadOptimize;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.EndOfDataDecoderException;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDecoderException;
@@ -788,11 +790,12 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
      * Check if request has headers indicating that it contains form body
      */
     private boolean hasFormBody() {
-        String contentHeader = request.headers().get("Content-Type");
-        if (contentHeader == null) {
+        String contentHeaderValue = request.headers().get(HttpHeaderNames.CONTENT_TYPE);
+        if (contentHeaderValue == null) {
             return false;
         }
-        return contentHeader.equals("application/x-www-form-urlencoded") || contentHeader.equals("multipart/form-data");
+        return HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.contentEquals(contentHeaderValue)
+                || HttpHeaderValues.MULTIPART_FORM_DATA.contentEquals(contentHeaderValue);
     }
 
     private static final class UrlEncodedDetector implements ByteProcessor {
