@@ -66,6 +66,14 @@ services:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
 
+  build-leak-adaptive:
+    <<: *common
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty.allocator.type=adaptive"
+
+  build-boringssl-snapshot:
+    <<: *common
+    command: /bin/bash -cl "./mvnw -B -ntp -pl handler -Pboringssl-snapshot clean package -Dxml.skip=true -Dtcnative.classifier=linux-x86_64"
+
   shell:
     <<: *common
     entrypoint: /bin/bash

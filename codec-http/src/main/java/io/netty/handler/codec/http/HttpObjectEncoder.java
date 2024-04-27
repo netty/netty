@@ -52,6 +52,9 @@ import static io.netty.handler.codec.http.HttpConstants.LF;
  * implement all abstract methods properly.
  */
 public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageToMessageEncoder<Object> {
+
+    // this is a constant to decide when it is appropriate to copy the data content into the header buffer
+    private static final int COPY_CONTENT_THRESHOLD = 128;
     static final int CRLF_SHORT = (CR << 8) | LF;
     private static final int ZERO_CRLF_MEDIUM = ('0' << 16) | CRLF_SHORT;
     private static final byte[] ZERO_CRLF_CRLF = { '0', CR, LF, CR, LF };
@@ -307,22 +310,35 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
             final H m = (H) o;
 
-            final ByteBuf buf = ctx.alloc().buffer((int) headersEncodedSizeAccumulator);
-
-            encodeInitialLine(buf, m);
-
             final int state = isContentAlwaysEmpty(m) ? ST_CONTENT_ALWAYS_EMPTY :
                     HttpUtil.isTransferEncodingChunked(m) ? ST_CONTENT_CHUNK : ST_CONTENT_NON_CHUNK;
+
+            ByteBuf content = msg.content();
+
+            final boolean accountForContentSize = content.readableBytes() > 0 &&
+                                        state == ST_CONTENT_NON_CHUNK &&
+                                        // try embed the content if less or equals than
+                                        // the biggest of ~12.5% of the header estimated size and COPY_DATA_THRESHOLD:
+                                        // it limits a wrong estimation to waste too much memory
+                                        content.readableBytes() <=
+                                        Math.max(COPY_CONTENT_THRESHOLD, ((int) headersEncodedSizeAccumulator) / 8);
+
+            final int headersAndContentSize = (int) headersEncodedSizeAccumulator +
+                                                  (accountForContentSize? content.readableBytes() : 0);
+            final ByteBuf buf = ctx.alloc().buffer(headersAndContentSize);
+
+            encodeInitialLine(buf, m);
 
             sanitizeHeadersBeforeEncode(m, state == ST_CONTENT_ALWAYS_EMPTY);
 
             encodeHeaders(m.headers(), buf);
             ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
 
+            // don't consider the copyContent case here: the statistics is just related the headers
             headersEncodedSizeAccumulator = HEADERS_WEIGHT_NEW * padSizeForAccumulation(buf.readableBytes()) +
                     HEADERS_WEIGHT_HISTORICAL * headersEncodedSizeAccumulator;
 
-            encodeByteBufHttpContent(state, ctx, buf, msg.content(), msg.trailingHeaders(), out);
+            encodeByteBufHttpContent(state, ctx, buf, content, msg.trailingHeaders(), out);
         } finally {
             msg.release();
         }
@@ -331,7 +347,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     private static boolean encodeContentNonChunk(List<Object> out, ByteBuf buf, ByteBuf content) {
         final int contentLength = content.readableBytes();
         if (contentLength > 0) {
-            if (buf.writableBytes() >= contentLength) {
+            if (buf.maxFastWritableBytes() >= contentLength) {
                 // merge into other buffer for performance reasons
                 buf.writeBytes(content);
                 out.add(buf);

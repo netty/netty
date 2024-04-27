@@ -16,11 +16,13 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -39,6 +41,7 @@ import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_HOST
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_PORT;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -161,11 +164,18 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
                 assertThat(future.channel().closeFuture().await(500), is(true));
                 assertThat(future.isCancelled(), is(true));
             } else {
-                // Cancellation not supported by the transport.
+                // Check if cancellation is supported or not.
+                assertFalse(isConnectCancellationSupported(future.channel()), future.channel().getClass() +
+                        " should support connect cancellation");
             }
         } finally {
             future.channel().close();
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    protected boolean isConnectCancellationSupported(Channel channel) {
+        return !(channel instanceof OioSocketChannel);
     }
 
     private static class TestHandler extends ChannelInboundHandlerAdapter {

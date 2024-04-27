@@ -7,7 +7,7 @@ You may obtain a copy of the License at:
 
 https://www.apache.org/licenses/
 
-A copy is also included with both the the downloadable source code package
+A copy is also included with both the downloadable source code package
 and jar that contains class bytecodes, as file "ASL 2.0". In both cases,
 that file should be located next to this file: in source distribution
 the location should be "release-notes/asl"; and in jar "META-INF/"

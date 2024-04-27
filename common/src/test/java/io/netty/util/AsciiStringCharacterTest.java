@@ -433,4 +433,34 @@ public class AsciiStringCharacterTest {
         int i4 = foo.indexOf(' ', i3 + 1);
         assertEquals(i4, -1);
     }
+
+    @Test
+    public void testToLowerCase() {
+        AsciiString foo = AsciiString.of("This is a tesT");
+        assertEquals("this is a test", foo.toLowerCase().toString());
+    }
+
+    @Test
+    public void testToLowerCaseForOddLengths() {
+        AsciiString foo = AsciiString.of("This is a test!");
+        assertEquals("this is a test!", foo.toLowerCase().toString());
+    }
+
+    @Test
+    public void testToLowerCaseLong() {
+        AsciiString foo = AsciiString.of("This is a test for longer sequences");
+        assertEquals("this is a test for longer sequences", foo.toLowerCase().toString());
+    }
+
+    @Test
+    public void testToUpperCase() {
+        AsciiString foo = AsciiString.of("This is a tesT");
+        assertEquals("THIS IS A TEST", foo.toUpperCase().toString());
+    }
+
+    @Test
+    public void testToUpperCaseLong() {
+        AsciiString foo = AsciiString.of("This is a test for longer sequences");
+        assertEquals("THIS IS A TEST FOR LONGER SEQUENCES", foo.toUpperCase().toString());
+    }
 }

@@ -43,6 +43,10 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
         super(fd);
     }
 
+    public EpollServerDomainSocketChannel(int fd, boolean active) {
+        super(new LinuxSocket(fd), active);
+    }
+
     EpollServerDomainSocketChannel(LinuxSocket fd) {
         super(fd);
     }

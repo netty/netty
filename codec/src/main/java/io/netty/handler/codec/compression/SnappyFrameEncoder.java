@@ -27,6 +27,17 @@ import static io.netty.handler.codec.compression.Snappy.calculateChecksum;
  * See <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format</a>.
  */
 public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
+
+    private static final short SNAPPY_SLICE_SIZE = Short.MAX_VALUE;
+
+    /**
+     * Both
+     * {@value io.netty.handler.codec.compression.SnappyFrameEncoder#SNAPPY_SLICE_SIZE}
+     * and {@value io.netty.handler.codec.compression.SnappyFrameEncoder#SNAPPY_SLICE_JUMBO_SIZE}
+     * are valid lengths for the Snappy framing format
+     */
+    private static final int SNAPPY_SLICE_JUMBO_SIZE = 65535;
+
     /**
      * The minimum amount that we'll consider actually attempting to compress.
      * This value is preamble + the minimum length our Snappy service will
@@ -42,8 +53,26 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
         (byte) 0xff, 0x06, 0x00, 0x00, 0x73, 0x4e, 0x61, 0x50, 0x70, 0x59
     };
 
+    public SnappyFrameEncoder() {
+        this(SNAPPY_SLICE_SIZE);
+    }
+
+    /**
+     * Create a new instance with a
+     * {@value io.netty.handler.codec.compression.SnappyFrameEncoder#SNAPPY_SLICE_JUMBO_SIZE}
+     * chunk size.
+     */
+    public static SnappyFrameEncoder snappyEncoderWithJumboFrames() {
+        return new SnappyFrameEncoder(SNAPPY_SLICE_JUMBO_SIZE);
+    }
+
+    private SnappyFrameEncoder(int sliceSize) {
+        this.sliceSize = sliceSize;
+    }
+
     private final Snappy snappy = new Snappy();
     private boolean started;
+    private final int sliceSize;
 
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf in, ByteBuf out) throws Exception {
@@ -67,12 +96,12 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
                 }
 
                 out.writeInt(0);
-                if (dataLength > Short.MAX_VALUE) {
-                    ByteBuf slice = in.readSlice(Short.MAX_VALUE);
+                if (dataLength > sliceSize) {
+                    ByteBuf slice = in.readSlice(sliceSize);
                     calculateAndWriteChecksum(slice, out);
-                    snappy.encode(slice, out, Short.MAX_VALUE);
+                    snappy.encode(slice, out, sliceSize);
                     setChunkLength(out, lengthIdx);
-                    dataLength -= Short.MAX_VALUE;
+                    dataLength -= sliceSize;
                 } else {
                     ByteBuf slice = in.readSlice(dataLength);
                     calculateAndWriteChecksum(slice, out);

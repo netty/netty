@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.AbstractReferenceCountedByteBuf;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.PromiseCombiner;
@@ -119,6 +120,15 @@ public final class PendingWriteQueue {
         size ++;
         bytes += messageSize;
         tracker.incrementPendingOutboundBytes(write.size);
+        // Touch the message to make it easier to debug buffer leaks.
+
+        // this save both checking against the ReferenceCounted interface
+        // and makes better use of virtual calls vs interface ones
+        if (msg instanceof AbstractReferenceCountedByteBuf) {
+            ((AbstractReferenceCountedByteBuf) msg).touch();
+        } else {
+            ReferenceCountUtil.touch(msg);
+        }
     }
 
     /**

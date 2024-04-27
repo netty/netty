@@ -27,10 +27,24 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
@@ -71,7 +85,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.handler.codec.http2.Http2FrameCodecBuilder.forClient;
+import static io.netty.handler.codec.http2.Http2FrameCodecBuilder.forServer;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -741,6 +758,119 @@ public class Http2MultiplexTransportTest {
             if (clientEventLoopGroup != null) {
                 clientEventLoopGroup.shutdownGracefully(0, 0, MILLISECONDS);
             }
+        }
+    }
+
+    @Test
+    public void testServerCloseShouldNotSendResetIfClientSentEOS() throws Exception {
+        EventLoopGroup group = null;
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        Channel clientStreamChannel = null;
+        try {
+            final CountDownLatch clientReceivedResponseLatch = new CountDownLatch(1);
+            final CountDownLatch resetFrameLatch = new CountDownLatch(1);
+            group = new DefaultEventLoop();
+            LocalAddress serverAddress = new LocalAddress(getClass().getName());
+            ServerBootstrap sb = new ServerBootstrap()
+                    .channel(LocalServerChannel.class)
+                    .group(group)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ChannelPipeline pipeline = ch.pipeline();
+                            pipeline.addLast(forServer().build());
+                            pipeline.addLast(new Http2FrameIgnore<Http2SettingsFrame>(Http2SettingsFrame.class));
+                            pipeline.addLast(new Http2FrameIgnore<Http2SettingsAckFrame>(Http2SettingsAckFrame.class));
+                            pipeline.addLast(new Http2MultiplexHandler(new ChannelInitializer<Http2StreamChannel>() {
+                                @Override
+                                protected void initChannel(Http2StreamChannel ch) {
+                                    ChannelPipeline pipeline = ch.pipeline();
+                                    pipeline.addLast(new Http2StreamFrameToHttpObjectCodec(true, true));
+                                    pipeline.addLast(new HttpObjectAggregator(16384));
+                                    pipeline.addLast(new SimpleChannelInboundHandler<FullHttpRequest>() {
+                                        @Override
+                                        protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
+                                            ctx.writeAndFlush(
+                                                    new DefaultFullHttpResponse(
+                                                            msg.protocolVersion(), HttpResponseStatus.OK,
+                                                            Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII)))
+                                                    .addListeners(ChannelFutureListener.CLOSE);
+                                        }
+                                    });
+                                }
+                            }));
+                        }
+                    });
+            serverChannel = sb.bind(serverAddress).sync().channel();
+
+            Bootstrap cb = new Bootstrap()
+                    .channel(LocalChannel.class)
+                    .group(group)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ChannelPipeline pipeline = ch.pipeline();
+                            pipeline.addLast(forClient().build());
+                            pipeline.addLast(new Http2FrameIgnore<Http2SettingsFrame>(Http2SettingsFrame.class));
+                            pipeline.addLast(new Http2FrameIgnore<Http2SettingsAckFrame>(Http2SettingsAckFrame.class));
+                            pipeline.addLast(new Http2MultiplexHandler(new ChannelInitializer<Http2StreamChannel>() {
+                                @Override
+                                protected void initChannel(Http2StreamChannel ch) {
+                                    // noop
+                                }
+                            }));
+                        }
+                    });
+
+            clientChannel = cb.connect(serverAddress).sync().channel();
+            clientStreamChannel = new Http2StreamChannelBootstrap(clientChannel)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ChannelPipeline pipeline = ch.pipeline();
+                            pipeline.addLast(new Http2StreamFrameToHttpObjectCodec(false, true));
+                            pipeline.addLast(new HttpObjectAggregator(16384));
+                            pipeline.addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
+                                @Override
+                                protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
+                                    clientReceivedResponseLatch.countDown();
+                                }
+                            });
+                        }
+                    })
+                    .open().sync().get();
+
+            clientStreamChannel.writeAndFlush(
+                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/test/")).sync();
+
+            assertTrue(clientReceivedResponseLatch.await(3, SECONDS));
+
+            // The server should NOT send any RST_STREAM frame.
+            assertFalse(resetFrameLatch.await(1, SECONDS));
+        } finally {
+            if (clientStreamChannel != null) {
+                clientStreamChannel.close().syncUninterruptibly();
+            }
+            if (clientChannel != null) {
+                clientChannel.close().syncUninterruptibly();
+            }
+            if (serverChannel != null) {
+                serverChannel.close().syncUninterruptibly();
+            }
+            if (group != null) {
+                group.shutdownGracefully(0, 3, SECONDS);
+            }
+        }
+    }
+
+    private static final class Http2FrameIgnore<T extends Http2Frame> extends SimpleChannelInboundHandler<T> {
+        Http2FrameIgnore(Class<? extends T> inboundMessageType) {
+            super(inboundMessageType);
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, T msg) {
         }
     }
 }

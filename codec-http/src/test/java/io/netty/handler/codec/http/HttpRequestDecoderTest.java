@@ -63,6 +63,7 @@ public class HttpRequestDecoderTest {
                 "Upgrade: WebSocket" + lineDelimiter2 +
                 "Connection: Upgrade" + lineDelimiter +
                 "Host: localhost" + lineDelimiter2 +
+                "Accept: */*" + lineDelimiter +
                 "Origin: http://localhost:8080" + lineDelimiter +
                 "Sec-WebSocket-Key1: 10  28 8V7 8 48     0" + lineDelimiter2 +
                 "Sec-WebSocket-Key2: 8 Xt754O3Q3QW 0   _60" + lineDelimiter +
@@ -117,10 +118,11 @@ public class HttpRequestDecoderTest {
     }
 
     private static void checkHeaders(HttpHeaders headers) {
-        assertEquals(7, headers.names().size());
+        assertEquals(8, headers.names().size());
         checkHeader(headers, "Upgrade", "WebSocket");
         checkHeader(headers, "Connection", "Upgrade");
         checkHeader(headers, "Host", "localhost");
+        checkHeader(headers, "Accept", "*/*");
         checkHeader(headers, "Origin", "http://localhost:8080");
         checkHeader(headers, "Sec-WebSocket-Key1", "10  28 8V7 8 48     0");
         checkHeader(headers, "Sec-WebSocket-Key2", "8 Xt754O3Q3QW 0   _60");
@@ -677,6 +679,37 @@ public class HttpRequestDecoderTest {
         });
 
         assertFalse(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+    }
+
+    @Test
+    public void testChunkSizeOverflow() {
+        String requestStr = "PUT /some/path HTTP/1.1\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "8ccccccc\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        HttpContent c = channel.readInbound();
+        c.release();
+        assertTrue(c.decoderResult().isFailure());
+        assertInstanceOf(NumberFormatException.class, c.decoderResult().cause());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testChunkSizeOverflow2() {
+        String requestStr = "PUT /some/path HTTP/1.1\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "bbbbbbbe;\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        HttpContent c = channel.readInbound();
+        c.release();
+        assertTrue(c.decoderResult().isFailure());
+        assertInstanceOf(NumberFormatException.class, c.decoderResult().cause());
         assertFalse(channel.finish());
     }
 

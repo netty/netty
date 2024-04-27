@@ -91,5 +91,5 @@ public abstract class AbstractEventLoopTest {
     }
 
     protected abstract EventLoopGroup newEventLoopGroup();
-    protected abstract Class<? extends ServerSocketChannel> newChannel();
+    protected abstract Class<? extends ServerChannel> newChannel();
 }

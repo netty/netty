@@ -26,6 +26,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
@@ -34,12 +35,12 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private final boolean completeEarlyIfPossible;
 
-    DnsAddressResolveContext(DnsNameResolver parent, Channel channel, Promise<?> originalPromise,
-                             String hostname, DnsRecord[] additionals,
+    DnsAddressResolveContext(DnsNameResolver parent, Channel channel, Future<? extends Channel> channelReadyFuture,
+                             Promise<?> originalPromise, String hostname, DnsRecord[] additionals,
                              DnsServerAddressStream nameServerAddrs, int allowedQueries, DnsCache resolveCache,
                              AuthoritativeDnsServerCache authoritativeDnsServerCache,
                              boolean completeEarlyIfPossible) {
-        super(parent, channel, originalPromise, hostname, DnsRecord.CLASS_IN,
+        super(parent, channel, channelReadyFuture, originalPromise, hostname, DnsRecord.CLASS_IN,
               parent.resolveRecordTypes(), additionals, nameServerAddrs, allowedQueries);
         this.resolveCache = resolveCache;
         this.authoritativeDnsServerCache = authoritativeDnsServerCache;
@@ -48,13 +49,14 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
 
     @Override
     DnsResolveContext<InetAddress> newResolverContext(DnsNameResolver parent, Channel channel,
+                                                      Future<? extends Channel> channelReadyFuture,
                                                       Promise<?> originalPromise,
                                                       String hostname,
                                                       int dnsClass, DnsRecordType[] expectedTypes,
                                                       DnsRecord[] additionals,
                                                       DnsServerAddressStream nameServerAddrs, int allowedQueries) {
-        return new DnsAddressResolveContext(parent, channel, originalPromise, hostname, additionals, nameServerAddrs,
-                allowedQueries, resolveCache, authoritativeDnsServerCache, completeEarlyIfPossible);
+        return new DnsAddressResolveContext(parent, channel, channelReadyFuture, originalPromise, hostname, additionals,
+                nameServerAddrs, allowedQueries, resolveCache, authoritativeDnsServerCache, completeEarlyIfPossible);
     }
 
     @Override

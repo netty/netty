@@ -90,6 +90,7 @@ import io.netty.util.AsciiString;
  */
 public class HttpRequestDecoder extends HttpObjectDecoder {
 
+    private static final AsciiString Accept = AsciiString.cached("Accept");
     private static final AsciiString Host = AsciiString.cached("Host");
     private static final AsciiString Connection = AsciiString.cached("Connection");
     private static final AsciiString ContentType = AsciiString.cached("Content-Type");
@@ -117,6 +118,9 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
 
     private static final long LENGTH_AS_LONG = 'L' | 'e' << 8 | 'n' << 16 | 'g' << 24 |
             (long) 't' << 32 | (long) 'h' << 40;
+
+    private static final long ACCEPT_AS_LONG = 'A' | 'c' << 8 | 'c' << 16 | 'e' << 24 |
+            (long) 'p' << 32 | (long) 't' << 40;
 
     /**
      * Creates a new instance with the default
@@ -200,9 +204,13 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
     @Override
     protected AsciiString splitHeaderName(final byte[] sb, final int start, final int length) {
         final byte firstChar = sb[start];
-        if (firstChar == 'H' && length == 4) {
-            if (isHost(sb, start)) {
+        if (firstChar == 'H') {
+            if (length == 4 && isHost(sb, start)) {
                 return Host;
+            }
+        } else if (firstChar == 'A') {
+            if (length == 6 && isAccept(sb, start)) {
+                return Accept;
             }
         } else if (firstChar == 'C') {
             if (length == 10) {
@@ -220,6 +228,16 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
             }
         }
         return super.splitHeaderName(sb, start, length);
+    }
+
+    private static boolean isAccept(byte[] sb, int start) {
+        final long maybeAccept = sb[start] |
+                sb[start + 1] << 8 |
+                sb[start + 2] << 16 |
+                sb[start + 3] << 24 |
+                (long) sb[start + 4] << 32 |
+                (long) sb[start + 5] << 40;
+        return maybeAccept == ACCEPT_AS_LONG;
     }
 
     private static boolean isHost(byte[] sb, int start) {

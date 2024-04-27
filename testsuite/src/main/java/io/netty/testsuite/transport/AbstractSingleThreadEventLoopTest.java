@@ -50,7 +50,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class AbstractSingleThreadEventLoopTest {
-
+    @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testChannelsRegistered() throws Exception {
         EventLoopGroup group = newEventLoopGroup();

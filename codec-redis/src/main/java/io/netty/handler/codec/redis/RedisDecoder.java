@@ -277,7 +277,7 @@ public final class RedisDecoder extends ByteToMessageDecoder {
         if (!in.isReadable(RedisConstants.EOL_LENGTH)) {
             return null;
         }
-        final int lfIndex = in.forEachByte(ByteProcessor.FIND_LF);
+        final int lfIndex = in.indexOf(in.readerIndex(), in.writerIndex(), (byte) '\n');
         if (lfIndex < 0) {
             return null;
         }

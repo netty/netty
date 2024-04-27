@@ -58,6 +58,9 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     private void addFirst(ByteBuf buf, ChannelFutureListener listener) {
+        // Touch the message to make it easier to debug buffer leaks.
+        buf.touch();
+
         if (listener != null) {
             bufAndListenerPairs.addFirst(listener);
         }
@@ -91,6 +94,9 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param listener to notify when all the bytes have been consumed and written, can be {@code null}.
      */
     public final void add(ByteBuf buf, ChannelFutureListener listener) {
+        // Touch the message to make it easier to debug buffer leaks.
+        buf.touch();
+
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
         bufAndListenerPairs.add(buf);
@@ -154,38 +160,40 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry == null) {
                     break;
                 }
-                if (entry instanceof ChannelFutureListener) {
-                    aggregatePromise.addListener((ChannelFutureListener) entry);
-                    continue;
-                }
+                // fast-path vs abstract type
+                if (entry instanceof ByteBuf) {
+                    entryBuffer = (ByteBuf) entry;
+                    int bufferBytes = entryBuffer.readableBytes();
 
-                entryBuffer = (ByteBuf) entry;
-                int bufferBytes = entryBuffer.readableBytes();
-
-                if (bufferBytes > bytes) {
-                    // Add the buffer back to the queue as we can't consume all of it.
-                    bufAndListenerPairs.addFirst(entryBuffer);
-                    if (bytes > 0) {
-                        // Take a slice of what we can consume and retain it.
-                        entryBuffer = entryBuffer.readRetainedSlice(bytes);
-                        // we end here, so if this is the only buffer to return, skip composing
-                        toReturn = toReturn == null ? entryBuffer
-                                                    : compose(alloc, toReturn, entryBuffer);
-                        bytes = 0;
+                    if (bufferBytes > bytes) {
+                        // Add the buffer back to the queue as we can't consume all of it.
+                        bufAndListenerPairs.addFirst(entryBuffer);
+                        if (bytes > 0) {
+                            // Take a slice of what we can consume and retain it.
+                            entryBuffer = entryBuffer.readRetainedSlice(bytes);
+                            // we end here, so if this is the only buffer to return, skip composing
+                            toReturn = toReturn == null ? entryBuffer
+                                    : compose(alloc, toReturn, entryBuffer);
+                            bytes = 0;
+                        }
+                        break;
                     }
-                    break;
-                }
 
-                bytes -= bufferBytes;
-                if (toReturn == null) {
-                    // if there are no more bytes in the queue after this, there's no reason to compose
-                    toReturn = bufferBytes == readableBytes
-                            ? entryBuffer
-                            : composeFirst(alloc, entryBuffer);
-                } else {
-                    toReturn = compose(alloc, toReturn, entryBuffer);
+                    bytes -= bufferBytes;
+                    if (toReturn == null) {
+                        // if there are no more bytes in the queue after this, there's no reason to compose
+                        toReturn = bufferBytes == readableBytes
+                                ? entryBuffer
+                                : composeFirst(alloc, entryBuffer);
+                    } else {
+                        toReturn = compose(alloc, toReturn, entryBuffer);
+                    }
+                    entryBuffer = null;
+                } else if (entry instanceof DelegatingChannelPromiseNotifier) {
+                    aggregatePromise.addListener((DelegatingChannelPromiseNotifier) entry);
+                } else if (entry instanceof ChannelFutureListener) {
+                    aggregatePromise.addListener((ChannelFutureListener) entry);
                 }
-                entryBuffer = null;
             }
         } catch (Throwable cause) {
             safeRelease(entryBuffer);

@@ -70,9 +70,12 @@ public class HttpRequestEncoderBenchmark extends AbstractMicrobenchmark {
     @Param({ "false", "true" })
     public boolean typePollution;
 
+    @Param({ "128" })
+    private int contentBytes;
+
     @Setup(Level.Trial)
     public void setup() throws Exception {
-        byte[] bytes = new byte[256];
+        byte[] bytes = new byte[contentBytes];
         content = Unpooled.buffer(bytes.length);
         content.writeBytes(bytes);
         ByteBuf testContent = Unpooled.unreleasableBuffer(content.asReadOnly());
@@ -112,27 +115,34 @@ public class HttpRequestEncoderBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void fullMessage() throws Exception {
+        fullRequest.content().setIndex(0, contentBytes);
         encoder.write(context, fullRequest, newPromise());
     }
 
     @Benchmark
     public void contentLength() throws Exception {
         encoder.write(context, contentLengthRequest, newPromise());
+        lastContent.content().setIndex(0, contentBytes);
         encoder.write(context, lastContent, newPromise());
     }
 
     @Benchmark
     public void chunked() throws Exception {
         encoder.write(context, chunkedRequest, newPromise());
+        lastContent.content().setIndex(0, contentBytes);
         encoder.write(context, lastContent, newPromise());
     }
 
     @Benchmark
     public void differentTypes() throws Exception {
         encoder.write(context, contentLengthRequest, newPromise());
+        lastContent.content().setIndex(0, contentBytes);
         encoder.write(context, lastContent, newPromise());
+        content.setIndex(0, contentBytes);
+        fullRequest.content().setIndex(0, contentBytes);
         encoder.write(context, fullRequest, newPromise());
         encoder.write(context, chunkedRequest, newPromise());
+        lastContent.content().setIndex(0, contentBytes);
         encoder.write(context, lastContent, newPromise());
     }
 

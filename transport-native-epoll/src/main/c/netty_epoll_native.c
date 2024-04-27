@@ -86,7 +86,7 @@
 extern int epoll_create1(int flags) __attribute__((weak));
 extern int epoll_pwait2(int epfd, struct epoll_event *events, int maxevents, const struct timespec *timeout, const sigset_t *sigmask) __attribute__((weak));
 
-#ifndef __USE_GNU
+#ifndef _GNU_SOURCE
 struct mmsghdr {
     struct msghdr msg_hdr;  /* Message header */
     unsigned int  msg_len;  /* Number of bytes transmitted */

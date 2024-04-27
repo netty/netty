@@ -35,11 +35,17 @@ public final class Zstd {
             t = e;
             logger.debug(
                 "zstd-jni not in the classpath; Zstd support will be unavailable.");
-        } catch (Throwable e) {
-            t = e;
-            logger.debug("Failed to load zstd-jni; Zstd support will be unavailable.", t);
         }
 
+        // If in the classpath, try to load the native library and initialize zstd.
+        if (t == null) {
+            try {
+                com.github.luben.zstd.util.Native.load();
+            } catch (Throwable e) {
+                t = e;
+                logger.debug("Failed to load zstd-jni; Zstd support will be unavailable.", t);
+            }
+        }
         cause = t;
     }
 

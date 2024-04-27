@@ -153,6 +153,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final Certificate[] keyCertChain;
     final ClientAuth clientAuth;
     final String[] protocols;
+    final boolean hasTLSv13Cipher;
+
     final boolean enableOcsp;
     final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
     final ReadWriteLock ctxLock = new ReentrantReadWriteLock();
@@ -279,7 +281,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         boolean success = false;
         try {
             boolean tlsv13Supported = OpenSsl.isTlsv13Supported();
-
+            boolean anyTlsv13Ciphers = false;
             try {
                 int protocolOpts = SSL.SSL_PROTOCOL_SSLV3 | SSL.SSL_PROTOCOL_TLSV1 |
                         SSL.SSL_PROTOCOL_TLSV1_1 | SSL.SSL_PROTOCOL_TLSV1_2;
@@ -311,8 +313,11 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     SSLContext.setCipherSuite(ctx, cipherBuilder.toString(), false);
                     if (tlsv13Supported) {
                         // Set TLSv1.3 ciphers.
-                        SSLContext.setCipherSuite(ctx,
-                                OpenSsl.checkTls13Ciphers(logger, cipherTLSv13Builder.toString()), true);
+                        String tlsv13Ciphers = OpenSsl.checkTls13Ciphers(logger, cipherTLSv13Builder.toString());
+                        SSLContext.setCipherSuite(ctx, tlsv13Ciphers, true);
+                        if (!tlsv13Ciphers.isEmpty()) {
+                            anyTlsv13Ciphers = true;
+                        }
                     }
                 }
             } catch (SSLException e) {
@@ -349,10 +354,12 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
             if (!tlsv13Supported) {
                 // Explicit disable TLSv1.3
-                // See https://github.com/netty/netty/issues/12968
+                // See:
+                //  - https://github.com/netty/netty/issues/12968
                 options |= SSL.SSL_OP_NO_TLSv1_3;
             }
 
+            hasTLSv13Cipher = anyTlsv13Ciphers;
             SSLContext.setOptions(ctx, options);
 
             // We need to enable SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER as the memory address may change between

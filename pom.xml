@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.105.Final-SNAPSHOT</version>
+  <version>4.1.110.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -186,6 +186,30 @@
         <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <testJvm />
+      </properties>
+    </profile>
+    <profile>
+      <id>java22</id>
+      <activation>
+        <jdk>22</jdk>
+      </activation>
+      <properties>
+        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
+        <argLine.alpnAgent />
+        <argLine.java9.extras />
+        <!-- Export some stuff which is used during our tests -->
+        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- 1.4.x does not work in Java10+ -->
+        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
+             our EventExecutorGroup implementations
+        -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <!-- pax-exam does not work on latest Java12 EA 22 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -527,6 +551,14 @@
       </properties>
     </profile>
     <profile>
+      <id>boringssl-snapshot</id>
+      <properties>
+        <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
+        <tcnative.version>2.0.66.Final-SNAPSHOT</tcnative.version>
+        <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
+      </properties>
+    </profile>
+    <profile>
       <id>leak</id>
       <properties>
         <argLine.leak>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</argLine.leak>
@@ -647,7 +679,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.61.Final</tcnative.version>
+    <tcnative.version>2.0.65.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -666,7 +698,7 @@
     <skipAutobahnTestsuite>false</skipAutobahnTestsuite>
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>19.3.6</graalvm.version>
-    <brotli4j.version>1.13.0</brotli4j.version>
+    <brotli4j.version>1.16.0</brotli4j.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
@@ -872,12 +904,17 @@
       <dependency>
         <groupId>com.github.luben</groupId>
         <artifactId>zstd-jni</artifactId>
-        <version>1.5.0-2</version>
+        <version>1.5.5-11</version>
         <optional>true</optional>
       </dependency>
       <dependency>
         <groupId>com.aayushatharva.brotli4j</groupId>
         <artifactId>brotli4j</artifactId>
+        <version>${brotli4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aayushatharva.brotli4j</groupId>
+        <artifactId>native-linux-ppc64le</artifactId>
         <version>${brotli4j.version}</version>
       </dependency>
       <dependency>
@@ -913,6 +950,11 @@
       <dependency>
         <groupId>com.aayushatharva.brotli4j</groupId>
         <artifactId>native-windows-x86_64</artifactId>
+        <version>${brotli4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.aayushatharva.brotli4j</groupId>
+        <artifactId>native-windows-aarch64</artifactId>
         <version>${brotli4j.version}</version>
       </dependency>
 
@@ -1084,7 +1126,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
-        <version>1.21</version>
+        <version>1.26.0</version>
         <scope>test</scope>
       </dependency>
 
@@ -1303,6 +1345,20 @@
                   <new>method io.netty.channel.unix.DomainSocketAddress io.netty.channel.unix.Socket::remoteDomainSocketAddress()</new>
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeErasureChanged</code>
+                  <old>method B io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::decoderEnforceMaxConsecutiveEmptyDataFrames(int) @ io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder</old>
+                  <new>method io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder::decoderEnforceMaxConsecutiveEmptyDataFrames(int)</new>
+                  <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeErasureChanged</code>
+                  <old>method B io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::decoderEnforceMaxRstFramesPerWindow(int, int) @ io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder</old>
+                  <new>method io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder::decoderEnforceMaxRstFramesPerWindow(int, int)</new>
+                  <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
@@ -1319,7 +1375,7 @@
       <plugin>
         <groupId>com.github.siom79.japicmp</groupId>
         <artifactId>japicmp-maven-plugin</artifactId>
-        <version>0.15.4</version>
+        <version>0.21.0</version>
         <configuration>
           <parameter>
             <ignoreMissingOldVersion>true</ignoreMissingOldVersion>
@@ -1877,6 +1933,7 @@
                 <archive>
                   <manifest>
                     <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                   </manifest>
                   <manifestEntries>
                     <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>

@@ -149,6 +149,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private static final InternalLogger LOG = InternalLoggerFactory.getInstance(Http2FrameCodec.class);
 
+    private static final Class<?>[] SUPPORTED_MESSAGES = new Class[] {
+            Http2DataFrame.class, Http2HeadersFrame.class, Http2WindowUpdateFrame.class, Http2ResetFrame.class,
+            Http2PingFrame.class, Http2SettingsFrame.class, Http2SettingsAckFrame.class, Http2GoAwayFrame.class,
+            Http2PushPromiseFrame.class, Http2PriorityFrame.class, Http2UnknownFrame.class };
+
     protected final PropertyKey streamKey;
     private final PropertyKey upgradeKey;
 
@@ -359,7 +364,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             ctx.write(msg, promise);
         } else {
             ReferenceCountUtil.release(msg);
-            throw new UnsupportedMessageTypeException(msg);
+            throw new UnsupportedMessageTypeException(msg, SUPPORTED_MESSAGES);
         }
     }
 
@@ -398,12 +403,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     private void writeHeadersFrame(final ChannelHandlerContext ctx, Http2HeadersFrame headersFrame,
-                                   final ChannelPromise promise) {
+                                   ChannelPromise promise) {
 
         if (isStreamIdValid(headersFrame.stream().id())) {
             encoder().writeHeaders(ctx, headersFrame.stream().id(), headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
         } else if (initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise)) {
+            promise = promise.unvoid();
+
             final int streamId = headersFrame.stream().id();
 
             encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),

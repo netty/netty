@@ -1,0 +1,28 @@
+[
+  {
+    "name": "org.bouncycastle.jce.provider.BouncyCastleProvider",
+    "condition": {
+      "typeReachable": "org.bouncycastle.jcajce.provider.BouncyCastleProvider"
+    },
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+        ]
+      }
+    ]
+  },
+  {
+    "name": "org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider",
+    "condition": {
+      "typeReachable": "org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider"
+    },
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+        ]
+      }
+    ]
+  }
+]

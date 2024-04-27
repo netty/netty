@@ -29,9 +29,12 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.Random;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
 @Threads(1)
-@Measurement(iterations = 5)
-@Warmup(iterations = 5)
+@Measurement(iterations = 5, time = 200, timeUnit = MILLISECONDS)
+@Warmup(iterations = 5, time = 200, timeUnit = MILLISECONDS)
+
 public class AsciiStringBenchmark extends AbstractMicrobenchmark {
 
     @Param({ "3", "5", "7", "8", "10", "20", "50", "100", "1000" })
@@ -40,6 +43,8 @@ public class AsciiStringBenchmark extends AbstractMicrobenchmark {
     private AsciiString asciiString;
     private String string;
     private static final Random random = new Random();
+    private AsciiString connection;
+    private AsciiString Connection;
 
     @Setup(Level.Trial)
     public void setup() {
@@ -47,6 +52,13 @@ public class AsciiStringBenchmark extends AbstractMicrobenchmark {
         random.nextBytes(bytes);
         asciiString = new AsciiString(bytes, false);
         string = new String(bytes, CharsetUtil.US_ASCII);
+        connection = AsciiString.cached("connection");
+        Connection = AsciiString.cached("Connection");
+    }
+
+    @Benchmark
+    public boolean equalsIgnoreCaseBench() {
+        return Connection.contentEqualsIgnoreCase(connection);
     }
 
     @Benchmark

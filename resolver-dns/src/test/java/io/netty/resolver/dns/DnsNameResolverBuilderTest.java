@@ -65,6 +65,7 @@ class DnsNameResolverBuilderTest {
 
         checkDefaultAuthoritativeDnsServerCache(
                 (DefaultAuthoritativeDnsServerCache) resolver.authoritativeDnsServerCache(), MAX_SUPPORTED_TTL_SECS, 0);
+assertThat(resolver.queryDnsServerAddressStream()).isInstanceOf(ThreadLocalNameServerAddressStream.class);
     }
 
     @Test
@@ -242,6 +243,35 @@ class DnsNameResolverBuilderTest {
         @Override
         public boolean clear(String hostname) {
             return false;
+        }
+    }
+
+    @Test
+    void testCustomQueryDnsServerAddressStream() {
+        DnsServerAddressStream queryAddressStream = new TestQueryServerAddressStream();
+        resolver = builder.queryServerAddressStream(queryAddressStream).build();
+
+        assertThat(resolver.queryDnsServerAddressStream()).isSameAs(queryAddressStream);
+
+        resolver = builder.copy().build();
+        assertThat(resolver.queryDnsServerAddressStream()).isSameAs(queryAddressStream);
+    }
+
+    private static final class TestQueryServerAddressStream implements DnsServerAddressStream {
+
+        @Override
+        public InetSocketAddress next() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public int size() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public DnsServerAddressStream duplicate() {
+            throw new UnsupportedOperationException();
         }
     }
 }

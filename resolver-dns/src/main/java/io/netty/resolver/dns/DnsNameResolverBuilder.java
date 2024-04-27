@@ -47,6 +47,8 @@ public final class DnsNameResolverBuilder {
     volatile EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
     private ChannelFactory<? extends SocketChannel> socketChannelFactory;
+    private boolean retryOnTimeout;
+
     private DnsCache resolveCache;
     private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
@@ -65,6 +67,7 @@ public final class DnsNameResolverBuilder {
     private HostsFileEntriesResolver hostsFileEntriesResolver = HostsFileEntriesResolver.DEFAULT;
     private DnsServerAddressStreamProvider dnsServerAddressStreamProvider =
             DnsServerAddressStreamProviders.platformDefault();
+    private DnsServerAddressStream queryDnsServerAddressStream;
     private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory =
             NoopDnsQueryLifecycleObserverFactory.INSTANCE;
     private String[] searchDomains;
@@ -143,8 +146,7 @@ public final class DnsNameResolverBuilder {
      * @return {@code this}
      */
     public DnsNameResolverBuilder socketChannelFactory(ChannelFactory<? extends SocketChannel> channelFactory) {
-        this.socketChannelFactory = channelFactory;
-        return this;
+        return socketChannelFactory(channelFactory, false);
     }
 
     /**
@@ -160,10 +162,52 @@ public final class DnsNameResolverBuilder {
      * @return {@code this}
      */
     public DnsNameResolverBuilder socketChannelType(Class<? extends SocketChannel> channelType) {
+        return socketChannelType(channelType, false);
+    }
+
+    /**
+     * Sets the {@link ChannelFactory} that will create a {@link SocketChannel} for
+     * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
+     *
+     * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
+     * {@link ChannelFactory} for this method.
+     *
+     * @param channelFactory the {@link ChannelFactory} or {@code null}
+     *                       if <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should not be supported.
+     *                       By default, TCP fallback is not enabled.
+     * @param retryOnTimeout if {@code true} the {@link DnsNameResolver} will also fallback to TCP if a timeout
+     *                       was detected, if {@code false} it will only try to use TCP if the response was marked
+     *                       as truncated.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder socketChannelFactory(
+            ChannelFactory<? extends SocketChannel> channelFactory, boolean retryOnTimeout) {
+        this.socketChannelFactory = channelFactory;
+        this.retryOnTimeout = retryOnTimeout;
+        return this;
+    }
+
+    /**
+     * Sets the {@link ChannelFactory} as a {@link ReflectiveChannelFactory} of this type for
+     * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
+     * Use as an alternative to {@link #socketChannelFactory(ChannelFactory)}.
+     *
+     * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
+     * {@code channelType} for this method.
+     *
+     * @param channelType the type or {@code null} if <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a>
+     *                    should not be supported. By default, TCP fallback is not enabled.
+     * @param retryOnTimeout if {@code true} the {@link DnsNameResolver} will also fallback to TCP if a timeout
+     *                       was detected, if {@code false} it will only try to use TCP if the response was marked
+     *                       as truncated.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder socketChannelType(
+            Class<? extends SocketChannel> channelType, boolean retryOnTimeout) {
         if (channelType == null) {
-            return socketChannelFactory(null);
+            return socketChannelFactory(null, retryOnTimeout);
         }
-        return socketChannelFactory(new ReflectiveChannelFactory<SocketChannel>(channelType));
+        return socketChannelFactory(new ReflectiveChannelFactory<SocketChannel>(channelType), retryOnTimeout);
     }
 
     /**
@@ -415,6 +459,20 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
+    protected DnsServerAddressStream queryServerAddressStream() {
+        return this.queryDnsServerAddressStream;
+    }
+
+    /**
+     * Set the {@link DnsServerAddressStream} which provides the server address for DNS queries.
+     * @return {@code this}.
+     */
+    public DnsNameResolverBuilder queryServerAddressStream(DnsServerAddressStream queryServerAddressStream) {
+        this.queryDnsServerAddressStream =
+                checkNotNull(queryServerAddressStream, "queryServerAddressStream");
+        return this;
+    }
+
     /**
      * Set the list of search domains of the resolver.
      *
@@ -465,6 +523,11 @@ public final class DnsNameResolverBuilder {
                 // Let us use the sane ordering as DnsNameResolver will be used when returning
                 // nameservers from the cache.
                 new NameServerComparator(DnsNameResolver.preferredAddressType(resolvedAddressTypes).addressType()));
+    }
+
+    private DnsServerAddressStream newQueryServerAddressStream(
+            DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
+        return new ThreadLocalNameServerAddressStream(dnsServerAddressStreamProvider);
     }
 
     private DnsCnameCache newCnameCache() {
@@ -524,10 +587,15 @@ public final class DnsNameResolverBuilder {
         DnsCnameCache cnameCache = this.cnameCache != null ? this.cnameCache : newCnameCache();
         AuthoritativeDnsServerCache authoritativeDnsServerCache = this.authoritativeDnsServerCache != null ?
                 this.authoritativeDnsServerCache : newAuthoritativeDnsServerCache();
+
+        DnsServerAddressStream queryDnsServerAddressStream = this.queryDnsServerAddressStream != null ?
+                this.queryDnsServerAddressStream : newQueryServerAddressStream(dnsServerAddressStreamProvider);
+
         return new DnsNameResolver(
                 eventLoop,
                 channelFactory,
                 socketChannelFactory,
+                retryOnTimeout,
                 resolveCache,
                 cnameCache,
                 authoritativeDnsServerCache,
@@ -542,6 +610,7 @@ public final class DnsNameResolverBuilder {
                 optResourceEnabled,
                 hostsFileEntriesResolver,
                 dnsServerAddressStreamProvider,
+                queryDnsServerAddressStream,
                 searchDomains,
                 ndots,
                 decodeIdn,
@@ -565,9 +634,7 @@ public final class DnsNameResolverBuilder {
             copiedBuilder.channelFactory(channelFactory);
         }
 
-        if (socketChannelFactory != null) {
-            copiedBuilder.socketChannelFactory(socketChannelFactory);
-        }
+        copiedBuilder.socketChannelFactory(socketChannelFactory, retryOnTimeout);
 
         if (resolveCache != null) {
             copiedBuilder.resolveCache(resolveCache);
@@ -603,6 +670,10 @@ public final class DnsNameResolverBuilder {
 
         if (dnsServerAddressStreamProvider != null) {
             copiedBuilder.nameServerProvider(dnsServerAddressStreamProvider);
+        }
+
+        if (queryDnsServerAddressStream != null) {
+            copiedBuilder.queryServerAddressStream(queryDnsServerAddressStream);
         }
 
         if (searchDomains != null) {

@@ -109,6 +109,22 @@ public final class Http2ConnectionHandlerBuilder
     }
 
     @Override
+    public int decoderEnforceMaxConsecutiveEmptyDataFrames() {
+        return super.decoderEnforceMaxConsecutiveEmptyDataFrames();
+    }
+
+    @Override
+    public Http2ConnectionHandlerBuilder decoderEnforceMaxConsecutiveEmptyDataFrames(int maxConsecutiveEmptyFrames) {
+        return super.decoderEnforceMaxConsecutiveEmptyDataFrames(maxConsecutiveEmptyFrames);
+    }
+
+    @Override
+    public Http2ConnectionHandlerBuilder decoderEnforceMaxRstFramesPerWindow(
+            int maxRstFramesPerWindow, int secondsPerWindow) {
+        return super.decoderEnforceMaxRstFramesPerWindow(maxRstFramesPerWindow, secondsPerWindow);
+    }
+
+    @Override
     public Http2ConnectionHandler build() {
         return super.build();
     }

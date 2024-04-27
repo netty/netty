@@ -16,7 +16,6 @@
 package io.netty.bootstrap;
 
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -25,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.ServiceLoader;
 
 /**
@@ -53,9 +53,9 @@ abstract class ChannelInitializerExtensions {
                 String extensionProp = SystemPropertyUtil.get(ChannelInitializerExtension.EXTENSIONS_SYSTEM_PROPERTY);
                 logger.debug("-Dio.netty.bootstrap.extensions: {}", extensionProp);
                 if ("serviceload".equalsIgnoreCase(extensionProp)) {
-                    impl = new ServiceLoadingExtensions(InternalLogLevel.DEBUG, true);
+                    impl = new ServiceLoadingExtensions(true);
                 } else if ("log".equalsIgnoreCase(extensionProp)) {
-                    impl = new ServiceLoadingExtensions(InternalLogLevel.INFO, false);
+                    impl = new ServiceLoadingExtensions(false);
                 } else {
                     impl = new EmptyExtensions();
                 }
@@ -78,14 +78,12 @@ abstract class ChannelInitializerExtensions {
     }
 
     private static final class ServiceLoadingExtensions extends ChannelInitializerExtensions {
-        private final InternalLogLevel logLevel;
         private final boolean loadAndCache;
 
         private WeakReference<ClassLoader> classLoader;
         private Collection<ChannelInitializerExtension> extensions;
 
-        ServiceLoadingExtensions(InternalLogLevel logLevel, boolean loadAndCache) {
-            this.logLevel = logLevel;
+        ServiceLoadingExtensions(boolean loadAndCache) {
             this.loadAndCache = loadAndCache;
         }
 
@@ -94,21 +92,19 @@ abstract class ChannelInitializerExtensions {
         synchronized Collection<ChannelInitializerExtension> extensions(ClassLoader cl) {
             ClassLoader configured = classLoader == null ? null : classLoader.get();
             if (configured == null || configured != cl) {
-                Collection<ChannelInitializerExtension> loaded = serviceLoadExtensions(logLevel, cl);
+                Collection<ChannelInitializerExtension> loaded = serviceLoadExtensions(loadAndCache, cl);
                 classLoader = new WeakReference<ClassLoader>(cl);
                 extensions = loadAndCache ? loaded : Collections.<ChannelInitializerExtension>emptyList();
             }
             return extensions;
         }
 
-        private static Collection<ChannelInitializerExtension> serviceLoadExtensions(
-                InternalLogLevel logLevel, ClassLoader cl) {
-            ArrayList<ChannelInitializerExtension> extensions = new ArrayList<ChannelInitializerExtension>();
+        private static Collection<ChannelInitializerExtension> serviceLoadExtensions(boolean load, ClassLoader cl) {
+            List<ChannelInitializerExtension> extensions = new ArrayList<ChannelInitializerExtension>();
 
             ServiceLoader<ChannelInitializerExtension> loader = ServiceLoader.load(
                     ChannelInitializerExtension.class, cl);
             for (ChannelInitializerExtension extension : loader) {
-                logger.log(logLevel, "Loaded extension: {}", extension.getClass());
                 extensions.add(extension);
             }
 
@@ -119,8 +115,12 @@ abstract class ChannelInitializerExtensions {
                         return Double.compare(a.priority(), b.priority());
                     }
                 });
+                logger.info("ServiceLoader {}(s) {}: {}", ChannelInitializerExtension.class.getSimpleName(),
+                        load ? "registered" : "detected", extensions);
                 return Collections.unmodifiableList(extensions);
             }
+            logger.debug("ServiceLoader {}(s) {}: []", ChannelInitializerExtension.class.getSimpleName(),
+                    load ? "registered" : "detected");
             return Collections.emptyList();
         }
     }

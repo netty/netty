@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -169,6 +170,13 @@ public class OpenSslConscryptSslEngineInteropTest extends ConscryptSslEngineTest
     @Override
     protected void invalidateSessionsAndAssert(SSLSessionContext context) {
         // Not supported by conscrypt
+    }
+
+    @Test
+    @Disabled("Disabled due a conscrypt bug")
+    @Override
+    public void testTLSv13DisabledIfNoValidCipherSuiteConfigured() throws Exception {
+        super.testTLSv13DisabledIfNoValidCipherSuiteConfigured();
     }
 
     @Override

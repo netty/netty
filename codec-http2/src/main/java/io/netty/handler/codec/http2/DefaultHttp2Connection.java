@@ -388,11 +388,13 @@ public class DefaultHttp2Connection implements Http2Connection {
         private static final byte META_STATE_RECV_HEADERS = 1 << 4;
         private static final byte META_STATE_RECV_TRAILERS = 1 << 5;
         private final int id;
+        private final long identity;
         private final PropertyMap properties = new PropertyMap();
         private State state;
         private byte metaState;
 
-        DefaultStream(int id, State state) {
+        DefaultStream(long identity, int id, State state) {
+            this.identity = identity;
             this.id = id;
             this.state = state;
         }
@@ -599,6 +601,20 @@ public class DefaultHttp2Connection implements Http2Connection {
                 }
             }
         }
+
+        @Override
+        public boolean equals(final Object obj) {
+            return super.equals(obj);
+        }
+
+        @Override
+        public int hashCode() {
+            long value = identity;
+            if (value == 0) {
+                return System.identityHashCode(this);
+            }
+            return (int) (value ^ (value >>> 32));
+        }
     }
 
     /**
@@ -606,7 +622,7 @@ public class DefaultHttp2Connection implements Http2Connection {
      */
     private final class ConnectionStream extends DefaultStream {
         ConnectionStream() {
-            super(CONNECTION_STREAM_ID, IDLE);
+            super(0, CONNECTION_STREAM_ID, IDLE);
         }
 
         @Override
@@ -671,6 +687,10 @@ public class DefaultHttp2Connection implements Http2Connection {
     private final class DefaultEndpoint<F extends Http2FlowController> implements Endpoint<F> {
         private final boolean server;
         /**
+         * This is an always increasing sequence number used to hash {@link DefaultStream} instances.
+         */
+        private long lastCreatedStreamIdentity;
+        /**
          * The minimum stream ID allowed when creating the next stream. This only applies at the time the stream is
          * created. If the ID of the stream being created is less than this value, stream creation will fail. Upon
          * successful creation of a stream, this value is incremented to the next valid stream ID.
@@ -694,6 +714,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         int numStreams;
 
         DefaultEndpoint(boolean server, int maxReservedStreams) {
+            this.lastCreatedStreamIdentity = 0;
             this.server = server;
 
             // Determine the starting stream ID for this endpoint. Client-initiated streams
@@ -750,8 +771,10 @@ public class DefaultHttp2Connection implements Http2Connection {
 
             checkNewStreamAllowed(streamId, state);
 
+            lastCreatedStreamIdentity++;
+
             // Create and initialize the stream.
-            DefaultStream stream = new DefaultStream(streamId, state);
+            DefaultStream stream = new DefaultStream(lastCreatedStreamIdentity, streamId, state);
 
             incrementExpectedStreamId(streamId);
 
@@ -785,8 +808,10 @@ public class DefaultHttp2Connection implements Http2Connection {
             State state = isLocal() ? RESERVED_LOCAL : RESERVED_REMOTE;
             checkNewStreamAllowed(streamId, state);
 
+            lastCreatedStreamIdentity++;
+
             // Create and initialize the stream.
-            DefaultStream stream = new DefaultStream(streamId, state);
+            DefaultStream stream = new DefaultStream(lastCreatedStreamIdentity, streamId, state);
 
             incrementExpectedStreamId(streamId);
 
@@ -840,7 +865,11 @@ public class DefaultHttp2Connection implements Http2Connection {
 
         @Override
         public int lastStreamCreated() {
-            return nextStreamIdToCreate > 1 ? nextStreamIdToCreate - 2 : 0;
+            // Stream ids are always incremented by 2 so just subtract it. This is even ok in the case
+            // of nextStreamIdToCreate overflown as it will just return the correct positive number.
+            // Use max(...) to ensure we return the correct value for the case when its a client and no stream
+            // was created yet.
+            return Math.max(0, nextStreamIdToCreate - 2);
         }
 
         @Override
@@ -892,7 +921,7 @@ public class DefaultHttp2Connection implements Http2Connection {
                         streamId, nextStreamIdToCreate);
             }
             if (nextStreamIdToCreate <= 0) {
-                // We exhausted the stream id space that we  can use. Let's signal this back but also signal that
+                // We exhausted the stream id space that we can use. Let's signal this back but also signal that
                 // we still may want to process active streams.
                 throw new Http2Exception(REFUSED_STREAM, "Stream IDs are exhausted for this endpoint.",
                         Http2Exception.ShutdownHint.GRACEFUL_SHUTDOWN);

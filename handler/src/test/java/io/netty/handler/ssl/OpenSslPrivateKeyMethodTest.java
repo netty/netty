@@ -76,7 +76,7 @@ public class OpenSslPrivateKeyMethodTest {
     private static final String RFC_CIPHER_NAME = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
     private static EventLoopGroup GROUP;
     private static SelfSignedCertificate CERT;
-    private static ExecutorService EXECUTOR;
+    private static DelayingExecutor EXECUTOR;
 
     static Collection<Object[]> parameters() {
         List<Object[]> dst = new ArrayList<Object[]>();
@@ -102,7 +102,7 @@ public class OpenSslPrivateKeyMethodTest {
 
         GROUP = new DefaultEventLoopGroup();
         CERT = new SelfSignedCertificate();
-        EXECUTOR = Executors.newCachedThreadPool(new ThreadFactory() {
+        EXECUTOR = new DelayingExecutor(new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
                 return new DelegateThread(r);

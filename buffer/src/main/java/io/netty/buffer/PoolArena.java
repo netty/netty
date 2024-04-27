@@ -515,20 +515,15 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     /**
-     * Return the number of bytes that are currently pinned to buffer instances, by the arena. The pinned memory is not
-     * accessible for use by any other allocation, until the buffers using have all been released.
+     * Return an estimate of the number of bytes that are currently pinned to buffer instances, by the arena. The
+     * pinned memory is not accessible for use by any other allocation, until the buffers using have all been released.
      */
     public long numPinnedBytes() {
         long val = activeBytesHuge.value(); // Huge chunks are exact-sized for the buffers they were allocated to.
-        lock();
-        try {
-            for (int i = 0; i < chunkListMetrics.size(); i++) {
-                for (PoolChunkMetric m: chunkListMetrics.get(i)) {
-                    val += ((PoolChunk<?>) m).pinnedBytes();
-                }
+        for (int i = 0; i < chunkListMetrics.size(); i++) {
+            for (PoolChunkMetric m: chunkListMetrics.get(i)) {
+                val += ((PoolChunk<?>) m).pinnedBytes();
             }
-        } finally {
-            unlock();
         }
         return max(0, val);
     }

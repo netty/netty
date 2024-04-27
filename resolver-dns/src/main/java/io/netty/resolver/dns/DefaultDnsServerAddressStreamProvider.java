@@ -50,9 +50,25 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
     static {
         final List<InetSocketAddress> defaultNameServers = new ArrayList<InetSocketAddress>(2);
         if (!PlatformDependent.isAndroid()) {
-            // Only try to use when not on Android as the classes not exists there:
+            // Skip this on Android; it has neither /etc/resolv.conf nor JNDI classes.
             // See https://github.com/netty/netty/issues/8654
-            DirContextUtils.addNameServers(defaultNameServers, DNS_PORT);
+            if (!PlatformDependent.isWindows()) {
+                // Try reading /etc/resolv.conf. It's usually found on Linux or macOS, but can also be missing.
+                try {
+                    defaultNameServers.addAll(ResolvConf.system().getNameservers());
+                } catch (IllegalStateException e) {
+                    String fallbackMessage = "Failed to get name servers from /etc/resolv.conf; will fall back to JNDI";
+                    if (logger.isDebugEnabled()) {
+                        // Always log at INFO, but only include stack trace if DEBUG is enabled.
+                        logger.info(fallbackMessage, e);
+                    } else {
+                        logger.info(fallbackMessage);
+                    }
+                    DirContextUtils.addNameServers(defaultNameServers, DNS_PORT);
+                }
+            } else {
+                DirContextUtils.addNameServers(defaultNameServers, DNS_PORT);
+            }
         }
 
         // Only try when using on Java8 and lower as otherwise it will produce:

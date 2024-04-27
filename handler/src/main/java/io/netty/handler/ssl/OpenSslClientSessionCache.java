@@ -55,34 +55,42 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
     }
 
     @Override
-    void setSession(long ssl, String host, int port) {
+    boolean setSession(long ssl, OpenSslSession session, String host, int port) {
         HostPort hostPort = keyFor(host, port);
         if (hostPort == null) {
-            return;
+            return false;
         }
-        final NativeSslSession session;
+        final NativeSslSession nativeSslSession;
         final boolean reused;
+        boolean singleUsed = false;
         synchronized (this) {
-            session = sessions.get(hostPort);
-            if (session == null) {
-                return;
+            nativeSslSession = sessions.get(hostPort);
+            if (nativeSslSession == null) {
+                return false;
             }
-            if (!session.isValid()) {
-                removeSessionWithId(session.sessionId());
-                return;
+            if (!nativeSslSession.isValid()) {
+                removeSessionWithId(nativeSslSession.sessionId());
+                return false;
             }
             // Try to set the session, if true is returned OpenSSL incremented the reference count
             // of the underlying SSL_SESSION*.
-            reused = SSL.setSession(ssl, session.session());
+            reused = SSL.setSession(ssl, nativeSslSession.session());
+            if (reused) {
+                singleUsed = nativeSslSession.shouldBeSingleUse();
+            }
         }
 
         if (reused) {
-            if (session.shouldBeSingleUse()) {
+            if (singleUsed) {
                 // Should only be used once
+                nativeSslSession.invalidate();
                 session.invalidate();
             }
-            session.updateLastAccessedTime();
+            nativeSslSession.setLastAccessedTime(System.currentTimeMillis());
+            session.setSessionDetails(nativeSslSession.getCreationTime(), nativeSslSession.getLastAccessedTime(),
+                    nativeSslSession.sessionId(), nativeSslSession.keyValueStorage);
         }
+        return reused;
     }
 
     private static HostPort keyFor(String host, int port) {

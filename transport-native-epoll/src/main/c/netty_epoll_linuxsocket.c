@@ -163,10 +163,10 @@ static void netty_epoll_linuxsocket_setTimeToLive(JNIEnv* env, jclass clazz, jin
 
 static void netty_epoll_linuxsocket_setIpMulticastLoop(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jint optval) {
     if (ipv6 == JNI_TRUE) {
-        u_int val = (u_int) optval;
+        unsigned int val = (unsigned int) optval;
         netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &val, sizeof(val));
     } else {
-        u_char val = (u_char) optval;
+        unsigned char val = (unsigned char) optval;
         netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_MULTICAST_LOOP, &val, sizeof(val));
     }
 }
@@ -538,13 +538,13 @@ static jint netty_epoll_linuxsocket_getTimeToLive(JNIEnv* env, jclass clazz, jin
 
 static jint netty_epoll_linuxsocket_getIpMulticastLoop(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6) {
     if (ipv6 == JNI_TRUE) {
-        u_int optval;
+        unsigned int optval;
         if (netty_unix_socket_getOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
             return -1;
         }
         return (jint) optval;
     } else {
-        u_char optval;
+        unsigned char optval;
         if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) == -1) {
             return -1;
         }

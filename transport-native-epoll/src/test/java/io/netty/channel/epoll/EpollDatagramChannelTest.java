@@ -44,6 +44,13 @@ public class EpollDatagramChannelTest {
     }
 
     @Test
+    public void testDefaultMaxMessagePerRead() {
+        EpollDatagramChannel channel = new EpollDatagramChannel();
+        assertEquals(16, channel.config().getMaxMessagesPerRead());
+        channel.unsafe().closeForcibly();
+    }
+
+    @Test
     public void testNotActiveNoLocalRemoteAddress() throws IOException {
         checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel());
         checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(InternetProtocolFamily.IPv4));

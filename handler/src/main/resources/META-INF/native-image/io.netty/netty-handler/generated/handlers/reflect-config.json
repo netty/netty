@@ -217,6 +217,13 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.netty.handler.codec.compression.ZstdDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.ZstdDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.netty.handler.codec.compression.ZstdEncoder",
     "condition": {
       "typeReachable": "io.netty.handler.codec.compression.ZstdEncoder"

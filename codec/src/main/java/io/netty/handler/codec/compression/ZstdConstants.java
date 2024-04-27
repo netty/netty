@@ -15,17 +15,24 @@
  */
 package io.netty.handler.codec.compression;
 
+import com.github.luben.zstd.Zstd;
+
 final class ZstdConstants {
 
     /**
      * Default compression level
      */
-    static final int DEFAULT_COMPRESSION_LEVEL = 3;
+    static final int DEFAULT_COMPRESSION_LEVEL = Zstd.defaultCompressionLevel();
+
+    /**
+     * Min compression level
+     */
+    static final int MIN_COMPRESSION_LEVEL = Zstd.minCompressionLevel();
 
     /**
      * Max compression level
      */
-    static final int MAX_COMPRESSION_LEVEL = 22;
+    static final int MAX_COMPRESSION_LEVEL = Zstd.maxCompressionLevel();
 
     /**
      * Max block size

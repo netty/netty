@@ -355,6 +355,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             ctx.read();
         }
         firedChannelRead = false;
+        selfFiredChannelRead = false;
         ctx.fireChannelReadComplete();
     }
 

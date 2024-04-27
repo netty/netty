@@ -56,7 +56,7 @@ public abstract class AbstractMicrobenchmarkBase {
         String className = getClass().getSimpleName();
 
         ChainedOptionsBuilder runnerOptions = new OptionsBuilder()
-            .include(".*" + className + ".*")
+            .include(".*\\." + className + "\\..*")
             .jvmArgs(jvmArgs());
 
         if (getWarmupIterations() > 0) {

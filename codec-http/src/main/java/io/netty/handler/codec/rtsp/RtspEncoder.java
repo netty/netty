@@ -24,7 +24,6 @@ import io.netty.handler.codec.http.HttpObjectEncoder;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.StringUtil;
 
 import static io.netty.handler.codec.http.HttpConstants.*;
 
@@ -61,8 +60,7 @@ public class RtspEncoder extends HttpObjectEncoder<HttpMessage> {
             buf.writeCharSequence(response.status().reasonPhrase(), CharsetUtil.US_ASCII);
             ByteBufUtil.writeShortBE(buf, CRLF_SHORT);
         } else {
-            throw new UnsupportedMessageTypeException("Unsupported type "
-                                + StringUtil.simpleClassName(message));
+            throw new UnsupportedMessageTypeException(message, HttpRequest.class, HttpResponse.class);
         }
     }
 }

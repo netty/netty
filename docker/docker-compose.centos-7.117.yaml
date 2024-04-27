@@ -6,7 +6,7 @@ services:
     image: netty:centos-7-1.17
     build:
       args:
-        java_version : "17.0.9-zulu"
+        java_version : "17.0.10-zulu"
 
   build:
     image: netty:centos-7-1.17
@@ -19,6 +19,9 @@ services:
 
   build-leak-boringssl-static:
     image: netty:centos-7-1.17
+
+  build-boringssl-snapshot:
+    image: netty:centos-6-1.17
 
   shell:
     image: netty:centos-7-1.17

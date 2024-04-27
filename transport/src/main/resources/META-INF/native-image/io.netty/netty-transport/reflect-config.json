@@ -6,6 +6,12 @@
       ]
     },
     {
+      "name": "io.netty.channel.socket.nio.NioSocketChannel",
+      "methods": [
+        { "name": "<init>", "parameterTypes": [] }
+      ]
+    },
+    {
       "name": "sun.nio.ch.SelectorImpl",
       "fields": [
         { "name": "selectedKeys",  "allowUnsafeAccess" : true},
