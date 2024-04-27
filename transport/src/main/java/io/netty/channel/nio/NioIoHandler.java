@@ -364,6 +364,19 @@ public final class NioIoHandler implements IoHandler {
                 needsToSelectAgain = true;
             }
         }
+
+        void close() {
+            cancel();
+            try {
+                handle.close();
+            } catch (Exception e) {
+                logger.debug("Exception during closing " + handle, e);
+            }
+        }
+
+        void handle(int ready) {
+            handle.handle(this, NioIoOpt.valueOf(ready));
+        }
     }
 
     @Override
@@ -556,7 +569,7 @@ public final class NioIoHandler implements IoHandler {
             }
             return;
         }
-        registration.handle.handle(registration, NioIoOpt.valueOf(k.readyOps()));
+        registration.handle(k.readyOps());
     }
 
     @Override
@@ -570,12 +583,7 @@ public final class NioIoHandler implements IoHandler {
         }
 
         for (DefaultNioRegistration reg: registrations) {
-            reg.cancel();
-            try {
-                reg.handle.close();
-            } catch (Exception e) {
-                logger.debug("Exception during closing " + reg.handle, e);
-            }
+            reg.close();
         }
     }
 

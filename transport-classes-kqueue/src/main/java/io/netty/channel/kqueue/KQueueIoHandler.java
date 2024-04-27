@@ -69,7 +69,6 @@ final class KQueueIoHandler implements IoHandler {
     private final FileDescriptor kqueueFd;
     private final KQueueEventArray changeList;
     private final KQueueEventArray eventList;
-    private final KQueueEventIoOpt[] eventIoOpts;
     private final SelectStrategy selectStrategy;
     private final IovArray iovArray = new IovArray();
     private final IntSupplier selectNowSupplier = new IntSupplier() {
@@ -116,11 +115,6 @@ final class KQueueIoHandler implements IoHandler {
         }
         this.changeList = new KQueueEventArray(maxEvents);
         this.eventList = new KQueueEventArray(maxEvents);
-        // Pre-create the KQueueEventIoOpt array to reuse these and so reduce object creation.
-        this.eventIoOpts = new KQueueEventIoOpt[maxEvents];
-        for (int i = 0; i < eventIoOpts.length; i++) {
-            eventIoOpts[i] = new KQueueEventIoOpt();
-        }
         int result = Native.keventAddUserEvent(kqueueFd.intValue(), KQUEUE_WAKE_UP_IDENT);
         if (result < 0) {
             destroy();
@@ -195,9 +189,7 @@ final class KQueueIoHandler implements IoHandler {
                 logger.warn("events[{}]=[{}, {}] had no registration!", i, ident, filter);
                 continue;
             }
-            KQueueEventIoOpt eventIoOpt = eventIoOpts[i];
-            eventIoOpt.update(ident, filter, flags, eventList.fflags(i), eventList.data(i));
-            registration.handle.handle(registration, eventIoOpt);
+            registration.handle(ident, filter, flags, eventList.fflags(i), eventList.data(i));
         }
     }
 
@@ -247,7 +239,7 @@ final class KQueueIoHandler implements IoHandler {
                     if (wakenUp == 1) {
                         wakeup();
                     }
-                    // fallthrough
+                    // fall-through
                 default:
             }
 
@@ -313,12 +305,7 @@ final class KQueueIoHandler implements IoHandler {
         DefaultKqueueIoRegistration[] copy = registrations.values().toArray(new DefaultKqueueIoRegistration[0]);
 
         for (DefaultKqueueIoRegistration reg: copy) {
-            reg.cancel();
-            try {
-                reg.handle.close();
-            } catch (Exception e) {
-                logger.debug("Exception during closing " + reg.handle, e);
-            }
+            reg.close();
         }
     }
 
@@ -381,6 +368,8 @@ final class KQueueIoHandler implements IoHandler {
     }
 
     private final class DefaultKqueueIoRegistration extends AtomicBoolean implements KQueueInternalIoRegistration {
+        private final KQueueEventIoOpt readyEventIoOpt = new KQueueEventIoOpt();;
+
         final KQueueIoHandle handle;
 
         private final IoEventLoop eventLoop;
@@ -408,6 +397,11 @@ final class KQueueIoHandler implements IoHandler {
         @Override
         public IovArray cleanArray() {
             return KQueueIoHandler.this.cleanArray();
+        }
+
+        void handle(int ident, short filter, short flags, int fflags, long data) {
+            readyEventIoOpt.update(ident, filter, flags, fflags, data);
+            handle.handle(this, readyEventIoOpt);
         }
 
         private void evSet(short filter, short flags, int fflags) {
@@ -441,6 +435,15 @@ final class KQueueIoHandler implements IoHandler {
                 } else if (old.handle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe) {
                     numChannels--;
                 }
+            }
+        }
+
+        void close() {
+            cancel();
+            try {
+                handle.close();
+            } catch (Exception e) {
+                logger.debug("Exception during closing " + handle, e);
             }
         }
     }

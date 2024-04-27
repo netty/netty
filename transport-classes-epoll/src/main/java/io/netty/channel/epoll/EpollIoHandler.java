@@ -235,16 +235,7 @@ public class EpollIoHandler implements IoHandler {
         DefaultEpollIoRegistration[] copy = registrations.values().toArray(new DefaultEpollIoRegistration[0]);
 
         for (DefaultEpollIoRegistration reg: copy) {
-            try {
-                reg.cancel();
-            } catch (Exception e) {
-                logger.debug("Exception during canceling " + reg, e);
-            }
-            try {
-                reg.handle.close();
-            } catch (Exception e) {
-                logger.debug("Exception during closing " + reg.handle, e);
-            }
+            reg.close();
         }
     }
 
@@ -343,6 +334,23 @@ public class EpollIoHandler implements IoHandler {
                     numChannels--;
                 }
             }
+        }
+
+        void close() {
+            try {
+                cancel();
+            } catch (Exception e) {
+                logger.debug("Exception during canceling " + this, e);
+            }
+            try {
+                handle.close();
+            } catch (Exception e) {
+                logger.debug("Exception during closing " + handle, e);
+            }
+        }
+
+        void handle(long ev) {
+            handle.handle(this, EpollIoOpt.valueOf((int) ev));
         }
     }
 
@@ -526,7 +534,7 @@ public class EpollIoHandler implements IoHandler {
 
                 DefaultEpollIoRegistration registration = registrations.get(fd);
                 if (registration != null) {
-                    registration.handle.handle(registration, EpollIoOpt.valueOf((int) ev));
+                    registration.handle(ev);
                 } else {
                     // We received an event for an fd which we not use anymore. Remove it from the epoll_event set.
                     try {
