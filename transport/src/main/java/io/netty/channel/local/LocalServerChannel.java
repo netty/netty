@@ -111,7 +111,13 @@ public class LocalServerChannel extends AbstractServerChannel {
                 }
             });
         } else {
-            ((LocalServerUnsafe) unsafe()).registerNow();
+            try {
+                ((LocalServerUnsafe) unsafe()).registerNow();
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+                return;
+            }
+            promise.setSuccess();
         }
     }
 
