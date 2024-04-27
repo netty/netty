@@ -41,6 +41,7 @@ import java.nio.ReadOnlyBufferException;
 import java.security.AlgorithmConstraints;
 import java.security.Principal;
 import java.security.cert.Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -52,6 +53,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -190,9 +193,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private Object algorithmConstraints;
     private List<String> sniHostNames;
 
-    // Mark as volatile as accessed by checkSniHostnameMatch(...) and also not specify the SNIMatcher type to allow us
-    // using it with java7.
-    private volatile Collection<?> matchers;
+    // Mark as volatile as accessed by checkSniHostnameMatch(...).
+    private volatile Collection<SNIMatcher> matchers;
 
     // SSL Engine status variables
     private boolean isInboundDone;
@@ -242,7 +244,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             @Override
             public List<SNIServerName> getRequestedServerNames() {
                 if (clientMode) {
-                    return Java8SslUtils.getSniHostNames(sniHostNames);
+                    return getSniHostNames(sniHostNames);
                 } else {
                     synchronized (ReferenceCountedOpenSslEngine.this) {
                         if (requestedServerNames == null) {
@@ -255,9 +257,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                 } else {
                                     // Convert to bytes as we do not want to do any strict validation of the
                                     // SNIHostName while creating it.
-                                    requestedServerNames =
-                                            Java8SslUtils.getSniHostName(
-                                                    SSL.getSniHostname(ssl).getBytes(CharsetUtil.UTF_8));
+                                    byte[] hostname = SSL.getSniHostname(ssl).getBytes(CharsetUtil.UTF_8);
+                                    requestedServerNames = hostname == null || hostname.length == 0 ?
+                                            Collections.emptyList() :
+                                                    Collections.singletonList(new SNIHostName(hostname));
                                 }
                             }
                         }
@@ -338,7 +341,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // See https://github.com/netty/netty/issues/4746
                 if (clientMode && SslUtils.isValidHostNameForSNI(peerHost)) {
                     // We do some extra validation to ensure we can construct the SNIHostName later again.
-                    if (Java8SslUtils.isValidHostNameForSNI(peerHost)) {
+                    if (isValidHostNameForSNI(peerHost)) {
                         SSL.setTlsExtHostName(ssl, peerHost);
                         sniHostNames = Collections.singletonList(peerHost);
                     }
@@ -394,6 +397,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
         // the ResourceLeakDetector.
         leak = leakDetection ? leakDetector.track(this) : null;
+    }
+
+    private static boolean isValidHostNameForSNI(String hostname) {
+        try {
+            new SNIHostName(hostname);
+            return true;
+        } catch (IllegalArgumentException illegal) {
+            return false;
+        }
     }
 
     final synchronized String[] authMethods() {
@@ -2178,15 +2190,25 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         sslParameters.setEndpointIdentificationAlgorithm(endPointIdentificationAlgorithm);
         sslParameters.setAlgorithmConstraints((AlgorithmConstraints) algorithmConstraints);
         if (sniHostNames != null) {
-            Java8SslUtils.setSniHostNames(sslParameters, sniHostNames);
+            sslParameters.setServerNames(getSniHostNames(sniHostNames));
         }
         if (!isDestroyed()) {
-            Java8SslUtils.setUseCipherSuitesOrder(
-                    sslParameters, (SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
+            sslParameters.setUseCipherSuitesOrder((SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
         }
 
-        Java8SslUtils.setSNIMatchers(sslParameters, matchers);
+        sslParameters.setSNIMatchers(matchers);
         return sslParameters;
+    }
+
+    private static List<SNIServerName> getSniHostNames(List<String> names) {
+        if (names == null || names.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<SNIServerName> sniServerNames = new ArrayList<SNIServerName>(names.size());
+        for (String name: names) {
+            sniServerNames.add(new SNIHostName(name.getBytes(CharsetUtil.UTF_8)));
+        }
+        return sniServerNames;
     }
 
     @Override
@@ -2198,13 +2220,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         boolean isDestroyed = isDestroyed();
         if (!isDestroyed) {
             if (clientMode) {
-                final List<String> sniHostNames = Java8SslUtils.getSniHostNames(sslParameters);
+                final List<String> sniHostNames = getSniHostNames(sslParameters);
                 for (String name: sniHostNames) {
                     SSL.setTlsExtHostName(ssl, name);
                 }
                 this.sniHostNames = sniHostNames;
             }
-            if (Java8SslUtils.getUseCipherSuitesOrder(sslParameters)) {
+            if (sslParameters.getUseCipherSuitesOrder()) {
                 SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
             } else {
                 SSL.clearOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
@@ -2225,6 +2247,24 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         super.setSSLParameters(sslParameters);
     }
 
+    private static List<String> getSniHostNames(SSLParameters sslParameters) {
+        List<SNIServerName> names = sslParameters.getServerNames();
+        if (names == null || names.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<String> strings = new ArrayList<String>(names.size());
+
+        for (SNIServerName serverName : names) {
+            if (serverName instanceof SNIHostName) {
+                strings.add(((SNIHostName) serverName).getAsciiName());
+            } else {
+                throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
+                        + " instances are supported, but found: " + serverName);
+            }
+        }
+        return strings;
+    }
+
     private static boolean isEndPointVerificationEnabled(String endPointIdentificationAlgorithm) {
         return endPointIdentificationAlgorithm != null && !endPointIdentificationAlgorithm.isEmpty();
     }
@@ -2234,7 +2274,18 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     final boolean checkSniHostnameMatch(byte[] hostname) {
-        return Java8SslUtils.checkSniHostnameMatch(matchers, hostname);
+        Collection<SNIMatcher> matchers = this.matchers;
+        if (matchers != null && !matchers.isEmpty()) {
+            SNIHostName name = new SNIHostName(hostname);
+            for (SNIMatcher matcher : matchers) {
+                // type 0 is for hostname
+                if (matcher.getType() == 0 && matcher.matches(name)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -2265,14 +2316,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             case ALPN:
                 applicationProtocol = SSL.getAlpnSelected(ssl);
                 if (applicationProtocol != null) {
-                    ReferenceCountedOpenSslEngine.this.applicationProtocol = selectApplicationProtocol(
+                    this.applicationProtocol = selectApplicationProtocol(
                             protocols, behavior, applicationProtocol);
                 }
                 break;
             case NPN:
                 applicationProtocol = SSL.getNextProtoNegotiated(ssl);
                 if (applicationProtocol != null) {
-                    ReferenceCountedOpenSslEngine.this.applicationProtocol = selectApplicationProtocol(
+                    this.applicationProtocol = selectApplicationProtocol(
                             protocols, behavior, applicationProtocol);
                 }
                 break;
@@ -2282,7 +2333,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     applicationProtocol = SSL.getNextProtoNegotiated(ssl);
                 }
                 if (applicationProtocol != null) {
-                    ReferenceCountedOpenSslEngine.this.applicationProtocol = selectApplicationProtocol(
+                    this.applicationProtocol = selectApplicationProtocol(
                             protocols, behavior, applicationProtocol);
                 }
                 break;
@@ -2291,9 +2342,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
-    private String selectApplicationProtocol(List<String> protocols,
-                                             ApplicationProtocolConfig.SelectedListenerFailureBehavior behavior,
-                                             String applicationProtocol) throws SSLException {
+    private static String selectApplicationProtocol(List<String> protocols,
+                                                    ApplicationProtocolConfig.SelectedListenerFailureBehavior behavior,
+                                                    String applicationProtocol) throws SSLException {
         if (behavior == ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT) {
             return applicationProtocol;
         } else {

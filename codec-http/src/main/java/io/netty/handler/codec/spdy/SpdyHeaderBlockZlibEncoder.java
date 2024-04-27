@@ -75,8 +75,7 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
         byte[] out = compressed.array();
         int off = compressed.arrayOffset() + compressed.writerIndex();
         int toWrite = compressed.writableBytes();
-        final int numBytes;
-        numBytes = compressor.deflate(out, off, toWrite, Deflater.SYNC_FLUSH);
+        final int numBytes = compressor.deflate(out, off, toWrite, Deflater.SYNC_FLUSH);
         compressed.writerIndex(compressed.writerIndex() + numBytes);
         return numBytes == toWrite;
     }
