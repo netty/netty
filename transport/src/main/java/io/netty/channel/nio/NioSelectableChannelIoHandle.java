@@ -31,15 +31,9 @@ import java.nio.channels.SelectionKey;
  */
 public abstract class NioSelectableChannelIoHandle<S extends SelectableChannel> implements IoHandle, NioIoHandle {
     private final S channel;
-    final int interestOps;
 
-    public NioSelectableChannelIoHandle(S channel, int interestOps) {
-        if ((interestOps & ~channel.validOps()) != 0) {
-            throw new IllegalArgumentException(
-                    "invalid interestOps: " + interestOps + "(validOps: " + channel.validOps() + ')');
-        }
+    public NioSelectableChannelIoHandle(S channel) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
-        this.interestOps = interestOps;
     }
 
     @Override
