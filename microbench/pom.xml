@@ -38,7 +38,6 @@
     <!-- This only be set when run on mac as on other platforms we just want to include the jar without native
          code -->
     <kqueue.classifier />
-    <japicmp.skip>true</japicmp.skip>
     <revapi.skip>true</revapi.skip>
     <javaModuleName>io.netty.microbench</javaModuleName>
   </properties>

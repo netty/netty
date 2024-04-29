@@ -29,7 +29,6 @@
   <name>Netty/Testsuite/Http2</name>
 
   <properties>
-    <japicmp.skip>true</japicmp.skip>
     <revapi.skip>true</revapi.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
