@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -300,9 +300,9 @@ public final class NioIoHandler implements IoHandler {
         }
     }
 
-    private static NioHandle nioHandle(IoHandle handle) {
-        if (handle instanceof NioHandle) {
-            return (NioHandle) handle;
+    private static NioIoHandle nioHandle(IoHandle handle) {
+        if (handle instanceof NioIoHandle) {
+            return (NioIoHandle) handle;
         }
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
@@ -315,15 +315,15 @@ public final class NioIoHandler implements IoHandler {
     }
 
     final class DefaultNioRegistration implements NioIoRegistration {
-        private final NioHandle handle;
+        private final NioIoHandle handle;
         private volatile SelectionKey key;
 
-        DefaultNioRegistration(NioHandle handle, NioIoOpt initialOpt, Selector selector) throws IOException {
+        DefaultNioRegistration(NioIoHandle handle, NioIoOpt initialOpt, Selector selector) throws IOException {
             this.handle = handle;
             key = handle.selectableChannel().register(selector, initialOpt.value, this);
         }
 
-        NioHandle handle() {
+        NioIoHandle handle() {
             return handle;
         }
 
@@ -386,7 +386,7 @@ public final class NioIoHandler implements IoHandler {
     @Override
     public NioIoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOpt initialOpt)
             throws Exception {
-        NioHandle nioHandle = nioHandle(handle);
+        NioIoHandle nioHandle = nioHandle(handle);
         NioIoOpt opt = cast(initialOpt);
         boolean selected = false;
         for (;;) {
@@ -592,15 +592,15 @@ public final class NioIoHandler implements IoHandler {
     }
 
     @Override
-    public void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && wakenUp.compareAndSet(false, true)) {
+    public void wakeup(IoEventLoop eventLoop) {
+        if (!eventLoop.inEventLoop() && wakenUp.compareAndSet(false, true)) {
             selector.wakeup();
         }
     }
 
     @Override
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
-        return NioHandle.class.isAssignableFrom(handleType);
+        return NioIoHandle.class.isAssignableFrom(handleType);
     }
 
     Selector unwrappedSelector() {

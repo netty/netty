@@ -86,6 +86,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
         this(parent, ch, NioIoOpt.valueOf(readInterestOp));
     }
+
     protected AbstractNioChannel(Channel parent, SelectableChannel ch, NioIoOpt readOpt) {
         super(parent);
         this.ch = ch;
@@ -223,7 +224,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         void forceFlush();
     }
 
-    protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe, NioHandle {
+    protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe, NioIoHandle {
         @Override
         public void close() {
             close(voidPromise());

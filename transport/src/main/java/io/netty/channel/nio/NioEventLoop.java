@@ -123,7 +123,7 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
     private void register0(final SelectableChannel ch, int interestOps, final NioTask<SelectableChannel> task) {
         try {
             register(
-                    new NioSelectableChannelHandle<SelectableChannel>(ch, interestOps) {
+                    new NioSelectableChannelIoHandle<SelectableChannel>(ch, interestOps) {
                         @Override
                         protected void handle(SelectableChannel channel, SelectionKey key) {
                             try {
@@ -241,7 +241,7 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
                     if (key.isValid()) {
                         Object attachment = key.attachment();
                         if (attachment instanceof NioIoHandler.DefaultNioRegistration) {
-                            NioHandle handle =  ((NioIoHandler.DefaultNioRegistration) attachment).handle();
+                            NioIoHandle handle =  ((NioIoHandler.DefaultNioRegistration) attachment).handle();
                             if (handle instanceof AbstractNioChannel.AbstractNioUnsafe) {
                                 return ((AbstractNioChannel.AbstractNioUnsafe) handle).channel();
                             }

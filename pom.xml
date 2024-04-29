@@ -1450,13 +1450,6 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
-                  <code>java.class.nonPublicPartOfAPI</code>
-                  <new>interface io.netty.channel.kqueue.KQueueIoRegistration</new>
-                  <justification>Acceptable incompatibility for required change</justification>
-                </item>
-
-                <item>
-                  <ignore>true</ignore>
                   <code>java.method.nowFinal</code>
                   <old>method void io.netty.channel.epoll.EpollEventLoop::cleanup()</old>
                   <new>method void io.netty.channel.SingleThreadIoEventLoop::cleanup() @ io.netty.channel.epoll.EpollEventLoop</new>

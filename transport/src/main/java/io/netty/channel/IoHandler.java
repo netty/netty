@@ -17,7 +17,7 @@ package io.netty.channel;
 
 /**
  * Handles IO dispatching for an {@link IoEventLoop}
- * All operations except {@link #wakeup(boolean)} and {@link #isCompatible(Class)} <strong>MUST</strong> be executed
+ * All operations except {@link #wakeup(IoEventLoop)} and {@link #isCompatible(Class)} <strong>MUST</strong> be executed
  * on the {@link IoEventLoop} thread and should never be called from the user-directly.
  */
 public interface IoHandler {
@@ -57,7 +57,7 @@ public interface IoHandler {
      * Wakeup the {@link IoHandler}, which means if any operation blocks it should be unblocked and
      * return as soon as possible.
      */
-    void wakeup(boolean inEventLoop);
+    void wakeup(IoEventLoop eventLoop);
 
     /**
      * Returns {@code true} if the given type is compatible with this {@link IoHandler} and so can be registered,

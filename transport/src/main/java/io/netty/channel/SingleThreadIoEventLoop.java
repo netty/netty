@@ -202,7 +202,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     @Override
     protected final void wakeup(boolean inEventLoop) {
-        ioHandler.wakeup(inEventLoop);
+        ioHandler.wakeup(this);
     }
 
     @Override

@@ -22,7 +22,7 @@ import java.nio.channels.SelectableChannel;
 /**
  * {@link IoHandle} subtype for NIO based implementations that will work with {@link NioIoHandler}.
  */
-public interface NioHandle extends IoHandle {
+public interface NioIoHandle extends IoHandle {
 
     /**
      * The underlying {@link SelectableChannel}.

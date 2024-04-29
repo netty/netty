@@ -205,7 +205,6 @@ public class EpollChannelConfig extends DefaultChannelConfig {
                 epollChannel.initialOpts = initial.with(EpollIoOpt.EPOLLET);
                 break;
             case LEVEL_TRIGGERED:
-                checkChannelNotRegistered();
                 epollChannel.initialOpts = initial.without(EpollIoOpt.EPOLLET);
                 break;
             default:

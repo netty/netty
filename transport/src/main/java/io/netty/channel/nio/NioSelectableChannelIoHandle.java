@@ -29,11 +29,11 @@ import java.nio.channels.SelectionKey;
  * {@link IoHandle} can be used together with {@link NioIoHandler} and so have events dispatched for
  * the {@link SelectableChannel}.
  */
-public abstract class NioSelectableChannelHandle<S extends SelectableChannel> implements IoHandle, NioHandle {
+public abstract class NioSelectableChannelIoHandle<S extends SelectableChannel> implements IoHandle, NioIoHandle {
     private final S channel;
     final int interestOps;
 
-    public NioSelectableChannelHandle(S channel, int interestOps) {
+    public NioSelectableChannelIoHandle(S channel, int interestOps) {
         if ((interestOps & ~channel.validOps()) != 0) {
             throw new IllegalArgumentException(
                     "invalid interestOps: " + interestOps + "(validOps: " + channel.validOps() + ')');
@@ -45,7 +45,7 @@ public abstract class NioSelectableChannelHandle<S extends SelectableChannel> im
     @Override
     public void handle(IoRegistration registration, IoOpt ioEvent) {
         SelectionKey key = ((NioIoRegistration) registration).selectionKey();
-        NioSelectableChannelHandle.this.handle(channel, key);
+        NioSelectableChannelIoHandle.this.handle(channel, key);
     }
 
     @Override

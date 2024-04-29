@@ -24,7 +24,6 @@ import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOpt;
-import io.netty.channel.IoRegistration;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.unix.FileDescriptor;
@@ -131,8 +130,8 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     @Override
-    public void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
+    public void wakeup(IoEventLoop eventLoop) {
+        if (!eventLoop.inEventLoop() && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
             wakeup();
         }
     }

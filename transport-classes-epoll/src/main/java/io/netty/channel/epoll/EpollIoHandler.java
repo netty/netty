@@ -220,8 +220,8 @@ public class EpollIoHandler implements IoHandler {
     }
 
     @Override
-    public void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && nextWakeupNanos.getAndSet(AWAKE) != AWAKE) {
+    public void wakeup(IoEventLoop eventLoop) {
+        if (!eventLoop.inEventLoop() && nextWakeupNanos.getAndSet(AWAKE) != AWAKE) {
             // write to the evfd which will then wake-up epoll_wait(...)
             Native.eventFdWrite(eventFd.intValue(), 1L);
         }
