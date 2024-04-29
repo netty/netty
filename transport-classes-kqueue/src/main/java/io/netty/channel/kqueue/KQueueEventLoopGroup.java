@@ -15,23 +15,36 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopTaskQueueFactory;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.IoEventLoop;
+import io.netty.channel.IoHandler;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.util.concurrent.EventExecutor;
+import io.netty.channel.SingleThreadIoEventLoop;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Iterator;
+import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
+
+/**
+ * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link KQueueIoHandler}.
+ */
+@Deprecated
 @UnstableApi
-public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
+public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
 
     // This does not use static by design to ensure the class can be loaded and only do the check when its actually
     // instanced.
@@ -39,6 +52,9 @@ public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
         // Ensure JNI is initialized by the time this class is loaded by this time!
         KQueue.ensureAvailability();
     }
+
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(KQueueEventLoopGroup.class);
+
     /**
      * Create a new instance using the default number of threads and the default {@link ThreadFactory}.
      */
@@ -111,29 +127,33 @@ public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
     @Deprecated
     public KQueueEventLoopGroup(int nThreads, ThreadFactory threadFactory, int maxEventsAtOnce,
                                SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, threadFactory, maxEventsAtOnce, selectStrategyFactory, RejectedExecutionHandlers.reject());
+        super(nThreads, threadFactory, KQueueIoHandler.newFactory(maxEventsAtOnce, selectStrategyFactory),
+                RejectedExecutionHandlers.reject());
     }
 
     public KQueueEventLoopGroup(int nThreads, Executor executor, SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, executor, 0, selectStrategyFactory, RejectedExecutionHandlers.reject());
+        super(nThreads, executor, KQueueIoHandler.newFactory(0, selectStrategyFactory),
+                RejectedExecutionHandlers.reject());
     }
 
     public KQueueEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
                                SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, executor, chooserFactory, 0, selectStrategyFactory, RejectedExecutionHandlers.reject());
+        super(nThreads, executor, KQueueIoHandler.newFactory(0, selectStrategyFactory),
+                chooserFactory, RejectedExecutionHandlers.reject());
     }
 
     public KQueueEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
                                SelectStrategyFactory selectStrategyFactory,
                                RejectedExecutionHandler rejectedExecutionHandler) {
-        super(nThreads, executor, chooserFactory, 0, selectStrategyFactory, rejectedExecutionHandler);
+        super(nThreads, executor,  KQueueIoHandler.newFactory(0, selectStrategyFactory), chooserFactory,
+                rejectedExecutionHandler);
     }
 
     public KQueueEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
                                 SelectStrategyFactory selectStrategyFactory,
                                 RejectedExecutionHandler rejectedExecutionHandler,
                                 EventLoopTaskQueueFactory queueFactory) {
-        super(nThreads, executor, chooserFactory, 0, selectStrategyFactory,
+        super(nThreads, executor, KQueueIoHandler.newFactory(0, selectStrategyFactory), chooserFactory,
                 rejectedExecutionHandler, queueFactory);
     }
 
@@ -155,37 +175,72 @@ public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
                                RejectedExecutionHandler rejectedExecutionHandler,
                                EventLoopTaskQueueFactory taskQueueFactory,
                                EventLoopTaskQueueFactory tailTaskQueueFactory) {
-        super(nThreads, executor, chooserFactory, 0, selectStrategyFactory, rejectedExecutionHandler, taskQueueFactory,
-                tailTaskQueueFactory);
+        super(nThreads, executor, KQueueIoHandler.newFactory(0, selectStrategyFactory), chooserFactory,
+                rejectedExecutionHandler, taskQueueFactory, tailTaskQueueFactory);
     }
 
     /**
-     * Sets the percentage of the desired amount of time spent for I/O in the child event loops.  The default value is
-     * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
+     * This method is a no-op.
+     *
+     * @deprecated
      */
+    @Deprecated
     public void setIoRatio(int ioRatio) {
-        for (EventExecutor e: this) {
-            ((KQueueEventLoop) e).setIoRatio(ioRatio);
-        }
+        LOGGER.debug("EpollEventLoopGroup.setIoRatio(int) logic was removed, this is a no-op");
     }
 
     @Override
-    protected EventLoop newChild(Executor executor, Object... args) throws Exception {
-        Integer maxEvents = (Integer) args[0];
-        SelectStrategyFactory selectStrategyFactory = (SelectStrategyFactory) args[1];
-        RejectedExecutionHandler rejectedExecutionHandler = (RejectedExecutionHandler) args[2];
+    protected IoEventLoop newChild(Executor executor, IoHandler handler, Object... args) {
+        RejectedExecutionHandler rejectedExecutionHandler = null;
         EventLoopTaskQueueFactory taskQueueFactory = null;
         EventLoopTaskQueueFactory tailTaskQueueFactory = null;
-
         int argsLength = args.length;
-        if (argsLength > 3) {
-            taskQueueFactory = (EventLoopTaskQueueFactory) args[3];
+        if (argsLength > 0) {
+            rejectedExecutionHandler = (RejectedExecutionHandler) args[0];
         }
-        if (argsLength > 4) {
-            tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[4];
+        if (argsLength > 1) {
+            taskQueueFactory = (EventLoopTaskQueueFactory) args[2];
         }
-        return new KQueueEventLoop(this, executor, maxEvents,
-                selectStrategyFactory.newSelectStrategy(),
-                rejectedExecutionHandler, taskQueueFactory, tailTaskQueueFactory);
+        if (argsLength > 2) {
+            tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[1];
+        }
+        return new KQueueEventLoop(this, executor, handler,
+                KQueueEventLoop.newTaskQueue(taskQueueFactory),
+                KQueueEventLoop.newTaskQueue(tailTaskQueueFactory),
+                rejectedExecutionHandler);
+    }
+
+    private static final class KQueueEventLoop extends SingleThreadIoEventLoop {
+        KQueueEventLoop(IoEventLoopGroup parent, Executor executor, IoHandler ioHandler,
+                        Queue<Runnable> taskQueue, Queue<Runnable> tailTaskQueue,
+                        RejectedExecutionHandler rejectedExecutionHandler) {
+            super(parent, executor, ioHandler, taskQueue, tailTaskQueue, rejectedExecutionHandler);
+        }
+
+        static Queue<Runnable> newTaskQueue(
+                EventLoopTaskQueueFactory queueFactory) {
+            if (queueFactory == null) {
+                return newTaskQueue0(DEFAULT_MAX_PENDING_TASKS);
+            }
+            return queueFactory.newTaskQueue(DEFAULT_MAX_PENDING_TASKS);
+        }
+
+        private static Queue<Runnable> newTaskQueue0(int maxPendingTasks) {
+            // This event loop never calls takeTask()
+            return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
+                    : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
+        }
+
+        @Override
+        public int registeredChannels() {
+            assert inEventLoop();
+            return ((KQueueIoHandler) ioHandler()).numRegisteredChannels();
+        }
+
+        @Override
+        public Iterator<Channel> registeredChannelsIterator() {
+            assert inEventLoop();
+            return ((KQueueIoHandler) ioHandler()).registeredChannelsList().iterator();
+        }
     }
 }

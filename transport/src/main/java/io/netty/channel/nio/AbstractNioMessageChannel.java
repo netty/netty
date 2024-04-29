@@ -25,7 +25,6 @@ import io.netty.channel.ServerChannel;
 import java.io.IOException;
 import java.net.PortUnreachableException;
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +39,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
      */
     protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
         super(parent, ch, readInterestOp);
+    }
+
+    protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, NioIoOpt readOpt) {
+        super(parent, ch, readOpt);
     }
 
     @Override
@@ -128,8 +131,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        final SelectionKey key = selectionKey();
-        final int interestOps = key.interestOps();
+        final NioIoRegistration registration = registration();
+        final NioIoOpt opt = registration.interestOpt();
 
         int maxMessagesPerWrite = maxMessagesPerWrite();
         while (maxMessagesPerWrite > 0) {
@@ -163,14 +166,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         }
         if (in.isEmpty()) {
             // Wrote all messages.
-            if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-                key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-            }
+            registration.updateInterestOpt(opt.without(NioIoOpt.WRITE));
         } else {
             // Did not write all messages.
-            if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-                key.interestOps(interestOps | SelectionKey.OP_WRITE);
-            }
+            registration.updateInterestOpt(opt.with(NioIoOpt.WRITE));
         }
     }
 

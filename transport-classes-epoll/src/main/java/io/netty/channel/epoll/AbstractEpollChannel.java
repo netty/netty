@@ -30,6 +30,9 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoEventLoop;
+import io.netty.channel.IoOpt;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
@@ -66,21 +69,16 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private ChannelPromise connectPromise;
     private Future<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
-
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    protected int flags = Native.EPOLLET;
+    private EpollIoRegistration registration;
     boolean inputClosedSeenErrorOnRead;
     boolean epollInReadyRunnablePending;
-
+    volatile EpollIoOpt initialOpts;
     protected volatile boolean active;
 
-    AbstractEpollChannel(LinuxSocket fd) {
-        this(null, fd, false);
-    }
-
-    AbstractEpollChannel(Channel parent, LinuxSocket fd, boolean active) {
+    AbstractEpollChannel(Channel parent, LinuxSocket fd, boolean active, EpollIoOpt initialOpts) {
         super(parent);
         this.socket = checkNotNull(fd, "fd");
         this.active = active;
@@ -90,9 +88,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             this.local = fd.localAddress();
             this.remote = fd.remoteAddress();
         }
+        this.initialOpts = initialOpts;
     }
 
-    AbstractEpollChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
+    AbstractEpollChannel(Channel parent, LinuxSocket fd, SocketAddress remote, EpollIoOpt initialOpts) {
         super(parent);
         this.socket = checkNotNull(fd, "fd");
         this.active = true;
@@ -100,6 +99,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         // See https://github.com/netty/netty/issues/2359
         this.remote = remote;
         this.local = fd.localAddress();
+        this.initialOpts = initialOpts;
     }
 
     static boolean isSoErrorZero(Socket fd) {
@@ -111,21 +111,27 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     protected void setFlag(int flag) throws IOException {
-        if (!isFlagSet(flag)) {
-            flags |= flag;
-            modifyEvents();
+        if (isRegistered()) {
+            EpollIoRegistration registration = registration();
+            registration.updateInterestOpt(registration.interestOpt().with(EpollIoOpt.valueOf(flag)));
+        } else {
+            initialOpts = initialOpts.with(EpollIoOpt.valueOf(flag));
         }
     }
 
     void clearFlag(int flag) throws IOException {
-        if (isFlagSet(flag)) {
-            flags &= ~flag;
-            modifyEvents();
-        }
+        EpollIoRegistration registration = registration();
+        registration.updateInterestOpt(
+                registration.interestOpt().without(EpollIoOpt.valueOf(flag)));
+    }
+
+    protected final EpollIoRegistration registration() {
+        assert registration != null;
+        return registration;
     }
 
     boolean isFlagSet(int flag) {
-        return (flags & flag) != 0;
+        return (registration().interestOpt().value & flag) != 0;
     }
 
     @Override
@@ -203,22 +209,25 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EpollEventLoop;
-    }
-
-    @Override
     public boolean isOpen() {
         return socket.isOpen();
     }
 
     @Override
     protected void doDeregister() throws Exception {
-        ((EpollEventLoop) eventLoop()).remove(this);
+        EpollIoRegistration registration = this.registration;
+        if (registration != null) {
+            registration.cancel();
+        }
     }
 
     @Override
-    protected final void doBeginRead() throws Exception {
+    protected boolean isCompatible(EventLoop loop) {
+        return loop instanceof IoEventLoop && ((IoEventLoop) loop).isCompatible(AbstractEpollUnsafe.class);
+    }
+
+    @Override
+    protected void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
         final AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) unsafe();
         unsafe.readPending = true;
@@ -269,23 +278,24 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         } else  {
             // The EventLoop is not registered atm so just update the flags so the correct value
             // will be used once the channel is registered
-            flags &= ~Native.EPOLLIN;
-        }
-    }
-
-    private void modifyEvents() throws IOException {
-        if (isOpen() && isRegistered()) {
-            ((EpollEventLoop) eventLoop()).modify(this);
+            initialOpts = initialOpts.without(EpollIoOpt.EPOLLIN);
         }
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected void doRegister(ChannelPromise promise) {
         // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
         // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
         epollInReadyRunnablePending = false;
-        ((EpollEventLoop) eventLoop()).add(this);
+        ((IoEventLoop) eventLoop()).register((AbstractEpollUnsafe) unsafe(), initialOpts).addListener(f -> {
+            if (f.isSuccess()) {
+                registration = (EpollIoRegistration) f.getNow();
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
+            }
+        });
     }
 
     @Override
@@ -394,7 +404,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         if (data.nioBufferCount() > 1) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
+            IovArray array = registration().ioHandler().cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
@@ -414,7 +424,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
     }
 
-    protected abstract class AbstractEpollUnsafe extends AbstractUnsafe {
+    protected abstract class AbstractEpollUnsafe extends AbstractUnsafe implements EpollIoHandle {
         boolean readPending;
         boolean maybeMoreDataToRead;
         private EpollRecvByteAllocatorHandle allocHandle;
@@ -425,6 +435,60 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 epollInReady();
             }
         };
+
+        Channel channel() {
+            return AbstractEpollChannel.this;
+        }
+
+        @Override
+        public FileDescriptor fd() {
+            return AbstractEpollChannel.this.fd();
+        }
+
+        @Override
+        public void close() {
+            close(voidPromise());
+        }
+
+        @Override
+        public void handle(IoRegistration registration, IoOpt readyOpt) {
+            EpollIoOpt epollOpt = (EpollIoOpt)  readyOpt;
+
+            // Don't change the ordering of processing EPOLLOUT | EPOLLRDHUP / EPOLLIN if you're not 100%
+            // sure about it!
+            // Re-ordering can easily introduce bugs and bad side-effects, as we found out painfully in the
+            // past.
+
+            // First check for EPOLLOUT as we may need to fail the connect ChannelPromise before try
+            // to read from the file descriptor.
+            // See https://github.com/netty/netty/issues/3785
+            //
+            // It is possible for an EPOLLOUT or EPOLLERR to be generated when a connection is refused.
+            // In either case epollOutReady() will do the correct thing (finish connecting, or fail
+            // the connection).
+            // See https://github.com/netty/netty/issues/3848
+            if (epollOpt.contains(EpollIoOpt.EPOLLERR) || epollOpt.contains(EpollIoOpt.EPOLLOUT)) {
+                // Force flush of data as the epoll is writable again
+                epollOutReady();
+            }
+
+            // Check EPOLLIN before EPOLLRDHUP to ensure all data is read before shutting down the input.
+            // See https://github.com/netty/netty/issues/4317.
+            //
+            // If EPOLLIN or EPOLLERR was received and the channel is still open call epollInReady(). This will
+            // try to read from the underlying file descriptor and so notify the user about the error.
+            if (epollOpt.contains(EpollIoOpt.EPOLLERR) || epollOpt.contains(EpollIoOpt.EPOLLIN)) {
+                // The Channel is still open and there is something to read. Do it now.
+                epollInReady();
+            }
+
+            // Check if EPOLLRDHUP was set, this will notify us for connection-reset in which case
+            // we may close the channel directly or try to read more data depending on the state of the
+            // Channel and als depending on the AbstractEpollChannel subtype.
+            if (epollOpt.contains(EpollIoOpt.EPOLLRDHUP)) {
+                epollRdHupReady();
+            }
+        }
 
         /**
          * Called once EPOLLIN event is ready to be processed
@@ -575,7 +639,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             assert eventLoop().inEventLoop();
             try {
                 readPending = false;
-                clearFlag(Native.EPOLLIN);
+                EpollIoRegistration registration = registration();
+                registration.updateInterestOpt(registration.interestOpt().without(EpollIoOpt.EPOLLIN));
             } catch (IOException e) {
                 // When this happens there is something completely wrong with either the filedescriptor or epoll,
                 // so fire the exception through the pipeline and close the Channel.

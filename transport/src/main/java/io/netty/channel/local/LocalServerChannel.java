@@ -18,8 +18,13 @@ package io.netty.channel.local;
 import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoEventLoop;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.IoOpt;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
@@ -45,6 +50,8 @@ public class LocalServerChannel extends AbstractServerChannel {
             unsafe().close(unsafe().voidPromise());
         }
     };
+
+    private IoRegistration registration;
 
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
@@ -81,7 +88,8 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SingleThreadEventLoop;
+        return loop instanceof SingleThreadEventLoop ||
+                (loop instanceof IoEventLoopGroup && ((IoEventLoopGroup) loop).isCompatible(LocalServerUnsafe.class));
     }
 
     @Override
@@ -90,8 +98,27 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doRegister() throws Exception {
-        ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+    protected void doRegister(ChannelPromise promise) {
+        EventLoop loop = eventLoop();
+        if (loop instanceof IoEventLoop) {
+            assert registration == null;
+            ((IoEventLoop) loop).register((LocalServerUnsafe) unsafe(), LocalIoOpt.DEFAULT).addListener(f -> {
+                if (f.isSuccess()) {
+                    registration = (IoRegistration) f.getNow();
+                    promise.setSuccess();
+                } else {
+                    promise.setFailure(f.cause());
+                }
+            });
+        } else {
+            try {
+                ((LocalServerUnsafe) unsafe()).registerNow();
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+                return;
+            }
+            promise.setSuccess();
+        }
     }
 
     @Override
@@ -114,7 +141,16 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+        EventLoop loop = eventLoop();
+        if (loop instanceof IoEventLoop) {
+            IoRegistration registration = this.registration;
+            if (registration != null) {
+                this.registration = null;
+                registration.cancel();
+            }
+        } else {
+            ((LocalServerUnsafe) unsafe()).deregisterNow();
+        }
     }
 
     @Override
@@ -176,6 +212,43 @@ public class LocalServerChannel extends AbstractServerChannel {
             acceptInProgress = false;
 
             readInbound();
+        }
+    }
+
+    @Override
+    protected AbstractUnsafe newUnsafe() {
+        return new LocalServerUnsafe();
+    }
+
+    private class LocalServerUnsafe extends AbstractUnsafe implements LocalIoHandle {
+        @Override
+        public void close() {
+            close(voidPromise());
+        }
+
+        @Override
+        public void handle(IoRegistration registration, IoOpt readyOpt) {
+            // NOOP
+        }
+
+        @Override
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            safeSetFailure(promise, new UnsupportedOperationException());
+        }
+
+        @Override
+        public void registerNow() {
+            ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+        }
+
+        @Override
+        public void deregisterNow() {
+            ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+        }
+
+        @Override
+        public void closeNow() {
+            close(voidPromise());
         }
     }
 }

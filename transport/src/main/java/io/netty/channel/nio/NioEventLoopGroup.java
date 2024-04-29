@@ -17,15 +17,19 @@ package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopTaskQueueFactory;
-import io.netty.channel.MultithreadEventLoopGroup;
+import io.netty.channel.IoEventLoop;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.IoHandler;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
@@ -33,9 +37,14 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * {@link MultithreadEventLoopGroup} implementations which is used for NIO {@link Selector} based {@link Channel}s.
+ * {@link MultiThreadIoEventLoopGroup} implementation which is used for NIO {@link Selector} based {@link Channel}s.
+ *
+ * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link io.netty.channel.nio.NioIoHandler}.
  */
-public class NioEventLoopGroup extends MultithreadEventLoopGroup {
+@Deprecated
+public class NioEventLoopGroup extends MultiThreadIoEventLoopGroup implements IoEventLoopGroup {
+
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(NioEventLoopGroup.class);
 
     /**
      * Create a new instance using the default number of threads, the default {@link ThreadFactory} and
@@ -84,7 +93,8 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
 
     public NioEventLoopGroup(int nThreads, ThreadFactory threadFactory,
         final SelectorProvider selectorProvider, final SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, threadFactory, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
+        super(nThreads, threadFactory, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory),
+                RejectedExecutionHandlers.reject());
     }
 
     public NioEventLoopGroup(
@@ -94,13 +104,14 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
 
     public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider selectorProvider,
                              final SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, executor, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
+        super(nThreads, executor, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory),
+                RejectedExecutionHandlers.reject());
     }
 
     public NioEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
                              final SelectorProvider selectorProvider,
                              final SelectStrategyFactory selectStrategyFactory) {
-        super(nThreads, executor, chooserFactory, selectorProvider, selectStrategyFactory,
+        super(nThreads, executor, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
                 RejectedExecutionHandlers.reject());
     }
 
@@ -108,7 +119,8 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
                              final SelectorProvider selectorProvider,
                              final SelectStrategyFactory selectStrategyFactory,
                              final RejectedExecutionHandler rejectedExecutionHandler) {
-        super(nThreads, executor, chooserFactory, selectorProvider, selectStrategyFactory, rejectedExecutionHandler);
+        super(nThreads, executor, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
+                rejectedExecutionHandler);
     }
 
     public NioEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
@@ -116,7 +128,7 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
                              final SelectStrategyFactory selectStrategyFactory,
                              final RejectedExecutionHandler rejectedExecutionHandler,
                              final EventLoopTaskQueueFactory taskQueueFactory) {
-        super(nThreads, executor, chooserFactory, selectorProvider, selectStrategyFactory,
+        super(nThreads, executor, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
                 rejectedExecutionHandler, taskQueueFactory);
     }
 
@@ -140,18 +152,18 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
                              RejectedExecutionHandler rejectedExecutionHandler,
                              EventLoopTaskQueueFactory taskQueueFactory,
                              EventLoopTaskQueueFactory tailTaskQueueFactory) {
-        super(nThreads, executor, chooserFactory, selectorProvider, selectStrategyFactory,
+        super(nThreads, executor, NioIoHandler.newFactory(selectorProvider, selectStrategyFactory), chooserFactory,
                 rejectedExecutionHandler, taskQueueFactory, tailTaskQueueFactory);
     }
 
     /**
-     * Sets the percentage of the desired amount of time spent for I/O in the child event loops.  The default value is
-     * {@code 50}, which means the event loop will try to spend the same amount of time for I/O as for non-I/O tasks.
+     * This method is a no-op.
+     *
+     * @deprecated
      */
+    @Deprecated
     public void setIoRatio(int ioRatio) {
-        for (EventExecutor e: this) {
-            ((NioEventLoop) e).setIoRatio(ioRatio);
-        }
+        LOGGER.debug("NioEventLoopGroup.setIoRatio(int) logic was removed, this is a no-op");
     }
 
     /**
@@ -165,22 +177,19 @@ public class NioEventLoopGroup extends MultithreadEventLoopGroup {
     }
 
     @Override
-    protected EventLoop newChild(Executor executor, Object... args) throws Exception {
-        SelectorProvider selectorProvider = (SelectorProvider) args[0];
-        SelectStrategyFactory selectStrategyFactory = (SelectStrategyFactory) args[1];
-        RejectedExecutionHandler rejectedExecutionHandler = (RejectedExecutionHandler) args[2];
+    protected IoEventLoop newChild(Executor executor, IoHandler ioHandler, Object... args) {
+        RejectedExecutionHandler rejectedExecutionHandler = (RejectedExecutionHandler) args[0];
         EventLoopTaskQueueFactory taskQueueFactory = null;
         EventLoopTaskQueueFactory tailTaskQueueFactory = null;
 
         int argsLength = args.length;
-        if (argsLength > 3) {
-            taskQueueFactory = (EventLoopTaskQueueFactory) args[3];
+        if (argsLength > 1) {
+            taskQueueFactory = (EventLoopTaskQueueFactory) args[1];
         }
-        if (argsLength > 4) {
-            tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[4];
+        if (argsLength > 2) {
+            tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[2];
         }
-        return new NioEventLoop(this, executor, selectorProvider,
-                selectStrategyFactory.newSelectStrategy(),
-                rejectedExecutionHandler, taskQueueFactory, tailTaskQueueFactory);
+        return new NioEventLoop(
+                this, executor, ioHandler, taskQueueFactory, tailTaskQueueFactory, rejectedExecutionHandler);
     }
 }

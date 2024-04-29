@@ -1328,6 +1328,245 @@
                   <new>method io.netty.channel.unix.DomainSocketAddress io.netty.channel.unix.Socket::remoteDomainSocketAddress()</new>
                   <justification>Acceptable incompatibility for required change</justification>
                 </item>
+
+                <!-- Needed for IoHandle concept -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.channel.nio.NioEventLoopGroup</old>
+                  <new>class io.netty.channel.nio.NioEventLoopGroup</new>
+                  <superClass>io.netty.channel.MultiThreadIoEventLoopGroup</superClass>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChangedCovariantly</code>
+                  <old>method io.netty.channel.EventLoop io.netty.channel.SingleThreadEventLoop::next() @ io.netty.channel.nio.NioEventLoop</old>
+                  <new>method io.netty.channel.IoEventLoop io.netty.channel.SingleThreadIoEventLoop::next() @ io.netty.channel.nio.NioEventLoop</new>
+                  <justification>Acceptable incompatibility for required change, as it's a new sub-interface</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method io.netty.channel.nio.NioEventLoop io.netty.channel.nio.AbstractNioChannel::eventLoop()</old>
+                  <new>method io.netty.channel.EventLoop io.netty.channel.AbstractChannel::eventLoop() @ io.netty.channel.nio.AbstractNioChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.noLongerInheritsFromClass</code>
+                  <old>class io.netty.channel.local.LocalEventLoopGroup</old>
+                  <new>class io.netty.channel.local.LocalEventLoopGroup</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.channel.local.LocalEventLoopGroup</old>
+                  <new>class io.netty.channel.local.LocalEventLoopGroup</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method io.netty.channel.nio.NioEventLoop io.netty.channel.nio.AbstractNioChannel::eventLoop() @ io.netty.channel.sctp.nio.NioSctpChannel</old>
+                  <new>method io.netty.channel.EventLoop io.netty.channel.AbstractChannel::eventLoop() @ io.netty.channel.sctp.nio.NioSctpChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method io.netty.channel.nio.NioEventLoop io.netty.channel.nio.AbstractNioChannel::eventLoop() @ io.netty.channel.sctp.nio.NioSctpServerChannel</old>
+                  <new>method io.netty.channel.EventLoop io.netty.channel.AbstractChannel::eventLoop() @ io.netty.channel.sctp.nio.NioSctpServerChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method io.netty.channel.nio.NioEventLoop io.netty.channel.nio.AbstractNioChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtAcceptorChannel</old>
+                  <new>method io.netty.channel.EventLoop io.netty.channel.AbstractChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtAcceptorChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method io.netty.channel.nio.NioEventLoop io.netty.channel.nio.AbstractNioChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtByteAcceptorChannel</old>
+                  <new>method io.netty.channel.EventLoop io.netty.channel.AbstractChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtByteAcceptorChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method io.netty.channel.nio.NioEventLoop io.netty.channel.nio.AbstractNioChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtByteConnectorChannel</old>
+                  <new>method io.netty.channel.EventLoop io.netty.channel.AbstractChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtByteConnectorChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method io.netty.channel.nio.NioEventLoop io.netty.channel.nio.AbstractNioChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtByteRendezvousChannel</old>
+                  <new>method io.netty.channel.EventLoop io.netty.channel.AbstractChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtByteRendezvousChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method io.netty.channel.nio.NioEventLoop io.netty.channel.nio.AbstractNioChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtMessageAcceptorChannel</old>
+                  <new>method io.netty.channel.EventLoop io.netty.channel.AbstractChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtMessageAcceptorChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method io.netty.channel.nio.NioEventLoop io.netty.channel.nio.AbstractNioChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtMessageConnectorChannel</old>
+                  <new>method io.netty.channel.EventLoop io.netty.channel.AbstractChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtMessageConnectorChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method io.netty.channel.nio.NioEventLoop io.netty.channel.nio.AbstractNioChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtMessageRendezvousChannel</old>
+                  <new>method io.netty.channel.EventLoop io.netty.channel.AbstractChannel::eventLoop() @ io.netty.channel.udt.nio.NioUdtMessageRendezvousChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.channel.kqueue.KQueueIoRegistration io.netty.channel.kqueue.AbstractKQueueChannel::registration() @ io.netty.channel.kqueue.AbstractKQueueServerChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.channel.kqueue.KQueueIoRegistration io.netty.channel.kqueue.AbstractKQueueChannel::registration() @ io.netty.channel.kqueue.AbstractKQueueStreamChannel</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChangedCovariantly</code>
+                  <old>method io.netty.channel.EventLoop io.netty.channel.MultithreadEventLoopGroup::next() @ io.netty.channel.kqueue.KQueueEventLoopGroup</old>
+                  <new>method io.netty.channel.IoEventLoop io.netty.channel.MultiThreadIoEventLoopGroup::next() @ io.netty.channel.kqueue.KQueueEventLoopGroup</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.nowFinal</code>
+                  <old>method void io.netty.channel.epoll.EpollEventLoop::cleanup()</old>
+                  <new>method void io.netty.channel.SingleThreadIoEventLoop::cleanup() @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <justification>Acceptable incompatibility for required change</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void io.netty.channel.epoll.EpollEventLoop::closeFileDescriptors()</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.channel.IoHandler io.netty.channel.SingleThreadIoEventLoop::ioHandler() @ io.netty.channel.epoll.EpollEventLoop</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChangedCovariantly</code>
+                  <old>method io.netty.channel.EventLoop io.netty.channel.SingleThreadEventLoop::next() @ io.netty.channel.epoll.EpollEventLoop</old>
+                  <new>method io.netty.channel.IoEventLoop io.netty.channel.SingleThreadIoEventLoop::next() @ io.netty.channel.epoll.EpollEventLoop</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method void io.netty.channel.epoll.EpollEventLoop::openFileDescriptors()</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.util.concurrent.Future&lt;io.netty.channel.IoRegistration&gt; io.netty.channel.SingleThreadIoEventLoop::register(io.netty.channel.IoHandle, io.netty.channel.IoOpt) @ io.netty.channel.epoll.EpollEventLoop</new>
+                </item>
+
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.nowFinal</code>
+                  <old>method void io.netty.channel.epoll.EpollEventLoop::wakeup(boolean)</old>
+                  <new>method void io.netty.channel.SingleThreadIoEventLoop::wakeup(boolean) @ io.netty.channel.epoll.EpollEventLoop</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>ava.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.channel.epoll.EpollEventLoop</old>
+                  <new>class io.netty.channel.epoll.EpollEventLoop</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChangedCovariantly</code>
+                  <old>method io.netty.channel.EventLoop io.netty.channel.MultithreadEventLoopGroup::next() @ io.netty.channel.epoll.EpollEventLoopGroup</old>
+                  <new>method io.netty.channel.IoEventLoop io.netty.channel.MultiThreadIoEventLoopGroup::next() @ io.netty.channel.epoll.EpollEventLoopGroup</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonFinalClassInheritsFromNewClass</code>
+                  <old>class io.netty.channel.epoll.EpollEventLoop</old>
+                  <new>class io.netty.channel.epoll.EpollEventLoop</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.channel.epoll.EpollIoRegistration io.netty.channel.epoll.AbstractEpollChannel::registration() @ io.netty.channel.epoll.AbstractEpollServerChannel</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method io.netty.channel.epoll.EpollIoRegistration io.netty.channel.epoll.AbstractEpollChannel::registration() @ io.netty.channel.epoll.AbstractEpollStreamChannel</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonPublicPartOfAPI</code>
+                  <new>interface io.netty.channel.epoll.EpollIoRegistration</new>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.AbstractEpollServerChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.AbstractEpollStreamChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollDatagramChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollDomainDatagramChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollDomainSocketChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollDomainSocketChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollServerDomainSocketChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollServerSocketChannel</old>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.removed</code>
+                  <old>field io.netty.channel.epoll.AbstractEpollChannel.flags @ io.netty.channel.epoll.EpollSocketChannel</old>
+                </item>
+
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.returnTypeErasureChanged</code>
@@ -1636,6 +1875,50 @@
             <overrideCompatibilityChangeParameters>
               <overrideCompatibilityChangeParameter>
                 <compatibilityChange>FIELD_REMOVED</compatibilityChange>
+                <sourceCompatible>true</sourceCompatible>
+                <binaryCompatible>true</binaryCompatible>
+                <semanticVersionLevel>PATCH</semanticVersionLevel>
+              </overrideCompatibilityChangeParameter>
+              <!-- Changes for IoHandle concept -->
+              <overrideCompatibilityChangeParameter>
+                <compatibilityChange>INTERFACE_ADDED</compatibilityChange>
+                <sourceCompatible>true</sourceCompatible>
+                <binaryCompatible>true</binaryCompatible>
+                <semanticVersionLevel>PATCH</semanticVersionLevel>
+              </overrideCompatibilityChangeParameter>
+              <overrideCompatibilityChangeParameter>
+                <compatibilityChange>METHOD_ABSTRACT_ADDED_IN_IMPLEMENTED_INTERFACE</compatibilityChange>
+                <sourceCompatible>true</sourceCompatible>
+                <binaryCompatible>true</binaryCompatible>
+                <semanticVersionLevel>PATCH</semanticVersionLevel>
+              </overrideCompatibilityChangeParameter>
+              <overrideCompatibilityChangeParameter>
+                <compatibilityChange>METHOD_DEFAULT_ADDED_IN_IMPLEMENTED_INTERFACE</compatibilityChange>
+                <sourceCompatible>true</sourceCompatible>
+                <binaryCompatible>true</binaryCompatible>
+                <semanticVersionLevel>PATCH</semanticVersionLevel>
+              </overrideCompatibilityChangeParameter>
+              <!-- Can we somehow only override this per class ?-->
+              <overrideCompatibilityChangeParameter>
+                <compatibilityChange>SUPERCLASS_REMOVED</compatibilityChange>
+                <sourceCompatible>true</sourceCompatible>
+                <binaryCompatible>true</binaryCompatible>
+                <semanticVersionLevel>PATCH</semanticVersionLevel>
+              </overrideCompatibilityChangeParameter>
+              <overrideCompatibilityChangeParameter>
+                <compatibilityChange>METHOD_REMOVED</compatibilityChange>
+                <sourceCompatible>true</sourceCompatible>
+                <binaryCompatible>true</binaryCompatible>
+                <semanticVersionLevel>PATCH</semanticVersionLevel>
+              </overrideCompatibilityChangeParameter>
+              <overrideCompatibilityChangeParameter>
+                <compatibilityChange>METHOD_NOW_FINAL</compatibilityChange>
+                <sourceCompatible>true</sourceCompatible>
+                <binaryCompatible>true</binaryCompatible>
+                <semanticVersionLevel>PATCH</semanticVersionLevel>
+              </overrideCompatibilityChangeParameter>
+              <overrideCompatibilityChangeParameter>
+                <compatibilityChange>METHOD_ADDED_TO_INTERFACE</compatibilityChange>
                 <sourceCompatible>true</sourceCompatible>
                 <binaryCompatible>true</binaryCompatible>
                 <semanticVersionLevel>PATCH</semanticVersionLevel>

@@ -69,7 +69,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
     }
 
     private EpollDomainDatagramChannel(LinuxSocket socket, boolean active) {
-        super(null, socket, active);
+        super(null, socket, active, EpollIoOpt.valueOf(0));
         config = new EpollDomainDatagramChannelConfig(this);
     }
 
@@ -183,7 +183,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
                         remoteAddress.path().getBytes(CharsetUtil.UTF_8));
             }
         } else if (data.nioBufferCount() > 1) {
-            IovArray array = ((EpollEventLoop) eventLoop()).cleanIovArray();
+            IovArray array = registration().ioHandler().cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
