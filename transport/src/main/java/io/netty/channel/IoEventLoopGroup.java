@@ -24,13 +24,24 @@ public interface IoEventLoopGroup extends EventLoopGroup {
     IoEventLoop next();
 
     /**
-     * Returns {@code true} if the given type is compatible with this {@link EventLoopGroup} and so can be registered
-     * to the contained {@link EventLoop}s, {@code false} otherwise.
+     * Returns {@code true} if the given type is compatible with this {@link IoEventLoopGroup} and so can be registered
+     * to the contained {@link IoEventLoop}s, {@code false} otherwise.
      *
      * @param handleType    the type of the {@link IoHandle}.
      * @return              if compatible of not.
      */
     default boolean isCompatible(Class<? extends IoHandle> handleType) {
         return next().isCompatible(handleType);
+    }
+
+    /**
+     * Returns {@code true} if the given {@link IoHandler} type is used by this {@link IoEventLoopGroup},
+     * {@code false} otherwise.
+     *
+     * @param handlerType the type of the {@link IoHandler}.
+     * @return            if used or not.
+     */
+    default boolean isIoType(Class<? extends IoHandler> handlerType) {
+        return next().isIoType(handlerType);
     }
 }
