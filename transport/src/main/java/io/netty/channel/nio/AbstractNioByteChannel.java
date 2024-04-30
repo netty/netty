@@ -323,30 +323,27 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
 
     protected final void setOpWrite() {
-        final SelectionKey key = selectionKey();
+        final NioIoRegistration registration = registration();
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop
         // See https://github.com/netty/netty/issues/2104
-        if (!key.isValid()) {
+        if (!registration.isValid()) {
             return;
         }
-        final int interestOps = key.interestOps();
-        if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-            key.interestOps(interestOps | SelectionKey.OP_WRITE);
+        final NioIoOpt opt = registration.interestOpt();
+        if (!opt.contains(NioIoOpt.WRITE)) {
+            registration.updateInterestOpt(opt.with(NioIoOpt.WRITE));
         }
     }
 
     protected final void clearOpWrite() {
-        final SelectionKey key = selectionKey();
+        final NioIoRegistration registration = registration();
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop
         // See https://github.com/netty/netty/issues/2104
-        if (!key.isValid()) {
+        if (!registration.isValid()) {
             return;
         }
-        final int interestOps = key.interestOps();
-        if ((interestOps & SelectionKey.OP_WRITE) != 0) {
-            key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
-        }
+        registration.updateInterestOpt(registration.interestOpt().without(NioIoOpt.WRITE));
     }
 }

@@ -498,42 +498,48 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void register0(ChannelPromise promise) {
-            try {
-                // check if the channel is still open as it could be closed in the mean time when the register
-                // call was outside of the eventLoop
-                if (!promise.setUncancellable() || !ensureOpen(promise)) {
-                    return;
-                }
-                boolean firstRegistration = neverRegistered;
-                doRegister();
-                neverRegistered = false;
-                registered = true;
+            // check if the channel is still open as it could be closed in the mean time when the register
+            // call was outside of the eventLoop
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+                return;
+            }
+            ChannelPromise registerPromise = newPromise();
+            boolean firstRegistration = neverRegistered;
+            registerPromise.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    if (future.isSuccess()) {
+                        neverRegistered = false;
+                        registered = true;
 
-                // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
-                // user may already fire events through the pipeline in the ChannelFutureListener.
-                pipeline.invokeHandlerAddedIfNeeded();
+                        // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
+                        // user may already fire events through the pipeline in the ChannelFutureListener.
+                        pipeline.invokeHandlerAddedIfNeeded();
 
-                safeSetSuccess(promise);
-                pipeline.fireChannelRegistered();
-                // Only fire a channelActive if the channel has never been registered. This prevents firing
-                // multiple channel actives if the channel is deregistered and re-registered.
-                if (isActive()) {
-                    if (firstRegistration) {
-                        pipeline.fireChannelActive();
-                    } else if (config().isAutoRead()) {
-                        // This channel was registered before and autoRead() is set. This means we need to begin read
-                        // again so that we process inbound data.
-                        //
-                        // See https://github.com/netty/netty/issues/4805
-                        beginRead();
+                        safeSetSuccess(promise);
+                        pipeline.fireChannelRegistered();
+                        // Only fire a channelActive if the channel has never been registered. This prevents firing
+                        // multiple channel actives if the channel is deregistered and re-registered.
+                        if (isActive()) {
+                            if (firstRegistration) {
+                                pipeline.fireChannelActive();
+                            } else if (config().isAutoRead()) {
+                                // This channel was registered before and autoRead() is set. This means we need to
+                                // begin read again so that we process inbound data.
+                                //
+                                // See https://github.com/netty/netty/issues/4805
+                                beginRead();
+                            }
+                        }
+                    } else {
+                        // Close the channel directly to avoid FD leak.
+                        closeForcibly();
+                        closeFuture.setClosed();
+                        safeSetFailure(promise, future.cause());
                     }
                 }
-            } catch (Throwable t) {
-                // Close the channel directly to avoid FD leak.
-                closeForcibly();
-                closeFuture.setClosed();
-                safeSetFailure(promise, t);
-            }
+            });
+            doRegister(registerPromise);
         }
 
         @Override
@@ -1072,11 +1078,29 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
+     * Subclasses may override this method
      *
-     * Sub-classes may override this method
+     * @deprecated use {@link #doRegister(ChannelPromise)}
      */
+    @Deprecated
     protected void doRegister() throws Exception {
         // NOOP
+    }
+
+    /**
+     * Is called after the {@link Channel} is registered with its {@link EventLoop} as part of the register process.
+     * Subclasses may override this method
+     *
+     * @param promise {@link ChannelPromise} that must be notified once done to continue the registration.
+     */
+    protected void doRegister(ChannelPromise promise) {
+        try {
+            doRegister();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     /**

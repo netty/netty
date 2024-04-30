@@ -101,7 +101,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     private EpollDatagramChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, active);
+        super(null, fd, active, EpollIoOpt.valueOf(0));
         config = new EpollDatagramChannelConfig(this);
     }
 
@@ -774,6 +774,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     private NativeDatagramPacketArray cleanDatagramPacketArray() {
-        return ((EpollEventLoop) eventLoop()).cleanDatagramPacketArray();
+        return registration().ioHandler().cleanDatagramPacketArray();
     }
 }

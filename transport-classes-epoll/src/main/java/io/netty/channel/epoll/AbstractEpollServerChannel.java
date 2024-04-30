@@ -21,7 +21,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
 
 import java.net.InetSocketAddress;
@@ -39,17 +38,12 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     }
 
     protected AbstractEpollServerChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, active);
+        super(null, fd, active, EpollIoOpt.valueOf(0));
     }
 
     @Override
     public ChannelMetadata metadata() {
         return METADATA;
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EpollEventLoop;
     }
 
     @Override
