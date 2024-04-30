@@ -726,10 +726,22 @@ public final class NioIoHandler implements IoHandler {
     }
 
     /**
-     * Returns a new {@link IoHandlerFactory} that creates {@link NioIoHandler} instances.
+     * Returns a new {@link IoHandlerFactory} that creates {@link NioIoHandler} instances
+     *
+     * @return factory                  the {@link IoHandlerFactory}.
      */
     public static IoHandlerFactory newFactory() {
         return newFactory(SelectorProvider.provider(), DefaultSelectStrategyFactory.INSTANCE);
+    }
+
+    /**
+     * Returns a new {@link IoHandlerFactory} that creates {@link NioIoHandler} instances.
+     *
+     * @param selectorProvider          the {@link SelectorProvider} to use.
+     * @return factory                  the {@link IoHandlerFactory}.
+     */
+    public static IoHandlerFactory newFactory(SelectorProvider selectorProvider) {
+        return newFactory(selectorProvider, DefaultSelectStrategyFactory.INSTANCE);
     }
 
     /**

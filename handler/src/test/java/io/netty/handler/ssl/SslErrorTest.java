@@ -22,7 +22,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -140,7 +141,7 @@ public class SslErrorTest {
 
         Channel serverChannel = null;
         Channel clientChannel = null;
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         final Promise<Void> promise = group.next().newPromise();
         try {
             serverChannel = new ServerBootstrap().group(group)

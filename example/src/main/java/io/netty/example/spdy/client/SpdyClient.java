@@ -20,7 +20,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -70,11 +71,11 @@ public final class SpdyClient {
             .build();
 
         HttpResponseClientHandler httpResponseHandler = new HttpResponseClientHandler();
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
         try {
             Bootstrap b = new Bootstrap();
-            b.group(workerGroup);
+            b.group(group);
             b.channel(NioSocketChannel.class);
             b.option(ChannelOption.SO_KEEPALIVE, true);
             b.remoteAddress(HOST, PORT);
@@ -100,7 +101,7 @@ public final class SpdyClient {
             // Wait until the connection is closed.
             channel.close().syncUninterruptibly();
         } finally {
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }

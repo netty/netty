@@ -22,10 +22,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -310,7 +311,7 @@ public class OpenSslCertificateCompressionTest {
     }
 
     public void runCertCompressionTest(SslContext clientSslContext, SslContext serverSslContext) throws Throwable {
-        EventLoopGroup group = new LocalEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         Promise<Object> clientPromise = group.next().newPromise();
         Promise<Object> serverPromise = group.next().newPromise();
         try {

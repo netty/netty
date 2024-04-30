@@ -18,7 +18,8 @@ package io.netty.example.worldclock;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.util.ServerUtil;
 import io.netty.handler.ssl.SslContext;
@@ -41,7 +42,7 @@ public final class WorldClockClient {
         // Configure SSL.
         final SslContext sslCtx = ServerUtil.buildSslContext();
 
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)

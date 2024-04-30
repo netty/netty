@@ -27,7 +27,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -301,7 +302,7 @@ public class NettyBlockHoundIntegrationTest {
                                  .sslProvider(SslProvider.JDK)
                                  .build();
         final SslHandler sslHandler = sslClientCtx.newHandler(UnpooledByteBufAllocator.DEFAULT);
-        final EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         final CountDownLatch activeLatch = new CountDownLatch(1);
         final AtomicReference<Throwable> error = new AtomicReference<>();
 
@@ -410,7 +411,7 @@ public class NettyBlockHoundIntegrationTest {
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testUnixResolverDnsServerAddressStreamProvider_ParseEtcResolverSearchDomainsAndOptions()
             throws InterruptedException {
-        NioEventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         try {
             DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
                     .channelFactory(NioDatagramChannel::new);
@@ -496,7 +497,7 @@ public class NettyBlockHoundIntegrationTest {
 
     private static void testHandshake(SslContext sslClientCtx, SslHandler clientSslHandler,
                                       SslHandler serverSslHandler) throws Exception {
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {

@@ -31,9 +31,10 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -82,7 +83,7 @@ public class PcapWriteHandlerTest {
         InetSocketAddress serverAddr = new InetSocketAddress("127.0.0.1", 0);
         InetSocketAddress clientAddr = new InetSocketAddress("127.0.0.1", 0);
 
-        NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2);
+        EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(2, NioIoHandler.newFactory());
 
         // We'll bootstrap a UDP Server to avoid "Network Unreachable errors" when sending UDP Packet.
         Bootstrap server = new Bootstrap()
@@ -187,8 +188,8 @@ public class PcapWriteHandlerTest {
     private static void tcpV4(final boolean sharedOutputStream) throws Exception {
         final ByteBuf byteBuf = Unpooled.buffer();
 
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup clientGroup = new NioEventLoopGroup();
+        EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        EventLoopGroup clientGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
         // Configure the echo server
         ServerBootstrap sb = new ServerBootstrap();

@@ -30,11 +30,12 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -163,7 +164,7 @@ public class Http2MultiplexTransportTest {
 
     @BeforeEach
     public void setup() {
-        eventLoopGroup = new NioEventLoopGroup();
+        eventLoopGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
     }
 
     @AfterEach
@@ -668,19 +669,19 @@ public class Http2MultiplexTransportTest {
         EventLoopGroup clientEventLoopGroup = null;
 
         try {
-            serverEventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+            serverEventLoopGroup = new MultiThreadIoEventLoopGroup(1, new ThreadFactory() {
                 @Override
                 public Thread newThread(Runnable r) {
                     return new Thread(r, "serverloop");
                 }
-            });
+            }, NioIoHandler.newFactory());
 
-            clientEventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+            clientEventLoopGroup = new MultiThreadIoEventLoopGroup(1, new ThreadFactory() {
                 @Override
                 public Thread newThread(Runnable r) {
                     return new Thread(r, "clientloop");
                 }
-            });
+            }, NioIoHandler.newFactory());
 
             final int streams = 10;
             final CountDownLatch latchClientResponses = new CountDownLatch(streams);

@@ -25,8 +25,9 @@ import io.netty.channel.ChannelHandlerMask.Skip;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.oio.OioSocketChannel;
@@ -85,7 +86,7 @@ public class DefaultChannelPipelineTest {
 
     @BeforeAll
     public static void beforeClass() throws Exception {
-        group = new DefaultEventLoopGroup(1);
+        group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
     }
 
     @AfterAll
@@ -968,8 +969,8 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testHandlerAddedAndRemovedCalledInCorrectOrder() throws Throwable {
-        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
-        final EventExecutorGroup group2 = new DefaultEventExecutorGroup(1);
+        final EventExecutorGroup group1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+        final EventExecutorGroup group2 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             BlockingQueue<CheckOrderHandler> addedQueue = new LinkedBlockingQueue<CheckOrderHandler>();
@@ -1012,7 +1013,7 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testHandlerAddedExceptionFromChildHandlerIsPropagated() {
-        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
+        final EventExecutorGroup group1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             final Promise<Void> promise = group1.next().newPromise();
             final AtomicBoolean handlerAdded = new AtomicBoolean();
@@ -1037,7 +1038,7 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testHandlerRemovedExceptionFromChildHandlerIsPropagated() {
-        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
+        final EventExecutorGroup group1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             final Promise<Void> promise = group1.next().newPromise();
             String handlerName = "foo";
@@ -1061,7 +1062,7 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testHandlerAddedThrowsAndRemovedThrowsException() throws InterruptedException {
-        final EventExecutorGroup group1 = new DefaultEventExecutorGroup(1);
+        final EventExecutorGroup group1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             final CountDownLatch latch = new CountDownLatch(1);
             final Promise<Void> promise = group1.next().newPromise();
@@ -1182,7 +1183,7 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddInListenerNio() {
-        testAddInListener(new NioSocketChannel(), new NioEventLoopGroup(1));
+        testAddInListener(new NioSocketChannel(), new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()));
     }
 
     @SuppressWarnings("deprecation")
@@ -1195,7 +1196,7 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddInListenerLocal() {
-        testAddInListener(new LocalChannel(), new DefaultEventLoopGroup(1));
+        testAddInListener(new LocalChannel(), new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory()));
     }
 
     private static void testAddInListener(Channel channel, EventLoopGroup group) {
@@ -1287,7 +1288,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testPinExecutor() {
-        EventExecutorGroup group = new DefaultEventExecutorGroup(2);
+        EventExecutorGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         ChannelPipeline pipeline = new LocalChannel().pipeline();
         ChannelPipeline pipeline2 = new LocalChannel().pipeline();
 
@@ -1308,7 +1309,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testNotPinExecutor() {
-        EventExecutorGroup group = new DefaultEventExecutorGroup(2);
+        EventExecutorGroup group = new MultiThreadIoEventLoopGroup(2, LocalIoHandler.newFactory());
         ChannelPipeline pipeline = new LocalChannel().pipeline();
         pipeline.channel().config().setOption(ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP, false);
 
@@ -1356,7 +1357,7 @@ public class DefaultChannelPipelineTest {
     // Test for https://github.com/netty/netty/issues/8676.
     @Test
     public void testHandlerRemovedOnlyCalledWhenHandlerAddedCalled() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        final EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             final AtomicReference<Error> errorRef = new AtomicReference<Error>();
 

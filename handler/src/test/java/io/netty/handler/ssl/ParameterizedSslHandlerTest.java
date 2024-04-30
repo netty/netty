@@ -26,14 +26,15 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -46,6 +47,7 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -75,7 +77,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.buffer.ByteBufUtil.writeAscii;
-import static io.netty.util.internal.ThreadLocalRandom.current;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -141,7 +142,7 @@ public class ParameterizedSslHandlerTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(clientProvider).build();
 
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -323,7 +324,7 @@ public class ParameterizedSslHandlerTest {
                         ResourcesUtil.getFile(getClass(), "test_unencrypted.pem"))
                 .sslProvider(clientProvider).build();
 
-        NioEventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -423,7 +424,7 @@ public class ParameterizedSslHandlerTest {
                                                          .protocols(SslProtocols.TLS_v1_2)
                                                          .build();
 
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -524,7 +525,7 @@ public class ParameterizedSslHandlerTest {
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void reentryOnHandshakeCompleteNioChannel(SslProvider clientProvider, SslProvider serverProvider)
             throws Exception {
-        EventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         try {
             Class<? extends ServerChannel> serverClass = NioServerSocketChannel.class;
             Class<? extends Channel> clientClass = NioSocketChannel.class;
@@ -547,11 +548,12 @@ public class ParameterizedSslHandlerTest {
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void reentryOnHandshakeCompleteLocalChannel(SslProvider clientProvider, SslProvider serverProvider)
             throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         try {
             Class<? extends ServerChannel> serverClass = LocalServerChannel.class;
             Class<? extends Channel> clientClass = LocalChannel.class;
-            SocketAddress bindAddress = new LocalAddress(String.valueOf(current().nextLong()));
+            SocketAddress bindAddress = new LocalAddress(String.valueOf(
+                    PlatformDependent.threadLocalRandom().nextLong()));
             reentryOnHandshakeComplete(clientProvider, serverProvider, group, bindAddress,
                     serverClass, clientClass, false, false);
             reentryOnHandshakeComplete(clientProvider, serverProvider, group, bindAddress,

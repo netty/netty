@@ -22,8 +22,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -57,8 +59,9 @@ public final class TcpDnsServer {
     private static final byte[] QUERY_RESULT = new byte[]{(byte) 192, (byte) 168, 1, 1};
 
     public static void main(String[] args) throws Exception {
-        ServerBootstrap bootstrap = new ServerBootstrap().group(new NioEventLoopGroup(1),
-                new NioEventLoopGroup())
+        ServerBootstrap bootstrap = new ServerBootstrap().group(
+                new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()),
+                new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()))
                 .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new ChannelInitializer<Channel>() {
@@ -110,7 +113,7 @@ public final class TcpDnsServer {
 
     // copy from TcpDnsClient.java
     private static void clientQuery() throws Exception {
-        NioEventLoopGroup group = new NioEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)

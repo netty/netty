@@ -26,9 +26,11 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.Attribute;
 import io.netty.util.CharsetUtil;
@@ -42,7 +44,7 @@ public class TrafficShapingHandlerTest {
 
     private static final long READ_LIMIT_BYTES_PER_SECOND = 1;
     private static final ScheduledExecutorService SES = Executors.newSingleThreadScheduledExecutor();
-    private static final DefaultEventLoopGroup GROUP = new DefaultEventLoopGroup(1);
+    private static final EventLoopGroup GROUP = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
     @AfterAll
     public static void destroy() {

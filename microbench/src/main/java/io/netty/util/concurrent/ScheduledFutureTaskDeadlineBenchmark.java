@@ -15,7 +15,8 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Level;
@@ -41,7 +42,8 @@ public class ScheduledFutureTaskDeadlineBenchmark extends AbstractMicrobenchmark
 
         @Setup(Level.Trial)
         public void reset() {
-            eventLoop = (AbstractScheduledEventExecutor) new NioEventLoopGroup(1).next();
+            eventLoop = (AbstractScheduledEventExecutor) new MultiThreadIoEventLoopGroup(
+                    1, NioIoHandler.newFactory()).next();
             future = (ScheduledFutureTask<?>) eventLoop.schedule(new Runnable() {
                 @Override
                 public void run() {

@@ -16,7 +16,8 @@
 package io.netty.resolver.dns;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.dns.DefaultDnsOptEcsRecord;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -37,7 +38,7 @@ public class DnsNameResolverClientSubnetTest {
     @Disabled
     @Test
     public void testSubnetQuery() throws Exception {
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         DnsNameResolver resolver = newResolver(group).build();
         try {
             // Same as:

@@ -24,8 +24,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ReflectiveChannelFactory;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
@@ -378,7 +379,7 @@ public class DnsNameResolverTest {
     }
 
     private static final TestDnsServer dnsServer = new TestDnsServer(DOMAINS_ALL);
-    private static final EventLoopGroup group = new NioEventLoopGroup(1);
+    private static final EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
 
     private static DnsNameResolverBuilder newResolver(boolean decodeToUnicode) {
         return newResolver(decodeToUnicode, null);
@@ -1408,7 +1409,7 @@ public class DnsNameResolverTest {
                 cache ? new DefaultAuthoritativeDnsServerCache() : NoopAuthoritativeDnsServerCache.INSTANCE);
         TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
                 new TestRecursiveCacheDnsQueryLifecycleObserverFactory();
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         final DnsNameResolver resolver = new DnsNameResolver(
                 group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
                 NoopDnsCache.INSTANCE, nsCache, lifecycleObserverFactory, 3000, ResolvedAddressTypes.IPV4_ONLY, true,
@@ -1566,7 +1567,7 @@ public class DnsNameResolverTest {
             }
         };
         redirectServer.start();
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         final DnsNameResolver resolver = new DnsNameResolver(
                 group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
                 cache, authoritativeDnsServerCache, NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000,
@@ -1702,7 +1703,7 @@ public class DnsNameResolverTest {
             }
         };
         redirectServer.start();
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
 
         final List<InetSocketAddress> cached = new CopyOnWriteArrayList<InetSocketAddress>();
         final AuthoritativeDnsServerCache authoritativeDnsServerCache = new AuthoritativeDnsServerCache() {
@@ -1832,7 +1833,7 @@ public class DnsNameResolverTest {
             }
         };
         redirectServer.start();
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
 
         final List<InetSocketAddress> cached = new CopyOnWriteArrayList<InetSocketAddress>();
         final AuthoritativeDnsServerCache authoritativeDnsServerCache = new AuthoritativeDnsServerCache() {
@@ -4222,7 +4223,7 @@ public class DnsNameResolverTest {
             }
         };
         server.start();
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
 
         final DnsNameResolver resolver = new DnsNameResolver(
                 group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
