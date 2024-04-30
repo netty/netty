@@ -24,18 +24,18 @@ import java.io.IOException;
  */
 public interface EpollIoRegistration extends IoRegistration {
     /**
-     * Update the {@link EpollIoOpt} for this registration.
+     * Update the {@link EpollIoOps} for this registration.
      *
-     * @param opt   the {@link EpollIoOpt} to use.
+     * @param opt   the {@link EpollIoOps} to use.
      */
-    void updateInterestOpt(EpollIoOpt opt) throws IOException;
+    void updateInterestOpt(EpollIoOps opt) throws IOException;
 
     /**
-     * The used {@link EpollIoOpt} for this registration.
+     * The used {@link EpollIoOps} for this registration.
      *
      * @return  opt.
      */
-    EpollIoOpt interestOpt();
+    EpollIoOps interestOpt();
 
     @Override
     void cancel() throws IOException;

@@ -31,7 +31,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEventLoop;
-import io.netty.channel.IoOpt;
+import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -73,10 +73,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
 
-    private final KQueueEventIoOpt readEnabledOpt;
-    private final KQueueEventIoOpt writeEnabledOpt;
-    private final KQueueEventIoOpt readDisabledOpt;
-    private final KQueueEventIoOpt writeDisabledOpt;
+    private final KQueueEventIoOps readEnabledOpt;
+    private final KQueueEventIoOps writeEnabledOpt;
+    private final KQueueEventIoOps readDisabledOpt;
+    private final KQueueEventIoOps writeDisabledOpt;
 
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
@@ -95,10 +95,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             remote = fd.remoteAddress();
         }
 
-        readEnabledOpt = KQueueEventIoOpt.newOpt(fd().intValue(), Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE, 0);
-        writeEnabledOpt = KQueueEventIoOpt.newOpt(fd().intValue(), Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE, 0);
-        readDisabledOpt = KQueueEventIoOpt.newOpt(fd().intValue(), Native.EVFILT_READ, Native.EV_DELETE_DISABLE, 0);
-        writeDisabledOpt = KQueueEventIoOpt.newOpt(fd().intValue(), Native.EVFILT_WRITE, Native.EV_DELETE_DISABLE, 0);
+        readEnabledOpt = KQueueEventIoOps.newOpt(fd().intValue(), Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE, 0);
+        writeEnabledOpt = KQueueEventIoOps.newOpt(fd().intValue(), Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE, 0);
+        readDisabledOpt = KQueueEventIoOps.newOpt(fd().intValue(), Native.EVFILT_READ, Native.EV_DELETE_DISABLE, 0);
+        writeDisabledOpt = KQueueEventIoOps.newOpt(fd().intValue(), Native.EVFILT_WRITE, Native.EV_DELETE_DISABLE, 0);
     }
 
     AbstractKQueueChannel(Channel parent, BsdSocket fd, SocketAddress remote) {
@@ -110,10 +110,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         this.remote = remote;
         local = fd.localAddress();
 
-        readEnabledOpt = KQueueEventIoOpt.newOpt(fd().intValue(), Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE, 0);
-        writeEnabledOpt = KQueueEventIoOpt.newOpt(fd().intValue(), Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE, 0);
-        readDisabledOpt = KQueueEventIoOpt.newOpt(fd().intValue(), Native.EVFILT_READ, Native.EV_DELETE_DISABLE, 0);
-        writeDisabledOpt = KQueueEventIoOpt.newOpt(fd().intValue(), Native.EVFILT_WRITE, Native.EV_DELETE_DISABLE, 0);
+        readEnabledOpt = KQueueEventIoOps.newOpt(fd().intValue(), Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE, 0);
+        writeEnabledOpt = KQueueEventIoOps.newOpt(fd().intValue(), Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE, 0);
+        readDisabledOpt = KQueueEventIoOps.newOpt(fd().intValue(), Native.EVFILT_READ, Native.EV_DELETE_DISABLE, 0);
+        writeDisabledOpt = KQueueEventIoOps.newOpt(fd().intValue(), Native.EVFILT_WRITE, Native.EV_DELETE_DISABLE, 0);
     }
 
     @Override
@@ -189,7 +189,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     private void clearRdHup0() {
-        registration.addOpt(KQueueEventIoOpt.newOpt(fd().intValue(),
+        registration.addOpt(KQueueEventIoOps.newOpt(fd().intValue(),
                 Native.EVFILT_SOCK, Native.EV_DELETE_DISABLE, Native.NOTE_RDHUP));
     }
 
@@ -213,7 +213,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        KQueueEventIoOpt initialOpt = KQueueEventIoOpt.newOpt(
+        KQueueEventIoOps initialOpt = KQueueEventIoOps.newOpt(
                 fd().intValue(), Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP);
         ((IoEventLoop) eventLoop()).register((AbstractKQueueUnsafe) unsafe(), initialOpt).addListener(f -> {
             if (f.isSuccess()) {
@@ -411,8 +411,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
 
         @Override
-        public void handle(IoRegistration registration, IoOpt readyOpt) {
-            KQueueEventIoOpt opt = (KQueueEventIoOpt) readyOpt;
+        public void handle(IoRegistration registration, IoOps readyOpt) {
+            KQueueEventIoOps opt = (KQueueEventIoOps) readyOpt;
             final short filter = opt.filter();
             final short flags = opt.flags();
             final int fflags = opt.fflags();

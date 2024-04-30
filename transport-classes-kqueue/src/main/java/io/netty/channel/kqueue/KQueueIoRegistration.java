@@ -23,11 +23,11 @@ import io.netty.channel.IoRegistration;
 public interface KQueueIoRegistration extends IoRegistration {
 
     /**
-     * Add the {@link KQueueEventIoOpt} to the registration.
+     * Add the {@link KQueueEventIoOps} to the registration.
      *
-     * @param opt   the {@link KQueueEventIoOpt} to use.
+     * @param opt   the {@link KQueueEventIoOps} to use.
      */
-    void addOpt(KQueueEventIoOpt opt);
+    void addOpt(KQueueEventIoOps opt);
 
     @Override
     KQueueIoHandler ioHandler();

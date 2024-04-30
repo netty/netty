@@ -15,57 +15,57 @@
  */
 package io.netty.channel.nio;
 
-import io.netty.channel.IoOpt;
+import io.netty.channel.IoOps;
 
 import java.nio.channels.SelectionKey;
 
 /**
- * Implementation of {@link IoOpt} for
+ * Implementation of {@link IoOps} for
  * that is used by {@link NioIoHandler} and so for NIO based transports.
  */
-public final class NioIoOpt implements IoOpt {
+public final class NioIoOps implements IoOps {
     /**
      * Interested in NO IO events.
      */
-    public static final NioIoOpt NONE = new NioIoOpt(0);
+    public static final NioIoOps NONE = new NioIoOps(0);
 
     /**
      * Interested in IO events that should be handled by accepting new connections
      */
-    public static final NioIoOpt ACCEPT = new NioIoOpt(SelectionKey.OP_ACCEPT);
+    public static final NioIoOps ACCEPT = new NioIoOps(SelectionKey.OP_ACCEPT);
 
     /**
      * Interested in IO events which should be handled by finish pending connect operations
      */
-    public static final NioIoOpt CONNECT = new NioIoOpt(SelectionKey.OP_CONNECT);
+    public static final NioIoOps CONNECT = new NioIoOps(SelectionKey.OP_CONNECT);
 
     /**
      * Interested in IO events which tell that the underlying channel is writable again.
      */
-    public static final NioIoOpt WRITE = new NioIoOpt(SelectionKey.OP_WRITE);
+    public static final NioIoOps WRITE = new NioIoOps(SelectionKey.OP_WRITE);
 
     /**
      * Interested in IO events which should be handled by reading data.
      */
-    public static final NioIoOpt READ = new NioIoOpt(SelectionKey.OP_READ);
+    public static final NioIoOps READ = new NioIoOps(SelectionKey.OP_READ);
 
     /**
      * Interested in IO events which should be either handled by reading or accepting.
      */
-    public static final NioIoOpt READ_AND_ACCEPT = new NioIoOpt(SelectionKey.OP_READ | SelectionKey.OP_ACCEPT);
+    public static final NioIoOps READ_AND_ACCEPT = new NioIoOps(SelectionKey.OP_READ | SelectionKey.OP_ACCEPT);
 
     /**
      * Interested in IO events which should be either handled by reading or writing.
      */
-    public static final NioIoOpt READ_AND_WRITE = new NioIoOpt(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+    public static final NioIoOps READ_AND_WRITE = new NioIoOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
     // Just use an array to store often used values.
-    private static final NioIoOpt[] OPTS;
+    private static final NioIoOps[] OPTS;
 
     static {
-        NioIoOpt all = new NioIoOpt(
+        NioIoOps all = new NioIoOps(
                 NONE.value | ACCEPT.value | CONNECT.value | WRITE.value | READ.value);
-        OPTS = new NioIoOpt[all.value + 1];
+        OPTS = new NioIoOps[all.value + 1];
         addToArray(OPTS, NONE);
         addToArray(OPTS, ACCEPT);
         addToArray(OPTS, CONNECT);
@@ -76,32 +76,32 @@ public final class NioIoOpt implements IoOpt {
         addToArray(OPTS, all);
     }
 
-    private static void addToArray(NioIoOpt[] array, NioIoOpt opt) {
+    private static void addToArray(NioIoOps[] array, NioIoOps opt) {
         array[opt.value] = opt;
     }
 
     final int value;
 
-    private NioIoOpt(int value) {
+    private NioIoOps(int value) {
         this.value = value;
     }
 
     /**
-     * Returns {@code true} if this {@link NioIoOpt} is a combination of the given {@link NioIoOpt}.
+     * Returns {@code true} if this {@link NioIoOps} is a combination of the given {@link NioIoOps}.
      * @param opt   the opt.
      * @return      {@code true} if a combination of the given.
      */
-    public boolean contains(NioIoOpt opt) {
+    public boolean contains(NioIoOps opt) {
         return (value & opt.value) != 0;
     }
 
     /**
-     * Return a {@link NioIoOpt} which is a combination of the current and the given {@link NioIoOpt}.
+     * Return a {@link NioIoOps} which is a combination of the current and the given {@link NioIoOps}.
      *
-     * @param opt   the {@link NioIoOpt} that should be added to this one.
-     * @return      a {@link NioIoOpt}.
+     * @param opt   the {@link NioIoOps} that should be added to this one.
+     * @return      a {@link NioIoOps}.
      */
-    public NioIoOpt with(NioIoOpt opt) {
+    public NioIoOps with(NioIoOps opt) {
         if (contains(opt)) {
             return this;
         }
@@ -109,12 +109,12 @@ public final class NioIoOpt implements IoOpt {
     }
 
     /**
-     * Return a {@link NioIoOpt} which is not a combination of the current and the given {@link NioIoOpt}.
+     * Return a {@link NioIoOps} which is not a combination of the current and the given {@link NioIoOps}.
      *
-     * @param opt   the {@link NioIoOpt} that should be remove from this one.
-     * @return      a {@link NioIoOpt}.
+     * @param opt   the {@link NioIoOps} that should be remove from this one.
+     * @return      a {@link NioIoOps}.
      */
-    public NioIoOpt without(NioIoOpt opt) {
+    public NioIoOps without(NioIoOps opt) {
         if (!contains(opt)) {
             return this;
         }
@@ -122,7 +122,7 @@ public final class NioIoOpt implements IoOpt {
     }
 
     /**
-     * Returns the underlying value of the {@link NioIoOpt}.
+     * Returns the underlying value of the {@link NioIoOps}.
      *
      * @return value.
      */
@@ -138,7 +138,7 @@ public final class NioIoOpt implements IoOpt {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        NioIoOpt nioOpt = (NioIoOpt) o;
+        NioIoOps nioOpt = (NioIoOps) o;
         return value == nioOpt.value;
     }
 
@@ -148,19 +148,19 @@ public final class NioIoOpt implements IoOpt {
     }
 
     /**
-     * Returns a {@link NioIoOpt} for the given value.
+     * Returns a {@link NioIoOps} for the given value.
      *
      * @param   value the value
-     * @return  the {@link NioIoOpt}.
+     * @return  the {@link NioIoOps}.
      */
-    public static NioIoOpt valueOf(int value) {
-        final NioIoOpt opt;
+    public static NioIoOps valueOf(int value) {
+        final NioIoOps opt;
         if (value < OPTS.length) {
             opt = OPTS[value];
             if (opt != null) {
                 return opt;
             }
         }
-        return new NioIoOpt(value);
+        return new NioIoOps(value);
     }
 }

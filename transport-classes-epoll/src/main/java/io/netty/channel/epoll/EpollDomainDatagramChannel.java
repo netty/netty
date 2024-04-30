@@ -69,7 +69,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
     }
 
     private EpollDomainDatagramChannel(LinuxSocket socket, boolean active) {
-        super(null, socket, active, EpollIoOpt.valueOf(0));
+        super(null, socket, active, EpollIoOps.valueOf(0));
         config = new EpollDomainDatagramChannelConfig(this);
     }
 

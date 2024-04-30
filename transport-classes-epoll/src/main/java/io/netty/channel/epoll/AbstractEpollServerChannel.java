@@ -38,7 +38,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     }
 
     protected AbstractEpollServerChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, active, EpollIoOpt.valueOf(0));
+        super(null, fd, active, EpollIoOps.valueOf(0));
     }
 
     @Override

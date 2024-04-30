@@ -141,7 +141,7 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
                                 logger.warn("Unexpected exception while running NioTask.channelUnregistered(...)", e);
                             }
                         }
-                    }, NioIoOpt.valueOf(interestOps)).get();
+                    }, NioIoOps.valueOf(interestOps)).get();
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

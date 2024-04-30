@@ -15,17 +15,17 @@
  */
 package io.netty.channel.local;
 
-import io.netty.channel.IoOpt;
+import io.netty.channel.IoOps;
 
 /**
- * {@link IoOpt} implementation that can be used with {@link LocalIoHandler}.
+ * {@link IoOps} implementation that can be used with {@link LocalIoHandler}.
  */
-public final class LocalIoOpt implements IoOpt {
+public final class LocalIoOps implements IoOps {
 
     /**
      * Default instance to use.
      */
-    public static final LocalIoOpt DEFAULT = new LocalIoOpt();
+    public static final LocalIoOps DEFAULT = new LocalIoOps();
 
-    private LocalIoOpt() { }
+    private LocalIoOps() { }
 }

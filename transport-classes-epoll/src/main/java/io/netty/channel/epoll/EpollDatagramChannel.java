@@ -101,7 +101,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     private EpollDatagramChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, active, EpollIoOpt.valueOf(0));
+        super(null, fd, active, EpollIoOps.valueOf(0));
         config = new EpollDatagramChannelConfig(this);
     }
 

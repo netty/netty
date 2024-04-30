@@ -15,12 +15,12 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.IoOpt;
+import io.netty.channel.IoOps;
 
 /**
- * Implementation of {@link IoOpt} that is used by {@link EpollIoHandler} and so for epoll based transports.
+ * Implementation of {@link IoOps} that is used by {@link EpollIoHandler} and so for epoll based transports.
  */
-public final class EpollIoOpt implements IoOpt {
+public final class EpollIoOps implements IoOps {
 
     static {
         // Need to ensure we load the native lib before trying to use the values in Native to construct the different
@@ -31,32 +31,32 @@ public final class EpollIoOpt implements IoOpt {
     /**
      * Interested in IO events that should be handled by accepting new connections
      */
-    public static final EpollIoOpt EPOLLOUT = new EpollIoOpt(Native.EPOLLOUT);
+    public static final EpollIoOps EPOLLOUT = new EpollIoOps(Native.EPOLLOUT);
 
     /**
      * Interested in IO events which should be handled by finish pending connect operations
      */
-    public static final EpollIoOpt EPOLLIN = new EpollIoOpt(Native.EPOLLIN);
+    public static final EpollIoOps EPOLLIN = new EpollIoOps(Native.EPOLLIN);
 
     /**
      * Interested in IO events which tell that the underlying channel is writable again.
      */
-    public static final EpollIoOpt EPOLLERR = new EpollIoOpt(Native.EPOLLERR);
+    public static final EpollIoOps EPOLLERR = new EpollIoOps(Native.EPOLLERR);
 
     /**
      * Interested in IO events which should be handled by reading data.
      */
-    public static final EpollIoOpt EPOLLRDHUP = new EpollIoOpt(Native.EPOLLRDHUP);
+    public static final EpollIoOps EPOLLRDHUP = new EpollIoOps(Native.EPOLLRDHUP);
 
-    public static final EpollIoOpt EPOLLET = new EpollIoOpt(Native.EPOLLET);
+    public static final EpollIoOps EPOLLET = new EpollIoOps(Native.EPOLLET);
 
     // Just use an array to store often used values.
-    private static final EpollIoOpt[] OPTS;
+    private static final EpollIoOps[] OPTS;
 
     static {
-        EpollIoOpt all = new EpollIoOpt(
+        EpollIoOps all = new EpollIoOps(
                 EPOLLOUT.value | EPOLLIN.value | EPOLLERR.value | EPOLLRDHUP.value);
-        OPTS = new EpollIoOpt[all.value + 1];
+        OPTS = new EpollIoOps[all.value + 1];
         addToArray(OPTS, EPOLLOUT);
         addToArray(OPTS, EPOLLIN);
         addToArray(OPTS, EPOLLERR);
@@ -64,32 +64,32 @@ public final class EpollIoOpt implements IoOpt {
         addToArray(OPTS, all);
     }
 
-    private static void addToArray(EpollIoOpt[] array, EpollIoOpt opt) {
+    private static void addToArray(EpollIoOps[] array, EpollIoOps opt) {
         array[opt.value] = opt;
     }
 
     final int value;
 
-    private EpollIoOpt(int value) {
+    private EpollIoOps(int value) {
         this.value = value;
     }
 
     /**
-     * Returns {@code true} if this {@link EpollIoOpt} is a combination of the given {@link EpollIoOpt}.
+     * Returns {@code true} if this {@link EpollIoOps} is a combination of the given {@link EpollIoOps}.
      * @param opt   the opt.
      * @return      {@code true} if a combination of the given.
      */
-    public boolean contains(EpollIoOpt opt) {
+    public boolean contains(EpollIoOps opt) {
         return (value & opt.value) != 0;
     }
 
     /**
-     * Return a {@link EpollIoOpt} which is a combination of the current and the given {@link EpollIoOpt}.
+     * Return a {@link EpollIoOps} which is a combination of the current and the given {@link EpollIoOps}.
      *
-     * @param opt   the {@link EpollIoOpt} that should be added to this one.
-     * @return      a {@link EpollIoOpt}.
+     * @param opt   the {@link EpollIoOps} that should be added to this one.
+     * @return      a {@link EpollIoOps}.
      */
-    public EpollIoOpt with(EpollIoOpt opt) {
+    public EpollIoOps with(EpollIoOps opt) {
         if (contains(opt)) {
             return this;
         }
@@ -97,12 +97,12 @@ public final class EpollIoOpt implements IoOpt {
     }
 
     /**
-     * Return a {@link EpollIoOpt} which is not a combination of the current and the given {@link EpollIoOpt}.
+     * Return a {@link EpollIoOps} which is not a combination of the current and the given {@link EpollIoOps}.
      *
-     * @param opt   the {@link EpollIoOpt} that should be remove from this one.
-     * @return      a {@link EpollIoOpt}.
+     * @param opt   the {@link EpollIoOps} that should be remove from this one.
+     * @return      a {@link EpollIoOps}.
      */
-    public EpollIoOpt without(EpollIoOpt opt) {
+    public EpollIoOps without(EpollIoOps opt) {
         if (!contains(opt)) {
             return this;
         }
@@ -110,7 +110,7 @@ public final class EpollIoOpt implements IoOpt {
     }
 
     /**
-     * Returns the underlying value of the {@link EpollIoOpt}.
+     * Returns the underlying value of the {@link EpollIoOps}.
      *
      * @return value.
      */
@@ -126,7 +126,7 @@ public final class EpollIoOpt implements IoOpt {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        EpollIoOpt nioOpt = (EpollIoOpt) o;
+        EpollIoOps nioOpt = (EpollIoOps) o;
         return value == nioOpt.value;
     }
 
@@ -136,13 +136,13 @@ public final class EpollIoOpt implements IoOpt {
     }
 
     /**
-     * Returns a {@link EpollIoOpt} for the given value.
+     * Returns a {@link EpollIoOps} for the given value.
      *
      * @param   value the value
-     * @return  the {@link EpollIoOpt}.
+     * @return  the {@link EpollIoOps}.
      */
-    public static EpollIoOpt valueOf(int value) {
-        final EpollIoOpt opt;
+    public static EpollIoOps valueOf(int value) {
+        final EpollIoOps opt;
         if (value > 0 && value < OPTS.length) {
             opt = OPTS[value];
             if (opt != null) {
@@ -151,6 +151,6 @@ public final class EpollIoOpt implements IoOpt {
         } else if (value == EPOLLET.value) {
             return EPOLLET;
         }
-        return new EpollIoOpt(value);
+        return new EpollIoOps(value);
     }
 }

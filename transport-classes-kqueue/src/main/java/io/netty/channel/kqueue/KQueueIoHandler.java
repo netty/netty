@@ -23,7 +23,7 @@ import io.netty.channel.IoExecutionContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
-import io.netty.channel.IoOpt;
+import io.netty.channel.IoOps;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.unix.FileDescriptor;
@@ -324,12 +324,12 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     @Override
-    public KQueueIoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOpt initialOpts) {
+    public KQueueIoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps initialOpts) {
         final KQueueIoHandle kqueueHandle = cast(handle);
         if (kqueueHandle.ident() == KQUEUE_WAKE_UP_IDENT) {
             throw new IllegalArgumentException("ident " + KQUEUE_WAKE_UP_IDENT + " is reserved for internal usage");
         }
-        KQueueEventIoOpt eventIoOpt = cast(initialOpts);
+        KQueueEventIoOps eventIoOpt = cast(initialOpts);
         DefaultKqueueIoRegistration registration = new DefaultKqueueIoRegistration(
                 eventLoop, kqueueHandle);
         DefaultKqueueIoRegistration old = registrations.put(kqueueHandle.ident(), registration);
@@ -353,9 +353,9 @@ public final class KQueueIoHandler implements IoHandler {
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
-    private static KQueueEventIoOpt cast(IoOpt opt) {
-        if (opt instanceof KQueueEventIoOpt) {
-            return (KQueueEventIoOpt) opt;
+    private static KQueueEventIoOps cast(IoOps opt) {
+        if (opt instanceof KQueueEventIoOps) {
+            return (KQueueEventIoOps) opt;
         }
         throw new IllegalArgumentException("IoOpt of type " + StringUtil.simpleClassName(opt) + " not supported");
     }
@@ -366,7 +366,7 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     private final class DefaultKqueueIoRegistration extends AtomicBoolean implements KQueueIoRegistration {
-        private final KQueueEventIoOpt readyEventIoOpt = new KQueueEventIoOpt();
+        private final KQueueEventIoOps readyEventIoOpt = new KQueueEventIoOps();
 
         final KQueueIoHandle handle;
 
@@ -378,7 +378,7 @@ public final class KQueueIoHandler implements IoHandler {
         }
 
         @Override
-        public void addOpt(KQueueEventIoOpt opt) {
+        public void addOpt(KQueueEventIoOps opt) {
             if (opt.ident() != handle.ident()) {
                 throw new IllegalArgumentException("ident does not match KQueueIoHandle.ident()");
             }
