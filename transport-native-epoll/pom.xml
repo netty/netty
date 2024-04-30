@@ -42,7 +42,6 @@
     <jni.compiler.args.libs>LIBS=-Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive -ldl</jni.compiler.args.libs>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <skipTests>true</skipTests>
-    <japicmp.skip>true</japicmp.skip>
   </properties>
 
   <profiles>

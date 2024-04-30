@@ -120,7 +120,6 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <!-- Needed for SelfSignedCertificate -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
-    <japicmp.skip>true</japicmp.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
     <javaModuleName>io.netty.transport_blockhound_tests</javaModuleName>
