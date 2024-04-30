@@ -21,7 +21,6 @@ import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.ServerChannel;
 import io.netty5.testsuite.transport.AbstractSingleThreadEventLoopTest;
-import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
@@ -44,7 +43,7 @@ public class IOUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Override
     protected IoHandlerFactory newIoHandlerFactory() {
-        return IOUring.newFactory();
+        return IOUringHandler.newFactory();
     }
 
     @Override
@@ -85,7 +84,7 @@ public class IOUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Test
     public void testSchedule() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, IOUring.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, IOUringHandler.newFactory());
         try {
             EventLoop loop = group.next();
             loop.schedule(EMPTY_RUNNABLE, 1, TimeUnit.SECONDS).asStage().sync();

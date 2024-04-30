@@ -15,7 +15,6 @@
  */
 package io.netty5.channel.uring;
 
-import io.netty5.channel.IoHandlerFactory;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import org.slf4j.Logger;
@@ -80,30 +79,6 @@ public final class IOUring {
 
     public static Throwable unavailabilityCause() {
         return UNAVAILABILITY_CAUSE;
-    }
-
-    public static IoHandlerFactory newFactory() {
-        ensureAvailability();
-        return () -> {
-            RingBuffer ringBuffer = Native.createRingBuffer();
-            return new IOUringHandler(ringBuffer);
-        };
-    }
-
-    public static IoHandlerFactory newFactory(int ringSize) {
-        ensureAvailability();
-        return () -> {
-            RingBuffer ringBuffer = Native.createRingBuffer(ringSize);
-            return new IOUringHandler(ringBuffer);
-        };
-    }
-
-    public static IoHandlerFactory newFactory(int ringSize, int kernelWorkerOffloadThreshold) {
-        ensureAvailability();
-        return () -> {
-            RingBuffer ringBuffer = Native.createRingBuffer(ringSize, kernelWorkerOffloadThreshold);
-            return new IOUringHandler(ringBuffer);
-        };
     }
 
     private IOUring() {

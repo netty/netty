@@ -39,7 +39,7 @@ public class PollRemoveTest {
 
     private static void ioUringTest() throws Exception {
         Class<? extends ServerSocketChannel> clazz = IOUringServerSocketChannel.class;
-        final EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, IOUring.newFactory());
+        final EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, IOUringHandler.newFactory());
 
         try {
             ServerBootstrap b = new ServerBootstrap();

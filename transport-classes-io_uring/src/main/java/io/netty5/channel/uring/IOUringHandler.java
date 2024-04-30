@@ -18,6 +18,7 @@ package io.netty5.channel.uring;
 import io.netty5.channel.IoExecutionContext;
 import io.netty5.channel.IoHandle;
 import io.netty5.channel.IoHandler;
+import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.util.collection.IntObjectHashMap;
 import io.netty5.util.collection.IntObjectMap;
@@ -38,7 +39,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * {@link IoHandler} which is implemented in terms of the Linux-specific {@code io_uring} API.
  */
-final class IOUringHandler implements IoHandler, CompletionCallback {
+public final class IOUringHandler implements IoHandler, CompletionCallback {
     private static final Logger logger = LoggerFactory.getLogger(IOUringHandler.class);
     private static final short RING_CLOSE = 1;
 
@@ -319,5 +320,29 @@ final class IOUringHandler implements IoHandler, CompletionCallback {
     @Override
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
         return AbstractIOUringChannel.class.isAssignableFrom(handleType);
+    }
+
+    public static IoHandlerFactory newFactory() {
+        IOUring.ensureAvailability();
+        return () -> {
+            RingBuffer ringBuffer = Native.createRingBuffer();
+            return new IOUringHandler(ringBuffer);
+        };
+    }
+
+    public static IoHandlerFactory newFactory(int ringSize) {
+        IOUring.ensureAvailability();
+        return () -> {
+            RingBuffer ringBuffer = Native.createRingBuffer(ringSize);
+            return new IOUringHandler(ringBuffer);
+        };
+    }
+
+    public static IoHandlerFactory newFactory(int ringSize, int kernelWorkerOffloadThreshold) {
+        IOUring.ensureAvailability();
+        return () -> {
+            RingBuffer ringBuffer = Native.createRingBuffer(ringSize, kernelWorkerOffloadThreshold);
+            return new IOUringHandler(ringBuffer);
+        };
     }
 }

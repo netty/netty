@@ -50,9 +50,9 @@ public class IOUringSocketTestPermutation extends SocketTestPermutation {
     static final IOUringSocketTestPermutation INSTANCE = new IOUringSocketTestPermutation();
 
     static final EventLoopGroup IO_URING_BOSS_GROUP = new MultithreadEventLoopGroup(
-            BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IOUring.newFactory());
+            BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IOUringHandler.newFactory());
     static final EventLoopGroup IO_URING_WORKER_GROUP = new MultithreadEventLoopGroup(
-            WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true), IOUring.newFactory());
+            WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true), IOUringHandler.newFactory());
 
     private static final Logger logger = LoggerFactory.getLogger(IOUringSocketTestPermutation.class);
 
