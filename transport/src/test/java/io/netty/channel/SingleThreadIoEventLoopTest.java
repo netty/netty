@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SingleThreadIoEventLoopTest {
 
     @Test
-    void testIsUsed() {
+    void testIsIoType() {
         IoHandler handler = new TestIoHandler();
         IoHandler handler2 = new TestIoHandler() { };
 
