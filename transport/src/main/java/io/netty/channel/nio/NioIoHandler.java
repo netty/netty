@@ -307,20 +307,20 @@ public final class NioIoHandler implements IoHandler {
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
-    private static NioIoOps cast(IoOps opt) {
-        if (opt instanceof NioIoOps) {
-            return (NioIoOps) opt;
+    private static NioIoOps cast(IoOps ops) {
+        if (ops instanceof NioIoOps) {
+            return (NioIoOps) ops;
         }
-        throw new IllegalArgumentException("IoOpt of type " + StringUtil.simpleClassName(opt) + " not supported");
+        throw new IllegalArgumentException("IoOps of type " + StringUtil.simpleClassName(ops) + " not supported");
     }
 
     final class DefaultNioRegistration implements NioIoRegistration {
         private final NioIoHandle handle;
         private volatile SelectionKey key;
 
-        DefaultNioRegistration(NioIoHandle handle, NioIoOps initialOpt, Selector selector) throws IOException {
+        DefaultNioRegistration(NioIoHandle handle, NioIoOps initialOps, Selector selector) throws IOException {
             this.handle = handle;
-            key = handle.selectableChannel().register(selector, initialOpt.value, this);
+            key = handle.selectableChannel().register(selector, initialOps.value, this);
         }
 
         NioIoHandle handle() {
@@ -328,8 +328,8 @@ public final class NioIoHandler implements IoHandler {
         }
 
         void register(Selector selector) throws IOException {
-            NioIoOps opts = interestOpt();
-            SelectionKey newKey = handle.selectableChannel().register(selector, opts.value, this);
+            NioIoOps ops = interestOps();
+            SelectionKey newKey = handle.selectableChannel().register(selector, ops.value, this);
             key.cancel();
             key = newKey;
         }
@@ -345,12 +345,12 @@ public final class NioIoHandler implements IoHandler {
         }
 
         @Override
-        public void updateInterestOpt(NioIoOps opt) {
-            key.interestOps(opt.value);
+        public void updateInterestOps(NioIoOps ops) {
+            key.interestOps(ops.value);
         }
 
         @Override
-        public NioIoOps interestOpt() {
+        public NioIoOps interestOps() {
             return NioIoOps.valueOf(key.interestOps());
         }
 
@@ -384,14 +384,14 @@ public final class NioIoHandler implements IoHandler {
     }
 
     @Override
-    public NioIoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps initialOpt)
+    public NioIoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps initialOps)
             throws Exception {
         NioIoHandle nioHandle = nioHandle(handle);
-        NioIoOps opt = cast(initialOpt);
+        NioIoOps ops = cast(initialOps);
         boolean selected = false;
         for (;;) {
             try {
-                return new DefaultNioRegistration(nioHandle, opt, unwrappedSelector());
+                return new DefaultNioRegistration(nioHandle, ops, unwrappedSelector());
             } catch (CancelledKeyException e) {
                 if (!selected) {
                     // Force the Selector to select now as the "canceled" SelectionKey may still be

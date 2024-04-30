@@ -33,16 +33,16 @@ public interface NioIoRegistration extends IoRegistration {
     /**
      * Update the {@link NioIoOps} for this registration.
      *
-     * @param opt   the {@link NioIoOps} to use.
+     * @param ops   the {@link NioIoOps} to use.
      */
-    void updateInterestOpt(NioIoOps opt);
+    void updateInterestOps(NioIoOps ops);
 
     /**
      * The used {@link NioIoOps} for this registration.
      *
-     * @return  opt.
+     * @return  ops.
      */
-    NioIoOps interestOpt();
+    NioIoOps interestOps();
 
     @Override
     void cancel();

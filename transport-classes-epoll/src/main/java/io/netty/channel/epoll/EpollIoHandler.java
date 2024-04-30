@@ -140,11 +140,11 @@ public class EpollIoHandler implements IoHandler {
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
-    private static EpollIoOps cast(IoOps opt) {
-        if (opt instanceof EpollIoOps) {
-            return (EpollIoOps) opt;
+    private static EpollIoOps cast(IoOps ops) {
+        if (ops instanceof EpollIoOps) {
+            return (EpollIoOps) ops;
         }
-        throw new IllegalArgumentException("IoOpt of type " + StringUtil.simpleClassName(opt) + " not supported");
+        throw new IllegalArgumentException("IoOps of type " + StringUtil.simpleClassName(ops) + " not supported");
     }
 
     /**
@@ -260,22 +260,22 @@ public class EpollIoHandler implements IoHandler {
         private final IoEventLoop eventLoop;
         final EpollIoHandle handle;
 
-        private volatile EpollIoOps currentOpt;
+        private volatile EpollIoOps currentOps;
 
-        DefaultEpollIoRegistration(IoEventLoop eventLoop, EpollIoHandle handle, EpollIoOps initialOpt) {
+        DefaultEpollIoRegistration(IoEventLoop eventLoop, EpollIoHandle handle, EpollIoOps initialOps) {
             this.eventLoop = eventLoop;
             this.handle = handle;
-            this.currentOpt = initialOpt;
+            this.currentOps = initialOps;
         }
 
         @Override
-        public void updateInterestOpt(EpollIoOps opt) throws IOException {
-            currentOpt = opt;
+        public void updateInterestOps(EpollIoOps ops) throws IOException {
+            currentOps = ops;
             try {
                 if (!isValid()) {
                     return;
                 }
-                Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), opt.value);
+                Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), ops.value);
             } catch (IOException e) {
                 throw e;
             } catch (Exception e) {
@@ -284,8 +284,8 @@ public class EpollIoHandler implements IoHandler {
         }
 
         @Override
-        public EpollIoOps interestOpt() {
-            return currentOpt;
+        public EpollIoOps interestOps() {
+            return currentOps;
         }
 
         @Override
@@ -348,13 +348,13 @@ public class EpollIoHandler implements IoHandler {
 
     @Override
     public EpollIoRegistration register(IoEventLoop eventLoop, IoHandle handle,
-                                      IoOps initialOpt)
+                                      IoOps initialOps)
             throws Exception {
         final EpollIoHandle epollHandle = cast(handle);
-        EpollIoOps opt = cast(initialOpt);
-        DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(eventLoop, epollHandle, opt);
+        EpollIoOps ops = cast(initialOps);
+        DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(eventLoop, epollHandle, ops);
         int fd = epollHandle.fd().intValue();
-        Native.epollCtlAdd(epollFd.intValue(), fd, registration.interestOpt().value);
+        Native.epollCtlAdd(epollFd.intValue(), fd, registration.interestOps().value);
         DefaultEpollIoRegistration old = registrations.put(fd, registration);
 
         // We either expect to have no registration in the map with the same FD or that the FD of the old registration

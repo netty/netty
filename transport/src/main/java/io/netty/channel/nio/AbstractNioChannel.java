@@ -247,7 +247,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             if (!registration.isValid()) {
                 return;
             }
-            registration.updateInterestOpt(registration.interestOpt().without(readOps));
+            registration.updateInterestOps(registration.interestOps().without(readOps));
         }
 
         @Override
@@ -392,26 +392,26 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         private boolean isFlushPending() {
             NioIoRegistration registration = registration();
-            return registration.isValid() && registration.interestOpt().contains(NioIoOps.WRITE);
+            return registration.isValid() && registration.interestOps().contains(NioIoOps.WRITE);
         }
 
         @Override
-        public void handle(IoRegistration registration, IoOps readyOpt) {
+        public void handle(IoRegistration registration, IoOps readyOps) {
             try {
                 NioIoRegistration nioRegistration = (NioIoRegistration) registration;
-                NioIoOps nioReadyOpt = (NioIoOps) readyOpt;
+                NioIoOps nioReadyOps = (NioIoOps) readyOps;
                 // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
                 // the NIO JDK channel implementation may throw a NotYetConnectedException.
-                if (nioReadyOpt.contains(NioIoOps.CONNECT)) {
+                if (nioReadyOps.contains(NioIoOps.CONNECT)) {
                     // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                     // See https://github.com/netty/netty/issues/924
-                    nioRegistration.updateInterestOpt(nioRegistration.interestOpt().without(NioIoOps.CONNECT));
+                    nioRegistration.updateInterestOps(nioRegistration.interestOps().without(NioIoOps.CONNECT));
 
                     unsafe().finishConnect();
                 }
 
                 // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
-                if (nioReadyOpt.contains(NioIoOps.WRITE)) {
+                if (nioReadyOps.contains(NioIoOps.WRITE)) {
                     // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to
                     // write
                     forceFlush();
@@ -419,7 +419,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
                 // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
                 // to a spin loop
-                if (nioReadyOpt.contains(NioIoOps.READ_AND_ACCEPT) || nioReadyOpt.equals(NioIoOps.NONE)) {
+                if (nioReadyOps.contains(NioIoOps.READ_AND_ACCEPT) || nioReadyOps.equals(NioIoOps.NONE)) {
                     read();
                 }
             } catch (CancelledKeyException ignored) {
@@ -466,7 +466,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         readPending = true;
 
-        registration.updateInterestOpt(registration.interestOpt().with(readOps));
+        registration.updateInterestOps(registration.interestOps().with(readOps));
     }
 
     /**

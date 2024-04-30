@@ -47,10 +47,10 @@ public interface IoEventLoop extends EventLoop, IoEventLoopGroup {
      * Register the {@link IoHandle} to the {@link EventLoop} for I/O processing.
      *
      * @param handle        the {@link IoHandle} to register.
-     * @param initialOpt    the initial {@link IoOps} to use.
+     * @param initialOps    the initial {@link IoOps} to use.
      * @return              the {@link Future} that is notified once the operations completes.
      */
-    Future<IoRegistration> register(IoHandle handle, IoOps initialOpt);
+    Future<IoRegistration> register(IoHandle handle, IoOps initialOps);
 
     @Override
     boolean isCompatible(Class<? extends IoHandle> handleType);

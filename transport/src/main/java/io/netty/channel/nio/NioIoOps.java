@@ -60,24 +60,24 @@ public final class NioIoOps implements IoOps {
     public static final NioIoOps READ_AND_WRITE = new NioIoOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
     // Just use an array to store often used values.
-    private static final NioIoOps[] OPTS;
+    private static final NioIoOps[] OPS;
 
     static {
         NioIoOps all = new NioIoOps(
                 NONE.value | ACCEPT.value | CONNECT.value | WRITE.value | READ.value);
-        OPTS = new NioIoOps[all.value + 1];
-        addToArray(OPTS, NONE);
-        addToArray(OPTS, ACCEPT);
-        addToArray(OPTS, CONNECT);
-        addToArray(OPTS, WRITE);
-        addToArray(OPTS, READ);
-        addToArray(OPTS, READ_AND_ACCEPT);
-        addToArray(OPTS, READ_AND_WRITE);
-        addToArray(OPTS, all);
+        OPS = new NioIoOps[all.value + 1];
+        addToArray(OPS, NONE);
+        addToArray(OPS, ACCEPT);
+        addToArray(OPS, CONNECT);
+        addToArray(OPS, WRITE);
+        addToArray(OPS, READ);
+        addToArray(OPS, READ_AND_ACCEPT);
+        addToArray(OPS, READ_AND_WRITE);
+        addToArray(OPS, all);
     }
 
-    private static void addToArray(NioIoOps[] array, NioIoOps opt) {
-        array[opt.value] = opt;
+    private static void addToArray(NioIoOps[] array, NioIoOps op) {
+        array[op.value] = op;
     }
 
     final int value;
@@ -88,37 +88,37 @@ public final class NioIoOps implements IoOps {
 
     /**
      * Returns {@code true} if this {@link NioIoOps} is a combination of the given {@link NioIoOps}.
-     * @param opt   the opt.
+     * @param ops   the ops.
      * @return      {@code true} if a combination of the given.
      */
-    public boolean contains(NioIoOps opt) {
-        return (value & opt.value) != 0;
+    public boolean contains(NioIoOps ops) {
+        return (value & ops.value) != 0;
     }
 
     /**
      * Return a {@link NioIoOps} which is a combination of the current and the given {@link NioIoOps}.
      *
-     * @param opt   the {@link NioIoOps} that should be added to this one.
+     * @param ops   the {@link NioIoOps} that should be added to this one.
      * @return      a {@link NioIoOps}.
      */
-    public NioIoOps with(NioIoOps opt) {
-        if (contains(opt)) {
+    public NioIoOps with(NioIoOps ops) {
+        if (contains(ops)) {
             return this;
         }
-        return valueOf(value | opt.value());
+        return valueOf(value | ops.value());
     }
 
     /**
      * Return a {@link NioIoOps} which is not a combination of the current and the given {@link NioIoOps}.
      *
-     * @param opt   the {@link NioIoOps} that should be remove from this one.
+     * @param ops   the {@link NioIoOps} that should be remove from this one.
      * @return      a {@link NioIoOps}.
      */
-    public NioIoOps without(NioIoOps opt) {
-        if (!contains(opt)) {
+    public NioIoOps without(NioIoOps ops) {
+        if (!contains(ops)) {
             return this;
         }
-        return valueOf(value & ~opt.value());
+        return valueOf(value & ~ops.value());
     }
 
     /**
@@ -138,8 +138,8 @@ public final class NioIoOps implements IoOps {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        NioIoOps nioOpt = (NioIoOps) o;
-        return value == nioOpt.value;
+        NioIoOps nioOps = (NioIoOps) o;
+        return value == nioOps.value;
     }
 
     @Override
@@ -154,11 +154,11 @@ public final class NioIoOps implements IoOps {
      * @return  the {@link NioIoOps}.
      */
     public static NioIoOps valueOf(int value) {
-        final NioIoOps opt;
-        if (value < OPTS.length) {
-            opt = OPTS[value];
-            if (opt != null) {
-                return opt;
+        final NioIoOps ops;
+        if (value < OPS.length) {
+            ops = OPS[value];
+            if (ops != null) {
+                return ops;
             }
         }
         return new NioIoOps(value);

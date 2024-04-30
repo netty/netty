@@ -479,7 +479,7 @@ public class LocalChannel extends AbstractChannel {
         }
 
         @Override
-        public void handle(IoRegistration registration, IoOps readyOpt) {
+        public void handle(IoRegistration registration, IoOps readyOps) {
             // NOOP
         }
 
