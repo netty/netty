@@ -15,12 +15,12 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.channel.IoOpt;
+import io.netty.channel.IoOps;
 
 /**
- * {@link IoOpt} to use with {@link KQueueIoHandler}.
+ * {@link IoOps} to use with {@link KQueueIoHandler}.
  */
-public final class KQueueEventIoOpt implements IoOpt {
+public final class KQueueEventIoOps implements IoOps {
     private int ident;
     private short filter;
     private short flags;
@@ -28,19 +28,19 @@ public final class KQueueEventIoOpt implements IoOpt {
     private long data;
 
     /**
-     * Creates a new {@link KQueueEventIoOpt}.
+     * Creates a new {@link KQueueEventIoOps}.
      *
      * @param ident     the identifier for this event.
      * @param filter    the filter for this event.
      * @param flags     the general flags.
      * @param fflags    filter-specific flags.
-     * @return          {@link KQueueEventIoOpt}.
+     * @return          {@link KQueueEventIoOps}.
      */
-    public static KQueueEventIoOpt newOpt(int ident, short filter, short flags, int fflags) {
-        return new KQueueEventIoOpt(ident, filter, flags, fflags, 0);
+    public static KQueueEventIoOps newOpt(int ident, short filter, short flags, int fflags) {
+        return new KQueueEventIoOps(ident, filter, flags, fflags, 0);
     }
 
-    private KQueueEventIoOpt(int ident, short filter, short flags, int fflags, long data) {
+    private KQueueEventIoOps(int ident, short filter, short flags, int fflags, long data) {
         this.ident = ident;
         this.filter = filter;
         this.flags = flags;
@@ -48,7 +48,7 @@ public final class KQueueEventIoOpt implements IoOpt {
         this.data = data;
     }
 
-    KQueueEventIoOpt() {
+    KQueueEventIoOps() {
         this(0, (short) 0, (short) 0, 0, 0);
     }
 

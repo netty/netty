@@ -30,14 +30,14 @@ public interface IoEventLoop extends EventLoop, IoEventLoopGroup {
         return this;
     }
     /**
-     * @deprecated Use {@link #register(IoHandle, IoOpt)}
+     * @deprecated Use {@link #register(IoHandle, IoOps)}
      */
     @Deprecated
     @Override
     ChannelFuture register(Channel channel);
 
     /**
-     * @deprecated Use {@link #register(IoHandle, IoOpt)}
+     * @deprecated Use {@link #register(IoHandle, IoOps)}
      */
     @Deprecated
     @Override
@@ -47,10 +47,10 @@ public interface IoEventLoop extends EventLoop, IoEventLoopGroup {
      * Register the {@link IoHandle} to the {@link EventLoop} for I/O processing.
      *
      * @param handle        the {@link IoHandle} to register.
-     * @param initialOpt    the initial {@link IoOpt} to use.
+     * @param initialOpt    the initial {@link IoOps} to use.
      * @return              the {@link Future} that is notified once the operations completes.
      */
-    Future<IoRegistration> register(IoHandle handle, IoOpt initialOpt);
+    Future<IoRegistration> register(IoHandle handle, IoOps initialOpt);
 
     @Override
     boolean isCompatible(Class<? extends IoHandle> handleType);

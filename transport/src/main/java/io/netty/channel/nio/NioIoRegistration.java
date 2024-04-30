@@ -31,18 +31,18 @@ public interface NioIoRegistration extends IoRegistration {
     SelectionKey selectionKey();
 
     /**
-     * Update the {@link NioIoOpt} for this registration.
+     * Update the {@link NioIoOps} for this registration.
      *
-     * @param opt   the {@link NioIoOpt} to use.
+     * @param opt   the {@link NioIoOps} to use.
      */
-    void updateInterestOpt(NioIoOpt opt);
+    void updateInterestOpt(NioIoOps opt);
 
     /**
-     * The used {@link NioIoOpt} for this registration.
+     * The used {@link NioIoOps} for this registration.
      *
      * @return  opt.
      */
-    NioIoOpt interestOpt();
+    NioIoOps interestOpt();
 
     @Override
     void cancel();

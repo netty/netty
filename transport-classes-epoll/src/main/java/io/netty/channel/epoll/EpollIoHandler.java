@@ -23,7 +23,7 @@ import io.netty.channel.IoExecutionContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
-import io.netty.channel.IoOpt;
+import io.netty.channel.IoOps;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.unix.FileDescriptor;
@@ -140,9 +140,9 @@ public class EpollIoHandler implements IoHandler {
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
-    private static EpollIoOpt cast(IoOpt opt) {
-        if (opt instanceof EpollIoOpt) {
-            return (EpollIoOpt) opt;
+    private static EpollIoOps cast(IoOps opt) {
+        if (opt instanceof EpollIoOps) {
+            return (EpollIoOps) opt;
         }
         throw new IllegalArgumentException("IoOpt of type " + StringUtil.simpleClassName(opt) + " not supported");
     }
@@ -260,16 +260,16 @@ public class EpollIoHandler implements IoHandler {
         private final IoEventLoop eventLoop;
         final EpollIoHandle handle;
 
-        private volatile EpollIoOpt currentOpt;
+        private volatile EpollIoOps currentOpt;
 
-        DefaultEpollIoRegistration(IoEventLoop eventLoop, EpollIoHandle handle, EpollIoOpt initialOpt) {
+        DefaultEpollIoRegistration(IoEventLoop eventLoop, EpollIoHandle handle, EpollIoOps initialOpt) {
             this.eventLoop = eventLoop;
             this.handle = handle;
             this.currentOpt = initialOpt;
         }
 
         @Override
-        public void updateInterestOpt(EpollIoOpt opt) throws IOException {
+        public void updateInterestOpt(EpollIoOps opt) throws IOException {
             currentOpt = opt;
             try {
                 if (!isValid()) {
@@ -284,7 +284,7 @@ public class EpollIoHandler implements IoHandler {
         }
 
         @Override
-        public EpollIoOpt interestOpt() {
+        public EpollIoOps interestOpt() {
             return currentOpt;
         }
 
@@ -342,16 +342,16 @@ public class EpollIoHandler implements IoHandler {
         }
 
         void handle(long ev) {
-            handle.handle(this, EpollIoOpt.valueOf((int) ev));
+            handle.handle(this, EpollIoOps.valueOf((int) ev));
         }
     }
 
     @Override
     public EpollIoRegistration register(IoEventLoop eventLoop, IoHandle handle,
-                                      IoOpt initialOpt)
+                                      IoOps initialOpt)
             throws Exception {
         final EpollIoHandle epollHandle = cast(handle);
-        EpollIoOpt opt = cast(initialOpt);
+        EpollIoOps opt = cast(initialOpt);
         DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(eventLoop, epollHandle, opt);
         int fd = epollHandle.fd().intValue();
         Native.epollCtlAdd(epollFd.intValue(), fd, registration.interestOpt().value);

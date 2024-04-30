@@ -24,7 +24,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioByteChannel;
-import io.netty.channel.nio.NioIoOpt;
+import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.nio.NioIoRegistration;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
 import io.netty.channel.udt.UdtChannel;
@@ -114,7 +114,7 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
             final boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
             if (!connected) {
                 NioIoRegistration registration = registration();
-                registration.updateInterestOpt(registration.interestOpt().with(NioIoOpt.CONNECT));
+                registration.updateInterestOpt(registration.interestOpt().with(NioIoOps.CONNECT));
             }
             success = true;
             return connected;
@@ -134,7 +134,7 @@ public class NioUdtByteConnectorChannel extends AbstractNioByteChannel implement
     protected void doFinishConnect() throws Exception {
         if (javaChannel().finishConnect()) {
             NioIoRegistration registration = registration();
-            registration.updateInterestOpt(registration.interestOpt().without(NioIoOpt.CONNECT));
+            registration.updateInterestOpt(registration.interestOpt().without(NioIoOps.CONNECT));
         } else {
             throw new Error(
                     "Provider error: failed to finish connect. Provider library should be upgraded.");

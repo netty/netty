@@ -92,17 +92,17 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     AbstractEpollStreamChannel(Channel parent, LinuxSocket fd) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(parent, fd, true, EpollIoOpt.EPOLLRDHUP);
+        super(parent, fd, true, EpollIoOps.EPOLLRDHUP);
     }
 
     protected AbstractEpollStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(parent, fd, remote, EpollIoOpt.EPOLLRDHUP);
+        super(parent, fd, remote, EpollIoOps.EPOLLRDHUP);
     }
 
     protected AbstractEpollStreamChannel(LinuxSocket fd, boolean active) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(null, fd, active, EpollIoOpt.EPOLLRDHUP);
+        super(null, fd, active, EpollIoOps.EPOLLRDHUP);
     }
 
     @Override
