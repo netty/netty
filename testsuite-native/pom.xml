@@ -29,7 +29,6 @@
   <name>Netty5/Testsuite/Native</name>
 
   <properties>
-    <japicmp.skip>true</japicmp.skip>
     <skipNativeTestsuite>false</skipNativeTestsuite>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>

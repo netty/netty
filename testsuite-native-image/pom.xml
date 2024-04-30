@@ -29,7 +29,6 @@
   <name>Netty5/Testsuite/NativeImage</name>
 
   <properties>
-    <japicmp.skip>true</japicmp.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
     <javaModuleName>io.netty5.testsuite_native_image</javaModuleName>

@@ -30,7 +30,6 @@
   <name>Netty5/Example</name>
 
   <properties>
-    <japicmp.skip>true</japicmp.skip>
     <javaModuleName>io.netty5.example</javaModuleName>
   </properties>
 

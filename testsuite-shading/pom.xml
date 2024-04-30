@@ -39,7 +39,6 @@
     <mangledShadingPrefix2>shaded_12</mangledShadingPrefix2>
     <skipShadingTestsuite>true</skipShadingTestsuite>
     <shadedPackagePrefix>io.netty5.</shadedPackagePrefix>
-    <japicmp.skip>true</japicmp.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
     <javaModuleName>io.netty5.testsuite_shading</javaModuleName>
