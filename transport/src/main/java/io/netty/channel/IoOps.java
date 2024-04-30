@@ -16,7 +16,7 @@
 package io.netty.channel;
 
 /**
- * An IO opt that is used when register an {@link IoHandle} to an {@link IoEventLoop}.
+ * An IO op that is used when register an {@link IoHandle} to an {@link IoEventLoop}.
  * Concrete {@link IoHandle} implementations support different concrete {@link IoOps} implementations.
  */
 public interface IoOps {

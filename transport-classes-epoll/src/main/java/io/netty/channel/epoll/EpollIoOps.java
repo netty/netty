@@ -51,21 +51,21 @@ public final class EpollIoOps implements IoOps {
     public static final EpollIoOps EPOLLET = new EpollIoOps(Native.EPOLLET);
 
     // Just use an array to store often used values.
-    private static final EpollIoOps[] OPTS;
+    private static final EpollIoOps[] OPS;
 
     static {
         EpollIoOps all = new EpollIoOps(
                 EPOLLOUT.value | EPOLLIN.value | EPOLLERR.value | EPOLLRDHUP.value);
-        OPTS = new EpollIoOps[all.value + 1];
-        addToArray(OPTS, EPOLLOUT);
-        addToArray(OPTS, EPOLLIN);
-        addToArray(OPTS, EPOLLERR);
-        addToArray(OPTS, EPOLLRDHUP);
-        addToArray(OPTS, all);
+        OPS = new EpollIoOps[all.value + 1];
+        addToArray(OPS, EPOLLOUT);
+        addToArray(OPS, EPOLLIN);
+        addToArray(OPS, EPOLLERR);
+        addToArray(OPS, EPOLLRDHUP);
+        addToArray(OPS, all);
     }
 
-    private static void addToArray(EpollIoOps[] array, EpollIoOps opt) {
-        array[opt.value] = opt;
+    private static void addToArray(EpollIoOps[] array, EpollIoOps ops) {
+        array[ops.value] = ops;
     }
 
     final int value;
@@ -76,37 +76,37 @@ public final class EpollIoOps implements IoOps {
 
     /**
      * Returns {@code true} if this {@link EpollIoOps} is a combination of the given {@link EpollIoOps}.
-     * @param opt   the opt.
+     * @param ops   the ops.
      * @return      {@code true} if a combination of the given.
      */
-    public boolean contains(EpollIoOps opt) {
-        return (value & opt.value) != 0;
+    public boolean contains(EpollIoOps ops) {
+        return (value & ops.value) != 0;
     }
 
     /**
      * Return a {@link EpollIoOps} which is a combination of the current and the given {@link EpollIoOps}.
      *
-     * @param opt   the {@link EpollIoOps} that should be added to this one.
+     * @param ops   the {@link EpollIoOps} that should be added to this one.
      * @return      a {@link EpollIoOps}.
      */
-    public EpollIoOps with(EpollIoOps opt) {
-        if (contains(opt)) {
+    public EpollIoOps with(EpollIoOps ops) {
+        if (contains(ops)) {
             return this;
         }
-        return valueOf(value | opt.value());
+        return valueOf(value | ops.value());
     }
 
     /**
      * Return a {@link EpollIoOps} which is not a combination of the current and the given {@link EpollIoOps}.
      *
-     * @param opt   the {@link EpollIoOps} that should be remove from this one.
+     * @param ops   the {@link EpollIoOps} that should be remove from this one.
      * @return      a {@link EpollIoOps}.
      */
-    public EpollIoOps without(EpollIoOps opt) {
-        if (!contains(opt)) {
+    public EpollIoOps without(EpollIoOps ops) {
+        if (!contains(ops)) {
             return this;
         }
-        return valueOf(value & ~opt.value());
+        return valueOf(value & ~ops.value());
     }
 
     /**
@@ -126,8 +126,8 @@ public final class EpollIoOps implements IoOps {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        EpollIoOps nioOpt = (EpollIoOps) o;
-        return value == nioOpt.value;
+        EpollIoOps nioOps = (EpollIoOps) o;
+        return value == nioOps.value;
     }
 
     @Override
@@ -142,11 +142,11 @@ public final class EpollIoOps implements IoOps {
      * @return  the {@link EpollIoOps}.
      */
     public static EpollIoOps valueOf(int value) {
-        final EpollIoOps opt;
-        if (value > 0 && value < OPTS.length) {
-            opt = OPTS[value];
-            if (opt != null) {
-                return opt;
+        final EpollIoOps ops;
+        if (value > 0 && value < OPS.length) {
+            ops = OPS[value];
+            if (ops != null) {
+                return ops;
             }
         } else if (value == EPOLLET.value) {
             return EPOLLET;

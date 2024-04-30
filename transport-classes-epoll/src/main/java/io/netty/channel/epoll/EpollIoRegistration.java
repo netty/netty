@@ -26,16 +26,16 @@ public interface EpollIoRegistration extends IoRegistration {
     /**
      * Update the {@link EpollIoOps} for this registration.
      *
-     * @param opt   the {@link EpollIoOps} to use.
+     * @param ops   the {@link EpollIoOps} to use.
      */
-    void updateInterestOpt(EpollIoOps opt) throws IOException;
+    void updateInterestOps(EpollIoOps ops) throws IOException;
 
     /**
      * The used {@link EpollIoOps} for this registration.
      *
-     * @return  opt.
+     * @return  ops.
      */
-    EpollIoOps interestOpt();
+    EpollIoOps interestOps();
 
     @Override
     void cancel() throws IOException;

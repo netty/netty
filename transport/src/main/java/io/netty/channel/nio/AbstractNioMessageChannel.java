@@ -41,8 +41,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         super(parent, ch, readInterestOp);
     }
 
-    protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, NioIoOps readOpt) {
-        super(parent, ch, readOpt);
+    protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, NioIoOps readOps) {
+        super(parent, ch, readOps);
     }
 
     @Override
@@ -132,7 +132,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         final NioIoRegistration registration = registration();
-        final NioIoOps opt = registration.interestOpt();
+        final NioIoOps ops = registration.interestOps();
 
         int maxMessagesPerWrite = maxMessagesPerWrite();
         while (maxMessagesPerWrite > 0) {
@@ -166,10 +166,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         }
         if (in.isEmpty()) {
             // Wrote all messages.
-            registration.updateInterestOpt(opt.without(NioIoOps.WRITE));
+            registration.updateInterestOps(ops.without(NioIoOps.WRITE));
         } else {
             // Did not write all messages.
-            registration.updateInterestOpt(opt.with(NioIoOps.WRITE));
+            registration.updateInterestOps(ops.with(NioIoOps.WRITE));
         }
     }
 

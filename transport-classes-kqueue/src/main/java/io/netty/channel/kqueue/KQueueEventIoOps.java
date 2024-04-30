@@ -36,7 +36,7 @@ public final class KQueueEventIoOps implements IoOps {
      * @param fflags    filter-specific flags.
      * @return          {@link KQueueEventIoOps}.
      */
-    public static KQueueEventIoOps newOpt(int ident, short filter, short flags, int fflags) {
+    public static KQueueEventIoOps newOps(int ident, short filter, short flags, int fflags) {
         return new KQueueEventIoOps(ident, filter, flags, fflags, 0);
     }
 
@@ -108,7 +108,7 @@ public final class KQueueEventIoOps implements IoOps {
 
     @Override
     public String toString() {
-        return "KQueueEventIoOpt{" +
+        return "KQueueEventIoOps{" +
                 "ident=" + ident +
                 ", filter=" + filter +
                 ", flags=" + flags +
