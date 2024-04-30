@@ -123,7 +123,7 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
     private void register0(final SelectableChannel ch, int interestOps, final NioTask<SelectableChannel> task) {
         try {
             register(
-                    new NioSelectableChannelIoHandle<SelectableChannel>(ch, interestOps) {
+                    new NioSelectableChannelIoHandle<SelectableChannel>(ch) {
                         @Override
                         protected void handle(SelectableChannel channel, SelectionKey key) {
                             try {
