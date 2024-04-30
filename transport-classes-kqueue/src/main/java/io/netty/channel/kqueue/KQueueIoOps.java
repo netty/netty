@@ -13,20 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.channel.kqueue;
+
+import io.netty.channel.IoOps;
 
 /**
- * A handle that can be registered to a {@link IoEventLoop}.
- * All methods must be called from the {@link IoEventLoop} thread.
+ * Implementation of {@link IoOps} for
+ * that is used by {@link KQueueIoHandler} and so for kqueue based transports.
  */
-public interface IoHandle extends AutoCloseable {
+public final class KQueueIoOps implements IoOps {
 
-    /**
-     * Be called once there is something to handle.
-     *
-     * @param registration  the {@link IoRegistration} for this {@link IoHandle}.
-     * @param ioEvent       the {@link IoEvent} that must be handled. The {@link IoEvent} is only valid
-     *                      while this method is executed and so must not escape it.
-     */
-    void handle(IoRegistration registration, IoEvent ioEvent);
+    public static final KQueueIoOps NONE = new KQueueIoOps();
+
+    private KQueueIoOps() { }
 }

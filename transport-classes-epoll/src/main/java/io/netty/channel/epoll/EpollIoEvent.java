@@ -13,20 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.channel.epoll;
+
+import io.netty.channel.IoEvent;
 
 /**
- * A handle that can be registered to a {@link IoEventLoop}.
- * All methods must be called from the {@link IoEventLoop} thread.
+ * {@link IoEvent} that must be handled by the {@link EpollIoHandle}.
  */
-public interface IoHandle extends AutoCloseable {
+public interface EpollIoEvent extends IoEvent {
 
     /**
-     * Be called once there is something to handle.
+     * Returns the {@link EpollIoOps} which did trigger the {@link EpollIoEvent}.
      *
-     * @param registration  the {@link IoRegistration} for this {@link IoHandle}.
-     * @param ioEvent       the {@link IoEvent} that must be handled. The {@link IoEvent} is only valid
-     *                      while this method is executed and so must not escape it.
+     * @return  ops.
      */
-    void handle(IoRegistration registration, IoEvent ioEvent);
+    EpollIoOps ops();
 }

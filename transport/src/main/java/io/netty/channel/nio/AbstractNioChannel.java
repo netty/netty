@@ -27,9 +27,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoEvent;
 import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoEventLoopGroup;
-import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -396,10 +396,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         @Override
-        public void handle(IoRegistration registration, IoOps readyOps) {
+        public void handle(IoRegistration registration, IoEvent event) {
             try {
                 NioIoRegistration nioRegistration = (NioIoRegistration) registration;
-                NioIoOps nioReadyOps = (NioIoOps) readyOps;
+                NioIoEvent nioEvent = (NioIoEvent) event;
+                NioIoOps nioReadyOps = nioEvent.ops();
                 // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
                 // the NIO JDK channel implementation may throw a NotYetConnectedException.
                 if (nioReadyOps.contains(NioIoOps.CONNECT)) {

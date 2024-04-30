@@ -342,7 +342,7 @@ public class EpollIoHandler implements IoHandler {
         }
 
         void handle(long ev) {
-            handle.handle(this, EpollIoOps.valueOf((int) ev));
+            handle.handle(this, EpollIoOps.eventOf((int) ev));
         }
     }
 

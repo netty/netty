@@ -374,7 +374,7 @@ public final class NioIoHandler implements IoHandler {
         }
 
         void handle(int ready) {
-            handle.handle(this, NioIoOps.valueOf(ready));
+            handle.handle(this, NioIoOps.eventOf(ready));
         }
 
         @Override

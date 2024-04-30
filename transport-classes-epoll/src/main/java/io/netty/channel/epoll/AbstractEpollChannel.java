@@ -30,8 +30,8 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoEvent;
 import io.netty.channel.IoEventLoop;
-import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -451,8 +451,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         @Override
-        public void handle(IoRegistration registration, IoOps readyOps) {
-            EpollIoOps epollOps = (EpollIoOps)  readyOps;
+        public void handle(IoRegistration registration, IoEvent event) {
+            EpollIoEvent epollEvent = (EpollIoEvent) event;
+            EpollIoOps epollOps = epollEvent.ops();
 
             // Don't change the ordering of processing EPOLLOUT | EPOLLRDHUP / EPOLLIN if you're not 100%
             // sure about it!

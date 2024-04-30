@@ -51,21 +51,20 @@ public final class EpollIoOps implements IoOps {
     public static final EpollIoOps EPOLLET = new EpollIoOps(Native.EPOLLET);
 
     // Just use an array to store often used values.
-    private static final EpollIoOps[] OPS;
+    private static final EpollIoEvent[] EVENTS;
 
     static {
-        EpollIoOps all = new EpollIoOps(
-                EPOLLOUT.value | EPOLLIN.value | EPOLLERR.value | EPOLLRDHUP.value);
-        OPS = new EpollIoOps[all.value + 1];
-        addToArray(OPS, EPOLLOUT);
-        addToArray(OPS, EPOLLIN);
-        addToArray(OPS, EPOLLERR);
-        addToArray(OPS, EPOLLRDHUP);
-        addToArray(OPS, all);
+        EpollIoOps all = new EpollIoOps(EPOLLOUT.value | EPOLLIN.value | EPOLLERR.value | EPOLLRDHUP.value);
+        EVENTS = new EpollIoEvent[all.value + 1];
+        addToArray(EVENTS, EPOLLOUT);
+        addToArray(EVENTS, EPOLLIN);
+        addToArray(EVENTS, EPOLLERR);
+        addToArray(EVENTS, EPOLLRDHUP);
+        addToArray(EVENTS, all);
     }
 
-    private static void addToArray(EpollIoOps[] array, EpollIoOps ops) {
-        array[ops.value] = ops;
+    private static void addToArray(EpollIoEvent[] array, EpollIoOps ops) {
+        array[ops.value] = new DefaultEpollIoEvent(ops);
     }
 
     final int value;
@@ -142,15 +141,46 @@ public final class EpollIoOps implements IoOps {
      * @return  the {@link EpollIoOps}.
      */
     public static EpollIoOps valueOf(int value) {
-        final EpollIoOps ops;
-        if (value > 0 && value < OPS.length) {
-            ops = OPS[value];
-            if (ops != null) {
-                return ops;
+        return eventOf(value).ops();
+    }
+
+    static EpollIoEvent eventOf(int value) {
+        if (value > 0 && value < EVENTS.length) {
+            EpollIoEvent event = EVENTS[value];
+            if (event != null) {
+                return event;
             }
-        } else if (value == EPOLLET.value) {
-            return EPOLLET;
         }
-        return new EpollIoOps(value);
+        return new DefaultEpollIoEvent(new EpollIoOps(value));
+    }
+
+    private static final class DefaultEpollIoEvent implements EpollIoEvent {
+        private final EpollIoOps ops;
+
+        DefaultEpollIoEvent(EpollIoOps ops) {
+            this.ops = ops;
+        }
+
+        @Override
+        public EpollIoOps ops() {
+            return ops;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            EpollIoEvent event = (EpollIoEvent) o;
+            return event.ops().equals(ops());
+        }
+
+        @Override
+        public int hashCode() {
+            return ops().hashCode();
+        }
     }
 }

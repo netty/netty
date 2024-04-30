@@ -85,7 +85,7 @@ public class SingleThreadIoEventLoopTest {
 
     private class TestIoHandle implements IoHandle {
         @Override
-        public void handle(IoRegistration registration, IoOps readyOps) {
+        public void handle(IoRegistration registration, IoEvent readyOps) {
             // NOOP
         }
 
