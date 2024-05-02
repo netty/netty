@@ -145,7 +145,6 @@ public final class EpollIoOps implements IoOps {
         return eventOf(value).ops();
     }
 
-
     @Override
     public String toString() {
         return "EpollIoOps{" +
