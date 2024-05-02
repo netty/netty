@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SingleThreadIoEventLoopTest {
 
     @Test
-    void testIsUsed() {
+    void testIsIoType() {
         IoHandler handler = new TestIoHandler();
         IoHandler handler2 = new TestIoHandler() { };
 
@@ -68,7 +68,7 @@ public class SingleThreadIoEventLoopTest {
         }
 
         @Override
-        public IoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps opt) {
+        public IoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps ops) {
             return null;
         }
 
@@ -85,7 +85,7 @@ public class SingleThreadIoEventLoopTest {
 
     private class TestIoHandle implements IoHandle {
         @Override
-        public void handle(IoRegistration registration, IoOps readyOpt) {
+        public void handle(IoRegistration registration, IoOps readyOps) {
             // NOOP
         }
 
