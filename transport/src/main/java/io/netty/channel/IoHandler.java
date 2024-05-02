@@ -48,10 +48,9 @@ public interface IoHandler {
      *
      * @param eventLoop     the {@link IoEventLoop} that did issue the registration.
      * @param handle        the {@link IoHandle} to register.
-     * @param initialOps           the {@link IoOps} which should be used during registration.
      * @throws Exception    thrown if an error happens during registration.
      */
-    IoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps initialOps) throws Exception;
+    IoRegistration register(IoEventLoop eventLoop, IoHandle handle) throws Exception;
 
     /**
      * Wakeup the {@link IoHandler}, which means if any operation blocks it should be unblocked and

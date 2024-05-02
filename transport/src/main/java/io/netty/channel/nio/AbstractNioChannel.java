@@ -438,7 +438,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     protected void doRegister(ChannelPromise promise) {
         assert registration == null;
-        ((IoEventLoop) eventLoop()).register((AbstractNioUnsafe) unsafe(), NioIoOps.NONE).addListener(f -> {
+        ((IoEventLoop) eventLoop()).register((AbstractNioUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (NioIoRegistration) f.getNow();
                 promise.setSuccess();

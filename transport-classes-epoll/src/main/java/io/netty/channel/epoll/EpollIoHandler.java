@@ -347,12 +347,11 @@ public class EpollIoHandler implements IoHandler {
     }
 
     @Override
-    public EpollIoRegistration register(IoEventLoop eventLoop, IoHandle handle,
-                                      IoOps initialOps)
+    public EpollIoRegistration register(IoEventLoop eventLoop, IoHandle handle)
             throws Exception {
         final EpollIoHandle epollHandle = cast(handle);
-        EpollIoOps ops = cast(initialOps);
-        DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(eventLoop, epollHandle, ops);
+        DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(eventLoop, epollHandle,
+                EpollIoOps.EPOLLERR);
         int fd = epollHandle.fd().intValue();
         Native.epollCtlAdd(epollFd.intValue(), fd, registration.interestOps().value);
         DefaultEpollIoRegistration old = registrations.put(fd, registration);

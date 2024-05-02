@@ -213,7 +213,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        ((IoEventLoop) eventLoop()).register((AbstractKQueueUnsafe) unsafe(), KQueueIoOps.NONE).addListener(f -> {
+        ((IoEventLoop) eventLoop()).register((AbstractKQueueUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 this.registration = (KQueueIoRegistration) f.getNow();
                 // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old

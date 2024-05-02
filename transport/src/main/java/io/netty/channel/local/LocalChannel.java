@@ -166,7 +166,7 @@ public class LocalChannel extends AbstractChannel {
         EventLoop loop = eventLoop();
         if (loop instanceof IoEventLoop) {
             assert registration == null;
-            ((IoEventLoop) loop).register((LocalUnsafe) unsafe(), LocalIoOps.DEFAULT).addListener(f -> {
+            ((IoEventLoop) loop).register((LocalUnsafe) unsafe()).addListener(f -> {
                if (f.isSuccess()) {
                    registration = (IoRegistration) f.getNow();
                    promise.setSuccess();

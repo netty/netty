@@ -288,9 +288,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
         // new EventLoop.
         epollInReadyRunnablePending = false;
-        ((IoEventLoop) eventLoop()).register((AbstractEpollUnsafe) unsafe(), initialOps).addListener(f -> {
+        ((IoEventLoop) eventLoop()).register((AbstractEpollUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (EpollIoRegistration) f.getNow();
+                registration.updateInterestOps(initialOps);
                 promise.setSuccess();
             } else {
                 promise.setFailure(f.cause());

@@ -384,10 +384,10 @@ public final class NioIoHandler implements IoHandler {
     }
 
     @Override
-    public NioIoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps initialOps)
+    public NioIoRegistration register(IoEventLoop eventLoop, IoHandle handle)
             throws Exception {
         NioIoHandle nioHandle = nioHandle(handle);
-        NioIoOps ops = cast(initialOps);
+        NioIoOps ops = NioIoOps.NONE;
         boolean selected = false;
         for (;;) {
             try {

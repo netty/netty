@@ -29,7 +29,8 @@ public final class EpollIoOps implements IoOps {
     }
 
     /**
-     * Interested in IO events that should be handled by accepting new connections
+     * Interested in IO events which tell that the underlying channel is writable again or a connection
+     * attempt can be continued.
      */
     public static final EpollIoOps EPOLLOUT = new EpollIoOps(Native.EPOLLOUT);
 
@@ -39,7 +40,7 @@ public final class EpollIoOps implements IoOps {
     public static final EpollIoOps EPOLLIN = new EpollIoOps(Native.EPOLLIN);
 
     /**
-     * Interested in IO events which tell that the underlying channel is writable again.
+     * Error condition happened on the associated file descriptor.
      */
     public static final EpollIoOps EPOLLERR = new EpollIoOps(Native.EPOLLERR);
 

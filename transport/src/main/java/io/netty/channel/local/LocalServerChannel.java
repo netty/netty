@@ -102,7 +102,7 @@ public class LocalServerChannel extends AbstractServerChannel {
         EventLoop loop = eventLoop();
         if (loop instanceof IoEventLoop) {
             assert registration == null;
-            ((IoEventLoop) loop).register((LocalServerUnsafe) unsafe(), LocalIoOps.DEFAULT).addListener(f -> {
+            ((IoEventLoop) loop).register((LocalServerUnsafe) unsafe()).addListener(f -> {
                 if (f.isSuccess()) {
                     registration = (IoRegistration) f.getNow();
                     promise.setSuccess();

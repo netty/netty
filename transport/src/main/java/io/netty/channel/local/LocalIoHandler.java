@@ -20,7 +20,6 @@ import io.netty.channel.IoExecutionContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
-import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
 import io.netty.util.internal.StringUtil;
 
@@ -90,12 +89,8 @@ public final class LocalIoHandler implements IoHandler {
     }
 
     @Override
-    public IoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps initialOps) {
+    public IoRegistration register(IoEventLoop eventLoop, IoHandle handle) {
         LocalIoHandle localHandle = cast(handle);
-        if (initialOps != LocalIoOps.DEFAULT) {
-            throw new IllegalArgumentException(
-                    "IoOps of type " + StringUtil.simpleClassName(initialOps) + " not supported");
-        }
         if (registeredChannels.add(localHandle)) {
             LocalIoRegistration registration = new LocalIoRegistration(eventLoop, localHandle);
             localHandle.registerNow();

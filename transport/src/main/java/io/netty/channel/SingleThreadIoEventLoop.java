@@ -176,23 +176,22 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     }
 
     @Override
-    public final Future<IoRegistration> register(final IoHandle handle, IoOps initialOps) {
+    public final Future<IoRegistration> register(final IoHandle handle) {
         Promise<IoRegistration> promise = newPromise();
         if (inEventLoop()) {
-            registerForIo0(handle, initialOps, promise);
+            registerForIo0(handle, promise);
         } else {
-            execute(() -> registerForIo0(handle, initialOps, promise));
+            execute(() -> registerForIo0(handle, promise));
         }
 
         return promise;
     }
 
-    private void registerForIo0(final IoHandle handle, IoOps initialOps,
-                               Promise<IoRegistration> promise) {
+    private void registerForIo0(final IoHandle handle, Promise<IoRegistration> promise) {
         assert inEventLoop();
         final IoRegistration registration;
         try {
-            registration = ioHandler.register(this, handle, initialOps);
+            registration = ioHandler.register(this, handle);
         } catch (Exception e) {
             promise.setFailure(e);
             return;

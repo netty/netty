@@ -23,7 +23,6 @@ import io.netty.channel.IoExecutionContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
-import io.netty.channel.IoOps;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.unix.FileDescriptor;
@@ -324,14 +323,10 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     @Override
-    public KQueueIoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps initialOps) {
+    public KQueueIoRegistration register(IoEventLoop eventLoop, IoHandle handle) {
         final KQueueIoHandle kqueueHandle = cast(handle);
         if (kqueueHandle.ident() == KQUEUE_WAKE_UP_IDENT) {
             throw new IllegalArgumentException("ident " + KQUEUE_WAKE_UP_IDENT + " is reserved for internal usage");
-        }
-        if (initialOps != KQueueIoOps.NONE) {
-            throw new IllegalArgumentException(
-                    "IoOpt of type " + StringUtil.simpleClassName(initialOps) + " not supported");
         }
 
         DefaultKqueueIoRegistration registration = new DefaultKqueueIoRegistration(
