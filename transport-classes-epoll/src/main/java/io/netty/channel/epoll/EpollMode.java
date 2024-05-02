@@ -17,7 +17,10 @@ package io.netty.channel.epoll;
 
 /**
  * The <a href="https://linux.die.net//man/7/epoll">epoll</a> mode to use.
+ *
+ * @deprecated Netty always uses level-triggered mode.
  */
+@Deprecated
 public enum EpollMode {
 
     /**

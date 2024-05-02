@@ -745,12 +745,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 return;
             }
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
-
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
             allocHandle.reset(config);
-            epollInBefore();
 
             ByteBuf byteBuf = null;
             boolean close = false;
@@ -824,7 +821,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
             } finally {
                 if (sQueue == null) {
-                    epollInFinally(config);
+                    if (shouldStopReading(config)) {
+                        clearEpollIn();
+                    }
                 } else {
                     if (!config.isAutoRead()) {
                         clearEpollIn();

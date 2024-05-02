@@ -25,7 +25,8 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.channel.unix.RawUnixChannelOption;
-import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,6 +35,9 @@ import java.util.Map;
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
 
 public class EpollChannelConfig extends DefaultChannelConfig {
+
+    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(EpollChannelConfig.class);
+
     private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
     protected EpollChannelConfig(Channel channel) {
@@ -180,10 +184,12 @@ public class EpollChannelConfig extends DefaultChannelConfig {
      * {@link EpollMode#EDGE_TRIGGERED}. If you want to use {@link #isAutoRead()} {@code false} or
      * {@link #getMaxMessagesPerRead()} and have an accurate behaviour you should use
      * {@link EpollMode#LEVEL_TRIGGERED}.
+     *
+     * @deprecated Netty always uses level-triggered mode and so this method is just a no-op.
      */
+    @Deprecated
     public EpollMode getEpollMode() {
-        return ((AbstractEpollChannel) channel).isFlagSet(Native.EPOLLET)
-                ? EpollMode.EDGE_TRIGGERED : EpollMode.LEVEL_TRIGGERED;
+        return EpollMode.LEVEL_TRIGGERED;
     }
 
     /**
@@ -193,22 +199,12 @@ public class EpollChannelConfig extends DefaultChannelConfig {
      * {@link EpollMode#LEVEL_TRIGGERED}.
      *
      * <strong>Be aware this config setting can only be adjusted before the channel was registered.</strong>
+     *
+     * @deprecated Netty always uses level-triggered mode and so this method is just a no-op.
      */
+    @Deprecated
     public EpollChannelConfig setEpollMode(EpollMode mode) {
-        ObjectUtil.checkNotNull(mode, "mode");
-
-        AbstractEpollChannel epollChannel = (AbstractEpollChannel) channel;
-        checkChannelNotRegistered();
-        switch (mode) {
-            case EDGE_TRIGGERED:
-                epollChannel.add(EpollIoOps.EPOLLET);
-                break;
-            case LEVEL_TRIGGERED:
-                epollChannel.remove(EpollIoOps.EPOLLET);
-                break;
-            default:
-                throw new Error();
-        }
+        LOGGER.debug("Changing the EpollMode is not supported anymore, this is just a no-op");
         return this;
     }
 
