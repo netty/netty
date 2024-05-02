@@ -145,6 +145,14 @@ public final class EpollIoOps implements IoOps {
         return eventOf(value).ops();
     }
 
+
+    @Override
+    public String toString() {
+        return "EpollIoOps{" +
+                "value=" + value +
+                '}';
+    }
+
     static EpollIoEvent eventOf(int value) {
         if (value > 0 && value < EVENTS.length) {
             EpollIoEvent event = EVENTS[value];
@@ -182,6 +190,13 @@ public final class EpollIoOps implements IoOps {
         @Override
         public int hashCode() {
             return ops().hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return "DefaultEpollIoEvent{" +
+                    "ops=" + ops +
+                    '}';
         }
     }
 }

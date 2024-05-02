@@ -108,7 +108,7 @@ public final class KQueueIoEvent implements IoEvent {
 
     @Override
     public String toString() {
-        return "KQueueEventIoOps{" +
+        return "KQueueIoEvent{" +
                 "ident=" + ident +
                 ", filter=" + filter +
                 ", flags=" + flags +
