@@ -20,7 +20,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
@@ -75,7 +77,8 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
                 = new ArrayList<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>>();
         for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
                 : SocketTestPermutation.INSTANCE.socketWithFastOpen()) {
-            if (comboFactory.newClientInstance().config().group() instanceof NioEventLoopGroup) {
+            EventLoopGroup group = comboFactory.newClientInstance().config().group();
+            if (group instanceof IoEventLoopGroup && ((IoEventLoopGroup) group).isIoType(NioIoHandler.class)) {
                 factories.add(comboFactory);
             }
         }

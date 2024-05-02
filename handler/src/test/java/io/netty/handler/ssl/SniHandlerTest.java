@@ -28,6 +28,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.local.LocalIoHandler;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.concurrent.Future;
 
@@ -42,13 +45,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.DecoderException;
@@ -411,7 +412,7 @@ public class SniHandlerTest {
                     .add("*.netty.io", nettyContext)
                     .add("sni.fake.site", sniContext).build();
             final SniHandler handler = new SniHandler(mapping);
-            EventLoopGroup group = new NioEventLoopGroup(2);
+            EventLoopGroup group = new MultiThreadIoEventLoopGroup(2, NioIoHandler.newFactory());
             Channel serverChannel = null;
             Channel clientChannel = null;
             try {
@@ -491,7 +492,7 @@ public class SniHandlerTest {
             case OPENSSL_REFCNT:
                 final String sniHost = "sni.netty.io";
                 LocalAddress address = new LocalAddress("testReplaceHandler-" + Math.random());
-                EventLoopGroup group = new DefaultEventLoopGroup(1);
+                EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
                 Channel sc = null;
                 Channel cc = null;
                 SslContext sslContext = null;

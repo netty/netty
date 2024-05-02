@@ -17,8 +17,8 @@ package io.netty.handler.ssl.ocsp;
 
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoop;
-import io.netty.channel.nio.NioEventLoop;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -36,10 +36,11 @@ public final class IoTransport {
     private final ChannelFactory<DatagramChannel> datagramChannel;
 
     /**
-     * Default {@link IoTransport} which uses {@link NioEventLoop}, {@link NioSocketChannel}
+     * Default {@link IoTransport} which uses {@link NioIoHandler}, {@link NioSocketChannel}
      * and {@link NioDatagramChannel}.
      */
-    public static final IoTransport DEFAULT = new IoTransport(new NioEventLoopGroup(1).next(),
+    public static final IoTransport DEFAULT = new IoTransport(
+            new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()).next(),
             new ChannelFactory<SocketChannel>() {
                 @Override
                 public SocketChannel newChannel() {

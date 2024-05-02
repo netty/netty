@@ -17,8 +17,9 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 
+import io.netty.channel.nio.NioIoHandler;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -37,7 +38,7 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
     public void testCloseOnError() throws Exception {
         ServerSocketChannel jdkChannel = ServerSocketChannel.open();
         NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(jdkChannel);
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         try {
             group.register(serverSocketChannel).syncUninterruptibly();
             serverSocketChannel.bind(new InetSocketAddress(0)).syncUninterruptibly();
@@ -52,7 +53,7 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
     @Test
     public void testIsActiveFalseAfterClose()  {
         NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel();
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         try {
             group.register(serverSocketChannel).syncUninterruptibly();
             Channel channel = serverSocketChannel.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();

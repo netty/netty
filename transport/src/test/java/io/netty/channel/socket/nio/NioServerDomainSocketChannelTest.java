@@ -17,7 +17,8 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -46,7 +47,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
     public void testCloseOnError() throws Exception {
         ServerSocketChannel jdkChannel = NioServerDomainSocketChannel.newChannel(SelectorProvider.provider());
         NioServerDomainSocketChannel serverSocketChannel = new NioServerDomainSocketChannel(jdkChannel);
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         File file = newRandomTmpFile();
         try {
             group.register(serverSocketChannel).syncUninterruptibly();
@@ -63,7 +64,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
     @Test
     public void testIsActiveFalseAfterClose() throws Exception {
         NioServerDomainSocketChannel serverSocketChannel = new NioServerDomainSocketChannel();
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         File file = newRandomTmpFile();
         try {
             group.register(serverSocketChannel).syncUninterruptibly();
@@ -85,7 +86,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
     @ValueSource(booleans = { false, true })
     public void testCreateChannelFromJdkChannel(boolean bindJdkChannel) throws Exception {
         File file = newRandomTmpFile();
-        EventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         try {
             SocketAddress localAddress = newUnixDomainSocketAddress(file.getAbsolutePath());
             ServerSocketChannel jdkChannel = NioServerDomainSocketChannel.newChannel(SelectorProvider.provider());

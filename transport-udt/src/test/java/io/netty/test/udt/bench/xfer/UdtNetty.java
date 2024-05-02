@@ -22,7 +22,9 @@ import com.yammer.metrics.core.Meter;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.test.udt.util.CustomReporter;
 import io.netty.test.udt.util.EchoMessageHandler;
@@ -92,10 +94,10 @@ public final class UdtNetty {
         final ChannelHandler handler1 = new EchoMessageHandler(rate, size);
         final ChannelHandler handler2 = new EchoMessageHandler(null, size);
 
-        final NioEventLoopGroup group1 = new NioEventLoopGroup(
-                1, Executors.defaultThreadFactory(), NioUdtProvider.MESSAGE_PROVIDER);
-        final NioEventLoopGroup group2 = new NioEventLoopGroup(
-                1, Executors.defaultThreadFactory(), NioUdtProvider.MESSAGE_PROVIDER);
+        final EventLoopGroup group1 = new MultiThreadIoEventLoopGroup(
+                1, Executors.defaultThreadFactory(), NioIoHandler.newFactory(NioUdtProvider.MESSAGE_PROVIDER));
+        final EventLoopGroup group2 = new MultiThreadIoEventLoopGroup(
+                1, Executors.defaultThreadFactory(), NioIoHandler.newFactory(NioUdtProvider.MESSAGE_PROVIDER));
 
         final Bootstrap peerBoot1 = new Bootstrap();
         peerBoot1.group(group1)

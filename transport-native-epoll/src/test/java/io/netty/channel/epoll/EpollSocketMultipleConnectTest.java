@@ -18,7 +18,8 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketMultipleConnectTest;
 
@@ -34,8 +35,14 @@ public class EpollSocketMultipleConnectTest extends SocketMultipleConnectTest {
         for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
                 : EpollSocketTestPermutation.INSTANCE.socketWithFastOpen()) {
             EventLoopGroup group = comboFactory.newClientInstance().config().group();
-            if (group instanceof NioEventLoopGroup || group instanceof EpollEventLoopGroup) {
+            if (group instanceof IoEventLoopGroup && ((IoEventLoopGroup) group).isIoType(NioIoHandler.class)) {
                 factories.add(comboFactory);
+            }
+            if (group instanceof IoEventLoopGroup) {
+                IoEventLoopGroup ioGroup = (IoEventLoopGroup) group;
+                if (ioGroup.isIoType(NioIoHandler.class) || ioGroup.isIoType(EpollIoHandler.class)) {
+                    factories.add(comboFactory);
+                }
             }
         }
         return factories;
