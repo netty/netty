@@ -16,7 +16,8 @@
 package io.netty.channel;
 
 /**
- * An IO event that is dispatched to an {@link IoHandle}.
+ * An IO event that is dispatched to an {@link IoHandle} as a result of a previous submitted {@link IoOps}.
+ *
  * Concrete {@link IoHandle} implementations support different concrete {@link IoEvent} implementations.
  */
 public interface IoEvent {

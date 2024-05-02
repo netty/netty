@@ -16,8 +16,10 @@
 package io.netty.channel;
 
 /**
- * An IO op that is used when register an {@link IoHandle} to an {@link IoEventLoop}.
- * Concrete {@link IoHandle} implementations support different concrete {@link IoOps} implementations.
+ * An IO op that can be submitted to an {@link IoRegistration} via {@link IoRegistration#submit(IoOps)}.
+// * These submitted {@link IoOps} will result in {@link IoEvent}s on the related {@link IoHandle}.
+ * Concrete {@link IoRegistration} implementations support different concrete {@link IoOps} implementations and
+ * will so also "produce" concrete {@link IoEvent}s.
  */
 public interface IoOps {
     // Marker interface.
