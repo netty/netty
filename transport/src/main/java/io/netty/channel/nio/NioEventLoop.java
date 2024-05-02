@@ -142,7 +142,7 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
                             }
                         }
                     }).get();
-            registration.updateInterestOps(NioIoOps.valueOf(interestOps));
+            registration.submit(NioIoOps.valueOf(interestOps));
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

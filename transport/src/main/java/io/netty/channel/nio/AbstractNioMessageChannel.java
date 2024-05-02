@@ -131,9 +131,6 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-        final NioIoRegistration registration = registration();
-        final NioIoOps ops = registration.interestOps();
-
         int maxMessagesPerWrite = maxMessagesPerWrite();
         while (maxMessagesPerWrite > 0) {
             Object msg = in.current();
@@ -166,10 +163,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         }
         if (in.isEmpty()) {
             // Wrote all messages.
-            registration.updateInterestOps(ops.without(NioIoOps.WRITE));
+            removeAndSubmit(NioIoOps.WRITE);
         } else {
             // Did not write all messages.
-            registration.updateInterestOps(ops.with(NioIoOps.WRITE));
+            addAndSubmit(NioIoOps.WRITE);
         }
     }
 

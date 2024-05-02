@@ -75,7 +75,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private EpollIoRegistration registration;
     boolean inputClosedSeenErrorOnRead;
     boolean epollInReadyRunnablePending;
-    volatile EpollIoOps initialOps;
+    private EpollIoOps ops;
     protected volatile boolean active;
 
     AbstractEpollChannel(Channel parent, LinuxSocket fd, boolean active, EpollIoOps initialOps) {
@@ -88,7 +88,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             this.local = fd.localAddress();
             this.remote = fd.remoteAddress();
         }
-        this.initialOps = initialOps;
+        this.ops = initialOps;
     }
 
     AbstractEpollChannel(Channel parent, LinuxSocket fd, SocketAddress remote, EpollIoOps initialOps) {
@@ -99,7 +99,15 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         // See https://github.com/netty/netty/issues/2359
         this.remote = remote;
         this.local = fd.localAddress();
-        this.initialOps = initialOps;
+        this.ops = initialOps;
+    }
+
+    void add(EpollIoOps add) {
+        ops = ops.with(add);
+    }
+
+    void remove(EpollIoOps remove) {
+        ops = ops.without(remove);
     }
 
     static boolean isSoErrorZero(Socket fd) {
@@ -111,18 +119,31 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     protected void setFlag(int flag) throws IOException {
+        ops = ops.with(EpollIoOps.valueOf(flag));
         if (isRegistered()) {
             EpollIoRegistration registration = registration();
-            registration.updateInterestOps(registration.interestOps().with(EpollIoOps.valueOf(flag)));
+            try {
+                registration.submit(ops);
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
         } else {
-            initialOps = initialOps.with(EpollIoOps.valueOf(flag));
+            ops = ops.with(EpollIoOps.valueOf(flag));
         }
     }
 
     void clearFlag(int flag) throws IOException {
         EpollIoRegistration registration = registration();
-        registration.updateInterestOps(
-                registration.interestOps().without(EpollIoOps.valueOf(flag)));
+        ops = ops.without(EpollIoOps.valueOf(flag));
+        try {
+            registration.submit(ops);
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     protected final EpollIoRegistration registration() {
@@ -131,7 +152,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     boolean isFlagSet(int flag) {
-        return (registration().interestOps().value & flag) != 0;
+        return (ops.value & flag) != 0;
     }
 
     @Override
@@ -278,7 +299,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         } else  {
             // The EventLoop is not registered atm so just update the flags so the correct value
             // will be used once the channel is registered
-            initialOps = initialOps.without(EpollIoOps.EPOLLIN);
+            ops = ops.without(EpollIoOps.EPOLLIN);
         }
     }
 
@@ -291,7 +312,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         ((IoEventLoop) eventLoop()).register((AbstractEpollUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (EpollIoRegistration) f.getNow();
-                registration.updateInterestOps(initialOps);
+                registration.submit(ops);
                 promise.setSuccess();
             } else {
                 promise.setFailure(f.cause());
@@ -641,9 +662,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             assert eventLoop().inEventLoop();
             try {
                 readPending = false;
+                ops = ops.without(EpollIoOps.EPOLLIN);
                 EpollIoRegistration registration = registration();
-                registration.updateInterestOps(registration.interestOps().without(EpollIoOps.EPOLLIN));
-            } catch (IOException e) {
+                registration.submit(ops);
+            } catch (Exception e) {
                 // When this happens there is something completely wrong with either the filedescriptor or epoll,
                 // so fire the exception through the pipeline and close the Channel.
                 pipeline().fireExceptionCaught(e);

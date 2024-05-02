@@ -16,6 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.IoEvent;
+
 /**
  * {@link IoEvent} to use with {@link KQueueIoHandler}.
  */

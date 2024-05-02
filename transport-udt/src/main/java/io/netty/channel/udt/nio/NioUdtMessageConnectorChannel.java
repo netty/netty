@@ -116,8 +116,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
         try {
             final boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
             if (!connected) {
-                NioIoRegistration registration = registration();
-                registration.updateInterestOps(registration.interestOps().with(NioIoOps.CONNECT));
+                addAndSubmit(NioIoOps.CONNECT);
             }
             success = true;
             return connected;
@@ -137,7 +136,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
     protected void doFinishConnect() throws Exception {
         if (javaChannel().finishConnect()) {
             NioIoRegistration registration = registration();
-            registration.updateInterestOps(registration.interestOps().without(NioIoOps.CONNECT));
+            removeAndSubmit(NioIoOps.CONNECT);
         } else {
             throw new Error(
                     "Provider error: failed to finish connect. Provider library should be upgraded.");

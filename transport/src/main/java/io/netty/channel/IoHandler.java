@@ -19,6 +19,13 @@ package io.netty.channel;
  * Handles IO dispatching for an {@link IoEventLoop}
  * All operations except {@link #wakeup(IoEventLoop)} and {@link #isCompatible(Class)} <strong>MUST</strong> be executed
  * on the {@link IoEventLoop} thread and should never be called from the user-directly.
+ * <p>
+ * Once a {@link IoHandle} is registered via the {@link #register(IoEventLoop, IoHandle)} method it's possible
+ * to submit {@link IoOps} related to the {@link IoHandle} via {@link IoRegistration#submit(IoOps)}.
+ * These submitted {@link IoOps} are the "source" of {@link IoEvent}s that are dispatched to the registered
+ * {@link IoHandle} via the {@link IoHandle#handle(IoRegistration, IoEvent)} method.
+ * These events must be consumed (and handled) as otherwise they might be reported again until handled.
+ *
  */
 public interface IoHandler {
     /**

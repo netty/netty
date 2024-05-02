@@ -22,8 +22,90 @@ import io.netty.channel.IoOps;
  * that is used by {@link KQueueIoHandler} and so for kqueue based transports.
  */
 public final class KQueueIoOps implements IoOps {
+    private int ident;
+    private short filter;
+    private short flags;
+    private int fflags;
+    private long data;
 
-    public static final KQueueIoOps NONE = new KQueueIoOps();
+    /**
+     * Creates a new {@link KQueueIoOps}.
+     *
+     * @param ident     the identifier for this event.
+     * @param filter    the filter for this event.
+     * @param flags     the general flags.
+     * @param fflags    filter-specific flags.
+     * @return          {@link KQueueIoOps}.
+     */
+    public static KQueueIoOps newOps(int ident, short filter, short flags, int fflags) {
+        return new KQueueIoOps(ident, filter, flags, fflags, 0);
+    }
 
-    private KQueueIoOps() { }
+    private KQueueIoOps(int ident, short filter, short flags, int fflags, long data) {
+        this.ident = ident;
+        this.filter = filter;
+        this.flags = flags;
+        this.fflags = fflags;
+        this.data = data;
+    }
+
+    KQueueIoOps() {
+        this(0, (short) 0, (short) 0, 0, 0);
+    }
+
+    /**
+     * Returns the identifier for this event.
+     *
+     * @return  ident.
+     */
+    public int ident() {
+        return ident;
+    }
+
+    /**
+     * Returns the filter for this event.
+     *
+     * @return filter.
+     */
+    public short filter() {
+        return filter;
+    }
+
+    /**
+     * Returns the general flags.
+     *
+     * @return flags.
+     */
+    public short flags() {
+        return flags;
+    }
+
+    /**
+     * Returns filter-specific flags.
+     *
+     * @return fflags.
+     */
+    public int fflags() {
+        return fflags;
+    }
+
+    /**
+     * Returns filter-specific data.
+     *
+     * @return data.
+     */
+    public long data() {
+        return data;
+    }
+
+    @Override
+    public String toString() {
+        return "KQueueEventIoOps{" +
+                "ident=" + ident +
+                ", filter=" + filter +
+                ", flags=" + flags +
+                ", fflags=" + fflags +
+                ", data=" + data +
+                '}';
+    }
 }

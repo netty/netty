@@ -59,6 +59,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected final int readInterestOp;
     protected final NioIoOps readOps;
 
+    private NioIoOps ops = NioIoOps.NONE;
+
     volatile NioIoRegistration registration;
     boolean readPending;
     private final Runnable clearReadPendingRunnable = new Runnable() {
@@ -103,6 +105,28 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             }
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);
+        }
+    }
+
+    protected void addAndSubmit(NioIoOps addOps) {
+        if (!ops.contains(addOps)) {
+            ops = ops.with(addOps);
+            try {
+                registration().submit(ops);
+            } catch (Exception e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
+    protected void removeAndSubmit(NioIoOps removeOps) {
+        if (ops.contains(removeOps)) {
+            ops = ops.without(removeOps);
+            try {
+            registration().submit(ops);
+            } catch (Exception e) {
+                throw new ChannelException(e);
+            }
         }
     }
 
@@ -247,7 +271,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             if (!registration.isValid()) {
                 return;
             }
-            registration.updateInterestOps(registration.interestOps().without(readOps));
+            addAndSubmit(readOps);
         }
 
         @Override
@@ -392,7 +416,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         private boolean isFlushPending() {
             NioIoRegistration registration = registration();
-            return registration.isValid() && registration.interestOps().contains(NioIoOps.WRITE);
+            return registration.isValid() && ops.contains(NioIoOps.WRITE);
         }
 
         @Override
@@ -406,7 +430,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 if (nioReadyOps.contains(NioIoOps.CONNECT)) {
                     // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                     // See https://github.com/netty/netty/issues/924
-                    nioRegistration.updateInterestOps(nioRegistration.interestOps().without(NioIoOps.CONNECT));
+                    removeAndSubmit(NioIoOps.CONNECT);
 
                     unsafe().finishConnect();
                 }
@@ -467,7 +491,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         readPending = true;
 
-        registration.updateInterestOps(registration.interestOps().with(readOps));
+        addAndSubmit(ops.with(readOps));
     }
 
     /**

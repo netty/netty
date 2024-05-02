@@ -183,7 +183,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
                 }
             }).get();
 
-            registration.updateInterestOps(NioIoOps.valueOf(SelectionKey.OP_CONNECT));
+            registration.submit(NioIoOps.valueOf(SelectionKey.OP_CONNECT));
 
             latch.await();
 

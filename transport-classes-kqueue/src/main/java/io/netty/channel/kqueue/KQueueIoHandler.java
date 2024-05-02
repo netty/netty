@@ -23,6 +23,7 @@ import io.netty.channel.IoExecutionContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.IoOps;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.unix.FileDescriptor;
@@ -351,6 +352,13 @@ public final class KQueueIoHandler implements IoHandler {
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
+    private static KQueueIoOps cast(IoOps ops) {
+        if (ops instanceof KQueueIoOps) {
+            return (KQueueIoOps) ops;
+        }
+        throw new IllegalArgumentException("IoOps of type " + StringUtil.simpleClassName(ops) + " not supported");
+    }
+
     @Override
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
         return KQueueIoHandle.class.isAssignableFrom(handleType);
@@ -369,8 +377,9 @@ public final class KQueueIoHandler implements IoHandler {
         }
 
         @Override
-        public void evSet(KQueueIoEvent event) {
-            if (event.ident() != handle.ident()) {
+        public void submit(IoOps ops) {
+            KQueueIoOps kQueueIoOps = cast(ops);
+            if (kQueueIoOps.ident() != handle.ident()) {
                 throw new IllegalArgumentException("ident does not match KQueueIoHandle.ident()");
             }
             if (!isValid()) {

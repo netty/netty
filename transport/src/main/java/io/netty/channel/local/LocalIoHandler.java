@@ -20,6 +20,7 @@ import io.netty.channel.IoExecutionContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
 import io.netty.util.internal.StringUtil;
 
@@ -111,6 +112,11 @@ public final class LocalIoHandler implements IoHandler {
         LocalIoRegistration(IoEventLoop eventLoop, LocalIoHandle handle) {
             this.eventLoop = eventLoop;
             this.handle = handle;
+        }
+
+        @Override
+        public void submit(IoOps ops) {
+            throw new UnsupportedOperationException();
         }
 
         @Override

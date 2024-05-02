@@ -17,28 +17,10 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.IoRegistration;
 
-import java.io.IOException;
-
 /**
  * Registration with an {@link EpollIoHandler}.
  */
 public interface EpollIoRegistration extends IoRegistration {
-    /**
-     * Update the {@link EpollIoOps} for this registration.
-     *
-     * @param ops   the {@link EpollIoOps} to use.
-     */
-    void updateInterestOps(EpollIoOps ops) throws IOException;
-
-    /**
-     * The used {@link EpollIoOps} for this registration.
-     *
-     * @return  ops.
-     */
-    EpollIoOps interestOps();
-
-    @Override
-    void cancel() throws IOException;
 
     @Override
     EpollIoHandler ioHandler();
