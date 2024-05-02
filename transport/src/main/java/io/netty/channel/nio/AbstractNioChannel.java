@@ -123,7 +123,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         if (ops.contains(removeOps)) {
             ops = ops.without(removeOps);
             try {
-            registration().submit(ops);
+                registration().submit(ops);
             } catch (Exception e) {
                 throw new ChannelException(e);
             }
@@ -491,7 +491,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         readPending = true;
 
-        addAndSubmit(ops.with(readOps));
+        addAndSubmit(readOps);
     }
 
     /**
