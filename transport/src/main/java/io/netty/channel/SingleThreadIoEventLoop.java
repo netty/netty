@@ -215,4 +215,9 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
         return ioHandler.isCompatible(handleType);
     }
+
+    @Override
+    public boolean isIoType(Class<? extends IoHandler> handlerType) {
+        return ioHandler.getClass().equals(handlerType);
+    }
 }

@@ -52,6 +52,11 @@ public interface IoEventLoop extends EventLoop, IoEventLoopGroup {
      */
     Future<IoRegistration> register(IoHandle handle, IoOps initialOps);
 
+    // Force sub-classes to implement.
     @Override
     boolean isCompatible(Class<? extends IoHandle> handleType);
+
+    // Force sub-classes to implement.
+    @Override
+    boolean isIoType(Class<? extends IoHandler> handlerType);
 }
