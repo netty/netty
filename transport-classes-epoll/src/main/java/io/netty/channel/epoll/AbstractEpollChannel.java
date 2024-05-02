@@ -76,6 +76,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     boolean inputClosedSeenErrorOnRead;
     boolean epollInReadyRunnablePending;
     private EpollIoOps ops;
+    private EpollIoOps inital;
     protected volatile boolean active;
 
     AbstractEpollChannel(Channel parent, LinuxSocket fd, boolean active, EpollIoOps initialOps) {
@@ -238,6 +239,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected void doDeregister() throws Exception {
         EpollIoRegistration registration = this.registration;
         if (registration != null) {
+            ops = inital;
             registration.cancel();
         }
     }
@@ -313,6 +315,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             if (f.isSuccess()) {
                 registration = (EpollIoRegistration) f.getNow();
                 registration.submit(ops);
+                inital = ops;
                 promise.setSuccess();
             } else {
                 promise.setFailure(f.cause());

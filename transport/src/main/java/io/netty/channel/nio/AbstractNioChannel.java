@@ -59,6 +59,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected final int readInterestOp;
     protected final NioIoOps readOps;
 
+    // We always start with NONE as initial ops.
     private NioIoOps ops = NioIoOps.NONE;
 
     volatile NioIoRegistration registration;
@@ -271,7 +272,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             if (!registration.isValid()) {
                 return;
             }
-            addAndSubmit(readOps);
+            removeAndSubmit(readOps);
         }
 
         @Override
@@ -477,6 +478,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         NioIoRegistration registration = registration();
         if (registration != null) {
             this.registration = null;
+            // Reset to NONE so we have the correct value when we register again.
+            ops = NioIoOps.NONE;
             registration.cancel();
         }
     }
