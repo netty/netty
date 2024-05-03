@@ -174,12 +174,16 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
             final CountDownLatch latch = new CountDownLatch(1);
 
-            loop.register(new NioSelectableChannelIoHandle<SocketChannel>(selectableChannel) {
+            NioIoRegistration registration =
+                    (NioIoRegistration) loop.register(
+                            new NioSelectableChannelIoHandle<SocketChannel>(selectableChannel) {
                 @Override
                 protected void handle(SocketChannel channel, SelectionKey key) {
                     latch.countDown();
                 }
-            }, NioIoOps.valueOf(SelectionKey.OP_CONNECT));
+            }).get();
+
+            registration.submit(NioIoOps.valueOf(SelectionKey.OP_CONNECT));
 
             latch.await();
 

@@ -1478,7 +1478,7 @@
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.finalMethodAddedToNonFinalClass</code>
-                  <new>method io.netty.util.concurrent.Future&lt;io.netty.channel.IoRegistration&gt; io.netty.channel.SingleThreadIoEventLoop::register(io.netty.channel.IoHandle, io.netty.channel.IoOps) @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <new>method io.netty.util.concurrent.Future&lt;io.netty.channel.IoRegistration&gt; io.netty.channel.SingleThreadIoEventLoop::register(io.netty.channel.IoHandle) @ io.netty.channel.epoll.EpollEventLoop</new>
                 </item>
 
                 <item>

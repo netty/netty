@@ -13,15 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.epoll;
+package io.netty.channel.nio;
 
-import io.netty.channel.IoRegistration;
+import io.netty.channel.IoEvent;
 
 /**
- * Registration with an {@link EpollIoHandler}.
+ * {@link IoEvent} that must be handled by the {@link NioIoHandle}.
  */
-public interface EpollIoRegistration extends IoRegistration {
+public interface NioIoEvent extends IoEvent {
 
-    @Override
-    EpollIoHandler ioHandler();
+    /**
+     * Returns the {@link NioIoOps} which did trigger the {@link NioIoEvent}.
+     *
+     * @return  ops.
+     */
+    NioIoOps ops();
 }

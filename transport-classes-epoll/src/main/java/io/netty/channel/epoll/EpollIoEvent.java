@@ -15,13 +15,17 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.IoRegistration;
+import io.netty.channel.IoEvent;
 
 /**
- * Registration with an {@link EpollIoHandler}.
+ * {@link IoEvent} that must be handled by the {@link EpollIoHandle}.
  */
-public interface EpollIoRegistration extends IoRegistration {
+public interface EpollIoEvent extends IoEvent {
 
-    @Override
-    EpollIoHandler ioHandler();
+    /**
+     * Returns the {@link EpollIoOps} which did trigger the {@link EpollIoEvent}.
+     *
+     * @return  ops.
+     */
+    EpollIoOps ops();
 }

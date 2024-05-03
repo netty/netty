@@ -16,8 +16,8 @@
 package io.netty.channel.nio;
 
 
+import io.netty.channel.IoEvent;
 import io.netty.channel.IoHandle;
-import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
 import io.netty.util.internal.ObjectUtil;
 
@@ -37,7 +37,7 @@ public abstract class NioSelectableChannelIoHandle<S extends SelectableChannel> 
     }
 
     @Override
-    public void handle(IoRegistration registration, IoOps ioEvent) {
+    public void handle(IoRegistration registration, IoEvent ioEvent) {
         SelectionKey key = ((NioIoRegistration) registration).selectionKey();
         NioSelectableChannelIoHandle.this.handle(channel, key);
     }

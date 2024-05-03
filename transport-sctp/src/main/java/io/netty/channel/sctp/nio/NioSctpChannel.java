@@ -232,7 +232,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         try {
             boolean connected = javaChannel().connect(remoteAddress);
             if (!connected) {
-                registration().updateInterestOps(NioIoOps.CONNECT);
+                addAndSubmit(NioIoOps.CONNECT);
             }
             success = true;
             return connected;

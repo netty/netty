@@ -21,9 +21,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoEvent;
 import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoEventLoopGroup;
-import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -102,7 +102,7 @@ public class LocalServerChannel extends AbstractServerChannel {
         EventLoop loop = eventLoop();
         if (loop instanceof IoEventLoop) {
             assert registration == null;
-            ((IoEventLoop) loop).register((LocalServerUnsafe) unsafe(), LocalIoOps.DEFAULT).addListener(f -> {
+            ((IoEventLoop) loop).register((LocalServerUnsafe) unsafe()).addListener(f -> {
                 if (f.isSuccess()) {
                     registration = (IoRegistration) f.getNow();
                     promise.setSuccess();
@@ -227,7 +227,7 @@ public class LocalServerChannel extends AbstractServerChannel {
         }
 
         @Override
-        public void handle(IoRegistration registration, IoOps readyOps) {
+        public void handle(IoRegistration registration, IoEvent event) {
             // NOOP
         }
 

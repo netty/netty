@@ -15,12 +15,12 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.channel.IoOps;
+import io.netty.channel.IoEvent;
 
 /**
- * {@link IoOps} to use with {@link KQueueIoHandler}.
+ * {@link IoEvent} to use with {@link KQueueIoHandler}.
  */
-public final class KQueueEventIoOps implements IoOps {
+public final class KQueueIoEvent implements IoEvent {
     private int ident;
     private short filter;
     private short flags;
@@ -28,19 +28,19 @@ public final class KQueueEventIoOps implements IoOps {
     private long data;
 
     /**
-     * Creates a new {@link KQueueEventIoOps}.
+     * Creates a new {@link KQueueIoEvent}.
      *
      * @param ident     the identifier for this event.
      * @param filter    the filter for this event.
      * @param flags     the general flags.
      * @param fflags    filter-specific flags.
-     * @return          {@link KQueueEventIoOps}.
+     * @return          {@link KQueueIoEvent}.
      */
-    public static KQueueEventIoOps newOps(int ident, short filter, short flags, int fflags) {
-        return new KQueueEventIoOps(ident, filter, flags, fflags, 0);
+    public static KQueueIoEvent newEvent(int ident, short filter, short flags, int fflags) {
+        return new KQueueIoEvent(ident, filter, flags, fflags, 0);
     }
 
-    private KQueueEventIoOps(int ident, short filter, short flags, int fflags, long data) {
+    private KQueueIoEvent(int ident, short filter, short flags, int fflags, long data) {
         this.ident = ident;
         this.filter = filter;
         this.flags = flags;
@@ -48,7 +48,7 @@ public final class KQueueEventIoOps implements IoOps {
         this.data = data;
     }
 
-    KQueueEventIoOps() {
+    KQueueIoEvent() {
         this(0, (short) 0, (short) 0, 0, 0);
     }
 
@@ -108,7 +108,7 @@ public final class KQueueEventIoOps implements IoOps {
 
     @Override
     public String toString() {
-        return "KQueueEventIoOps{" +
+        return "KQueueIoEvent{" +
                 "ident=" + ident +
                 ", filter=" + filter +
                 ", flags=" + flags +

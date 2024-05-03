@@ -25,8 +25,8 @@ public interface IoHandle extends AutoCloseable {
      * Be called once there is something to handle.
      *
      * @param registration  the {@link IoRegistration} for this {@link IoHandle}.
-     * @param readyOps      the {@link IoOps} that must be handled. The {@link IoOps} is only valid
+     * @param ioEvent       the {@link IoEvent} that must be handled. The {@link IoEvent} is only valid
      *                      while this method is executed and so must not escape it.
      */
-    void handle(IoRegistration registration, IoOps readyOps);
+    void handle(IoRegistration registration, IoEvent ioEvent);
 }

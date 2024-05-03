@@ -122,7 +122,7 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
 
     private void register0(final SelectableChannel ch, int interestOps, final NioTask<SelectableChannel> task) {
         try {
-            register(
+            NioIoRegistration registration = (NioIoRegistration) register(
                     new NioSelectableChannelIoHandle<SelectableChannel>(ch) {
                         @Override
                         protected void handle(SelectableChannel channel, SelectionKey key) {
@@ -141,7 +141,8 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
                                 logger.warn("Unexpected exception while running NioTask.channelUnregistered(...)", e);
                             }
                         }
-                    }, NioIoOps.valueOf(interestOps)).get();
+                    }).get();
+            registration.submit(NioIoOps.valueOf(interestOps));
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

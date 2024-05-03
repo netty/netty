@@ -328,8 +328,7 @@ public final class NioIoHandler implements IoHandler {
         }
 
         void register(Selector selector) throws IOException {
-            NioIoOps ops = interestOps();
-            SelectionKey newKey = handle.selectableChannel().register(selector, ops.value, this);
+            SelectionKey newKey = handle.selectableChannel().register(selector, key.interestOps(), this);
             key.cancel();
             key = newKey;
         }
@@ -345,13 +344,8 @@ public final class NioIoHandler implements IoHandler {
         }
 
         @Override
-        public void updateInterestOps(NioIoOps ops) {
-            key.interestOps(ops.value);
-        }
-
-        @Override
-        public NioIoOps interestOps() {
-            return NioIoOps.valueOf(key.interestOps());
+        public void submit(IoOps ops) {
+            key.interestOps(cast(ops).value);
         }
 
         @Override
@@ -374,7 +368,7 @@ public final class NioIoHandler implements IoHandler {
         }
 
         void handle(int ready) {
-            handle.handle(this, NioIoOps.valueOf(ready));
+            handle.handle(this, NioIoOps.eventOf(ready));
         }
 
         @Override
@@ -384,10 +378,10 @@ public final class NioIoHandler implements IoHandler {
     }
 
     @Override
-    public NioIoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps initialOps)
+    public NioIoRegistration register(IoEventLoop eventLoop, IoHandle handle)
             throws Exception {
         NioIoHandle nioHandle = nioHandle(handle);
-        NioIoOps ops = cast(initialOps);
+        NioIoOps ops = NioIoOps.NONE;
         boolean selected = false;
         for (;;) {
             try {

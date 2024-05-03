@@ -324,12 +324,12 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     @Override
-    public KQueueIoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps initialOps) {
+    public KQueueIoRegistration register(IoEventLoop eventLoop, IoHandle handle) {
         final KQueueIoHandle kqueueHandle = cast(handle);
         if (kqueueHandle.ident() == KQUEUE_WAKE_UP_IDENT) {
             throw new IllegalArgumentException("ident " + KQUEUE_WAKE_UP_IDENT + " is reserved for internal usage");
         }
-        KQueueEventIoOps eventIoOps = cast(initialOps);
+
         DefaultKqueueIoRegistration registration = new DefaultKqueueIoRegistration(
                 eventLoop, kqueueHandle);
         DefaultKqueueIoRegistration old = registrations.put(kqueueHandle.ident(), registration);
@@ -339,7 +339,6 @@ public final class KQueueIoHandler implements IoHandler {
             throw new IllegalStateException("registration for the KQueueIoHandle.ident() already exists");
         }
 
-        registration.addOps(eventIoOps);
         if (kqueueHandle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe) {
             numChannels++;
         }
@@ -353,9 +352,9 @@ public final class KQueueIoHandler implements IoHandler {
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
-    private static KQueueEventIoOps cast(IoOps ops) {
-        if (ops instanceof KQueueEventIoOps) {
-            return (KQueueEventIoOps) ops;
+    private static KQueueIoOps cast(IoOps ops) {
+        if (ops instanceof KQueueIoOps) {
+            return (KQueueIoOps) ops;
         }
         throw new IllegalArgumentException("IoOps of type " + StringUtil.simpleClassName(ops) + " not supported");
     }
@@ -366,7 +365,7 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     private final class DefaultKqueueIoRegistration extends AtomicBoolean implements KQueueIoRegistration {
-        private final KQueueEventIoOps readyEventIoOps = new KQueueEventIoOps();
+        private final KQueueIoEvent event = new KQueueIoEvent();
 
         final KQueueIoHandle handle;
 
@@ -378,17 +377,18 @@ public final class KQueueIoHandler implements IoHandler {
         }
 
         @Override
-        public void addOps(KQueueEventIoOps ops) {
-            if (ops.ident() != handle.ident()) {
+        public void submit(IoOps ops) {
+            KQueueIoOps kQueueIoOps = cast(ops);
+            if (kQueueIoOps.ident() != handle.ident()) {
                 throw new IllegalArgumentException("ident does not match KQueueIoHandle.ident()");
             }
             if (!isValid()) {
                 return;
             }
             if (eventLoop.inEventLoop()) {
-                evSet(ops.filter(), ops.flags(), ops.fflags());
+                evSet(event.filter(), event.flags(), event.fflags());
             } else {
-                eventLoop.execute(() -> evSet(ops.filter(), ops.flags(), ops.fflags()));
+                eventLoop.execute(() -> evSet(event.filter(), event.flags(), event.fflags()));
             }
         }
 
@@ -398,8 +398,8 @@ public final class KQueueIoHandler implements IoHandler {
         }
 
         void handle(int ident, short filter, short flags, int fflags, long data) {
-            readyEventIoOps.update(ident, filter, flags, fflags, data);
-            handle.handle(this, readyEventIoOps);
+            event.update(ident, filter, flags, fflags, data);
+            handle.handle(this, event);
         }
 
         private void evSet(short filter, short flags, int fflags) {

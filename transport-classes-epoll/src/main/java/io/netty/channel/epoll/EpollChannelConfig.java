@@ -198,14 +198,13 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         ObjectUtil.checkNotNull(mode, "mode");
 
         AbstractEpollChannel epollChannel = (AbstractEpollChannel) channel;
-        EpollIoOps initial = epollChannel.initialOps;
         checkChannelNotRegistered();
         switch (mode) {
             case EDGE_TRIGGERED:
-                epollChannel.initialOps = initial.with(EpollIoOps.EPOLLET);
+                epollChannel.add(EpollIoOps.EPOLLET);
                 break;
             case LEVEL_TRIGGERED:
-                epollChannel.initialOps = initial.without(EpollIoOps.EPOLLET);
+                epollChannel.remove(EpollIoOps.EPOLLET);
                 break;
             default:
                 throw new Error();

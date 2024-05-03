@@ -60,24 +60,25 @@ public final class NioIoOps implements IoOps {
     public static final NioIoOps READ_AND_WRITE = new NioIoOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
     // Just use an array to store often used values.
-    private static final NioIoOps[] OPS;
+    private static final NioIoEvent[] EVENTS;
 
     static {
         NioIoOps all = new NioIoOps(
                 NONE.value | ACCEPT.value | CONNECT.value | WRITE.value | READ.value);
-        OPS = new NioIoOps[all.value + 1];
-        addToArray(OPS, NONE);
-        addToArray(OPS, ACCEPT);
-        addToArray(OPS, CONNECT);
-        addToArray(OPS, WRITE);
-        addToArray(OPS, READ);
-        addToArray(OPS, READ_AND_ACCEPT);
-        addToArray(OPS, READ_AND_WRITE);
-        addToArray(OPS, all);
+
+        EVENTS = new NioIoEvent[all.value + 1];
+        addToArray(EVENTS, NONE);
+        addToArray(EVENTS, ACCEPT);
+        addToArray(EVENTS, CONNECT);
+        addToArray(EVENTS, WRITE);
+        addToArray(EVENTS, READ);
+        addToArray(EVENTS, READ_AND_ACCEPT);
+        addToArray(EVENTS, READ_AND_WRITE);
+        addToArray(EVENTS, all);
     }
 
-    private static void addToArray(NioIoOps[] array, NioIoOps op) {
-        array[op.value] = op;
+    private static void addToArray(NioIoEvent[] array, NioIoOps opt) {
+        array[opt.value] = new DefaultNioIoEvent(opt);
     }
 
     final int value;
@@ -154,13 +155,46 @@ public final class NioIoOps implements IoOps {
      * @return  the {@link NioIoOps}.
      */
     public static NioIoOps valueOf(int value) {
-        final NioIoOps ops;
-        if (value < OPS.length) {
-            ops = OPS[value];
-            if (ops != null) {
-                return ops;
+        return eventOf(value).ops();
+    }
+
+    static NioIoEvent eventOf(int value) {
+        if (value > 0 && value < EVENTS.length) {
+            NioIoEvent event = EVENTS[value];
+            if (event != null) {
+                return event;
             }
         }
-        return new NioIoOps(value);
+        return new DefaultNioIoEvent(new NioIoOps(value));
+    }
+
+    private static final class DefaultNioIoEvent implements NioIoEvent {
+        private final NioIoOps ops;
+
+        DefaultNioIoEvent(NioIoOps ops) {
+            this.ops = ops;
+        }
+
+        @Override
+        public NioIoOps ops() {
+            return ops;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            NioIoEvent event = (NioIoEvent) o;
+            return event.ops().equals(ops());
+        }
+
+        @Override
+        public int hashCode() {
+            return ops().hashCode();
+        }
     }
 }

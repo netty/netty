@@ -22,6 +22,13 @@ package io.netty.channel;
 public interface IoRegistration {
 
     /**
+     * Submit the {@link IoOps} to the registration.
+     *
+     * @param ops ops.
+     */
+    void submit(IoOps ops) throws Exception;
+
+    /**
      * Returns {@code true} if the registration is still valid. Once {@link #cancel()} is called this
      * will return {@code false}.
      *

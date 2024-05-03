@@ -27,9 +27,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoEvent;
 import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoEventLoopGroup;
-import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -58,6 +58,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final SelectableChannel ch;
     protected final int readInterestOp;
     protected final NioIoOps readOps;
+
+    // We always start with NONE as initial ops.
+    private NioIoOps ops = NioIoOps.NONE;
 
     volatile NioIoRegistration registration;
     boolean readPending;
@@ -103,6 +106,28 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             }
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);
+        }
+    }
+
+    protected void addAndSubmit(NioIoOps addOps) {
+        if (!ops.contains(addOps)) {
+            ops = ops.with(addOps);
+            try {
+                registration().submit(ops);
+            } catch (Exception e) {
+                throw new ChannelException(e);
+            }
+        }
+    }
+
+    protected void removeAndSubmit(NioIoOps removeOps) {
+        if (ops.contains(removeOps)) {
+            ops = ops.without(removeOps);
+            try {
+                registration().submit(ops);
+            } catch (Exception e) {
+                throw new ChannelException(e);
+            }
         }
     }
 
@@ -247,7 +272,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             if (!registration.isValid()) {
                 return;
             }
-            registration.updateInterestOps(registration.interestOps().without(readOps));
+            removeAndSubmit(readOps);
         }
 
         @Override
@@ -392,20 +417,21 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         private boolean isFlushPending() {
             NioIoRegistration registration = registration();
-            return registration.isValid() && registration.interestOps().contains(NioIoOps.WRITE);
+            return registration.isValid() && ops.contains(NioIoOps.WRITE);
         }
 
         @Override
-        public void handle(IoRegistration registration, IoOps readyOps) {
+        public void handle(IoRegistration registration, IoEvent event) {
             try {
                 NioIoRegistration nioRegistration = (NioIoRegistration) registration;
-                NioIoOps nioReadyOps = (NioIoOps) readyOps;
+                NioIoEvent nioEvent = (NioIoEvent) event;
+                NioIoOps nioReadyOps = nioEvent.ops();
                 // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
                 // the NIO JDK channel implementation may throw a NotYetConnectedException.
                 if (nioReadyOps.contains(NioIoOps.CONNECT)) {
                     // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                     // See https://github.com/netty/netty/issues/924
-                    nioRegistration.updateInterestOps(nioRegistration.interestOps().without(NioIoOps.CONNECT));
+                    removeAndSubmit(NioIoOps.CONNECT);
 
                     unsafe().finishConnect();
                 }
@@ -437,7 +463,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     protected void doRegister(ChannelPromise promise) {
         assert registration == null;
-        ((IoEventLoop) eventLoop()).register((AbstractNioUnsafe) unsafe(), NioIoOps.NONE).addListener(f -> {
+        ((IoEventLoop) eventLoop()).register((AbstractNioUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (NioIoRegistration) f.getNow();
                 promise.setSuccess();
@@ -452,6 +478,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         NioIoRegistration registration = registration();
         if (registration != null) {
             this.registration = null;
+            // Reset to NONE so we have the correct value when we register again.
+            ops = NioIoOps.NONE;
             registration.cancel();
         }
     }
@@ -466,7 +494,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         readPending = true;
 
-        registration.updateInterestOps(registration.interestOps().with(readOps));
+        addAndSubmit(readOps);
     }
 
     /**

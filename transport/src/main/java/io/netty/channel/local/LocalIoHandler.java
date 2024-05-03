@@ -90,12 +90,8 @@ public final class LocalIoHandler implements IoHandler {
     }
 
     @Override
-    public IoRegistration register(IoEventLoop eventLoop, IoHandle handle, IoOps initialOps) {
+    public IoRegistration register(IoEventLoop eventLoop, IoHandle handle) {
         LocalIoHandle localHandle = cast(handle);
-        if (initialOps != LocalIoOps.DEFAULT) {
-            throw new IllegalArgumentException(
-                    "IoOps of type " + StringUtil.simpleClassName(initialOps) + " not supported");
-        }
         if (registeredChannels.add(localHandle)) {
             LocalIoRegistration registration = new LocalIoRegistration(eventLoop, localHandle);
             localHandle.registerNow();
@@ -116,6 +112,11 @@ public final class LocalIoHandler implements IoHandler {
         LocalIoRegistration(IoEventLoop eventLoop, LocalIoHandle handle) {
             this.eventLoop = eventLoop;
             this.handle = handle;
+        }
+
+        @Override
+        public void submit(IoOps ops) {
+            throw new UnsupportedOperationException();
         }
 
         @Override

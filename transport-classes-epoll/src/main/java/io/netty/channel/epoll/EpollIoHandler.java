@@ -260,32 +260,24 @@ public class EpollIoHandler implements IoHandler {
         private final IoEventLoop eventLoop;
         final EpollIoHandle handle;
 
-        private volatile EpollIoOps currentOps;
-
-        DefaultEpollIoRegistration(IoEventLoop eventLoop, EpollIoHandle handle, EpollIoOps initialOps) {
+        DefaultEpollIoRegistration(IoEventLoop eventLoop, EpollIoHandle handle) {
             this.eventLoop = eventLoop;
             this.handle = handle;
-            this.currentOps = initialOps;
         }
 
         @Override
-        public void updateInterestOps(EpollIoOps ops) throws IOException {
-            currentOps = ops;
+        public void submit(IoOps ops) throws Exception {
+            EpollIoOps epollIoOps = cast(ops);
             try {
                 if (!isValid()) {
                     return;
                 }
-                Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), ops.value);
+                Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
             } catch (IOException e) {
                 throw e;
             } catch (Exception e) {
                 throw new IOException(e);
             }
-        }
-
-        @Override
-        public EpollIoOps interestOps() {
-            return currentOps;
         }
 
         @Override
@@ -342,19 +334,17 @@ public class EpollIoHandler implements IoHandler {
         }
 
         void handle(long ev) {
-            handle.handle(this, EpollIoOps.valueOf((int) ev));
+            handle.handle(this, EpollIoOps.eventOf((int) ev));
         }
     }
 
     @Override
-    public EpollIoRegistration register(IoEventLoop eventLoop, IoHandle handle,
-                                      IoOps initialOps)
+    public EpollIoRegistration register(IoEventLoop eventLoop, IoHandle handle)
             throws Exception {
         final EpollIoHandle epollHandle = cast(handle);
-        EpollIoOps ops = cast(initialOps);
-        DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(eventLoop, epollHandle, ops);
+        DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(eventLoop, epollHandle);
         int fd = epollHandle.fd().intValue();
-        Native.epollCtlAdd(epollFd.intValue(), fd, registration.interestOps().value);
+        Native.epollCtlAdd(epollFd.intValue(), fd, EpollIoOps.EPOLLERR.value);
         DefaultEpollIoRegistration old = registrations.put(fd, registration);
 
         // We either expect to have no registration in the map with the same FD or that the FD of the old registration
