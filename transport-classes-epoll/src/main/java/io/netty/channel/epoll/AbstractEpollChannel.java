@@ -507,7 +507,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
          */
         abstract void epollInReady();
 
-        boolean shouldStopReading(ChannelConfig config) {
+        final boolean shouldStopReading(ChannelConfig config) {
             // Check if there is a readPending which was not processed yet.
             // This could be for two reasons:
             // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
