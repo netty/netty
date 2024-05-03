@@ -89,12 +89,9 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                 return;
             }
             final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.edgeTriggered(isFlagSet(Native.EPOLLET));
-
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);
             allocHandle.attemptedBytesRead(1);
-            epollInBefore();
 
             Throwable exception = null;
             try {
@@ -124,7 +121,9 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                     pipeline.fireExceptionCaught(exception);
                 }
             } finally {
-                epollInFinally(config);
+                if (shouldStopReading(config)) {
+                    clearEpollIn();
+                }
             }
         }
     }

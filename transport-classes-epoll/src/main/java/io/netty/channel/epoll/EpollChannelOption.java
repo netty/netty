@@ -48,6 +48,10 @@ public final class EpollChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Boolean> TCP_QUICKACK = valueOf(EpollChannelOption.class, "TCP_QUICKACK");
     public static final ChannelOption<Integer> SO_BUSY_POLL = valueOf(EpollChannelOption.class, "SO_BUSY_POLL");
 
+    /**
+     * @deprecated Netty always uses level-triggered mode and so this method is just a no-op.
+     */
+    @Deprecated
     public static final ChannelOption<EpollMode> EPOLL_MODE =
             ChannelOption.valueOf(EpollChannelOption.class, "EPOLL_MODE");
 
