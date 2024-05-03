@@ -58,10 +58,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final SelectableChannel ch;
     protected final int readInterestOp;
     protected final NioIoOps readOps;
-
-    // We always start with NONE as initial ops.
-    private NioIoOps ops = NioIoOps.NONE;
-
     volatile NioIoRegistration registration;
     boolean readPending;
     private final Runnable clearReadPendingRunnable = new Runnable() {
@@ -110,10 +106,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     protected void addAndSubmit(NioIoOps addOps) {
-        if (!ops.contains(addOps)) {
-            ops = ops.with(addOps);
+        int interestOps = selectionKey().interestOps();
+        if (!addOps.isIncludedIn(interestOps)) {
             try {
-                registration().submit(ops);
+                registration().submit(NioIoOps.valueOf(interestOps).with(addOps));
             } catch (Exception e) {
                 throw new ChannelException(e);
             }
@@ -121,10 +117,10 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     protected void removeAndSubmit(NioIoOps removeOps) {
-        if (ops.contains(removeOps)) {
-            ops = ops.without(removeOps);
+        int interestOps = selectionKey().interestOps();
+        if (removeOps.isIncludedIn(interestOps)) {
             try {
-                registration().submit(ops);
+                registration().submit(NioIoOps.valueOf(interestOps).without(removeOps));
             } catch (Exception e) {
                 throw new ChannelException(e);
             }
@@ -417,7 +413,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         private boolean isFlushPending() {
             NioIoRegistration registration = registration();
-            return registration.isValid() && ops.contains(NioIoOps.WRITE);
+            return registration.isValid() && NioIoOps.WRITE.isIncludedIn(registration.selectionKey().interestOps());
         }
 
         @Override
@@ -478,8 +474,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         NioIoRegistration registration = registration();
         if (registration != null) {
             this.registration = null;
-            // Reset to NONE so we have the correct value when we register again.
-            ops = NioIoOps.NONE;
             registration.cancel();
         }
     }

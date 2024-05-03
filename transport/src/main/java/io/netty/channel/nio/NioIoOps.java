@@ -93,7 +93,7 @@ public final class NioIoOps implements IoOps {
      * @return      {@code true} if a combination of the given.
      */
     public boolean contains(NioIoOps ops) {
-        return (value & ops.value) != 0;
+        return isIncludedIn(ops.value);
     }
 
     /**
@@ -123,7 +123,7 @@ public final class NioIoOps implements IoOps {
     }
 
     /**
-     * Returns the underlying value of the {@link NioIoOps}.
+     * Returns the underlying ops value of the {@link NioIoOps}.
      *
      * @return value.
      */
@@ -156,6 +156,26 @@ public final class NioIoOps implements IoOps {
      */
     public static NioIoOps valueOf(int value) {
         return eventOf(value).ops();
+    }
+
+    /**
+     * Returns {@code true} if this {@link NioIoOps} is <strong>included </strong> in the given {@code ops}.
+     *
+     * @param ops   the ops to check.
+     * @return      {@code true} if <strong>included</strong>, {@code false} otherwise.
+     */
+    public boolean isIncludedIn(int ops) {
+        return (ops & value) != 0;
+    }
+
+    /**
+     * Returns {@code true} if this {@link NioIoOps} is <strong>not included</strong> in the given {@code ops}.
+     *
+     * @param ops   the ops to check.
+     * @return      {@code true} if <strong>not included</strong>, {@code false} otherwise.
+     */
+    public boolean isNotIncludedIn(int ops) {
+        return (ops & value) == 0;
     }
 
     static NioIoEvent eventOf(int value) {
