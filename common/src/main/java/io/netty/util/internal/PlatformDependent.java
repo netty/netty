@@ -31,16 +31,17 @@ import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
@@ -61,6 +62,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static io.netty.util.internal.PlatformDependent0.HASH_CODE_ASCII_SEED;
 import static io.netty.util.internal.PlatformDependent0.HASH_CODE_C1;
@@ -69,6 +71,7 @@ import static io.netty.util.internal.PlatformDependent0.hashCodeAsciiSanitize;
 import static io.netty.util.internal.PlatformDependent0.unalignedAccess;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.lang.invoke.MethodType.methodType;
 
 /**
  * Utility that detects various properties specific to the current runtime
@@ -211,20 +214,15 @@ public final class PlatformDependent {
     static void addFilesystemOsClassifiers(final Set<String> allowedClassifiers,
                                            final Set<String> availableClassifiers) {
         for (final String osReleaseFileName : OS_RELEASE_FILES) {
-            final File file = new File(osReleaseFileName);
+            final Path file = Paths.get(osReleaseFileName);
             boolean found = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
                 @Override
                 public Boolean run() {
+                    Pattern lineSplitPattern = Pattern.compile("[ ]+");
                     try {
-                        if (file.exists()) {
-                            BufferedReader reader = null;
-                            try {
-                                reader = new BufferedReader(
-                                        new InputStreamReader(
-                                                new FileInputStream(file), CharsetUtil.UTF_8));
-
-                                String line;
-                                while ((line = reader.readLine()) != null) {
+                        if (Files.exists(file)) {
+                            try (Stream<String> lines = Files.lines(file, StandardCharsets.UTF_8)) {
+                                lines.forEach(line -> {
                                     if (line.startsWith(LINUX_ID_PREFIX)) {
                                         String id = normalizeOsReleaseVariableValue(
                                                 line.substring(LINUX_ID_PREFIX.length()));
@@ -232,21 +230,14 @@ public final class PlatformDependent {
                                     } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
                                         line = normalizeOsReleaseVariableValue(
                                                 line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                                        addClassifier(allowedClassifiers, availableClassifiers, line.split("[ ]+"));
+                                        addClassifier(allowedClassifiers, availableClassifiers,
+                                                lineSplitPattern.split(line));
                                     }
-                                }
+                                });
                             } catch (SecurityException e) {
                                 logger.debug("Unable to read {}", osReleaseFileName, e);
                             } catch (IOException e) {
                                 logger.debug("Error while reading content of {}", osReleaseFileName, e);
-                            } finally {
-                                if (reader != null) {
-                                    try {
-                                        reader.close();
-                                    } catch (IOException ignored) {
-                                        // Ignore
-                                    }
-                                }
                             }
                             // specification states we should only fall back if /etc/os-release does not exist
                             return true;
@@ -441,7 +432,7 @@ public final class PlatformDependent {
         if (hasUnsafe()) {
             PlatformDependent0.throwException(t);
         } else {
-            PlatformDependent.<RuntimeException>throwException0(t);
+            throwException0(t);
         }
     }
 
@@ -1193,33 +1184,9 @@ public final class PlatformDependent {
      *
      * @return The estimated max direct memory, in bytes.
      */
+    @SuppressWarnings("unchecked")
     public static long estimateMaxDirectMemory() {
         long maxDirectMemory = PlatformDependent0.bitsMaxDirectMemory();
-        if (maxDirectMemory > 0) {
-            return maxDirectMemory;
-        }
-
-        ClassLoader systemClassLoader = null;
-        try {
-            systemClassLoader = getSystemClassLoader();
-
-            // When using IBM J9 / Eclipse OpenJ9 we should not use VM.maxDirectMemory() as it not reflects the
-            // correct value.
-            // See:
-            //  - https://github.com/netty/netty/issues/7654
-            String vmName = SystemPropertyUtil.get("java.vm.name", "").toLowerCase();
-            if (!vmName.startsWith("ibm j9") &&
-                    // https://github.com/eclipse/openj9/blob/openj9-0.8.0/runtime/include/vendor_version.h#L53
-                    !vmName.startsWith("eclipse openj9")) {
-                // Try to get from sun.misc.VM.maxDirectMemory() which should be most accurate.
-                Class<?> vmClass = Class.forName("sun.misc.VM", true, systemClassLoader);
-                Method m = vmClass.getDeclaredMethod("maxDirectMemory");
-                maxDirectMemory = ((Number) m.invoke(null)).longValue();
-            }
-        } catch (Throwable ignored) {
-            // Ignore
-        }
-
         if (maxDirectMemory > 0) {
             return maxDirectMemory;
         }
@@ -1227,15 +1194,18 @@ public final class PlatformDependent {
         try {
             // Now try to get the JVM option (-XX:MaxDirectMemorySize) and parse it.
             // Note that we are using reflection because Android doesn't have these classes.
+            ClassLoader systemClassLoader = getSystemClassLoader();
             Class<?> mgmtFactoryClass = Class.forName(
                     "java.lang.management.ManagementFactory", true, systemClassLoader);
             Class<?> runtimeClass = Class.forName(
                     "java.lang.management.RuntimeMXBean", true, systemClassLoader);
 
-            Object runtime = mgmtFactoryClass.getDeclaredMethod("getRuntimeMXBean").invoke(null);
-
-            @SuppressWarnings("unchecked")
-            List<String> vmArgs = (List<String>) runtimeClass.getDeclaredMethod("getInputArguments").invoke(runtime);
+            MethodHandles.Lookup lookup = MethodHandles.publicLookup();
+            MethodHandle getRuntime = lookup.findStatic(
+                    mgmtFactoryClass, "getRuntimeMXBean", methodType(runtimeClass));
+            MethodHandle getInputArguments = lookup.findVirtual(
+                    runtimeClass, "getInputArguments", methodType(List.class));
+            List<String> vmArgs = (List<String>) getInputArguments.invoke(getRuntime.invoke());
 
             Pattern maxDirectMemorySizeArgPattern = getMaxDirectMemorySizeArgPattern();
 
