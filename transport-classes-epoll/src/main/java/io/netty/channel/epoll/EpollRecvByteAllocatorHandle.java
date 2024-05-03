@@ -46,15 +46,6 @@ class EpollRecvByteAllocatorHandle extends DelegatingHandle implements ExtendedH
     }
 
     boolean maybeMoreDataToRead() {
-        /**
-         * EPOLL ET requires that we read until we get an EAGAIN
-         * (see Q9 in <a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll man</a>). However in order to
-         * respect auto read we supporting reading to stop if auto read is off. It is expected that the
-         * {@link #EpollSocketChannel} implementations will track if we are in edgeTriggered mode and all data was not
-         * read, and will force a EPOLLIN ready event.
-         *
-         * It is assumed RDHUP is handled externally by checking {@link #isReceivedRdHup()}.
-         */
         return lastBytesRead() == attemptedBytesRead();
     }
 
@@ -67,7 +58,7 @@ class EpollRecvByteAllocatorHandle extends DelegatingHandle implements ExtendedH
 
     @Override
     public final boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-        return ((ExtendedHandle) delegate()).continueReading(maybeMoreDataSupplier);
+        return isReceivedRdHup() || ((ExtendedHandle) delegate()).continueReading(maybeMoreDataSupplier);
     }
 
     @Override
