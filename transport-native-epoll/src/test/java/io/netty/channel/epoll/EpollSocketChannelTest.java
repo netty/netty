@@ -101,6 +101,12 @@ public class EpollSocketChannelTest {
         assertTrue(info.rcvRtt() >= 0);
         assertTrue(info.rcvSpace() >= 0);
         assertTrue(info.totalRetrans() >= 0);
+        assertTrue(info.pacingRate() >= 0);
+        assertTrue(info.maxPacingRate() >= 0);
+        assertTrue(info.bytesAcked() >= 0);
+        assertTrue(info.bytesReceived() >= 0);
+        assertTrue(info.segsOut() >= 0);
+        assertTrue(info.segsIn() >= 0);
     }
 
     // See https://github.com/netty/netty/issues/7159

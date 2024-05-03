@@ -56,12 +56,19 @@ package io.netty.channel.epoll;
  *      __u32   tcpi_rcv_space;
  *
  *      __u32   tcpi_total_retrans;
+ *
+ *      __u64   tcpi_pacing_rate;
+ *      __u64   tcpi_max_pacing_rate;
+ *      __u64   tcpi_bytes_acked;
+ *      __u64   tcpi_bytes_received;
+ *      __u32   tcpi_segs_out;
+ *      __u32   tcpi_segs_in;
  * };
  * </p>
  */
 public final class EpollTcpInfo {
 
-    final long[] info = new long[32];
+    final long[] info = new long[38];
 
     public int state() {
         return (int) info[0];
@@ -189,5 +196,41 @@ public final class EpollTcpInfo {
 
     public long totalRetrans() {
         return info[31];
+    }
+
+    /**
+     * Returns an unsigned long
+     */
+    public long pacingRate() {
+        return info[32];
+    }
+
+    /**
+     * Returns an unsigned long
+     */
+    public long maxPacingRate() {
+        return info[33];
+    }
+
+    /**
+     * Returns an unsigned long
+     */
+    public long bytesAcked() {
+        return info[34];
+    }
+
+    /**
+     * Returns an unsigned long
+     */
+    public long bytesReceived() {
+        return info[35];
+    }
+
+    public long segsOut() {
+        return info[36];
+    }
+
+    public long segsIn() {
+        return info[37];
     }
 }

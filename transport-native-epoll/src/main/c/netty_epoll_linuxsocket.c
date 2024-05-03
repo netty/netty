@@ -613,7 +613,7 @@ static void netty_epoll_linuxsocket_getTcpInfo(JNIEnv* env, jclass clazz, jint f
      if (netty_unix_socket_getOption(env, fd, IPPROTO_TCP, TCP_INFO, &tcp_info, sizeof(tcp_info)) == -1) {
          return;
      }
-     jlong cArray[32];
+     jlong cArray[38];
      // Expand to 64 bits, then cast away unsigned-ness.
      cArray[0] = (jlong) (uint64_t) tcp_info.tcpi_state;
      cArray[1] = (jlong) (uint64_t) tcp_info.tcpi_ca_state;
@@ -647,8 +647,14 @@ static void netty_epoll_linuxsocket_getTcpInfo(JNIEnv* env, jclass clazz, jint f
      cArray[29] = (jlong) (uint64_t) tcp_info.tcpi_rcv_rtt;
      cArray[30] = (jlong) (uint64_t) tcp_info.tcpi_rcv_space;
      cArray[31] = (jlong) (uint64_t) tcp_info.tcpi_total_retrans;
+     cArray[32] = (jlong) (uint64_t) tcp_info.tcpi_pacing_rate;
+     cArray[33] = (jlong) (uint64_t) tcp_info.tcpi_max_pacing_rate;
+     cArray[34] = (jlong) (uint64_t) tcp_info.tcpi_bytes_acked;
+     cArray[35] = (jlong) (uint64_t) tcp_info.tcpi_bytes_received;
+     cArray[36] = (jlong) (uint64_t) tcp_info.tcpi_segs_out;
+     cArray[37] = (jlong) (uint64_t) tcp_info.tcpi_segs_in;
 
-     (*env)->SetLongArrayRegion(env, array, 0, 32, cArray);
+     (*env)->SetLongArrayRegion(env, array, 0, 38, cArray);
 }
 
 static jint netty_epoll_linuxsocket_isTcpCork(JNIEnv* env, jclass clazz, jint fd) {
