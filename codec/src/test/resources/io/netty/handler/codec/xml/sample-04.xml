@@ -288,49 +288,6 @@
         </configuration>
       </plugin>
       <plugin>
-        <!-- ensure that only methods available in java 1.6 can
-             be used even when compiling with java 1.7+ -->
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.15</version>
-        <configuration>
-          <signature>
-            <groupId>org.codehaus.mojo.signature</groupId>
-            <artifactId>java16</artifactId>
-            <version>1.1</version>
-          </signature>
-          <ignores>
-            <ignore>sun.misc.Unsafe</ignore>
-            <ignore>sun.misc.Cleaner</ignore>
-
-            <ignore>java.util.zip.Deflater</ignore>
-
-            <!-- Used for NIO UDP multicast -->
-            <ignore>java.nio.channels.DatagramChannel</ignore>
-            <ignore>java.nio.channels.MembershipKey</ignore>
-            <ignore>java.net.StandardProtocolFamily</ignore>
-
-            <!-- Used for NIO. 2 -->
-            <ignore>java.nio.channels.AsynchronousChannel</ignore>
-            <ignore>java.nio.channels.AsynchronousSocketChannel</ignore>
-            <ignore>java.nio.channels.AsynchronousServerSocketChannel</ignore>
-            <ignore>java.nio.channels.AsynchronousChannelGroup</ignore>
-            <ignore>java.nio.channels.NetworkChannel</ignore>
-            <ignore>java.nio.channels.InterruptedByTimeoutException</ignore>
-            <ignore>java.net.StandardSocketOptions</ignore>
-            <ignore>java.net.SocketOption</ignore>
-          </ignores>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>process-classes</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
         <version>2.12.1</version>
         <executions>
