@@ -120,7 +120,7 @@ public final class PlatformDependent {
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
     private static final Cleaner CLEANER;
-    private static final int UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD;
+    private static final boolean HAS_ALLOCATE_UNINIT_ARRAY;
     // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
     private static final String[] OS_RELEASE_FILES = {"/etc/os-release", "/usr/lib/os-release"};
     private static final String LINUX_ID_PREFIX = "ID=";
@@ -162,12 +162,7 @@ public final class PlatformDependent {
         }
         logger.debug("-Dio.netty.maxDirectMemory: {} bytes", maxDirectMemory);
         DIRECT_MEMORY_LIMIT = maxDirectMemory >= 1 ? maxDirectMemory : MAX_DIRECT_MEMORY;
-
-        int tryAllocateUninitializedArray =
-                SystemPropertyUtil.getInt("io.netty.uninitializedArrayAllocationThreshold", 1024);
-        UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD = javaVersion() >= 9 && PlatformDependent0.hasAllocateArrayMethod() ?
-                tryAllocateUninitializedArray : -1;
-        logger.debug("-Dio.netty.uninitializedArrayAllocationThreshold: {}", UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD);
+        HAS_ALLOCATE_UNINIT_ARRAY = javaVersion() >= 9 && PlatformDependent0.hasAllocateArrayMethod();
 
         MAYBE_SUPER_USER = maybeSuperUser0();
 
@@ -295,8 +290,7 @@ public final class PlatformDependent {
     }
 
     public static byte[] allocateUninitializedArray(int size) {
-        return UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD < 0 || UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD > size ?
-                new byte[size] : PlatformDependent0.allocateUninitializedArray(size);
+        return HAS_ALLOCATE_UNINIT_ARRAY ?  PlatformDependent0.allocateUninitializedArray(size) : new byte[size];
     }
 
     /**
