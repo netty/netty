@@ -146,6 +146,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
                 // In case of password authentication, send an authentication request.
                 ctx.pipeline().replace(decoderName, decoderName, new Socks5PasswordAuthResponseDecoder());
                 sendToProxyServer(new DefaultSocks5PasswordAuthRequest(
+                        Socks5AuthMethod.PASSWORD,
                         username != null? username : "", password != null? password : ""));
             } else {
                 // Should never reach here.

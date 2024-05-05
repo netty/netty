@@ -22,6 +22,13 @@ package io.netty.handler.codec.socksx.v5;
 public interface Socks5PasswordAuthRequest extends Socks5Message {
 
     /**
+     * Returns the {@code METHOD} field of this request.
+     */
+    default Socks5AuthMethod authMethod() {
+        return Socks5AuthMethod.PASSWORD;
+    }
+
+    /**
      * Returns the username of this request.
      */
     String username();
@@ -30,4 +37,5 @@ public interface Socks5PasswordAuthRequest extends Socks5Message {
      * Returns the password of this request.
      */
     String password();
+
 }

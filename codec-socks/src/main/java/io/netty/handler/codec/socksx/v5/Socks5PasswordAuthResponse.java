@@ -21,7 +21,15 @@ package io.netty.handler.codec.socksx.v5;
  */
 public interface Socks5PasswordAuthResponse extends Socks5Message {
     /**
+     * Returns the {@code METHOD} field of this response.
+     */
+    default Socks5AuthMethod authMethod() {
+        return Socks5AuthMethod.PASSWORD;
+    }
+
+    /**
      * Returns the status of this response.
      */
     Socks5PasswordAuthStatus status();
+
 }

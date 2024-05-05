@@ -24,12 +24,19 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultSocks5PasswordAuthRequest extends AbstractSocks5Message implements Socks5PasswordAuthRequest {
 
+    private final Socks5AuthMethod authMethod;
     private final String username;
     private final String password;
 
+    @Deprecated
     public DefaultSocks5PasswordAuthRequest(String username, String password) {
+        this(Socks5AuthMethod.PASSWORD, username, password);
+    }
+
+    public DefaultSocks5PasswordAuthRequest(Socks5AuthMethod authMethod, String username, String password) {
         ObjectUtil.checkNotNull(username, "username");
         ObjectUtil.checkNotNull(password, "password");
+        ObjectUtil.checkNotNull(authMethod, "authMethod");
 
         if (username.length() > 255) {
             throw new IllegalArgumentException("username: **** (expected: less than 256 chars)");
@@ -40,8 +47,8 @@ public class DefaultSocks5PasswordAuthRequest extends AbstractSocks5Message impl
 
         this.username = username;
         this.password = password;
+        this.authMethod = authMethod;
     }
-
     @Override
     public String username() {
         return username;
@@ -53,6 +60,11 @@ public class DefaultSocks5PasswordAuthRequest extends AbstractSocks5Message impl
     }
 
     @Override
+    public Socks5AuthMethod authMethod() {
+        return authMethod;
+    }
+
+    @Override
     public String toString() {
         StringBuilder buf = new StringBuilder(StringUtil.simpleClassName(this));
 
@@ -60,13 +72,14 @@ public class DefaultSocks5PasswordAuthRequest extends AbstractSocks5Message impl
         if (!decoderResult.isSuccess()) {
             buf.append("(decoderResult: ");
             buf.append(decoderResult);
-            buf.append(", username: ");
+            buf.append(", authMethod: ");
         } else {
-            buf.append("(username: ");
+            buf.append("(authMethod: ");
         }
-        buf.append(username());
+        buf.append(authMethod());
+        buf.append(", username: ");
+        buf.append(username);
         buf.append(", password: ****)");
-
         return buf.toString();
     }
 }
