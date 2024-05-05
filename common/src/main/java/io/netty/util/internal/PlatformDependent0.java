@@ -412,7 +412,7 @@ final class PlatformDependent0 {
                     try {
                         return MethodHandles.publicLookup().findVirtual(
                                 ByteBuffer.class, "alignedSlice", methodType(ByteBuffer.class, int.class));
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         return null;
                     }
                 }
