@@ -15,8 +15,12 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.AdaptivePoolingAllocator.MagazineCaching;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 /**
  * An auto-tuning pooling {@link ByteBufAllocator}, that follows an anti-generational hypothesis.
@@ -29,6 +33,16 @@ import io.netty.util.internal.UnstableApi;
 @UnstableApi
 public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
         implements ByteBufAllocatorMetricProvider, ByteBufAllocatorMetric {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AdaptiveByteBufAllocator.class);
+    private static final boolean DEFAULT_USE_CACHED_MAGAZINES_FOR_NON_EVENT_LOOP_THREADS;
+
+    static {
+        DEFAULT_USE_CACHED_MAGAZINES_FOR_NON_EVENT_LOOP_THREADS = SystemPropertyUtil.getBoolean(
+                "io.netty.allocator.useCachedMagazinesForNonEventLoopThreads", false);
+        logger.debug("-Dio.netty.allocator.useCachedMagazinesForNonEventLoopThreads: {}",
+                     DEFAULT_USE_CACHED_MAGAZINES_FOR_NON_EVENT_LOOP_THREADS);
+    }
+
     private final AdaptivePoolingAllocator direct;
     private final AdaptivePoolingAllocator heap;
 
@@ -37,9 +51,15 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
     }
 
     public AdaptiveByteBufAllocator(boolean preferDirect) {
+        this(preferDirect, DEFAULT_USE_CACHED_MAGAZINES_FOR_NON_EVENT_LOOP_THREADS);
+    }
+
+    public AdaptiveByteBufAllocator(boolean preferDirect, boolean useCacheForNonEventLoopThreads) {
         super(preferDirect);
-        direct = new AdaptivePoolingAllocator(new DirectChunkAllocator(this));
-        heap = new AdaptivePoolingAllocator(new HeapChunkAllocator(this));
+        MagazineCaching magazineCaching = useCacheForNonEventLoopThreads?
+                MagazineCaching.FastThreadLocalThreads : MagazineCaching.EventLoopThreads;
+        direct = new AdaptivePoolingAllocator(new DirectChunkAllocator(this), magazineCaching);
+        heap = new AdaptivePoolingAllocator(new HeapChunkAllocator(this), magazineCaching);
     }
 
     @Override
