@@ -18,11 +18,13 @@ package io.netty.buffer;
 import io.netty.util.ByteProcessor;
 import io.netty.util.NettyRuntime;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
@@ -36,7 +38,9 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.util.Arrays;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.StampedLock;
@@ -69,6 +73,15 @@ import java.util.concurrent.locks.StampedLock;
  */
 @UnstableApi
 final class AdaptivePoolingAllocator {
+
+    enum MagazineCaching {
+        EventLoopThreads,
+        FastThreadLocalThreads,
+        None
+    }
+
+    private static final int EXPANSION_ATTEMPTS = 3;
+    private static final int INITIAL_MAGAZINES = 4;
     private static final int RETIRE_CAPACITY = 4 * 1024;
     private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
@@ -93,16 +106,51 @@ final class AdaptivePoolingAllocator {
     private static final int CENTRAL_QUEUE_CAPACITY = SystemPropertyUtil.getInt(
             "io.netty.allocator.centralQueueCapacity", NettyRuntime.availableProcessors());
 
+    private static final Object NO_MAGAZINE = Boolean.TRUE;
+
     private final ChunkAllocator chunkAllocator;
     private final Queue<ChunkByteBuf> centralQueue;
     private final StampedLock magazineExpandLock;
     private volatile Magazine[] magazines;
+    private final FastThreadLocal<Object> threadLocalMagazine;
+    private final Set<Magazine> liveCachedMagazines;
 
-    AdaptivePoolingAllocator(ChunkAllocator chunkAllocator) {
+    AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, MagazineCaching magazineCaching) {
+        ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
+        ObjectUtil.checkNotNull(magazineCaching, "magazineCaching");
         this.chunkAllocator = chunkAllocator;
         centralQueue = ObjectUtil.checkNotNull(createSharedChunkQueue(), "centralQueue");
         magazineExpandLock = new StampedLock();
-        Magazine[] mags = new Magazine[4];
+        if (magazineCaching != MagazineCaching.None) {
+            assert magazineCaching == MagazineCaching.EventLoopThreads ||
+                   magazineCaching == MagazineCaching.FastThreadLocalThreads;
+            final boolean cachedMagazinesNonEventLoopThreads =
+                    magazineCaching == MagazineCaching.FastThreadLocalThreads;
+            final Set<Magazine> liveMagazines = new CopyOnWriteArraySet<Magazine>();
+            threadLocalMagazine = new FastThreadLocal<Object>() {
+                @Override
+                protected Object initialValue() {
+                    if (cachedMagazinesNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
+                        Magazine mag = new Magazine(AdaptivePoolingAllocator.this, false);
+                        liveMagazines.add(mag);
+                        return mag;
+                    }
+                    return NO_MAGAZINE;
+                }
+
+                @Override
+                protected void onRemoval(final Object value) throws Exception {
+                    if (value != NO_MAGAZINE) {
+                        liveMagazines.remove(value);
+                    }
+                }
+            };
+            liveCachedMagazines = liveMagazines;
+        } else {
+            threadLocalMagazine = null;
+            liveCachedMagazines = null;
+        }
+        Magazine[] mags = new Magazine[INITIAL_MAGAZINES];
         for (int i = 0; i < mags.length; i++) {
             mags[i] = new Magazine(this);
         }
@@ -150,8 +198,15 @@ final class AdaptivePoolingAllocator {
     }
 
     private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
-        long threadId = currentThread.getId();
         int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
+        FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
+        if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
+            Object mag = threadLocalMagazine.get();
+            if (mag != NO_MAGAZINE) {
+                return ((Magazine) mag).allocate(size, sizeBucket, maxCapacity, buf);
+            }
+        }
+        long threadId = currentThread.getId();
         Magazine[] mags;
         int expansions = 0;
         do {
@@ -170,7 +225,7 @@ final class AdaptivePoolingAllocator {
                 }
             }
             expansions++;
-        } while (expansions <= 3 && tryExpandMagazines(mags.length));
+        } while (expansions <= EXPANSION_ATTEMPTS && tryExpandMagazines(mags.length));
         return null;
     }
 
@@ -195,6 +250,11 @@ final class AdaptivePoolingAllocator {
         }
         for (Magazine magazine : magazines) {
             sum += magazine.usedMemory.get();
+        }
+        if (liveCachedMagazines != null) {
+            for (Magazine magazine : liveCachedMagazines) {
+                sum += magazine.usedMemory.get();
+            }
         }
         return sum;
     }
@@ -238,6 +298,7 @@ final class AdaptivePoolingAllocator {
         private static final int HISTO_MAX_BUCKET_MASK = HISTO_BUCKET_COUNT - 1;
 
         protected final AdaptivePoolingAllocator parent;
+        private final boolean shareable;
         private final short[][] histos = {
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
@@ -251,8 +312,9 @@ final class AdaptivePoolingAllocator {
         private volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
         protected volatile int localPrefChunkSize = MIN_CHUNK_SIZE;
 
-        private AllocationStatistics(AdaptivePoolingAllocator parent) {
+        private AllocationStatistics(AdaptivePoolingAllocator parent, boolean shareable) {
             this.parent = parent;
+            this.shareable = shareable;
         }
 
         protected void recordAllocationSize(int bucket) {
@@ -291,8 +353,10 @@ final class AdaptivePoolingAllocator {
             int percentileSize = 1 << sizeBucket + HISTO_MIN_BUCKET_SHIFT;
             int prefChunkSize = Math.max(percentileSize * BUFS_PER_CHUNK, MIN_CHUNK_SIZE);
             localPrefChunkSize = prefChunkSize;
-            for (Magazine mag : parent.magazines) {
-                prefChunkSize = Math.max(prefChunkSize, mag.localPrefChunkSize);
+            if (shareable) {
+                for (Magazine mag : parent.magazines) {
+                    prefChunkSize = Math.max(prefChunkSize, mag.localPrefChunkSize);
+                }
             }
             if (sharedPrefChunkSize != prefChunkSize) {
                 // Preferred chunk size changed. Increase check frequency.
@@ -335,7 +399,11 @@ final class AdaptivePoolingAllocator {
         private final AtomicLong usedMemory;
 
         Magazine(AdaptivePoolingAllocator parent) {
-            super(parent);
+            this(parent, true);
+        }
+
+        Magazine(AdaptivePoolingAllocator parent, boolean shareable) {
+            super(parent, shareable);
             usedMemory = new AtomicLong();
         }
 
