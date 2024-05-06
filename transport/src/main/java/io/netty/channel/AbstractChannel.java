@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.DefaultAttributeMap;
@@ -121,28 +120,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public boolean isWritable() {
-        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
-        return buf != null && buf.isWritable();
-    }
-
-    @Override
-    public long bytesBeforeUnwritable() {
-        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
-        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
-        // We should be consistent with that here.
-        return buf != null ? buf.bytesBeforeUnwritable() : 0;
-    }
-
-    @Override
-    public long bytesBeforeWritable() {
-        ChannelOutboundBuffer buf = unsafe.outboundBuffer();
-        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
-        // We should be consistent with that here.
-        return buf != null ? buf.bytesBeforeWritable() : Long.MAX_VALUE;
-    }
-
-    @Override
     public Channel parent() {
         return parent;
     }
@@ -150,11 +127,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public ChannelPipeline pipeline() {
         return pipeline;
-    }
-
-    @Override
-    public ByteBufAllocator alloc() {
-        return config().getAllocator();
     }
 
     @Override
@@ -217,118 +189,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public boolean isRegistered() {
         return registered;
-    }
-
-    @Override
-    public ChannelFuture bind(SocketAddress localAddress) {
-        return pipeline.bind(localAddress);
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress) {
-        return pipeline.connect(remoteAddress);
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return pipeline.connect(remoteAddress, localAddress);
-    }
-
-    @Override
-    public ChannelFuture disconnect() {
-        return pipeline.disconnect();
-    }
-
-    @Override
-    public ChannelFuture close() {
-        return pipeline.close();
-    }
-
-    @Override
-    public ChannelFuture deregister() {
-        return pipeline.deregister();
-    }
-
-    @Override
-    public Channel flush() {
-        pipeline.flush();
-        return this;
-    }
-
-    @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.bind(localAddress, promise);
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-        return pipeline.connect(remoteAddress, promise);
-    }
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline.connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    public ChannelFuture disconnect(ChannelPromise promise) {
-        return pipeline.disconnect(promise);
-    }
-
-    @Override
-    public ChannelFuture close(ChannelPromise promise) {
-        return pipeline.close(promise);
-    }
-
-    @Override
-    public ChannelFuture deregister(ChannelPromise promise) {
-        return pipeline.deregister(promise);
-    }
-
-    @Override
-    public Channel read() {
-        pipeline.read();
-        return this;
-    }
-
-    @Override
-    public ChannelFuture write(Object msg) {
-        return pipeline.write(msg);
-    }
-
-    @Override
-    public ChannelFuture write(Object msg, ChannelPromise promise) {
-        return pipeline.write(msg, promise);
-    }
-
-    @Override
-    public ChannelFuture writeAndFlush(Object msg) {
-        return pipeline.writeAndFlush(msg);
-    }
-
-    @Override
-    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return pipeline.writeAndFlush(msg, promise);
-    }
-
-    @Override
-    public ChannelPromise newPromise() {
-        return pipeline.newPromise();
-    }
-
-    @Override
-    public ChannelProgressivePromise newProgressivePromise() {
-        return pipeline.newProgressivePromise();
-    }
-
-    @Override
-    public ChannelFuture newSucceededFuture() {
-        return pipeline.newSucceededFuture();
-    }
-
-    @Override
-    public ChannelFuture newFailedFuture(Throwable cause) {
-        return pipeline.newFailedFuture(cause);
     }
 
     @Override

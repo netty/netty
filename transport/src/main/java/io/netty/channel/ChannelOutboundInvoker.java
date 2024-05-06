@@ -32,7 +32,9 @@ public interface ChannelOutboundInvoker {
      * called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture bind(SocketAddress localAddress);
+    default ChannelFuture bind(SocketAddress localAddress) {
+        return bind(localAddress, newPromise());
+    }
 
     /**
      * Request to connect to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
@@ -47,7 +49,9 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture connect(SocketAddress remoteAddress);
+    default ChannelFuture connect(SocketAddress remoteAddress) {
+        return connect(remoteAddress, newPromise());
+    }
 
     /**
      * Request to connect to the given {@link SocketAddress} while bind to the localAddress and notify the
@@ -59,7 +63,9 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress);
+    default ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        return connect(remoteAddress, localAddress, newPromise());
+    }
 
     /**
      * Request to disconnect from the remote peer and notify the {@link ChannelFuture} once the operation completes,
@@ -70,7 +76,9 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture disconnect();
+    default ChannelFuture disconnect() {
+        return disconnect(newPromise());
+    }
 
     /**
      * Request to close the {@link Channel} and notify the {@link ChannelFuture} once the operation completes,
@@ -84,7 +92,9 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelFuture close();
+    default ChannelFuture close() {
+        return close(newPromise());
+    }
 
     /**
      * Request to deregister from the previous assigned {@link EventExecutor} and notify the
@@ -97,7 +107,9 @@ public interface ChannelOutboundInvoker {
      * {@link Channel}.
      *
      */
-    ChannelFuture deregister();
+    default ChannelFuture deregister() {
+        return deregister(newPromise());
+    }
 
     /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link ChannelFuture} once the operation
@@ -205,7 +217,9 @@ public interface ChannelOutboundInvoker {
      * This method will not request to actual flush, so be sure to call {@link #flush()}
      * once you want to request to flush all pending data to the actual transport.
      */
-    ChannelFuture write(Object msg);
+    default ChannelFuture write(Object msg) {
+        return write(msg, newPromise());
+    }
 
     /**
      * Request to write a message via this {@link ChannelHandlerContext} through the {@link ChannelPipeline}.
@@ -227,7 +241,9 @@ public interface ChannelOutboundInvoker {
     /**
      * Shortcut for call {@link #write(Object)} and {@link #flush()}.
      */
-    ChannelFuture writeAndFlush(Object msg);
+    default ChannelFuture writeAndFlush(Object msg) {
+        return writeAndFlush(msg, newPromise());
+    }
 
     /**
      * Return a new {@link ChannelPromise}.

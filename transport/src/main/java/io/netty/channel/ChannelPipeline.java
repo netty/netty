@@ -629,4 +629,19 @@ public interface ChannelPipeline
 
     @Override
     ChannelPipeline flush();
+
+    @Override
+    default ChannelPromise newPromise() {
+        return new DefaultChannelPromise(channel());
+    }
+
+    @Override
+    default ChannelProgressivePromise newProgressivePromise() {
+        return new DefaultChannelProgressivePromise(channel());
+    }
+
+    @Override
+    default ChannelFuture newFailedFuture(Throwable cause) {
+        return new FailedChannelFuture(channel(), null, cause);
+    }
 }

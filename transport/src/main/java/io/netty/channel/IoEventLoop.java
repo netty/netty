@@ -23,6 +23,11 @@ import io.netty.util.concurrent.Future;
  */
 public interface IoEventLoop extends EventLoop, IoEventLoopGroup {
 
+    @Override
+    default IoEventLoop next() {
+        return this;
+    }
+
     // We only not return IoHandleEventLoopGroup here as this could break compat for people
     // that extend EventLoopGroup implementations that now implement IoHandleEventLoop (for example NioEventLoop).
     @Override
