@@ -20,11 +20,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.ConcurrentSet;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * This class allows one to ensure that at all times for every IP address there is at most one
@@ -33,7 +33,7 @@ import java.util.Set;
 @ChannelHandler.Sharable
 public class UniqueIpFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
-    private final Set<InetAddress> connected = new ConcurrentSet<InetAddress>();
+    private final Set<InetAddress> connected = ConcurrentHashMap.newKeySet();
 
     @Override
     protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) throws Exception {

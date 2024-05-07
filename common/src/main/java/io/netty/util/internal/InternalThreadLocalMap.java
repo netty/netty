@@ -67,7 +67,6 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private int futureListenerStackDepth;
     private int localChannelReaderStackDepth;
     private Map<Class<?>, Boolean> handlerSharableCache;
-    private IntegerHolder counterHashCode;
     private ThreadLocalRandom random;
     private Map<Class<?>, TypeParameterMatcher> typeParameterMatcherGetCache;
     private Map<Class<?>, Map<String, TypeParameterMatcher>> typeParameterMatcherFindCache;
@@ -183,9 +182,6 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
         if (handlerSharableCache != null) {
             count ++;
         }
-        if (counterHashCode != null) {
-            count ++;
-        }
         if (random != null) {
             count ++;
         }
@@ -293,16 +289,6 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
             typeParameterMatcherFindCache = cache = new IdentityHashMap<Class<?>, Map<String, TypeParameterMatcher>>();
         }
         return cache;
-    }
-
-    @Deprecated
-    public IntegerHolder counterHashCode() {
-        return counterHashCode;
-    }
-
-    @Deprecated
-    public void setCounterHashCode(IntegerHolder counterHashCode) {
-        this.counterHashCode = counterHashCode;
     }
 
     public Map<Class<?>, Boolean> handlerSharableCache() {
