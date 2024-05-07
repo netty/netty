@@ -19,6 +19,8 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import sun.misc.Unsafe;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -30,6 +32,7 @@ import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static java.lang.invoke.MethodType.methodType;
 
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
@@ -43,16 +46,14 @@ final class PlatformDependent0 {
     private static final long INT_ARRAY_INDEX_SCALE;
     private static final long LONG_ARRAY_BASE_OFFSET;
     private static final long LONG_ARRAY_INDEX_SCALE;
-    private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
+    private static final MethodHandle DIRECT_BUFFER_CONSTRUCTOR;
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
-    private static final Method ALLOCATE_ARRAY_METHOD;
-    private static final Method ALIGN_SLICE;
+    private static final MethodHandle ALLOCATE_ARRAY_METHOD;
+    private static final MethodHandle ALIGN_SLICE;
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
-    private static final boolean STORE_FENCE_AVAILABLE;
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
-    private static final Object INTERNAL_UNSAFE;
 
     // See https://github.com/oracle/graal/blob/master/sdk/src/org.graalvm.nativeimage/src/org/graalvm/nativeimage/
     // ImageInfo.java
@@ -79,18 +80,16 @@ final class PlatformDependent0 {
     private static final long BITS_MAX_DIRECT_MEMORY;
 
     static {
+        MethodHandles.Lookup lookup = MethodHandles.lookup();
         final ByteBuffer direct;
         Field addressField = null;
-        Method allocateArrayMethod = null;
-        Throwable unsafeUnavailabilityCause = null;
+        MethodHandle allocateArrayMethod = null;
+        Throwable unsafeUnavailabilityCause;
         Unsafe unsafe;
-        Object internalUnsafe = null;
-        boolean storeFenceAvailable = false;
         if ((unsafeUnavailabilityCause = EXPLICIT_NO_UNSAFE_CAUSE) != null) {
             direct = null;
             addressField = null;
             unsafe = null;
-            internalUnsafe = null;
         } else {
             direct = ByteBuffer.allocateDirect(1);
 
@@ -132,78 +131,11 @@ final class PlatformDependent0 {
                 if (logger.isTraceEnabled()) {
                     logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", (Throwable) maybeUnsafe);
                 } else {
-                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable: {}", ((Throwable) maybeUnsafe).getMessage());
+                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable: {}", unsafeUnavailabilityCause.getMessage());
                 }
             } else {
                 unsafe = (Unsafe) maybeUnsafe;
                 logger.debug("sun.misc.Unsafe.theUnsafe: available");
-            }
-
-            // ensure the unsafe supports all necessary methods to work around the mistake in the latest OpenJDK
-            // https://github.com/netty/netty/issues/1061
-            // https://www.mail-archive.com/jdk6-dev@openjdk.java.net/msg00698.html
-            if (unsafe != null) {
-                final Unsafe finalUnsafe = unsafe;
-                final Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                    @Override
-                    public Object run() {
-                        try {
-                            finalUnsafe.getClass().getDeclaredMethod(
-                                    "copyMemory", Object.class, long.class, Object.class, long.class, long.class);
-                            return null;
-                        } catch (NoSuchMethodException e) {
-                            return e;
-                        } catch (SecurityException e) {
-                            return e;
-                        }
-                    }
-                });
-
-                if (maybeException == null) {
-                    logger.debug("sun.misc.Unsafe.copyMemory: available");
-                } else {
-                    // Unsafe.copyMemory(Object, long, Object, long, long) unavailable.
-                    unsafe = null;
-                    unsafeUnavailabilityCause = (Throwable) maybeException;
-                    if (logger.isTraceEnabled()) {
-                        logger.debug("sun.misc.Unsafe.copyMemory: unavailable", (Throwable) maybeException);
-                    } else {
-                        logger.debug("sun.misc.Unsafe.copyMemory: unavailable: {}",
-                                ((Throwable) maybeException).getMessage());
-                    }
-                }
-            }
-
-            // ensure Unsafe::storeFence to be available: jdk < 8 shouldn't have it
-            if (unsafe != null) {
-                final Unsafe finalUnsafe = unsafe;
-                final Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                    @Override
-                    public Object run() {
-                        try {
-                            finalUnsafe.getClass().getDeclaredMethod("storeFence");
-                            return null;
-                        } catch (NoSuchMethodException e) {
-                            return e;
-                        } catch (SecurityException e) {
-                            return e;
-                        }
-                    }
-                });
-
-                if (maybeException == null) {
-                    logger.debug("sun.misc.Unsafe.storeFence: available");
-                    storeFenceAvailable = true;
-                } else {
-                    storeFenceAvailable = false;
-                    // Unsafe.storeFence unavailable.
-                    if (logger.isTraceEnabled()) {
-                        logger.debug("sun.misc.Unsafe.storeFence: unavailable", (Throwable) maybeException);
-                    } else {
-                        logger.debug("sun.misc.Unsafe.storeFence: unavailable: {}",
-                                     ((Throwable) maybeException).getMessage());
-                    }
-                }
             }
 
             if (unsafe != null) {
@@ -276,9 +208,8 @@ final class PlatformDependent0 {
             BITS_MAX_DIRECT_MEMORY = -1;
             DIRECT_BUFFER_CONSTRUCTOR = null;
             ALLOCATE_ARRAY_METHOD = null;
-            STORE_FENCE_AVAILABLE = false;
         } else {
-            Constructor<?> directBufferConstructor;
+            MethodHandle directBufferConstructor;
             long address = -1;
             try {
                 final Object maybeDirectBufferConstructor =
@@ -286,34 +217,31 @@ final class PlatformDependent0 {
                             @Override
                             public Object run() {
                                 try {
+                                    Class<? extends ByteBuffer> directClass = direct.getClass();
                                     final Constructor<?> constructor = javaVersion() >= 21 ?
-                                            direct.getClass().getDeclaredConstructor(long.class, long.class) :
-                                            direct.getClass().getDeclaredConstructor(long.class, int.class);
+                                            directClass.getDeclaredConstructor(long.class, long.class) :
+                                            directClass.getDeclaredConstructor(long.class, int.class);
                                     Throwable cause = ReflectionUtil.trySetAccessible(constructor, true);
                                     if (cause != null) {
                                         return cause;
                                     }
-                                    return constructor;
-                                } catch (NoSuchMethodException e) {
-                                    return e;
-                                } catch (SecurityException e) {
+                                    return lookup.unreflectConstructor(constructor)
+                                            .asType(methodType(ByteBuffer.class, long.class, int.class));
+                                } catch (Throwable e) {
                                     return e;
                                 }
                             }
                         });
 
-                if (maybeDirectBufferConstructor instanceof Constructor<?>) {
+                if (maybeDirectBufferConstructor instanceof MethodHandle) {
                     address = UNSAFE.allocateMemory(1);
                     // try to use the constructor now
                     try {
-                        ((Constructor<?>) maybeDirectBufferConstructor).newInstance(address, 1);
-                        directBufferConstructor = (Constructor<?>) maybeDirectBufferConstructor;
+                        MethodHandle constructor = (MethodHandle) maybeDirectBufferConstructor;
+                        ByteBuffer ignore = (ByteBuffer) constructor.invokeExact(address, 1);
+                        directBufferConstructor = constructor;
                         logger.debug("direct buffer constructor: available");
-                    } catch (InstantiationException e) {
-                        directBufferConstructor = null;
-                    } catch (IllegalAccessException e) {
-                        directBufferConstructor = null;
-                    } catch (InvocationTargetException e) {
+                    } catch (Throwable e) {
                         directBufferConstructor = null;
                     }
                 } else {
@@ -422,41 +350,39 @@ final class PlatformDependent0 {
                         try {
                             // Java9 has jdk.internal.misc.Unsafe and not all methods are propagated to
                             // sun.misc.Unsafe
-                            Class<?> internalUnsafeClass = getClassLoader(PlatformDependent0.class)
+                            Class<?> cls = getClassLoader(PlatformDependent0.class)
                                     .loadClass("jdk.internal.misc.Unsafe");
-                            Method method = internalUnsafeClass.getDeclaredMethod("getUnsafe");
-                            return method.invoke(null);
+                            return lookup.findStatic(cls, "getUnsafe", methodType(cls)).invoke();
                         } catch (Throwable e) {
                             return e;
                         }
                     }
                 });
                 if (!(maybeException instanceof Throwable)) {
-                    internalUnsafe = maybeException;
-                    final Object finalInternalUnsafe = internalUnsafe;
+                    final Object finalInternalUnsafe = maybeException;
                     maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                         @Override
                         public Object run() {
                             try {
-                                return finalInternalUnsafe.getClass().getDeclaredMethod(
-                                        "allocateUninitializedArray", Class.class, int.class);
-                            } catch (NoSuchMethodException e) {
-                                return e;
-                            } catch (SecurityException e) {
+                                Class<?> finalInternalUnsafeClass = finalInternalUnsafe.getClass();
+                                return lookup.findVirtual(
+                                        finalInternalUnsafeClass,
+                                        "allocateUninitializedArray",
+                                        methodType(Object.class, Class.class, int.class));
+                            } catch (Throwable e) {
                                 return e;
                             }
                         }
                     });
 
-                    if (maybeException instanceof Method) {
+                    if (maybeException instanceof MethodHandle) {
                         try {
-                            Method m = (Method) maybeException;
-                            byte[] bytes = (byte[]) m.invoke(finalInternalUnsafe, byte.class, 8);
+                            MethodHandle m = (MethodHandle) maybeException;
+                            m = m.bindTo(finalInternalUnsafe);
+                            byte[] bytes = (byte[]) m.invokeExact(byte.class, 8);
                             assert bytes.length == 8;
                             allocateArrayMethod = m;
-                        } catch (IllegalAccessException e) {
-                            maybeException = e;
-                        } catch (InvocationTargetException e) {
+                        } catch (Throwable e) {
                             maybeException = e;
                         }
                     }
@@ -477,16 +403,16 @@ final class PlatformDependent0 {
                 logger.debug("jdk.internal.misc.Unsafe.allocateUninitializedArray(int): unavailable prior to Java9");
             }
             ALLOCATE_ARRAY_METHOD = allocateArrayMethod;
-            STORE_FENCE_AVAILABLE = storeFenceAvailable;
         }
 
         if (javaVersion() > 9) {
-            ALIGN_SLICE = (Method) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            ALIGN_SLICE = (MethodHandle) AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
                 public Object run() {
                     try {
-                        return ByteBuffer.class.getDeclaredMethod("alignedSlice", int.class);
-                    } catch (Exception e) {
+                        return MethodHandles.publicLookup().findVirtual(
+                                ByteBuffer.class, "alignedSlice", methodType(ByteBuffer.class, int.class));
+                    } catch (Throwable e) {
                         return null;
                     }
                 }
@@ -494,8 +420,6 @@ final class PlatformDependent0 {
         } else {
             ALIGN_SLICE = null;
         }
-
-        INTERNAL_UNSAFE = internalUnsafe;
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
@@ -527,7 +451,7 @@ final class PlatformDependent0 {
         }
 
         if (!SystemPropertyUtil.getBoolean(unsafePropName, true)) {
-            String msg = "sun.misc.Unsafe: unavailable (" + unsafePropName + ")";
+            String msg = "sun.misc.Unsafe: unavailable (" + unsafePropName + ')';
             logger.debug(msg);
             return new UnsupportedOperationException(msg);
         }
@@ -584,11 +508,9 @@ final class PlatformDependent0 {
 
     static ByteBuffer alignSlice(ByteBuffer buffer, int alignment) {
         try {
-            return (ByteBuffer) ALIGN_SLICE.invoke(buffer, alignment);
-        } catch (IllegalAccessException e) {
-            throw new Error(e);
-        } catch (InvocationTargetException e) {
-            throw new Error(e);
+            return (ByteBuffer) ALIGN_SLICE.invokeExact(buffer, alignment);
+        } catch (Throwable e) {
+            throw new LinkageError("ByteBuffer.alignedSlice not available", e);
         }
     }
 
@@ -598,11 +520,9 @@ final class PlatformDependent0 {
 
     static byte[] allocateUninitializedArray(int size) {
         try {
-            return (byte[]) ALLOCATE_ARRAY_METHOD.invoke(INTERNAL_UNSAFE, byte.class, size);
-        } catch (IllegalAccessException e) {
-            throw new Error(e);
-        } catch (InvocationTargetException e) {
-            throw new Error(e);
+            return (byte[]) ALLOCATE_ARRAY_METHOD.invokeExact(byte.class, size);
+        } catch (Throwable e) {
+            throw new LinkageError("Unsafe.allocateUninitializedArray not available", e);
         }
     }
 
@@ -610,13 +530,12 @@ final class PlatformDependent0 {
         ObjectUtil.checkPositiveOrZero(capacity, "capacity");
 
         try {
-            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.newInstance(address, capacity);
+            return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.invokeExact(address, capacity);
         } catch (Throwable cause) {
-            // Not expected to ever throw!
             if (cause instanceof Error) {
-                throw (Error) cause;
+                throw (Error) cause; // Let OutOfMemoryError etc. pass through.
             }
-            throw new Error(cause);
+            throw new LinkageError("DirectByteBuffer constructor not available", cause);
         }
     }
 
@@ -637,12 +556,8 @@ final class PlatformDependent0 {
     }
 
     static void safeConstructPutInt(Object object, long fieldOffset, int value) {
-        if (STORE_FENCE_AVAILABLE) {
-            UNSAFE.putInt(object, fieldOffset, value);
-            UNSAFE.storeFence();
-        } else {
-            UNSAFE.putIntVolatile(object, fieldOffset, value);
-        }
+        UNSAFE.putInt(object, fieldOffset, value);
+        UNSAFE.storeFence();
     }
 
     private static long getLong(Object object, long fieldOffset) {

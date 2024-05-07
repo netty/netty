@@ -163,7 +163,6 @@ final class ChannelHandlerMask {
         return mask;
     }
 
-    @SuppressWarnings("rawtypes")
     private static boolean isSkippable(
             final Class<?> handlerType, final String methodName, final Class<?>... paramTypes) throws Exception {
         return AccessController.doPrivileged(new PrivilegedExceptionAction<Boolean>() {
