@@ -471,7 +471,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        NioIoRegistration registration = registration();
+        NioIoRegistration registration = this.registration;
         if (registration != null) {
             this.registration = null;
             registration.cancel();
