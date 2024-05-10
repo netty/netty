@@ -91,16 +91,6 @@
       <optional>true</optional>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.jetty.npn</groupId>
-      <artifactId>npn-api</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.jetty.alpn</groupId>
-      <artifactId>alpn-api</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
       <groupId>${conscrypt.groupId}</groupId>
       <artifactId>${conscrypt.artifactId}</artifactId>
       <classifier>${conscrypt.classifier}</classifier>

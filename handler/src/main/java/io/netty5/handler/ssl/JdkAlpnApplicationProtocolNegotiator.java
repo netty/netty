@@ -28,7 +28,6 @@ import javax.net.ssl.SSLEngine;
 public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicationProtocolNegotiator {
     private static final boolean AVAILABLE = Conscrypt.isAvailable() ||
                                              JdkAlpnSslUtils.supportsAlpn() ||
-                                             JettyAlpnSslEngine.isAvailable() ||
                                              BouncyCastle.isAvailable();
 
     private static final SslEngineWrapperFactory ALPN_WRAPPER = AVAILABLE ? new AlpnWrapper() : new FailureWrapper();
@@ -143,10 +142,6 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
             // present
             if (JdkAlpnSslUtils.supportsAlpn()) {
                 return new JdkAlpnSslEngine(engine, applicationNegotiator, isServer);
-            }
-            if (JettyAlpnSslEngine.isAvailable()) {
-                return isServer ? JettyAlpnSslEngine.newServerEngine(engine, applicationNegotiator)
-                        : JettyAlpnSslEngine.newClientEngine(engine, applicationNegotiator);
             }
             throw new UnsupportedOperationException("ALPN not supported. Unable to wrap SSLEngine of type '"
                     + engine.getClass().getName() + "')");
