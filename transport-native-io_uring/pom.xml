@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2021 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   https://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.netty</groupId>
+    <artifactId>netty-parent</artifactId>
+    <version>4.2.0.Final-SNAPSHOT</version>
+  </parent>
+  <artifactId>netty-transport-native-io_uring</artifactId>
+
+  <name>Netty/Transport/Native/io_uring</name>
+  <packaging>jar</packaging>
+
+  <properties>
+    <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
+    <javaModuleName>io.netty.transport.io_uring</javaModuleName>
+    <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
+    <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
+    <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
+    <unix.common.include.unpacked.dir>${unix.common.lib.dir}/META-INF/native/include</unix.common.include.unpacked.dir>
+    <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
+    <jni.compiler.args.ldflags>LDFLAGS=-L${unix.common.lib.unpacked.dir} -Wl,--no-as-needed -lrt -ldl -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
+    <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+    <skipTests>true</skipTests>
+    <jniArch>${os.detected.arch}</jniArch>
+    <jni.classifier>${os.detected.name}-${jniArch}</jni.classifier>
+    <jniLibName>netty_transport_native_io_uring_${jniArch}</jniLibName>
+    <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
+    <extraConfigureArg />
+    <extraConfigureArg2 />
+    <!-- Always check JNI during test run so we catch bugs that could cause crashes -->
+    <argLine.jni>-Xcheck:jni</argLine.jni>
+    <test.argLine>-D_</test.argLine>
+  </properties>
+
+  <profiles>
+    <profile>
+      <id>linux</id>
+      <activation>
+        <os>
+          <family>linux</family>
+        </os>
+      </activation>
+      <properties>
+        <skipTests>false</skipTests>
+      </properties>
+
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <!-- Copy the native lib that was generated -->
+              <execution>
+                <id>copy-native-lib</id>
+                <phase>process-test-resources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+
+                    <copy todir="${project.build.outputDirectory}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}/META-INF/native" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/\1" />
+                    </copy>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <executions>
+              <!-- unpack the unix-common static library and include files -->
+              <execution>
+                <id>unpack</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>unpack-dependencies</goal>
+                </goals>
+                <configuration>
+                  <includeGroupIds>${project.groupId}</includeGroupIds>
+                  <includeArtifactIds>netty-transport-native-unix-common</includeArtifactIds>
+                  <classifier>${jni.classifier}</classifier>
+                  <outputDirectory>${unix.common.lib.dir}</outputDirectory>
+                  <includes>META-INF/native/**</includes>
+                  <overWriteReleases>false</overWriteReleases>
+                  <overWriteSnapshots>true</overWriteSnapshots>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.fusesource.hawtjni</groupId>
+            <artifactId>hawtjni-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>build-native-lib</id>
+                <configuration>
+                  <name>${jniLibName}</name>
+                  <nativeSourceDirectory>${nativeSourceDirectory}</nativeSourceDirectory>
+                  <libDirectory>${nativeLibOnlyDir}</libDirectory>
+                  <configureArgs>
+                    <arg>${jni.compiler.args.ldflags}</arg>
+                    <arg>${jni.compiler.args.cflags}</arg>
+                    <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
+                    <configureArg>${extraConfigureArg}</configureArg>
+                    <configureArg>${extraConfigureArg2}</configureArg>
+                  </configureArgs>
+                </configuration>
+                <goals>
+                  <goal>generate</goal>
+                  <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <artifactId>maven-jar-plugin</artifactId>
+            <executions>
+              <!-- Generate the JAR that contains the native library in it. -->
+              <execution>
+                <id>native-jar</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+                <configuration>
+                  <archive>
+                    <manifest>
+                      <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                      <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                    </manifest>
+                    <manifestEntries>
+                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_io_uring_${os.detected.arch}.so; osname=Linux; processor=${os.detected.arch},*</Bundle-NativeCode>
+                      <Fragment-Host>io.netty.transport-classes-io_uring</Fragment-Host>
+                      <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                    </manifestEntries>
+                    <index>true</index>
+                    <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                  </archive>
+                  <classifier>${jni.classifier}</classifier>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>io_uring-epoll-combination</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <includes>
+                    <include>**/CombinationOfIOUringAndEpollTest.java</include>
+                  </includes>
+                  <reuseForks>false</reuseForks>
+                </configuration>
+              </execution>
+              <execution>
+                <id>epoll-io_uring-combination</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <includes>
+                    <include>**/CombinationOfEpollAndIOUringTest.java</include>
+                  </includes>
+                  <runOrder>random</runOrder>
+                  <systemPropertyVariables>
+                    <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
+                    <logLevel>debug</logLevel>
+                  </systemPropertyVariables>
+                  <properties>
+                    <property>
+                      <name>listener</name>
+                      <value>io.netty.build.junit.TimedOutTestsListener</value>
+                    </property>
+                  </properties>
+                  <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
+                  <trimStackTrace>false</trimStackTrace>
+                  <argLine>${test.argLine}</argLine>
+                  <!-- Ensure a new JVM is used -->
+                  <forkCount>1</forkCount>
+                  <reuseForks>false</reuseForks>
+                </configuration>
+              </execution>
+              <execution>
+                <id>default-test</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <includes>
+                    <include>**/*Test*.java</include>
+                  </includes>
+                  <excludes>
+                    <exclude>**/Abstract*</exclude>
+                    <exclude>**/CombinationOf*</exclude>
+                  </excludes>
+                  <runOrder>random</runOrder>
+                  <systemPropertyVariables>
+                    <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
+                    <logLevel>debug</logLevel>
+                  </systemPropertyVariables>
+                  <properties>
+                    <property>
+                      <name>listener</name>
+                      <value>io.netty.build.junit.TimedOutTestsListener</value>
+                    </property>
+                  </properties>
+                  <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
+                  <trimStackTrace>false</trimStackTrace>
+                  <argLine>${test.argLine}</argLine>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+
+      <dependencies>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-unix-common</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <!--
+            The unix-common with classifier dependency is optional because it is not a runtime dependency, but a build time
+            dependency to get the static library which is built directly into the shared library generated by this project.
+          -->
+          <optional>true</optional>
+        </dependency>
+
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${project.version}</version>
+          <scope>test</scope>
+          <classifier>${jni.classifier}</classifier>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>linux-aarch64</id>
+      <properties>
+        <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
+        <jniArch>aarch_64</jniArch>
+        <!-- As we cross-compile just skip the tests because we could not load this lib on the system anyway -->
+        <skipTests>true</skipTests>
+        <extraConfigureArg>--host=aarch64-linux-gnu</extraConfigureArg>
+        <extraConfigureArg2>CC=aarch64-none-linux-gnu-gcc</extraConfigureArg2>
+      </properties>
+    </profile>
+    <profile>
+      <id>linux-aarch64-native</id>
+      <properties>
+        <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
+        <jniArch>aarch_64</jniArch>
+        <extraConfigureArg>--host=aarch64-linux-gnu</extraConfigureArg>
+      </properties>
+    </profile>
+    <profile>
+      <id>leak</id>
+      <properties>
+        <test.argLine>-Dio.netty.leakDetection.level=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
+      </properties>
+    </profile>
+  </profiles>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-unix-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-classes-io_uring</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-testsuite</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-unix-common-tests</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-classes-epoll</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Also include c files in source jar -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>${nativeSourceDirectory}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <!-- Generate the fallback JAR that does not contain the native library. -->
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <excludes>
+                <exclude>META-INF/native/**</exclude>
+              </excludes>
+              <archive>
+                <manifest>
+                  <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                  <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                </manifest>
+                <manifestEntries>
+                  <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                </manifestEntries>
+                <index>true</index>
+                <manifestFile>${project.build.directory}/manifests/MANIFEST.MF</manifestFile>
+              </archive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- Copy the manifest file that we populated so far so we can use it as a starting point when generating the jars and adding more things to it. -->
+          <execution>
+            <id>copy-manifest</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST.MF" />
+                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST-native.MF" />
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

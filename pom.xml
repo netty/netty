@@ -695,6 +695,8 @@
     <module>transport-native-unix-common</module>
     <module>transport-classes-epoll</module>
     <module>transport-native-epoll</module>
+    <module>transport-classes-io_uring</module>
+    <module>transport-native-io_uring</module>
     <module>transport-classes-kqueue</module>
     <module>transport-native-kqueue</module>
     <module>transport-rxtx</module>
