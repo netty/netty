@@ -25,14 +25,6 @@ package io.netty.util.concurrent;
 public interface EventExecutor extends EventExecutorGroup {
 
     /**
-     * Returns a reference to itself.
-     */
-    @Override
-    default EventExecutor next() {
-        return this;
-    }
-
-    /**
      * Return the {@link EventExecutorGroup} which is the parent of this {@link EventExecutor},
      */
     EventExecutorGroup parent();
