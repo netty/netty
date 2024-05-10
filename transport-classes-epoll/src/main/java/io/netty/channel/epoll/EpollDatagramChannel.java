@@ -28,6 +28,7 @@ import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.UnixChannelUtil;
@@ -77,23 +78,34 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     /**
-     * Create a new instance which selects the {@link InternetProtocolFamily} to use depending
+     * Create a new instance which selects the {@link SocketProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel() {
-        this(null);
+        this((SocketProtocolFamily) null);
     }
 
     /**
      * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
+     *
+     * @deprecated use {@link EpollDatagramChannel#EpollDatagramChannel(SocketProtocolFamily)}
      */
+    @Deprecated
     public EpollDatagramChannel(InternetProtocolFamily family) {
         this(newSocketDgram(family), false);
     }
 
     /**
-     * Create a new instance which selects the {@link InternetProtocolFamily} to use depending
+     * Create a new instance using the given {@link SocketProtocolFamily}. If {@code null} is used it will depend
+     * on the Operation Systems default which will be chosen.
+     */
+    public EpollDatagramChannel(SocketProtocolFamily family) {
+        this(newSocketDgram(family), false);
+    }
+
+    /**
+     * Create a new instance which selects the {@link SocketProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
      */
     public EpollDatagramChannel(int fd) {
@@ -319,7 +331,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
             if (socketAddress.getAddress().isAnyLocalAddress() &&
                     socketAddress.getAddress() instanceof Inet4Address) {
-                if (socket.family() == InternetProtocolFamily.IPv6) {
+                if (socket.family() == SocketProtocolFamily.INET6) {
                     localAddress = new InetSocketAddress(Native.INET6_ANY, socketAddress.getPort());
                 }
             }

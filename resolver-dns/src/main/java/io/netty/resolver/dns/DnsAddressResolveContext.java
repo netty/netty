@@ -72,7 +72,8 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
 
     @Override
     boolean isCompleteEarly(InetAddress resolved) {
-        return completeEarlyIfPossible && parent.preferredAddressType().addressType() == resolved.getClass();
+        return completeEarlyIfPossible &&
+                DnsNameResolver.addressType(parent.preferredAddressType()) == resolved.getClass();
     }
 
     @Override

@@ -15,18 +15,18 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.testsuite.transport.socket.DatagramMulticastTest;
 
 public class EpollDatagramMulticastIpv6WithIpv4AddrTest extends DatagramMulticastTest {
 
     @Override
-    protected InternetProtocolFamily groupInternetProtocalFamily() {
-        return InternetProtocolFamily.IPv4;
+    protected SocketProtocolFamily groupInternetProtocalFamily() {
+        return SocketProtocolFamily.INET;
     }
 
     @Override
-    protected InternetProtocolFamily socketInternetProtocalFamily() {
-        return InternetProtocolFamily.IPv6;
+    protected SocketProtocolFamily socketInternetProtocalFamily() {
+        return SocketProtocolFamily.INET6;
     }
 }

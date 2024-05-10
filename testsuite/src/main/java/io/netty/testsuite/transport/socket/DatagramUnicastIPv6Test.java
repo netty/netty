@@ -15,7 +15,7 @@
  */
 package io.netty.testsuite.transport.socket;
 
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import org.junit.jupiter.api.BeforeAll;
 import org.opentest4j.TestAbortedException;
 
@@ -38,7 +38,7 @@ public class DatagramUnicastIPv6Test extends DatagramUnicastInetTest {
         }
     }
     @Override
-    protected InternetProtocolFamily internetProtocolFamily() {
-        return InternetProtocolFamily.IPv6;
+    protected SocketProtocolFamily socketProtocolFamily() {
+        return SocketProtocolFamily.INET6;
     }
 }

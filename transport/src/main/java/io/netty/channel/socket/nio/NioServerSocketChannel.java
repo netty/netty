@@ -23,6 +23,7 @@ import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -54,7 +55,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     private static final Method OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY =
             SelectorProviderUtil.findOpenMethod("openServerSocketChannel");
 
-    private static ServerSocketChannel newChannel(SelectorProvider provider, InternetProtocolFamily family) {
+    private static ServerSocketChannel newChannel(SelectorProvider provider, SocketProtocolFamily family) {
         try {
             ServerSocketChannel channel =
                     SelectorProviderUtil.newChannel(OPEN_SERVER_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
@@ -77,13 +78,23 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      * Create a new instance using the given {@link SelectorProvider}.
      */
     public NioServerSocketChannel(SelectorProvider provider) {
-        this(provider, null);
+        this(provider, (SocketProtocolFamily) null);
+    }
+
+    /**
+     * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
+     *
+     * @deprecated use {@link NioServerSocketChannel#NioServerSocketChannel(SelectorProvider, SocketProtocolFamily)}
+     */
+    @Deprecated
+    public NioServerSocketChannel(SelectorProvider provider, InternetProtocolFamily family) {
+        this(provider, family == null ? null : family.toSocketProtocolFamily());
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
      */
-    public NioServerSocketChannel(SelectorProvider provider, InternetProtocolFamily family) {
+    public NioServerSocketChannel(SelectorProvider provider, SocketProtocolFamily family) {
         this(newChannel(provider, family));
     }
 

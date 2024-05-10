@@ -26,7 +26,7 @@ import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramUnicastInetTest;
 import org.junit.jupiter.api.Test;
@@ -45,7 +45,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return EpollSocketTestPermutation.INSTANCE.datagram(InternetProtocolFamily.IPv4);
+        return EpollSocketTestPermutation.INSTANCE.datagram(SocketProtocolFamily.INET);
     }
 
     public void testSimpleSendWithConnect(Bootstrap sb, Bootstrap cb) throws Throwable {

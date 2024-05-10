@@ -22,7 +22,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.NetUtil;
@@ -179,9 +179,9 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
 
     private InetSocketAddress newAnySocketAddress() throws UnknownHostException {
         switch (socketInternetProtocalFamily()) {
-            case IPv4:
+            case INET:
                 return new InetSocketAddress(InetAddress.getByName("0.0.0.0"), 0);
-            case IPv6:
+            case INET6:
                 return new InetSocketAddress(InetAddress.getByName("::"), 0);
             default:
                 throw new AssertionError();
@@ -192,7 +192,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         Enumeration<InetAddress> addresses = iface.getInetAddresses();
         while (addresses.hasMoreElements()) {
             InetAddress address = addresses.nextElement();
-            if (socketInternetProtocalFamily().addressType().isAssignableFrom(address.getClass())) {
+            if (isSupported(socketInternetProtocalFamily(), address)) {
                 return new InetSocketAddress(address, 0);
             }
         }
@@ -205,7 +205,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
                 Enumeration<InetAddress> addresses = iface.getInetAddresses();
                 while (addresses.hasMoreElements()) {
                     InetAddress address = addresses.nextElement();
-                    if (socketInternetProtocalFamily().addressType().isAssignableFrom(address.getClass())) {
+                    if (isSupported(socketInternetProtocalFamily(), address)) {
                         MulticastSocket socket = new MulticastSocket(newAnySocketAddress());
                         socket.setReuseAddress(true);
                         socket.setNetworkInterface(iface);
@@ -226,7 +226,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
     }
 
     private String groupAddress() {
-        return groupInternetProtocalFamily() == InternetProtocolFamily.IPv4?
+        return groupInternetProtocalFamily() == SocketProtocolFamily.INET?
                 "230.0.0.1" : "FF01:0:0:0:0:0:0:101";
     }
 }

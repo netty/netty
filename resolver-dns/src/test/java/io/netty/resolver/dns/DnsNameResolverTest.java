@@ -29,7 +29,7 @@ import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
@@ -641,9 +641,11 @@ public class DnsNameResolverTest {
             assertThat(resolved.getHostName(), is(unresolved));
 
             boolean typeMatches = false;
-            for (InternetProtocolFamily f : resolver.resolvedInternetProtocolFamiliesUnsafe()) {
+            for (SocketProtocolFamily f : resolver.resolvedInternetProtocolFamiliesUnsafe()) {
                 Class<?> resolvedType = resolved.getClass();
-                if (f.addressType().isAssignableFrom(resolvedType)) {
+                Class<? extends InetAddress> addressType = DnsNameResolver.addressType(f);
+                assertNotNull(addressType);
+                if (addressType.isAssignableFrom(resolvedType)) {
                     typeMatches = true;
                 }
             }
