@@ -93,7 +93,7 @@
                 netty5-testsuite-native,netty5-testsuite-native-image,netty5-testsuite-native-image-client,
                 netty5-testsuite-native-image-client-runtime-init,netty5-testsuite-osgi,netty5-testsuite-shading,
                 netty5-transport-blockhound-tests,netty5-transport-native-unix-common-tests,netty5-microbench,
-                netty5-dev-tools,netty5-example,netty5-memory-segment
+                netty5-example,netty5-memory-segment
               </skippedModules>
               <additionalOptions>
                 <!--
@@ -192,7 +192,6 @@
       </activation>
       <properties>
         <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <testJvm />
       </properties>
     </profile>
@@ -210,7 +209,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -226,7 +224,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -242,7 +239,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -258,7 +254,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -274,7 +269,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -290,7 +284,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -308,7 +301,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -326,7 +318,6 @@
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -343,7 +334,6 @@
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -360,7 +350,6 @@
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -377,7 +366,6 @@
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -394,7 +382,6 @@
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- pax-exam does not work on latest Java11 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -488,7 +475,6 @@
       <!-- Skip many checks for faster turn-around in local builds. -->
       <id>fast</id>
       <properties>
-        <forbiddenapis.skip>true</forbiddenapis.skip>
         <checkstyle.skip>true</checkstyle.skip>
         <revapi.skip>true</revapi.skip>
         <xml.skip>true</xml.skip>
@@ -558,7 +544,6 @@
   <properties>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
-    <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
@@ -615,7 +600,6 @@
 
   <modules>
     <module>all</module>
-    <module>dev-tools</module>
     <module>common</module>
     <module>buffer</module>
     <module>codec</module>
@@ -659,12 +643,6 @@
         <version>0.0.9.Final</version>
         <classifier>sources</classifier>
         <optional>true</optional>
-      </dependency>
-
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>netty5-dev-tools</artifactId>
-        <version>${project.version}</version>
       </dependency>
 
       <!-- Needed for java11 and later as javax.activation is not part of the JDK anymore -->
@@ -1461,11 +1439,6 @@
         <artifactId>maven-remote-resources-plugin</artifactId>
         <version>1.5</version>
       </plugin>
-      <plugin>
-        <groupId>de.thetaphi</groupId>
-        <artifactId>forbiddenapis</artifactId>
-        <version>2.2</version>
-      </plugin>
     </plugins>
 
     <pluginManagement>
@@ -1707,83 +1680,6 @@
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-remote-resources-plugin</artifactId>
-          <version>1.5</version>
-          <configuration>
-            <resourceBundles>
-              <resourceBundle>io.netty:netty5-dev-tools:${project.version}</resourceBundle>
-            </resourceBundles>
-            <outputDirectory>${netty.dev.tools.directory}</outputDirectory>
-            <!-- don't include netty-dev-tools in artifacts -->
-            <attachToMain>false</attachToMain>
-            <attachToTest>false</attachToTest>
-          </configuration>
-          <executions>
-            <execution>
-              <goals>
-                <goal>process</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>de.thetaphi</groupId>
-          <artifactId>forbiddenapis</artifactId>
-          <version>2.2</version>
-          <executions>
-            <execution>
-              <id>check-forbidden-apis</id>
-              <configuration>
-                <targetVersion>${maven.compiler.target}</targetVersion>
-                <!-- allow undocumented classes like sun.misc.Unsafe: -->
-                <internalRuntimeForbidden>false</internalRuntimeForbidden>
-                <!-- if the used Java version is too new, don't fail, just do nothing: -->
-                <failOnUnsupportedJava>false</failOnUnsupportedJava>
-                <bundledSignatures>
-                  <!-- This will automatically choose the right signatures based on 'targetVersion': -->
-                  <!-- enabling these should be done in the future -->
-                  <!-- bundledSignature>jdk-unsafe</bundledSignature -->
-                  <!-- bundledSignature>jdk-deprecated</bundledSignature -->
-                  <!-- bundledSignature>jdk-system-out</bundledSignature -->
-                </bundledSignatures>
-                <signaturesFiles>
-                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
-                </signaturesFiles>
-                <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
-              </configuration>
-              <phase>compile</phase>
-              <goals>
-                <goal>check</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>check-forbidden-test-apis</id>
-              <configuration>
-                <targetVersion>${maven.compiler.target}</targetVersion>
-                <!-- allow undocumented classes like sun.misc.Unsafe: -->
-                <internalRuntimeForbidden>true</internalRuntimeForbidden>
-                <!-- if the used Java version is too new, don't fail, just do nothing: -->
-                <failOnUnsupportedJava>false</failOnUnsupportedJava>
-                <bundledSignatures>
-                  <!-- This will automatically choose the right signatures based on 'targetVersion': -->
-                  <!-- enabling these should be done in the future -->
-                  <!-- bundledSignature>jdk-unsafe</bundledSignature -->
-                  <!-- bundledSignature>jdk-deprecated</bundledSignature -->
-                </bundledSignatures>
-                <signaturesFiles>
-                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
-                </signaturesFiles>
-                <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
-              </configuration>
-              <phase>test-compile</phase>
-              <goals>
-                <goal>testCheck</goal>
-              </goals>
-            </execution>
-          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
