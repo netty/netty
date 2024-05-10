@@ -567,7 +567,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                         // We attempted to shutdown and failed, which means the input has already effectively been
                         // shutdown.
                     }
-                    clearEpollIn0();
+                    if (shouldStopReading(config())) {
+                        clearEpollIn0();
+                    }
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());
