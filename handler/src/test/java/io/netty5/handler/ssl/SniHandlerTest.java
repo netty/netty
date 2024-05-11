@@ -86,7 +86,7 @@ import static org.mockito.Mockito.mock;
 public class SniHandlerTest {
     private static final Logger logger = LoggerFactory.getLogger(SniHandlerTest.class);
 
-    private static ApplicationProtocolConfig newApnConfig() {
+    private static ApplicationProtocolConfig newAlpnConfig() {
         return new ApplicationProtocolConfig(
                 ApplicationProtocolConfig.Protocol.ALPN,
                 // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
@@ -96,23 +96,23 @@ public class SniHandlerTest {
                 "myprotocol");
     }
 
-    private static void assumeApnSupported(SslProvider provider) {
+    private static void assumeAlpnSupported(SslProvider provider) {
         switch (provider) {
             case OPENSSL:
             case OPENSSL_REFCNT:
                 assumeTrue(OpenSsl.isAlpnSupported());
                 break;
             case JDK:
-                assumeTrue(JettyAlpnSslEngine.isAvailable());
+                assumeTrue(JdkAlpnSslUtils.supportsAlpn());
                 break;
             default:
                 throw new Error();
         }
     }
 
-    private static SslContext makeSslContext(SslProvider provider, boolean apn) throws Exception {
-        if (apn) {
-            assumeApnSupported(provider);
+    private static SslContext makeSslContext(SslProvider provider, boolean alpn) throws Exception {
+        if (alpn) {
+            assumeAlpnSupported(provider);
         }
 
         File keyFile = ResourcesUtil.getFile(SniHandlerTest.class, "test_encrypted.pem");
@@ -120,22 +120,22 @@ public class SniHandlerTest {
 
         SslContextBuilder sslCtxBuilder = SslContextBuilder.forServer(crtFile, keyFile, "12345")
                 .sslProvider(provider);
-        if (apn) {
-            sslCtxBuilder.applicationProtocolConfig(newApnConfig());
+        if (alpn) {
+            sslCtxBuilder.applicationProtocolConfig(newAlpnConfig());
         }
         return sslCtxBuilder.build();
     }
 
-    private static SslContext makeSslClientContext(SslProvider provider, boolean apn) throws Exception {
-        if (apn) {
-            assumeApnSupported(provider);
+    private static SslContext makeSslClientContext(SslProvider provider, boolean alpn) throws Exception {
+        if (alpn) {
+            assumeAlpnSupported(provider);
         }
 
         File crtFile = ResourcesUtil.getFile(SniHandlerTest.class, "test.crt");
 
         SslContextBuilder sslCtxBuilder = SslContextBuilder.forClient().trustManager(crtFile).sslProvider(provider);
-        if (apn) {
-            sslCtxBuilder.applicationProtocolConfig(newApnConfig());
+        if (alpn) {
+            sslCtxBuilder.applicationProtocolConfig(newAlpnConfig());
         }
         return sslCtxBuilder.build();
     }
@@ -391,15 +391,15 @@ public class SniHandlerTest {
 
     @ParameterizedTest(name = "{index}: sslProvider={0}")
     @MethodSource("data")
-    public void testSniWithApnHandler(SslProvider provider) throws Exception {
+    public void testSniWithAlpnHandler(SslProvider provider) throws Exception {
         SslContext nettyContext = makeSslContext(provider, true);
         SslContext sniContext = makeSslContext(provider, true);
         final SslContext clientContext = makeSslClientContext(provider, true);
         try {
-            final AtomicBoolean serverApnCtx = new AtomicBoolean(false);
-            final AtomicBoolean clientApnCtx = new AtomicBoolean(false);
-            final CountDownLatch serverApnDoneLatch = new CountDownLatch(1);
-            final CountDownLatch clientApnDoneLatch = new CountDownLatch(1);
+            final AtomicBoolean serverAlpnCtx = new AtomicBoolean(false);
+            final AtomicBoolean clientAlpnCtx = new AtomicBoolean(false);
+            final CountDownLatch serverAlpnDoneLatch = new CountDownLatch(1);
+            final CountDownLatch clientAlpnDoneLatch = new CountDownLatch(1);
 
             final DomainNameMapping<SslContext> mapping = new DomainNameMappingBuilder<>(nettyContext)
                     .add("*.netty.io", nettyContext)
@@ -418,13 +418,13 @@ public class SniHandlerTest {
                         ChannelPipeline p = ch.pipeline();
                         // Server side SNI.
                         p.addLast(handler);
-                        // Catch the notification event that APN has completed successfully.
+                        // Catch the notification event that ALPN has completed successfully.
                         p.addLast(new ApplicationProtocolNegotiationHandler("foo") {
                             @Override
                             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
                                 // addresses issue #9131
-                                serverApnCtx.set(ctx.pipeline().context(this) != null);
-                                serverApnDoneLatch.countDown();
+                                serverAlpnCtx.set(ctx.pipeline().context(this) != null);
+                                serverAlpnDoneLatch.countDown();
                             }
                         });
                     }
@@ -438,13 +438,13 @@ public class SniHandlerTest {
                     protected void initChannel(Channel ch) throws Exception {
                         ch.pipeline().addLast(new SslHandler(clientContext.newEngine(
                                 ch.bufferAllocator(), "sni.fake.site", -1)));
-                        // Catch the notification event that APN has completed successfully.
+                        // Catch the notification event that ALPN has completed successfully.
                         ch.pipeline().addLast(new ApplicationProtocolNegotiationHandler("foo") {
                             @Override
                             protected void configurePipeline(ChannelHandlerContext ctx, String protocol) {
                                 // addresses issue #9131
-                                clientApnCtx.set(ctx.pipeline().context(this) != null);
-                                clientApnDoneLatch.countDown();
+                                clientAlpnCtx.set(ctx.pipeline().context(this) != null);
+                                clientAlpnDoneLatch.countDown();
                             }
                         });
                     }
@@ -453,10 +453,10 @@ public class SniHandlerTest {
                 serverChannel = sb.bind(new InetSocketAddress(0)).asStage().get();
                 clientChannel = cb.connect(serverChannel.localAddress()).asStage().get();
 
-                assertTrue(serverApnDoneLatch.await(5, TimeUnit.SECONDS));
-                assertTrue(clientApnDoneLatch.await(5, TimeUnit.SECONDS));
-                assertTrue(serverApnCtx.get());
-                assertTrue(clientApnCtx.get());
+                assertTrue(serverAlpnDoneLatch.await(5, TimeUnit.SECONDS));
+                assertTrue(clientAlpnDoneLatch.await(5, TimeUnit.SECONDS));
+                assertTrue(serverAlpnCtx.get());
+                assertTrue(clientAlpnCtx.get());
                 assertThat(handler.hostname(), is("sni.fake.site"));
                 assertThat(handler.sslContext(), is(sniContext));
             } finally {
