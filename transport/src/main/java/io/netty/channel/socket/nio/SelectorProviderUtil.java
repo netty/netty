@@ -15,7 +15,7 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -65,9 +65,9 @@ final class SelectorProviderUtil {
     }
 
     static <C extends Channel> C newChannel(Method method, SelectorProvider provider,
-                                                    InternetProtocolFamily family) throws IOException {
+                                                    SocketProtocolFamily family) throws IOException {
         if (family != null) {
-            return newChannel(method, provider, ProtocolFamilyConverter.convert(family));
+            return newChannel(method, provider, family.toJdkFamily());
         }
         return null;
     }

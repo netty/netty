@@ -17,12 +17,12 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -134,7 +134,7 @@ public class DefaultDnsRecordEncoderTest {
             int rdataLength = out.readUnsignedShort();
             assertEquals(rdataLength, out.readableBytes());
 
-            assertEquals((short) InternetProtocolFamily.of(address).addressNumber(), out.readShort());
+            assertEquals((short) (address instanceof Inet4Address ? 1 : 2), out.readShort());
 
             assertEquals(prefix, out.readUnsignedByte());
             assertEquals(0, out.readUnsignedByte()); // This must be 0 for requests.

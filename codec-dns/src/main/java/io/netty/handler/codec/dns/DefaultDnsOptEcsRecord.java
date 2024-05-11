@@ -16,6 +16,8 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.util.NetUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
@@ -59,16 +61,40 @@ public final class DefaultDnsOptEcsRecord extends AbstractDnsOptPseudoRrRecord i
     /**
      * Creates a new instance.
      *
-     * @param maxPayloadSize the suggested max payload size in bytes
-     * @param protocolFamily the {@link InternetProtocolFamily} to use. This should be the same as the one used to
-     *                       send the query.
+     * @param maxPayloadSize    the suggested max payload size in bytes
+     * @param protocolFamily    the {@link InternetProtocolFamily} to use. This should be the same as the one used to
+     *                          send the query.
+     * @deprecated              use {@link DefaultDnsOptEcsRecord#DefaultDnsOptEcsRecord(int, SocketProtocolFamily)}
      */
+    @Deprecated
     public DefaultDnsOptEcsRecord(int maxPayloadSize, InternetProtocolFamily protocolFamily) {
         this(maxPayloadSize, 0, 0, 0, protocolFamily.localhost().getAddress());
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param maxPayloadSize        the suggested max payload size in bytes
+     * @param socketProtocolFamily  the {@link SocketProtocolFamily} to use. This should be the same as the one used to
+     *                              send the query.
+     */
+    public DefaultDnsOptEcsRecord(int maxPayloadSize, SocketProtocolFamily socketProtocolFamily) {
+        this(maxPayloadSize, 0, 0, 0, localAddress(socketProtocolFamily));
+    }
+
+    private static byte[] localAddress(SocketProtocolFamily family) {
+        switch (family) {
+            case INET:
+                return NetUtil.LOCALHOST4.getAddress();
+            case INET6:
+                return NetUtil.LOCALHOST6.getAddress();
+            default:
+                return null;
+        }
+    }
+
     private static byte[] verifyAddress(byte[] bytes) {
-        if (bytes.length == 4 || bytes.length == 16) {
+        if (bytes != null && bytes.length == 4 || bytes.length == 16) {
             return bytes;
         }
         throw new IllegalArgumentException("bytes.length must either 4 or 16");

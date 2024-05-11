@@ -24,6 +24,6 @@ import java.util.List;
 public class KQueueDatagramUnicastIPv6Test extends DatagramUnicastIPv6Test {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return KQueueSocketTestPermutation.INSTANCE.datagram(internetProtocolFamily());
+        return KQueueSocketTestPermutation.INSTANCE.datagram(socketProtocolFamily());
     }
 }

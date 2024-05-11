@@ -26,6 +26,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DatagramSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.IovArray;
@@ -63,7 +64,16 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         config = new KQueueDatagramChannelConfig(this);
     }
 
+    /**
+     * @deprecated use {@link KQueueDatagramChannel#KQueueDatagramChannel(SocketProtocolFamily)}
+     */
+    @Deprecated
     public KQueueDatagramChannel(InternetProtocolFamily protocol) {
+        super(null, newSocketDgram(protocol), false);
+        config = new KQueueDatagramChannelConfig(this);
+    }
+
+    public KQueueDatagramChannel(SocketProtocolFamily protocol) {
         super(null, newSocketDgram(protocol), false);
         config = new KQueueDatagramChannelConfig(this);
     }

@@ -21,6 +21,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.UnstableApi;
@@ -38,7 +39,16 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
         config = new KQueueSocketChannelConfig(this);
     }
 
+    /**
+     * @deprecated use {@link SocketProtocolFamily#KQueueDatagramChannel(SocketProtocolFamily)}
+     */
+    @Deprecated
     public KQueueSocketChannel(InternetProtocolFamily protocol) {
+        super(null, BsdSocket.newSocketStream(protocol), false);
+        config = new KQueueSocketChannelConfig(this);
+    }
+
+    public KQueueSocketChannel(SocketProtocolFamily protocol) {
         super(null, BsdSocket.newSocketStream(protocol), false);
         config = new KQueueSocketChannelConfig(this);
     }

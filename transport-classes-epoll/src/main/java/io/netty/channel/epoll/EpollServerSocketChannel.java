@@ -18,6 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.SocketProtocolFamily;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -41,10 +42,19 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public EpollServerSocketChannel() {
-        this((InternetProtocolFamily) null);
+        this((SocketProtocolFamily) null);
     }
 
+    /**
+     * @deprecated  use {@link EpollServerSocketChannel#EpollServerSocketChannel(SocketProtocolFamily)}
+     */
+    @Deprecated
     public EpollServerSocketChannel(InternetProtocolFamily protocol) {
+        super(newSocketStream(protocol), false);
+        config = new EpollServerSocketChannelConfig(this);
+    }
+
+    public EpollServerSocketChannel(SocketProtocolFamily protocol) {
         super(newSocketStream(protocol), false);
         config = new EpollServerSocketChannelConfig(this);
     }
