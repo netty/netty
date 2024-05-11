@@ -40,39 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JdkSslEngineTest extends SSLEngineTest {
     public enum ProviderType {
-        NPN_JETTY {
-            @Override
-            boolean isAvailable() {
-                return JettyNpnSslEngine.isAvailable();
-            }
-
-            @Override
-            Protocol protocol() {
-                return Protocol.NPN;
-            }
-
-            @Override
-            Provider provider() {
-                return null;
-            }
-        },
-        ALPN_JETTY {
-            @Override
-            boolean isAvailable() {
-                return JettyAlpnSslEngine.isAvailable();
-            }
-
-            @Override
-            Protocol protocol() {
-                return Protocol.ALPN;
-            }
-
-            @Override
-            Provider provider() {
-                // Use the default provider.
-                return null;
-            }
-        },
         ALPN_JAVA {
             @Override
             boolean isAvailable() {
@@ -212,46 +179,36 @@ public class JdkSslEngineTest extends SSLEngineTest {
             throws Exception {
         try {
             param.providerType.activate(this);
-            if (param.providerType == ProviderType.NPN_JETTY) {
-                ApplicationProtocolConfig clientApn = failingNegotiator(param.providerType.protocol(),
-                    PREFERRED_APPLICATION_LEVEL_PROTOCOL);
-                ApplicationProtocolConfig serverApn = acceptingNegotiator(param.providerType.protocol(),
-                    APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
-                setupHandlers(param, serverApn, clientApn);
-                assertTrue(clientLatch.await(2, TimeUnit.SECONDS));
-                assertTrue(clientException instanceof SSLHandshakeException);
-            } else {
-                // ALPN
-                SelfSignedCertificate ssc = new SelfSignedCertificate();
-                JdkApplicationProtocolNegotiator clientApn = new JdkAlpnApplicationProtocolNegotiator(true, true,
-                    PREFERRED_APPLICATION_LEVEL_PROTOCOL);
-                JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(
-                        (engine, supportedProtocols) -> new ProtocolSelector() {
-                            @Override
-                            public void unsupported() {
-                            }
+            // ALPN
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            JdkApplicationProtocolNegotiator clientApn = new JdkAlpnApplicationProtocolNegotiator(true, true,
+                PREFERRED_APPLICATION_LEVEL_PROTOCOL);
+            JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(
+                    (engine, supportedProtocols) -> new ProtocolSelector() {
+                        @Override
+                        public void unsupported() {
+                        }
 
-                            @Override
-                            public String select(List<String> protocols) {
-                                return APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE;
-                            }
-                        }, JdkBaseApplicationProtocolNegotiator.FAIL_SELECTION_LISTENER_FACTORY,
-                    APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
+                        @Override
+                        public String select(List<String> protocols) {
+                            return APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE;
+                        }
+                    }, JdkBaseApplicationProtocolNegotiator.FAIL_SELECTION_LISTENER_FACTORY,
+                APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
 
-                SslContext serverSslCtx = new JdkSslServerContext(param.providerType.provider(),
-                    ssc.certificate(), ssc.privateKey(), null, null,
-                    IdentityCipherSuiteFilter.INSTANCE, serverApn, 0, 0);
-                SslContext clientSslCtx = new JdkSslClientContext(param.providerType.provider(), null,
-                    InsecureTrustManagerFactory.INSTANCE, null,
-                    IdentityCipherSuiteFilter.INSTANCE, clientApn, 0, 0);
+            SslContext serverSslCtx = new JdkSslServerContext(param.providerType.provider(),
+                ssc.certificate(), ssc.privateKey(), null, null,
+                IdentityCipherSuiteFilter.INSTANCE, serverApn, 0, 0);
+            SslContext clientSslCtx = new JdkSslClientContext(param.providerType.provider(), null,
+                InsecureTrustManagerFactory.INSTANCE, null,
+                IdentityCipherSuiteFilter.INSTANCE, clientApn, 0, 0);
 
-                setupHandlers(param.type(), param.delegate(), new TestDelegatingSslContext(param, serverSslCtx),
-                        new TestDelegatingSslContext(param, clientSslCtx));
-                assertTrue(clientLatch.await(2, TimeUnit.SECONDS));
-                // When using TLSv1.3 the handshake is NOT sent in an extra round trip which means there will be
-                // no exception reported in this case but just the channel will be closed.
-                assertTrue(clientException instanceof SSLHandshakeException || clientException == null);
-            }
+            setupHandlers(param.type(), param.delegate(), new TestDelegatingSslContext(param, serverSslCtx),
+                    new TestDelegatingSslContext(param, clientSslCtx));
+            assertTrue(clientLatch.await(2, TimeUnit.SECONDS));
+            // When using TLSv1.3 the handshake is NOT sent in an extra round trip which means there will be
+            // no exception reported in this case but just the channel will be closed.
+            assertTrue(clientException instanceof SSLHandshakeException || clientException == null);
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
@@ -284,10 +241,6 @@ public class JdkSslEngineTest extends SSLEngineTest {
     public void testAlpnCompatibleProtocolsDifferentClientOrder(JdkSSLEngineTestParam param) throws Exception {
         try {
             param.providerType.activate(this);
-            if (param.providerType == ProviderType.NPN_JETTY) {
-                // This test only applies to ALPN.
-                throw tlsExtensionNotFound(param.providerType.protocol());
-            }
             // Even the preferred application protocol appears second in the client's list, it will be picked
             // because it's the first one on server's list.
             ApplicationProtocolConfig clientApn = acceptingNegotiator(Protocol.ALPN,
