@@ -16,7 +16,6 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.internal.UnstableApi;
 
@@ -94,8 +93,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         }
 
         // See https://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
-        final short addressNumber = (short) (bytes.length == 4 ?
-                InternetProtocolFamily.IPv4.addressNumber() : InternetProtocolFamily.IPv6.addressNumber());
+        final short addressNumber = (short) (bytes.length == 4 ? 1 : 2);
         int payloadLength = calculateEcsAddressLength(sourcePrefixLength, lowOrderBitsToPreserve);
 
         int fullPayloadLength = 2 + // OPTION-CODE

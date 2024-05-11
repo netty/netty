@@ -18,11 +18,14 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.testsuite.transport.AbstractComboTestsuiteTest;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.NetUtil;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
@@ -41,24 +44,35 @@ public abstract class AbstractDatagramTest extends AbstractComboTestsuiteTest<Bo
 
     protected SocketAddress newSocketAddress() {
         switch (socketInternetProtocalFamily()) {
-            case IPv4:
+            case INET:
                 return new InetSocketAddress(NetUtil.LOCALHOST4, 0);
-            case IPv6:
+            case INET6:
                 return new InetSocketAddress(NetUtil.LOCALHOST6, 0);
             default:
                 throw new AssertionError();
         }
     }
 
-    protected InternetProtocolFamily internetProtocolFamily() {
-        return InternetProtocolFamily.IPv4;
+    protected boolean isSupported(SocketProtocolFamily family, InetAddress address) {
+        switch (family) {
+            case INET:
+                return address instanceof Inet4Address;
+            case INET6:
+                return address instanceof Inet6Address;
+            default:
+                return false;
+        }
     }
 
-    protected InternetProtocolFamily groupInternetProtocalFamily() {
-        return internetProtocolFamily();
+    protected SocketProtocolFamily socketProtocolFamily() {
+        return SocketProtocolFamily.INET;
     }
 
-    protected InternetProtocolFamily socketInternetProtocalFamily() {
-        return internetProtocolFamily();
+    protected SocketProtocolFamily groupInternetProtocalFamily() {
+        return socketProtocolFamily();
+    }
+
+    protected SocketProtocolFamily socketInternetProtocalFamily() {
+        return socketProtocolFamily();
     }
 }

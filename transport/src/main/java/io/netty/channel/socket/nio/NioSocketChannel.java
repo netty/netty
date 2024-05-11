@@ -32,6 +32,7 @@ import io.netty.channel.socket.DefaultSocketChannelConfig;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.UnstableApi;
@@ -63,7 +64,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     private final SocketChannelConfig config;
 
-    private static SocketChannel newChannel(SelectorProvider provider, InternetProtocolFamily family) {
+    private static SocketChannel newChannel(SelectorProvider provider, SocketProtocolFamily family) {
         try {
             SocketChannel channel = SelectorProviderUtil.newChannel(OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
             return channel == null ? provider.openSocketChannel() : channel;
@@ -83,13 +84,23 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      * Create a new instance using the given {@link SelectorProvider}.
      */
     public NioSocketChannel(SelectorProvider provider) {
-        this(provider, null);
+        this(provider, (SocketProtocolFamily) null);
+    }
+
+    /**
+     * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
+     *
+     * @deprecated use {@link NioSocketChannel#NioSocketChannel(SelectorProvider, SocketProtocolFamily)}
+     */
+    @Deprecated
+    public NioSocketChannel(SelectorProvider provider, InternetProtocolFamily family) {
+        this(provider, family == null ? null : family.toSocketProtocolFamily());
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
      */
-    public NioSocketChannel(SelectorProvider provider, InternetProtocolFamily family) {
+    public NioSocketChannel(SelectorProvider provider, SocketProtocolFamily family) {
         this(newChannel(provider, family));
     }
 

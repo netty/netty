@@ -17,6 +17,7 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
@@ -197,7 +198,14 @@ final class BsdSocket extends Socket {
         return new BsdSocket(newSocketStream0());
     }
 
+    /**
+     * @deprecated use {@link #newSocketStream(SocketProtocolFamily)}
+     */
     public static BsdSocket newSocketStream(InternetProtocolFamily protocol) {
+        return new BsdSocket(newSocketStream0(protocol));
+    }
+
+    public static BsdSocket newSocketStream(SocketProtocolFamily protocol) {
         return new BsdSocket(newSocketStream0(protocol));
     }
 
@@ -205,7 +213,14 @@ final class BsdSocket extends Socket {
         return new BsdSocket(newSocketDgram0());
     }
 
+    /**
+     * @deprecated use {@link #newSocketDgram(SocketProtocolFamily)}
+     */
     public static BsdSocket newSocketDgram(InternetProtocolFamily protocol) {
+        return new BsdSocket(newSocketDgram0(protocol));
+    }
+
+    public static BsdSocket newSocketDgram(SocketProtocolFamily protocol) {
         return new BsdSocket(newSocketDgram0(protocol));
     }
 

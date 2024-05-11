@@ -23,7 +23,10 @@ import java.net.InetAddress;
 
 /**
  * Internet Protocol (IP) families used byte the {@link DatagramChannel}
+ *
+ * @deprecated use {@link SocketProtocolFamily}.
  */
+@Deprecated
 public enum InternetProtocolFamily {
     IPv4(Inet4Address.class, 1),
     IPv6(Inet6Address.class, 2);
@@ -77,5 +80,16 @@ public enum InternetProtocolFamily {
             return IPv6;
         }
         throw new IllegalArgumentException("address " + address + " not supported");
+    }
+
+    public SocketProtocolFamily toSocketProtocolFamily() {
+        switch (this) {
+            case IPv4:
+                return SocketProtocolFamily.INET;
+            case IPv6:
+                return SocketProtocolFamily.INET6;
+            default:
+                throw new IllegalStateException();
+        }
     }
 }

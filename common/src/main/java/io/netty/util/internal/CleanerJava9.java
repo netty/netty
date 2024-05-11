@@ -17,12 +17,15 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import sun.misc.Unsafe;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+
+import static java.lang.invoke.MethodType.methodType;
 
 /**
  * Provide a way to clean a ByteBuffer on Java9+.
@@ -30,10 +33,10 @@ import java.security.PrivilegedAction;
 final class CleanerJava9 implements Cleaner {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CleanerJava9.class);
 
-    private static final Method INVOKE_CLEANER;
+    private static final MethodHandle INVOKE_CLEANER;
 
     static {
-        final Method method;
+        final MethodHandle method;
         final Throwable error;
         if (PlatformDependent0.hasUnsafe()) {
             final ByteBuffer buffer = ByteBuffer.allocateDirect(1);
@@ -42,15 +45,14 @@ final class CleanerJava9 implements Cleaner {
                 public Object run() {
                     try {
                         // See https://bugs.openjdk.java.net/browse/JDK-8171377
-                        Method m = PlatformDependent0.UNSAFE.getClass().getDeclaredMethod(
-                                "invokeCleaner", ByteBuffer.class);
-                        m.invoke(PlatformDependent0.UNSAFE, buffer);
-                        return m;
-                    } catch (NoSuchMethodException e) {
-                        return e;
-                    } catch (InvocationTargetException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
+                        Class<? extends Unsafe> unsafeClass = PlatformDependent0.UNSAFE.getClass();
+                        MethodHandles.Lookup lookup = MethodHandles.lookup();
+                        MethodHandle invokeCleaner = lookup.findVirtual(
+                                unsafeClass, "invokeCleaner", methodType(void.class, ByteBuffer.class));
+                        invokeCleaner = invokeCleaner.bindTo(PlatformDependent0.UNSAFE);
+                        invokeCleaner.invokeExact(buffer);
+                        return invokeCleaner;
+                    } catch (Throwable e) {
                         return e;
                     }
                 }
@@ -60,7 +62,7 @@ final class CleanerJava9 implements Cleaner {
                 method = null;
                 error = (Throwable) maybeInvokeMethod;
             } else {
-                method = (Method) maybeInvokeMethod;
+                method = (MethodHandle) maybeInvokeMethod;
                 error = null;
             }
         } else {
@@ -85,7 +87,7 @@ final class CleanerJava9 implements Cleaner {
         // See https://bugs.openjdk.java.net/browse/JDK-8191053.
         if (System.getSecurityManager() == null) {
             try {
-                INVOKE_CLEANER.invoke(PlatformDependent0.UNSAFE, buffer);
+                INVOKE_CLEANER.invokeExact(buffer);
             } catch (Throwable cause) {
                 PlatformDependent0.throwException(cause);
             }
@@ -95,14 +97,12 @@ final class CleanerJava9 implements Cleaner {
     }
 
     private static void freeDirectBufferPrivileged(final ByteBuffer buffer) {
-        Exception error = AccessController.doPrivileged(new PrivilegedAction<Exception>() {
+        Throwable error = AccessController.doPrivileged(new PrivilegedAction<Throwable>() {
             @Override
-            public Exception run() {
+            public Throwable run() {
                 try {
-                    INVOKE_CLEANER.invoke(PlatformDependent0.UNSAFE, buffer);
-                } catch (InvocationTargetException e) {
-                    return e;
-                } catch (IllegalAccessException e) {
+                    INVOKE_CLEANER.invokeExact(buffer);
+                } catch (Throwable e) {
                     return e;
                 }
                 return null;

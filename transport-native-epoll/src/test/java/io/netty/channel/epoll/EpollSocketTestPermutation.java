@@ -21,7 +21,9 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -44,10 +46,10 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
     static final EpollSocketTestPermutation INSTANCE = new EpollSocketTestPermutation();
 
-    static final EventLoopGroup EPOLL_BOSS_GROUP =
-            new EpollEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-epoll-boss", true));
-    static final EventLoopGroup EPOLL_WORKER_GROUP =
-            new EpollEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-epoll-worker", true));
+    static final EventLoopGroup EPOLL_BOSS_GROUP = new MultiThreadIoEventLoopGroup(
+            BOSSES, new DefaultThreadFactory("testsuite-epoll-boss", true), EpollIoHandler.newFactory());
+    static final EventLoopGroup EPOLL_WORKER_GROUP = new MultiThreadIoEventLoopGroup(
+            WORKERS, new DefaultThreadFactory("testsuite-epoll-worker", true), EpollIoHandler.newFactory());
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
@@ -141,7 +143,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
-            final InternetProtocolFamily family) {
+            final SocketProtocolFamily family) {
         // Make the list of Bootstrap factories.
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
                 new BootstrapFactory<Bootstrap>() {
@@ -181,12 +183,12 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     }
 
     List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> epollOnlyDatagram(
-            final InternetProtocolFamily family) {
+            final SocketProtocolFamily family) {
         return combo(Collections.singletonList(datagramBootstrapFactory(family)),
                 Collections.singletonList(datagramBootstrapFactory(family)));
     }
 
-    private static BootstrapFactory<Bootstrap> datagramBootstrapFactory(final InternetProtocolFamily family) {
+    private static BootstrapFactory<Bootstrap> datagramBootstrapFactory(final SocketProtocolFamily family) {
         return new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
@@ -198,7 +200,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
                     @Override
                     public String toString() {
-                        return InternetProtocolFamily.class.getSimpleName() + ".class";
+                        return SocketProtocolFamily.class.getSimpleName() + ".class";
                     }
                 });
             }

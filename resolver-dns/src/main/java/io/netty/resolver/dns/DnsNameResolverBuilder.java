@@ -21,6 +21,7 @@ import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.concurrent.Future;
@@ -322,9 +323,12 @@ public final class DnsNameResolverBuilder {
      * Compute a {@link ResolvedAddressTypes} from some {@link InternetProtocolFamily}s.
      * An empty input will return the default value, based on "java.net" System properties.
      * Valid inputs are (), (IPv4), (IPv6), (Ipv4, IPv6) and (IPv6, IPv4).
+     *
      * @param internetProtocolFamilies a valid sequence of {@link InternetProtocolFamily}s
      * @return a {@link ResolvedAddressTypes}
+     * @deprecated use {@link #computeResolvedAddressTypes(SocketProtocolFamily...)}
      */
+    @Deprecated
     public static ResolvedAddressTypes computeResolvedAddressTypes(InternetProtocolFamily... internetProtocolFamilies) {
         if (internetProtocolFamilies == null || internetProtocolFamilies.length == 0) {
             return DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
@@ -332,15 +336,43 @@ public final class DnsNameResolverBuilder {
         if (internetProtocolFamilies.length > 2) {
             throw new IllegalArgumentException("No more than 2 InternetProtocolFamilies");
         }
+        return computeResolvedAddressTypes(toSocketProtocolFamilies(internetProtocolFamilies));
+    }
 
-        switch(internetProtocolFamilies[0]) {
-            case IPv4:
-                return (internetProtocolFamilies.length >= 2
-                        && internetProtocolFamilies[1] == InternetProtocolFamily.IPv6) ?
+    private static SocketProtocolFamily[] toSocketProtocolFamilies(InternetProtocolFamily... internetProtocolFamilies) {
+        if (internetProtocolFamilies == null || internetProtocolFamilies.length == 0) {
+            return null;
+        }
+        SocketProtocolFamily[] socketProtocolFamilies = new SocketProtocolFamily[internetProtocolFamilies.length];
+        for (int i = 0; i < internetProtocolFamilies.length; i++) {
+            socketProtocolFamilies[i] = internetProtocolFamilies[i].toSocketProtocolFamily();
+        }
+        return socketProtocolFamilies;
+    }
+
+    /**
+     * Compute a {@link ResolvedAddressTypes} from some {@link SocketProtocolFamily}s.
+     * An empty input will return the default value, based on "java.net" System properties.
+     * Valid inputs are (), (IPv4), (IPv6), (Ipv4, IPv6) and (IPv6, IPv4).
+     * @param socketProtocolFamilies a valid sequence of {@link SocketProtocolFamily}s
+     * @return a {@link ResolvedAddressTypes}
+     */
+    public static ResolvedAddressTypes computeResolvedAddressTypes(SocketProtocolFamily... socketProtocolFamilies) {
+        if (socketProtocolFamilies == null || socketProtocolFamilies.length == 0) {
+            return DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
+        }
+        if (socketProtocolFamilies.length > 2) {
+            throw new IllegalArgumentException("No more than 2 socketProtocolFamilies");
+        }
+
+        switch(socketProtocolFamilies[0]) {
+            case INET:
+                return (socketProtocolFamilies.length >= 2
+                        && socketProtocolFamilies[1] == SocketProtocolFamily.INET6) ?
                         ResolvedAddressTypes.IPV4_PREFERRED: ResolvedAddressTypes.IPV4_ONLY;
-            case IPv6:
-                return (internetProtocolFamilies.length >= 2
-                        && internetProtocolFamilies[1] == InternetProtocolFamily.IPv4) ?
+            case INET6:
+                return (socketProtocolFamilies.length >= 2
+                        && socketProtocolFamilies[1] == SocketProtocolFamily.INET) ?
                         ResolvedAddressTypes.IPV6_PREFERRED: ResolvedAddressTypes.IPV6_ONLY;
             default:
                 throw new IllegalArgumentException(
@@ -522,7 +554,8 @@ public final class DnsNameResolverBuilder {
                 intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE),
                 // Let us use the sane ordering as DnsNameResolver will be used when returning
                 // nameservers from the cache.
-                new NameServerComparator(DnsNameResolver.preferredAddressType(resolvedAddressTypes).addressType()));
+                new NameServerComparator(DnsNameResolver.addressType(
+                        DnsNameResolver.preferredAddressType(resolvedAddressTypes))));
     }
 
     private DnsServerAddressStream newQueryServerAddressStream(

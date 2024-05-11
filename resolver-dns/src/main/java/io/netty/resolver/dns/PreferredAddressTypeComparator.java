@@ -15,7 +15,7 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -27,11 +27,11 @@ final class PreferredAddressTypeComparator implements Comparator<InetAddress> {
     private static final PreferredAddressTypeComparator IPv4 = new PreferredAddressTypeComparator(Inet4Address.class);
     private static final PreferredAddressTypeComparator IPv6 = new PreferredAddressTypeComparator(Inet6Address.class);
 
-    static PreferredAddressTypeComparator comparator(InternetProtocolFamily family) {
+    static PreferredAddressTypeComparator comparator(SocketProtocolFamily family) {
         switch (family) {
-            case IPv4:
+            case INET:
                 return IPv4;
-            case IPv6:
+            case INET6:
                 return IPv6;
             default:
                 throw new IllegalArgumentException();

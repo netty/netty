@@ -1,0 +1,44 @@
+[
+  {
+    "name":"java.nio.ByteBuffer",
+    "methods": [
+      {"name": "alignedSlice", "parameterTypes": ["int"]}
+    ]
+  },
+  {
+    "name": "java.nio.DirectByteBuffer",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "sun.misc.Unsafe"
+    },
+    "name": "sun.misc.Unsafe",
+    "allDeclaredFields": true
+  },
+  {
+    "condition": {
+      "typeReachable": "jdk.internal.misc.Unsafe"
+    },
+    "name": "jdk.internal.misc.Unsafe",
+    "allPublicMethods": true
+  },
+  {
+    "condition": {
+      "typeReachable": "java.lang.management.ManagementFactory"
+    },
+    "name": "java.lang.management.ManagementFactory",
+    "methods": [
+      {"name": "getRuntimeMXBean", "parameterTypes": []}
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "java.lang.management.RuntimeMXBean"
+    },
+    "name": "java.lang.management.RuntimeMXBean",
+    "methods": [
+      {"name": "getInputArguments", "parameterTypes": []}
+    ]
+  }
+]

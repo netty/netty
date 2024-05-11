@@ -18,30 +18,29 @@ package io.netty.util.internal;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Objects;
+
+import static java.lang.invoke.MethodType.methodType;
 
 
 /**
  * Allows to free direct {@link ByteBuffer} by using Cleaner. This is encapsulated in an extra class to be able
  * to use {@link PlatformDependent0} on Android without problems.
- *
+ * <p>
  * For more details see <a href="https://github.com/netty/netty/issues/2604">#2604</a>.
  */
 final class CleanerJava6 implements Cleaner {
-    private static final long CLEANER_FIELD_OFFSET;
-    private static final Method CLEAN_METHOD;
-    private static final Field CLEANER_FIELD;
+    private static final MethodHandle CLEAN_METHOD;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CleanerJava6.class);
 
     static {
-        long fieldOffset;
-        Method clean;
-        Field cleanerField;
+        MethodHandle clean;
         Throwable error = null;
         final ByteBuffer direct = ByteBuffer.allocateDirect(1);
         try {
@@ -49,13 +48,29 @@ final class CleanerJava6 implements Cleaner {
                 @Override
                 public Object run() {
                     try {
-                        Field cleanerField =  direct.getClass().getDeclaredField("cleaner");
-                        if (!PlatformDependent.hasUnsafe()) {
-                            // We need to make it accessible if we do not use Unsafe as we will access it via
-                            // reflection.
-                            cleanerField.setAccessible(true);
-                        }
-                        return cleanerField;
+                        Class<?> cleanerClass = Class.forName("sun.misc.Cleaner");
+                        Class<?> directBufClass = Class.forName("sun.nio.ch.DirectBuffer");
+                        MethodHandles.Lookup lookup = MethodHandles.lookup();
+
+                        // Call clean() on the cleaner
+                        MethodHandle clean = lookup.findVirtual(
+                                cleanerClass, "clean", methodType(void.class));
+                        // But only if the cleaner is non-null
+                        MethodHandle nullTest = lookup.findStatic(
+                                Objects.class, "nonNull", methodType(boolean.class, Object.class));
+                        clean = MethodHandles.guardWithTest(
+                                nullTest.asType(methodType(boolean.class, cleanerClass)),
+                                clean,
+                                nullTest.asType(methodType(void.class, cleanerClass)));
+                        // Change receiver to DirectBuffer, convert DirectBuffer to Cleaner by calling cleaner()
+                        clean = MethodHandles.filterArguments(clean, 0, lookup.findVirtual(
+                                directBufClass,
+                                "cleaner",
+                                methodType(cleanerClass)));
+                        // Change receiver to ByteBuffer, convert using explicit cast to DirectBuffer
+                        clean = MethodHandles.explicitCastArguments(clean,
+                                methodType(void.class, ByteBuffer.class));
+                        return clean;
                     } catch (Throwable cause) {
                         return cause;
                     }
@@ -65,27 +80,12 @@ final class CleanerJava6 implements Cleaner {
                 throw (Throwable) mayBeCleanerField;
             }
 
-            cleanerField = (Field) mayBeCleanerField;
-
-            final Object cleaner;
-
-            // If we have sun.misc.Unsafe we will use it as its faster then using reflection,
-            // otherwise let us try reflection as last resort.
-            if (PlatformDependent.hasUnsafe()) {
-                fieldOffset = PlatformDependent0.objectFieldOffset(cleanerField);
-                cleaner = PlatformDependent0.getObject(direct, fieldOffset);
-            } else {
-                fieldOffset = -1;
-                cleaner = cleanerField.get(direct);
-            }
-            clean = cleaner.getClass().getDeclaredMethod("clean");
-            clean.invoke(cleaner);
+            clean = (MethodHandle) mayBeCleanerField;
+            clean.invokeExact(direct);
         } catch (Throwable t) {
             // We don't have ByteBuffer.cleaner().
-            fieldOffset = -1;
             clean = null;
             error = t;
-            cleanerField = null;
         }
 
         if (error == null) {
@@ -93,13 +93,11 @@ final class CleanerJava6 implements Cleaner {
         } else {
             logger.debug("java.nio.ByteBuffer.cleaner(): unavailable", error);
         }
-        CLEANER_FIELD = cleanerField;
-        CLEANER_FIELD_OFFSET = fieldOffset;
         CLEAN_METHOD = clean;
     }
 
     static boolean isSupported() {
-        return CLEANER_FIELD_OFFSET != -1 || CLEANER_FIELD != null;
+        return CLEAN_METHOD != null;
     }
 
     @Override
@@ -135,17 +133,7 @@ final class CleanerJava6 implements Cleaner {
         }
     }
 
-    private static void freeDirectBuffer0(ByteBuffer buffer) throws Exception {
-        final Object cleaner;
-        // If CLEANER_FIELD_OFFSET == -1 we need to use reflection to access the cleaner, otherwise we can use
-        // sun.misc.Unsafe.
-        if (CLEANER_FIELD_OFFSET == -1) {
-            cleaner = CLEANER_FIELD.get(buffer);
-        } else {
-            cleaner = PlatformDependent0.getObject(buffer, CLEANER_FIELD_OFFSET);
-        }
-        if (cleaner != null) {
-            CLEAN_METHOD.invoke(cleaner);
-        }
+    private static void freeDirectBuffer0(ByteBuffer buffer) throws Throwable {
+        CLEAN_METHOD.invokeExact(buffer);
     }
 }

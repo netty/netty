@@ -26,7 +26,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * We only need to test methods defined by {@link InternaLogger}.
+ * We only need to test methods defined by {@link InternalLogger}.
  */
 public abstract class AbstractInternalLoggerTest<T> {
     protected String loggerName = "foo";
