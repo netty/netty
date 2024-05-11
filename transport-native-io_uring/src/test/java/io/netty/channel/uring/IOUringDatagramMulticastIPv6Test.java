@@ -33,6 +33,6 @@ public class IOUringDatagramMulticastIPv6Test extends DatagramMulticastIPv6Test 
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return IOUringSocketTestPermutation.INSTANCE.datagram(internetProtocolFamily());
+        return IOUringSocketTestPermutation.INSTANCE.datagram(socketProtocolFamily());
     }
 }

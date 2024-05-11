@@ -25,7 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.SegmentedDatagramPacket;
@@ -58,7 +58,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
     private volatile boolean connected;
 
     /**
-     * Create a new instance which selects the {@link InternetProtocolFamily} to use depending
+     * Create a new instance which selects the {@link SocketProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
      */
     public IOUringDatagramChannel() {
@@ -66,17 +66,17 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
     }
 
     /**
-     * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
+     * Create a new instance using the given {@link SocketProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      */
-    public IOUringDatagramChannel(InternetProtocolFamily family) {
+    public IOUringDatagramChannel(SocketProtocolFamily family) {
         this(family == null ?
                 LinuxSocket.newSocketDgram(Socket.isIPv6Preferred()) :
-                        LinuxSocket.newSocketDgram(family == InternetProtocolFamily.IPv6), false);
+                        LinuxSocket.newSocketDgram(family == SocketProtocolFamily.INET6), false);
     }
 
     /**
-     * Create a new instance which selects the {@link InternetProtocolFamily} to use depending
+     * Create a new instance which selects the {@link SocketProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
      */
     public IOUringDatagramChannel(int fd) {
@@ -266,7 +266,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
             if (socketAddress.getAddress().isAnyLocalAddress() &&
                     socketAddress.getAddress() instanceof Inet4Address) {
-                if (socket.family() == InternetProtocolFamily.IPv6) {
+                if (socket.family() == SocketProtocolFamily.INET6) {
                     localAddress = new InetSocketAddress(LinuxSocket.INET6_ANY, socketAddress.getPort());
                 }
             }

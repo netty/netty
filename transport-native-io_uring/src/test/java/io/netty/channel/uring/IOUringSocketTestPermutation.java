@@ -23,6 +23,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -127,7 +128,7 @@ public class IOUringSocketTestPermutation extends SocketTestPermutation {
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
-            final InternetProtocolFamily family) {
+            final SocketProtocolFamily family) {
         // Make the list of Bootstrap factories.
         List<BootstrapFactory<Bootstrap>> bfs = Arrays.<BootstrapFactory<Bootstrap>>asList(
                 new BootstrapFactory<Bootstrap>() {

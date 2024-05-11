@@ -23,7 +23,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramUnicastInetTest;
 import io.netty.util.ReferenceCountUtil;
@@ -51,7 +51,7 @@ public class IOUringDatagramUnicastTest extends DatagramUnicastInetTest {
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return IOUringSocketTestPermutation.INSTANCE.datagram(InternetProtocolFamily.IPv4);
+        return IOUringSocketTestPermutation.INSTANCE.datagram(SocketProtocolFamily.INET);
     }
 
     @Test

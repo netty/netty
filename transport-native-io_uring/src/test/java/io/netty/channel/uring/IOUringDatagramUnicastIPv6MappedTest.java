@@ -33,6 +33,6 @@ public class IOUringDatagramUnicastIPv6MappedTest extends DatagramUnicastIPv6Map
 
     @Override
     protected List<BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
-        return IOUringSocketTestPermutation.INSTANCE.datagram(internetProtocolFamily());
+        return IOUringSocketTestPermutation.INSTANCE.datagram(socketProtocolFamily());
     }
 }

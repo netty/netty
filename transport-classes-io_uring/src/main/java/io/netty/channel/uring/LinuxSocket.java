@@ -16,7 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.ChannelException;
-import io.netty.channel.socket.InternetProtocolFamily;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.PeerCredentials;
@@ -53,8 +53,8 @@ final class LinuxSocket extends Socket {
         }
     }
 
-    InternetProtocolFamily family() {
-        return ipv6 ? InternetProtocolFamily.IPv6 : InternetProtocolFamily.IPv4;
+    SocketProtocolFamily family() {
+        return ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET;
     }
 
     @Override
@@ -72,8 +72,8 @@ final class LinuxSocket extends Socket {
     }
 
     void setNetworkInterface(NetworkInterface netInterface) throws IOException {
-        InetAddress address = deriveInetAddress(netInterface, family() == InternetProtocolFamily.IPv6);
-        if (address.equals(family() == InternetProtocolFamily.IPv4 ? INET_ANY : INET6_ANY)) {
+        InetAddress address = deriveInetAddress(netInterface, family() == SocketProtocolFamily.INET6);
+        if (address.equals(family() == SocketProtocolFamily.INET ? INET_ANY : INET6_ANY)) {
             throw new IOException("NetworkInterface does not support " + family());
         }
         final NativeInetAddress nativeAddress = NativeInetAddress.newInstance(address);
