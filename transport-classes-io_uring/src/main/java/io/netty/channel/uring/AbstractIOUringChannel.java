@@ -921,9 +921,12 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                     hdr.write(socket, inetSocketAddress, initialData.memoryAddress(),
                             initialData.readableBytes(), (short) 0);
 
+                    IOUringIoRegistration registration = registration();
                     IOUringIoOps ops = IOUringIoOps.newSendmsg(fd().intValue(), 0, Native.MSG_FASTOPEN,
-                            hdr.address(), (short) 0);
+                            hdr.address(), registration.nextOpsId());
+                    long id = ops.udata();
                     registration().submit(ops);
+                    connectId = id;
                 } else {
                     submitConnect(inetSocketAddress);
                 }

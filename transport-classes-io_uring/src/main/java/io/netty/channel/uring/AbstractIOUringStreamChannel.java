@@ -248,7 +248,6 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             registration.submit(ops);
             writeId = id;
             writeOpCode = opCode;
-            registration.submit(ops);
             return 1;
         }
 
