@@ -141,26 +141,16 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
 
     @Override
     public ChannelFuture shutdownInput(final ChannelPromise promise) {
-        Executor closeExecutor = ((IOUringStreamUnsafe) unsafe()).prepareToClose();
-        if (closeExecutor != null) {
-            closeExecutor.execute(new Runnable() {
+        EventLoop loop = eventLoop();
+        if (loop.inEventLoop()) {
+            shutdownInput0(promise);
+        } else {
+            loop.execute(new Runnable() {
                 @Override
                 public void run() {
                     shutdownInput0(promise);
                 }
             });
-        } else {
-            EventLoop loop = eventLoop();
-            if (loop.inEventLoop()) {
-                shutdownInput0(promise);
-            } else {
-                loop.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        shutdownInput0(promise);
-                    }
-                });
-            }
         }
         return promise;
     }
@@ -211,12 +201,6 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
     }
 
     private final class IOUringStreamUnsafe extends AbstractUringUnsafe {
-
-        // Overridden here just to be able to access this method from AbstractEpollStreamChannel
-        @Override
-        protected Executor prepareToClose() {
-            return super.prepareToClose();
-        }
 
         private ByteBuf readBuffer;
         private IovArray iovArray;
