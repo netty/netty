@@ -25,12 +25,6 @@ package io.netty.util.concurrent;
 public interface EventExecutor extends EventExecutorGroup {
 
     /**
-     * Returns a reference to itself.
-     */
-    @Override
-    EventExecutor next();
-
-    /**
      * Return the {@link EventExecutorGroup} which is the parent of this {@link EventExecutor},
      */
     EventExecutorGroup parent();
@@ -38,7 +32,9 @@ public interface EventExecutor extends EventExecutorGroup {
     /**
      * Calls {@link #inEventLoop(Thread)} with {@link Thread#currentThread()} as argument
      */
-    boolean inEventLoop();
+    default boolean inEventLoop() {
+        return inEventLoop(Thread.currentThread());
+    }
 
     /**
      * Return {@code true} if the given {@link Thread} is executed in the event loop,
@@ -49,24 +45,32 @@ public interface EventExecutor extends EventExecutorGroup {
     /**
      * Return a new {@link Promise}.
      */
-    <V> Promise<V> newPromise();
+    default <V> Promise<V> newPromise() {
+        return new DefaultPromise<>(this);
+    }
 
     /**
      * Create a new {@link ProgressivePromise}.
      */
-    <V> ProgressivePromise<V> newProgressivePromise();
+    default <V> ProgressivePromise<V> newProgressivePromise() {
+        return new DefaultProgressivePromise<>(this);
+    }
 
     /**
      * Create a new {@link Future} which is marked as succeeded already. So {@link Future#isSuccess()}
      * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
-    <V> Future<V> newSucceededFuture(V result);
+    default <V> Future<V> newSucceededFuture(V result) {
+        return new SucceededFuture<>(this, result);
+    }
 
     /**
      * Create a new {@link Future} which is marked as failed already. So {@link Future#isSuccess()}
      * will return {@code false}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
      */
-    <V> Future<V> newFailedFuture(Throwable cause);
+    default <V> Future<V> newFailedFuture(Throwable cause) {
+        return new FailedFuture<>(this, cause);
+    }
 }

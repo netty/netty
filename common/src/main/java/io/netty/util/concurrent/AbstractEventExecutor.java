@@ -61,11 +61,6 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     }
 
     @Override
-    public boolean inEventLoop() {
-        return inEventLoop(Thread.currentThread());
-    }
-
-    @Override
     public Iterator<EventExecutor> iterator() {
         return selfCollection.iterator();
     }
@@ -90,26 +85,6 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     public List<Runnable> shutdownNow() {
         shutdown();
         return Collections.emptyList();
-    }
-
-    @Override
-    public <V> Promise<V> newPromise() {
-        return new DefaultPromise<V>(this);
-    }
-
-    @Override
-    public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new DefaultProgressivePromise<V>(this);
-    }
-
-    @Override
-    public <V> Future<V> newSucceededFuture(V result) {
-        return new SucceededFuture<V>(this, result);
-    }
-
-    @Override
-    public <V> Future<V> newFailedFuture(Throwable cause) {
-        return new FailedFuture<V>(this, cause);
     }
 
     @Override
