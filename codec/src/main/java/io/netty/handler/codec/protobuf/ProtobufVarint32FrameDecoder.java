@@ -70,52 +70,68 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
      *
      * @return decoded int if buffers readerIndex has been forwarded else nonsense value
      */
-    private static int readRawVarint32(ByteBuf buffer) {
+    static int readRawVarint32(ByteBuf buffer) {
+        if (buffer.readableBytes() < 4) {
+            return readRawVarint24(buffer);
+        }
+        int wholeOrMore = buffer.getIntLE(buffer.readerIndex());
+        int firstOneOnStop = ~wholeOrMore & 0x80808080;
+        if (firstOneOnStop == 0) {
+            return readRawVarint40(buffer, wholeOrMore);
+        }
+        int bitsToKeep = Integer.numberOfTrailingZeros(firstOneOnStop) + 1;
+        buffer.skipBytes(bitsToKeep >> 3);
+        int shiftToHighlightTheWhole = 32 - bitsToKeep;
+        // this is not brilliant, we have a data dependency here
+        int wholeWithContinuations = (wholeOrMore << shiftToHighlightTheWhole) >> shiftToHighlightTheWhole;
+        // mix them up as per varint spec while dropping the continuation bits
+        int result = wholeWithContinuations & 0x7F |
+                     (((wholeWithContinuations >> 8) & 0x7F) << 7) |
+                     (((wholeWithContinuations >> 16) & 0x7F) << 14) |
+                     (((wholeWithContinuations >> 24) & 0x7F) << 21);
+        return result;
+    }
+
+    private static int readRawVarint40(ByteBuf buffer, int wholeOrMore) {
+        byte lastByte;
+        if (buffer.readableBytes() == 4 || (lastByte = buffer.getByte(buffer.readerIndex() + 4)) < 0) {
+            throw new CorruptedFrameException("malformed varint.");
+        }
+        buffer.skipBytes(5);
+        // add it to wholeOrMore
+        return wholeOrMore & 0x7F |
+               (((wholeOrMore >> 8) & 0x7F) << 7) |
+               (((wholeOrMore >> 16) & 0x7F) << 14) |
+               (((wholeOrMore >> 24) & 0x7F) << 21) |
+               (lastByte << 28);
+    }
+
+    private static int readRawVarint24(ByteBuf buffer) {
         if (!buffer.isReadable()) {
             return 0;
         }
         buffer.markReaderIndex();
+
         byte tmp = buffer.readByte();
         if (tmp >= 0) {
             return tmp;
-        } else {
-            int result = tmp & 127;
-            if (!buffer.isReadable()) {
-                buffer.resetReaderIndex();
-                return 0;
-            }
-            if ((tmp = buffer.readByte()) >= 0) {
-                result |= tmp << 7;
-            } else {
-                result |= (tmp & 127) << 7;
-                if (!buffer.isReadable()) {
-                    buffer.resetReaderIndex();
-                    return 0;
-                }
-                if ((tmp = buffer.readByte()) >= 0) {
-                    result |= tmp << 14;
-                } else {
-                    result |= (tmp & 127) << 14;
-                    if (!buffer.isReadable()) {
-                        buffer.resetReaderIndex();
-                        return 0;
-                    }
-                    if ((tmp = buffer.readByte()) >= 0) {
-                        result |= tmp << 21;
-                    } else {
-                        result |= (tmp & 127) << 21;
-                        if (!buffer.isReadable()) {
-                            buffer.resetReaderIndex();
-                            return 0;
-                        }
-                        result |= (tmp = buffer.readByte()) << 28;
-                        if (tmp < 0) {
-                            throw new CorruptedFrameException("malformed varint.");
-                        }
-                    }
-                }
-            }
-            return result;
         }
+        int result = tmp & 127;
+        if (!buffer.isReadable()) {
+            buffer.resetReaderIndex();
+            return 0;
+        }
+        if ((tmp = buffer.readByte()) >= 0) {
+            return result | tmp << 7;
+        }
+        result |= (tmp & 127) << 7;
+        if (!buffer.isReadable()) {
+            buffer.resetReaderIndex();
+            return 0;
+        }
+        if ((tmp = buffer.readByte()) >= 0) {
+            return result | tmp << 14;
+        }
+        return result | (tmp & 127) << 14;
     }
 }
