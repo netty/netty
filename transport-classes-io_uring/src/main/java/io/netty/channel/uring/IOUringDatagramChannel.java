@@ -100,7 +100,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
     }
 
     private IOUringDatagramChannel(LinuxSocket fd, boolean active) {
-        // Always use a blocking fd and so make use of fast-pool.
+        // Always use a blocking fd and so make use of fast-poll.
         super(null, LinuxSocket.makeBlocking(fd), active);
         config = new IOUringDatagramChannelConfig(this);
     }
