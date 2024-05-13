@@ -21,5 +21,5 @@ import io.netty.channel.IoHandle;
  * {@link IoHandle} implementation for io_uring.
  */
 public interface IOUringIoHandle extends IoHandle {
-
+    // Marker interface.
 }

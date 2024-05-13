@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Objects.requireNonNull;
 
@@ -59,7 +58,6 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
     private final long eventfdReadBuf;
 
     private long eventfdReadSubmitted;
-    private final AtomicInteger opsId = new AtomicInteger(Short.MIN_VALUE - 1);
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
     private boolean closeCompleted;
@@ -411,19 +409,6 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
      */
     byte[] inet6AddressArray() {
         return inet6AddressArray;
-    }
-
-    // This method is thread-safe as it is called from IOUringIoRegistration which must be thread-safe.
-    short nextOpsId() {
-        for (;;) {
-            int id = opsId.incrementAndGet();
-            if (id > Short.MAX_VALUE) {
-                // The id is too large as it will not fit in a short. Let's reset and increment again.
-                opsId.set(Short.MIN_VALUE - 1);
-            } else if (id != 0) {
-                return (short) id;
-            }
-        }
     }
 
     /**

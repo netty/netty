@@ -218,7 +218,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
                 int fd = fd().intValue();
                 IOUringIoRegistration registration = registration();
                 IOUringIoOps ops = IOUringIoOps.newWritev(fd, 0, 0, iovArray.memoryAddress(offset),
-                        iovArray.count() - offset, registration.id(), registration.nextOpsId());
+                        iovArray.count() - offset, registration.id(), nextOpsId());
                 long id = ops.udata();
                 byte opCode = ops.opcode();
                 registration.submit(ops);
@@ -244,7 +244,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             IOUringIoRegistration registration = registration();
             IOUringIoOps ops = IOUringIoOps.newWrite(fd, 0, 0,
                     buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(),
-                    registration.id(), registration.nextOpsId());
+                    registration.id(), nextOpsId());
             long id = ops.udata();
             byte opCode = ops.opcode();
             registration.submit(ops);
@@ -274,7 +274,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             // transports.
             IOUringIoOps ops = IOUringIoOps.newRecv(fd, 0, first ? 0 : Native.MSG_DONTWAIT,
                     byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(),
-                    registration.id(), registration.nextOpsId());
+                    registration.id(), nextOpsId());
             long id = ops.udata();
             registration.submit(ops);
             readId = id;

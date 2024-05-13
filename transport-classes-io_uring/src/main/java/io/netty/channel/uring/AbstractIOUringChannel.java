@@ -80,6 +80,8 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private static final int READ_SCHEDULED = 1 << 5;
     private static final int CONNECT_SCHEDULED = 1 << 6;
 
+    private short opsId = Short.MIN_VALUE;
+
     private long pollInId;
     private long pollOutId;
     private long pollRdhupId;
@@ -142,6 +144,15 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         // See https://github.com/netty/netty/issues/2359
         this.remote = remote;
         this.local = fd.localAddress();
+    }
+
+    /**
+     * Returns the next id that should be used when submitting {@link IOUringIoOps}.
+     *
+     * @return  opsId
+     */
+    protected final short nextOpsId() {
+        return opsId++;
     }
 
     public boolean isOpen() {
@@ -987,7 +998,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IOUringIoRegistration registration = registration();
         IOUringIoOps ops = IOUringIoOps.newConnect(
-                fd, 0, remoteAddressMemoryAddress, registration.id(), registration.nextOpsId());
+                fd, 0, remoteAddressMemoryAddress, registration.id(), nextOpsId());
         long id = ops.udata();
         registration.submit(ops);
         connectId = id;

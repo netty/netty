@@ -143,7 +143,7 @@ public final class IOUringIoOps implements IoOps {
     }
 
     /**
-     * Return the full udata that is a combination of {@link #fd()}, {@link #opcode()} and {@link #data()}.
+     * Return the full udata that is a combination of {@code id}, {@link #opcode()} and {@link #data()}.
      *
      * @return  udata.
      */

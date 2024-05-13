@@ -38,15 +38,4 @@ public interface IOUringIoRegistration extends IoRegistration {
      * @return  the id.
      */
     int id();
-
-    /**
-     * Return the next id that can be used to "tag" an {@link IOUringIoOps} via the {@link IOUringIoOps#udata()}.
-     * This id can then be used to cancel the operation via
-     * {@link IOUringIoOps#newAsyncCancel(int, int, long, int, short)}.
-     *
-     * @return  the next id to use.
-     */
-    default short nextOpsId() {
-        return ioHandler().nextOpsId();
-    }
 }
