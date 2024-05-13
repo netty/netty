@@ -18,7 +18,7 @@ package io.netty.channel.uring;
 import io.netty.channel.IoEvent;
 
 /**
- * {@link IoEvent} for io_uring.
+ * {@link IoEvent} that will be produced as an result of a {@link IOUringIoOps}.
  */
 public final class IOUringIoEvent implements IoEvent {
 
@@ -45,7 +45,7 @@ public final class IOUringIoEvent implements IoEvent {
         this.data = data;
     }
 
-    // Use internally to reduce object creation
+    // Used internally to reduce object creation
     void update(int res, int flags, byte opcode, int id, short data) {
         this.res = res;
         this.flags = flags;
@@ -73,7 +73,7 @@ public final class IOUringIoEvent implements IoEvent {
     }
 
     /**
-     * Returns the op code of the {@link IOUringIoOps#opcode()}.
+     * Returns the op code of the {@link IOUringIoOps}.
      *
      * @return  opcode
      */
@@ -82,7 +82,7 @@ public final class IOUringIoEvent implements IoEvent {
     }
 
     /**
-     * Returns the data that is passed as part of {@link IOUringIoOps#data()}.
+     * Returns the data that is passed as part of {@link IOUringIoOps}.
      *
      * @return  data.
      */
@@ -91,7 +91,7 @@ public final class IOUringIoEvent implements IoEvent {
     };
 
     /**
-     * Returns the id that is passed as part of {@link IOUringIoOps#id()}.
+     * Returns the id that is passed as part of {@link IOUringIoOps}.
      *
      * @return  id.
      */

@@ -42,9 +42,9 @@ public class IOUringSocketTestPermutation extends SocketTestPermutation {
     static final IOUringSocketTestPermutation INSTANCE = new IOUringSocketTestPermutation();
 
     static final EventLoopGroup IO_URING_BOSS_GROUP = new MultiThreadIoEventLoopGroup(
-            BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IOUringHandler.newFactory());
+            BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IOUringIoHandler.newFactory());
     static final EventLoopGroup IO_URING_WORKER_GROUP = new MultiThreadIoEventLoopGroup(
-            WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true), IOUringHandler.newFactory());
+            WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true), IOUringIoHandler.newFactory());
 
     @Override
     public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {

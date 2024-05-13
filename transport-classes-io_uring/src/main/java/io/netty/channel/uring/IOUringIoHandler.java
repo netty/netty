@@ -43,8 +43,8 @@ import static java.util.Objects.requireNonNull;
 /**
  * {@link IoHandler} which is implemented in terms of the Linux-specific {@code io_uring} API.
  */
-public final class IOUringHandler implements IoHandler, CompletionCallback {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringHandler.class);
+public final class IOUringIoHandler implements IoHandler {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IOUringIoHandler.class);
     private static final short RING_CLOSE = 1;
 
     private final RingBuffer ringBuffer;
@@ -57,6 +57,13 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
     private final FileDescriptor eventfd;
     private final long eventfdReadBuf;
 
+    private final CompletionCallback completionCallback = new CompletionCallback() {
+        @Override
+        public void handle(int res, int flags, int id, byte op, short data) {
+            IOUringIoHandler.this.handle(res, flags, id, op, data);
+        }
+    };
+
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
@@ -67,7 +74,7 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
     private static final int EVENTFD_ID = Integer.MAX_VALUE;
     private static final int RINGFD_ID = EVENTFD_ID - 1;
 
-    IOUringHandler(RingBuffer ringBuffer) {
+    IOUringIoHandler(RingBuffer ringBuffer) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IOUring.ensureAvailability();
         this.ringBuffer = requireNonNull(ringBuffer, "ringBuffer");
@@ -91,11 +98,10 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
         } else {
             submissionQueue.submit();
         }
-        return completionQueue.process(this);
+        return completionQueue.process(completionCallback);
     }
 
-    @Override
-    public void handle(int res, int flags, int id, byte op, short data) {
+    void handle(int res, int flags, int id, byte op, short data) {
         if (id == EVENTFD_ID) {
             handleEventFdRead();
             return;
@@ -106,11 +112,6 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
             }
             return;
         }
-        if (op == Native.IORING_OP_ASYNC_CANCEL) {
-            // We don't care about the result of async cancels; they are best-effort.
-            return;
-        }
-
         DefaultIoUringIoRegistration registration = registrations.get(id);
         if (registration == null) {
             logger.debug("ignoring {} completion for unknown registration (id={}, res={})",
@@ -156,7 +157,7 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
                 submissionQueue.submit();
             }
             if (completionQueue.hasCompletions()) {
-                completionQueue.process(this);
+                completionQueue.process(completionCallback);
             }
         }
     }
@@ -178,7 +179,7 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
         submissionQueue.link(false);
         submissionQueue.addLinkTimeout(ringBuffer.fd(), TimeUnit.MILLISECONDS.toNanos(200), RINGFD_ID, (short) 0);
         submissionQueue.submitAndWait();
-        completionQueue.process(this);
+        completionQueue.process(completionCallback);
         completeRingClose();
     }
 
@@ -208,7 +209,7 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
                     if (id == EVENTFD_ID) {
                         eventFdDrained = true;
                     }
-                    IOUringHandler.this.handle(res, flags, id, op, data);
+                    IOUringIoHandler.this.handle(res, flags, id, op, data);
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
@@ -320,8 +321,8 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
         }
 
         @Override
-        public IOUringHandler ioHandler() {
-            return IOUringHandler.this;
+        public IOUringIoHandler ioHandler() {
+            return IOUringIoHandler.this;
         }
 
         @Override
@@ -417,18 +418,18 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
     }
 
     /**
-     * Create a new {@link IoHandlerFactory} that can be used to create {@link IOUringHandler}s.
+     * Create a new {@link IoHandlerFactory} that can be used to create {@link IOUringIoHandler}s.
      *
      * @return factory
      */
     public static IoHandlerFactory newFactory() {
         IOUring.ensureAvailability();
-        return () -> new IOUringHandler(Native.createRingBuffer());
+        return () -> new IOUringIoHandler(Native.createRingBuffer());
     }
 
     /**
-     * Create a new {@link IoHandlerFactory} that can be used to create {@link IOUringHandler}s.
-     * Each {@link IOUringHandler} will use a ring of size {@code ringSize}.
+     * Create a new {@link IoHandlerFactory} that can be used to create {@link IOUringIoHandler}s.
+     * Each {@link IOUringIoHandler} will use a ring of size {@code ringSize}.
      *
      * @param  ringSize     the size of the ring.
      * @return              factory
@@ -436,6 +437,6 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
     public static IoHandlerFactory newFactory(int ringSize) {
         IOUring.ensureAvailability();
         ObjectUtil.checkPositive(ringSize, "ringSize");
-        return () -> new IOUringHandler(Native.createRingBuffer());
+        return () -> new IOUringIoHandler(Native.createRingBuffer());
     }
 }

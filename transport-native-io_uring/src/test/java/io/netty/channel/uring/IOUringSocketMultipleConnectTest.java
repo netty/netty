@@ -44,7 +44,7 @@ public class IOUringSocketMultipleConnectTest extends SocketMultipleConnectTest 
             EventLoopGroup group = comboFactory.newClientInstance().config().group();
             if (group instanceof IoEventLoopGroup) {
                 IoEventLoopGroup ioGroup = (IoEventLoopGroup) group;
-                if (ioGroup.isIoType(NioIoHandler.class) || ioGroup.isIoType(IOUringHandler.class)) {
+                if (ioGroup.isIoType(NioIoHandler.class) || ioGroup.isIoType(IOUringIoHandler.class)) {
                     factories.add(comboFactory);
                 }
             }

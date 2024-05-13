@@ -128,11 +128,13 @@ final class SubmissionQueue {
             }
         }
         long sqe = submissionQueueArrayAddress + (tail++ & ringMask) * SQE_SIZE;
-        return setData(sqe, op, flags, ioPrio, rwFlags, fd,
-                bufferAddress, length, offset, UserData.encode(id, op, data));
+        long udata = UserData.encode(id, op, data);
+        setData(sqe, op, flags, ioPrio, rwFlags, fd,
+                bufferAddress, length, offset, udata);
+        return udata;
     }
 
-    long enqueueSqe(byte op, int flags, short ioPrio, int rwFlags, int fd,
+    void enqueueSqe(byte op, int flags, short ioPrio, int rwFlags, int fd,
                     long bufferAddress, int length, long offset, long udata) {
         int pending = tail - head;
         if (pending == ringEntries) {
@@ -143,10 +145,10 @@ final class SubmissionQueue {
             }
         }
         long sqe = submissionQueueArrayAddress + (tail++ & ringMask) * SQE_SIZE;
-        return setData(sqe, op, flags, ioPrio, rwFlags, fd, bufferAddress, length, offset, udata);
+        setData(sqe, op, flags, ioPrio, rwFlags, fd, bufferAddress, length, offset, udata);
     }
 
-    private long setData(long sqe, byte op, int flags, short ioPrio, int rwFlags, int fd, long bufferAddress,
+    private void setData(long sqe, byte op, int flags, short ioPrio, int rwFlags, int fd, long bufferAddress,
                          int length, long offset, long udata) {
         //set sqe(submission queue) properties
 
@@ -170,7 +172,6 @@ final class SubmissionQueue {
                         ringFd, Native.opToStr(op), fd, length, offset, udata);
             }
         }
-        return udata;
     }
 
     @Override

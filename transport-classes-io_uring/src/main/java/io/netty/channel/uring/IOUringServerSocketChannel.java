@@ -47,12 +47,13 @@ public final class IOUringServerSocketChannel extends AbstractIOUringServerChann
     @Override
     Channel newChildChannel(int fd, long acceptedAddressMemoryAddress, long acceptedAddressLengthMemoryAddress) {
         final InetSocketAddress address;
+        IOUringIoHandler handler = (IOUringIoHandler) registration().ioHandler();
         if (socket.isIpv6()) {
-            byte[] ipv6Array = registration().ioHandler().inet6AddressArray();
-            byte[] ipv4Array = registration().ioHandler().inet4AddressArray();
+            byte[] ipv6Array = handler.inet6AddressArray();
+            byte[] ipv4Array = handler.inet4AddressArray();
             address = SockaddrIn.readIPv6(acceptedAddressMemoryAddress, ipv6Array, ipv4Array);
         } else {
-            byte[] addressArray = registration().ioHandler().inet4AddressArray();
+            byte[] addressArray = handler.inet4AddressArray();
             address = SockaddrIn.readIPv4(acceptedAddressMemoryAddress, addressArray);
         }
         return new IOUringSocketChannel(this, new LinuxSocket(fd), address);

@@ -17,7 +17,7 @@ package io.netty.channel.uring.example;
 
 import io.netty.channel.Channel;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.uring.IOUringHandler;
+import io.netty.channel.uring.IOUringIoHandler;
 import io.netty.channel.uring.IOUringServerSocketChannel;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
@@ -32,8 +32,8 @@ public class EchoIOUringServer {
     private static final int PORT = Integer.parseInt(System.getProperty("port", "8080"));
 
     public static void main(String []args) throws Exception {
-        EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, IOUringHandler.newFactory());
-        EventLoopGroup workerGroup = new MultiThreadIoEventLoopGroup(1, IOUringHandler.newFactory());
+        EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, IOUringIoHandler.newFactory());
+        EventLoopGroup workerGroup = new MultiThreadIoEventLoopGroup(1, IOUringIoHandler.newFactory());
         final EchoIOUringServerHandler serverHandler = new EchoIOUringServerHandler();
         try {
             ServerBootstrap b = new ServerBootstrap();

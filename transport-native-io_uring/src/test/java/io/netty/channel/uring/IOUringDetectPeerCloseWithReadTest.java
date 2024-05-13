@@ -33,7 +33,7 @@ public class IOUringDetectPeerCloseWithReadTest extends DetectPeerCloseWithoutRe
 
     @Override
     protected EventLoopGroup newGroup() {
-        return new MultiThreadIoEventLoopGroup(2, IOUringHandler.newFactory());
+        return new MultiThreadIoEventLoopGroup(2, IOUringIoHandler.newFactory());
     }
 
     @Override

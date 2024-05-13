@@ -18,7 +18,7 @@ package io.netty.channel.uring;
 import io.netty.channel.IoOps;
 
 /**
- * {@link IoOps} for
+ * {@link IoOps} for implementation for
  * <a href="https://github.com/axboe/liburing/blob/liburing-2.6/src/include/liburing/io_uring.h">IO_uring</a>.
  */
 public final class IOUringIoOps implements IoOps {
@@ -45,7 +45,7 @@ public final class IOUringIoOps implements IoOps {
      * @param length        the length
      * @param offset        the offset.
      * @param id            the id that to map the resulting {@link IOUringIoEvent}.
-     * @param data         the user data that will be passed back on completion.
+     * @param data          the user data that will be passed back on completion.
      */
     public IOUringIoOps(byte opcode, int flags, short ioPrio, int fd, int rwFlags, long bufferAddress,
                         int length, long offset, int id, short data) {

@@ -448,11 +448,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
 
             if (ioState == 0 && closed) {
-                freeResourcedNow(reg);
+                freeResourcesNow(reg);
             }
         }
 
-        protected void freeResourcedNow(IOUringIoRegistration reg) {
+        /**
+         * Free all resources now. No new IO will be submitted for this channel via io_uring
+         *
+         * @param reg   the {@link IOUringIoRegistration}.
+         */
+        protected void freeResourcesNow(IOUringIoRegistration reg) {
             freeMsgHdrArray();
             freeRemoteAddressMemory();
             reg.cancel();

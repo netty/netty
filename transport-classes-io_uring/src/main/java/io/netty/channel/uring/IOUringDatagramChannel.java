@@ -352,7 +352,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
         connected = false;
     }
 
-    final class IOUringDatagramChannelUnsafe extends AbstractUringUnsafe {
+    private final class IOUringDatagramChannelUnsafe extends AbstractUringUnsafe {
         private final WriteProcessor writeProcessor = new WriteProcessor();
 
         private ByteBuf readBuffer;
@@ -395,6 +395,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
                 pipeline.fireExceptionCaught(t);
             }
         }
+
         private void recvmsgComplete(ChannelPipeline pipeline, IOUringRecvByteAllocatorHandle allocHandle,
                                       ByteBuf byteBuf, int res, int flags, int idx, int outstanding)
                 throws IOException {
@@ -410,7 +411,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
                 if (hdr.hasPort(IOUringDatagramChannel.this)) {
                     allocHandle.incMessagesRead(1);
                     DatagramPacket packet = hdr.read(
-                            IOUringDatagramChannel.this, registration().ioHandler(), byteBuf, res);
+                            IOUringDatagramChannel.this, (IOUringIoHandler) registration().ioHandler(), byteBuf, res);
                     pipeline.fireChannelRead(packet);
                 }
             }
@@ -604,10 +605,10 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
         }
 
         @Override
-        protected void freeResourcedNow(IOUringIoRegistration reg) {
+        protected void freeResourcesNow(IOUringIoRegistration reg) {
             sendmsgHdrs.release();
             recvmsgHdrs.release();
-            super.freeResourcedNow(reg);
+            super.freeResourcesNow(reg);
         }
     }
 

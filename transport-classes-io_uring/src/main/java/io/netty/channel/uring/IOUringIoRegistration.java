@@ -23,16 +23,20 @@ import io.netty.channel.IoRegistration;
  */
 public interface IOUringIoRegistration extends IoRegistration {
 
+    /**
+     * Submit a {@link IOUringIoOps} that will produce an entry on the used submission queue.
+     *
+     * @param   ops ops.
+     * @return  the u_data of the {@link IOUringIoOps}. This can be used to cancel a previous submitted
+     * {@link IOUringIoOps}.
+     */
     @Override
     long submit(IoOps ops);
 
     void cancel();
 
-    @Override
-    IOUringHandler ioHandler();
-
     /**
-     * Return the id of this {@link IOUringIoRegistration}. This id should be used to when creating {@link IOUringIoOps}
+     * Return the id of this {@link IOUringIoRegistration}. This id MUST be used to when creating {@link IOUringIoOps}
      * that will be submitted to this {@link IOUringIoRegistration} via {@link IOUringIoRegistration#submit(IoOps)}.
      *
      * @return  the id.
