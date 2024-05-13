@@ -207,8 +207,6 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
             FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
             Thread currentThread = Thread.currentThread();
             if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
-                // this is going to exclude virtual threads,
-                // but sadly even custom event executor which are not FastThreadLocalThreads
                 Object mag = threadLocalMagazine.get();
                 if (mag != NO_MAGAZINE) {
                     return ((Magazine) mag).allocate(size, sizeBucket);
@@ -295,8 +293,6 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 try {
                     mag.ownerEventExecutor.execute(() -> {
                         threadLocalMagazine.remove();
-                        // this is to prevent that a subsequent request will try to create a new Magazine
-                        threadLocalMagazine.set(NO_MAGAZINE);
                         drainCloseCentralQueue();
                     });
                 } catch (Throwable ignore) {
@@ -393,7 +389,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
             int percentileSize = 1 << sizeBucket + HISTO_MIN_BUCKET_SHIFT;
             int prefChunkSize = Math.max(percentileSize * BUFS_PER_CHUNK, MIN_CHUNK_SIZE);
             localPrefChunkSize = prefChunkSize;
-            if (ownerEventExecutor != null) {
+            if (ownerEventExecutor == null) {
                 for (Magazine mag : parent.magazines) {
                     prefChunkSize = Math.max(prefChunkSize, mag.localPrefChunkSize);
                 }
