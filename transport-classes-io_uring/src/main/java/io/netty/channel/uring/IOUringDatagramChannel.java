@@ -387,7 +387,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             ByteBuf byteBuf = this.readBuffer;
             assert byteBuf != null;
             try {
-                recvmsgComplete(pipeline, allocHandle, byteBuf, res, data, outstanding);
+                recvmsgComplete(pipeline, allocHandle, byteBuf, res, flags, data, outstanding);
             } catch (Throwable t) {
                 if (connected && t instanceof NativeIoException) {
                     t = translateForConnected((NativeIoException) t);
@@ -396,7 +396,8 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             }
         }
         private void recvmsgComplete(ChannelPipeline pipeline, IOUringRecvByteAllocatorHandle allocHandle,
-                                      ByteBuf byteBuf, int res, int idx, int outstanding) throws IOException {
+                                      ByteBuf byteBuf, int res, int flags, int idx, int outstanding)
+                throws IOException {
             MsgHdrMemory hdr = recvmsgHdrs.hdr(idx);
             if (res < 0) {
                 if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
@@ -425,7 +426,13 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
 
                 if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
                     if (allocHandle.lastBytesRead() > 0 &&
-                            allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER)) {
+                            allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER) &&
+                            // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
+                            // trying to schedule a read. If it's supported and not part of the flags we know for sure
+                            // that the next read (which would be using Native.MSG_DONTWAIT) will complete without
+                            // be able to read any data. This is useless work and we can skip it.
+                            (!IOUring.isIOUringCqeFSockNonEmptySupported() ||
+                                    (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
                         // Let's schedule another read.
                         scheduleRead(false);
                     } else {
