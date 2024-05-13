@@ -65,7 +65,6 @@ final class SubmissionQueue {
     private final long timeoutMemoryAddress;
     private final IntSupplier completionCount;
     private int numHandledFds;
-    private boolean link;
     private int head;
     private int tail;
 
@@ -107,14 +106,6 @@ final class SubmissionQueue {
     void decrementHandledFds() {
         numHandledFds--;
         assert numHandledFds >= 0;
-    }
-
-    void link(boolean link) {
-        this.link = link;
-    }
-
-    private int flags() {
-        return link ? Native.IOSQE_LINK : 0;
     }
 
     long enqueueSqe(byte op, int flags, short ioPrio, int rwFlags, int fd,
@@ -208,7 +199,7 @@ final class SubmissionQueue {
     }
 
     long addCancel(int fd, long sqeToCancel, int id) {
-        return enqueueSqe(Native.IORING_OP_ASYNC_CANCEL, flags(), (short) 0, 0, fd, sqeToCancel, 0, 0, id, (short) 0);
+        return enqueueSqe(Native.IORING_OP_ASYNC_CANCEL, 0, (short) 0, 0, fd, sqeToCancel, 0, 0, id, (short) 0);
     }
 
     int submit() {

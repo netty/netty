@@ -173,10 +173,8 @@ public final class IOUringIoHandler implements IoHandler {
             submissionQueue.submit();
         }
         // Try to drain all the IO from the queue first...
-        submissionQueue.link(true);
         submissionQueue.addNop(ringBuffer.fd(), Native.IOSQE_IO_DRAIN, RINGFD_ID, (short) 0);
         // ... but only wait for 200 milliseconds on this
-        submissionQueue.link(false);
         submissionQueue.addLinkTimeout(ringBuffer.fd(), TimeUnit.MILLISECONDS.toNanos(200), RINGFD_ID, (short) 0);
         submissionQueue.submitAndWait();
         completionQueue.process(completionCallback);
