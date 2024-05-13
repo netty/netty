@@ -152,7 +152,13 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
      * @return  opsId
      */
     protected final short nextOpsId() {
-        return opsId++;
+        short id = opsId++;
+
+        // We use 0 for "none".
+        if (id == 0) {
+            id = opsId++;
+        }
+        return id;
     }
 
     public boolean isOpen() {
@@ -257,7 +263,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         if (registration != null) {
             if (socket.markClosed()) {
                 int fd = fd().intValue();
-                IOUringIoOps ops = IOUringIoOps.newClose(fd, 0, registration.id(), (short) 0);
+                IOUringIoOps ops = IOUringIoOps.newClose(fd, 0, registration.id(), nextOpsId());
                 registration.submit(ops);
             }
         } else {
@@ -348,9 +354,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         IOUringIoRegistration registration = registration();
         IOUringIoOps ops = IOUringIoOps.newPollAdd(
                 fd, 0, Native.POLLOUT, registration.id(), (short) Native.POLLOUT);
-        long id = ops.udata();
-        registration.submit(ops);
-        pollOutId = id;
+        pollOutId = registration.submit(ops);
         ioState |= POLL_OUT_SCHEDULED;
     }
 
@@ -360,9 +364,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         IOUringIoRegistration registration = registration();
         IOUringIoOps ops = IOUringIoOps.newPollAdd(
                 fd, 0, Native.POLLRDHUP, registration.id(), (short) Native.POLLRDHUP);
-        long id = ops.udata();
-        registration.submit(ops);
-        pollRdhupId = id;
+        pollRdhupId = registration.submit(ops);
         ioState |= POLL_RDHUP_SCHEDULED;
     }
 
@@ -639,9 +641,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             IOUringIoRegistration registration = registration();
             IOUringIoOps ops = IOUringIoOps.newPollAdd(
                     fd, 0, Native.POLLIN, registration.id(), (short) Native.POLLIN);
-            long id = ops.udata();
-            registration.submit(ops);
-            pollInId = id;
+            pollInId = registration.submit(ops);
             ioState |= POLL_IN_SCHEDULED;
         }
 
@@ -943,9 +943,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                     IOUringIoRegistration registration = registration();
                     IOUringIoOps ops = IOUringIoOps.newSendmsg(fd, 0, Native.MSG_FASTOPEN,
                             hdr.address(), registration.id(), hdr.idx());
-                    long id = ops.udata();
-                    registration.submit(ops);
-                    connectId = id;
+                    connectId = registration.submit(ops);
                 } else {
                     submitConnect(inetSocketAddress);
                 }
@@ -999,9 +997,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         IOUringIoRegistration registration = registration();
         IOUringIoOps ops = IOUringIoOps.newConnect(
                 fd, 0, remoteAddressMemoryAddress, registration.id(), nextOpsId());
-        long id = ops.udata();
-        registration.submit(ops);
-        connectId = id;
+        connectId = registration.submit(ops);
     }
 
     @Override

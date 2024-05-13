@@ -24,7 +24,7 @@ import io.netty.channel.IoRegistration;
 public interface IOUringIoRegistration extends IoRegistration {
 
     @Override
-    void submit(IoOps ops);
+    long submit(IoOps ops);
 
     void cancel();
 

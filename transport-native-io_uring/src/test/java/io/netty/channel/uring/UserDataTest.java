@@ -30,7 +30,7 @@ public class UserDataTest {
                     final byte expectedOp = op;
                     final short expectedData = (short) data;
                     long udata = UserData.encode(expectedFd, expectedOp, expectedData);
-                    UserData.decode(0, 0, udata, (res, flags, actualOp, actualFd, actualData) -> {
+                    UserData.decode(0, 0, udata, (res, flags, actualFd, actualOp, actualData) -> {
                         assertEquals(expectedFd, actualFd);
                         assertEquals(expectedOp, actualOp);
                         assertEquals(expectedData, actualData);

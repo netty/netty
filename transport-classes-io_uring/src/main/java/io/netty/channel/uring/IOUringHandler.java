@@ -95,7 +95,7 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
     }
 
     @Override
-    public void handle(int res, int flags, byte op, int id, short data) {
+    public void handle(int res, int flags, int id, byte op, short data) {
         if (id == EVENTFD_ID) {
             handleEventFdRead();
             return;
@@ -204,11 +204,11 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
                 boolean eventFdDrained;
 
                 @Override
-                public void handle(int res, int flags, byte op, int id, short data) {
+                public void handle(int res, int flags, int id, byte op, short data) {
                     if (id == EVENTFD_ID) {
                         eventFdDrained = true;
                     }
-                    IOUringHandler.this.handle(res, flags, op, id, data);
+                    IOUringHandler.this.handle(res, flags, id, op, data);
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
@@ -296,16 +296,21 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
         }
 
         @Override
-        public void submit(IoOps ops) {
+        public long submit(IoOps ops) {
             IOUringIoOps ioOps = (IOUringIoOps) ops;
+            int decodedId = UserData.decodeId(ioOps.udata());
+            if (decodedId != id) {
+                throw new IllegalArgumentException("IoUringIOps id(" + decodedId + ") does not match: " + id);
+            }
             if (!isValid()) {
-                return;
+                return ioOps.udata();
             }
             if (eventLoop.inEventLoop()) {
                 submit0(ioOps);
             } else {
                 eventLoop.execute(() -> submit0(ioOps));
             }
+            return ioOps.udata();
         }
 
         private void submit0(IOUringIoOps ioOps) {

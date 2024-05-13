@@ -493,8 +493,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             // readComplete0(...)
             IOUringIoOps ops = IOUringIoOps.newRecvmsg(fd, 0, msgFlags, msgHdrMemory.address(),
                     registration.id(), msgHdrMemory.idx());
-            long id = ops.udata();
-            registration.submit(ops);
+            long id = registration.submit(ops);
             recvmsgHdrs.setId(msgHdrMemory.idx(), id);
             return true;
         }
@@ -592,8 +591,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
             IOUringIoRegistration registration = registration();
             IOUringIoOps ops = IOUringIoOps.newSendmsg(fd, 0, msgFlags, hdr.address(), registration.id(), hdr.idx());
-            long id = ops.udata();
-            registration.submit(ops);
+            long id = registration.submit(ops);
             sendmsgHdrs.setId(hdr.idx(), id);
             return true;
         }

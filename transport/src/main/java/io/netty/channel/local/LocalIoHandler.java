@@ -115,7 +115,7 @@ public final class LocalIoHandler implements IoHandler {
         }
 
         @Override
-        public void submit(IoOps ops) {
+        public long submit(IoOps ops) {
             throw new UnsupportedOperationException();
         }
 

@@ -34,7 +34,8 @@ public final class IOUringIoEvent implements IoEvent {
      * @param res       the result.
      * @param flags     the flags
      * @param opcode    the op code
-     * @param data      the user data that was give as part of the submission.
+     * @param id        the id that was given as part of the submission.
+     * @param data      the user data that was given as part of the submission.
      */
     public IOUringIoEvent(int res, int flags, byte opcode, int id, short data) {
         this.res = res;

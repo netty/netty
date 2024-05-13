@@ -344,8 +344,10 @@ public final class NioIoHandler implements IoHandler {
         }
 
         @Override
-        public void submit(IoOps ops) {
-            key.interestOps(cast(ops).value);
+        public long submit(IoOps ops) {
+            int v = cast(ops).value;
+            key.interestOps(v);
+            return v;
         }
 
         @Override
