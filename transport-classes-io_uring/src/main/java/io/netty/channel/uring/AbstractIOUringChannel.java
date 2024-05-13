@@ -433,10 +433,14 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
 
             if (ioState == 0 && closed) {
-                freeMsgHdrArray();
-                freeRemoteAddressMemory();
-                reg.cancel();
+                freeResourcedNow(reg);
             }
+        }
+
+        protected void freeResourcedNow(IOUringIoRegistration reg) {
+            freeMsgHdrArray();
+            freeRemoteAddressMemory();
+            reg.cancel();
         }
 
         private void handleDelayedClosed() {
@@ -913,16 +917,16 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                     }
                 }
                 if (initialData != null) {
-                    AbstractIOUringChannel.this.msgHdrMemoryArray = new MsgHdrMemoryArray(1);
+                    AbstractIOUringChannel.this.msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
                     MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
                     hdr.write(socket, inetSocketAddress, initialData.memoryAddress(),
                             initialData.readableBytes(), (short) 0);
 
                     IOUringIoRegistration registration = registration();
                     IOUringIoOps ops = IOUringIoOps.newSendmsg(fd().intValue(), 0, Native.MSG_FASTOPEN,
-                            hdr.address(), registration.nextOpsId());
+                            hdr.address(), hdr.idx());
                     long id = ops.udata();
-                    registration().submit(ops);
+                    registration.submit(ops);
                     connectId = id;
                 } else {
                     submitConnect(inetSocketAddress);

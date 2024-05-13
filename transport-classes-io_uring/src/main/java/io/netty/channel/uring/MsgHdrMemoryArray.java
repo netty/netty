@@ -15,16 +15,24 @@
  */
 package io.netty.channel.uring;
 
+import java.util.Arrays;
+
 final class MsgHdrMemoryArray {
     private int idx;
     private final MsgHdrMemory[] hdrs;
     private final int capacity;
+    private final long[] ids;
 
-    MsgHdrMemoryArray(int capacity) {
+    static final long NO_ID = -1;
+
+    MsgHdrMemoryArray(short capacity) {
+        assert capacity >= 0;
         this.capacity = capacity;
         hdrs = new MsgHdrMemory[capacity];
+        ids = new long[capacity];
         for (int i = 0; i < hdrs.length; i++) {
-            hdrs[i] = new MsgHdrMemory(i);
+            hdrs[i] = new MsgHdrMemory((short) i);
+            ids[i] = NO_ID;
         }
     }
 
@@ -39,7 +47,16 @@ final class MsgHdrMemoryArray {
         return hdrs[idx];
     }
 
+    long id(int idx) {
+        return ids[idx];
+    }
+
+    void setId(int idx, long id) {
+        ids[idx] = id;
+    }
+
     void clear() {
+        Arrays.fill(ids, 0, idx, NO_ID);
         idx = 0;
     }
 

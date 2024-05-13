@@ -16,7 +16,6 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.IoEventLoop;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.internal.PlatformDependent;
 
@@ -24,10 +23,10 @@ import java.net.InetSocketAddress;
 
 final class MsgHdrMemory {
     private final long memory;
-    private final int idx;
+    private final short idx;
     private final long cmsgDataAddr;
 
-    MsgHdrMemory(int idx) {
+    MsgHdrMemory(short idx) {
         this.idx = idx;
         int size = Native.SIZEOF_MSGHDR + Native.SIZEOF_SOCKADDR_STORAGE + Native.SIZEOF_IOVEC + Native.CMSG_SPACE;
         memory = PlatformDependent.allocateMemory(size);
@@ -85,7 +84,7 @@ final class MsgHdrMemory {
         return new DatagramPacket(slice.retain(), channel.localAddress(), sender);
     }
 
-    int idx() {
+    short idx() {
         return idx;
     }
 
