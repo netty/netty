@@ -32,7 +32,7 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.*;
 
 
-public final class IOUringSocketChannelConfig extends DefaultChannelConfig implements SocketChannelConfig {
+final class IOUringSocketChannelConfig extends DefaultChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
 

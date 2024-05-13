@@ -32,7 +32,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Map;
 
-public final class IOUringDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
+final class IOUringDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
     private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
     private boolean activeOnOpen;
     private volatile int maxDatagramSize;

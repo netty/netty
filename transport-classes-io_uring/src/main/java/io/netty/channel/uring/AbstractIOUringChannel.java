@@ -163,9 +163,6 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         return socket;
     }
 
-    @Override
-    protected abstract AbstractUringUnsafe newUnsafe();
-
     AbstractUringUnsafe ioUringUnsafe() {
         return (AbstractUringUnsafe) unsafe();
     }

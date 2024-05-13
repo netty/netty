@@ -16,7 +16,9 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.ServerSocketChannelConfig;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -38,7 +40,7 @@ public final class IOUringServerSocketChannel extends AbstractIOUringServerChann
     }
 
     @Override
-    public IOUringServerSocketChannelConfig config() {
+    public ServerSocketChannelConfig config() {
         return config;
     }
 
@@ -70,8 +72,8 @@ public final class IOUringServerSocketChannel extends AbstractIOUringServerChann
     public void doBind(SocketAddress localAddress) throws Exception {
         super.doBind(localAddress);
         if (IOUring.isTcpFastOpenServerSideAvailable()) {
-            int fastOpen = config().getTcpFastopen();
-            if (fastOpen > 0) {
+            Integer fastOpen = config().getOption(ChannelOption.TCP_FASTOPEN);
+            if (fastOpen != null && fastOpen > 0) {
                 socket.setTcpFastOpen(fastOpen);
             }
         }

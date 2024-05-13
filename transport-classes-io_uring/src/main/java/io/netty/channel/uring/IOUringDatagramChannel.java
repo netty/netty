@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Errors;
@@ -256,7 +257,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
     }
 
     @Override
-    protected AbstractUringUnsafe newUnsafe() {
+    protected AbstractUnsafe newUnsafe() {
         return new IOUringDatagramChannelUnsafe();
     }
 
@@ -316,7 +317,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
     }
 
     @Override
-    public IOUringDatagramChannelConfig config() {
+    public DatagramChannelConfig config() {
         return config;
     }
 
@@ -497,7 +498,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
 
             int writable = byteBuf.writableBytes();
             allocHandle.attemptedBytesRead(writable);
-            int datagramSize = config().getMaxDatagramPayloadSize();
+            int datagramSize = ((IOUringDatagramChannelConfig) config()).getMaxDatagramPayloadSize();
 
             int numDatagram = datagramSize == 0 ? 1 : Math.max(1, byteBuf.writableBytes() / datagramSize);
 

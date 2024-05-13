@@ -18,6 +18,7 @@ package io.netty.channel.uring;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.SocketChannelConfig;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -41,7 +42,7 @@ public final class IOUringSocketChannel extends AbstractIOUringStreamChannel imp
     }
 
     @Override
-    public IOUringSocketChannelConfig config() {
+    public SocketChannelConfig config() {
         return config;
     }
 

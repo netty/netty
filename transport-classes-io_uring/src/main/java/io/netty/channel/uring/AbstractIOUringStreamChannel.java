@@ -32,7 +32,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.io.IOException;
-import java.util.concurrent.Executor;
 
 import static io.netty.channel.unix.Errors.ioResult;
 

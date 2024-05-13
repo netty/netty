@@ -201,86 +201,9 @@ final class SubmissionQueue {
                 timeoutMemoryAddress, 1, 0, extraData);
     }
 
-    long addPollIn(int fd) {
-        return addPoll(fd, Native.POLLIN);
-    }
-
-    long addPollRdHup(int fd) {
-        return addPoll(fd, Native.POLLRDHUP);
-    }
-
-    long addPollOut(int fd) {
-        return addPoll(fd, Native.POLLOUT);
-    }
-
-    private long addPoll(int fd, int pollMask) {
-        return enqueueSqe(Native.IORING_OP_POLL_ADD, 0, (short) 0, pollMask, fd,
-                0, 0, 0, (short) pollMask);
-    }
-
-    long addRecvmsg(int fd, long msgHdr, short extraData) {
-        // Use Native.MSG_DONTWAIT due a io_uring bug which did have it not respect non-blocking fds.
-        // See https://lore.kernel.org/io-uring/371592A7-A199-4F5C-A906-226FFC6CEED9@googlemail.com/T/#u
-        return enqueueSqe(Native.IORING_OP_RECVMSG, flags(), (short) 0, 0 /*Native.MSG_DONTWAIT*/, fd,
-                msgHdr, 1, 0, extraData);
-    }
-
-    long addSendmsg(int fd, long msgHdr, int flags, short extraData) {
-        return enqueueSqe(Native.IORING_OP_SENDMSG, flags(), (short) 0, flags, fd, msgHdr, 1, 0, extraData);
-    }
-
-    long addRead(int fd, long bufferAddress, int pos, int limit, short extraData) {
-        return enqueueSqe(Native.IORING_OP_READ, flags(), (short) 0, 0, fd,
-                bufferAddress + pos, limit - pos, 0, extraData);
-    }
-
-    long addRecv(int fd, long bufferAddress, int pos, int limit, int flags, short extraData) {
-        return enqueueSqe(Native.IORING_OP_RECV, flags(), (short) 0, flags, fd,
-                bufferAddress + pos, limit - pos, 0, extraData);
-    }
-
     long addEventFdRead(int fd, long bufferAddress, int pos, int limit, short extraData) {
         return enqueueSqe(Native.IORING_OP_READ, 0, (short) 0, 0, fd,
                 bufferAddress + pos, limit - pos, 0, extraData);
-    }
-
-    long addSend(int fd, long bufferAddress, int pos, int limit, short extraData) {
-        return enqueueSqe(Native.IORING_OP_SEND, flags(), (short) 0, 0, fd,
-                bufferAddress + pos, limit - pos, 0, extraData);
-    }
-
-    long addWrite(int fd, long bufferAddress, int pos, int limit, short extraData) {
-        return enqueueSqe(Native.IORING_OP_WRITE, flags(), (short) 0, 0, fd,
-                bufferAddress + pos, limit - pos, 0, extraData);
-    }
-
-    long addAccept(int fd, long address, long addressLength, short extraData) {
-        return enqueueSqe(Native.IORING_OP_ACCEPT, flags(), (short) 0,
-                /*Native.SOCK_NONBLOCK |*/ Native.SOCK_CLOEXEC, fd,
-                address, 0, addressLength, extraData);
-    }
-
-    //fill the address which is associated with server poll link user_data
-    long addPollRemove(int fd, int pollMask) {
-        assert pollMask <= Short.MAX_VALUE && pollMask >= Short.MIN_VALUE;
-        return enqueueSqe(Native.IORING_OP_POLL_REMOVE, 0, (short) 0, 0, fd,
-                          UserData.encode(fd, Native.IORING_OP_POLL_ADD, (short) pollMask),
-                0, 0, (short) pollMask);
-    }
-
-    long addConnect(int fd, long socketAddress, long socketAddressLength, short extraData) {
-        return enqueueSqe(Native.IORING_OP_CONNECT, flags(), (short) 0, 0, fd,
-                socketAddress, 0, socketAddressLength, extraData);
-    }
-
-    long addWritev(int fd, long iovecArrayAddress, int length, short extraData) {
-        return enqueueSqe(Native.IORING_OP_WRITEV, flags(), (short) 0, 0, fd,
-                iovecArrayAddress, length, 0, extraData);
-    }
-
-    long addClose(int fd, boolean drain, short extraData) {
-        int flags = flags() | (drain ? Native.IOSQE_IO_DRAIN : 0);
-        return enqueueSqe(Native.IORING_OP_CLOSE, flags, (short) 0,  0, fd, 0, 0, 0, extraData);
     }
 
     long addCancel(int fd, long sqeToCancel) {
