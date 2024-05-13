@@ -81,9 +81,8 @@ public class ProtobufVarint32FrameDecoder extends ByteToMessageDecoder {
         }
         int bitsToKeep = Integer.numberOfTrailingZeros(firstOneOnStop) + 1;
         buffer.skipBytes(bitsToKeep >> 3);
-        int shiftToHighlightTheWhole = 32 - bitsToKeep;
-        // this is not brilliant, we have a data dependency here
-        int wholeWithContinuations = (wholeOrMore << shiftToHighlightTheWhole) >> shiftToHighlightTheWhole;
+        int thisVarintMask = firstOneOnStop ^ (firstOneOnStop - 1);
+        int wholeWithContinuations = wholeOrMore & thisVarintMask;
         // mix them up as per varint spec while dropping the continuation bits:
         // 0x7F007F isolate the first byte and the third byte dropping the continuation bits
         // 0x7F007F00 isolate the second byte and the fourth byte dropping the continuation bits
