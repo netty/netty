@@ -43,12 +43,12 @@ public class SubmissionQueueTest {
 
             int counter = 0;
             while (submissionQueue.remaining() > 0) {
-                assertThat(submissionQueue.addNop(0, 0, (short) 1)).isNotZero();
+                assertThat(submissionQueue.addNop(0, 0, 0, (short) 1)).isNotZero();
                 counter++;
             }
             assertEquals(8, counter);
             assertEquals(8, submissionQueue.count());
-            assertThat(submissionQueue.addNop(0, 0, (short) 1)).isNotZero();
+            assertThat(submissionQueue.addNop(0, 0, 0, (short) 1)).isNotZero();
             assertEquals(1, submissionQueue.count());
             submissionQueue.submitAndWait();
             assertEquals(9, completionQueue.count());

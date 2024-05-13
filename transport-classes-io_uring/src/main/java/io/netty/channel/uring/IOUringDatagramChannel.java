@@ -100,6 +100,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
     }
 
     private IOUringDatagramChannel(LinuxSocket fd, boolean active) {
+        // Always use a blocking fd and so make use of fast-pool.
         super(null, LinuxSocket.makeBlocking(fd), active);
         config = new IOUringDatagramChannelConfig(this);
     }
@@ -485,14 +486,15 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             }
             msgHdrMemory.write(socket, null, bufferAddress, bufferLength, (short) 0);
 
+            int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
-
+            IOUringIoRegistration registration = registration();
             // We always use idx here so we can detect if no idx was used by checking if data < 0 in
             // readComplete0(...)
-            IOUringIoOps ops = IOUringIoOps.newRecvmsg(fd().intValue(), 0, msgFlags, msgHdrMemory.address(),
-                    msgHdrMemory.idx());
+            IOUringIoOps ops = IOUringIoOps.newRecvmsg(fd, 0, msgFlags, msgHdrMemory.address(),
+                    registration.id(), msgHdrMemory.idx());
             long id = ops.udata();
-            registration().submit(ops);
+            registration.submit(ops);
             recvmsgHdrs.setId(msgHdrMemory.idx(), id);
             return true;
         }
@@ -586,10 +588,12 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             }
             hdr.write(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
 
+            int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
-            IOUringIoOps ops = IOUringIoOps.newSendmsg(fd().intValue(), 0, msgFlags, hdr.address(), hdr.idx());
+            IOUringIoRegistration registration = registration();
+            IOUringIoOps ops = IOUringIoOps.newSendmsg(fd, 0, msgFlags, hdr.address(), registration.id(), hdr.idx());
             long id = ops.udata();
-            registration().submit(ops);
+            registration.submit(ops);
             sendmsgHdrs.setId(hdr.idx(), id);
             return true;
         }
@@ -639,6 +643,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
 
     private int cancel(IOUringIoRegistration registration, byte op, MsgHdrMemoryArray array) {
         int cancelled = 0;
+        int fd = fd().intValue();
         for (int idx = 0; idx < array.length(); idx++) {
             long id = array.id(idx);
             if (id == MsgHdrMemoryArray.NO_ID) {
@@ -646,7 +651,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             }
             // Let's try to cancel outstanding op as these might be submitted and waiting for data
             // (via fastpoll).
-            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(fd().intValue(), 0, id, op);
+            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(fd, 0, id, registration.id(), op);
             registration.submit(ops);
             cancelled++;
         }

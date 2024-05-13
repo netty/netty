@@ -23,7 +23,7 @@ import io.netty.channel.IoEvent;
 public final class IOUringIoEvent implements IoEvent {
 
     private byte opcode;
-    private int fd;
+    private int id;
     private int res;
     private int flags;
     private short data;
@@ -36,20 +36,20 @@ public final class IOUringIoEvent implements IoEvent {
      * @param opcode    the op code
      * @param data      the user data that was give as part of the submission.
      */
-    public IOUringIoEvent(int res, int flags, byte opcode, int fd, short data) {
+    public IOUringIoEvent(int res, int flags, byte opcode, int id, short data) {
         this.res = res;
         this.flags = flags;
         this.opcode = opcode;
-        this.fd = fd;
+        this.id = id;
         this.data = data;
     }
 
     // Use internally to reduce object creation
-    void update(int res, int flags, byte opcode, int fd, short data) {
+    void update(int res, int flags, byte opcode, int id, short data) {
         this.res = res;
         this.flags = flags;
         this.opcode = opcode;
-        this.fd = fd;
+        this.id = id;
         this.data = data;
     }
 
@@ -81,7 +81,7 @@ public final class IOUringIoEvent implements IoEvent {
     }
 
     /**
-     * Returns the data that is passed as part of {@link IOUringIoOps#data()}-
+     * Returns the data that is passed as part of {@link IOUringIoOps#data()}.
      *
      * @return  data.
      */
@@ -90,19 +90,19 @@ public final class IOUringIoEvent implements IoEvent {
     };
 
     /**
-     * Returns the fd that is passed as part of {@link IOUringIoOps#fd()}-
+     * Returns the id that is passed as part of {@link IOUringIoOps#id()}.
      *
-     * @return  fd.
+     * @return  id.
      */
-    public int fd() {
-        return fd;
+    public int id() {
+        return id;
     }
 
     @Override
     public String toString() {
         return "IOUringIoEvent{" +
                 "opcode=" + opcode +
-                ", fd=" + fd +
+                ", id=" + id +
                 ", res=" + res +
                 ", flags=" + flags +
                 ", data=" + data +

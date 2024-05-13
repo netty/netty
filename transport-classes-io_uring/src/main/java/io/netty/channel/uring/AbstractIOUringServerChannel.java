@@ -72,7 +72,9 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
     protected void cancelOutstandingReads(IOUringIoRegistration registration, int numOutstandingReads) {
         if (acceptId != 0) {
             assert numOutstandingReads == 1;
-            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(fd().intValue(), 0, acceptId, Native.IORING_OP_ACCEPT);
+            int fd = fd().intValue();
+            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(
+                    fd, 0, acceptId, registration.id(), Native.IORING_OP_ACCEPT);
             registration.submit(ops);
         }
         assert numOutstandingReads == 0;
@@ -109,9 +111,11 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
             final IOUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.attemptedBytesRead(1);
 
+            int fd = fd().intValue();
             IOUringIoRegistration registration = registration();
-            IOUringIoOps ops = IOUringIoOps.newAccept(fd().intValue(), 0, 0,
-                    acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, registration.nextOpsId());
+            IOUringIoOps ops = IOUringIoOps.newAccept(fd, 0, 0,
+                    acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress,
+                    registration.id(), registration.nextOpsId());
             long id  = ops.udata();
             registration.submit(ops);
             acceptId = id;

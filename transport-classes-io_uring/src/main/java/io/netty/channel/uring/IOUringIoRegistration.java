@@ -32,8 +32,17 @@ public interface IOUringIoRegistration extends IoRegistration {
     IOUringHandler ioHandler();
 
     /**
-     * Return the next id that can be used to "tag" an {@link IOUringIoOps} via the {@link IOUringIoOps#data()}.
-     * This id can then be used to cancel the operation via {@link IOUringIoOps#newAsyncCancel(int, int, long, short)}.
+     * Return the id of this {@link IOUringIoRegistration}. This id should be used to when creating {@link IOUringIoOps}
+     * that will be submitted to this {@link IOUringIoRegistration} via {@link IOUringIoRegistration#submit(IoOps)}.
+     *
+     * @return  the id.
+     */
+    int id();
+
+    /**
+     * Return the next id that can be used to "tag" an {@link IOUringIoOps} via the {@link IOUringIoOps#udata()}.
+     * This id can then be used to cancel the operation via
+     * {@link IOUringIoOps#newAsyncCancel(int, int, long, int, short)}.
      *
      * @return  the next id to use.
      */

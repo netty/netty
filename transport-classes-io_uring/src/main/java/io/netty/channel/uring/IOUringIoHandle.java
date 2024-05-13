@@ -16,17 +16,10 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.IoHandle;
-import io.netty.channel.unix.FileDescriptor;
 
 /**
  * {@link IoHandle} implementation for io_uring.
  */
 public interface IOUringIoHandle extends IoHandle {
 
-    /**
-     * Returns the {@link FileDescriptor} that used by this {@link IoHandle}.
-     *
-     * @return fd
-     */
-    FileDescriptor fd();
 }

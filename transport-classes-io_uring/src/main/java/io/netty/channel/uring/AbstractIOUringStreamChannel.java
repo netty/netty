@@ -215,9 +215,10 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
                 int offset = iovArray.count();
                 in.forEachFlushedMessage(iovArray);
 
+                int fd = fd().intValue();
                 IOUringIoRegistration registration = registration();
-                IOUringIoOps ops = IOUringIoOps.newWritev(fd().intValue(), 0, 0, iovArray.memoryAddress(offset),
-                        iovArray.count() - offset, registration.nextOpsId());
+                IOUringIoOps ops = IOUringIoOps.newWritev(fd, 0, 0, iovArray.memoryAddress(offset),
+                        iovArray.count() - offset, registration.id(), registration.nextOpsId());
                 long id = ops.udata();
                 byte opCode = ops.opcode();
                 registration.submit(ops);
@@ -239,9 +240,11 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             assert writeId == 0;
             ByteBuf buf = (ByteBuf) msg;
 
+            int fd = fd().intValue();
             IOUringIoRegistration registration = registration();
-            IOUringIoOps ops = IOUringIoOps.newWrite(fd().intValue(), 0, 0,
-                    buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), registration.nextOpsId());
+            IOUringIoOps ops = IOUringIoOps.newWrite(fd, 0, 0,
+                    buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(),
+                    registration.id(), registration.nextOpsId());
             long id = ops.udata();
             byte opCode = ops.opcode();
             registration.submit(ops);
@@ -261,6 +264,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
 
             readBuffer = byteBuf;
 
+            int fd = fd().intValue();
             IOUringIoRegistration registration = registration();
             // Depending on if this is the first read or not we will use Native.MSG_DONTWAIT.
             // The idea is that if the socket is blocking we can do the first read in a blocking fashion
@@ -268,8 +272,9 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             // be possible directly we schedule these with Native.MSG_DONTWAIT. This allows us to still be
             // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
             // transports.
-            IOUringIoOps ops = IOUringIoOps.newRecv(fd().intValue(), 0, first ? 0 : Native.MSG_DONTWAIT,
-                    byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(), registration.nextOpsId());
+            IOUringIoOps ops = IOUringIoOps.newRecv(fd, 0, first ? 0 : Native.MSG_DONTWAIT,
+                    byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(),
+                    registration.id(), registration.nextOpsId());
             long id = ops.udata();
             registration.submit(ops);
             readId = id;
@@ -390,7 +395,8 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
         if (readId != 0) {
             // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
             assert numOutstandingReads == 1;
-            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(fd().intValue(), 0, readId, Native.IORING_OP_READV);
+            int fd = fd().intValue();
+            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(fd, 0, readId, registration.id(), Native.IORING_OP_READV);
             registration.submit(ops);
         } else {
             assert numOutstandingReads == 0;
@@ -404,7 +410,8 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             // (via fastpoll).
             assert numOutstandingWrites == 1;
             assert writeOpCode != 0;
-            registration.submit(IOUringIoOps.newAsyncCancel(fd().intValue(), 0, writeId, writeOpCode));
+            int fd = fd().intValue();
+            registration.submit(IOUringIoOps.newAsyncCancel(fd, 0, writeId, registration.id(), writeOpCode));
         } else {
             assert numOutstandingWrites == 0;
         }

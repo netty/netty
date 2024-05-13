@@ -63,6 +63,11 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
     private boolean closeCompleted;
+    private int nextRegistrationId = Integer.MIN_VALUE;
+
+    // these two ids are used internally any so can't be used by nextRegistrationId().
+    private static final int EVENTFD_ID = Integer.MAX_VALUE;
+    private static final int RINGFD_ID = EVENTFD_ID - 1;
 
     IOUringHandler(RingBuffer ringBuffer) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
@@ -92,12 +97,12 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
     }
 
     @Override
-    public void handle(int res, int flags, byte op, int fd, short data) {
-        if (fd == eventfd.intValue()) {
+    public void handle(int res, int flags, byte op, int id, short data) {
+        if (id == EVENTFD_ID) {
             handleEventFdRead();
             return;
         }
-        if (fd == ringBuffer.fd()) {
+        if (id == RINGFD_ID) {
             if (op == Native.IORING_OP_NOP && data == RING_CLOSE) {
                 completeRingClose();
             }
@@ -108,13 +113,13 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
             return;
         }
 
-        DefaultIoUringIoRegistration registration = registrations.get(fd);
+        DefaultIoUringIoRegistration registration = registrations.get(id);
         if (registration == null) {
-            logger.debug("ignoring {} completion for unknown registration (fd={}, res={})",
-                    Native.opToStr(op), fd, res);
+            logger.debug("ignoring {} completion for unknown registration (id={}, res={})",
+                    Native.opToStr(op), id, res);
             return;
         }
-        registration.handle(res, flags, op, fd, data);
+        registration.handle(res, flags, op, id, data);
     }
 
     private void handleEventFdRead() {
@@ -127,12 +132,14 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
 
     private void submitEventFdRead() {
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
-        eventfdReadSubmitted = submissionQueue.addEventFdRead(eventfd.intValue(), eventfdReadBuf, 0, 8, (short) 0);
+        eventfdReadSubmitted = submissionQueue.addEventFdRead(
+                eventfd.intValue(), eventfdReadBuf, 0, 8, EVENTFD_ID, (short) 0);
     }
 
     private void submitTimeout(IoExecutionContext context) {
         long delayNanos = context.delayNanos(System.nanoTime());
-        ringBuffer.ioUringSubmissionQueue().addTimeout(ringBuffer.fd(), delayNanos, (short) 0);
+        ringBuffer.ioUringSubmissionQueue().addTimeout(
+                ringBuffer.fd(), delayNanos, RINGFD_ID, (short) 0);
     }
 
     @Override
@@ -143,7 +150,7 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
 
         List<DefaultIoUringIoRegistration> copy = new ArrayList<>(registrations.values());
         // Ensure all previously submitted IOs get to complete before closing all fds.
-        submissionQueue.addNop(ringBuffer.fd(), Native.IOSQE_IO_DRAIN, (short) 0);
+        submissionQueue.addNop(ringBuffer.fd(), Native.IOSQE_IO_DRAIN, RINGFD_ID, (short) 0);
 
         for (DefaultIoUringIoRegistration registration: copy) {
             registration.close();
@@ -168,10 +175,10 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
         }
         // Try to drain all the IO from the queue first...
         submissionQueue.link(true);
-        submissionQueue.addNop(ringBuffer.fd(), Native.IOSQE_IO_DRAIN, (short) 0);
+        submissionQueue.addNop(ringBuffer.fd(), Native.IOSQE_IO_DRAIN, RINGFD_ID, (short) 0);
         // ... but only wait for 200 milliseconds on this
         submissionQueue.link(false);
-        submissionQueue.addLinkTimeout(ringBuffer.fd(), TimeUnit.MILLISECONDS.toNanos(200), (short) 0);
+        submissionQueue.addLinkTimeout(ringBuffer.fd(), TimeUnit.MILLISECONDS.toNanos(200), RINGFD_ID, (short) 0);
         submissionQueue.submitAndWait();
         completionQueue.process(this);
         completeRingClose();
@@ -199,11 +206,11 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
                 boolean eventFdDrained;
 
                 @Override
-                public void handle(int res, int flags, byte op, int fd, short data) {
-                    if (fd == eventfd.intValue()) {
+                public void handle(int res, int flags, byte op, int id, short data) {
+                    if (id == EVENTFD_ID) {
                         eventFdDrained = true;
                     }
-                    IOUringHandler.this.handle(res, flags, op, fd, data);
+                    IOUringHandler.this.handle(res, flags, op, id, data);
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
@@ -217,7 +224,7 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
         // transition back to false, thus we should never have any more events written.
         // So, if we have a read event pending, we can cancel it.
         if (eventfdReadSubmitted != 0) {
-            submissionQueue.addCancel(eventfd.intValue(), eventfdReadSubmitted);
+            submissionQueue.addCancel(eventfd.intValue(), eventfdReadSubmitted, EVENTFD_ID);
             eventfdReadSubmitted = 0;
             submissionQueue.submit();
         }
@@ -245,11 +252,29 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
             throw new RejectedExecutionException("IoEventLoop is shutting down");
         }
         DefaultIoUringIoRegistration registration = new DefaultIoUringIoRegistration(eventLoop, ioHandle);
-        int fd = ioHandle.fd().intValue();
-        if (registrations.put(fd, registration) == null) {
-            ringBuffer.ioUringSubmissionQueue().incrementHandledFds();
+        for (;;) {
+            int id = nextRegistrationId();
+            DefaultIoUringIoRegistration old = registrations.put(id, registration);
+            if (old != null) {
+                assert old.handle != registration.handle;
+                registrations.put(id, old);
+            } else {
+                registration.id = id;
+                break;
+            }
         }
+
+        ringBuffer.ioUringSubmissionQueue().incrementHandledFds();
         return registration;
+    }
+
+    private int nextRegistrationId() {
+        for (;;) {
+            int id = nextRegistrationId++;
+            if (id != RINGFD_ID && id != EVENTFD_ID) {
+                return id;
+            }
+        }
     }
 
     private final class DefaultIoUringIoRegistration extends AtomicBoolean implements IOUringIoRegistration {
@@ -260,17 +285,21 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
         private boolean removeLater;
         private int outstandingCompletions;
 
+        int id;
+
         DefaultIoUringIoRegistration(IoEventLoop eventLoop, IOUringIoHandle handle) {
             this.eventLoop = eventLoop;
             this.handle = handle;
         }
 
         @Override
+        public int id() {
+            return id;
+        }
+
+        @Override
         public void submit(IoOps ops) {
             IOUringIoOps ioOps = (IOUringIoOps) ops;
-            if (ioOps.fd() != handle.fd().intValue()) {
-                throw new IllegalArgumentException("IOUringIoOps fd does not match IOUringHandle fd");
-            }
             if (!isValid()) {
                 return;
             }
@@ -320,15 +349,9 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
         }
 
         private void remove() {
-            int fd = handle.fd().intValue();
-            DefaultIoUringIoRegistration old = registrations.remove(fd);
-            if (old != null) {
-                ringBuffer.ioUringSubmissionQueue().decrementHandledFds();
-                if (old != this) {
-                    // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
-                    registrations.put(fd, old);
-                }
-            }
+            DefaultIoUringIoRegistration old = registrations.remove(id());
+            assert old == this;
+            ringBuffer.ioUringSubmissionQueue().decrementHandledFds();
         }
 
         void close() {
@@ -345,8 +368,8 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
             }
         }
 
-        void handle(int res, int flags, byte op, int fd, short data) {
-            event.update(res, flags, op, fd, data);
+        void handle(int res, int flags, byte op, int id, short data) {
+            event.update(res, flags, op, id, data);
             handle.handle(this, event);
             if (--outstandingCompletions == 0 && removeLater) {
                 // No more outstanding completions, remove the fd <-> registration mapping now.
@@ -403,11 +426,23 @@ public final class IOUringHandler implements IoHandler, CompletionCallback {
         }
     }
 
+    /**
+     * Create a new {@link IoHandlerFactory} that can be used to create {@link IOUringHandler}s.
+     *
+     * @return factory
+     */
     public static IoHandlerFactory newFactory() {
         IOUring.ensureAvailability();
         return () -> new IOUringHandler(Native.createRingBuffer());
     }
 
+    /**
+     * Create a new {@link IoHandlerFactory} that can be used to create {@link IOUringHandler}s.
+     * Each {@link IOUringHandler} will use a ring of size {@code ringSize}.
+     *
+     * @param  ringSize     the size of the ring.
+     * @return              factory
+     */
     public static IoHandlerFactory newFactory(int ringSize) {
         IOUring.ensureAvailability();
         ObjectUtil.checkPositive(ringSize, "ringSize");

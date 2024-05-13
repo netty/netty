@@ -44,10 +44,11 @@ public final class IOUringIoOps implements IoOps {
      * @param bufferAddress the bufferaddress
      * @param length        the length
      * @param offset        the offset.
+     * @param id            the id that to map the resulting {@link IOUringIoEvent}.
      * @param data         the user data that will be passed back on completion.
      */
     public IOUringIoOps(byte opcode, int flags, short ioPrio, int fd, int rwFlags, long bufferAddress,
-                        int length, long offset, short data) {
+                        int length, long offset, int id, short data) {
         this.opcode = opcode;
         this.flags = flags;
         this.ioPrio = ioPrio;
@@ -56,8 +57,8 @@ public final class IOUringIoOps implements IoOps {
         this.bufferAddress = bufferAddress;
         this.length = length;
         this.offset = offset;
-        // We encode the fd, op and udata into a long so we are able to use it later.
-        this.udata = UserData.encode(fd, opcode, data);
+        // We encode the id, op and udata into a long so we are able to use it later.
+        this.udata = UserData.encode(id, opcode, data);
     }
 
     /**
@@ -171,13 +172,14 @@ public final class IOUringIoOps implements IoOps {
      * @param fd        the filedescriptor
      * @param flags     the flags.
      * @param udata     the {@link #udata()} of the previous {@link IOUringIoOps} that should be cancelled.
+     * @param id        the id
      * @param data      the data
      * @return          ops.
      */
-    public static IOUringIoOps newAsyncCancel(int fd, int flags, long udata, short data) {
+    public static IOUringIoOps newAsyncCancel(int fd, int flags, long udata, int id, short data) {
         // Best effort to cancel the
         return new IOUringIoOps(Native.IORING_OP_ASYNC_CANCEL, flags, (short) 0, fd, 0,
-                udata, 0, 0, data);
+                udata, 0, 0, id, data);
     }
 
     /**
@@ -185,11 +187,12 @@ public final class IOUringIoOps implements IoOps {
      *
      * @param fd        the filedescriptor
      * @param flags     the flags.
+     * @param id        the id
      * @param data      the data
      * @return          ops.
      */
-    public static IOUringIoOps newClose(int fd, int flags, short data) {
-        return new IOUringIoOps(Native.IORING_OP_CLOSE, flags, (short) 0, fd, 0, 0, 0, 0, data);
+    public static IOUringIoOps newClose(int fd, int flags, int id, short data) {
+        return new IOUringIoOps(Native.IORING_OP_CLOSE, flags, (short) 0, fd, 0, 0, 0, 0, id, data);
     }
 
     /**
@@ -201,8 +204,8 @@ public final class IOUringIoOps implements IoOps {
      * @param data      the data
      * @return          ops.
      */
-    public static IOUringIoOps newPollAdd(int fd, int flags, int mask, short data) {
-        return new IOUringIoOps(Native.IORING_OP_POLL_ADD, flags, (short) 0, fd, mask, 0, 0, 0, data);
+    public static IOUringIoOps newPollAdd(int fd, int flags, int mask, int id, short data) {
+        return new IOUringIoOps(Native.IORING_OP_POLL_ADD, flags, (short) 0, fd, mask, 0, 0, 0, id, data);
     }
 
     /**
@@ -211,11 +214,12 @@ public final class IOUringIoOps implements IoOps {
      * @param fd        the filedescriptor
      * @param flags     the flags.
      * @param msgFlags  the msg flags.
+     * @param id        the id
      * @param data      the data
      * @return          ops.
      */
-    public static IOUringIoOps newSendmsg(int fd, int flags, int msgFlags, long address, short data) {
-        return new IOUringIoOps(Native.IORING_OP_SENDMSG, flags, (short) 0, fd, msgFlags, address, 1, 0, data);
+    public static IOUringIoOps newSendmsg(int fd, int flags, int msgFlags, long address, int id, short data) {
+        return new IOUringIoOps(Native.IORING_OP_SENDMSG, flags, (short) 0, fd, msgFlags, address, 1, 0, id, data);
     }
 
     /**
@@ -224,12 +228,13 @@ public final class IOUringIoOps implements IoOps {
      * @param fd                    the filedescriptor
      * @param flags                 the flags.
      * @param remoteMemoryAddress   the memory address of the sockaddr_storage.
+     * @param id                    the id
      * @param data                  the data
      * @return                      ops.
      */
-    public static IOUringIoOps newConnect(int fd, int flags, long remoteMemoryAddress, short data) {
+    public static IOUringIoOps newConnect(int fd, int flags, long remoteMemoryAddress, int id, short data) {
         return new IOUringIoOps(Native.IORING_OP_CONNECT, flags, (short) 0, fd, 0, remoteMemoryAddress,
-                0, Native.SIZEOF_SOCKADDR_STORAGE, data);
+                0, Native.SIZEOF_SOCKADDR_STORAGE, id, data);
     }
 
     /**
@@ -238,11 +243,12 @@ public final class IOUringIoOps implements IoOps {
      * @param fd        the filedescriptor
      * @param flags     the flags.
      * @param udata     the {@link #udata()} that was used to add before.
+     * @param id        the id
      * @param data      the data
      * @return          ops.
      */
-    public static IOUringIoOps newPollRemove(int fd, int flags, long udata, short data) {
-        return new IOUringIoOps(Native.IORING_OP_POLL_REMOVE, flags, (short) 0, fd, 0, udata, 0, 0, data);
+    public static IOUringIoOps newPollRemove(int fd, int flags, long udata, int id, short data) {
+        return new IOUringIoOps(Native.IORING_OP_POLL_REMOVE, flags, (short) 0, fd, 0, udata, 0, 0, id, data);
     }
 
     /**
@@ -253,13 +259,14 @@ public final class IOUringIoOps implements IoOps {
      * @param acceptedAddressMemoryAddress          the memory address of the sockaddr_storage.
      * @parma acceptedAddressLengthMemoryAddress    the memory address of the length that will be updated once a new
      *                                              connection was accepted.
+     * @param id                                    the id
      * @param data                                  the data
      * @return                                      ops.
      */
     public static IOUringIoOps newAccept(int fd, int flags, int acceptFlags,  long acceptedAddressMemoryAddress,
-                                         long acceptedAddressLengthMemoryAddress, short data) {
+                                         long acceptedAddressLengthMemoryAddress, int id, short data) {
         return new IOUringIoOps(Native.IORING_OP_ACCEPT, flags, (short) 0, fd, acceptFlags,
-                acceptedAddressMemoryAddress, 0, acceptedAddressLengthMemoryAddress, data);
+                acceptedAddressMemoryAddress, 0, acceptedAddressLengthMemoryAddress, id, data);
     }
 
     /**
@@ -270,13 +277,14 @@ public final class IOUringIoOps implements IoOps {
      * @param writevFlags                           the writev flags.
      * @param memoryAddress                         the memory address of the io_vec array.
      * @param length                                the length of the io_vec array.
+     * @param id                                    the id
      * @param data                                  the data
      * @return                                      ops.
      */
     public static IOUringIoOps newWritev(int fd, int flags, int writevFlags, long memoryAddress,
-                                         int length, short data) {
+                                         int length, int id, short data) {
         return new IOUringIoOps(Native.IORING_OP_WRITEV, flags, (short) 0, fd,
-                writevFlags, memoryAddress, length, 0, data);
+                writevFlags, memoryAddress, length, 0, id, data);
     }
 
     /**
@@ -287,12 +295,14 @@ public final class IOUringIoOps implements IoOps {
      * @param writeFlags                            the write flags.
      * @param memoryAddress                         the memory address of the buffer
      * @param length                                the length of the buffer.
+     * @param id                                    the id
      * @param data                                  the data
      * @return                                      ops.
      */
-    public static IOUringIoOps newWrite(int fd, int flags, int writeFlags, long memoryAddress, int length, short data) {
+    public static IOUringIoOps newWrite(
+            int fd, int flags, int writeFlags, long memoryAddress, int length, int id, short data) {
         return new IOUringIoOps(Native.IORING_OP_WRITE, flags, (short) 0, fd,
-                writeFlags, memoryAddress, length, 0, data);
+                writeFlags, memoryAddress, length, 0, id, data);
     }
 
     /**
@@ -303,11 +313,14 @@ public final class IOUringIoOps implements IoOps {
      * @param recvFlags                             the recv flags.
      * @param memoryAddress                         the memory address of the buffer
      * @param length                                the length of the buffer.
+     * @param id                                    the id
      * @param data                                  the data
      * @return                                      ops.
      */
-    public static IOUringIoOps newRecv(int fd, int flags, int recvFlags, long memoryAddress, int length, short data) {
-        return new IOUringIoOps(Native.IORING_OP_RECV, flags, (short) 0, fd, recvFlags, memoryAddress, length, 0, data);
+    public static IOUringIoOps newRecv(
+            int fd, int flags, int recvFlags, long memoryAddress, int length, int id, short data) {
+        return new IOUringIoOps(
+                Native.IORING_OP_RECV, flags, (short) 0, fd, recvFlags, memoryAddress, length, 0, id, data);
     }
 
     /**
@@ -317,11 +330,13 @@ public final class IOUringIoOps implements IoOps {
      * @param flags                                 the flags.
      * @param msgFlags                              the recvmsg flags.
      * @param memoryAddress                         the memory address of the msghdr struct
+     * @param id                                    the id
      * @param data                                  the data
      * @return                                      ops.
      */
-    public static IOUringIoOps newRecvmsg(int fd, int flags, int msgFlags, long memoryAddress, short data) {
-        return new IOUringIoOps(Native.IORING_OP_RECVMSG, flags, (short) 0, fd, msgFlags, memoryAddress, 1, 0, data);
+    public static IOUringIoOps newRecvmsg(int fd, int flags, int msgFlags, long memoryAddress, int id, short data) {
+        return new IOUringIoOps(
+                Native.IORING_OP_RECVMSG, flags, (short) 0, fd, msgFlags, memoryAddress, 1, 0, id, data);
     }
 
     /**
@@ -332,11 +347,14 @@ public final class IOUringIoOps implements IoOps {
      * @param sendFlags                             the send flags.
      * @param memoryAddress                         the memory address of the buffer.
      * @param length                                the length of the buffer.
+     * @param id                                    the id
      * @param data                                  the data
      * @return                                      ops.
      */
-    public static IOUringIoOps newSend(int fd, int flags, int sendFlags, long memoryAddress, int length, short data) {
-        return new IOUringIoOps(Native.IORING_OP_SEND, flags, (short) 0, fd, sendFlags, memoryAddress, length, 0, data);
+    public static IOUringIoOps newSend(
+            int fd, int flags, int sendFlags, long memoryAddress, int length, int id, short data) {
+        return new IOUringIoOps(
+                Native.IORING_OP_SEND, flags, (short) 0, fd, sendFlags, memoryAddress, length, 0, id, data);
     }
 
     /**
@@ -345,10 +363,11 @@ public final class IOUringIoOps implements IoOps {
      * @param fd                                    the filedescriptor
      * @param flags                                 the flags.
      * @param how                                   how the shutdown will be done.
+     * @param id                                    the id
      * @param data                                  the data
      * @return                                      ops.
      */
-    public static IOUringIoOps newShutdown(int fd, int flags, int how, short data) {
-        return new IOUringIoOps(Native.IORING_OP_SHUTDOWN, flags, (short) 0, fd, 0, 0, how, 0, data);
+    public static IOUringIoOps newShutdown(int fd, int flags, int how, int id, short data) {
+        return new IOUringIoOps(Native.IORING_OP_SHUTDOWN, flags, (short) 0, fd, 0, 0, how, 0, id, data);
     }
 }
