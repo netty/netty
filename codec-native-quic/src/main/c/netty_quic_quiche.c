@@ -494,11 +494,13 @@ static jint netty_quiche_conn_stream_priority(JNIEnv* env, jclass clazz, jlong c
 }
 
 static jint netty_quiche_conn_stream_recv(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jlong out, int buf_len, jlong finAddr) {
-    return (jint) quiche_conn_stream_recv((quiche_conn *) conn, (uint64_t) stream_id,  (uint8_t *) out, (size_t) buf_len, (bool *) finAddr);
+    uint64_t error_code;
+    return (jint) quiche_conn_stream_recv((quiche_conn *) conn, (uint64_t) stream_id,  (uint8_t *) out, (size_t) buf_len, (bool *) finAddr, &error_code);
 }
 
 static jint netty_quiche_conn_stream_send(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jlong buf, int buf_len, jboolean fin) {
-    return (jint) quiche_conn_stream_send((quiche_conn *) conn, (uint64_t) stream_id,  (uint8_t *) buf, (size_t) buf_len, fin == JNI_TRUE ? true : false);
+    uint64_t error_code;
+    return (jint) quiche_conn_stream_send((quiche_conn *) conn, (uint64_t) stream_id,  (uint8_t *) buf, (size_t) buf_len, fin == JNI_TRUE ? true : false, &error_code);
 }
 
 static jint netty_quiche_conn_stream_shutdown(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id, jint direction, jlong err) {
