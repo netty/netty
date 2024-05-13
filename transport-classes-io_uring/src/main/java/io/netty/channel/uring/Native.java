@@ -37,8 +37,6 @@ import java.util.Locale;
 final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
     static final int DEFAULT_RING_SIZE = Math.max(164, SystemPropertyUtil.getInt("io.netty.iouring.ringSize", 4096));
-    static final int DEFAULT_IOSEQ_ASYNC_THRESHOLD =
-            Math.max(0, SystemPropertyUtil.getInt("io.netty.iouring.iosqeAsyncThreshold", 25));
 
     static {
         Selector selector = null;
