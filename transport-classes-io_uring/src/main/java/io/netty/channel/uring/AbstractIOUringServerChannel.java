@@ -74,7 +74,7 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
             assert numOutstandingReads == 1;
             int fd = fd().intValue();
             IOUringIoOps ops = IOUringIoOps.newAsyncCancel(
-                    fd, 0, acceptId, registration.id(), Native.IORING_OP_ACCEPT);
+                    fd, 0, acceptId, Native.IORING_OP_ACCEPT);
             registration.submit(ops);
         }
         assert numOutstandingReads == 0;
@@ -114,8 +114,7 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
             int fd = fd().intValue();
             IOUringIoRegistration registration = registration();
             IOUringIoOps ops = IOUringIoOps.newAccept(fd, 0, 0,
-                    acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress,
-                    registration.id(), nextOpsId());
+                    acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, nextOpsId());
             acceptId = registration.submit(ops);
             return 1;
         }

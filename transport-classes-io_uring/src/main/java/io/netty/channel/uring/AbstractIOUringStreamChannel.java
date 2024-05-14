@@ -218,7 +218,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
                 int fd = fd().intValue();
                 IOUringIoRegistration registration = registration();
                 IOUringIoOps ops = IOUringIoOps.newWritev(fd, 0, 0, iovArray.memoryAddress(offset),
-                        iovArray.count() - offset, registration.id(), nextOpsId());
+                        iovArray.count() - offset, nextOpsId());
                 byte opCode = ops.opcode();
                 writeId = registration.submit(ops);
                 writeOpCode = opCode;
@@ -241,8 +241,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             int fd = fd().intValue();
             IOUringIoRegistration registration = registration();
             IOUringIoOps ops = IOUringIoOps.newWrite(fd, 0, 0,
-                    buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(),
-                    registration.id(), nextOpsId());
+                    buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
             byte opCode = ops.opcode();
             writeId = registration.submit(ops);
             writeOpCode = opCode;
@@ -269,8 +268,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
             // transports.
             IOUringIoOps ops = IOUringIoOps.newRecv(fd, 0, first ? 0 : Native.MSG_DONTWAIT,
-                    byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(),
-                    registration.id(), nextOpsId());
+                    byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
             readId = registration.submit(ops);
             return 1;
         }
@@ -390,7 +388,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
             assert numOutstandingReads == 1;
             int fd = fd().intValue();
-            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(fd, 0, readId, registration.id(), Native.IORING_OP_RECV);
+            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(fd, 0, readId, Native.IORING_OP_RECV);
             registration.submit(ops);
         } else {
             assert numOutstandingReads == 0;
@@ -405,7 +403,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             assert numOutstandingWrites == 1;
             assert writeOpCode != 0;
             int fd = fd().intValue();
-            registration.submit(IOUringIoOps.newAsyncCancel(fd, 0, writeId, registration.id(), writeOpCode));
+            registration.submit(IOUringIoOps.newAsyncCancel(fd, 0, writeId, writeOpCode));
         } else {
             assert numOutstandingWrites == 0;
         }

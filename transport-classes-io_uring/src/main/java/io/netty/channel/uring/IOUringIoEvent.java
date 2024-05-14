@@ -23,7 +23,6 @@ import io.netty.channel.IoEvent;
 public final class IOUringIoEvent implements IoEvent {
 
     private byte opcode;
-    private int id;
     private int res;
     private int flags;
     private short data;
@@ -34,23 +33,20 @@ public final class IOUringIoEvent implements IoEvent {
      * @param res       the result.
      * @param flags     the flags
      * @param opcode    the op code
-     * @param id        the id that was given as part of the submission.
      * @param data      the user data that was given as part of the submission.
      */
-    public IOUringIoEvent(int res, int flags, byte opcode, int id, short data) {
+    public IOUringIoEvent(int res, int flags, byte opcode, short data) {
         this.res = res;
         this.flags = flags;
         this.opcode = opcode;
-        this.id = id;
         this.data = data;
     }
 
     // Used internally to reduce object creation
-    void update(int res, int flags, byte opcode, int id, short data) {
+    void update(int res, int flags, byte opcode, short data) {
         this.res = res;
         this.flags = flags;
         this.opcode = opcode;
-        this.id = id;
         this.data = data;
     }
 
@@ -90,20 +86,10 @@ public final class IOUringIoEvent implements IoEvent {
         return data;
     };
 
-    /**
-     * Returns the id that is passed as part of {@link IOUringIoOps}.
-     *
-     * @return  id.
-     */
-    public int id() {
-        return id;
-    }
-
     @Override
     public String toString() {
         return "IOUringIoEvent{" +
                 "opcode=" + opcode +
-                ", id=" + id +
                 ", res=" + res +
                 ", flags=" + flags +
                 ", data=" + data +

@@ -34,12 +34,4 @@ public interface IOUringIoRegistration extends IoRegistration {
     long submit(IoOps ops);
 
     void cancel();
-
-    /**
-     * Return the id of this {@link IOUringIoRegistration}. This id MUST be used to when creating {@link IOUringIoOps}
-     * that will be submitted to this {@link IOUringIoRegistration} via {@link IOUringIoRegistration#submit(IoOps)}.
-     *
-     * @return  the id.
-     */
-    int id();
 }

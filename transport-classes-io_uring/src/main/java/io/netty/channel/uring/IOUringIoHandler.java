@@ -111,7 +111,7 @@ public final class IOUringIoHandler implements IoHandler {
                     Native.opToStr(op), id, res);
             return;
         }
-        registration.handle(res, flags, op, id, data);
+        registration.handle(res, flags, op, data);
     }
 
     private void handleEventFdRead() {
@@ -268,7 +268,7 @@ public final class IOUringIoHandler implements IoHandler {
 
     private final class DefaultIoUringIoRegistration extends AtomicBoolean implements IOUringIoRegistration {
         private final IoEventLoop eventLoop;
-        private final IOUringIoEvent event = new IOUringIoEvent(0, 0, (byte) 0, 0, (short) 0);
+        private final IOUringIoEvent event = new IOUringIoEvent(0, 0, (byte) 0, (short) 0);
         final IOUringIoHandle handle;
 
         private boolean removeLater;
@@ -282,31 +282,23 @@ public final class IOUringIoHandler implements IoHandler {
         }
 
         @Override
-        public int id() {
-            return id;
-        }
-
-        @Override
         public long submit(IoOps ops) {
             IOUringIoOps ioOps = (IOUringIoOps) ops;
-            int decodedId = UserData.decodeId(ioOps.udata());
-            if (decodedId != id) {
-                throw new IllegalArgumentException("IoUringIOps id(" + decodedId + ") does not match: " + id);
-            }
+            long udata = UserData.encode(id, ioOps.opcode(), ioOps.data());
             if (!isValid()) {
-                return ioOps.udata();
+                return udata;
             }
             if (eventLoop.inEventLoop()) {
-                submit0(ioOps);
+                submit0(ioOps, udata);
             } else {
-                eventLoop.execute(() -> submit0(ioOps));
+                eventLoop.execute(() -> submit0(ioOps, udata));
             }
-            return ioOps.udata();
+            return udata;
         }
 
-        private void submit0(IOUringIoOps ioOps) {
+        private void submit0(IOUringIoOps ioOps, long udata) {
             ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
-                    ioOps.rwFlags(), ioOps.fd(), ioOps.bufferAddress(), ioOps.length(), ioOps.offset(), ioOps.udata());
+                    ioOps.rwFlags(), ioOps.fd(), ioOps.bufferAddress(), ioOps.length(), ioOps.offset(), udata);
             outstandingCompletions++;
         }
 
@@ -343,7 +335,7 @@ public final class IOUringIoHandler implements IoHandler {
         }
 
         private void remove() {
-            DefaultIoUringIoRegistration old = registrations.remove(id());
+            DefaultIoUringIoRegistration old = registrations.remove(id);
             assert old == this;
             ringBuffer.ioUringSubmissionQueue().decrementHandledFds();
         }
@@ -362,8 +354,8 @@ public final class IOUringIoHandler implements IoHandler {
             }
         }
 
-        void handle(int res, int flags, byte op, int id, short data) {
-            event.update(res, flags, op, id, data);
+        void handle(int res, int flags, byte op, short data) {
+            event.update(res, flags, op, data);
             handle.handle(this, event);
             if (--outstandingCompletions == 0 && removeLater) {
                 // No more outstanding completions, remove the fd <-> registration mapping now.

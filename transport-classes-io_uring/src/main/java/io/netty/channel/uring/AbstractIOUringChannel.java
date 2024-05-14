@@ -263,7 +263,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         if (registration != null) {
             if (socket.markClosed()) {
                 int fd = fd().intValue();
-                IOUringIoOps ops = IOUringIoOps.newClose(fd, 0, registration.id(), nextOpsId());
+                IOUringIoOps ops = IOUringIoOps.newClose(fd, 0, nextOpsId());
                 registration.submit(ops);
             }
         } else {
@@ -353,7 +353,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IOUringIoRegistration registration = registration();
         IOUringIoOps ops = IOUringIoOps.newPollAdd(
-                fd, 0, Native.POLLOUT, registration.id(), (short) Native.POLLOUT);
+                fd, 0, Native.POLLOUT, (short) Native.POLLOUT);
         pollOutId = registration.submit(ops);
         ioState |= POLL_OUT_SCHEDULED;
     }
@@ -363,7 +363,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IOUringIoRegistration registration = registration();
         IOUringIoOps ops = IOUringIoOps.newPollAdd(
-                fd, 0, Native.POLLRDHUP, registration.id(), (short) Native.POLLRDHUP);
+                fd, 0, Native.POLLRDHUP, (short) Native.POLLRDHUP);
         pollRdhupId = registration.submit(ops);
         ioState |= POLL_RDHUP_SCHEDULED;
     }
@@ -517,7 +517,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                         int fd = fd().intValue();
                         // Best effort to cancel the already submitted connect request.
                         registration.submit(IOUringIoOps.newAsyncCancel(
-                                fd, 0, connectId, registration.id(), Native.IORING_OP_CONNECT));
+                                fd, 0, connectId, Native.IORING_OP_CONNECT));
                     }
                     cancelOutstandingReads(registration, numOutstandingReads);
                     cancelOutstandingWrites(registration, numOutstandingWrites);
@@ -645,7 +645,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             int fd = fd().intValue();
             IOUringIoRegistration registration = registration();
             IOUringIoOps ops = IOUringIoOps.newPollAdd(
-                    fd, 0, Native.POLLIN, registration.id(), (short) Native.POLLIN);
+                    fd, 0, Native.POLLIN, (short) Native.POLLIN);
             pollInId = registration.submit(ops);
             ioState |= POLL_IN_SCHEDULED;
         }
@@ -947,7 +947,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                     int fd = fd().intValue();
                     IOUringIoRegistration registration = registration();
                     IOUringIoOps ops = IOUringIoOps.newSendmsg(fd, 0, Native.MSG_FASTOPEN,
-                            hdr.address(), registration.id(), hdr.idx());
+                            hdr.address(), hdr.idx());
                     connectId = registration.submit(ops);
                 } else {
                     submitConnect(inetSocketAddress);
@@ -1001,7 +1001,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IOUringIoRegistration registration = registration();
         IOUringIoOps ops = IOUringIoOps.newConnect(
-                fd, 0, remoteAddressMemoryAddress, registration.id(), nextOpsId());
+                fd, 0, remoteAddressMemoryAddress, nextOpsId());
         connectId = registration.submit(ops);
     }
 
@@ -1036,15 +1036,15 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
             registration.submit(IOUringIoOps.newPollRemove(
-                    fd, 0, pollRdhupId, registration.id(), (short) Native.POLLRDHUP));
+                    fd, 0, pollRdhupId, (short) Native.POLLRDHUP));
         }
         if ((ioState & POLL_IN_SCHEDULED) != 0) {
             registration.submit(IOUringIoOps.newPollRemove(
-                    fd, 0, pollInId, registration.id(), (short) Native.POLLIN));
+                    fd, 0, pollInId, (short) Native.POLLIN));
         }
         if ((ioState & POLL_OUT_SCHEDULED) != 0) {
             registration.submit(IOUringIoOps.newPollRemove(
-                    fd,  0, pollOutId, registration.id(), (short) Native.POLLOUT));
+                    fd,  0, pollOutId, (short) Native.POLLOUT));
         }
 
         registration = null;

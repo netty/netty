@@ -499,8 +499,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             IOUringIoRegistration registration = registration();
             // We always use idx here so we can detect if no idx was used by checking if data < 0 in
             // readComplete0(...)
-            IOUringIoOps ops = IOUringIoOps.newRecvmsg(fd, 0, msgFlags, msgHdrMemory.address(),
-                    registration.id(), msgHdrMemory.idx());
+            IOUringIoOps ops = IOUringIoOps.newRecvmsg(fd, 0, msgFlags, msgHdrMemory.address(), msgHdrMemory.idx());
             long id = registration.submit(ops);
             recvmsgHdrs.setId(msgHdrMemory.idx(), id);
             return true;
@@ -599,7 +598,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
             IOUringIoRegistration registration = registration();
-            IOUringIoOps ops = IOUringIoOps.newSendmsg(fd, 0, msgFlags, hdr.address(), registration.id(), hdr.idx());
+            IOUringIoOps ops = IOUringIoOps.newSendmsg(fd, 0, msgFlags, hdr.address(), hdr.idx());
             long id = registration.submit(ops);
             sendmsgHdrs.setId(hdr.idx(), id);
             return true;
@@ -658,7 +657,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             }
             // Let's try to cancel outstanding op as these might be submitted and waiting for data
             // (via fastpoll).
-            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(fd, 0, id, registration.id(), op);
+            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(fd, 0, id, op);
             registration.submit(ops);
             cancelled++;
         }
