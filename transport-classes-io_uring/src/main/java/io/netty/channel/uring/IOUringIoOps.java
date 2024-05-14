@@ -252,7 +252,7 @@ public final class IOUringIoOps implements IoOps {
     }
 
     /**
-     * Returns a new {@code OP_CONNECT} {@link IOUringIoOps}.
+     * Returns a new {@code OP_ACCEPT} {@link IOUringIoOps}.
      *
      * @param fd                                    the filedescriptor
      * @param flags                                 the flags.
@@ -358,7 +358,7 @@ public final class IOUringIoOps implements IoOps {
     }
 
     /**
-     * Returns a new {@code OP_SEND} {@link IOUringIoOps}.
+     * Returns a new {@code OP_SHUTDOWN} {@link IOUringIoOps}.
      *
      * @param fd                                    the filedescriptor
      * @param flags                                 the flags.

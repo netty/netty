@@ -939,7 +939,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                     }
                 }
                 if (initialData != null) {
-                    AbstractIOUringChannel.this.msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
+                    msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
                     MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
                     hdr.write(socket, inetSocketAddress, initialData.memoryAddress(),
                             initialData.readableBytes(), (short) 0);

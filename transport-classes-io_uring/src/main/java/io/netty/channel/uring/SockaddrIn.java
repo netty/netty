@@ -35,9 +35,9 @@ final class SockaddrIn {
 
     static int write(boolean ipv6, long memory, InetSocketAddress address) {
         if (ipv6) {
-            return SockaddrIn.writeIPv6(memory, address.getAddress(), address.getPort());
+            return writeIPv6(memory, address.getAddress(), address.getPort());
         } else {
-            return SockaddrIn.writeIPv4(memory, address.getAddress(), address.getPort());
+            return writeIPv4(memory, address.getAddress(), address.getPort());
         }
     }
 
