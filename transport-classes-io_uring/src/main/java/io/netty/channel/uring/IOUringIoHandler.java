@@ -57,13 +57,6 @@ public final class IOUringIoHandler implements IoHandler {
     private final FileDescriptor eventfd;
     private final long eventfdReadBuf;
 
-    private final CompletionCallback completionCallback = new CompletionCallback() {
-        @Override
-        public void handle(int res, int flags, int id, byte op, short data) {
-            IOUringIoHandler.this.handle(res, flags, id, op, data);
-        }
-    };
-
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
@@ -98,10 +91,10 @@ public final class IOUringIoHandler implements IoHandler {
         } else {
             submissionQueue.submit();
         }
-        return completionQueue.process(completionCallback);
+        return completionQueue.process(this::handle);
     }
 
-    void handle(int res, int flags, int id, byte op, short data) {
+    private void handle(int res, int flags, int id, byte op, short data) {
         if (id == EVENTFD_ID) {
             handleEventFdRead();
             return;
@@ -157,7 +150,7 @@ public final class IOUringIoHandler implements IoHandler {
                 submissionQueue.submit();
             }
             if (completionQueue.hasCompletions()) {
-                completionQueue.process(completionCallback);
+                completionQueue.process(this::handle);
             }
         }
     }
@@ -177,7 +170,7 @@ public final class IOUringIoHandler implements IoHandler {
         // ... but only wait for 200 milliseconds on this
         submissionQueue.addLinkTimeout(ringBuffer.fd(), TimeUnit.MILLISECONDS.toNanos(200), RINGFD_ID, (short) 0);
         submissionQueue.submitAndWait();
-        completionQueue.process(completionCallback);
+        completionQueue.process(this::handle);
         completeRingClose();
     }
 
