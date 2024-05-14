@@ -145,7 +145,9 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 @Override
                 protected void onRemoval(final Object value) {
                     if (value != NO_MAGAZINE) {
-                        liveMagazines.remove(value);
+                        if (liveMagazines.remove(value)) {
+                            ((Magazine) value).close();
+                        }
                     }
                 }
             };
