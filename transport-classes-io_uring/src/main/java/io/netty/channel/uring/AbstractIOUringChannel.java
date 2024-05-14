@@ -25,7 +25,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
@@ -68,7 +67,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 abstract class AbstractIOUringChannel extends AbstractChannel implements UnixChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractIOUringChannel.class);
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     final LinuxSocket socket;
     protected volatile boolean active;
 
@@ -161,7 +159,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         return id;
     }
 
-    public boolean isOpen() {
+    public final boolean isOpen() {
         return socket.isOpen();
     }
 
@@ -171,16 +169,11 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
-    }
-
-    @Override
-    public FileDescriptor fd() {
+    public final FileDescriptor fd() {
         return socket;
     }
 
-    AbstractUringUnsafe ioUringUnsafe() {
+    private AbstractUringUnsafe ioUringUnsafe() {
         return (AbstractUringUnsafe) unsafe();
     }
 
@@ -275,7 +268,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected void doBeginRead() {
+    protected final void doBeginRead() {
         if (inputClosedSeenErrorOnRead) {
             // We did see an error while reading and so closed the input. Stop reading.
             return;
@@ -343,7 +336,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         return numOutstandingWrites;
     }
 
-    protected IOUringIoRegistration registration() {
+    protected final IOUringIoRegistration registration() {
         assert registration != null;
         return registration;
     }
@@ -391,7 +384,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         private boolean closed;
 
         @Override
-        public void handle(IoRegistration registration, IoEvent ioEvent) {
+        public final void handle(IoRegistration registration, IoEvent ioEvent) {
             IOUringIoRegistration reg = (IOUringIoRegistration) registration;
             IOUringIoEvent event = (IOUringIoEvent) ioEvent;
             byte op = event.opcode();
@@ -482,12 +475,12 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
 
         @Override
-        public void close() throws Exception {
+        public final void close() throws Exception {
             close(voidPromise());
         }
 
         @Override
-        public void close(ChannelPromise promise) {
+        public final void close(ChannelPromise promise) {
             if (delayedClose == null) {
                 // We have a write operation pending that should be completed asap.
                 // We will do the actual close operation one this write result is returned as otherwise
@@ -595,14 +588,11 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             }
         }
 
-        final IOUringRecvByteAllocatorHandle newIOUringHandle(RecvByteBufAllocator.ExtendedHandle handle) {
-            return new IOUringRecvByteAllocatorHandle(handle);
-        }
-
         @Override
         public final IOUringRecvByteAllocatorHandle recvBufAllocHandle() {
             if (allocHandle == null) {
-                allocHandle = newIOUringHandle((RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
+                allocHandle = new IOUringRecvByteAllocatorHandle(
+                        (RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
             }
             return allocHandle;
         }
@@ -650,7 +640,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             ioState |= POLL_IN_SCHEDULED;
         }
 
-        final void readComplete(int res, int flags, int data) {
+        private void readComplete(int res, int flags, int data) {
             assert numOutstandingReads > 0;
             if (--numOutstandingReads == 0) {
                 readPending = false;
@@ -677,7 +667,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         /**
          * Called once POLLRDHUP event is ready to be processed
          */
-        final void pollRdHup(int res) {
+        private void pollRdHup(int res) {
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
@@ -697,7 +687,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         /**
          * Called once POLLIN event is ready to be processed
          */
-        final void pollIn(int res) {
+        private void pollIn(int res) {
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
@@ -793,7 +783,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
          * @param flags the flags.
          * @param data  the data that was passed when submitting the op.
          */
-        final void writeComplete(int res, int flags, short data) {
+        private void writeComplete(int res, int flags, short data) {
             if ((ioState & CONNECT_SCHEDULED) != 0) {
                 // The writeComplete(...) callback was called because of a sendmsg(...) result that was used for
                 // TCP_FASTOPEN_CONNECT.
@@ -1072,12 +1062,12 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected SocketAddress localAddress0() {
+    protected final SocketAddress localAddress0() {
         return local;
     }
 
     @Override
-    protected SocketAddress remoteAddress0() {
+    protected final SocketAddress remoteAddress0() {
         return remote;
     }
 

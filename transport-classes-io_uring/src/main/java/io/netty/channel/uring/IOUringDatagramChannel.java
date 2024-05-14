@@ -122,7 +122,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
 
     @Override
     public boolean isActive() {
-        return socket.isOpen() && (config.getActiveOnOpen() && isRegistered() || active);
+        return socket.isOpen() && (config.getActiveOnOpen() && isRegistered() || super.isActive());
     }
 
     @Override

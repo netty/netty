@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -31,6 +32,8 @@ import static io.netty.channel.unix.Errors.ERRNO_EAGAIN_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERRNO_EWOULDBLOCK_NEGATIVE;
 
 abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel implements ServerChannel {
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
+
     private final ByteBuffer acceptedAddressMemory;
     private final ByteBuffer acceptedAddressLengthMemory;
 
@@ -52,24 +55,29 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
     }
 
     @Override
-    protected void doClose() throws Exception {
+    public final ChannelMetadata metadata() {
+        return METADATA;
+    }
+
+    @Override
+    protected final void doClose() throws Exception {
         super.doClose();
         Buffer.free(acceptedAddressMemory);
         Buffer.free(acceptedAddressLengthMemory);
     }
 
     @Override
-    protected AbstractUringUnsafe newUnsafe() {
+    protected final AbstractUringUnsafe newUnsafe() {
         return new UringServerChannelUnsafe();
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) {
+    protected final void doWrite(ChannelOutboundBuffer in) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    protected void cancelOutstandingReads(IOUringIoRegistration registration, int numOutstandingReads) {
+    protected final void cancelOutstandingReads(IOUringIoRegistration registration, int numOutstandingReads) {
         if (acceptId != 0) {
             assert numOutstandingReads == 1;
             int fd = fd().intValue();
@@ -81,14 +89,14 @@ abstract class AbstractIOUringServerChannel extends AbstractIOUringChannel imple
     }
 
     @Override
-    protected void cancelOutstandingWrites(IOUringIoRegistration registration, int numOutstandingWrites) {
+    protected final void cancelOutstandingWrites(IOUringIoRegistration registration, int numOutstandingWrites) {
         assert numOutstandingWrites == 0;
-        // NOOP.
     }
+
     abstract Channel newChildChannel(
             int fd, long acceptedAddressMemoryAddress, long acceptedAddressLengthMemoryAddress) throws Exception;
 
-    final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
+    private final class UringServerChannelUnsafe extends AbstractIOUringChannel.AbstractUringUnsafe {
 
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {

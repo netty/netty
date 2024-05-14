@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -37,6 +38,7 @@ import static io.netty.channel.unix.Errors.ioResult;
 
 abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel implements DuplexChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractIOUringStreamChannel.class);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     // Store the opCode so we know if we used WRITE or WRITEV.
     private byte writeOpCode;
@@ -56,17 +58,22 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
     }
 
     @Override
-    protected AbstractUringUnsafe newUnsafe() {
+    public ChannelMetadata metadata() {
+        return METADATA;
+    }
+
+    @Override
+    protected final AbstractUringUnsafe newUnsafe() {
         return new IOUringStreamUnsafe();
     }
 
     @Override
-    public ChannelFuture shutdown() {
+    public final ChannelFuture shutdown() {
         return shutdown(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdown(final ChannelPromise promise) {
+    public final ChannelFuture shutdown(final ChannelPromise promise) {
         ChannelFuture shutdownOutputFuture = shutdownOutput();
         if (shutdownOutputFuture.isDone()) {
             shutdownOutputDone(shutdownOutputFuture, promise);
@@ -97,27 +104,27 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
     }
 
     @Override
-    public boolean isOutputShutdown() {
+    public final boolean isOutputShutdown() {
         return socket.isOutputShutdown();
     }
 
     @Override
-    public boolean isInputShutdown() {
+    public final boolean isInputShutdown() {
         return socket.isInputShutdown();
     }
 
     @Override
-    public boolean isShutdown() {
+    public final boolean isShutdown() {
         return socket.isShutdown();
     }
 
     @Override
-    public ChannelFuture shutdownOutput() {
+    public final ChannelFuture shutdownOutput() {
         return shutdownOutput(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdownOutput(final ChannelPromise promise) {
+    public final ChannelFuture shutdownOutput(final ChannelPromise promise) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
@@ -134,12 +141,12 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
     }
 
     @Override
-    public ChannelFuture shutdownInput() {
+    public final ChannelFuture shutdownInput() {
         return shutdownInput(newPromise());
     }
 
     @Override
-    public ChannelFuture shutdownInput(final ChannelPromise promise) {
+    public final ChannelFuture shutdownInput(final ChannelPromise promise) {
         EventLoop loop = eventLoop();
         if (loop.inEventLoop()) {
             shutdownInput0(promise);
@@ -187,7 +194,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
     }
 
     @Override
-    protected void doRegister(ChannelPromise promise) {
+    protected final void doRegister(ChannelPromise promise) {
         super.doRegister(promise);
         promise.addListener(f -> {
             if (f.isSuccess()) {
@@ -383,7 +390,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
     }
 
     @Override
-    protected void cancelOutstandingReads(IOUringIoRegistration registration, int numOutstandingReads) {
+    protected final void cancelOutstandingReads(IOUringIoRegistration registration, int numOutstandingReads) {
         if (readId != 0) {
             // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
             assert numOutstandingReads == 1;
@@ -396,7 +403,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
     }
 
     @Override
-    protected void cancelOutstandingWrites(IOUringIoRegistration registration,  int numOutstandingWrites) {
+    protected final void cancelOutstandingWrites(IOUringIoRegistration registration,  int numOutstandingWrites) {
         if (writeId != 0) {
             // Let's try to cancel outstanding writes as these might be submitted and waiting to finish writing
             // (via fastpoll).
