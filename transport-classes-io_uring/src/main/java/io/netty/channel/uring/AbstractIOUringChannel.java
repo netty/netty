@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -344,7 +344,7 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     private void schedulePollOut() {
         // This should only be done if the socket is non-blocking.
         assert !socket.isBlocking();
-        
+
         assert (ioState & POLL_OUT_SCHEDULED) == 0;
         int fd = fd().intValue();
         IOUringIoRegistration registration = registration();

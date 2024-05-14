@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -35,11 +35,7 @@ import org.junit.jupiter.api.Timeout;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IOUringDatagramUnicastTest extends DatagramUnicastInetTest {

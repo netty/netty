@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,12 +18,13 @@ package io.netty.channel.uring;
 import java.util.Arrays;
 
 final class MsgHdrMemoryArray {
-    private int idx;
+    static final long NO_ID = -1;
+
     private final MsgHdrMemory[] hdrs;
     private final int capacity;
     private final long[] ids;
 
-    static final long NO_ID = -1;
+    private int idx;
 
     MsgHdrMemoryArray(short capacity) {
         assert capacity >= 0;
