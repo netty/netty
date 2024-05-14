@@ -16,7 +16,7 @@
 package io.netty.channel.uring;
 
 /**
- * <p>
+ * <pre>{@code
  * struct tcp_info
  * {
  *      __u8    tcpi_state;
@@ -57,7 +57,7 @@ package io.netty.channel.uring;
  *
  *      __u32   tcpi_total_retrans;
  * };
- * </p>
+ * }</pre>
  */
 public final class IOUringTcpInfo {
 

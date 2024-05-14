@@ -21,6 +21,7 @@ import io.netty.channel.unix.UnixChannelOption;
 public final class IOUringChannelOption<T> extends UnixChannelOption<T> {
 
     private IOUringChannelOption() { }
+
     public static final ChannelOption<Boolean> TCP_CORK = valueOf(IOUringChannelOption.class, "TCP_CORK");
     public static final ChannelOption<Long> TCP_NOTSENT_LOWAT =
             valueOf(IOUringChannelOption.class, "TCP_NOTSENT_LOWAT");

@@ -390,7 +390,7 @@ abstract class AbstractIOUringStreamChannel extends AbstractIOUringChannel imple
             // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
             assert numOutstandingReads == 1;
             int fd = fd().intValue();
-            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(fd, 0, readId, registration.id(), Native.IORING_OP_READV);
+            IOUringIoOps ops = IOUringIoOps.newAsyncCancel(fd, 0, readId, registration.id(), Native.IORING_OP_RECV);
             registration.submit(ops);
         } else {
             assert numOutstandingReads == 0;

@@ -532,7 +532,8 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel impleme
             if (res >= 0) {
                 // When using Datagram we should consider the message written as long as res is not negative.
                 return outboundBuffer.remove();
-            } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+            }
+            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return false;
             }
             try {

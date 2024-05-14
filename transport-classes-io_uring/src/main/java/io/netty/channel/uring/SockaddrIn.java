@@ -42,7 +42,7 @@ final class SockaddrIn {
     }
 
     /**
-     *
+     * <pre>{@code
      * struct sockaddr_in {
      *      sa_family_t    sin_family; // address family: AF_INET
      *      in_port_t      sin_port;   // port in network byte order
@@ -53,7 +53,7 @@ final class SockaddrIn {
      * struct in_addr {
      *     uint32_t       s_addr;     // address in network byte order
      * };
-     *
+     * }</pre>
      */
     static int writeIPv4(long memory, InetAddress address, int port) {
         PlatformDependent.setMemory(memory, Native.SIZEOF_SOCKADDR_IN, (byte) 0);
@@ -73,6 +73,7 @@ final class SockaddrIn {
     }
 
     /**
+     * <pre>{@code
      * struct sockaddr_in6 {
      *     sa_family_t     sin6_family;   // AF_INET6
      *     in_port_t       sin6_port;     // port number
@@ -84,6 +85,7 @@ final class SockaddrIn {
      * struct in6_addr {
      *     unsigned char s6_addr[16];   // IPv6 address
      * };
+     * }</pre>
      */
     static int writeIPv6(long memory, InetAddress address, int port) {
         PlatformDependent.setMemory(memory, Native.SIZEOF_SOCKADDR_IN6, (byte) 0);

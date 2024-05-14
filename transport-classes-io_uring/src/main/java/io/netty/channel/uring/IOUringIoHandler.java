@@ -266,12 +266,11 @@ public final class IOUringIoHandler implements IoHandler {
     }
 
     private int nextRegistrationId() {
-        for (;;) {
-            int id = nextRegistrationId++;
-            if (id != RINGFD_ID && id != EVENTFD_ID) {
-                return id;
-            }
-        }
+        int id;
+        do {
+            id = nextRegistrationId++;
+        } while (id == RINGFD_ID || id == EVENTFD_ID);
+        return id;
     }
 
     private final class DefaultIoUringIoRegistration extends AtomicBoolean implements IOUringIoRegistration {

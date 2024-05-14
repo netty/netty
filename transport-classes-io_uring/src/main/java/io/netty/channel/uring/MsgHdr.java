@@ -18,6 +18,7 @@ package io.netty.channel.uring;
 import io.netty.util.internal.PlatformDependent;
 
 /**
+ * <pre>{@code
  * struct msghdr {
  *     void         *msg_name;       // optional address
  *     socklen_t    msg_namelen;     // size of address
@@ -27,6 +28,7 @@ import io.netty.util.internal.PlatformDependent;
  *     size_t       msg_controllen;  // ancillary data buffer len
  *     int          msg_flags;       // flags on received message
  * };
+ * }</pre>
  */
 final class MsgHdr {
 

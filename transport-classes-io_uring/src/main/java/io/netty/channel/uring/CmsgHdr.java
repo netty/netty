@@ -18,12 +18,14 @@ package io.netty.channel.uring;
 import io.netty.util.internal.PlatformDependent;
 
 /**
+ * <pre>{@code
  * struct cmsghdr {
  *     socklen_t cmsg_len;    // data byte count, including header
  *     int cmsg_level;  //originating protocol
  *     int cmsg_type;   // protocol-specific type
  *     // followed by unsigned char cmsg_data[];
  * };
+ * }</pre>
  */
 final class CmsgHdr {
 
