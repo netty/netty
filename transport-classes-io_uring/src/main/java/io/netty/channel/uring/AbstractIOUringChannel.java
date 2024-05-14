@@ -342,6 +342,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void schedulePollOut() {
+        // This should only be done if the socket is non-blocking.
+        assert !socket.isBlocking();
+        
         assert (ioState & POLL_OUT_SCHEDULED) == 0;
         int fd = fd().intValue();
         IOUringIoRegistration registration = registration();
@@ -628,6 +631,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
         }
 
         final void schedulePollIn() {
+            // This should only be done if the socket is non-blocking.
+            assert !socket.isBlocking();
+
             assert (ioState & POLL_IN_SCHEDULED) == 0;
             if (!isActive() || shouldBreakIoUringInReady(config())) {
                 return;
@@ -863,6 +869,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
             freeRemoteAddressMemory();
 
             if (res == ERRNO_EINPROGRESS_NEGATIVE || res == ERROR_EALREADY_NEGATIVE) {
+                // This should only happen if the socket is non-blocking.
+                assert !socket.isBlocking();
+
                 // connect not complete yet need to wait for poll_out event
                 schedulePollOut();
             } else {
