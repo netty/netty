@@ -773,6 +773,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
                         cancelConnectTimeoutFuture();
                         connectPromise = null;
                     } else {
+                        // This should only happen if the socket is non-blocking.
+                        assert !socket.isBlocking();
+
                         // The connect was not done yet, register for POLLOUT again
                         schedulePollOut();
                     }
@@ -818,6 +821,9 @@ abstract class AbstractIOUringChannel extends AbstractChannel implements UnixCha
 
             boolean writtenAll = writeComplete0(res, flags, data, numOutstandingWrites);
             if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
+                // This should only happen if the socket is non-blocking.
+                assert !socket.isBlocking();
+
                 // We were not able to write everything, let's register for POLLOUT
                 schedulePollOut();
             }
