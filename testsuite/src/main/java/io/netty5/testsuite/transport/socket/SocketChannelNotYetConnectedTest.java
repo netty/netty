@@ -25,7 +25,7 @@ import io.netty5.channel.ChannelHandlerAdapter;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.SingleThreadEventLoop;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.handler.codec.ByteToMessageDecoder;
@@ -77,7 +77,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
             @Override
             public void run(Bootstrap bootstrap) throws Throwable {
                 SingleThreadEventLoop group = new SingleThreadEventLoop(
-                        new DefaultThreadFactory(getClass()), NioHandler.newFactory().newHandler());
+                        new DefaultThreadFactory(getClass()), NioIoHandler.newFactory().newHandler());
                 ServerBootstrap sb = new ServerBootstrap().group(group);
                 Channel serverChannel = sb.childHandler(new ChannelHandlerAdapter() {
                     @Override

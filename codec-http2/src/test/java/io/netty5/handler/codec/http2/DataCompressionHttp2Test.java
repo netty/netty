@@ -23,7 +23,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.http.HttpHeaderNames;
@@ -362,8 +362,8 @@ public class DataCompressionHttp2Test {
                 any(Buffer.class), anyInt(), anyBoolean());
 
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        sb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()),
-                new MultithreadEventLoopGroup(NioHandler.newFactory()));
+        sb.group(new MultithreadEventLoopGroup(NioIoHandler.newFactory()),
+                new MultithreadEventLoopGroup(NioIoHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -387,7 +387,7 @@ public class DataCompressionHttp2Test {
             }
         });
 
-        cb.group(new MultithreadEventLoopGroup(NioHandler.newFactory()));
+        cb.group(new MultithreadEventLoopGroup(NioIoHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override

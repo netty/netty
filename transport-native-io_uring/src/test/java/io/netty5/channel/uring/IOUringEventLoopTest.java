@@ -43,7 +43,7 @@ public class IOUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Override
     protected IoHandlerFactory newIoHandlerFactory() {
-        return IOUringHandler.newFactory();
+        return IOUringIoHandler.newFactory();
     }
 
     @Override
@@ -84,7 +84,7 @@ public class IOUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Test
     public void testSchedule() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, IOUringHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, IOUringIoHandler.newFactory());
         try {
             EventLoop loop = group.next();
             loop.schedule(EMPTY_RUNNABLE, 1, TimeUnit.SECONDS).asStage().sync();

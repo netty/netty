@@ -26,7 +26,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.DefaultFullHttpResponse;
@@ -558,7 +558,7 @@ public class InboundHttp2ToHttpAdapterTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
+        sb.group(new MultithreadEventLoopGroup(LocalIoHandler.newFactory()));
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -585,7 +585,7 @@ public class InboundHttp2ToHttpAdapterTest {
             }
         });
 
-        cb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
+        cb.group(new MultithreadEventLoopGroup(LocalIoHandler.newFactory()));
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override

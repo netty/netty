@@ -31,9 +31,10 @@ public abstract class AbstractServerChannel<P extends Channel, L extends SocketA
      * Creates a new instance.
      */
     protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
-                                    Class<? extends Channel> childChannelType) {
-        super(null, eventLoop, false, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory());
-        this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", childChannelType);
+                                    Class<? extends IoHandle> ioHandleType) {
+        super(null, eventLoop, false, new ServerChannelReadHandleFactory(),
+                new ServerChannelWriteHandleFactory(), ioHandleType);
+        this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", ioHandleType);
     }
 
     @Override

@@ -173,12 +173,16 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
     protected void run() {
         assert inEventLoop();
         do {
-            runIO();
+            runIo();
             if (isShuttingDown()) {
                 ioHandler.prepareToDestroy();
             }
             runAllTasks(maxTasksPerRun);
         } while (!confirmShutdown());
+    }
+
+    protected final IoHandler ioHandler() {
+        return ioHandler;
     }
 
     /**
@@ -187,73 +191,43 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
      *
      * This method must be called from the {@link EventLoop} thread.
      */
-    protected int runIO() {
+    protected int runIo() {
         assert inEventLoop();
         return ioHandler.run(context);
     }
 
     @Override
-    public final Future<Void> registerForIo(IoHandle handle) {
-        Promise<Void> promise = newPromise();
-        if (inEventLoop()) {
-            registerForIO0(handle, promise);
-        } else {
-            execute(() -> registerForIO0(handle, promise));
-        }
-        return promise.asFuture();
-    }
-
-    private void registerForIO0(IoHandle handle, Promise<Void> promise) {
-        try {
-            if (handle.isRegistered()) {
-                throw new IllegalStateException("IoHandle already registered");
-            }
-
-            checkInEventLoopIfPossible(handle);
-
-            ioHandler.register(handle);
-        } catch (Throwable cause) {
-            promise.setFailure(cause);
-            return;
-        }
-        promise.setSuccess(null);
+    public EventLoop next() {
+        return this;
     }
 
     @Override
-    public final Future<Void> deregisterForIo(IoHandle handle) {
-       Promise<Void> promise = newPromise();
-       if (inEventLoop()) {
-           deregisterForIO(handle, promise);
-       } else {
-           execute(() -> deregisterForIO(handle, promise));
-       }
-       return promise.asFuture();
+    public final Future<IoRegistration> register(final IoHandle handle) {
+        Promise<IoRegistration> promise = newPromise();
+        if (inEventLoop()) {
+            register0(handle, promise);
+        } else {
+            execute(() -> register0(handle, promise));
+        }
+
+        return promise.asFuture();
     }
 
-    private void deregisterForIO(IoHandle handle, Promise<Void> promise) {
+    private void register0(final IoHandle handle, Promise<IoRegistration> promise) {
+        assert inEventLoop();
+        final IoRegistration registration;
         try {
-            if (!handle.isRegistered()) {
-                throw new IllegalStateException("Channel not registered");
-            }
-            checkInEventLoopIfPossible(handle);
-
-            ioHandler.deregister(handle);
-        } catch (Throwable cause) {
-            promise.setFailure(cause);
+            registration = ioHandler.register(this, handle);
+        } catch (Exception e) {
+            promise.setFailure(e);
             return;
         }
-        promise.setSuccess(null);
-    }
-
-    private static void checkInEventLoopIfPossible(IoHandle handle) {
-        if (handle instanceof Channel && !((Channel) handle).executor().inEventLoop()) {
-            throw new IllegalStateException("Channel.executor() is not using the same Thread as this EventLoop");
-        }
+        promise.setSuccess(registration);
     }
 
     @Override
     protected final void wakeup(boolean inEventLoop) {
-        ioHandler.wakeup(inEventLoop);
+        ioHandler.wakeup(this);
     }
 
     @Override
@@ -265,5 +239,10 @@ public class SingleThreadEventLoop extends SingleThreadEventExecutor implements 
     @Override
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
         return ioHandler.isCompatible(handleType);
+    }
+
+    @Override
+    public boolean isIoType(Class<? extends IoHandler> handlerType) {
+        return ioHandler.getClass().equals(handlerType);
     }
 }

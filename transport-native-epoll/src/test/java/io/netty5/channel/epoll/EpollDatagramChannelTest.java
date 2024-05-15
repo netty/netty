@@ -46,7 +46,7 @@ public class EpollDatagramChannelTest {
 
     @Test
     public void testNotActiveNoLocalRemoteAddress() throws IOException {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
         try {
             checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(group.next()));
             checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(group.next(), SocketProtocolFamily.INET));
@@ -58,7 +58,7 @@ public class EpollDatagramChannelTest {
 
     @Test
     public void testActiveHasLocalAddress() throws IOException {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
         try {
             Socket socket = Socket.newSocketDgram();
             EpollDatagramChannel channel = new EpollDatagramChannel(
@@ -75,7 +75,7 @@ public class EpollDatagramChannelTest {
 
     @Test
     public void testLocalAddressBeforeAndAfterBind() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
         try {
             TestHandler handler = new TestHandler();
             InetSocketAddress localAddressBeforeBind = new InetSocketAddress(LOCALHOST, 0);

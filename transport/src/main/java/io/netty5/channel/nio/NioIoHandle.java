@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,23 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.channel.kqueue;
+package io.netty5.channel.nio;
 
-import io.netty5.channel.unix.IovArray;
+import io.netty5.channel.IoHandle;
 
+import java.nio.channels.SelectableChannel;
 
 /**
- * Registration with an {@link KQueueHandler}.
+ * {@link IoHandle} subtype for NIO based implementations that will work with {@link NioIoHandler}.
  */
-interface KQueueRegistration {
+public interface NioIoHandle extends IoHandle {
 
     /**
-     * Update the event-set for the registration.
+     * The underlying {@link SelectableChannel}.
+     *
+     * @return the channel
      */
-    void evSet(short filter, short flags, int fflags);
-
-    /**
-     * Returns an {@link IovArray} that can be used for {@code writev}.
-     */
-    IovArray cleanArray();
+    SelectableChannel selectableChannel();
 }

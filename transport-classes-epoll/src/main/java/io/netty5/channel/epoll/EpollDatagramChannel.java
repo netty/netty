@@ -159,7 +159,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     }
 
     private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
-        super(null, eventLoop, true, 0, new FixedReadHandleFactory(2048),
+        super(null, eventLoop, true, EpollIoOps.valueOf(0), new FixedReadHandleFactory(2048),
                 new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE), fd, active);
     }
 
@@ -342,7 +342,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 writeSink.numFlushedMessages() > 1 ||
                 // We only handle UDP_SEGMENT in sendmmsg.
                 writeSink.currentFlushedMessage() instanceof SegmentedDatagramPacket) {
-            NativeDatagramPacketArray array = cleanDatagramPacketArray();
+            NativeDatagramPacketArray array = registration().ioHandler().cleanDatagramPacketArray();
             writeSink.forEachFlushedMessage(array.addFunction(isConnected(), Integer.MAX_VALUE));
             int cnt = array.count();
 
@@ -582,13 +582,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         try {
             if (numDatagram <= 1) {
                 if (!connected || isUdpGro()) {
-                    return recvmsg(readSink, cleanDatagramPacketArray(), buf);
+                    return recvmsg(readSink, registration().ioHandler().cleanDatagramPacketArray(), buf);
                 } else {
                     return connectedRead(readSink, buf, datagramSize);
                 }
             } else {
                 // Try to use scattering reads via recvmmsg(...) syscall.
-                return scatteringRead(readSink, cleanDatagramPacketArray(), buf, datagramSize, numDatagram);
+                return scatteringRead(readSink, registration().ioHandler().cleanDatagramPacketArray(),
+                        buf, datagramSize, numDatagram);
             }
         } catch (NativeIoException e) {
             if (connected) {
@@ -782,10 +783,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
         } finally {
             releaseAndRecycle(buf, datagramPackets);
         }
-    }
-
-    private NativeDatagramPacketArray cleanDatagramPacketArray() {
-        return registration().cleanDatagramPacketArray();
     }
 
     @SuppressWarnings("unchecked")

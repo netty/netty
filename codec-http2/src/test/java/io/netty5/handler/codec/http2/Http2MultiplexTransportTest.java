@@ -31,9 +31,9 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
@@ -167,7 +167,7 @@ public class Http2MultiplexTransportTest {
 
     @BeforeEach
     public void setup() {
-        eventLoopGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        eventLoopGroup = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
     }
 
     @AfterEach
@@ -657,14 +657,14 @@ public class Http2MultiplexTransportTest {
                 public Thread newThread(Runnable r) {
                     return new Thread(r, "serverloop");
                 }
-            }, NioHandler.newFactory());
+            }, NioIoHandler.newFactory());
 
             clientEventLoopGroup = new MultithreadEventLoopGroup(1, new ThreadFactory() {
                 @Override
                 public Thread newThread(Runnable r) {
                     return new Thread(r, "clientloop");
                 }
-            }, NioHandler.newFactory());
+            }, NioIoHandler.newFactory());
 
             final int streams = 10;
             final CountDownLatch latchClientResponses = new CountDownLatch(streams);
@@ -754,7 +754,7 @@ public class Http2MultiplexTransportTest {
         try {
             final CountDownLatch clientReceivedResponseLatch = new CountDownLatch(1);
             final CountDownLatch resetFrameLatch = new CountDownLatch(1);
-            group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+            group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
             LocalAddress serverAddress = new LocalAddress(getClass().getName());
             ServerBootstrap sb = new ServerBootstrap()
                     .channel(LocalServerChannel.class)

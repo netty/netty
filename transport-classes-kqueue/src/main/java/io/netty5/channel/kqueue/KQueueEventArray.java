@@ -77,9 +77,9 @@ final class KQueueEventArray {
         size = 0;
     }
 
-    void evSet(AbstractKQueueChannel ch, short filter, short flags, int fflags) {
+    void evSet(int ident, short filter, short flags, int fflags) {
         reallocIfNeeded();
-        evSet(getKEventOffset(size++) + memoryAddress, ch.socket.intValue(), filter, flags, fflags);
+        evSet(getKEventOffset(size++) + memoryAddress, ident, filter, flags, fflags);
     }
 
     private void reallocIfNeeded() {
@@ -151,7 +151,7 @@ final class KQueueEventArray {
         return getShort(index, KQUEUE_FFLAGS_OFFSET);
     }
 
-    int fd(int index) {
+    int ident(int index) {
         if (PlatformDependent.hasUnsafe()) {
             return PlatformDependent.getInt(getKEventOffsetAddress(index) + KQUEUE_IDENT_OFFSET);
         }

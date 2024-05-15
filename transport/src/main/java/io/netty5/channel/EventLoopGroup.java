@@ -39,4 +39,15 @@ public interface EventLoopGroup extends EventExecutorGroup {
     default boolean isCompatible(Class<? extends IoHandle> handleType) {
         return next().isCompatible(handleType);
     }
+
+    /**
+     * Returns {@code true} if the given {@link IoHandler} type is used by this {@link EventLoopGroup},
+     * {@code false} otherwise.
+     *
+     * @param handlerType the type of the {@link IoHandler}.
+     * @return            if used or not.
+     */
+    default boolean isIoType(Class<? extends IoHandler> handlerType) {
+        return next().isIoType(handlerType);
+    }
 }

@@ -32,12 +32,12 @@ public abstract class AbstractNioMessageChannel<P extends Channel, L extends Soc
 
     /**
      * @see AbstractNioChannel#AbstractNioChannel(Channel, EventLoop,
-     * boolean, ReadHandleFactory, WriteHandleFactory ,SelectableChannel, int)
+     * boolean, ReadHandleFactory, WriteHandleFactory ,SelectableChannel, NioIoOps)
      */
     protected AbstractNioMessageChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
                                         ReadHandleFactory defaultReadHandleFactory,
                                         WriteHandleFactory defaultWriteHandleFactory,
-                                        SelectableChannel ch, int readInterestOp) {
+                                        SelectableChannel ch, NioIoOps readInterestOp) {
         super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory,
                 ch, readInterestOp);
     }

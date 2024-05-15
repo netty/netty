@@ -37,7 +37,7 @@ public class KQueueServerSocketChannelConfigTest {
 
     @BeforeAll
     public static void before() throws Exception {
-        group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
+        group = new MultithreadEventLoopGroup(1, KQueueIoHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (KQueueServerSocketChannel) bootstrap.group(group)
                                                   .channel(KQueueServerSocketChannel.class)

@@ -16,7 +16,7 @@
 package io.netty5.testsuite.svm.client;
 
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.resolver.AddressResolver;
 import io.netty5.resolver.dns.DnsAddressResolverGroup;
@@ -37,7 +37,7 @@ public final class DnsNativeClient {
 
     public static void main(String[] args) throws Exception {
         MultithreadEventLoopGroup group = new MultithreadEventLoopGroup(
-                1, new DefaultThreadFactory("netty"), NioHandler.newFactory());
+                1, new DefaultThreadFactory("netty"), NioIoHandler.newFactory());
 
         DnsAddressResolverGroup resolverGroup = new DnsAddressResolverGroup(NioDatagramChannel.class,
                 DnsServerAddressStreamProviders.platformDefault());

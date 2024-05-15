@@ -25,6 +25,8 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.ServerChannelReadHandleFactory;
 import io.netty5.channel.ServerChannelWriteHandleFactory;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
+import io.netty5.channel.nio.NioIoHandle;
+import io.netty5.channel.nio.NioIoOps;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.SocketUtils;
 import org.slf4j.Logger;
@@ -132,10 +134,10 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
             EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
             ServerSocketChannel channel, ProtocolFamily family) {
         super(null, eventLoop, false, new ServerChannelReadHandleFactory(),
-                new ServerChannelWriteHandleFactory(), channel, SelectionKey.OP_ACCEPT);
+                new ServerChannelWriteHandleFactory(), channel, NioIoOps.ACCEPT);
         this.family = toJdkFamily(family);
         this.childEventLoopGroup = validateEventLoopGroup(
-                childEventLoopGroup, "childEventLoopGroup", NioSocketChannel.class);
+                childEventLoopGroup, "childEventLoopGroup", NioIoHandle.class);
     }
 
     @Override

@@ -17,13 +17,13 @@ package io.netty5.testsuite.transport;
 
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.ServerChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 
 public class LocalSingleThreadEventLoopTest extends AbstractSingleThreadEventLoopTest {
     @Override
     protected IoHandlerFactory newIoHandlerFactory() {
-        return LocalHandler.newFactory();
+        return LocalIoHandler.newFactory();
     }
 
     @Override

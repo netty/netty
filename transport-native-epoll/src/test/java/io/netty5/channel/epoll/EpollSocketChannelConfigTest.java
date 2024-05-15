@@ -50,7 +50,7 @@ public class EpollSocketChannelConfigTest {
     @BeforeAll
     public static void beforeClass() {
         rand = new Random();
-        group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
     }
 
     @AfterAll

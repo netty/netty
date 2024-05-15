@@ -18,12 +18,14 @@ package io.netty5.channel;
 /**
  * A handle that will process I/O.
  */
-public interface IoHandle {
+public interface IoHandle extends AutoCloseable {
 
     /**
-     * Return true if registered already.
+     * Be called once there is something to handle.
      *
-     * @return {@code true} if registered, {@code false} otherwise
+     * @param registration  the {@link IoRegistration} for this {@link IoHandle}.
+     * @param ioEvent       the {@link IoEvent} that must be handled. The {@link IoEvent} is only valid
+     *                      while this method is executed and so must not escape it.
      */
-    boolean isRegistered();
+    void handle(IoRegistration registration, IoEvent ioEvent);
 }

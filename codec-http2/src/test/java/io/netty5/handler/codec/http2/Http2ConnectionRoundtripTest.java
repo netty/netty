@@ -30,7 +30,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty5.util.AsciiString;
@@ -1049,7 +1049,7 @@ public class Http2ConnectionRoundtripTest {
 
         final AtomicReference<Http2ConnectionHandler> serverHandlerRef = new AtomicReference<>();
         final CountDownLatch serverInitLatch = new CountDownLatch(1);
-        sb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
+        sb.group(new MultithreadEventLoopGroup(LocalIoHandler.newFactory()));
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1069,7 +1069,7 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        cb.group(new MultithreadEventLoopGroup(LocalHandler.newFactory()));
+        cb.group(new MultithreadEventLoopGroup(LocalIoHandler.newFactory()));
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override

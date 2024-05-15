@@ -94,6 +94,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private volatile L localAddress;
     private volatile R remoteAddress;
     private volatile boolean registered;
+    private IoRegistration registration;
 
     private volatile ReadBufferAllocator currentBufferAllocator;
 
@@ -151,12 +152,14 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      * @param parent                    the parent of this channel. {@code null} if there's no parent.
      * @param eventLoop                 the {@link EventLoop} which will be used.
      * @param supportingDisconnect      {@code true} if and only if the channel has the {@code disconnect()}
-     *                                  operation that allows a user to disconnect and then call {
-     *                                  @link Channel#connect(SocketAddress)} again, such as UDP/IP.
+     *                                  operation that allows a user to disconnect and then call
+     *                                  {@link Channel#connect(SocketAddress)} again, such as UDP/IP.
+     * @param handleType                the {@link IoHandle} type.
      */
-    protected AbstractChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect) {
+    protected AbstractChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
+                              Class<? extends IoHandle> handleType) {
         this(parent, eventLoop, supportingDisconnect, new AdaptiveReadHandleFactory(),
-                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE));
+                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE), handleType);
     }
 
     /**
@@ -169,12 +172,13 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      *                                      @link Channel#connect(SocketAddress)} again, such as UDP/IP.
      * @param defaultReadHandleFactory      the {@link ReadHandleFactory} that is used by default.
      * @param defaultWriteHandleFactory     the {@link WriteHandleFactory} that is used by default.
+     * @param handleType                    the {@link IoHandle} type.
      */
     protected AbstractChannel(P parent, EventLoop eventLoop,
                               boolean supportingDisconnect, ReadHandleFactory defaultReadHandleFactory,
-                              WriteHandleFactory defaultWriteHandleFactory) {
+                              WriteHandleFactory defaultWriteHandleFactory, Class<? extends IoHandle> handleType) {
         this(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory,
-                DefaultChannelId.newInstance());
+                DefaultChannelId.newInstance(), handleType);
     }
 
     /**
@@ -188,12 +192,13 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      * @param defaultReadHandleFactory      the {@link ReadHandleFactory} that is used by default.
      * @param defaultWriteHandleFactory     the {@link WriteHandleFactory} that is used by default.
      * @param id                            the {@link ChannelId} which will be used.
+     * @param handleType                    the {@link IoHandle} type.
      */
     protected AbstractChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
                               ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
-                              ChannelId id) {
+                              ChannelId id, Class<? extends IoHandle> handleType) {
         this.parent = parent;
-        this.eventLoop = validateEventLoopGroup(eventLoop, "eventLoop", getClass());
+        this.eventLoop = validateEventLoopGroup(eventLoop, "eventLoop", handleType);
         this.id = requireNonNull(id, "id");
         this.supportingDisconnect = supportingDisconnect;
         readHandleFactory = requireNonNull(defaultReadHandleFactory, "defaultReadHandleFactory");
@@ -210,16 +215,16 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
      *
      * @param group         the group to check against
      * @param name          the name of the param that is used when throwing an exception.
-     * @param channelType   the {@link Channel} type.
+     * @param handleType   the {@link Channel} type.
      * @return              the group itself
      * @param <T>           the concreate type of the {@link EventLoopGroup}.
      */
     protected static <T extends EventLoopGroup> T validateEventLoopGroup(
-            T group, String name, Class<? extends Channel> channelType) {
+            T group, String name, Class<? extends IoHandle> handleType) {
         requireNonNull(group, name);
-        if (!group.isCompatible(channelType)) {
-            throw new IllegalArgumentException(group + " does not support channel of type " +
-                            StringUtil.simpleClassName(channelType));
+        if (!group.isCompatible(handleType)) {
+            throw new IllegalArgumentException(group + " does not support IoHandle of type " +
+                            StringUtil.simpleClassName(handleType));
         }
         return group;
     }
@@ -291,11 +296,6 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     protected final void cacheAddresses(L localAddress, R  remoteAddress) {
         this.localAddress = localAddress;
         this.remoteAddress = remoteAddress;
-    }
-
-    @Override
-    public final boolean isRegistered() {
-        return registered;
     }
 
     @Override
@@ -450,10 +450,20 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         return estimatorHandle;
     }
 
+    @Override
+    public boolean isRegistered() {
+        return registered;
+    }
+
+    protected IoRegistration registration() {
+        assert registration != null;
+        return registration;
+    }
+
     private void registerTransport(final Promise<Void> promise) {
         assertEventLoop();
 
-        if (isRegistered()) {
+        if (registered) {
             promise.setFailure(new IllegalStateException("registered to an event loop already"));
             return;
         }
@@ -465,11 +475,13 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                 return;
             }
             boolean firstRegistration = neverRegistered;
-            executor().registerForIo(this).addListener(f -> {
+            executor().register(ioHandle()).addListener(f -> {
                 if (f.isSuccess()) {
 
                     neverRegistered = false;
                     registered = true;
+
+                    registration = f.getNow();
 
                     safeSetSuccess(promise);
                     pipeline.fireChannelRegistered();
@@ -486,12 +498,13 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                     closeNowAndFail(promise, f.cause());
                 }
             });
-
         } catch (Throwable t) {
             // Close the channel directly to avoid FD leak.
             closeNowAndFail(promise, t);
         }
     }
+
+    protected abstract IoHandle ioHandle();
 
     /**
      * Calls {@link ChannelPipeline#fireChannelActive()} if it was not done yet.
@@ -800,7 +813,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         }
     }
 
-    private void deregisterTransport(final Promise<Void> promise) {
+    protected final void deregisterTransport(final Promise<Void> promise) {
         assertEventLoop();
 
         deregister(promise, false);
@@ -827,25 +840,27 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         // https://github.com/netty/netty/issues/4435
         invokeLater(() -> {
             try {
-                eventLoop.deregisterForIo(this).addListener(f -> {
-                    if (f.isFailed()) {
-                        logger.warn("Unexpected exception occurred while deregistering a channel.", f.cause());
-                    }
-                    deregisterDone(fireChannelInactive, promise);
-                });
+                doDeregister();
             } catch (Throwable t) {
                 logger.warn("Unexpected exception occurred while deregistering a channel.", t);
+            } finally {
                 deregisterDone(fireChannelInactive, promise);
             }
         });
+    }
+
+    protected void doDeregister() throws Exception {
+        IoRegistration registration = this.registration;
+        if (registration != null) {
+            this.registration = null;
+            registration.cancel();
+        }
     }
 
     private void deregisterDone(boolean fireChannelInactive, Promise<Void> promise) {
         if (fireChannelInactive) {
             pipeline.fireChannelInactive();
         }
-        // Ensure we also clear all scheduled reads so its possible to schedule again if the Channel is re-registered.
-        clearScheduledRead();
 
         // Some transports like local and AIO does not allow the deregistration of
         // an open channel. Their doDeregister() calls close(). Consequently,
@@ -853,6 +868,9 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
         // if it was registered.
         if (registered) {
             registered = false;
+            // Ensure we also clear all scheduled reads so its possible to schedule again if the Channel is
+            // re-registered.
+            clearScheduledRead();
             pipeline.fireChannelUnregistered();
 
             if (!isOpen()) {
@@ -867,6 +885,10 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
                     }
                 }
             }
+        } else {
+            // Ensure we also clear all scheduled reads so its possible to schedule again if the Channel is
+            // re-registered.
+            clearScheduledRead();
         }
         safeSetSuccess(promise);
     }

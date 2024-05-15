@@ -35,7 +35,7 @@ public class EpollChannelConfigTest {
     @Test
     public void testOptionGetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
         try {
             EpollSocketChannel channel = new EpollSocketChannel(group.next());
             channel.getOption(ChannelOption.SO_LINGER);
@@ -54,7 +54,7 @@ public class EpollChannelConfigTest {
     @Test
     public void testOptionSetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
         try {
             EpollSocketChannel channel = new EpollSocketChannel(group.next());
             channel.setOption(ChannelOption.SO_KEEPALIVE, true);
@@ -73,7 +73,7 @@ public class EpollChannelConfigTest {
     @Test
     public void testIntegerOption() throws Exception {
         Epoll.ensureAvailability();
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
         try {
             EpollSocketChannel channel = new EpollSocketChannel(group.next());
             IntegerUnixChannelOption opt = new IntegerUnixChannelOption("INT_OPT", 1, 2);
@@ -90,7 +90,7 @@ public class EpollChannelConfigTest {
     @Test
     public void testRawOption() throws Exception {
         Epoll.ensureAvailability();
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
         try {
             EpollSocketChannel channel = new EpollSocketChannel(group.next());
             // Value for SOL_SOCKET and SO_REUSEADDR

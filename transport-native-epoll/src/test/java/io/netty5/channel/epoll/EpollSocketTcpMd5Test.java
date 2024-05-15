@@ -46,7 +46,7 @@ public class EpollSocketTcpMd5Test {
 
     @BeforeAll
     public static void beforeClass() {
-        GROUP = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        GROUP = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
     }
 
     @BeforeEach

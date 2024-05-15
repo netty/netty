@@ -46,7 +46,7 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
         final EventLoopGroup group = new SingleThreadEventLoop(
                 new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())),
-                new EpollHandler(0, DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy()) {
+                new EpollIoHandler(0, DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy()) {
                     @Override
                     void handleLoopException(Throwable t) {
                         capture.set(t);
@@ -162,7 +162,7 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Override
     protected IoHandlerFactory newIoHandlerFactory() {
-        return EpollHandler.newFactory();
+        return EpollIoHandler.newFactory();
     }
 
     @Override

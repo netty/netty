@@ -20,7 +20,7 @@ import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +53,7 @@ public class ChannelInitializerTest {
 
     @BeforeEach
     public void setUp() {
-        group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         server = new ServerBootstrap()
                 .group(group)
                 .channel(LocalServerChannel.class)

@@ -25,7 +25,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
@@ -64,7 +64,7 @@ public class Http2StreamChannelBootstrapTest {
         Channel clientChannel = null;
         try {
             final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-            group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+            group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
             LocalAddress serverAddress = new LocalAddress(getClass());
             ServerBootstrap sb = new ServerBootstrap()
                     .channel(LocalServerChannel.class)

@@ -24,7 +24,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.util.AttributeKey;
 import org.junit.jupiter.api.Test;
@@ -48,7 +48,7 @@ public class ServerBootstrapTest {
     public void testHandlerRegister() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<Throwable> error = new AtomicReference<>();
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.channel(LocalServerChannel.class)
@@ -105,7 +105,7 @@ public class ServerBootstrapTest {
             }
         };
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         Channel sch = null;
         Channel cch = null;
         try {
@@ -148,7 +148,7 @@ public class ServerBootstrapTest {
 
     @Test
     public void optionsAndAttributesMustBeAvailableOnChildChannelInit() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         LocalAddress addr = new LocalAddress(ServerBootstrapTest.class);
         final AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
         final AtomicBoolean requestServed = new AtomicBoolean();
@@ -184,7 +184,7 @@ public class ServerBootstrapTest {
         LocalAddress addr = new LocalAddress(ServerBootstrapTest.class);
         final AtomicReference<Channel> expectedServerChannel = new AtomicReference<Channel>();
         final AtomicReference<Channel> expectedChildChannel = new AtomicReference<Channel>();
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         final ServerBootstrap sb = new ServerBootstrap();
         sb.group(group);
         sb.channel(LocalServerChannel.class);

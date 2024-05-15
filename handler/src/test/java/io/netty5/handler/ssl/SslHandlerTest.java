@@ -33,9 +33,9 @@ import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.ByteToMessageDecoder;
@@ -473,7 +473,7 @@ public class SslHandlerTest {
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testRemoval() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -599,7 +599,7 @@ public class SslHandlerTest {
         final Logger logger = LoggerFactory.getLogger(getClass());
         Channel serverChannel = null;
         Channel clientChannel = null;
-        EventLoopGroup group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group)
@@ -706,7 +706,7 @@ public class SslHandlerTest {
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         final CountDownLatch serverReceiveLatch = new CountDownLatch(1);
@@ -779,7 +779,7 @@ public class SslHandlerTest {
                 .trustManager(new SelfSignedCertificate().cert())
                 .build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try (AutoCloseable ignore1 = autoClosing(sslServerCtx);
@@ -853,7 +853,7 @@ public class SslHandlerTest {
                                                          .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                                          .sslProvider(SslProvider.JDK).build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         final CountDownLatch activeLatch = new CountDownLatch(1);
@@ -935,7 +935,7 @@ public class SslHandlerTest {
                                                          .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                                          .sslProvider(SslProvider.JDK).build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         final SslHandler sslHandler = sslClientCtx.newHandler(offHeapAllocator());
@@ -1121,7 +1121,7 @@ public class SslHandlerTest {
                     .sslProvider(provider).build();
         }
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         BufferAllocator allocator = SslProvider.JDK == provider?
@@ -1202,7 +1202,7 @@ public class SslHandlerTest {
         final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
                 .sslProvider(SslProvider.JDK).build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         final SslHandler clientSslHandler = sslClientCtx.newHandler(offHeapAllocator(), command -> {
@@ -1316,7 +1316,7 @@ public class SslHandlerTest {
             ((OpenSslSessionContext) sslServerCtx.sessionContext()).setTicketKeys();
         }
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         final byte[] bytes = new byte[96];
         ThreadLocalRandom.current().nextBytes(bytes);
@@ -1493,7 +1493,7 @@ public class SslHandlerTest {
         final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
                 .sslProvider(SslProvider.JDK).build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         final SslHandler clientSslHandler = sslClientCtx.newHandler(DefaultBufferAllocators.onHeapAllocator());
         final SslHandler serverSslHandler = sslServerCtx.newHandler(DefaultBufferAllocators.onHeapAllocator());
@@ -1602,7 +1602,7 @@ public class SslHandlerTest {
                 .ciphers(Collections.singleton(serverCipher))
                 .sslProvider(provider).build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc;
         Channel cc;
         final SslHandler clientSslHandler = sslClientCtx.newHandler(offHeapAllocator());
@@ -1716,7 +1716,7 @@ public class SslHandlerTest {
                 .protocols(protocol)
                 .sslProvider(provider).build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
 
         final LinkedBlockingQueue<Channel> acceptedChannels =
                 new LinkedBlockingQueue<Channel>();

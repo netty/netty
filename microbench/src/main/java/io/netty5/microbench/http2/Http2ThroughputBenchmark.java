@@ -31,9 +31,9 @@ import io.netty5.channel.ServerChannel;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.ServerSocketChannel;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
@@ -228,10 +228,10 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
     private IoHandlerFactory getHandlerFactory() throws Exception {
         Class<?> factoryClass;
         switch (transport) {
-            case local: return LocalHandler.newFactory();
-            case nio: return NioHandler.newFactory();
-            case epoll: factoryClass = Class.forName("io.netty5.channel.epoll.EpollHandler"); break;
-            case kqueue: factoryClass = Class.forName("io.netty5.channel.kqueue.KQueueHandler"); break;
+            case local: return LocalIoHandler.newFactory();
+            case nio: return NioIoHandler.newFactory();
+            case epoll: factoryClass = Class.forName("io.netty5.channel.epoll.EpollIoHandler"); break;
+            case kqueue: factoryClass = Class.forName("io.netty5.channel.kqueue.KQueueIoHandler"); break;
             case io_uring: factoryClass = Class.forName("io.netty5.channel.uring.IOUring"); break;
             default: throw new UnsupportedOperationException("Unrecognized transport: " + transport);
         }

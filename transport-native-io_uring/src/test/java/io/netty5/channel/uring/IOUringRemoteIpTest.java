@@ -67,7 +67,7 @@ public class IOUringRemoteIpTest {
 
     private static void testRemoteAddress(InetAddress server, InetAddress client) throws Exception {
         final Promise<SocketAddress> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, IOUringHandler.newFactory());
+        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, IOUringIoHandler.newFactory());
         Socket socket = new Socket();
         try {
             ServerBootstrap b = new ServerBootstrap();

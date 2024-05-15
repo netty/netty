@@ -30,9 +30,9 @@ import io.netty5.channel.ServerChannel;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
@@ -136,7 +136,7 @@ public class ParameterizedSslHandlerTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(clientProvider).build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -318,7 +318,7 @@ public class ParameterizedSslHandlerTest {
                         ResourcesUtil.getFile(getClass(), "test_unencrypted.pem"))
                 .sslProvider(clientProvider).build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -418,7 +418,7 @@ public class ParameterizedSslHandlerTest {
                                                          .protocols(SslProtocols.TLS_v1_2)
                                                          .build();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try {
@@ -514,7 +514,7 @@ public class ParameterizedSslHandlerTest {
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void reentryOnHandshakeCompleteNioChannel(SslProvider clientProvider, SslProvider serverProvider)
             throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         try {
             Class<? extends ServerChannel> serverClass = NioServerSocketChannel.class;
             Class<? extends Channel> clientClass = NioSocketChannel.class;
@@ -537,7 +537,7 @@ public class ParameterizedSslHandlerTest {
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void reentryOnHandshakeCompleteLocalChannel(SslProvider clientProvider, SslProvider serverProvider)
             throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
         try {
             Class<? extends ServerChannel> serverClass = LocalServerChannel.class;
             Class<? extends Channel> clientClass = LocalChannel.class;

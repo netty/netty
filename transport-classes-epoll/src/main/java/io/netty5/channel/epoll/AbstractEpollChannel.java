@@ -19,6 +19,9 @@ import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.IoEvent;
+import io.netty5.channel.IoHandle;
+import io.netty5.channel.IoRegistration;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.socket.DomainSocketAddress;
@@ -33,6 +36,7 @@ import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.IovArray;
 import io.netty5.channel.unix.Socket;
 import io.netty5.channel.unix.UnixChannel;
+import io.netty5.util.concurrent.Future;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -57,30 +61,81 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         }
     };
 
+    private final EpollIoHandle handle = new EpollIoHandle() {
+        @Override
+        public FileDescriptor fd() {
+            return AbstractEpollChannel.this.fd();
+        }
+
+        @Override
+        public void handle(IoRegistration registration, IoEvent event) {
+            EpollIoEvent epollEvent = (EpollIoEvent) event;
+            EpollIoOps epollOps = epollEvent.ops();
+
+            // Don't change the ordering of processing EPOLLOUT | EPOLLRDHUP / EPOLLIN if you're not 100%
+            // sure about it!
+            // Re-ordering can easily introduce bugs and bad side-effects, as we found out painfully in the
+            // past.
+
+            // First check for EPOLLOUT as we may need to fail the connect ChannelPromise before try
+            // to read from the file descriptor.
+            // See https://github.com/netty/netty/issues/3785
+            //
+            // It is possible for an EPOLLOUT or EPOLLERR to be generated when a connection is refused.
+            // In either case epollOutReady() will do the correct thing (finish connecting, or fail
+            // the connection).
+            // See https://github.com/netty/netty/issues/3848
+            if (epollOps.contains(EpollIoOps.EPOLLERR) || epollOps.contains(EpollIoOps.EPOLLOUT)) {
+                // Force flush of data as the epoll is writable again
+                epollOutReady();
+            }
+
+            // Check EPOLLIN before EPOLLRDHUP to ensure all data is read before shutting down the input.
+            // See https://github.com/netty/netty/issues/4317.
+            //
+            // If EPOLLIN or EPOLLERR was received and the channel is still open call epollInReady(). This will
+            // try to read from the underlying file descriptor and so notify the user about the error.
+            if (epollOps.contains(EpollIoOps.EPOLLERR) || epollOps.contains(EpollIoOps.EPOLLIN)) {
+                // The Channel is still open and there is something to read. Do it now.
+                epollInReady();
+            }
+
+            // Check if EPOLLRDHUP was set, this will notify us for connection-reset in which case
+            // we may close the channel directly or try to read more data depending on the state of the
+            // Channel and als depending on the AbstractEpollChannel subtype.
+            if (epollOps.contains(EpollIoOps.EPOLLRDHUP)) {
+                epollRdHupReady();
+            }
+        }
+
+        @Override
+        public void close() {
+            closeTransportNow();
+        }
+    };
+
     protected volatile boolean active;
-
-    private EpollRegistration registration;
-
-    private int flags = Native.EPOLLET;
     private boolean readNowRunnablePending;
     private boolean maybeMoreDataToRead;
+    private EpollIoOps ops;
 
     private boolean receivedRdHup;
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
 
-    AbstractEpollChannel(EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
+    AbstractEpollChannel(EventLoop eventLoop, boolean supportingDisconnect, EpollIoOps initialOps,
                          ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
                          LinuxSocket fd) {
-        this(null, eventLoop, supportingDisconnect, initialFlag, defaultReadHandleFactory, defaultWriteHandleFactory,
+        this(null, eventLoop, supportingDisconnect, initialOps, defaultReadHandleFactory, defaultWriteHandleFactory,
                 fd, false);
     }
 
-    AbstractEpollChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
+    AbstractEpollChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect, EpollIoOps initialOps,
                          ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
                          LinuxSocket fd, boolean active) {
-        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory);
-        flags |= initialFlag;
+        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory,
+                EpollIoHandle.class);
+        this.ops = initialOps;
         socket = requireNonNull(fd, "fd");
         this.active = active;
         if (active) {
@@ -91,17 +146,23 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         }
     }
 
-    AbstractEpollChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect, int initialFlag,
+    AbstractEpollChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect, EpollIoOps initialOps,
                          ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
                          LinuxSocket fd, SocketAddress remote) {
-        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory);
-        flags |= initialFlag;
+        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory,
+                EpollIoHandle.class);
+        this.ops = initialOps;
         socket = requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
         remoteAddress =  remote == null ? fd.remoteAddress() : remote;
         localAddress = fd.localAddress();
+    }
+
+    @Override
+    protected IoHandle ioHandle() {
+        return handle;
     }
 
     protected static boolean isSoErrorZero(Socket fd) {
@@ -112,31 +173,52 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         }
     }
 
-    protected final void setFlag(int flag) throws IOException {
-        if (!isFlagSet(flag)) {
-            flags |= flag;
-            modifyEvents();
+    protected void setFlag(int flag) throws IOException {
+        ops = ops.with(EpollIoOps.valueOf(flag));
+        if (isRegistered() && isOpen()) {
+            EpollIoRegistration registration = registration();
+            try {
+                registration.submit(ops);
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        } else {
+            ops = ops.with(EpollIoOps.valueOf(flag));
         }
     }
 
-    protected final void clearFlag(int flag) throws IOException {
-        if (isFlagSet(flag)) {
-            flags &= ~flag;
-            modifyEvents();
+    void clearFlag(int flag) throws IOException {
+        ops = ops.without(EpollIoOps.valueOf(flag));
+        if (isRegistered() && isOpen()) {
+            EpollIoRegistration registration = registration();
+            try {
+                registration.submit(ops);
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
         }
     }
 
-    protected final EpollRegistration registration() {
-        assert registration != null;
-        return registration;
+    @Override
+    protected final EpollIoRegistration registration() {
+        return (EpollIoRegistration) super.registration();
     }
 
-    private boolean isFlagSet(int flag) {
-        return (flags & flag) != 0;
+    @Override
+    public Future<Void> register() {
+        return super.register().addListener(f -> {
+            if (f.isSuccess() && isOpen()) {
+                registration().submit(ops);
+            }
+        });
     }
 
-    final int flags() {
-        return flags;
+    boolean isFlagSet(int flag) {
+        return (ops.value & flag) != 0;
     }
 
     @Override
@@ -170,20 +252,6 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         return socket.isOpen();
     }
 
-    final void register0(EpollRegistration registration) {
-        // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
-        // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
-        // new EventLoop.
-        readNowRunnablePending = false;
-        this.registration = registration;
-    }
-
-    final void deregister0() throws Exception {
-        if (registration != null) {
-            registration.remove();
-        }
-    }
-
     @Override
     protected final void doRead(boolean wasReadPendingAlready) throws Exception {
         if (!wasReadPendingAlready) {
@@ -198,12 +266,6 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
         // RDHUP was received.
         if (maybeMoreDataToRead || receivedRdHup) {
             executeReadNowRunnable();
-        }
-    }
-
-    private void modifyEvents() throws IOException {
-        if (isOpen() && isRegistered() && registration != null) {
-            registration.update();
         }
     }
 
@@ -273,7 +335,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
             throws IOException {
         assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
 
-        IovArray array = registration().cleanIovArray();
+        IovArray array = registration().ioHandler().cleanIovArray();
         array.addReadable(data);
         int count = array.count();
         assert count != 0;

@@ -29,6 +29,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.DefaultChannelPipeline;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.IoHandle;
 import io.netty5.channel.MaxMessagesWriteHandleFactory;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.Resource;
@@ -68,6 +69,13 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     private State state;
     private boolean inputShutdown;
     private boolean outputShutdown;
+
+    private final EmbeddedIoHandle handle = new EmbeddedIoHandle() {
+        @Override
+        protected void setActive() {
+            EmbeddedChannel.this.setActive();
+        }
+    };
 
     /**
      * Create a new instance with an {@link EmbeddedChannelId} and an empty pipeline.
@@ -253,7 +261,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     public EmbeddedChannel(Ticker ticker, Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
                            final ChannelHandler... handlers) {
         super(parent, new EmbeddedEventLoop(ticker), hasDisconnect, new AdaptiveReadHandleFactory(),
-                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE), channelId);
+                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE), channelId, EmbeddedIoHandle.class);
         setup(register, handlers);
     }
 
@@ -276,6 +284,11 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
             Future<Void> future = register();
             assert future.isDone();
         }
+    }
+
+    @Override
+    protected IoHandle ioHandle() {
+        return handle;
     }
 
     @Override

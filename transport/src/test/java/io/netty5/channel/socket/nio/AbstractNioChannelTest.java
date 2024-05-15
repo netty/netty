@@ -15,14 +15,15 @@
  */
 package io.netty5.channel.socket.nio;
 
-import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.IoHandle;
+import io.netty5.channel.IoHandler;
+import io.netty5.channel.IoRegistration;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.AbstractNioChannel;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.util.concurrent.AbstractEventExecutor;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel<?, ?, 
 
     @Test
     public void testNioChannelOption() throws Exception {
-        EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
         T channel = newNioChannel(eventLoopGroup);
         try {
             NetworkChannel jdkChannel = jdkChannel(channel);
@@ -71,7 +72,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel<?, ?, 
 
     @Test
     public void testInvalidNioChannelOption() throws Exception {
-        EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
         T channel = newNioChannel(eventLoopGroup);
         try {
             ChannelOption option = NioChannelOption.of(newInvalidOption());
@@ -85,7 +86,7 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel<?, ?, 
 
     @Test
     public void testWrapping() throws Exception {
-        EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
         final EventLoop eventLoop = eventLoopGroup.next();
 
         class WrappedEventLoop extends AbstractEventExecutor implements EventLoop {
@@ -96,7 +97,6 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel<?, ?, 
             }
 
             @Override
-            @Test
             public EventLoop next() {
                 return this;
             }
@@ -164,18 +164,18 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel<?, ?, 
             }
 
             @Override
-            public Future<Void> registerForIo(IoHandle handle) {
-                return eventLoop.registerForIo(handle);
-            }
-
-            @Override
-            public Future<Void> deregisterForIo(IoHandle handle) {
-                return eventLoop.deregisterForIo(handle);
+            public Future<IoRegistration> register(IoHandle handle) {
+                return eventLoop.register(handle);
             }
 
             @Override
             public boolean isCompatible(Class<? extends IoHandle> handleType) {
                 return eventLoop.isCompatible(handleType);
+            }
+
+            @Override
+            public boolean isIoType(Class<? extends IoHandler> handlerType) {
+                return eventLoop.isIoType(handlerType);
             }
         }
 

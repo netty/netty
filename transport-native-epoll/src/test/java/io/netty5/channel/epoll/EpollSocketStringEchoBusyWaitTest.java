@@ -38,7 +38,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
     @BeforeAll
     public static void setup() throws Exception {
         EPOLL_LOOP = new MultithreadEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
-                EpollHandler.newFactory(0, () -> (selectSupplier, hasTasks) -> SelectStrategy.BUSY_WAIT));
+                EpollIoHandler.newFactory(0, () -> (selectSupplier, hasTasks) -> SelectStrategy.BUSY_WAIT));
     }
 
     @AfterAll

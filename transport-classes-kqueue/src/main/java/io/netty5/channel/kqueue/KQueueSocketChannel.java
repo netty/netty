@@ -40,6 +40,7 @@ import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
+import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
@@ -465,7 +466,11 @@ public final class KQueueSocketChannel
                     // because we try to read or write until the actual close happens which may be later due
                     // SO_LINGER handling.
                     // See https://github.com/netty/netty/issues/4449
-                    return executor().deregisterForIo(this).map(v -> GlobalEventExecutor.INSTANCE);
+                    readFilter(false);
+                    writeFilter(false);
+                    Promise<Void> promise = newPromise();
+                    deregisterTransport(promise);
+                    return promise.asFuture().map(v -> GlobalEventExecutor.INSTANCE);
                 }
             } catch (Throwable ignore) {
                 // Ignore the error as the underlying channel may be closed in the meantime and so
@@ -673,7 +678,7 @@ public final class KQueueSocketChannel
      */
     private void doWriteMultiple(WriteSink writeSink)
             throws Exception {
-        IovArray array = registration().cleanArray();
+        IovArray array = registration().ioHandler().cleanArray();
         array.maxBytes(writeSink.estimatedMaxBytesPerGatheringWrite());
         writeSink.forEachFlushedMessage(array);
 

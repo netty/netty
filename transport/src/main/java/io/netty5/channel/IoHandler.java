@@ -17,7 +17,7 @@ package io.netty5.channel;
 
 /**
  * Handles IO dispatching for an {@link EventLoop}
- * All operations except {@link #wakeup(boolean)} and {@link #isCompatible(Class)} <strong>MUST</strong> be executed
+ * All operations except {@link #wakeup(EventLoop)} and {@link #isCompatible(Class)} <strong>MUST</strong> be executed
  * on the {@link EventLoop} thread and should never be called from the user-directly.
  */
 public interface IoHandler {
@@ -43,26 +43,19 @@ public interface IoHandler {
     void destroy();
 
     /**
-     * Register a {@link Channel} for IO.
+     * Register a {@link IoHandle} for IO.
      *
-     * @param channel       the {@link Channel} to register..
+     * @param eventLoop     the {@link EventLoop} that did issue the registration.
+     * @param handle        the {@link IoHandle} to register.
      * @throws Exception    thrown if an error happens during registration.
      */
-    void register(IoHandle channel) throws Exception;
-
-    /**
-     * Deregister a {@link IoHandle} for IO.
-     *
-     * @param handle        the {@link IoHandle} to deregister..
-     * @throws Exception    thrown if an error happens during deregistration.
-     */
-    void deregister(IoHandle handle) throws Exception;
+    IoRegistration register(EventLoop eventLoop, IoHandle handle) throws Exception;
 
     /**
      * Wakeup the {@link IoHandler}, which means if any operation blocks it should be unblocked and
      * return as soon as possible.
      */
-    void wakeup(boolean inEventLoop);
+    void wakeup(EventLoop eventLoop);
 
     /**
      * Returns {@code true} if the given type is compatible with this {@link IoHandler} and so can be registered,

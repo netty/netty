@@ -27,7 +27,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -45,8 +45,8 @@ public class EchoIT {
 
     @Test
     void echoServerMustReplyWithSameData() throws Exception {
-        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
-        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
+        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         final EchoServerHandler serverHandler = new EchoServerHandler();
         try {
             ServerBootstrap server = new ServerBootstrap();
@@ -69,7 +69,7 @@ public class EchoIT {
             InetSocketAddress serverAddress = (InetSocketAddress) bind.localAddress();
 
             // Configure the client.
-            EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+            EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
             try {
                 Bootstrap b = new Bootstrap();
                 b.group(group)

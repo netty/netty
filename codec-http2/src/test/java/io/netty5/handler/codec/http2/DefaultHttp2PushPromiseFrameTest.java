@@ -23,7 +23,7 @@ import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -44,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DefaultHttp2PushPromiseFrameTest {
 
-    private final EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(2, NioHandler.newFactory());
+    private final EventLoopGroup eventLoopGroup = new MultithreadEventLoopGroup(2, NioIoHandler.newFactory());
     private final ClientHandler clientHandler = new ClientHandler();
     private final Map<Integer, String> contentMap = new ConcurrentHashMap<Integer, String>();
 

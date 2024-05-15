@@ -42,7 +42,7 @@ public class KQueueChannelConfigTest {
 
     @Test
     public void testOptionGetThrowsChannelException() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueIoHandler.newFactory());
         try {
             KQueueSocketChannel channel = new KQueueSocketChannel(group.next());
             channel.getOption(ChannelOption.SO_LINGER);
@@ -60,7 +60,7 @@ public class KQueueChannelConfigTest {
 
     @Test
     public void testOptionSetThrowsChannelException() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueIoHandler.newFactory());
         try {
             KQueueSocketChannel channel = new KQueueSocketChannel(group.next());
             channel.setOption(ChannelOption.SO_KEEPALIVE, true);
@@ -79,7 +79,7 @@ public class KQueueChannelConfigTest {
     // See https://github.com/netty/netty/issues/7159
     @Test
     public void testSoLingerNoAssertError() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueIoHandler.newFactory());
 
         try {
             Bootstrap bootstrap = new Bootstrap();
@@ -97,7 +97,7 @@ public class KQueueChannelConfigTest {
 
     @Test
     public void testIntegerOption() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueIoHandler.newFactory());
         try {
             KQueueSocketChannel channel = new KQueueSocketChannel(group.next());
             IntegerUnixChannelOption opt = new IntegerUnixChannelOption("INT_OPT", 0xffff, 0x0004);
@@ -113,7 +113,7 @@ public class KQueueChannelConfigTest {
 
     @Test
     public void testRawOption() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, KQueueIoHandler.newFactory());
         try {
             KQueueSocketChannel channel = new KQueueSocketChannel(group.next());
             // Value for SOL_SOCKET and SO_REUSEADDR

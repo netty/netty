@@ -17,13 +17,13 @@ package io.netty5.testsuite.transport;
 
 import io.netty5.channel.IoHandlerFactory;
 import io.netty5.channel.ServerChannel;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 
 public class NioSingleThreadEventLoopTest extends AbstractSingleThreadEventLoopTest {
     @Override
     protected IoHandlerFactory newIoHandlerFactory() {
-        return NioHandler.newFactory();
+        return NioIoHandler.newFactory();
     }
 
     @Override

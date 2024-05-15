@@ -27,7 +27,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -133,7 +133,7 @@ public class HttpClientCodecTest {
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
         final CountDownLatch responseReceivedLatch = new CountDownLatch(1);
         try {
-            sb.group(new MultithreadEventLoopGroup(2, NioHandler.newFactory()));
+            sb.group(new MultithreadEventLoopGroup(2, NioIoHandler.newFactory()));
             sb.channel(NioServerSocketChannel.class);
             sb.childHandler(new ChannelInitializer<>() {
                 @Override
@@ -171,7 +171,7 @@ public class HttpClientCodecTest {
                 }
             });
 
-            cb.group(new MultithreadEventLoopGroup(1, NioHandler.newFactory()));
+            cb.group(new MultithreadEventLoopGroup(1, NioIoHandler.newFactory()));
             cb.channel(NioSocketChannel.class);
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true);
             cb.handler(new ChannelInitializer<>() {

@@ -56,9 +56,9 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty5.channel.embedded.EmbeddedChannel$1",
+    "name": "io.netty5.channel.embedded.EmbeddedChannel$2",
     "condition": {
-      "typeReachable": "io.netty5.channel.embedded.EmbeddedChannel$1"
+      "typeReachable": "io.netty5.channel.embedded.EmbeddedChannel$2"
     },
     "queryAllPublicMethods": true
   },
