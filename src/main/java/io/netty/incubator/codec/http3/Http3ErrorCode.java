@@ -126,4 +126,8 @@ public enum Http3ErrorCode {
     Http3ErrorCode(int code) {
         this.code = code;
     }
+
+    public int code() {
+        return code;
+    }
 }
