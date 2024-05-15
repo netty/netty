@@ -249,7 +249,7 @@ public final class IOUringIoHandler implements IoHandler {
                 assert old.handle != registration.handle;
                 registrations.put(id, old);
             } else {
-                registration.id = id;
+                registration.setId(id);
                 break;
             }
         }
@@ -273,12 +273,15 @@ public final class IOUringIoHandler implements IoHandler {
 
         private boolean removeLater;
         private int outstandingCompletions;
-
-        int id;
+        private int id;
 
         DefaultIoUringIoRegistration(IoEventLoop eventLoop, IOUringIoHandle handle) {
             this.eventLoop = eventLoop;
             this.handle = handle;
+        }
+
+        void setId(int id) {
+            this.id = id;
         }
 
         @Override
@@ -326,7 +329,7 @@ public final class IOUringIoHandler implements IoHandler {
 
         private void tryRemove() {
             if (outstandingCompletions > 0) {
-                // We have some completions outstanding, we will remove the fd <-> registration mapping
+                // We have some completions outstanding, we will remove the id <-> registration mapping
                 // once these are done.
                 removeLater = true;
                 return;
