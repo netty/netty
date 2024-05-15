@@ -13,8 +13,26 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/**
- * <a href="https://kernel.dk/io_uring.pdf">io_uring</a> is a high I/O performance scalable interface for fully
- * asynchronous Linux syscalls.
- */
 package io.netty.channel.uring;
+
+import io.netty.channel.epoll.Epoll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+public class CombinationOfIoUringAndEpollTest {
+
+    @BeforeAll
+    public static void loadJNI() {
+        assumeTrue(IoUring.isAvailable());
+        // Epoll must be usable.
+        Epoll.ensureAvailability();
+    }
+
+    @Test
+    public void testIOUringAndEpollCanBothBeLoaded() {
+        IoUring.ensureAvailability();
+        Epoll.ensureAvailability();
+    }
+}

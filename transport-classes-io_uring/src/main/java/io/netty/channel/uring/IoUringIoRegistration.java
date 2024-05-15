@@ -13,8 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/**
- * <a href="https://kernel.dk/io_uring.pdf">io_uring</a> is a high I/O performance scalable interface for fully
- * asynchronous Linux syscalls.
- */
 package io.netty.channel.uring;
+
+import io.netty.channel.IoOps;
+import io.netty.channel.IoRegistration;
+
+/**
+ * {@link IoRegistration} to use with io_uring.
+ */
+public interface IoUringIoRegistration extends IoRegistration {
+
+    /**
+     * Submit a {@link IoUringIoOps} that will produce an entry on the used submission queue.
+     *
+     * @param   ops ops.
+     * @return  the u_data of the {@link IoUringIoOps}. This can be used to cancel a previous submitted
+     * {@link IoUringIoOps}.
+     */
+    @Override
+    long submit(IoOps ops);
+
+    void cancel();
+}

@@ -48,9 +48,9 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
         return getOptions(
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
-                ALLOW_HALF_CLOSURE, IOUringChannelOption.TCP_CORK, IOUringChannelOption.TCP_NOTSENT_LOWAT,
-                IOUringChannelOption.TCP_KEEPCNT, IOUringChannelOption.TCP_KEEPIDLE, IOUringChannelOption.TCP_KEEPINTVL,
-                IOUringChannelOption.TCP_QUICKACK, IOUringChannelOption.IP_TRANSPARENT,
+                ALLOW_HALF_CLOSURE, IoUringChannelOption.TCP_CORK, IoUringChannelOption.TCP_NOTSENT_LOWAT,
+                IoUringChannelOption.TCP_KEEPCNT, IoUringChannelOption.TCP_KEEPIDLE, IoUringChannelOption.TCP_KEEPINTVL,
+                IoUringChannelOption.TCP_QUICKACK, IoUringChannelOption.IP_TRANSPARENT,
                 ChannelOption.TCP_FASTOPEN_CONNECT);
     }
 
@@ -81,28 +81,28 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
         if (option == ALLOW_HALF_CLOSURE) {
             return (T) Boolean.valueOf(isAllowHalfClosure());
         }
-        if (option == IOUringChannelOption.TCP_CORK) {
+        if (option == IoUringChannelOption.TCP_CORK) {
             return (T) Boolean.valueOf(isTcpCork());
         }
-        if (option == IOUringChannelOption.TCP_NOTSENT_LOWAT) {
+        if (option == IoUringChannelOption.TCP_NOTSENT_LOWAT) {
             return (T) Long.valueOf(getTcpNotSentLowAt());
         }
-        if (option == IOUringChannelOption.TCP_KEEPIDLE) {
+        if (option == IoUringChannelOption.TCP_KEEPIDLE) {
             return (T) Integer.valueOf(getTcpKeepIdle());
         }
-        if (option == IOUringChannelOption.TCP_KEEPINTVL) {
+        if (option == IoUringChannelOption.TCP_KEEPINTVL) {
             return (T) Integer.valueOf(getTcpKeepIntvl());
         }
-        if (option == IOUringChannelOption.TCP_KEEPCNT) {
+        if (option == IoUringChannelOption.TCP_KEEPCNT) {
             return (T) Integer.valueOf(getTcpKeepCnt());
         }
-        if (option == IOUringChannelOption.TCP_USER_TIMEOUT) {
+        if (option == IoUringChannelOption.TCP_USER_TIMEOUT) {
             return (T) Integer.valueOf(getTcpUserTimeout());
         }
-        if (option == IOUringChannelOption.TCP_QUICKACK) {
+        if (option == IoUringChannelOption.TCP_QUICKACK) {
             return (T) Boolean.valueOf(isTcpQuickAck());
         }
-        if (option == IOUringChannelOption.IP_TRANSPARENT) {
+        if (option == IoUringChannelOption.IP_TRANSPARENT) {
             return (T) Boolean.valueOf(isIpTransparent());
         }
         if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
@@ -131,21 +131,21 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
             setTrafficClass((Integer) value);
         } else if (option == ALLOW_HALF_CLOSURE) {
             setAllowHalfClosure((Boolean) value);
-        } else if (option == IOUringChannelOption.TCP_CORK) {
+        } else if (option == IoUringChannelOption.TCP_CORK) {
             setTcpCork((Boolean) value);
-        } else if (option == IOUringChannelOption.TCP_NOTSENT_LOWAT) {
+        } else if (option == IoUringChannelOption.TCP_NOTSENT_LOWAT) {
             setTcpNotSentLowAt((Long) value);
-        } else if (option == IOUringChannelOption.TCP_KEEPIDLE) {
+        } else if (option == IoUringChannelOption.TCP_KEEPIDLE) {
             setTcpKeepIdle((Integer) value);
-        } else if (option == IOUringChannelOption.TCP_KEEPCNT) {
+        } else if (option == IoUringChannelOption.TCP_KEEPCNT) {
             setTcpKeepCnt((Integer) value);
-        } else if (option == IOUringChannelOption.TCP_KEEPINTVL) {
+        } else if (option == IoUringChannelOption.TCP_KEEPINTVL) {
             setTcpKeepIntvl((Integer) value);
-        } else if (option == IOUringChannelOption.TCP_USER_TIMEOUT) {
+        } else if (option == IoUringChannelOption.TCP_USER_TIMEOUT) {
             setTcpUserTimeout((Integer) value);
-        } else if (option == IOUringChannelOption.IP_TRANSPARENT) {
+        } else if (option == IoUringChannelOption.IP_TRANSPARENT) {
             setIpTransparent((Boolean) value);
-        } else if (option == IOUringChannelOption.TCP_QUICKACK) {
+        } else if (option == IoUringChannelOption.TCP_QUICKACK) {
             setTcpQuickAck((Boolean) value);
         } else if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             setTcpFastOpenConnect((Boolean) value);
@@ -159,7 +159,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public int getSendBufferSize() {
         try {
-            return ((IOUringSocketChannel) channel).socket.getSendBufferSize();
+            return ((IoUringSocketChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -168,7 +168,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public int getSoLinger() {
         try {
-            return ((IOUringSocketChannel) channel).socket.getSoLinger();
+            return ((IoUringSocketChannel) channel).socket.getSoLinger();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -177,7 +177,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public int getTrafficClass() {
         try {
-            return ((IOUringSocketChannel) channel).socket.getTrafficClass();
+            return ((IoUringSocketChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -186,7 +186,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public boolean isKeepAlive() {
         try {
-            return ((IOUringSocketChannel) channel).socket.isKeepAlive();
+            return ((IoUringSocketChannel) channel).socket.isKeepAlive();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -195,7 +195,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public boolean isReuseAddress() {
         try {
-            return ((IOUringSocketChannel) channel).socket.isReuseAddress();
+            return ((IoUringSocketChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -204,7 +204,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public boolean isTcpNoDelay() {
         try {
-            return ((IOUringSocketChannel) channel).socket.isTcpNoDelay();
+            return ((IoUringSocketChannel) channel).socket.isTcpNoDelay();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -215,7 +215,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public boolean isTcpCork() {
         try {
-            return ((IOUringSocketChannel) channel).socket.isTcpCork();
+            return ((IoUringSocketChannel) channel).socket.isTcpCork();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -226,7 +226,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public int getSoBusyPoll() {
         try {
-            return ((IOUringSocketChannel) channel).socket.getSoBusyPoll();
+            return ((IoUringSocketChannel) channel).socket.getSoBusyPoll();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -239,7 +239,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public long getTcpNotSentLowAt() {
         try {
-            return ((IOUringSocketChannel) channel).socket.getTcpNotSentLowAt();
+            return ((IoUringSocketChannel) channel).socket.getTcpNotSentLowAt();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -250,7 +250,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public int getTcpKeepIdle() {
         try {
-            return ((IOUringSocketChannel) channel).socket.getTcpKeepIdle();
+            return ((IoUringSocketChannel) channel).socket.getTcpKeepIdle();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -261,7 +261,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public int getTcpKeepIntvl() {
         try {
-            return ((IOUringSocketChannel) channel).socket.getTcpKeepIntvl();
+            return ((IoUringSocketChannel) channel).socket.getTcpKeepIntvl();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -272,7 +272,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public int getTcpKeepCnt() {
         try {
-            return ((IOUringSocketChannel) channel).socket.getTcpKeepCnt();
+            return ((IoUringSocketChannel) channel).socket.getTcpKeepCnt();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -283,7 +283,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public int getTcpUserTimeout() {
         try {
-            return ((IOUringSocketChannel) channel).socket.getTcpUserTimeout();
+            return ((IoUringSocketChannel) channel).socket.getTcpUserTimeout();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -292,7 +292,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public IOUringSocketChannelConfig setKeepAlive(boolean keepAlive) {
         try {
-            ((IOUringSocketChannel) channel).socket.setKeepAlive(keepAlive);
+            ((IoUringSocketChannel) channel).socket.setKeepAlive(keepAlive);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -308,7 +308,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public IOUringSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
-            ((IOUringSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
+            ((IoUringSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -318,7 +318,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public IOUringSocketChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
-            ((IOUringSocketChannel) channel).socket.setReuseAddress(reuseAddress);
+            ((IoUringSocketChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -328,7 +328,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public IOUringSocketChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
-            ((IOUringSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
+            ((IoUringSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -338,7 +338,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public int getReceiveBufferSize() {
         try {
-            return ((IOUringSocketChannel) channel).socket.getReceiveBufferSize();
+            return ((IoUringSocketChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -347,7 +347,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public IOUringSocketChannelConfig setSoLinger(int soLinger) {
         try {
-            ((IOUringSocketChannel) channel).socket.setSoLinger(soLinger);
+            ((IoUringSocketChannel) channel).socket.setSoLinger(soLinger);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -357,7 +357,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public IOUringSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
         try {
-            ((IOUringSocketChannel) channel).socket.setTcpNoDelay(tcpNoDelay);
+            ((IoUringSocketChannel) channel).socket.setTcpNoDelay(tcpNoDelay);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -369,7 +369,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public IOUringSocketChannelConfig setTcpCork(boolean tcpCork) {
         try {
-            ((IOUringSocketChannel) channel).socket.setTcpCork(tcpCork);
+            ((IoUringSocketChannel) channel).socket.setTcpCork(tcpCork);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -381,7 +381,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public IOUringSocketChannelConfig setSoBusyPoll(int loopMicros) {
         try {
-            ((IOUringSocketChannel) channel).socket.setSoBusyPoll(loopMicros);
+            ((IoUringSocketChannel) channel).socket.setSoBusyPoll(loopMicros);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -395,7 +395,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public IOUringSocketChannelConfig setTcpNotSentLowAt(long tcpNotSentLowAt) {
         try {
-            ((IOUringSocketChannel) channel).socket.setTcpNotSentLowAt(tcpNotSentLowAt);
+            ((IoUringSocketChannel) channel).socket.setTcpNotSentLowAt(tcpNotSentLowAt);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -405,7 +405,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
     @Override
     public IOUringSocketChannelConfig setTrafficClass(int trafficClass) {
         try {
-            ((IOUringSocketChannel) channel).socket.setTrafficClass(trafficClass);
+            ((IoUringSocketChannel) channel).socket.setTrafficClass(trafficClass);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -417,7 +417,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public IOUringSocketChannelConfig setTcpKeepIdle(int seconds) {
         try {
-            ((IOUringSocketChannel) channel).socket.setTcpKeepIdle(seconds);
+            ((IoUringSocketChannel) channel).socket.setTcpKeepIdle(seconds);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -429,7 +429,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public IOUringSocketChannelConfig setTcpKeepIntvl(int seconds) {
         try {
-            ((IOUringSocketChannel) channel).socket.setTcpKeepIntvl(seconds);
+            ((IoUringSocketChannel) channel).socket.setTcpKeepIntvl(seconds);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -449,7 +449,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public IOUringSocketChannelConfig setTcpKeepCnt(int probes) {
         try {
-            ((IOUringSocketChannel) channel).socket.setTcpKeepCnt(probes);
+            ((IoUringSocketChannel) channel).socket.setTcpKeepCnt(probes);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -461,7 +461,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public IOUringSocketChannelConfig setTcpUserTimeout(int milliseconds) {
         try {
-            ((IOUringSocketChannel) channel).socket.setTcpUserTimeout(milliseconds);
+            ((IoUringSocketChannel) channel).socket.setTcpUserTimeout(milliseconds);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -474,7 +474,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public boolean isIpTransparent() {
         try {
-            return ((IOUringSocketChannel) channel).socket.isIpTransparent();
+            return ((IoUringSocketChannel) channel).socket.isIpTransparent();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -486,7 +486,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public IOUringSocketChannelConfig setIpTransparent(boolean transparent) {
         try {
-            ((IOUringSocketChannel) channel).socket.setIpTransparent(transparent);
+            ((IoUringSocketChannel) channel).socket.setIpTransparent(transparent);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -513,7 +513,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public IOUringSocketChannelConfig setTcpQuickAck(boolean quickAck) {
         try {
-            ((IOUringSocketChannel) channel).socket.setTcpQuickAck(quickAck);
+            ((IoUringSocketChannel) channel).socket.setTcpQuickAck(quickAck);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -526,7 +526,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public boolean isTcpQuickAck() {
         try {
-            return ((IOUringSocketChannel) channel).socket.isTcpQuickAck();
+            return ((IoUringSocketChannel) channel).socket.isTcpQuickAck();
         } catch (IOException e) {
             throw new ChannelException(e);
         }

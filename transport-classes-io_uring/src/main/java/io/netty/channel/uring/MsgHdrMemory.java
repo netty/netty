@@ -52,7 +52,7 @@ final class MsgHdrMemory {
         MsgHdr.write(memory, sockAddress, addressLength, iovAddress, 1, cmsgAddr, cmsgDataAddr, segmentSize);
     }
 
-    boolean hasPort(IOUringDatagramChannel channel) {
+    boolean hasPort(IoUringDatagramChannel channel) {
         long sockAddress = memory + Native.SIZEOF_MSGHDR;
         if (channel.socket.isIpv6()) {
             return SockaddrIn.hasPortIpv6(sockAddress);
@@ -60,7 +60,7 @@ final class MsgHdrMemory {
         return SockaddrIn.hasPortIpv4(sockAddress);
     }
 
-    DatagramPacket read(IOUringDatagramChannel channel, IOUringIoHandler handler, ByteBuf buffer, int bytesRead) {
+    DatagramPacket read(IoUringDatagramChannel channel, IoUringIoHandler handler, ByteBuf buffer, int bytesRead) {
         long sockAddress = memory + Native.SIZEOF_MSGHDR;
         InetSocketAddress sender;
         if (channel.socket.isIpv6()) {

@@ -13,8 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/**
- * <a href="https://kernel.dk/io_uring.pdf">io_uring</a> is a high I/O performance scalable interface for fully
- * asynchronous Linux syscalls.
- */
 package io.netty.channel.uring;
+
+import io.netty.channel.unix.Socket;
+import io.netty.channel.unix.tests.SocketTest;
+import org.junit.jupiter.api.BeforeAll;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+public class IoUringSocketTest extends SocketTest<Socket> {
+
+    @BeforeAll
+    public static void loadJNI() {
+        assumeTrue(IoUring.isAvailable());
+    }
+
+    @Override
+    protected Socket newSocket() {
+        return Socket.newSocketStream();
+    }
+}

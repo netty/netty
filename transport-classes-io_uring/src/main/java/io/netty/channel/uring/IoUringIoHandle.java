@@ -13,8 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/**
- * <a href="https://kernel.dk/io_uring.pdf">io_uring</a> is a high I/O performance scalable interface for fully
- * asynchronous Linux syscalls.
- */
 package io.netty.channel.uring;
+
+import io.netty.channel.IoHandle;
+
+/**
+ * {@link IoHandle} implementation for io_uring.
+ */
+public interface IoUringIoHandle extends IoHandle {
+    // Marker interface.
+}
