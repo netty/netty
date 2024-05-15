@@ -377,19 +377,20 @@ public final class KQueueIoHandler implements IoHandler {
         }
 
         @Override
-        public void submit(IoOps ops) {
+        public long submit(IoOps ops) {
             KQueueIoOps kQueueIoOps = cast(ops);
             if (kQueueIoOps.ident() != handle.ident()) {
                 throw new IllegalArgumentException("ident does not match KQueueIoHandle.ident()");
             }
             if (!isValid()) {
-                return;
+                return -1;
             }
             if (eventLoop.inEventLoop()) {
                 evSet(event.filter(), event.flags(), event.fflags());
             } else {
                 eventLoop.execute(() -> evSet(event.filter(), event.flags(), event.fflags()));
             }
+            return 0;
         }
 
         @Override

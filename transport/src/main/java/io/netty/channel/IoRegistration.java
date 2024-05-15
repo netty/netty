@@ -24,9 +24,10 @@ public interface IoRegistration {
     /**
      * Submit the {@link IoOps} to the registration.
      *
-     * @param ops ops.
+     * @param   ops ops.
+     * @return  an identifier for the operation, which might be unique or not (depending on the implementation).
      */
-    void submit(IoOps ops) throws Exception;
+    long submit(IoOps ops) throws Exception;
 
     /**
      * Returns {@code true} if the registration is still valid. Once {@link #cancel()} is called this

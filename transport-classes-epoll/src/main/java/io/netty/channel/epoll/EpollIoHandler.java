@@ -266,13 +266,14 @@ public class EpollIoHandler implements IoHandler {
         }
 
         @Override
-        public void submit(IoOps ops) throws Exception {
+        public long submit(IoOps ops) throws Exception {
             EpollIoOps epollIoOps = cast(ops);
             try {
                 if (!isValid()) {
-                    return;
+                    return -1;
                 }
                 Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
+                return epollIoOps.value;
             } catch (IOException e) {
                 throw e;
             } catch (Exception e) {
