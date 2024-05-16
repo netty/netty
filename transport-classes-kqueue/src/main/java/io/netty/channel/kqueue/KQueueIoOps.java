@@ -22,7 +22,6 @@ import io.netty.channel.IoOps;
  * that is used by {@link KQueueIoHandler} and so for kqueue based transports.
  */
 public final class KQueueIoOps implements IoOps {
-    private int ident;
     private short filter;
     private short flags;
     private int fflags;
@@ -31,18 +30,16 @@ public final class KQueueIoOps implements IoOps {
     /**
      * Creates a new {@link KQueueIoOps}.
      *
-     * @param ident     the identifier for this event.
      * @param filter    the filter for this event.
      * @param flags     the general flags.
      * @param fflags    filter-specific flags.
      * @return          {@link KQueueIoOps}.
      */
-    public static KQueueIoOps newOps(int ident, short filter, short flags, int fflags) {
-        return new KQueueIoOps(ident, filter, flags, fflags, 0);
+    public static KQueueIoOps newOps(short filter, short flags, int fflags) {
+        return new KQueueIoOps(filter, flags, fflags, 0);
     }
 
-    private KQueueIoOps(int ident, short filter, short flags, int fflags, long data) {
-        this.ident = ident;
+    private KQueueIoOps(short filter, short flags, int fflags, long data) {
         this.filter = filter;
         this.flags = flags;
         this.fflags = fflags;
@@ -50,17 +47,9 @@ public final class KQueueIoOps implements IoOps {
     }
 
     KQueueIoOps() {
-        this(0, (short) 0, (short) 0, 0, 0);
+        this((short) 0, (short) 0, 0, 0);
     }
 
-    /**
-     * Returns the identifier for this event.
-     *
-     * @return  ident.
-     */
-    public int ident() {
-        return ident;
-    }
 
     /**
      * Returns the filter for this event.
@@ -101,8 +90,7 @@ public final class KQueueIoOps implements IoOps {
     @Override
     public String toString() {
         return "KQueueIoOps{" +
-                "ident=" + ident +
-                ", filter=" + filter +
+                "filter=" + filter +
                 ", flags=" + flags +
                 ", fflags=" + fflags +
                 ", data=" + data +
