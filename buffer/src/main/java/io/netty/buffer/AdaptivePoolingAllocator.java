@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
 import io.netty.util.NettyRuntime;
+import io.netty.util.Recycler;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
@@ -1091,7 +1092,9 @@ final class AdaptivePoolingAllocator {
             if (chunk != null) {
                 chunk.release();
             }
-            if (handle != null) {
+            if (handle instanceof Recycler.EnhancedHandle) {
+                ((Recycler.EnhancedHandle<?>) handle).unguardedRecycle(this);
+            } else if (handle != null) {
                 handle.recycle(this);
             }
         }
