@@ -22,10 +22,10 @@ import io.netty.channel.IoOps;
  * that is used by {@link KQueueIoHandler} and so for kqueue based transports.
  */
 public final class KQueueIoOps implements IoOps {
-    private short filter;
-    private short flags;
-    private int fflags;
-    private long data;
+    private final short filter;
+    private final short flags;
+    private final int fflags;
+    private final long data;
 
     /**
      * Creates a new {@link KQueueIoOps}.
@@ -45,11 +45,6 @@ public final class KQueueIoOps implements IoOps {
         this.fflags = fflags;
         this.data = data;
     }
-
-    KQueueIoOps() {
-        this((short) 0, (short) 0, 0, 0);
-    }
-
 
     /**
      * Returns the filter for this event.
