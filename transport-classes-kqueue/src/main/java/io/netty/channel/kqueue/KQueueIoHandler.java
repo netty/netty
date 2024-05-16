@@ -385,10 +385,13 @@ public final class KQueueIoHandler implements IoHandler {
             if (!isValid()) {
                 return -1;
             }
+            short filter = kQueueIoOps.filter();
+            short flags = kQueueIoOps.flags();
+            int fflags = kQueueIoOps.fflags();
             if (eventLoop.inEventLoop()) {
-                evSet(event.filter(), event.flags(), event.fflags());
+                evSet(filter, flags, fflags);
             } else {
-                eventLoop.execute(() -> evSet(event.filter(), event.flags(), event.fflags()));
+                eventLoop.execute(() -> evSet(filter, flags, fflags));
             }
             return 0;
         }
