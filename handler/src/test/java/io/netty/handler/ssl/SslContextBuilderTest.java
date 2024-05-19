@@ -20,6 +20,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.mockito.Mockito;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLEngine;
@@ -31,6 +32,7 @@ import java.io.ByteArrayInputStream;
 import java.net.Socket;
 import java.security.Principal;
 import java.security.PrivateKey;
+import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
@@ -244,6 +246,11 @@ public class SslContextBuilderTest {
         }
     }
 
+    @Test
+    public void testSecureRandom() throws Exception {
+        testServerContextWithSecureRandom(SslProvider.JDK, Mockito.mock(SecureRandom.class));
+    }
+
     private static void testKeyStoreType(SslProvider provider) throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
         SslContextBuilder builder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
@@ -322,6 +329,23 @@ public class SslContextBuilderTest {
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
         assertFalse(engine.getWantClientAuth());
         assertTrue(engine.getNeedClientAuth());
+        engine.closeInbound();
+        engine.closeOutbound();
+    }
+
+    private static void testServerContextWithSecureRandom(SslProvider provider,
+                                                          SecureRandom mockSecureRandom) throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SslContextBuilder builder = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .sslProvider(provider)
+                .secureRandom(mockSecureRandom)
+                .trustManager(cert.cert())
+                .clientAuth(ClientAuth.REQUIRE);
+        SslContext context = builder.build();
+        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        assertFalse(engine.getWantClientAuth());
+        assertTrue(engine.getNeedClientAuth());
+        Mockito.verify(mockSecureRandom, Mockito.atLeastOnce()).nextInt();
         engine.closeInbound();
         engine.closeOutbound();
     }
