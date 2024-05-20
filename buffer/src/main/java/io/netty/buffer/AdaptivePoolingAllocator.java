@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
 import io.netty.util.NettyRuntime;
+import io.netty.util.Recycler;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
@@ -41,6 +42,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.StampedLock;
@@ -109,7 +111,7 @@ final class AdaptivePoolingAllocator {
     private static final Object NO_MAGAZINE = Boolean.TRUE;
 
     private final ChunkAllocator chunkAllocator;
-    private final Queue<ChunkByteBuf> centralQueue;
+    private final Queue<Chunk> centralQueue;
     private final StampedLock magazineExpandLock;
     private volatile Magazine[] magazines;
     private final FastThreadLocal<Object> threadLocalMagazine;
@@ -177,7 +179,7 @@ final class AdaptivePoolingAllocator {
      *
      * @return A new multi-producer, multi-consumer queue.
      */
-    private static Queue<ChunkByteBuf> createSharedChunkQueue() {
+    private static Queue<Chunk> createSharedChunkQueue() {
         return PlatformDependent.newFixedMpmcQueue(CENTRAL_QUEUE_CAPACITY);
     }
 
@@ -238,15 +240,15 @@ final class AdaptivePoolingAllocator {
         if (result == null) {
             // Create a one-off chunk for this allocation.
             AbstractByteBuf innerChunk = (AbstractByteBuf) chunkAllocator.allocate(size, maxCapacity);
-            ChunkByteBuf chunk = new ChunkByteBuf(innerChunk, magazine, false);
+            Chunk chunk = new Chunk(innerChunk, magazine, false);
             chunk.readInitInto(into, size, maxCapacity);
         }
     }
 
     long usedMemory() {
         long sum = 0;
-        for (ByteBuf byteBuf : centralQueue) {
-            sum += byteBuf.capacity();
+        for (Chunk chunk : centralQueue) {
+            sum += chunk.capacity();
         }
         for (Magazine magazine : magazines) {
             sum += magazine.usedMemory.get();
@@ -282,7 +284,7 @@ final class AdaptivePoolingAllocator {
         return true;
     }
 
-    private boolean offerToQueue(ChunkByteBuf buffer) {
+    private boolean offerToQueue(Chunk buffer) {
         return centralQueue.offer(buffer);
     }
 
@@ -388,14 +390,14 @@ final class AdaptivePoolingAllocator {
 
     private static final class Magazine extends AllocationStatistics {
         private static final long serialVersionUID = -4068223712022528165L;
-        private static final AtomicReferenceFieldUpdater<Magazine, ChunkByteBuf> NEXT_IN_LINE;
+        private static final AtomicReferenceFieldUpdater<Magazine, Chunk> NEXT_IN_LINE;
 
         static {
-            NEXT_IN_LINE = AtomicReferenceFieldUpdater.newUpdater(Magazine.class, ChunkByteBuf.class, "nextInLine");
+            NEXT_IN_LINE = AtomicReferenceFieldUpdater.newUpdater(Magazine.class, Chunk.class, "nextInLine");
         }
-        private ChunkByteBuf current;
+        private Chunk current;
         @SuppressWarnings("unused") // updated via NEXT_IN_LINE
-        private volatile ChunkByteBuf nextInLine;
+        private volatile Chunk nextInLine;
         private final AtomicLong usedMemory;
 
         Magazine(AdaptivePoolingAllocator parent) {
@@ -409,9 +411,9 @@ final class AdaptivePoolingAllocator {
 
         public AdaptiveByteBuf allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
             recordAllocationSize(sizeBucket);
-            ChunkByteBuf curr = current;
-            if (curr != null && curr.readableBytes() >= size) {
-                if (curr.readableBytes() == size) {
+            Chunk curr = current;
+            if (curr != null && curr.remainingCapacity() >= size) {
+                if (curr.remainingCapacity() == size) {
                     current = null;
                     try {
                         return curr.readInitInto(buf, size, maxCapacity);
@@ -434,16 +436,16 @@ final class AdaptivePoolingAllocator {
             }
             current = curr;
             final AdaptiveByteBuf result;
-            if (curr.readableBytes() > size) {
+            if (curr.remainingCapacity() > size) {
                 result = curr.readInitInto(buf, size, maxCapacity);
-            } else if (curr.readableBytes() == size) {
+            } else if (curr.remainingCapacity() == size) {
                 result = curr.readInitInto(buf, size, maxCapacity);
                 curr.release();
                 current = null;
             } else {
-                ChunkByteBuf newChunk = newChunkAllocation(size);
+                Chunk newChunk = newChunkAllocation(size);
                 result = newChunk.readInitInto(buf, size, maxCapacity);
-                if (curr.readableBytes() < RETIRE_CAPACITY) {
+                if (curr.remainingCapacity() < RETIRE_CAPACITY) {
                     curr.release();
                     current = newChunk;
                 } else if (!(boolean) NEXT_IN_LINE.compareAndSet(this, null, newChunk)) {
@@ -457,33 +459,46 @@ final class AdaptivePoolingAllocator {
             return result;
         }
 
-        private ChunkByteBuf newChunkAllocation(int promptingSize) {
+        private Chunk newChunkAllocation(int promptingSize) {
             int size = Math.max(promptingSize * BUFS_PER_CHUNK, preferredChunkSize());
             ChunkAllocator chunkAllocator = parent.chunkAllocator;
-            ChunkByteBuf chunk = new ChunkByteBuf((AbstractByteBuf) chunkAllocator.allocate(size, size), this, true);
-            chunk.writerIndex(size);
+            Chunk chunk = new Chunk((AbstractByteBuf) chunkAllocator.allocate(size, size), this, true);
             return chunk;
         }
 
-        boolean trySetNextInLine(ChunkByteBuf buffer) {
+        boolean trySetNextInLine(Chunk buffer) {
             return NEXT_IN_LINE.compareAndSet(this, null, buffer);
         }
     }
 
-    private static final class ChunkByteBuf extends AbstractReferenceCountedByteBuf {
+    private static final class Chunk {
+
+        /**
+         * We're using 2 separate counters for reference counting, one for the up-count and one for the down-count,
+         * in order to speed up the borrowing, which shouldn't need atomic operations, being single-threaded.
+         */
+        private static final AtomicIntegerFieldUpdater<Chunk> REF_CNT_UP_UPDATER =
+                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCntUp");
+        private static final AtomicIntegerFieldUpdater<Chunk> REF_CNT_DOWN_UPDATER =
+                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCntDown");
+
         private final AbstractByteBuf delegate;
         private final Magazine magazine;
+        private final int capacity;
         private final boolean pooled;
+        private int allocatedBytes;
+        private volatile int refCntUp;
+        private volatile int refCntDown;
 
-        ChunkByteBuf(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
-            super(delegate.maxCapacity());
+        Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             this.delegate = delegate;
             this.magazine = magazine;
             this.pooled = pooled;
-            magazine.usedMemory.getAndAdd(capacity());
+            this.capacity = delegate.capacity();
+            magazine.usedMemory.getAndAdd(capacity);
+            REF_CNT_UP_UPDATER.lazySet(this, 1);
         }
 
-        @Override
         protected void deallocate() {
             Magazine mag = magazine;
             AdaptivePoolingAllocator parent = mag.parent;
@@ -495,9 +510,10 @@ final class AdaptivePoolingAllocator {
                 mag.usedMemory.getAndAdd(-capacity());
                 delegate.release();
             } else {
-                resetRefCnt();
+                REF_CNT_UP_UPDATER.lazySet(this, 1);
+                REF_CNT_DOWN_UPDATER.lazySet(this, 0);
                 delegate.setIndex(0, 0);
-                setIndex(0, capacity());
+                allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
                     if (!parent.offerToQueue(this)) {
                         // The central queue is full. Drop the memory with the original Drop instance.
@@ -508,248 +524,40 @@ final class AdaptivePoolingAllocator {
         }
 
         public AdaptiveByteBuf readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
-            int startIndex = readerIndex();
-            skipBytes(size);
+            int startIndex = allocatedBytes;
+            allocatedBytes = startIndex + size;
+            unguardedRetain();
             buf.init(delegate, this, 0, 0, startIndex, size, maxCapacity);
             return buf;
         }
 
-        @Override
-        protected byte _getByte(int index) {
-            return delegate._getByte(index);
+        public int remainingCapacity() {
+            return capacity - allocatedBytes;
         }
 
-        @Override
-        protected short _getShort(int index) {
-            return delegate._getShort(index);
-        }
-
-        @Override
-        protected short _getShortLE(int index) {
-            return delegate._getShortLE(index);
-        }
-
-        @Override
-        protected int _getUnsignedMedium(int index) {
-            return delegate._getUnsignedMedium(index);
-        }
-
-        @Override
-        protected int _getUnsignedMediumLE(int index) {
-            return delegate._getUnsignedMediumLE(index);
-        }
-
-        @Override
-        protected int _getInt(int index) {
-            return delegate._getInt(index);
-        }
-
-        @Override
-        protected int _getIntLE(int index) {
-            return delegate._getIntLE(index);
-        }
-
-        @Override
-        protected long _getLong(int index) {
-            return delegate._getLong(index);
-        }
-
-        @Override
-        protected long _getLongLE(int index) {
-            return delegate._getLongLE(index);
-        }
-
-        @Override
-        protected void _setByte(int index, int value) {
-            delegate._setByte(index, value);
-        }
-
-        @Override
-        protected void _setShort(int index, int value) {
-            delegate._setShort(index, value);
-        }
-
-        @Override
-        protected void _setShortLE(int index, int value) {
-            delegate._setShortLE(index, value);
-        }
-
-        @Override
-        protected void _setMedium(int index, int value) {
-            delegate._setMedium(index, value);
-        }
-
-        @Override
-        protected void _setMediumLE(int index, int value) {
-            delegate._setMediumLE(index, value);
-        }
-
-        @Override
-        protected void _setInt(int index, int value) {
-            delegate._setInt(index, value);
-        }
-
-        @Override
-        protected void _setIntLE(int index, int value) {
-            delegate._setIntLE(index, value);
-        }
-
-        @Override
-        protected void _setLong(int index, long value) {
-            delegate._setLong(index, value);
-        }
-
-        @Override
-        protected void _setLongLE(int index, long value) {
-            delegate._setLongLE(index, value);
-        }
-
-        @Override
         public int capacity() {
-            return delegate.capacity();
+            return capacity;
         }
 
-        @Override
-        public ByteBuf capacity(int newCapacity) {
-            delegate.capacity(newCapacity);
-            return this;
+        private void unguardedRetain() {
+            REF_CNT_UP_UPDATER.lazySet(this, refCntUp + 1);
         }
 
-        @Override
-        public ByteBufAllocator alloc() {
-            return delegate.alloc();
-        }
-
-        @Override
-        public ByteOrder order() {
-            return delegate.order();
-        }
-
-        @Override
-        public ByteBuf unwrap() {
-            return delegate;
-        }
-
-        @Override
-        public boolean isDirect() {
-            return delegate.isDirect();
-        }
-
-        @Override
-        public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-            delegate.getBytes(index, dst, dstIndex, length);
-            return this;
-        }
-
-        @Override
-        public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-            delegate.getBytes(index, dst, dstIndex, length);
-            return this;
-        }
-
-        @Override
-        public ByteBuf getBytes(int index, ByteBuffer dst) {
-            delegate.getBytes(index, dst);
-            return this;
-        }
-
-        @Override
-        public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-            delegate.getBytes(index, out, length);
-            return this;
-        }
-
-        @Override
-        public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
-            return delegate.getBytes(index, out, length);
-        }
-
-        @Override
-        public int getBytes(int index, FileChannel out, long position, int length) throws IOException {
-            return delegate.getBytes(index, out, position, length);
-        }
-
-        @Override
-        public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-            delegate.setBytes(index, src, srcIndex, length);
-            return this;
-        }
-
-        @Override
-        public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-            delegate.setBytes(index, src, srcIndex, length);
-            return this;
-        }
-
-        @Override
-        public ByteBuf setBytes(int index, ByteBuffer src) {
-            delegate.setBytes(index, src);
-            return this;
-        }
-
-        @Override
-        public int setBytes(int index, InputStream in, int length) throws IOException {
-            return delegate.setBytes(index, in, length);
-        }
-
-        @Override
-        public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-            return delegate.setBytes(index, in, length);
-        }
-
-        @Override
-        public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
-            return delegate.setBytes(index, in, position, length);
-        }
-
-        @Override
-        public ByteBuf copy(int index, int length) {
-            return delegate.copy(index, length);
-        }
-
-        @Override
-        public int nioBufferCount() {
-            return delegate.nioBufferCount();
-        }
-
-        @Override
-        public ByteBuffer nioBuffer(int index, int length) {
-            return delegate.nioBuffer(index, length);
-        }
-
-        @Override
-        public ByteBuffer internalNioBuffer(int index, int length) {
-            return delegate.internalNioBuffer(index, length);
-        }
-
-        @Override
-        public ByteBuffer[] nioBuffers(int index, int length) {
-            return delegate.nioBuffers(index, length);
-        }
-
-        @Override
-        public boolean hasArray() {
-            return delegate.hasArray();
-        }
-
-        @Override
-        public byte[] array() {
-            return delegate.array();
-        }
-
-        @Override
-        public int arrayOffset() {
-            return delegate.arrayOffset();
-        }
-
-        @Override
-        public boolean hasMemoryAddress() {
-            return delegate.hasMemoryAddress();
-        }
-
-        @Override
-        public long memoryAddress() {
-            return delegate.memoryAddress();
+        public void release() {
+            int refCntDown;
+            boolean deallocate;
+            do {
+                int refCntUp = this.refCntUp;
+                refCntDown = this.refCntDown;
+                int remaining = refCntUp - refCntDown;
+                if (remaining <= 0) {
+                    throw new IllegalStateException("RefCnt is already 0");
+                }
+                deallocate = remaining == 1;
+            } while (!REF_CNT_DOWN_UPDATER.compareAndSet(this, refCntDown, refCntDown + 1));
+            if (deallocate) {
+                deallocate();
+            }
         }
     }
 
@@ -776,7 +584,7 @@ final class AdaptivePoolingAllocator {
 
         int adjustment;
         private AbstractByteBuf rootParent;
-        private ChunkByteBuf chunk;
+        private Chunk chunk;
         private int length;
         private ByteBuffer tmpNioBuf;
 
@@ -785,9 +593,8 @@ final class AdaptivePoolingAllocator {
             handle = recyclerHandle;
         }
 
-        void init(AbstractByteBuf unwrapped, ChunkByteBuf wrapped, int readerIndex, int writerIndex,
-                         int adjustment, int capacity, int maxCapacity) {
-            wrapped.retain();
+        void init(AbstractByteBuf unwrapped, Chunk wrapped, int readerIndex, int writerIndex,
+                  int adjustment, int capacity, int maxCapacity) {
             this.adjustment = adjustment;
             chunk = wrapped;
             length = capacity;
@@ -819,7 +626,7 @@ final class AdaptivePoolingAllocator {
             ByteBuffer data = tmpNioBuf;
             data.clear();
             tmpNioBuf = null;
-            ChunkByteBuf chunk = this.chunk;
+            Chunk chunk = this.chunk;
             Magazine magazine = chunk.magazine;
             AdaptivePoolingAllocator allocator = magazine.parent;
             int readerIndex = this.readerIndex;
@@ -1276,7 +1083,9 @@ final class AdaptivePoolingAllocator {
             if (chunk != null) {
                 chunk.release();
             }
-            if (handle != null) {
+            if (handle instanceof Recycler.EnhancedHandle) {
+                ((Recycler.EnhancedHandle<?>) handle).unguardedRecycle(this);
+            } else if (handle != null) {
                 handle.recycle(this);
             }
         }
