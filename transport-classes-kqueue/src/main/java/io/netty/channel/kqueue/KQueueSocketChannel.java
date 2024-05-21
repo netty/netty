@@ -24,13 +24,11 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.Executor;
 
-@UnstableApi
 public final class KQueueSocketChannel extends AbstractKQueueStreamChannel implements SocketChannel {
     private final KQueueSocketChannelConfig config;
 
@@ -40,7 +38,7 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
     }
 
     /**
-     * @deprecated use {@link SocketProtocolFamily#KQueueDatagramChannel(SocketProtocolFamily)}
+     * @deprecated use {@link KQueueDatagramChannel(SocketProtocolFamily)}
      */
     @Deprecated
     public KQueueSocketChannel(InternetProtocolFamily protocol) {

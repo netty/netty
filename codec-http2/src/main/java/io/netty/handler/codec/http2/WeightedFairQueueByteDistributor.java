@@ -23,7 +23,6 @@ import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PriorityQueue;
 import io.netty.util.internal.PriorityQueueNode;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -56,7 +55,6 @@ import static java.lang.Math.min;
  * Each write operation will use the {@link #allocationQuantum(int)} to know how many more bytes should be allocated
  * relative to the next stream which wants to write. This is to balance fairness while also considering goodput.
  */
-@UnstableApi
 public final class WeightedFairQueueByteDistributor implements StreamByteDistributor {
     /**
      * The initial size of the children map is chosen to be conservative on initial memory allocations under

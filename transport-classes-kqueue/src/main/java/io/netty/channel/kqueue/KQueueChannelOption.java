@@ -18,9 +18,7 @@ package io.netty.channel.kqueue;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.unix.UnixChannelOption;
-import io.netty.util.internal.UnstableApi;
 
-@UnstableApi
 public final class KQueueChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Integer> SO_SNDLOWAT = valueOf(KQueueChannelOption.class, "SO_SNDLOWAT");
     public static final ChannelOption<Boolean> TCP_NOPUSH = valueOf(KQueueChannelOption.class, "TCP_NOPUSH");

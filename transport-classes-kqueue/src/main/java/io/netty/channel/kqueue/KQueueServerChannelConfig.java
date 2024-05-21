@@ -24,7 +24,6 @@ import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.util.Map;
@@ -35,7 +34,6 @@ import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.channel.ChannelOption.TCP_FASTOPEN;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
-@UnstableApi
 public class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSocketChannelConfig {
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile boolean enableTcpFastOpen;

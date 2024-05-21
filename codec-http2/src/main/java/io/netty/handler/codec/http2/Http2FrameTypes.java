@@ -15,12 +15,9 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * Registry of all standard frame types defined by the HTTP/2 specification.
  */
-@UnstableApi
 public final class Http2FrameTypes {
     public static final byte DATA = 0x0;
     public static final byte HEADERS = 0x1;

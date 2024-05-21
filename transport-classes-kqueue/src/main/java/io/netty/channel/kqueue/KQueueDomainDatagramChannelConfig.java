@@ -23,7 +23,6 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.unix.DomainDatagramChannelConfig;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.util.Map;
@@ -31,7 +30,6 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 
-@UnstableApi
 public final class KQueueDomainDatagramChannelConfig
         extends KQueueChannelConfig implements DomainDatagramChannelConfig {
 

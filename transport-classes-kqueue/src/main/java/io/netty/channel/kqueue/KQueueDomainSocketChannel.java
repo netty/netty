@@ -30,7 +30,6 @@ import java.net.SocketAddress;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDomain;
 
-@UnstableApi
 public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel implements DomainSocketChannel {
     private final KQueueDomainSocketChannelConfig config = new KQueueDomainSocketChannelConfig(this);
 

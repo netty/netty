@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.util.collection.CharObjectHashMap;
-import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_CONCURRENT_STREAMS;
@@ -46,7 +45,6 @@ import static java.lang.Integer.toHexString;
  * the spec for the SETTINGS frame. Permits storage of arbitrary key/value pairs but provides helper
  * methods for standard settings.
  */
-@UnstableApi
 public final class Http2Settings extends CharObjectHashMap<Long> {
     /**
      * Default capacity based on the number of standard settings from the HTTP/2 spec, adjusted so that adding all of

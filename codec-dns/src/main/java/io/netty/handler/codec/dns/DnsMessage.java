@@ -16,12 +16,10 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.util.ReferenceCounted;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * The superclass which contains core information concerning a {@link DnsQuery} and a {@link DnsResponse}.
  */
-@UnstableApi
 public interface DnsMessage extends ReferenceCounted {
 
     /**

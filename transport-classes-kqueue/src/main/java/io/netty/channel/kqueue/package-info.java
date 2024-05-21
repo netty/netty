@@ -17,7 +17,4 @@
 /**
  * BSD specific transport.
  */
-@UnstableApi
 package io.netty.channel.kqueue;
-
-import io.netty.util.internal.UnstableApi;

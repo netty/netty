@@ -18,13 +18,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.UnstableApi;
 
 
 /**
  * Handler for outbound HTTP/2 traffic.
  */
-@UnstableApi
 public interface Http2ConnectionEncoder extends Http2FrameWriter {
 
     /**

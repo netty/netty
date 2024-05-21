@@ -15,14 +15,11 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 import java.net.InetAddress;
 
 /**
  * An ECS record as defined in <a href="https://tools.ietf.org/html/rfc7871#section-6">Client Subnet in DNS Queries</a>.
  */
-@UnstableApi
 public interface DnsOptEcsRecord extends DnsOptPseudoRecord {
 
     /**

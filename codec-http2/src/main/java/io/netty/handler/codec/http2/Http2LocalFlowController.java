@@ -15,12 +15,10 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * A {@link Http2FlowController} for controlling the inbound flow of {@code DATA} frames from the remote endpoint.
  */
-@UnstableApi
 public interface Http2LocalFlowController extends Http2FlowController {
     /**
      * Sets the writer to be use for sending {@code WINDOW_UPDATE} frames. This must be called before any flow

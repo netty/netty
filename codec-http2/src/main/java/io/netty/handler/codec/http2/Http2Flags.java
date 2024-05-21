@@ -15,12 +15,9 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * Provides utility methods for accessing specific flags as defined by the HTTP/2 spec.
  */
-@UnstableApi
 public final class Http2Flags {
     public static final short END_STREAM = 0x1;
     public static final short END_HEADERS = 0x4;

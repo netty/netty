@@ -18,12 +18,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Interface that defines an object capable of producing HTTP/2 data frames.
  */
-@UnstableApi
 public interface Http2DataWriter {
     /**
      * Writes a {@code DATA} frame to the remote endpoint. This will result in one or more
