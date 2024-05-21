@@ -450,7 +450,7 @@ public class SslContextBuilderTest {
         server_engine.closeOutbound();
     }
 
-    static class SpySecureRandom extends SecureRandom {
+    private static final class SpySecureRandom extends SecureRandom {
         private int count;
 
         @Override
@@ -490,7 +490,7 @@ public class SslContextBuilderTest {
         }
 
         @Override
-        public synchronized double nextGaussian() {
+        public double nextGaussian() {
             count++;
             return super.nextGaussian();
         }
