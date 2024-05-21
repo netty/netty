@@ -16,14 +16,12 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Decodes a DNS record into its object representation.
  *
  * @see DatagramDnsResponseDecoder
  */
-@UnstableApi
 public interface DnsRecordDecoder {
 
     DnsRecordDecoder DEFAULT = new DefaultDnsRecordDecoder();

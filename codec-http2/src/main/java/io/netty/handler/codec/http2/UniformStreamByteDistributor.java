@@ -14,8 +14,6 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -34,7 +32,6 @@ import static java.lang.Math.min;
  * fewer streams may be written to in each call to {@link #distribute(int, Writer)}, doing this
  * should improve the goodput on each written stream.
  */
-@UnstableApi
 public final class UniformStreamByteDistributor implements StreamByteDistributor {
     private final Http2Connection.PropertyKey stateKey;
     private final Deque<State> queue = new ArrayDeque<State>(4);

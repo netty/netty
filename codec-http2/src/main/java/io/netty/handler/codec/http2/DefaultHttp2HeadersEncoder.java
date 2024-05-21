@@ -19,13 +19,11 @@ import java.io.Closeable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-@UnstableApi
 public class DefaultHttp2HeadersEncoder implements
     Http2HeadersEncoder, Http2HeadersEncoder.Configuration, Closeable {
 

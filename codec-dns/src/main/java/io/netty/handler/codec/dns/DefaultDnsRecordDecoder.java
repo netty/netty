@@ -16,14 +16,12 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * The default {@link DnsRecordDecoder} implementation.
  *
  * @see DefaultDnsRecordEncoder
  */
-@UnstableApi
 public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
 
     static final String ROOT = ".";

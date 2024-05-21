@@ -16,13 +16,11 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * This class brings {@link Http2Connection.Listener} and {@link Http2FrameListener} together to provide
  * NOOP implementation so inheriting classes can selectively choose which methods to override.
  */
-@UnstableApi
 public class Http2EventAdapter implements Http2Connection.Listener, Http2FrameListener {
     @Override
     public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream)

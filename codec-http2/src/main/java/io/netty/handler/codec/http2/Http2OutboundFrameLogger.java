@@ -21,13 +21,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Decorator around a {@link Http2FrameWriter} that logs all outbound frames before calling the
  * writer.
  */
-@UnstableApi
 public class Http2OutboundFrameLogger implements Http2FrameWriter {
     private final Http2FrameWriter writer;
     private final Http2FrameLogger logger;

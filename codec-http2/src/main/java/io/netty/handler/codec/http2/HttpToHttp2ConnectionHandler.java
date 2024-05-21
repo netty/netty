@@ -27,14 +27,12 @@ import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Translates HTTP/1.x object writes into HTTP/2 frames.
  * <p>
  * See {@link InboundHttp2ToHttpAdapter} to get translation from HTTP/2 frames to HTTP/1.x objects.
  */
-@UnstableApi
 public class HttpToHttp2ConnectionHandler extends Http2ConnectionHandler {
 
     private final boolean validateHeaders;

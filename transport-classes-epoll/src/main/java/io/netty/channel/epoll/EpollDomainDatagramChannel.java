@@ -33,7 +33,6 @@ import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -41,7 +40,6 @@ import java.nio.ByteBuffer;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketDomainDgram;
 
-@UnstableApi
 public final class EpollDomainDatagramChannel extends AbstractEpollChannel implements DomainDatagramChannel {
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);

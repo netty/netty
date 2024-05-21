@@ -17,12 +17,10 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * The default {@link Http2PingFrame} implementation.
  */
-@UnstableApi
 public class DefaultHttp2PingFrame implements Http2PingFrame {
 
     private final long content;

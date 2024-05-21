@@ -108,7 +108,6 @@ public interface RecvByteBufAllocator {
     }
 
     @SuppressWarnings("deprecation")
-    @UnstableApi
     interface ExtendedHandle extends Handle {
         /**
          * Same as {@link Handle#continueReading()} except "more data" is determined by the supplier parameter.

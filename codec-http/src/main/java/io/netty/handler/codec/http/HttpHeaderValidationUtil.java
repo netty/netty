@@ -16,14 +16,12 @@
 package io.netty.handler.codec.http;
 
 import io.netty.util.AsciiString;
-import io.netty.util.internal.UnstableApi;
 
 import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
 
 /**
  * Functions used to perform various validations of HTTP header names and values.
  */
-@UnstableApi
 public final class HttpHeaderValidationUtil {
     private HttpHeaderValidationUtil() {
     }

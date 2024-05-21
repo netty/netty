@@ -32,7 +32,6 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -119,7 +118,6 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
      * <strong>IMPORTANT:</strong>
      * It already call {@code super.channelRead(ctx, request)} before returning.
      */
-    @UnstableApi
     protected void onHttpRequestChannelRead(ChannelHandlerContext ctx, HttpRequest request) throws Exception {
         List<WebSocketServerExtension> validExtensionsList = null;
 
@@ -201,7 +199,6 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
      * <strong>IMPORTANT:</strong>
      * It already call {@code super.write(ctx, response, promise)} before returning.
      */
-    @UnstableApi
     protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response, ChannelPromise promise)
             throws Exception {
         List<WebSocketServerExtension> validExtensionsList = validExtensions.poll();

@@ -31,7 +31,6 @@ import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -98,7 +97,6 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  * and send a {@link Http2ResetFrame} with the unwrapped {@link Http2Error} set. Another possibility is to just
  * directly write a {@link Http2ResetFrame} to the {@link Http2StreamChannel}l.
  */
-@UnstableApi
 public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
 
     static final ChannelFutureListener CHILD_CHANNEL_REGISTRATION_LISTENER = new ChannelFutureListener() {

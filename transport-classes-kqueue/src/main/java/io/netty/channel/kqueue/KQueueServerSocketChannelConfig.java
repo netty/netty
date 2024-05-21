@@ -21,8 +21,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.ServerSocketChannelConfig;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.util.Map;
@@ -30,7 +28,6 @@ import java.util.Map;
 import static io.netty.channel.kqueue.KQueueChannelOption.SO_ACCEPTFILTER;
 import static io.netty.channel.unix.UnixChannelOption.SO_REUSEPORT;
 
-@UnstableApi
 public class KQueueServerSocketChannelConfig extends KQueueServerChannelConfig {
     KQueueServerSocketChannelConfig(KQueueServerSocketChannel channel) {
         super(channel);

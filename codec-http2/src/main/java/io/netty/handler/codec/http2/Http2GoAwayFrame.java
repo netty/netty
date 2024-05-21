@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * HTTP/2 GOAWAY frame.
@@ -29,7 +28,6 @@ import io.netty.util.internal.UnstableApi;
  * <p>Graceful shutdown as described in the HTTP/2 spec can be accomplished by calling
  * {@code #setExtraStreamIds(Integer.MAX_VALUE)}.
  */
-@UnstableApi
 public interface Http2GoAwayFrame extends Http2Frame, ByteBufHolder {
     /**
      * The reason for beginning closure of the connection. Represented as an HTTP/2 error code.

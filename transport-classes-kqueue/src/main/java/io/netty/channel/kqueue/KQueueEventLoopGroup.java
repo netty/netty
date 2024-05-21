@@ -25,12 +25,11 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
-import io.netty.util.internal.UnstableApi;
+
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
-@UnstableApi
 public final class KQueueEventLoopGroup extends MultithreadEventLoopGroup {
 
     // This does not use static by design to ensure the class can be loaded and only do the check when its actually

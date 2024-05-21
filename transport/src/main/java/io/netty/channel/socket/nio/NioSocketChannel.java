@@ -35,9 +35,9 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.SuppressJava6Requirement;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -161,7 +161,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
-    @UnstableApi
     @Override
     protected final void doShutdownOutput() throws Exception {
         if (PlatformDependent.javaVersion() >= 7) {

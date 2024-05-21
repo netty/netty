@@ -38,7 +38,6 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.SuppressJava6Requirement;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -161,8 +160,7 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
         return isInputShutdown() && isOutputShutdown() || !isActive();
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
-    @UnstableApi
+    @SuppressJava6Requirement(reason = "guarded by version check")
     @Override
     protected void doShutdownOutput() throws Exception {
         javaChannel().shutdownOutput();
@@ -268,6 +266,7 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
             promise.setSuccess();
         }
     }
+
     private void shutdownInput0(final ChannelPromise promise) {
         try {
             shutdownInput0();

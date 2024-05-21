@@ -19,7 +19,6 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.Async.Schedule;
@@ -495,7 +494,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     /**
      * Invoked before returning from {@link #runAllTasks()} and {@link #runAllTasks(long)}.
      */
-    @UnstableApi
     protected void afterRunningAllTasks() { }
 
     /**
@@ -516,7 +514,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * Returns the absolute point in time (relative to {@link #getCurrentTimeNanos()}) at which the next
      * closest scheduled task should run.
      */
-    @UnstableApi
     protected long deadlineNanos() {
         ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
         if (scheduledTask == null) {

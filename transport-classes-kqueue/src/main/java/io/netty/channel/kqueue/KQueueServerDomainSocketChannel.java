@@ -18,7 +18,6 @@ package io.netty.channel.kqueue;
 import io.netty.channel.Channel;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.ServerDomainSocketChannel;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -27,7 +26,6 @@ import java.net.SocketAddress;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDomain;
 
-@UnstableApi
 public final class KQueueServerDomainSocketChannel extends AbstractKQueueServerChannel
                                                   implements ServerDomainSocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(

@@ -16,14 +16,11 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Builder for the {@link Http2FrameCodec}.
  */
-@UnstableApi
 public class Http2FrameCodecBuilder extends
         AbstractHttp2ConnectionHandlerBuilder<Http2FrameCodec, Http2FrameCodecBuilder> {
 

@@ -37,7 +37,6 @@ import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -532,7 +531,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
-    @UnstableApi
     @Override
     protected final void doShutdownOutput() throws Exception {
         socket.shutdown(false, true);

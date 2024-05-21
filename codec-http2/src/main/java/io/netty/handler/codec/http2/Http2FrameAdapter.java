@@ -16,12 +16,10 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Convenience class that provides no-op implementations for all methods of {@link Http2FrameListener}.
  */
-@UnstableApi
 public class Http2FrameAdapter implements Http2FrameListener {
 
     @Override
