@@ -17,11 +17,11 @@
 /**
  * Abstraction of a byte buffer - the fundamental data structure
  * to represent a low-level binary and text message.
- *
+ * <p>
  * Netty uses its own buffer API instead of NIO {@link java.nio.ByteBuffer} to
  * represent a sequence of bytes. This approach has significant advantage over
  * using {@link java.nio.ByteBuffer}.  Netty's new buffer type,
- * {@link io.netty5.buffer.ByteBuf}, has been designed from ground
+ * {@link io.netty5.buffer.Buffer}, has been designed from ground
  * up to address the problems of {@link java.nio.ByteBuffer} and to meet the
  * daily needs of network application developers.  To list a few cool features:
  * <ul>
@@ -35,18 +35,18 @@
  *
  * <h3>Extensibility</h3>
  *
- * {@link io.netty5.buffer.ByteBuf} has rich set of operations
+ * {@link io.netty5.buffer.Buffer} has rich set of operations
  * optimized for rapid protocol implementation.  For example,
- * {@link io.netty5.buffer.ByteBuf} provides various operations
+ * {@link io.netty5.buffer.Buffer} provides various operations
  * for accessing unsigned values and strings and searching for certain byte
  * sequence in a buffer.  You can also extend or wrap existing buffer type
  * to add convenient accessors.  The custom buffer type still implements
- * {@link io.netty5.buffer.ByteBuf} interface rather than
+ * {@link io.netty5.buffer.Buffer} interface rather than
  * introducing an incompatible type.
  *
  * <h3>Transparent Zero Copy</h3>
  *
- * To lift up the performance of a network application to the extreme, you need
+ * To improve the performance of a network application to the extreme, you need
  * to reduce the number of memory copy operation.  You might have a set of
  * buffers that could be sliced and combined to compose a whole message.  Netty
  * provides a composite buffer which allows you to create a new buffer from the
@@ -70,18 +70,21 @@
  * // The composite type is incompatible with the component type.
  * ByteBuffer[] message = new ByteBuffer[] { header, body };
  * </pre>
- * By contrast, {@link io.netty5.buffer.ByteBuf} does not have such
+ * By contrast, {@link io.netty5.buffer.Buffer} does not have such
  * caveats because it is fully extensible and has a built-in composite buffer
  * type.
  * <pre>
  * // The composite type is compatible with the component type.
- * {@link io.netty5.buffer.ByteBuf} message = {@link io.netty5.buffer.Unpooled}.wrappedBuffer(header, body);
+ * // Note the use of send(), as the composite buffer takes charge of the lifecycle of its component buffers.
+ * {@link io.netty5.buffer.Buffer} msg = {@link io.netty5.buffer.BufferAllocator}.compose(
+ *      Arrays.asList(header.send(), body.send()));
  *
  * // Therefore, you can even create a composite by mixing a composite and an
  * // ordinary buffer.
- * {@link io.netty5.buffer.ByteBuf} messageWithFooter = {@link io.netty5.buffer.Unpooled}.wrappedBuffer(msg, footer);
+ * {@link io.netty5.buffer.Buffer} messageWithFooter = {@link io.netty5.buffer.BufferAllocator}.compose(
+ *  *      Arrays.asList(msg.send(), footer.send()));
  *
- * // Because the composite is still a {@link io.netty5.buffer.ByteBuf}, you can access its content
+ * // Because the composite is still a {@link io.netty5.buffer.Buffer}, you can access its content
  * // easily, and the accessor method will behave just like it's a single buffer
  * // even if the region you want to access spans over multiple components.  The
  * // unsigned integer being read here is located across body and footer.
@@ -92,33 +95,30 @@
  * <h3>Automatic Capacity Extension</h3>
  *
  * Many protocols define variable length messages, which means there's no way to
- * determine the length of a message until you construct the message or it is
+ * determine the length of a message until you construct the message, or it is
  * difficult and inconvenient to calculate the length precisely.  It is just
  * like when you build a {@link java.lang.String}. You often estimate the length
  * of the resulting string and let {@link java.lang.StringBuffer} expand itself
  * on demand.
  * <pre>
- * // A new dynamic buffer is created.  Internally, the actual buffer is created
- * // lazily to avoid potentially wasted memory space.
- * {@link io.netty5.buffer.ByteBuf} b = {@link io.netty5.buffer.Unpooled}.buffer(4);
+ * // A new dynamic buffer is created with the specified initial capacity (4).
+ * {@link io.netty5.buffer.Buffer} b = allocator.allocate(4);
  *
- * // When the first write attempt is made, the internal buffer is created with
- * // the specified initial capacity (4).
- * b.writeByte('1');
- *
- * b.writeByte('2');
- * b.writeByte('3');
- * b.writeByte('4');
+ * // Writes within the buffer capacity need no further allocation
+ * b.writeByte((byte) 1);
+ * b.writeByte((byte) 2);
+ * b.writeByte((byte) 3);
+ * b.writeByte((byte) 4);
  *
  * // When the number of written bytes exceeds the initial capacity (4), the
  * // internal buffer is reallocated automatically with a larger capacity.
- * b.writeByte('5');
+ * b.writeByte((byte) 5);
  * </pre>
  *
  * <h3>Better Performance</h3>
  *
  * Most frequently used buffer implementation of
- * {@link io.netty5.buffer.ByteBuf} is a very thin wrapper of a
+ * {@link io.netty5.buffer.Buffer} is a very thin wrapper of a
  * byte array (i.e. {@code byte[]}).  Unlike {@link java.nio.ByteBuffer}, it has
  * no complicated boundary check and index compensation, and therefore it is
  * easier for a JVM to optimize the buffer access.  More complicated buffer

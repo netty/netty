@@ -30,7 +30,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty5.util.internal.StringUtil.NEWLINE;
 
 /**
- * A collection of utility methods that is related with handling {@code ByteBuf},
+ * A collection of utility methods that is related with handling {@code Buffer},
  * such as the generation of hex dump and swapping an integer's byte order.
  */
 public final class BufferUtil {

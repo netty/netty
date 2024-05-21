@@ -54,12 +54,12 @@ public class BufferChecksumTest {
         try (buf) {
             // all variations of xxHash32: slow and naive, optimised, wrapped optimised;
             // the last two should be literally identical, but it's best to guard against
-            // an accidental regression in ByteBufChecksum#wrapChecksum(Checksum)
+            // an accidental regression in BufferChecksum#wrapChecksum(Checksum)
             testUpdate(xxHash32(DEFAULT_SEED), new BufferChecksum(xxHash32(DEFAULT_SEED)), buf);
             testUpdate(xxHash32(DEFAULT_SEED), new Lz4XXHash32(DEFAULT_SEED), buf);
             testUpdate(xxHash32(DEFAULT_SEED), new BufferChecksum(new Lz4XXHash32(DEFAULT_SEED)), buf);
 
-            // CRC32 and Adler32, special-cased to use ReflectiveByteBufChecksum
+            // CRC32 and Adler32, special-cased optimization
             testUpdate(new CRC32(), new BufferChecksum(new CRC32()), buf);
             testUpdate(new Adler32(), new BufferChecksum(new Adler32()), buf);
         }

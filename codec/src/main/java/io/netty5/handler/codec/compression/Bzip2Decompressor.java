@@ -37,7 +37,7 @@ import static io.netty5.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
 
 /**
  * Uncompresses a {@link Buffer} encoded with the Bzip2 format.
- *
+ * <p>
  * See <a href="https://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
  */
 public final class Bzip2Decompressor implements Decompressor {
@@ -240,7 +240,7 @@ public final class Bzip2Decompressor implements Decompressor {
                             for (currSelector = huffmanStageDecoder.currentSelector;
                                  currSelector < totalSelectors; currSelector++) {
                                 if (!reader.hasReadableBits(HUFFMAN_SELECTOR_LIST_MAX_LENGTH)) {
-                                    // Save state if end of current ByteBuf was reached
+                                    // Save state if end of current Buffer was reached
                                     huffmanStageDecoder.currentSelector = currSelector;
                                     return null;
                                 }
@@ -302,7 +302,7 @@ public final class Bzip2Decompressor implements Decompressor {
                                 modifyLength = false;
                             }
                             if (saveStateAndReturn) {
-                                // Save state if end of current ByteBuf was reached
+                                // Save state if end of current Buffer was reached
                                 huffmanStageDecoder.currentGroup = currGroup;
                                 huffmanStageDecoder.currentLength = currLength;
                                 huffmanStageDecoder.currentAlpha = currAlpha;
@@ -323,7 +323,7 @@ public final class Bzip2Decompressor implements Decompressor {
                             }
                             // It used to avoid "Bzip2Decoder.decode() did not read anything but decoded a message"
                             // exception. Because previous operation may read only a few bits from
-                            // Bzip2BitReader.bitBuffer and don't read incoming ByteBuf.
+                            // Bzip2BitReader.bitBuffer and don't read incoming Buffer.
                             if (in.readerOffset() == oldReaderIndex && in.readableBytes() > 0) {
                                 reader.refill();
                             }
@@ -340,7 +340,7 @@ public final class Bzip2Decompressor implements Decompressor {
                                 int currentBlockCRC = blockDecompressor.checkCRC();
                                 streamCRC = (streamCRC << 1 | streamCRC >>> 31) ^ currentBlockCRC;
 
-                                // Return here so the ByteBuf that was put in the List will be forwarded to the user
+                                // Return here so the Buffer that was put in the List will be forwarded to the user
                                 // and so can be released as soon as possible.
                                 Buffer data = uncompressed;
                                 uncompressed = null;

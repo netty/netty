@@ -153,7 +153,7 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
 
     public void testCompositeBufferPartialWriteDoesNotCorruptData(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         // The scenario is the following:
-        // Limit SO_SNDBUF so that a single buffer can be written, and part of a CompositeByteBuf at the same time.
+        // Limit SO_SNDBUF so that a single buffer can be written, and part of a CompositeBuffer at the same time.
         // We then write the single buffer, the CompositeBuffer, and another single buffer and verify the data is not
         // corrupted when we read it on the other side.
         Channel serverChannel = null;

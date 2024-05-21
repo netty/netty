@@ -1237,7 +1237,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                             }
                             // We are directly using the ByteBuffer memory for the write, and so we only know what has
                             // been consumed after we let SSL decrypt the data. At this point we should update the
-                            // number of bytes consumed, update the ByteBuffer position, and release temp ByteBuf.
+                            // number of bytes consumed, update the ByteBuffer position, and release temp Buffer.
                             int localBytesConsumed = pendingEncryptedBytes - SSL.bioLengthByteBuffer(networkBIO);
                             bytesConsumed += localBytesConsumed;
                             packetLength -= localBytesConsumed;
