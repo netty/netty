@@ -16,12 +16,10 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * The default {@link DnsQuestion} implementation.
  */
-@UnstableApi
 public class DefaultDnsQuestion extends AbstractDnsRecord implements DnsQuestion {
 
     /**

@@ -16,12 +16,9 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * A visitor that allows to iterate over a collection of {@link Http2FrameStream}s.
  */
-@UnstableApi
 public interface Http2FrameStreamVisitor {
 
     /**

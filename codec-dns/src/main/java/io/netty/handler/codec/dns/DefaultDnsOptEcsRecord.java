@@ -18,7 +18,6 @@ package io.netty.handler.codec.dns;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetAddress;
 import java.util.Arrays;
@@ -26,7 +25,6 @@ import java.util.Arrays;
 /**
  * Default {@link DnsOptEcsRecord} implementation.
  */
-@UnstableApi
 public final class DefaultDnsOptEcsRecord extends AbstractDnsOptPseudoRrRecord implements DnsOptEcsRecord {
     private final int srcPrefixLength;
     private final byte[] address;

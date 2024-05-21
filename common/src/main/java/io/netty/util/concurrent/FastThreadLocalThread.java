@@ -16,7 +16,6 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -98,7 +97,6 @@ public class FastThreadLocalThread extends Thread {
     /**
      * Returns {@code true} if {@link FastThreadLocal#removeAll()} will be called once {@link #run()} completes.
      */
-    @UnstableApi
     public boolean willCleanupFastThreadLocals() {
         return cleanupFastThreadLocals;
     }
@@ -106,7 +104,6 @@ public class FastThreadLocalThread extends Thread {
     /**
      * Returns {@code true} if {@link FastThreadLocal#removeAll()} will be called once {@link Thread#run()} completes.
      */
-    @UnstableApi
     public static boolean willCleanupFastThreadLocals(Thread thread) {
         return thread instanceof FastThreadLocalThread &&
                 ((FastThreadLocalThread) thread).willCleanupFastThreadLocals();

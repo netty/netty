@@ -28,7 +28,6 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.UnstableApi;
 
 import static io.netty.util.internal.StringUtil.COMMA;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -564,7 +563,6 @@ public final class HttpUtil {
      * @return the normalized content length from the headers or {@code -1} if the fields were empty.
      * @throws IllegalArgumentException if the content-length fields are not valid
      */
-    @UnstableApi
     public static long normalizeAndGetContentLength(
             List<? extends CharSequence> contentLengthFields, boolean isHttp10OrEarlier,
             boolean allowDuplicateContentLengths) {

@@ -23,7 +23,6 @@ import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -1225,7 +1224,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     protected void onUnhandledChannelWritabilityChanged() {
     }
 
-    @UnstableApi
     protected void incrementPendingOutboundBytes(long size) {
         ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
         if (buffer != null) {
@@ -1233,7 +1231,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    @UnstableApi
     protected void decrementPendingOutboundBytes(long size) {
         ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
         if (buffer != null) {

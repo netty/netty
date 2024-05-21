@@ -16,7 +16,6 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * An <a href="https://tools.ietf.org/html/rfc6891#section-6.1">OPT RR</a> record.
@@ -24,7 +23,6 @@ import io.netty.util.internal.UnstableApi;
  * This is used for <a href="https://tools.ietf.org/html/rfc6891#section-6.1.3">
  *     Extension Mechanisms for DNS (EDNS(0))</a>.
  */
-@UnstableApi
 public abstract class AbstractDnsOptPseudoRrRecord extends AbstractDnsRecord implements DnsOptPseudoRecord {
 
     protected AbstractDnsOptPseudoRrRecord(int maxPayloadSize, int extendedRcode, int version) {

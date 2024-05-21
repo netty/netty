@@ -27,7 +27,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -88,7 +87,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         return promise;
     }
 
-    @UnstableApi
     @Override
     protected final void doShutdownOutput() throws Exception {
         socket.shutdown(false, true);

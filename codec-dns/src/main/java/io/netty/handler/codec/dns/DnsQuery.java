@@ -15,12 +15,9 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * A DNS query message.
  */
-@UnstableApi
 public interface DnsQuery extends DnsMessage {
     @Override
     DnsQuery setId(int id);

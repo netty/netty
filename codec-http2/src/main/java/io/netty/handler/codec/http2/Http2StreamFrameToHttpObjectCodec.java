@@ -44,7 +44,6 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -57,7 +56,6 @@ import java.util.List;
  * For simplicity, it converts to chunked encoding unless the entire stream
  * is a single header.
  */
-@UnstableApi
 @Sharable
 public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Http2StreamFrame, HttpObject> {
 

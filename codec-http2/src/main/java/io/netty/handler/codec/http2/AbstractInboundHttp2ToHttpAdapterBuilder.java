@@ -15,14 +15,12 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.internal.UnstableApi;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * A skeletal builder implementation of {@link InboundHttp2ToHttpAdapter} and its subtypes.
  */
-@UnstableApi
 public abstract class AbstractInboundHttp2ToHttpAdapterBuilder<
         T extends InboundHttp2ToHttpAdapter, B extends AbstractInboundHttp2ToHttpAdapterBuilder<T, B>> {
 

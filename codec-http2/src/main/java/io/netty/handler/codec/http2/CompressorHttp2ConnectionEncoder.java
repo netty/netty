@@ -37,7 +37,6 @@ import io.netty.handler.codec.compression.SnappyFrameEncoder;
 import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +56,6 @@ import static io.netty.handler.codec.http.HttpHeaderValues.SNAPPY;
  * A decorating HTTP2 encoder that will compress data frames according to the {@code content-encoding} header for each
  * stream. The compression provided by this class will be applied to the data for the entire stream.
  */
-@UnstableApi
 public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionEncoder {
     // We cannot remove this because it'll be breaking change
     public static final int DEFAULT_COMPRESSION_LEVEL = 6;

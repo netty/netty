@@ -32,7 +32,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Basic implementation of {@link Http2LocalFlowController}.
@@ -40,7 +39,6 @@ import io.netty.util.internal.UnstableApi;
  * This class is <strong>NOT</strong> thread safe. The assumption is all methods must be invoked from a single thread.
  * Typically this thread is the event loop thread for the {@link ChannelHandlerContext} managed by this class.
  */
-@UnstableApi
 public class DefaultHttp2LocalFlowController implements Http2LocalFlowController {
     /**
      * The default ratio of window size to initial window size below which a {@code WINDOW_UPDATE}

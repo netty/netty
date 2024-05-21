@@ -17,14 +17,12 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * The default {@link DnsRecordEncoder} implementation.
  *
  * @see DefaultDnsRecordDecoder
  */
-@UnstableApi
 public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     private static final int PREFIX_MASK = Byte.SIZE - 1;
 

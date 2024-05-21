@@ -23,7 +23,6 @@ import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.PeerCredentials;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -127,7 +126,6 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
      * Returns the unix credentials (uid, gid, pid) of the peer
      * <a href=https://man7.org/linux/man-pages/man7/socket.7.html>SO_PEERCRED</a>
      */
-    @UnstableApi
     public PeerCredentials peerCredentials() throws IOException {
         return socket.getPeerCredentials();
     }

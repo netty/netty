@@ -32,7 +32,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -144,7 +143,6 @@ import static io.netty.util.internal.logging.InternalLogLevel.DEBUG;
  * Server-side HTTP to HTTP/2 upgrade is supported in conjunction with {@link Http2ServerUpgradeCodec}; the necessary
  * HTTP-to-HTTP/2 conversion is performed automatically.
  */
-@UnstableApi
 public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private static final InternalLogger LOG = InternalLoggerFactory.getInstance(Http2FrameCodec.class);

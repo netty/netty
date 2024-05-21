@@ -29,7 +29,6 @@ import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -43,7 +42,6 @@ import java.util.concurrent.ThreadFactory;
  * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link KQueueIoHandler}.
  */
 @Deprecated
-@UnstableApi
 public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
 
     // This does not use static by design to ensure the class can be loaded and only do the check when its actually

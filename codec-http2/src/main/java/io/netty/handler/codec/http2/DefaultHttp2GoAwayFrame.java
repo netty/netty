@@ -21,12 +21,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * The default {@link Http2GoAwayFrame} implementation.
  */
-@UnstableApi
 public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implements Http2GoAwayFrame {
 
     private final long errorCode;
