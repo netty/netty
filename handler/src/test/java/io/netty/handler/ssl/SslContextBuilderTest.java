@@ -248,7 +248,7 @@ public class SslContextBuilderTest {
 
     @Test
     public void testSecureRandom() throws Exception {
-        testServerContextWithSecureRandom(SslProvider.JDK, Mockito.mock(SecureRandom.class));
+        testServerContextWithSecureRandom(SslProvider.JDK, new SpySecureRandom());
     }
 
     private static void testKeyStoreType(SslProvider provider) throws Exception {
@@ -334,18 +334,18 @@ public class SslContextBuilderTest {
     }
 
     private static void testServerContextWithSecureRandom(SslProvider provider,
-                                                          SecureRandom mockSecureRandom) throws Exception {
+                                                          SpySecureRandom secureRandom) throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
         SslContextBuilder builder = SslContextBuilder.forServer(cert.key(), cert.cert())
                 .sslProvider(provider)
-                .secureRandom(mockSecureRandom)
+                .secureRandom(secureRandom)
                 .trustManager(cert.cert())
                 .clientAuth(ClientAuth.REQUIRE);
         SslContext context = builder.build();
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
         assertFalse(engine.getWantClientAuth());
         assertTrue(engine.getNeedClientAuth());
-        Mockito.verify(mockSecureRandom, Mockito.atLeastOnce()).nextInt();
+        assertTrue(secureRandom.getCount() > 0);
         engine.closeInbound();
         engine.closeOutbound();
     }
@@ -448,5 +448,55 @@ public class SslContextBuilderTest {
         assertTrue(server_engine.getNeedClientAuth());
         server_engine.closeInbound();
         server_engine.closeOutbound();
+    }
+
+    static class SpySecureRandom extends SecureRandom {
+        private int count;
+
+        @Override
+        public int nextInt() {
+            count++;
+            return super.nextInt();
+        }
+
+        @Override
+        public int nextInt(int bound) {
+            count++;
+            return super.nextInt(bound);
+        }
+
+        @Override
+        public long nextLong() {
+            count++;
+            return super.nextLong();
+        }
+
+        @Override
+        public boolean nextBoolean() {
+            count++;
+            return super.nextBoolean();
+        }
+
+        @Override
+        public float nextFloat() {
+            count++;
+            return super.nextFloat();
+        }
+
+        @Override
+        public double nextDouble() {
+            count++;
+            return super.nextDouble();
+        }
+
+        @Override
+        public synchronized double nextGaussian() {
+            count++;
+            return super.nextGaussian();
+        }
+
+        public int getCount() {
+            return count;
+        }
     }
 }
