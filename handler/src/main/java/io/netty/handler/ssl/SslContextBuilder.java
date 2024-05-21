@@ -601,9 +601,15 @@ public final class SslContextBuilder {
         this.enableOcsp = enableOcsp;
         return this;
     }
-
     /**
-     * @param secureRandom the source of randomness for SslContext
+     * Specify a non-default source of randomness for the {@link javax.net.ssl.SSLContext}.
+     * <p>
+     * In general, the best practice is to leave this unspecified, or to assign a new random source using the
+     * default {@code new SecureRandom()} constructor.
+     * Only assign this something when you have a good reason to.
+     *
+     * @param secureRandom the source of randomness for {@link javax.net.ssl.SSLContext}
+     *
      */
     public SslContextBuilder secureRandom(SecureRandom secureRandom) {
         this.secureRandom = secureRandom;
