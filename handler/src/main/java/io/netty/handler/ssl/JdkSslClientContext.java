@@ -27,6 +27,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
 import java.security.PrivateKey;
+import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 
 /**
@@ -175,7 +176,7 @@ public final class JdkSslClientContext extends JdkSslContext {
                         long sessionCacheSize, long sessionTimeout) throws SSLException {
         super(newSSLContext(provider, toX509CertificatesInternal(trustCertCollectionFile),
                 trustManagerFactory, null, null,
-                null, null, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType()), true,
+                null, null, sessionCacheSize, sessionTimeout, null, KeyStore.getDefaultType()), true,
                 ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
     }
 
@@ -258,7 +259,8 @@ public final class JdkSslClientContext extends JdkSslContext {
         super(newSSLContext(null, toX509CertificatesInternal(
                 trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
-                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType()), true,
+                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout,
+                        null, KeyStore.getDefaultType()), true,
                 ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
     }
 
@@ -267,11 +269,11 @@ public final class JdkSslClientContext extends JdkSslContext {
                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                         ApplicationProtocolConfig apn, String[] protocols, long sessionCacheSize, long sessionTimeout,
-                        String keyStoreType)
+                        SecureRandom secureRandom, String keyStoreType)
             throws SSLException {
         super(newSSLContext(sslContextProvider, trustCertCollection, trustManagerFactory,
                             keyCertChain, key, keyPassword, keyManagerFactory, sessionCacheSize,
-                            sessionTimeout, keyStoreType),
+                            sessionTimeout, secureRandom, keyStoreType),
                 true, ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE, protocols, false);
     }
 
@@ -280,7 +282,7 @@ public final class JdkSslClientContext extends JdkSslContext {
                                             TrustManagerFactory trustManagerFactory, X509Certificate[] keyCertChain,
                                             PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
                                             long sessionCacheSize, long sessionTimeout,
-                                            String keyStore) throws SSLException {
+                                            SecureRandom secureRandom, String keyStore) throws SSLException {
         try {
             if (trustCertCollection != null) {
                 trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory, keyStore);
@@ -293,7 +295,7 @@ public final class JdkSslClientContext extends JdkSslContext {
                 : SSLContext.getInstance(PROTOCOL, sslContextProvider);
             ctx.init(keyManagerFactory == null ? null : keyManagerFactory.getKeyManagers(),
                      trustManagerFactory == null ? null : trustManagerFactory.getTrustManagers(),
-                     null);
+                     secureRandom);
 
             SSLSessionContext sessCtx = ctx.getClientSessionContext();
             if (sessionCacheSize > 0) {

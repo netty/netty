@@ -31,6 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.net.Socket;
 import java.security.Principal;
 import java.security.PrivateKey;
+import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
@@ -244,6 +245,16 @@ public class SslContextBuilderTest {
         }
     }
 
+    @Test
+    public void testServerContextWithSecureRandom() throws Exception {
+        testServerContextWithSecureRandom(SslProvider.JDK, new SpySecureRandom());
+    }
+
+    @Test
+    public void testClientContextWithSecureRandom() throws Exception {
+        testClientContextWithSecureRandom(SslProvider.JDK, new SpySecureRandom());
+    }
+
     private static void testKeyStoreType(SslProvider provider) throws Exception {
         SelfSignedCertificate cert = new SelfSignedCertificate();
         SslContextBuilder builder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
@@ -322,6 +333,41 @@ public class SslContextBuilderTest {
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
         assertFalse(engine.getWantClientAuth());
         assertTrue(engine.getNeedClientAuth());
+        engine.closeInbound();
+        engine.closeOutbound();
+    }
+
+    private static void testServerContextWithSecureRandom(SslProvider provider,
+                                                          SpySecureRandom secureRandom) throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SslContextBuilder builder = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .sslProvider(provider)
+                .secureRandom(secureRandom)
+                .trustManager(cert.cert())
+                .clientAuth(ClientAuth.REQUIRE);
+        SslContext context = builder.build();
+        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        assertFalse(engine.getWantClientAuth());
+        assertTrue(engine.getNeedClientAuth());
+        assertTrue(secureRandom.getCount() > 0);
+        engine.closeInbound();
+        engine.closeOutbound();
+    }
+
+    private static void testClientContextWithSecureRandom(SslProvider provider,
+                                                          SpySecureRandom secureRandom) throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SslContextBuilder builder = SslContextBuilder.forClient()
+                .sslProvider(provider)
+                .secureRandom(secureRandom)
+                .keyManager(cert.key(), cert.cert())
+                .trustManager(cert.cert())
+                .clientAuth(ClientAuth.OPTIONAL);
+        SslContext context = builder.build();
+        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        assertFalse(engine.getWantClientAuth());
+        assertFalse(engine.getNeedClientAuth());
+        assertTrue(secureRandom.getCount() > 0);
         engine.closeInbound();
         engine.closeOutbound();
     }
@@ -424,5 +470,55 @@ public class SslContextBuilderTest {
         assertTrue(server_engine.getNeedClientAuth());
         server_engine.closeInbound();
         server_engine.closeOutbound();
+    }
+
+    private static final class SpySecureRandom extends SecureRandom {
+        private int count;
+
+        @Override
+        public int nextInt() {
+            count++;
+            return super.nextInt();
+        }
+
+        @Override
+        public int nextInt(int bound) {
+            count++;
+            return super.nextInt(bound);
+        }
+
+        @Override
+        public long nextLong() {
+            count++;
+            return super.nextLong();
+        }
+
+        @Override
+        public boolean nextBoolean() {
+            count++;
+            return super.nextBoolean();
+        }
+
+        @Override
+        public float nextFloat() {
+            count++;
+            return super.nextFloat();
+        }
+
+        @Override
+        public double nextDouble() {
+            count++;
+            return super.nextDouble();
+        }
+
+        @Override
+        public double nextGaussian() {
+            count++;
+            return super.nextGaussian();
+        }
+
+        public int getCount() {
+            return count;
+        }
     }
 }
