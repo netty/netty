@@ -2435,6 +2435,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private static boolean attemptCopyToCumulation(ByteBuf cumulation, ByteBuf next, int wrapDataSize) {
         final int inReadableBytes = next.readableBytes();
+        // Nothing to copy so just release the buffer.
+        if (inReadableBytes == 0) {
+            next.release();
+            return true;
+        }
+        // don't attempt to write to a readonly buffer. isWritable might return true for a readonly buffer.
+        if (cumulation.isReadOnly()) {
+            return false;
+        }
         final int cumulationCapacity = cumulation.capacity();
         if (wrapDataSize - cumulation.readableBytes() >= inReadableBytes &&
                 // Avoid using the same buffer if next's data would make cumulation exceed the wrapDataSize.
