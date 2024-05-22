@@ -602,13 +602,13 @@ public final class SslContextBuilder {
         return this;
     }
     /**
-     * Specify a non-default source of randomness for the {@link javax.net.ssl.SSLContext}.
+     * Specify a non-default source of randomness for the {@link JdkSslContext}
      * <p>
      * In general, the best practice is to leave this unspecified, or to assign a new random source using the
      * default {@code new SecureRandom()} constructor.
      * Only assign this something when you have a good reason to.
      *
-     * @param secureRandom the source of randomness for {@link javax.net.ssl.SSLContext}
+     * @param secureRandom the source of randomness for {@link JdkSslContext}
      *
      */
     public SslContextBuilder secureRandom(SecureRandom secureRandom) {
@@ -630,7 +630,8 @@ public final class SslContextBuilder {
         } else {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
-                ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout, enableOcsp, keyStoreType,
+                ciphers, cipherFilter, apn, protocols, sessionCacheSize,
+                    sessionTimeout, enableOcsp, secureRandom, keyStoreType,
                     toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }

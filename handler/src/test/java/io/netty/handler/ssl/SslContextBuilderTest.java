@@ -247,8 +247,13 @@ public class SslContextBuilderTest {
     }
 
     @Test
-    public void testSecureRandom() throws Exception {
+    public void testServerContextWithSecureRandom() throws Exception {
         testServerContextWithSecureRandom(SslProvider.JDK, new SpySecureRandom());
+    }
+
+    @Test
+    public void testClientContextWithSecureRandom() throws Exception {
+        testClientContextWithSecureRandom(SslProvider.JDK, new SpySecureRandom());
     }
 
     private static void testKeyStoreType(SslProvider provider) throws Exception {
@@ -345,6 +350,24 @@ public class SslContextBuilderTest {
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
         assertFalse(engine.getWantClientAuth());
         assertTrue(engine.getNeedClientAuth());
+        assertTrue(secureRandom.getCount() > 0);
+        engine.closeInbound();
+        engine.closeOutbound();
+    }
+
+    private static void testClientContextWithSecureRandom(SslProvider provider,
+                                                          SpySecureRandom secureRandom) throws Exception {
+        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SslContextBuilder builder = SslContextBuilder.forClient()
+                .sslProvider(provider)
+                .secureRandom(secureRandom)
+                .keyManager(cert.key(), cert.cert())
+                .trustManager(cert.cert())
+                .clientAuth(ClientAuth.OPTIONAL);
+        SslContext context = builder.build();
+        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        assertFalse(engine.getWantClientAuth());
+        assertFalse(engine.getNeedClientAuth());
         assertTrue(secureRandom.getCount() > 0);
         engine.closeInbound();
         engine.closeOutbound();
