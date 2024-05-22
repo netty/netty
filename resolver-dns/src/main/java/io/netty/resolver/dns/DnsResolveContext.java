@@ -464,11 +464,9 @@ abstract class DnsResolveContext<T> {
         final InetSocketAddress nameServerAddr = nameServerAddrStream.next();
         if (nameServerAddr.isUnresolved()) {
             queryUnresolvedNameServer(nameServerAddr, nameServerAddrStream, nameServerAddrStreamIndex, question,
-                                      queryLifecycleObserver, promise, cause);
+                    queryLifecycleObserver, promise, cause);
             return;
         }
-        final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
-                channel.eventLoop().newPromise();
 
         final long queryStartTimeNanos;
         final boolean isFeedbackAddressStream;
@@ -482,7 +480,7 @@ abstract class DnsResolveContext<T> {
 
         final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f =
                 parent.doQuery(channel, channelReadyFuture, nameServerAddr, question,
-                        queryLifecycleObserver, additionals, flush, queryPromise);
+                        queryLifecycleObserver, additionals, flush, channel.eventLoop().newPromise());
 
         queriesInProgress.add(f);
 

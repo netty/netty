@@ -110,6 +110,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import sun.jvm.hotspot.debugger.Address;
 
 import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
@@ -3513,6 +3514,96 @@ public class DnsNameResolverTest {
             assertThat(e, is(instanceOf(CancellationException.class)));
         }
         assertThat(isQuerySentToSecondServer.get(), is(false));
+    }
+
+    @Test
+    void backupRequests() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicBoolean backupStarted = new AtomicBoolean();
+        final TestDnsServer dnsServer1 = new TestDnsServer(Collections.singleton("netty.io")) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                try {
+                    latch.await();
+                } catch (InterruptedException ex) {
+                    logger.error("Interrupted", ex);
+                }
+                return message;
+            }
+        };
+        dnsServer1.start();
+        final AtomicBoolean isQuerySentToSecondServer = new AtomicBoolean();
+        final TestDnsServer dnsServer2 = new TestDnsServer(Collections.singleton("netty.io")) {
+            @Override
+            protected DnsMessage filterMessage(DnsMessage message) {
+                isQuerySentToSecondServer.set(true);
+                return message;
+            }
+        };
+        dnsServer2.start();
+        DnsServerAddressStreamProvider nameServerProvider = new DnsServerAddressStreamProvider() {
+
+            private final DnsServerAddressStream stream =  new DnsServerAddressStream() {
+                boolean firstDone;
+                @Override
+                public synchronized InetSocketAddress next() {
+                    if (!firstDone) {
+                        logger.info("Using first address.");
+                        firstDone = true;
+                        return dnsServer1.localAddress();
+                    } else {
+                        logger.info("Using second address.");
+                        return dnsServer2.localAddress();
+                    }
+                }
+
+                @Override
+                public int size() {
+                    return 2;
+                }
+
+                @Override
+                public DnsServerAddressStream duplicate() {
+                    return this;
+                }
+            };
+            @Override
+            public DnsServerAddressStream nameServerAddressStream(String hostname) {
+                return stream;
+            }
+        };
+        final DnsNameResolver resolver = new DnsNameResolverBuilder(group.next())
+                .dnsQueryLifecycleObserverFactory(new TestRecursiveCacheDnsQueryLifecycleObserverFactory())
+                .channelType(NioDatagramChannel.class)
+                .optResourceEnabled(false)
+                .queryTimeoutMillis(0) // disable timeouts.
+                .nameServerProvider(nameServerProvider)
+                .backupRequestPolicy(new BackupRequestPolicy() {
+                    @Override
+                    public boolean attemptBackupRequest() {
+                        logger.info("Backup request executing");
+                        backupStarted.set(true);
+                        return true;
+                    }
+
+                    @Override
+                    public long backupDelayMs() {
+                        return 1000;
+                    }
+                })
+                .build();
+
+        AddressedEnvelope<DnsResponse, InetSocketAddress> result = resolver.query(
+                new DefaultDnsQuestion("netty.io", DnsRecordType.A)).get();
+        try {
+            assertThat(isQuerySentToSecondServer.get(), is(true));
+            assertThat(backupStarted.get(), is(true));
+        } finally {
+            result.release();
+            latch.countDown();
+            dnsServer1.stop();
+            dnsServer2.stop();
+        }
     }
 
     @Test
