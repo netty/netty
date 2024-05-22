@@ -20,7 +20,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.mockito.Mockito;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLEngine;
