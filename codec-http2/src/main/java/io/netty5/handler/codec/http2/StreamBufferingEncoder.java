@@ -195,7 +195,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             return super.writeRstStream(ctx, streamId, errorCode);
         }
         // Since the delegate doesn't know about any buffered streams we have to handle cancellation
-        // of the promises and releasing of the ByteBufs here.
+        // of the promises and releasing of the Buffers here.
         PendingStream stream = pendingStreams.remove(streamId);
         if (stream != null) {
             // Sending a RST_STREAM to a buffered stream will succeed the promise of all frames

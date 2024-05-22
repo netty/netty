@@ -87,7 +87,7 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
             out.set(0, new DatagramPacket((Buffer) content, msg.recipient(), msg.sender()));
         } else {
             throw new EncoderException(
-                    StringUtil.simpleClassName(encoder) + " must produce only ByteBuf.");
+                    StringUtil.simpleClassName(encoder) + " must produce only Buffer.");
         }
     }
 

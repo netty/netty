@@ -65,7 +65,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * An NIO {@link io.netty5.channel.socket.DatagramChannel} that sends and receives an
- * {@link AddressedEnvelope AddressedEnvelope<ByteBuf, SocketAddress>}.
+ * {@link AddressedEnvelope AddressedEnvelope<Buffer, SocketAddress>}.
  *
  * <h3>Available options</h3>
  *
@@ -281,11 +281,9 @@ public final class NioDatagramChannel
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     public boolean isActive() {
         DatagramChannel ch = javaChannel();
-        return ch.isOpen() && (getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered()
-                || bound);
+        return ch.isOpen() && (getOption(DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered() || bound);
     }
 
     @Override
@@ -468,7 +466,7 @@ public final class NioDatagramChannel
 
     private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
         if (envelope.recipient() instanceof InetSocketAddress
-                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
+                && ((InetSocketAddress) envelope.recipient()).isUnresolved()) {
             throw new UnresolvedAddressException();
         }
     }

@@ -17,7 +17,7 @@
 /**
  * Encoder and decoder which transform a
  * <a href="https://en.wikipedia.org/wiki/Base64">Base64</a>-encoded
- * {@link java.lang.String} or {@link io.netty5.buffer.ByteBuf}
- * into a decoded {@link io.netty5.buffer.ByteBuf} and vice versa.
+ * {@link java.lang.String} or {@link io.netty5.buffer.Buffer}
+ * into a decoded {@link io.netty5.buffer.Buffer} and vice versa.
  */
 package io.netty5.handler.codec.base64;

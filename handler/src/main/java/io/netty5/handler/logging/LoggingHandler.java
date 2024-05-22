@@ -31,7 +31,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link ChannelHandler} that logs all events using a logging framework.
- * By default, all events are logged at <tt>DEBUG</tt> level and full hex dumps are recorded for ByteBufs.
+ * By default, all events are logged at <tt>DEBUG</tt> level and full hex dumps are recorded for Buffers.
  */
 @SuppressWarnings("StringBufferReplaceableByString")
 public class LoggingHandler implements ChannelHandler {
@@ -53,7 +53,7 @@ public class LoggingHandler implements ChannelHandler {
      * Creates a new instance whose logger name is the fully qualified class
      * name of the instance.
      *
-     * @param format Format of ByteBuf dumping
+     * @param format Format of Buffer dumping
      */
     public LoggingHandler(BufferFormat format) {
         this(DEFAULT_LEVEL, format);
@@ -74,7 +74,7 @@ public class LoggingHandler implements ChannelHandler {
      * name of the instance.
      *
      * @param level the log level
-     * @param bufferFormat the ByteBuf format
+     * @param bufferFormat the Buffer format
      */
     public LoggingHandler(LogLevel level, BufferFormat bufferFormat) {
         this.level = requireNonNull(level, "level").unwrap();
@@ -107,7 +107,7 @@ public class LoggingHandler implements ChannelHandler {
      *
      * @param clazz the class type to generate the logger for
      * @param level the log level
-     * @param bufferFormat the ByteBuf format
+     * @param bufferFormat the Buffer format
      */
     public LoggingHandler(Class<?> clazz, LogLevel level, BufferFormat bufferFormat) {
         requireNonNull(clazz, "clazz");
@@ -140,7 +140,7 @@ public class LoggingHandler implements ChannelHandler {
      *
      * @param name the name of the class to use for the logger
      * @param level the log level
-     * @param bufferFormat the ByteBuf format
+     * @param bufferFormat the Buffer format
      */
     public LoggingHandler(String name, LogLevel level, BufferFormat bufferFormat) {
         requireNonNull(name, "name");

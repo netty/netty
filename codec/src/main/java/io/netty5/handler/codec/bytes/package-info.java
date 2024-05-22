@@ -16,6 +16,6 @@
 
 /**
  * Encoder and decoder which transform an array of bytes into a
- * {@link io.netty5.buffer.ByteBuf} and vice versa.
+ * {@link io.netty5.buffer.Buffer} and vice versa.
  */
 package io.netty5.handler.codec.bytes;

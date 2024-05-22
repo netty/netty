@@ -85,7 +85,7 @@ final class Bzip2HuffmanStageDecoder {
      */
     final Bzip2MoveToFrontTable tableMTF = new Bzip2MoveToFrontTable();
 
-    // For saving state if end of current ByteBuf was reached
+    // For saving state if end of current Buffer was reached
     int currentSelector;
 
     /**
@@ -93,7 +93,7 @@ final class Bzip2HuffmanStageDecoder {
      */
     final byte[][] tableCodeLengths;
 
-    // For saving state if end of current ByteBuf was reached
+    // For saving state if end of current Buffer was reached
     int currentGroup;
     int currentLength = -1;
     int currentAlpha;

@@ -32,26 +32,27 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Description of algorithm for PageRun/PoolSubpage allocation from PoolChunk
- *
- * Notation: The following terms are important to understand the code
- * > page  - a page is the smallest unit of memory chunk that can be allocated
- * > run   - a run is a collection of pages
- * > chunk - a chunk is a collection of runs
- * > in this code chunkSize = maxPages * pageSize
- *
+ * <p>
+ * Notation: The following terms are important to understand the code:
+ * <ul>
+ * <li>page  - a page is the smallest unit of memory chunk that can be allocated</li>
+ * <li>run   - a run is a collection of pages</li>
+ * <li>chunk - a chunk is a collection of runs</li>
+ * <li>in this code chunkSize = maxPages * pageSize</li>
+ * </ul>
+ * <p>
  * To begin we allocate a byte array of size = chunkSize
- * Whenever a ByteBuf of given size needs to be created we search for the first position
+ * Whenever a Buffer of given size needs to be created we search for the first position
  * in the byte array that has enough empty space to accommodate the requested size and
  * return a (long) handle that encodes this offset information, (this memory segment is then
- * marked as reserved, so it is always used by exactly one ByteBuf and no more)
- *
+ * marked as reserved, so it is always used by exactly one Buffer and no more)
+ * <p>
  * For simplicity all sizes are normalized according to {@link PoolArena#size2SizeIdx(int)} method.
  * This ensures that when we request for memory segments of size > pageSize the normalizedCapacity
  * equals the next nearest size in {@link SizeClasses}.
- *
- *
+ * <p>
  *  A chunk has the following layout:
- *
+ * <pre>
  *     /-----------------\
  *     | run             |
  *     |                 |
@@ -75,12 +76,12 @@ import java.util.concurrent.locks.ReentrantLock;
  *     |                 |
  *     |                 |
  *     \-----------------/
+ * </pre>
  *
- *
- * handle:
- * -------
+ * <h4>handle:</h4>
+ * <p>
  * a handle is a long number, the bit layout of a run looks like:
- *
+ * <pre>
  * oooooooo ooooooos ssssssss ssssssue bbbbbbbb bbbbbbbb bbbbbbbb bbbbbbbb
  *
  * o: runOffset (page offset in the chunk), 15bit
@@ -88,56 +89,61 @@ import java.util.concurrent.locks.ReentrantLock;
  * u: isUsed?, 1bit
  * e: isSubpage?, 1bit
  * b: bitmapIdx of subpage, zero if it's not subpage, 32bit
- *
- * runsAvailMap:
- * ------
+ * </pre>
+ * <h4>runsAvailMap:</h4>
+ * <p>
  * a map which manages all runs (used and not in used).
+ * <p>
  * For each run, the first runOffset and last runOffset are stored in runsAvailMap.
- * key: runOffset
- * value: handle
+ * <ul>
+ * <li>key: runOffset</li>
+ * <li>value: handle</li>
+ * </ul>
  *
- * runsAvail:
- * ----------
+ * <h4>runsAvail:</h4>
+ * <p>
  * an array of {@link PriorityQueue}.
+ * <p>
  * Each queue manages same size of runs.
  * Runs are sorted by offset, so that we always allocate runs with smaller offset.
  *
- *
- * Algorithm:
- * ----------
- *
- *   As we allocate runs, we update values stored in runsAvailMap and runsAvail so that the property is maintained.
- *
- * Initialization -
+ * <h4>Algorithm:</h4>
+ * <p>
+ * As we allocate runs, we update values stored in runsAvailMap and runsAvail so that the property is maintained.
+ * <h5>Initialization:</h5>
+ * <p>
  *  In the beginning we store the initial run which is the whole chunk.
+ *  <p>
  *  The initial run:
+ *  <pre>
  *  runOffset = 0
  *  size = chunkSize
  *  isUsed = no
  *  isSubpage = no
  *  bitmapIdx = 0
+ * </pre>
  *
+ * <h4>Algorithm: [allocateRun(size)]</h4>
+ * <ol>
+ * <li>find the first avail run using in runsAvails according to size</li>
+ * <li>if pages of run is larger than request pages then split it, and save the tailing run
+ *    for later using</li>
+ * </ol>
  *
- * Algorithm: [allocateRun(size)]
- * ----------
- * 1) find the first avail run using in runsAvails according to size
- * 2) if pages of run is larger than request pages then split it, and save the tailing run
- *    for later using
- *
- * Algorithm: [allocateSubpage(size)]
- * ----------
- * 1) find a not full subpage according to size.
+ * <h4>Algorithm: [allocateSubpage(size)]</h4>
+ * <ol>
+ * <li>find a not full subpage according to size.
  *    if it already exists just return, otherwise allocate a new PoolSubpage and call init()
- *    note that this subpage object is added to subpagesPool in the PoolArena when we init() it
- * 2) call subpage.allocate()
- *
- * Algorithm: [free(handle, length, nioBuffer)]
- * ----------
- * 1) if it is a subpage, return the slab back into this subpage
- * 2) if the subpage is not used, or it is a run, then start free this run
- * 3) merge continuous avail runs
- * 4) save the merged run
- *
+ *    note that this subpage object is added to subpagesPool in the PoolArena when we init() it</li>
+ * <li>call subpage.allocate()</li>
+ * </ol>
+ * <h4>Algorithm: [free(handle, length, nioBuffer)]</h4>
+ * <ol>
+ * <li>if it is a subpage, return the slab back into this subpage</li>
+ * <li>if the subpage is not used, or it is a run, then start free this run</li>
+ * <li>merge continuous avail runs</li>
+ * <li>save the merged run</li>
+ * </ol>
  */
 final class PoolChunk implements PoolChunkMetric {
     private static final Logger LOGGER = LoggerFactory.getLogger(PoolChunk.class);

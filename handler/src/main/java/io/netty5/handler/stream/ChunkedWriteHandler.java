@@ -262,7 +262,7 @@ public class ChunkedWriteHandler implements ChannelHandler {
                 }
 
                 if (message == null) {
-                    // If message is null write an empty ByteBuf.
+                    // If message is null write an empty Buffer.
                     // See https://github.com/netty/netty/issues/1671
                     message = allocator.allocate(0);
                 }

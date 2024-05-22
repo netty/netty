@@ -158,7 +158,7 @@ public class Http2ControlFrameLimitEncoderTest {
         // Close and release any buffered frames.
         encoder.close();
 
-        // Notify all goAway Promise instances now as these will also release the retained ByteBuf for the
+        // Notify all goAway Promise instances now as these will also release the retained Buffer for the
         // debugData.
         for (;;) {
             Promise<Void> promise = goAwayPromises.poll();

@@ -303,7 +303,7 @@ public class NioSocketChannel
                 super.doWriteNow(writeSink);
                 return;
             case 1: {
-                // Only one ByteBuf so use non-gathering write
+                // Only one Buffer so use non-gathering write
                 // Zero length buffers are not added to nioBuffers by ChannelOutboundBuffer, so there is no need
                 // to check if the total size of all the buffers is non-zero.
                 ByteBuffer buffer = nioBuffers[0];
@@ -346,7 +346,6 @@ public class NioSocketChannel
         return null;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected <T> T getExtendedOption(ChannelOption<T> option) {
         SocketOption<T> socketOption = NioChannelOption.toSocketOption(option);

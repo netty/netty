@@ -131,7 +131,7 @@ public interface BufferAllocator extends SafeCloseable {
     Buffer allocate(int size);
 
     /**
-     * Compose the send of a buffer and present them as a single buffer.
+     * Compose the Send of a buffer and present them as a single buffer.
      * <p>
      * When a composite buffer is closed, all of its constituent component buffers are closed as well.
      * <p>
@@ -148,7 +148,7 @@ public interface BufferAllocator extends SafeCloseable {
     }
 
     /**
-     * Compose the given sequence of sends of buffers and present them as a single buffer.
+     * Compose the given sequence of Sends of buffers and present them as a single buffer.
      * <p>
      * When a composite buffer is closed, all of its constituent component buffers are closed as well.
      * <p>

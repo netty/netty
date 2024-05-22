@@ -79,7 +79,7 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     private static final byte OPCODE_PONG = 0xA;
     /**
      * The size threshold for gathering writes. Non-Masked messages bigger than this size will be be sent fragmented as
-     * a header and a content ByteBuf whereas messages smaller than the size will be merged into a single buffer and
+     * a header and a content Buffer whereas messages smaller than the size will be merged into a single buffer and
      * sent at once.<br>
      * Masked messages will always be sent at once.
      */

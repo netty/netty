@@ -52,7 +52,7 @@ public final class TcpDnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
         out.skipWritableBytes(2);
         encoder.encode(msg, out);
 
-        // Now fill in the correct length based on the amount of data that we wrote the ByteBuf.
+        // Now fill in the correct length based on the amount of data that we wrote the Buffer.
         out.setShort(initialOffset, (short) (out.writerOffset() - initialOffset - 2));
     }
 

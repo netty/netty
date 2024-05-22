@@ -301,8 +301,8 @@ public class DefaultHttp2FrameWriterTest {
         byte[] payload = {(byte) 0x01, (byte) 0x03, (byte) 0x05, (byte) 0x07, (byte) 0x09};
 
         // will auto release after frameWriter.writeFrame succeed
-        Buffer payloadByteBuf = bb(payload);
-        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payloadByteBuf);
+        Buffer payloadBuffer = bb(payload);
+        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), payloadBuffer);
 
         byte[] expectedFrameHeaderBytes = {
                 (byte) 0x00, (byte) 0x00, (byte) 0x05, // payload length
