@@ -101,7 +101,7 @@ public final class KQueueServerSocketChannel extends
         super(null, eventLoop, false, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
                 newSocketStream(), false);
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
-                KQueueSocketChannel.class);
+                KQueueIoHandle.class);
     }
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
@@ -109,7 +109,7 @@ public final class KQueueServerSocketChannel extends
         super(null, eventLoop, false, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
                 BsdSocket.newSocket(protocolFamily), false);
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
-                KQueueSocketChannel.class);
+                KQueueIoHandle.class);
     }
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
@@ -125,7 +125,7 @@ public final class KQueueServerSocketChannel extends
         super(null, eventLoop, false, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
                 socket, isSoErrorZero(socket));
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
-                KQueueSocketChannel.class);
+                KQueueIoHandle.class);
     }
 
     @Override

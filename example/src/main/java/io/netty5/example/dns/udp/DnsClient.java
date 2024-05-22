@@ -24,7 +24,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.handler.codec.dns.DatagramDnsQuery;
@@ -68,7 +68,7 @@ public final class DnsClient {
 
     public static void main(String[] args) throws Exception {
         InetSocketAddress addr = new InetSocketAddress(DNS_SERVER_HOST, DNS_SERVER_PORT);
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)

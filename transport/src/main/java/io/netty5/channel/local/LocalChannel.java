@@ -22,6 +22,9 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.IoEvent;
+import io.netty5.channel.IoHandle;
+import io.netty5.channel.IoRegistration;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.ReferenceCounted;
 import io.netty5.util.Resource;
@@ -42,8 +45,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 /**
  * A {@link Channel} for the local transport.
  */
-public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddress, LocalAddress>
-        implements LocalChannelUnsafe {
+public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddress, LocalAddress> {
     private static final Logger logger = LoggerFactory.getLogger(LocalChannel.class);
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<LocalChannel, Future> FINISH_READ_FUTURE_UPDATER =
@@ -57,6 +59,41 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
         // Ensure the inboundBuffer is not empty as readInbound() will always call fireChannelReadComplete()
         if (!inboundBuffer.isEmpty()) {
             readNow();
+        }
+    };
+
+    private final LocalIoHandle handle = new LocalIoHandle() {
+
+        @Override
+        public void registerTransportNow() {
+            // Store the peer in a local variable as it may be set to null if doClose() is called.
+            // See https://github.com/netty/netty/issues/2144
+            LocalChannel peer = LocalChannel.this.peer;
+            if (parent() != null && peer != null) {
+                // Mark this Channel as active before finish the connect on the remote peer.
+                state = State.CONNECTED;
+                peer.finishConnectAsync();
+            }
+        }
+
+        @Override
+        public void deregisterTransportNow() {
+            // Noop
+        }
+
+        @Override
+        public void closeTransportNow() {
+            closeTransport(newPromise());
+        }
+
+        @Override
+        public void handle(IoRegistration registration, IoEvent ioEvent) {
+            // NOOP.
+        }
+
+        @Override
+        public void close() {
+            closeTransport(newPromise());
         }
     };
 
@@ -75,7 +112,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     }
 
     protected LocalChannel(LocalServerChannel parent, EventLoop eventLoop, LocalChannel peer) {
-        super(parent, eventLoop, false);
+        super(parent, eventLoop, false, LocalIoHandle.class);
         this.peer = peer;
         if (parent != null) {
             localAddress = parent.localAddress();
@@ -104,6 +141,11 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
     @Override
     protected LocalAddress remoteAddress0() {
         return remoteAddress;
+    }
+
+    @Override
+    protected IoHandle ioHandle() {
+        return handle;
     }
 
     @Override
@@ -462,27 +504,5 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
                 finishConnect();
             }
         });
-    }
-
-    @Override
-    public void registerTransportNow() {
-        // Store the peer in a local variable as it may be set to null if doClose() is called.
-        // See https://github.com/netty/netty/issues/2144
-        LocalChannel peer = this.peer;
-        if (parent() != null && peer != null) {
-            // Mark this Channel as active before finish the connect on the remote peer.
-            state = State.CONNECTED;
-            peer.finishConnectAsync();
-        }
-    }
-
-    @Override
-    public void deregisterTransportNow() {
-        // Noop
-    }
-
-    @Override
-    public void closeTransportNow() {
-        closeTransport(newPromise());
     }
 }

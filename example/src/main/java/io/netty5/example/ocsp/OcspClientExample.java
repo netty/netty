@@ -26,7 +26,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.http.DefaultFullHttpRequest;
 import io.netty5.handler.codec.http.FullHttpRequest;
@@ -87,7 +87,7 @@ public class OcspClientExample {
                 .build();
 
         try {
-            EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+            EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
             try {
                 Promise<FullHttpResponse> promise = group.next().newPromise();
 

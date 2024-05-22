@@ -112,26 +112,6 @@ public abstract class AbstractSingleThreadEventLoopTest {
         }
     }
 
-    @Test
-    public void testDoesNotSupportChannelType() {
-        EventLoopGroup group = new MultithreadEventLoopGroup(newIoHandlerFactory());
-        try {
-            assertFalse(group.isCompatible(Channel.class));
-        } finally {
-            group.shutdownGracefully();
-        }
-    }
-
-    @Test
-    public void testDoesSupportChannelType() {
-        EventLoopGroup group = new MultithreadEventLoopGroup(newIoHandlerFactory());
-        try {
-            assertTrue(group.isCompatible(serverChannelClass()));
-        } finally {
-            group.shutdownGracefully();
-        }
-    }
-
     protected abstract IoHandlerFactory newIoHandlerFactory();
     protected abstract Class<? extends ServerChannel> serverChannelClass();
 }

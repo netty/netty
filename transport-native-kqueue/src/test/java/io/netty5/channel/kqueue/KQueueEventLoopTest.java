@@ -47,7 +47,7 @@ public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Override
     protected IoHandlerFactory newIoHandlerFactory() {
-        return KQueueHandler.newFactory();
+        return KQueueIoHandler.newFactory();
     }
 
     @Override

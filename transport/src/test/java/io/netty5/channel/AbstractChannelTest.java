@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty5.util.concurrent.ImmediateEventExecutor.INSTANCE;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -194,15 +195,53 @@ public class AbstractChannelTest {
     }
 
     private static void registerChannel(Channel channel) throws Exception {
-        when(channel.executor().registerForIo(channel)).thenReturn(INSTANCE.newSucceededFuture(null));
-        when(channel.executor().deregisterForIo(channel)).thenReturn(INSTANCE.newSucceededFuture(null));
+        when(channel.executor().register(any(IoHandle.class))).thenReturn(
+                INSTANCE.newSucceededFuture(new TestIoRegistration()));
         channel.register().asStage().sync(); // Cause any exceptions to be thrown
     }
 
+    private static final class TestIoRegistration extends AtomicBoolean implements IoRegistration {
+        @Override
+        public long submit(IoOps ops) {
+            return 0;
+        }
+
+        @Override
+        public boolean isValid() {
+            return false;
+        }
+
+        @Override
+        public void cancel() {
+            // NOOP.
+        }
+
+        @Override
+        public IoHandler ioHandler() {
+            return null;
+        }
+    }
     private static class TestChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
 
+        private static final class TestIoHandle implements IoHandle {
+            static final TestIoHandle INSTANCE = new TestIoHandle();
+            @Override
+            public void handle(IoRegistration registration, IoEvent ioEvent) {
+                // noop
+            }
+
+            @Override
+            public void close() {
+                // noop
+            }
+        }
         TestChannel(EventLoop eventLoop) {
-            super(null, eventLoop, false);
+            super(null, eventLoop, false, TestIoHandle.class);
+        }
+
+        @Override
+        protected IoHandle ioHandle() {
+            return TestIoHandle.INSTANCE;
         }
 
         @Override

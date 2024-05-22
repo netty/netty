@@ -22,7 +22,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.group.DefaultChannelGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.GlobalEventExecutor;
@@ -43,7 +43,7 @@ public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramCh
     @Test
     public void testBindMultiple() throws Exception {
         DefaultChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         try {
             for (int i = 0; i < 100; i++) {
                 Bootstrap udpBootstrap = new Bootstrap();

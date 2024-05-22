@@ -30,7 +30,7 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
@@ -68,7 +68,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
      */
     @Test
     public void testFlushCloseReentrance() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
         try {
             final Queue<Future<Void>> futures = new LinkedBlockingQueue<>();
 
@@ -127,7 +127,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
      */
     @Test
     public void testFlushAfterGatheredFlush() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(NioServerSocketChannel.class);
@@ -165,7 +165,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testChannelReRegisterReadSameEventLoop() throws Exception {
-        final EventLoopGroup group = new MultithreadEventLoopGroup(2, NioHandler.newFactory());
+        final EventLoopGroup group = new MultithreadEventLoopGroup(2, NioIoHandler.newFactory());
         final CountDownLatch latch = new CountDownLatch(1);
 
         // Just some random bytes
@@ -228,7 +228,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testShutdownOutputAndClose() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
         ServerSocket socket = new ServerSocket();
         socket.bind(new InetSocketAddress(0));
         Socket accepted = null;

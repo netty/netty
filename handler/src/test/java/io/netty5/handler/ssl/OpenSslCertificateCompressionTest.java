@@ -27,7 +27,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
@@ -315,7 +315,7 @@ public class OpenSslCertificateCompressionTest {
     }
 
     public void runCertCompressionTest(SslContext clientSslContext, SslContext serverSslContext) throws Throwable {
-        EventLoopGroup group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
         Promise<Object> clientPromise = group.next().newPromise();
         Promise<Object> serverPromise = group.next().newPromise();
         try {

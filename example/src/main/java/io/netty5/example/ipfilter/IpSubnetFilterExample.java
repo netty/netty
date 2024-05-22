@@ -24,7 +24,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.handler.ipfilter.IpFilterRuleType;
@@ -44,7 +44,7 @@ public final class IpSubnetFilterExample {
     static final int PORT = Integer.parseInt(System.getProperty("port", "8009"));
 
     public static void main(String[] args) throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
 
         try {
             List<IpSubnetFilterRule> rules = new ArrayList<>();

@@ -103,18 +103,18 @@ public final class EpollServerSocketChannel
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, false, 0, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
-                LinuxSocket.newSocketStream());
+        super(eventLoop, false, EpollIoOps.valueOf(0), new ServerChannelReadHandleFactory(),
+                new ServerChannelWriteHandleFactory(), LinuxSocket.newSocketStream());
         this.childEventLoopGroup = validateEventLoopGroup(
-                childEventLoopGroup, "childEventLoopGroup", EpollSocketChannel.class);
+                childEventLoopGroup, "childEventLoopGroup", EpollIoHandle.class);
     }
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                     ProtocolFamily protocolFamily) {
-        super(null, eventLoop, false, 0, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
-                LinuxSocket.newSocket(protocolFamily), false);
+        super(null, eventLoop, false, EpollIoOps.valueOf(0), new ServerChannelReadHandleFactory(),
+                new ServerChannelWriteHandleFactory(), LinuxSocket.newSocket(protocolFamily), false);
         this.childEventLoopGroup = validateEventLoopGroup(
-                childEventLoopGroup, "childEventLoopGroup", EpollSocketChannel.class);
+                childEventLoopGroup, "childEventLoopGroup", EpollIoHandle.class);
     }
 
     public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd,
@@ -125,10 +125,10 @@ public final class EpollServerSocketChannel
     private EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket socket) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        super(null, eventLoop, false, 0, new ServerChannelReadHandleFactory(), new ServerChannelWriteHandleFactory(),
-                socket, isSoErrorZero(socket));
+        super(null, eventLoop, false, EpollIoOps.valueOf(0), new ServerChannelReadHandleFactory(),
+                new ServerChannelWriteHandleFactory(), socket, isSoErrorZero(socket));
         this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup",
-                EpollSocketChannel.class);
+                EpollIoHandle.class);
     }
 
     @Override

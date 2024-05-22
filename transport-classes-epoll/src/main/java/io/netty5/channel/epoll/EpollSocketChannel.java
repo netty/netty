@@ -41,6 +41,7 @@ import io.netty5.channel.unix.UnixChannelUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
+import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -140,7 +141,7 @@ public final class EpollSocketChannel
 
     public EpollSocketChannel(EventLoop eventLoop, ProtocolFamily protocolFamily) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(null, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveReadHandleFactory(), newWriteHandleFactory(),
+        super(null, eventLoop, false, EpollIoOps.EPOLLRDHUP, new AdaptiveReadHandleFactory(), newWriteHandleFactory(),
                 LinuxSocket.newSocket(protocolFamily), false);
     }
 
@@ -150,14 +151,14 @@ public final class EpollSocketChannel
 
     private EpollSocketChannel(EventLoop eventLoop, LinuxSocket socket) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(null, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveReadHandleFactory(), newWriteHandleFactory(),
+        super(null, eventLoop, false, EpollIoOps.EPOLLRDHUP, new AdaptiveReadHandleFactory(), newWriteHandleFactory(),
                 socket, isSoErrorZero(socket));
     }
 
     EpollSocketChannel(EpollServerSocketChannel parent, EventLoop eventLoop,
                        LinuxSocket fd, SocketAddress remoteAddress) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(parent, eventLoop, false, Native.EPOLLRDHUP, new AdaptiveReadHandleFactory(), newWriteHandleFactory(),
+        super(parent, eventLoop, false, EpollIoOps.EPOLLRDHUP, new AdaptiveReadHandleFactory(), newWriteHandleFactory(),
                 fd, remoteAddress);
 
         if (fd.protocolFamily() != SocketProtocolFamily.UNIX && parent != null) {
@@ -335,7 +336,7 @@ public final class EpollSocketChannel
      * @throws Exception If an I/O error occurs.
      */
     private void doWriteMultiple(WriteSink writeSink) throws Exception {
-        IovArray array = registration().cleanIovArray();
+        IovArray array = registration().ioHandler().cleanIovArray();
         array.maxBytes(writeSink.estimatedMaxBytesPerGatheringWrite());
         writeSink.forEachFlushedMessage(array);
 
@@ -1007,7 +1008,9 @@ public final class EpollSocketChannel
                     // because we try to read or write until the actual close happens which may be later due
                     // SO_LINGER handling.
                     // See https://github.com/netty/netty/issues/4449
-                    executor().deregisterForIo(this).map(v -> GlobalEventExecutor.INSTANCE);
+                    Promise<Void> promise = newPromise();
+                    deregisterTransport(promise);
+                    return promise.asFuture().map(v -> GlobalEventExecutor.INSTANCE);
                 }
             } catch (Throwable ignore) {
                 // Ignore the error as the underlying channel may be closed in the meantime and so

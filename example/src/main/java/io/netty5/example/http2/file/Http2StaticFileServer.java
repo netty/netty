@@ -19,7 +19,7 @@ import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.handler.codec.http2.Http2SecurityUtil;
 import io.netty5.handler.logging.LogLevel;
@@ -51,8 +51,8 @@ public final class Http2StaticFileServer {
                         ApplicationProtocolNames.HTTP_1_1))
                 .build();
 
-        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(2, NioHandler.newFactory());
-        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(4, NioHandler.newFactory());
+        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(2, NioIoHandler.newFactory());
+        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(4, NioIoHandler.newFactory());
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)

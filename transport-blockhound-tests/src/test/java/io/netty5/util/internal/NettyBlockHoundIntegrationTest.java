@@ -26,7 +26,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -298,7 +298,7 @@ public class NettyBlockHoundIntegrationTest {
                                  .build();
         BufferAllocator alloc = offHeapAllocator();
         final SslHandler sslHandler = sslClientCtx.newHandler(alloc);
-        final EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        final EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         final CountDownLatch activeLatch = new CountDownLatch(1);
         final AtomicReference<Throwable> error = new AtomicReference<>();
 
@@ -407,7 +407,7 @@ public class NettyBlockHoundIntegrationTest {
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testUnixResolverDnsServerAddressStreamProvider_ParseEtcResolverSearchDomainsAndOptions()
             throws InterruptedException {
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         try {
             DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
                     .channelFactory(NioDatagramChannel::new);
@@ -493,7 +493,7 @@ public class NettyBlockHoundIntegrationTest {
 
     private static void testHandshake(SslContext sslClientCtx, SslHandler clientSslHandler,
                                       SslHandler serverSslHandler) throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         Channel cc = null;
         try (AutoCloseable ignore = autoClosing(sslClientCtx)) {

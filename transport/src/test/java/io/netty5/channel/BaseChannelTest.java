@@ -20,7 +20,7 @@ import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,7 +34,7 @@ class BaseChannelTest {
     }
 
     ServerBootstrap getLocalServerBootstrap() {
-        EventLoopGroup serverGroup = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+        EventLoopGroup serverGroup = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
         ServerBootstrap sb = new ServerBootstrap();
         sb.group(serverGroup);
         sb.channel(LocalServerChannel.class);
@@ -48,7 +48,7 @@ class BaseChannelTest {
     }
 
     Bootstrap getLocalClientBootstrap() {
-        EventLoopGroup clientGroup = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+        EventLoopGroup clientGroup = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
         Bootstrap cb = new Bootstrap();
         cb.channel(LocalChannel.class);
         cb.group(clientGroup);

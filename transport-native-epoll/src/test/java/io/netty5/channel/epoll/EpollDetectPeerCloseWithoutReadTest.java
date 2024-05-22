@@ -24,7 +24,7 @@ import io.netty5.channel.unix.tests.DetectPeerCloseWithoutReadTest;
 public class EpollDetectPeerCloseWithoutReadTest extends DetectPeerCloseWithoutReadTest {
     @Override
     protected EventLoopGroup newGroup() {
-        return new MultithreadEventLoopGroup(2, EpollHandler.newFactory());
+        return new MultithreadEventLoopGroup(2, EpollIoHandler.newFactory());
     }
 
     @Override

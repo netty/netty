@@ -19,7 +19,7 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.timeout.IdleStateHandler;
@@ -43,7 +43,7 @@ public final class UptimeClient {
     private static final Bootstrap bs = new Bootstrap();
 
     public static void main(String[] args) throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         bs.group(group)
                 .channel(NioSocketChannel.class)
                 .remoteAddress(HOST, PORT)

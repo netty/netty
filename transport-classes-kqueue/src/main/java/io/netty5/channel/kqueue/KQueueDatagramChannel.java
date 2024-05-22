@@ -366,7 +366,7 @@ public final class KQueueDatagramChannel
         try {
             final int written;
             if (data.countReadableComponents() > 1) {
-                IovArray array = registration().cleanArray();
+                IovArray array = registration().ioHandler().cleanArray();
                 array.addReadable(data);
                 int count = array.count();
                 assert count != 0;

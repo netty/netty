@@ -18,7 +18,7 @@ package io.netty5.resolver.dns;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.handler.codec.dns.DnsRecord;
 import org.junit.jupiter.api.AfterEach;
@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class DnsNameResolverBuilderTest {
     @AutoClose("shutdownGracefully")
-    private static final EventLoopGroup GROUP = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+    private static final EventLoopGroup GROUP = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
 
     private DnsNameResolverBuilder builder;
     private DnsNameResolver resolver;

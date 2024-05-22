@@ -27,7 +27,7 @@ public class EpollDatagramChannelConfigTest {
     public void testIpFreeBind() throws Exception {
         Epoll.ensureAvailability();
 
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
         try {
             EpollDatagramChannel channel = new EpollDatagramChannel(group.next());
             channel.setOption(EpollChannelOption.IP_FREEBIND, true);

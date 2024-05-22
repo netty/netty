@@ -27,7 +27,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.ssl.OpenSsl;
 import io.netty5.handler.ssl.ReferenceCountedOpenSslEngine;
@@ -365,7 +365,7 @@ public class OcspTest {
                         .build();
 
                 try (AutoCloseable ignore2 = autoClosing(clientSslContext)) {
-                    EventLoopGroup group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+                    EventLoopGroup group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
                     try {
                         LocalAddress address = new LocalAddress(OcspTest.class);
                         Channel server = newServer(group, address, serverSslContext, response, serverHandler);

@@ -19,6 +19,7 @@ import io.netty5.channel.AbstractEventLoopTest;
 import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.IoRegistration;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SelectStrategy;
 import io.netty5.channel.SelectStrategyFactory;
@@ -49,7 +50,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
     @Override
     protected EventLoopGroup newEventLoopGroup() {
-        return new MultithreadEventLoopGroup(NioHandler.newFactory());
+        return new MultithreadEventLoopGroup(NioIoHandler.newFactory());
     }
 
     @Override
@@ -59,21 +60,21 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
     @Test
     public void testRebuildSelector() throws Exception {
-        final NioHandler nioHandler = (NioHandler) NioHandler.newFactory().newHandler();
-        EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioHandler);
+        final NioIoHandler nioIoHandler = (NioIoHandler) NioIoHandler.newFactory().newHandler();
+        EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioIoHandler);
         try {
             Channel channel = new NioServerSocketChannel(loop, loop);
             channel.register().asStage().sync();
 
-            Selector selector = loop.submit(nioHandler::unwrappedSelector).asStage().get();
+            Selector selector = loop.submit(nioIoHandler::unwrappedSelector).asStage().get();
 
-            assertSame(selector, loop.submit(nioHandler::unwrappedSelector).asStage().get());
+            assertSame(selector, loop.submit(nioIoHandler::unwrappedSelector).asStage().get());
             assertTrue(selector.isOpen());
 
             // Submit to the EventLoop, so we are sure its really executed in a non-async manner.
-            loop.submit(nioHandler::rebuildSelector).asStage().sync();
+            loop.submit(nioIoHandler::rebuildSelector0).asStage().sync();
 
-            Selector newSelector = loop.submit(nioHandler::unwrappedSelector).asStage().get();
+            Selector newSelector = loop.submit(nioIoHandler::unwrappedSelector).asStage().get();
             assertTrue(newSelector.isOpen());
             assertNotSame(selector, newSelector);
             assertFalse(selector.isOpen());
@@ -86,7 +87,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
     @Test
     public void testScheduleBigDelayNotOverflow() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
 
         final EventLoop el = group.next();
         Future<?> future = el.schedule(() -> {
@@ -100,10 +101,10 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
     @Test
     public void testInterruptEventLoopThread() throws Exception {
-        final NioHandler nioHandler = (NioHandler) NioHandler.newFactory().newHandler();
-        EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioHandler);
+        final NioIoHandler nioIoHandler = (NioIoHandler) NioIoHandler.newFactory().newHandler();
+        EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioIoHandler);
         try {
-            Selector selector = loop.submit(nioHandler::unwrappedSelector).asStage().get();
+            Selector selector = loop.submit(nioIoHandler::unwrappedSelector).asStage().get();
             assertTrue(selector.isOpen());
 
             loop.submit(() -> {
@@ -121,7 +122,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
             latch.await();
 
-            assertSame(selector, loop.submit(nioHandler::unwrappedSelector).asStage().get());
+            assertSame(selector, loop.submit(nioIoHandler::unwrappedSelector).asStage().get());
             assertTrue(selector.isOpen());
         } finally {
             loop.shutdownGracefully();
@@ -131,8 +132,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testSelectableChannel() throws Exception {
-        final NioHandler nioHandler = (NioHandler) NioHandler.newFactory().newHandler();
-        EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioHandler);
+        final NioIoHandler nioIoHandler = (NioIoHandler) NioIoHandler.newFactory().newHandler();
+        EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioIoHandler);
         try {
             Channel channel = new NioServerSocketChannel(loop, loop);
             channel.register().asStage().sync();
@@ -143,10 +144,16 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             selectableChannel.connect(channel.localAddress());
 
             final CountDownLatch latch = new CountDownLatch(1);
-
-            loop.registerForIo(new NioSelectableChannelHandle<>(selectableChannel,
-                    SelectionKey.OP_CONNECT, (ch, key) -> latch.countDown()));
-
+            loop.register(new NioSelectableChannelIoHandle<>(selectableChannel) {
+                @Override
+                protected void handle(SocketChannel channel, SelectionKey key) {
+                    latch.countDown();
+                }
+            }).addListener(f -> {
+                if (f.isSuccess()) {
+                    f.getNow().submit(NioIoOps.CONNECT);
+                }
+            }).asStage().sync();
             latch.await();
 
             selectableChannel.close();
@@ -176,20 +183,20 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             }
         };
 
-        final NioHandler nioHandler = (NioHandler) NioHandler.newFactory(SelectorProvider.provider(),
+        final NioIoHandler nioIoHandler = (NioIoHandler) NioIoHandler.newFactory(SelectorProvider.provider(),
                 selectStrategyFactory).newHandler();
 
-        EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioHandler);
+        EventLoop loop = new SingleThreadEventLoop(new DefaultThreadFactory("ioPool"), nioIoHandler);
         try {
             Channel channel = new NioServerSocketChannel(loop, loop);
-            Selector selector = nioHandler.unwrappedSelector();
+            Selector selector = nioIoHandler.unwrappedSelector();
             strategyLatch.countDown();
 
             channel.register().asStage().sync();
 
             latch.await();
 
-            Selector newSelector = loop.submit(nioHandler::unwrappedSelector).asStage().get();
+            Selector newSelector = loop.submit(nioIoHandler::unwrappedSelector).asStage().get();
             assertTrue(newSelector.isOpen());
             assertNotSame(selector, newSelector);
             assertFalse(selector.isOpen());

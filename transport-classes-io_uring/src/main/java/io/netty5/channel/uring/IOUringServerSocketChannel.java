@@ -85,7 +85,10 @@ public final class IOUringServerSocketChannel extends AbstractIOUringChannel<Uni
     @Override
     protected void doRead(boolean wasReadPendingAlready) throws Exception {
         if (!wasReadPendingAlready) {
-            submissionQueue.addAccept(fd().intValue(), sockaddrPtr, addrlenPtr, IS_ACCEPT);
+            IOUringIoRegistration registration = registration();
+            IOUringIoOps ops = IOUringIoOps.newAccept(fd().intValue(), 0, 0,
+                    sockaddrPtr, addrlenPtr, IS_ACCEPT);
+            registration.submit(ops);
         }
     }
 

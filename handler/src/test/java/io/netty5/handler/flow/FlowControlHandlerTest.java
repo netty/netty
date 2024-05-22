@@ -29,7 +29,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.timeout.IdleStateEvent;
@@ -62,7 +62,7 @@ public class FlowControlHandlerTest {
 
     @BeforeAll
     public static void init() {
-        eventLoopGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        eventLoopGroup = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
     }
 
     /**

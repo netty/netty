@@ -17,7 +17,7 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty5.handler.codec.http2.Http2Stream.State;
 import io.netty5.util.concurrent.Promise;
@@ -35,7 +35,6 @@ import org.mockito.stubbing.Answer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2TestUtil.empty;
 import static java.lang.Integer.MAX_VALUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,7 +68,7 @@ public class DefaultHttp2ConnectionTest {
 
     @BeforeAll
     public static void beforeClass() {
-        group = new MultithreadEventLoopGroup(2, LocalHandler.newFactory());
+        group = new MultithreadEventLoopGroup(2, LocalIoHandler.newFactory());
     }
 
     @AfterAll

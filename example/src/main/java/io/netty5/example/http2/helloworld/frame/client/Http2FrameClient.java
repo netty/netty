@@ -19,7 +19,7 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.http2.DefaultHttp2HeadersFrame;
 import io.netty5.handler.codec.http2.Http2HeadersFrame;
@@ -57,7 +57,7 @@ public final class Http2FrameClient {
     }
 
     public static void main(String[] args) throws Exception {
-        final EventLoopGroup clientWorkerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        final EventLoopGroup clientWorkerGroup = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
 
         // Configure SSL.
         final SslContext sslCtx;

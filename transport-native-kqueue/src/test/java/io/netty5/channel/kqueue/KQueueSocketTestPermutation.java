@@ -46,10 +46,10 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
 
     static final EventLoopGroup KQUEUE_BOSS_GROUP =
             new MultithreadEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-KQueue-boss", true),
-                    KQueueHandler.newFactory());
+                    KQueueIoHandler.newFactory());
     static final EventLoopGroup KQUEUE_WORKER_GROUP =
             new MultithreadEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-KQueue-worker", true),
-                    KQueueHandler.newFactory());
+                    KQueueIoHandler.newFactory());
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {

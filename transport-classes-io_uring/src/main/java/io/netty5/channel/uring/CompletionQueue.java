@@ -105,8 +105,8 @@ final class CompletionQueue implements IntSupplier {
             i++;
 
             if (logger.isTraceEnabled()) {
-                logger.trace("completed(ring {}): {}(fd={}, res={})",
-                        ringFd, Native.opToStr(UserData.decodeOp(udata)), UserData.decodeFd(udata), res);
+                logger.trace("completed(ring {}): {}(id={}, res={})",
+                        ringFd, Native.opToStr(UserData.decodeOp(udata)), UserData.decodeId(udata), res);
             }
             try {
                 decode(res, flags, udata, callback);
@@ -139,7 +139,7 @@ final class CompletionQueue implements IntSupplier {
             long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
             long udata = PlatformDependent.getLong(cqeAddress + CQE_USER_DATA_FIELD);
             int res = PlatformDependent.getInt(cqeAddress + CQE_RES_FIELD);
-            sb.add(Native.opToStr(UserData.decodeOp(udata)) + "(fd=" + UserData.decodeFd(udata) + ",res=" + res + ')');
+            sb.add(Native.opToStr(UserData.decodeOp(udata)) + "(id=" + UserData.decodeId(udata) + ",res=" + res + ')');
             head++;
         }
         return sb.toString();

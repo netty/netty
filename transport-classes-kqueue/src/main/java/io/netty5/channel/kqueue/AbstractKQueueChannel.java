@@ -19,6 +19,9 @@ import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.DefaultBufferAllocators;
 import io.netty5.channel.ChannelOption;
+import io.netty5.channel.IoEvent;
+import io.netty5.channel.IoHandle;
+import io.netty5.channel.IoRegistration;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.kqueue.KQueueReadHandleFactory.KQueueReadHandle;
@@ -31,6 +34,7 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.channel.unix.UnixChannel;
+import io.netty5.util.concurrent.Future;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -60,9 +64,51 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     };
 
-    private long numberBytesPending;
+    private final KQueueIoHandle handle = new KQueueIoHandle() {
+        @Override
+        public int ident() {
+            return AbstractKQueueChannel.this.fd().intValue();
+        }
 
-    private KQueueRegistration registration;
+        @Override
+        public void handle(IoRegistration registration, IoEvent event) {
+            KQueueIoEvent kqueueEvent = (KQueueIoEvent) event;
+            final short filter = kqueueEvent.filter();
+            final short flags = kqueueEvent.flags();
+            final int fflags = kqueueEvent.fflags();
+            final long data = kqueueEvent.data();
+
+            // First check for EPOLLOUT as we may need to fail the connect ChannelPromise before try
+            // to read from the file descriptor.
+            if (filter == Native.EVFILT_WRITE) {
+                writeReady();
+            } else if (filter == Native.EVFILT_READ) {
+                // Check READ before EOF to ensure all data is read before shutting down the input.
+                readReady(data);
+            } else if (filter == Native.EVFILT_SOCK && (fflags & Native.NOTE_RDHUP) != 0) {
+                readEOF();
+            }
+
+            // Check if EV_EOF was set, this will notify us for connection-reset in which case
+            // we may close the channel directly or try to read more data depending on the state of the
+            // Channel and also depending on the AbstractKQueueChannel subtype.
+            if ((flags & Native.EV_EOF) != 0) {
+                readEOF();
+            }
+        }
+
+        @Override
+        public void close() throws Exception {
+            closeTransportNow();
+        }
+    };
+
+    private final KQueueIoOps readEnabledOps;
+    private final KQueueIoOps writeEnabledOps;
+    private final KQueueIoOps readDisabledOps;
+    private final KQueueIoOps writeDisabledOps;
+
+    private long numberBytesPending;
 
     private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
@@ -74,7 +120,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     AbstractKQueueChannel(P parent, EventLoop eventLoop, boolean supportsDisconnect,
                           ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
                           BsdSocket fd, boolean active) {
-        super(parent, eventLoop, supportsDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory);
+        super(parent, eventLoop, supportsDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory,
+                KQueueIoHandle.class);
         socket = requireNonNull(fd, "fd");
         this.active = active;
         if (active) {
@@ -83,18 +130,34 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
             this.localAddress = fd.localAddress();
             this.remoteAddress = fd.remoteAddress();
         }
+
+        readEnabledOps = KQueueIoOps.newOps(fd().intValue(), Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE, 0);
+        writeEnabledOps = KQueueIoOps.newOps(fd().intValue(), Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE, 0);
+        readDisabledOps = KQueueIoOps.newOps(fd().intValue(), Native.EVFILT_READ, Native.EV_DELETE_DISABLE, 0);
+        writeDisabledOps = KQueueIoOps.newOps(fd().intValue(), Native.EVFILT_WRITE, Native.EV_DELETE_DISABLE, 0);
     }
 
     AbstractKQueueChannel(P parent, EventLoop eventLoop, boolean supportsDisconnect,
                           ReadHandleFactory defaultReadHandleFactory, WriteHandleFactory defaultWriteHandleFactory,
                           BsdSocket fd, SocketAddress remote) {
-        super(parent, eventLoop, supportsDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory);
+        super(parent, eventLoop, supportsDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory,
+                KQueueIoHandle.class);
         socket = requireNonNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
         this.localAddress = fd.localAddress();
         this.remoteAddress = remote == null ? fd.remoteAddress() : remote;
+
+        readEnabledOps = KQueueIoOps.newOps(fd().intValue(), Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE, 0);
+        writeEnabledOps = KQueueIoOps.newOps(fd().intValue(), Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE, 0);
+        readDisabledOps = KQueueIoOps.newOps(fd().intValue(), Native.EVFILT_READ, Native.EV_DELETE_DISABLE, 0);
+        writeDisabledOps = KQueueIoOps.newOps(fd().intValue(), Native.EVFILT_WRITE, Native.EV_DELETE_DISABLE, 0);
+    }
+
+    @Override
+    protected IoHandle ioHandle() {
+        return handle;
     }
 
     @Override
@@ -151,9 +214,8 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
-    protected final KQueueRegistration registration() {
-        assert registration != null;
-        return registration;
+    protected final KQueueIoRegistration registration() {
+        return (KQueueIoRegistration) super.registration();
     }
 
     @Override
@@ -188,6 +250,42 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     }
 
     @Override
+    public Future<Void> register() {
+        return super.register().addListener(f -> {
+            if (f.isSuccess()) {
+                // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old
+                // EventLoop make sure the readReadyRunnablePending variable is reset so we will be able to execute
+                // the Runnable on the new EventLoop.
+                readNowRunnablePending = false;
+
+                int ident = fd().intValue();
+                submit(KQueueIoOps.newOps(
+                        ident, Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP));
+
+                // Add the write event first so we get notified of connection refused on the client side!
+                if (writeFilterEnabled) {
+                    submit(writeEnabledOps);
+                }
+                if (readFilterEnabled) {
+                    submit(readEnabledOps);
+                }
+            }
+        });
+    }
+
+    @Override
+    protected void doDeregister() throws Exception {
+        // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
+        // to false to ensure a consistent state in all cases.
+        // Make sure we unregister our filters from kqueue!
+        readFilter(false);
+        writeFilter(false);
+        clearRdHup0();
+
+        super.doDeregister();
+    }
+
+    @Override
     protected final void doRead(boolean wasReadPendingAlready) {
         if (!wasReadPendingAlready) {
             // We must set the read flag here as it is possible the user didn't read in the last read loop, the
@@ -204,43 +302,19 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
-    final void register0(KQueueRegistration registration)  {
-        this.registration = registration;
-        // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
-        // make sure the readReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
-        // new EventLoop.
-        readNowRunnablePending = false;
-
-        // Add the write event first so we get notified of connection refused on the client side!
-        if (writeFilterEnabled) {
-            evSet0(registration, Native.EVFILT_WRITE, Native.EV_ADD_CLEAR_ENABLE);
-        }
-        if (readFilterEnabled) {
-            evSet0(registration, Native.EVFILT_READ, Native.EV_ADD_CLEAR_ENABLE);
-        }
-        evSet0(registration, Native.EVFILT_SOCK, Native.EV_ADD, Native.NOTE_RDHUP);
-    }
-
-    final void deregister0() {
-        // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
-        // to false to ensure a consistent state in all cases.
-        readFilterEnabled = false;
-        writeFilterEnabled = false;
-    }
-
-    final void unregisterFilters() {
-        // Make sure we unregister our filters from kqueue!
-        readFilter(false);
-        writeFilter(false);
-
-        if (registration != null) {
-            clearRdHup0();
-            registration = null;
-        }
-    }
-
     private void clearRdHup0() {
-        evSet0(registration, Native.EVFILT_SOCK, Native.EV_DELETE_DISABLE, Native.NOTE_RDHUP);
+        submit(KQueueIoOps.newOps(fd().intValue(),
+                Native.EVFILT_SOCK, Native.EV_DELETE_DISABLE, Native.NOTE_RDHUP));
+    }
+
+    private void submit(KQueueIoOps ops) {
+        if (isRegistered()) {
+            try {
+                registration().submit(ops);
+            } catch (Exception e) {
+                throw new ChannelException(e);
+            }
+        }
     }
 
     /**
@@ -303,31 +377,14 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     final void readFilter(boolean readFilterEnabled) {
         if (this.readFilterEnabled != readFilterEnabled) {
             this.readFilterEnabled = readFilterEnabled;
-            evSet(Native.EVFILT_READ, readFilterEnabled ? Native.EV_ADD_CLEAR_ENABLE : Native.EV_DELETE_DISABLE);
+            submit(readFilterEnabled ? readEnabledOps : readDisabledOps);
         }
     }
 
     final void writeFilter(boolean writeFilterEnabled) {
         if (this.writeFilterEnabled != writeFilterEnabled) {
             this.writeFilterEnabled = writeFilterEnabled;
-            evSet(Native.EVFILT_WRITE, writeFilterEnabled ? Native.EV_ADD_CLEAR_ENABLE : Native.EV_DELETE_DISABLE);
-        }
-    }
-
-    private void evSet(short filter, short flags) {
-        if (isRegistered()) {
-            evSet0(registration, filter, flags);
-        }
-    }
-
-    private void evSet0(KQueueRegistration registration, short filter, short flags) {
-        evSet0(registration, filter, flags, 0);
-    }
-
-    private void evSet0(KQueueRegistration registration, short filter, short flags, int fflags) {
-        // Only try to add to changeList if the FD is still open, if not we already closed it in the meantime.
-        if (isOpen()) {
-            registration.evSet(filter, flags, fflags);
+            submit(writeFilterEnabled ? writeEnabledOps : writeDisabledOps);
         }
     }
 

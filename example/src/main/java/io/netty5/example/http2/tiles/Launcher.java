@@ -18,7 +18,7 @@ package io.netty5.example.http2.tiles;
 
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 
 /**
  * <p>
@@ -39,7 +39,7 @@ import io.netty5.channel.nio.NioHandler;
 public final class Launcher {
 
     public static void main(String[] args) {
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         Http2Server http2 = new Http2Server(group);
         HttpServer http = new HttpServer(group);
         try {

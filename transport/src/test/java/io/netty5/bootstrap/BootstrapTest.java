@@ -24,7 +24,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.resolver.AbstractAddressResolver;
 import io.netty5.resolver.AddressResolver;
@@ -72,8 +72,8 @@ public class BootstrapTest {
 
     @BeforeAll
     public static void setUp() {
-        groupA = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
-        groupB = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        groupA = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
+        groupB = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         dummyHandler = new DummyHandler();
     }
 
@@ -190,7 +190,7 @@ public class BootstrapTest {
 
     @Test
     public void testLateRegisterSuccess() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             LateRegisterHandler registerHandler = new LateRegisterHandler();
             ServerBootstrap bootstrap = new ServerBootstrap();
@@ -217,7 +217,7 @@ public class BootstrapTest {
 
     @Test
     public void testLateRegisterSuccessBindFailed() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         LateRegisterHandler registerHandler = new LateRegisterHandler();
         try {
             ServerBootstrap bootstrap = new ServerBootstrap();
@@ -254,7 +254,7 @@ public class BootstrapTest {
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testLateRegistrationConnect() throws Throwable {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         LateRegisterHandler registerHandler = new LateRegisterHandler();
         try {
             final Bootstrap bootstrapA = new Bootstrap();
@@ -314,7 +314,7 @@ public class BootstrapTest {
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testLateRegistrationConnectWithCreateUnregistered() throws Throwable {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         LateRegisterHandler registerHandler = new LateRegisterHandler();
         try {
             final Bootstrap bootstrapA = new Bootstrap();
@@ -377,7 +377,7 @@ public class BootstrapTest {
     @Test
     void mustCallInitializerExtensions() throws Exception {
         // Separate group for thread-local test isolation.
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap cb = new Bootstrap();
         cb.group(group);
         cb.handler(dummyHandler);

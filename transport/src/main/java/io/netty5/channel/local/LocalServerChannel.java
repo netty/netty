@@ -20,7 +20,11 @@ import io.netty5.channel.AbstractServerChannel;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
+import io.netty5.channel.IoEvent;
+import io.netty5.channel.IoHandle;
+import io.netty5.channel.IoRegistration;
 import io.netty5.channel.ServerChannel;
+import io.netty5.channel.SingleThreadEventLoop;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
@@ -29,17 +33,55 @@ import java.util.Queue;
 /**
  * A {@link ServerChannel} for the local transport which allows in VM communication.
  */
-public class LocalServerChannel extends AbstractServerChannel<LocalChannel, LocalAddress, LocalAddress>
-        implements LocalChannelUnsafe {
+public class LocalServerChannel extends AbstractServerChannel<LocalChannel, LocalAddress, LocalAddress> {
 
     private final Queue<Object> inboundBuffer = new ArrayDeque<>();
     private volatile int state; // 0 - open, 1 - active, 2 - closed
     private volatile LocalAddress localAddress;
     private volatile boolean acceptInProgress;
+    private final Runnable shutdownHook = new Runnable() {
+        @Override
+        public void run() {
+            closeTransport(newPromise());
+        }
+    };
+
+    private final LocalIoHandle handle = new LocalIoHandle() {
+
+        @Override
+        public void registerTransportNow() {
+            ((SingleThreadEventLoop) executor()).addShutdownHook(shutdownHook);
+        }
+
+        @Override
+        public void deregisterTransportNow() {
+            // Noop
+        }
+
+        @Override
+        public void closeTransportNow() {
+            closeTransport(newPromise());
+        }
+
+        @Override
+        public void handle(IoRegistration registration, IoEvent ioEvent) {
+            // NOOP.
+        }
+
+        @Override
+        public void close() {
+            closeTransport(newPromise());
+        }
+    };
 
     public LocalServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, childEventLoopGroup, LocalChannel.class);
+        super(eventLoop, childEventLoopGroup, LocalIoHandle.class);
         setOption(ChannelOption.BUFFER_ALLOCATOR, DefaultBufferAllocators.onHeapAllocator());
+    }
+
+    @Override
+    protected IoHandle ioHandle() {
+        return handle;
     }
 
     @Override
@@ -122,18 +164,5 @@ public class LocalServerChannel extends AbstractServerChannel<LocalChannel, Loca
 
             readNow();
         }
-    }
-
-    @Override
-    public void registerTransportNow() {
-    }
-
-    @Override
-    public void deregisterTransportNow() {
-    }
-
-    @Override
-    public void closeTransportNow() {
-        closeTransport(newPromise());
     }
 }

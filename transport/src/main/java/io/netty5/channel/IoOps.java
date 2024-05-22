@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,10 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.channel.local;
+package io.netty5.channel;
 
-interface LocalChannelUnsafe {
-    void registerTransportNow();
-    void deregisterTransportNow();
-    void closeTransportNow();
+/**
+ * An IO op that can be submitted to an {@link IoRegistration} via {@link IoRegistration#submit(IoOps)}.
+// * These submitted {@link IoOps} will result in {@link IoEvent}s on the related {@link IoHandle}.
+ * Concrete {@link IoRegistration} implementations support different concrete {@link IoOps} implementations and
+ * will so also "produce" concrete {@link IoEvent}s.
+ */
+public interface IoOps {
+    // Marker interface.
 }

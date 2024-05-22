@@ -25,7 +25,7 @@ import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.util.Attribute;
 import io.netty5.util.concurrent.EventExecutorGroup;
@@ -47,7 +47,7 @@ public class TrafficShapingHandlerTest {
     private static final long READ_LIMIT_BYTES_PER_SECOND = 1;
     private static final EventExecutorGroup SES = new SingleThreadEventExecutor();
     private static final MultithreadEventLoopGroup GROUP =
-            new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+            new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
 
     @AfterAll
     public static void destroy() {

@@ -21,9 +21,9 @@ import io.netty5.channel.ChannelHandlerMask.Skip;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.util.AbstractReferenceCounted;
 import io.netty5.util.ReferenceCounted;
@@ -72,7 +72,7 @@ public class DefaultChannelPipelineTest {
 
     @BeforeAll
     public static void beforeClass() {
-        group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
     }
 
     @AfterAll
@@ -965,7 +965,7 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddBefore() throws Throwable {
-        EventLoopGroup defaultGroup = new MultithreadEventLoopGroup(2, LocalHandler.newFactory());
+        EventLoopGroup defaultGroup = new MultithreadEventLoopGroup(2, LocalIoHandler.newFactory());
         try {
             EventLoop eventLoop1 = defaultGroup.next();
             EventLoop eventLoop2 = defaultGroup.next();
@@ -992,7 +992,7 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddInListenerNio() throws Throwable {
-        EventLoopGroup nioEventLoopGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup nioEventLoopGroup = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
         try {
             testAddInListener(new NioSocketChannel(nioEventLoopGroup.next()));
         } finally {
@@ -1160,7 +1160,7 @@ public class DefaultChannelPipelineTest {
     // Test for https://github.com/netty/netty/issues/8676.
     @Test
     public void testHandlerRemovedOnlyCalledWhenHandlerAddedCalled() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             final AtomicReference<Error> errorRef = new AtomicReference<>();
 

@@ -26,6 +26,7 @@ import io.netty5.channel.EventLoop;
 import io.netty5.channel.FixedReadHandleFactory;
 import io.netty5.channel.MaxMessagesWriteHandleFactory;
 import io.netty5.channel.nio.AbstractNioMessageChannel;
+import io.netty5.channel.nio.NioIoOps;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
@@ -168,7 +169,7 @@ public final class NioDatagramChannel
      */
     public NioDatagramChannel(EventLoop eventLoop, DatagramChannel socket, ProtocolFamily family) {
         super(null, eventLoop, true, new FixedReadHandleFactory(2048),
-                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE), socket, SelectionKey.OP_READ);
+                new MaxMessagesWriteHandleFactory(Integer.MAX_VALUE), socket, NioIoOps.READ);
         this.family = toJdkFamily(family);
     }
 

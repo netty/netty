@@ -17,7 +17,7 @@ package io.netty5.resolver.dns;
 
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
@@ -59,7 +59,7 @@ public class SearchDomainTest {
 
     @BeforeEach
     public void before() {
-        group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        group = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
     }
 
     @AfterEach

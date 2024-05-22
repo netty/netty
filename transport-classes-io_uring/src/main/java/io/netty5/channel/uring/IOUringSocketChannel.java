@@ -102,7 +102,10 @@ public final class IOUringSocketChannel extends AbstractIOUringChannel<IOUringSe
                 var cmp = itr.firstReadable();
                 connectMsgHdr.write(socket, remoteAddress, cmp.readableNativeAddress(), cmp.readableBytes(), (short) 0);
             }
-            submissionQueue.addSendmsg(fd().intValue(), connectMsgHdr.address(), Native.MSG_FASTOPEN, IS_CONNECT);
+            IOUringIoRegistration registration = registration();
+            IOUringIoOps ops = IOUringIoOps.newSendmsg(fd().intValue(), 0, Native.MSG_FASTOPEN,
+                    connectMsgHdr.address(), IS_CONNECT);
+            registration.submit(ops);
             writeInFlight = true;
             return;
         }
@@ -147,7 +150,10 @@ public final class IOUringSocketChannel extends AbstractIOUringChannel<IOUringSe
         // If we already have an outstanding write promise, we can't write anymore until it completes.
         if (!writeInFlight) {
             writeSink.consumeEachFlushedMessage(this::submitWriteMessage);
-            submissionQueue.addWritev(fd().intValue(), writeIovs.memoryAddress(0), writeIovs.count(), IS_WRITE);
+            IOUringIoRegistration registration = registration();
+            IOUringIoOps ops = IOUringIoOps.newWritev(fd().intValue(), 0, 0, writeIovs.memoryAddress(0),
+                    writeIovs.count(), IS_WRITE);
+            registration.submit(ops);
             writeInFlight = true;
         }
     }
@@ -221,8 +227,11 @@ public final class IOUringSocketChannel extends AbstractIOUringChannel<IOUringSe
                 writeFlushedNow();
             } else if (!completedAll) {
                 // We did not write everything. Submit another write IO for the remainder.
-                submissionQueue.addWritev(fd().intValue(),
-                        writeIovs.memoryAddress(0), writeIovs.count(), IS_WRITE);
+                IOUringIoRegistration registration = registration();
+                IOUringIoOps ops = IOUringIoOps.newWritev(fd().intValue(), 0, 0, writeIovs.memoryAddress(0),
+                        writeIovs.count(), IS_WRITE);
+                registration.submit(ops);
+
                 writeInFlight = true;
             }
         }

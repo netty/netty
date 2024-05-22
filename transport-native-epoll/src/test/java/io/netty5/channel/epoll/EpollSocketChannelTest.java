@@ -31,7 +31,7 @@ public class EpollSocketChannelTest {
 
     @Test
     public void testTcpInfo() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
 
         try {
             Bootstrap bootstrap = new Bootstrap();
@@ -87,7 +87,7 @@ public class EpollSocketChannelTest {
     // See https://github.com/netty/netty/issues/7159
     @Test
     public void testSoLingerNoAssertError() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
 
         try {
             Bootstrap bootstrap = new Bootstrap();

@@ -18,10 +18,12 @@ package io.netty5.channel.nio;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelException;
 import io.netty5.channel.DefaultSelectStrategyFactory;
+import io.netty5.channel.EventLoop;
 import io.netty5.channel.IoExecutionContext;
 import io.netty5.channel.IoHandle;
 import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
+import io.netty5.channel.IoOps;
 import io.netty5.channel.SelectStrategy;
 import io.netty5.channel.SelectStrategyFactory;
 import io.netty5.util.internal.PlatformDependent;
@@ -55,9 +57,9 @@ import static java.util.Objects.requireNonNull;
  * {@link Selector} and so does the multi-plexing of these in the event loop.
  *
  */
-public final class NioHandler implements IoHandler {
+public final class NioIoHandler implements IoHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(NioHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(NioIoHandler.class);
 
     private static final int CLEANUP_INTERVAL = 256; // XXX Hard-coded value, but won't need customization.
 
@@ -111,11 +113,11 @@ public final class NioHandler implements IoHandler {
     private int cancelledKeys;
     private boolean needsToSelectAgain;
 
-    private NioHandler() {
+    private NioIoHandler() {
         this(SelectorProvider.provider(), DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy());
     }
 
-    private NioHandler(SelectorProvider selectorProvider, SelectStrategy strategy) {
+    private NioIoHandler(SelectorProvider selectorProvider, SelectStrategy strategy) {
         provider = selectorProvider;
         final SelectorTuple selectorTuple = openSelector();
         selector = selectorTuple.selector;
@@ -124,20 +126,20 @@ public final class NioHandler implements IoHandler {
     }
 
     /**
-     * Returns a new {@link IoHandlerFactory} that creates {@link NioHandler} instances.
+     * Returns a new {@link IoHandlerFactory} that creates {@link NioIoHandler} instances.
      */
     public static IoHandlerFactory newFactory() {
-        return NioHandler::new;
+        return NioIoHandler::new;
     }
 
     /**
-     * Returns a new {@link IoHandlerFactory} that creates {@link NioHandler} instances.
+     * Returns a new {@link IoHandlerFactory} that creates {@link NioIoHandler} instances.
      */
     public static IoHandlerFactory newFactory(final SelectorProvider selectorProvider,
                                               final SelectStrategyFactory selectStrategyFactory) {
         requireNonNull(selectorProvider, "selectorProvider");
         requireNonNull(selectStrategyFactory, "selectStrategyFactory");
-        return () -> new NioHandler(selectorProvider, selectStrategyFactory.newSelectStrategy());
+        return () -> new NioIoHandler(selectorProvider, selectStrategyFactory.newSelectStrategy());
     }
 
     private static final class SelectorTuple {
@@ -243,7 +245,7 @@ public final class NioHandler implements IoHandler {
     }
 
     /**
-     * Returns the {@link SelectorProvider} used by this {@link NioHandler} to obtain the {@link Selector}.
+     * Returns the {@link SelectorProvider} used by this {@link NioIoHandler} to obtain the {@link Selector}.
      */
     public SelectorProvider selectorProvider() {
         return provider;
@@ -253,7 +255,7 @@ public final class NioHandler implements IoHandler {
      * Replaces the current {@link Selector} of this event loop with newly created {@link Selector}s to work
      * around the infamous epoll 100% CPU bug.
      */
-    void rebuildSelector() {
+    void rebuildSelector0() {
         final Selector oldSelector = selector;
         final SelectorTuple newSelectorTuple;
 
@@ -270,17 +272,18 @@ public final class NioHandler implements IoHandler {
 
         // Register all channels to the new Selector.
         int nChannels = 0;
-        for (SelectionKey key: oldSelector.keys()) {
-            NioProcessor handle = (NioProcessor) key.attachment();
+        for (SelectionKey key : oldSelector.keys()) {
+            DefaultNioRegistration handle = (DefaultNioRegistration) key.attachment();
             try {
                 if (!key.isValid() || key.channel().keyFor(newSelectorTuple.unwrappedSelector) != null) {
                     continue;
                 }
+
                 handle.register(newSelectorTuple.unwrappedSelector);
-                nChannels ++;
+                nChannels++;
             } catch (Exception e) {
                 logger.warn("Failed to re-register a NioHandle to the new Selector.", e);
-                handle.close();
+                handle.cancel();
             }
         }
 
@@ -301,24 +304,94 @@ public final class NioHandler implements IoHandler {
         }
     }
 
-    private static NioProcessor nioHandle(IoHandle handle) {
-        if (handle instanceof AbstractNioChannel) {
-            return ((AbstractNioChannel<?, ?, ?>) handle).nioProcessor();
-        }
-        if (handle instanceof NioSelectableChannelHandle) {
-            return ((NioSelectableChannelHandle<?>) handle).nioProcessor();
+    private static NioIoHandle nioHandle(IoHandle handle) {
+        if (handle instanceof NioIoHandle) {
+            return (NioIoHandle) handle;
         }
         throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
+    private static NioIoOps cast(IoOps ops) {
+        if (ops instanceof NioIoOps) {
+            return (NioIoOps) ops;
+        }
+        throw new IllegalArgumentException("IoOps of type " + StringUtil.simpleClassName(ops) + " not supported");
+    }
+
+    final class DefaultNioRegistration implements NioIoRegistration {
+        private final NioIoHandle handle;
+        private volatile SelectionKey key;
+
+        DefaultNioRegistration(NioIoHandle handle, NioIoOps initialOps, Selector selector) throws IOException {
+            this.handle = handle;
+            key = handle.selectableChannel().register(selector, initialOps.value, this);
+        }
+
+        NioIoHandle handle() {
+            return handle;
+        }
+
+        void register(Selector selector) throws IOException {
+            SelectionKey newKey = handle.selectableChannel().register(selector, key.interestOps(), this);
+            key.cancel();
+            key = newKey;
+        }
+
+        @Override
+        public SelectionKey selectionKey() {
+            return key;
+        }
+
+        @Override
+        public boolean isValid() {
+            return key.isValid();
+        }
+
+        @Override
+        public long submit(IoOps ops) {
+            int v = cast(ops).value;
+            key.interestOps(v);
+            return v;
+        }
+
+        @Override
+        public void cancel() {
+            key.cancel();
+            cancelledKeys++;
+            if (cancelledKeys >= CLEANUP_INTERVAL) {
+                cancelledKeys = 0;
+                needsToSelectAgain = true;
+            }
+        }
+
+        void close() {
+            cancel();
+            try {
+                handle.close();
+            } catch (Exception e) {
+                logger.debug("Exception during closing " + handle, e);
+            }
+        }
+
+        void handle(int ready) {
+            handle.handle(this, NioIoOps.eventOf(ready));
+        }
+
+        @Override
+        public NioIoHandler ioHandler() {
+            return NioIoHandler.this;
+        }
+    }
+
     @Override
-    public void register(IoHandle handle) throws Exception {
-        NioProcessor nioProcessor = nioHandle(handle);
+    public NioIoRegistration register(EventLoop eventLoop, IoHandle handle)
+            throws Exception {
+        NioIoHandle nioHandle = nioHandle(handle);
+        NioIoOps ops = NioIoOps.NONE;
         boolean selected = false;
         for (;;) {
             try {
-                nioProcessor.register(unwrappedSelector());
-                return;
+                return new DefaultNioRegistration(nioHandle, ops, unwrappedSelector());
             } catch (CancelledKeyException e) {
                 if (!selected) {
                     // Force the Selector to select now as the "canceled" SelectionKey may still be
@@ -331,17 +404,6 @@ public final class NioHandler implements IoHandler {
                     throw e;
                 }
             }
-        }
-    }
-
-    @Override
-    public void deregister(IoHandle handle) {
-        NioProcessor nioProcessor = nioHandle(handle);
-        nioProcessor.deregister();
-        cancelledKeys ++;
-        if (cancelledKeys >= CLEANUP_INTERVAL) {
-            cancelledKeys = 0;
-            needsToSelectAgain = true;
         }
     }
 
@@ -397,7 +459,7 @@ public final class NioHandler implements IoHandler {
             } catch (IOException e) {
                 // If we receive an IOException here its because the Selector is messed up. Let's rebuild
                 // the selector and retry. https://github.com/netty/netty/issues/8566
-                rebuildSelector();
+                rebuildSelector0();
                 handleLoopException(e);
                 return 0;
             }
@@ -502,35 +564,43 @@ public final class NioHandler implements IoHandler {
     }
 
     private void processSelectedKey(SelectionKey k) {
-        final NioProcessor handle = (NioProcessor) k.attachment();
-        handle.handle(k);
+        final DefaultNioRegistration registration = (DefaultNioRegistration) k.attachment();
+        if (!registration.isValid()) {
+            try {
+                registration.handle.close();
+            } catch (Exception e) {
+                logger.debug("Exception during closing " + registration.handle, e);
+            }
+            return;
+        }
+        registration.handle(k.readyOps());
     }
 
     @Override
     public void prepareToDestroy() {
         selectAgain();
         Set<SelectionKey> keys = selector.keys();
-        Collection<NioProcessor> handles = new ArrayList<>(keys.size());
+        Collection<DefaultNioRegistration> registrations = new ArrayList<>(keys.size());
         for (SelectionKey k: keys) {
-            NioProcessor handle = (NioProcessor) k.attachment();
-            handles.add(handle);
+            DefaultNioRegistration handle = (DefaultNioRegistration) k.attachment();
+            registrations.add(handle);
         }
 
-        for (NioProcessor h: handles) {
-            h.close();
+        for (DefaultNioRegistration reg: registrations) {
+            reg.close();
         }
     }
 
     @Override
-    public void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && wakenUp.compareAndSet(false, true)) {
+    public void wakeup(EventLoop eventLoop) {
+        if (!eventLoop.inEventLoop() && wakenUp.compareAndSet(false, true)) {
             selector.wakeup();
         }
     }
 
     @Override
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
-        return AbstractNioChannel.class.isAssignableFrom(handleType);
+        return NioIoHandle.class.isAssignableFrom(handleType);
     }
 
     Selector unwrappedSelector() {
@@ -638,7 +708,7 @@ public final class NioHandler implements IoHandler {
                 "Selector.select() returned prematurely {} times in a row; rebuilding Selector {}.",
                 selectCnt, selector);
 
-        rebuildSelector();
+        rebuildSelector0();
         Selector selector = this.selector;
 
         // Select again to populate selectedKeys.

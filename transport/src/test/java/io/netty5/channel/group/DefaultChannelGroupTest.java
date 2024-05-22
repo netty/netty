@@ -21,7 +21,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.util.concurrent.FutureCompletionStage;
 import io.netty5.util.concurrent.GlobalEventExecutor;
@@ -32,8 +32,8 @@ public class DefaultChannelGroupTest {
     // Test for #1183
     @Test
     public void testNotThrowBlockingOperationException() throws Exception {
-        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
-        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
+        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
 
         final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 

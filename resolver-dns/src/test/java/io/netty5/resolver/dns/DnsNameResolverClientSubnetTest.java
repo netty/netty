@@ -17,7 +17,7 @@ package io.netty5.resolver.dns;
 
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.handler.codec.dns.DefaultDnsOptEcsRecord;
 import io.netty5.util.concurrent.Future;
@@ -37,7 +37,7 @@ public class DnsNameResolverClientSubnetTest {
     @Disabled
     @Test
     public void testSubnetQuery() throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
         DnsNameResolver resolver = newResolver(group).build();
         try {
             // Same as:

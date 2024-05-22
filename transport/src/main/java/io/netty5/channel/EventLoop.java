@@ -34,22 +34,16 @@ public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
     /**
      * Register the {@link IoHandle} to the {@link EventLoop} for I/O processing.
      *
-     * @param handle   the {@link IoHandle} to register.
-     * @return          the {@link Future} that is notified once the operations completes.
+     * @param handle        the {@link IoHandle} to register.
+     * @return              the {@link Future} that is notified once the operations completes.
      */
-    Future<Void> registerForIo(IoHandle handle);
+    Future<IoRegistration> register(IoHandle handle);
 
-    /**
-     * Deregister the {@link Channel} from the {@link EventLoop} for I/O processing.
-     *
-     * @param channel   the {@link IoHandle} to deregister.
-     * @return          the {@link Future} that is notified once the operations completes.
-     */
-    Future<Void> deregisterForIo(IoHandle handle);
-
-    // Force the implementing class to implement this method itself. This is needed as
-    // EventLoopGroup provides default implementations that call next() which would lead to
-    // and infinite loop if not implemented differently in the EventLoop itself.
+    // Force sub-classes to implement.
     @Override
     boolean isCompatible(Class<? extends IoHandle> handleType);
+
+    // Force sub-classes to implement.
+    @Override
+    boolean isIoType(Class<? extends IoHandler> handlerType);
 }

@@ -30,7 +30,7 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
@@ -76,7 +76,7 @@ public class CipherSuiteCanaryTest {
 
     @BeforeAll
     public static void init() throws Exception {
-        GROUP = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+        GROUP = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
         CERT = new SelfSignedCertificate();
     }
 

@@ -24,7 +24,7 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
-import io.netty5.channel.local.LocalHandler;
+import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.resolver.AbstractAddressResolver;
 import io.netty5.resolver.AddressResolver;
@@ -52,7 +52,7 @@ public class ResolveAddressHandlerTest {
 
     @BeforeAll
     public static void createEventLoop() {
-        group = new MultithreadEventLoopGroup(LocalHandler.newFactory());
+        group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
     }
 
     @AfterAll

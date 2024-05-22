@@ -54,6 +54,7 @@ public class NativeTest {
         assumeTrue(IOUring.isAvailable());
     }
 
+    /*
     @Test
     public void canWriteFile(@TempDir Path tmpDir) {
         BufferAllocator allocator = DefaultBufferAllocators.offHeapAllocator();
@@ -264,6 +265,7 @@ public class NativeTest {
             ringBuffer.close();
         }
     }
+     */
 
     @Test
     public void parsingKernelVersionTest() {

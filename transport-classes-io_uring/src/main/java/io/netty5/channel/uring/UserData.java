@@ -19,16 +19,26 @@ final class UserData {
     private UserData() {
     }
 
-    static long encode(int fd, byte op, short data) {
-        return ((long) data << 48) | ((op & 0xFFL)  << 32) | fd & 0xFFFFFFFFL;
+    /**
+     * Encode the given data into a long that can be stored as udata.
+     *
+     * @param id        the id.
+     * @param op        the operation
+     * @param data      the custom data
+     * @return          the udata.
+     */
+    static long encode(int id, byte op, short data) {
+        return ((long) data << 48) | ((op & 0xFFL)  << 32) | id & 0xFFFFFFFFL;
     }
 
     static void decode(int res, int flags, long udata, CompletionCallback callback) {
-        int fd = decodeFd(udata);
-        callback.handle(fd, res, flags, udata);
+        int id = decodeId(udata);
+        byte op = decodeOp(udata);
+        short data = decodeData(udata);
+        callback.handle(res, flags, id, op, data);
     }
 
-    static int decodeFd(long udata) {
+    static int decodeId(long udata) {
         return (int) (udata & 0xFFFFFFFFL);
     }
 

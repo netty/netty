@@ -16,10 +16,12 @@
 package io.netty5.channel.epoll;
 
 import io.netty5.channel.DefaultSelectStrategyFactory;
+import io.netty5.channel.EventLoop;
 import io.netty5.channel.IoExecutionContext;
 import io.netty5.channel.IoHandle;
 import io.netty5.channel.IoHandler;
 import io.netty5.channel.IoHandlerFactory;
+import io.netty5.channel.IoOps;
 import io.netty5.channel.SelectStrategy;
 import io.netty5.channel.SelectStrategyFactory;
 import io.netty5.channel.unix.FileDescriptor;
@@ -36,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntSupplier;
 
@@ -46,14 +49,14 @@ import static java.util.Objects.requireNonNull;
 /**
  * {@link IoHandler} which uses epoll under the covers. Only works on Linux!
  */
-public class EpollHandler implements IoHandler {
+public class EpollIoHandler implements IoHandler {
     private static final long EPOLL_WAIT_MILLIS_THRESHOLD =
             SystemPropertyUtil.getLong("io.netty5.channel.epoll.epollWaitThreshold", 10);
 
     private static final Logger logger;
 
     static {
-        logger = LoggerFactory.getLogger(EpollHandler.class);
+        logger = LoggerFactory.getLogger(EpollIoHandler.class);
         // Ensure JNI is initialized by the time this class is loaded by this time!
         // We use unix-common methods in this class which are backed by JNI methods.
         Epoll.ensureAvailability();
@@ -64,7 +67,7 @@ public class EpollHandler implements IoHandler {
     private FileDescriptor epollFd;
     private FileDescriptor eventFd;
     private FileDescriptor timerFd;
-    private final IntObjectMap<AbstractEpollChannel<?>> channels = new IntObjectHashMap<>(4096);
+    private final IntObjectMap<DefaultEpollIoRegistration> registrations = new IntObjectHashMap<>(4096);
     private final boolean allowGrowing;
     private final EpollEventArray events;
 
@@ -95,20 +98,27 @@ public class EpollHandler implements IoHandler {
     // See https://man7.org/linux/man-pages/man2/timerfd_create.2.html.
     private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
 
-    private static AbstractEpollChannel<?> cast(IoHandle handle) {
-        if (handle instanceof AbstractEpollChannel) {
-            return (AbstractEpollChannel<?>) handle;
+    private static EpollIoHandle cast(IoHandle handle) {
+        if (handle instanceof EpollIoHandle) {
+            return (EpollIoHandle) handle;
         }
-        throw new IllegalArgumentException("Channel of type " + StringUtil.simpleClassName(handle) + " not supported");
+        throw new IllegalArgumentException("IoHandle of type " + StringUtil.simpleClassName(handle) + " not supported");
     }
 
-    private EpollHandler() {
+    private static EpollIoOps cast(IoOps ops) {
+        if (ops instanceof EpollIoOps) {
+            return (EpollIoOps) ops;
+        }
+        throw new IllegalArgumentException("IoOps of type " + StringUtil.simpleClassName(ops) + " not supported");
+    }
+
+    private EpollIoHandler() {
         this(0, DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy());
     }
 
     // Package-private for tests.
     @VisibleForTesting
-    EpollHandler(int maxEvents, SelectStrategy strategy) {
+    EpollIoHandler(int maxEvents, SelectStrategy strategy) {
         selectStrategy = strategy;
         if (maxEvents == 0) {
             allowGrowing = true;
@@ -169,23 +179,23 @@ public class EpollHandler implements IoHandler {
     }
 
     /**
-     * Returns a new {@link IoHandlerFactory} that creates {@link EpollHandler} instances.
+     * Returns a new {@link IoHandlerFactory} that creates {@link EpollIoHandler} instances.
      */
     public static IoHandlerFactory newFactory() {
-        return EpollHandler::new;
+        return EpollIoHandler::new;
     }
 
     /**
-     * Returns a new {@link IoHandlerFactory} that creates {@link EpollHandler} instances.
+     * Returns a new {@link IoHandlerFactory} that creates {@link EpollIoHandler} instances.
      */
     public static IoHandlerFactory newFactory(final int maxEvents,
                                               final SelectStrategyFactory selectStrategyFactory) {
         checkPositiveOrZero(maxEvents, "maxEvents");
         requireNonNull(selectStrategyFactory, "selectStrategyFactory");
-        return () -> new EpollHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
+        return () -> new EpollIoHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
     }
 
-    private IovArray cleanIovArray() {
+    IovArray cleanIovArray() {
         if (iovArray == null) {
             iovArray = new IovArray();
         } else {
@@ -194,7 +204,7 @@ public class EpollHandler implements IoHandler {
         return iovArray;
     }
 
-    private NativeDatagramPacketArray cleanDatagramPacketArray() {
+    NativeDatagramPacketArray cleanDatagramPacketArray() {
         if (datagramPacketArray == null) {
             datagramPacketArray = new NativeDatagramPacketArray();
         } else {
@@ -203,83 +213,111 @@ public class EpollHandler implements IoHandler {
         return datagramPacketArray;
     }
 
-    @Override
-    public final void register(IoHandle handle) throws Exception {
-        final AbstractEpollChannel<?> epollChannel = cast(handle);
-        epollChannel.register0(new EpollRegistration() {
-            @Override
-            public void update() throws IOException {
-                EpollHandler.this.modify(epollChannel);
+    private final class DefaultEpollIoRegistration extends AtomicBoolean implements EpollIoRegistration {
+        private final EventLoop eventLoop;
+        final EpollIoHandle handle;
+
+        DefaultEpollIoRegistration(EventLoop eventLoop, EpollIoHandle handle) {
+            this.eventLoop = eventLoop;
+            this.handle = handle;
+        }
+
+        @Override
+        public long submit(IoOps ops) throws Exception {
+            EpollIoOps epollIoOps = cast(ops);
+            try {
+                if (!isValid()) {
+                    return -1;
+                }
+                Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
+                return epollIoOps.value;
+            } catch (IOException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new IOException(e);
             }
+        }
 
-            @Override
-            public void remove() throws IOException {
-                EpollHandler.this.remove(epollChannel);
+        @Override
+        public EpollIoHandler ioHandler() {
+            return EpollIoHandler.this;
+        }
+
+        @Override
+        public boolean isValid() {
+            return !get();
+        }
+
+        @Override
+        public void cancel() throws IOException {
+            if (getAndSet(true)) {
+                return;
             }
-
-            @Override
-            public IovArray cleanIovArray() {
-                return EpollHandler.this.cleanIovArray();
+            if (handle.fd().isOpen()) {
+                // Remove the fd registration from epoll. This is only needed if it's still open as otherwise it will
+                // be automatically removed once the file-descriptor is closed.
+                Native.epollCtlDel(epollFd.intValue(), handle.fd().intValue());
             }
-
-            @Override
-            public NativeDatagramPacketArray cleanDatagramPacketArray() {
-                return EpollHandler.this.cleanDatagramPacketArray();
+            if (eventLoop.inEventLoop()) {
+                cancel0();
+            } else {
+                eventLoop.execute(this::cancel0);
             }
-        });
-        add(epollChannel);
-    }
+        }
 
-    @Override
-    public final void deregister(IoHandle handle) throws Exception {
-        cast(handle).deregister0();
-    }
+        private void cancel0() {
+            int fd = handle.fd().intValue();
+            DefaultEpollIoRegistration old = registrations.remove(fd);
+            if (old != this) {
+                // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
+                registrations.put(fd, old);
+            }
+        }
 
-    @Override
-    public final void wakeup(boolean inEventLoop) {
-        if (!inEventLoop && nextWakeupNanos.getAndSet(AWAKE) != AWAKE) {
-            // write to the evfd which will then wake-up epoll_wait(...)
-            Native.eventFdWrite(eventFd.intValue(), 1L);
+        void close() {
+            try {
+                cancel();
+            } catch (Exception e) {
+                logger.debug("Exception during canceling " + this, e);
+            }
+            try {
+                handle.close();
+            } catch (Exception e) {
+                logger.debug("Exception during closing " + handle, e);
+            }
+        }
+
+        void handle(long ev) {
+            handle.handle(this, EpollIoOps.eventOf((int) ev));
         }
     }
 
-    /**
-     * Register the given channel with this {@link EpollHandler}.
-     */
-    private void add(AbstractEpollChannel<?> ch) throws IOException {
-        int fd = ch.socket.intValue();
-        Native.epollCtlAdd(epollFd.intValue(), fd, ch.flags());
-        AbstractEpollChannel<?> old = channels.put(fd, ch);
+    @Override
+    public EpollIoRegistration register(EventLoop eventLoop, IoHandle handle)
+            throws Exception {
+        final EpollIoHandle epollHandle = cast(handle);
+        DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(eventLoop, epollHandle);
+        int fd = epollHandle.fd().intValue();
+        Native.epollCtlAdd(epollFd.intValue(), fd, EpollIoOps.EPOLLERR.value);
+        DefaultEpollIoRegistration old = registrations.put(fd, registration);
 
-        // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
-        // closed.
-        assert old == null || !old.isOpen();
+        // We either expect to have no registration in the map with the same FD or that the FD of the old registration
+        // is already closed / cancelled.
+        assert old == null || !old.isValid() || !old.handle.fd().isOpen();
+
+        return registration;
     }
 
-    /**
-     * The flags of the given epoll was modified so update the registration
-     */
-    private void modify(AbstractEpollChannel<?> ch) throws IOException {
-        Native.epollCtlMod(epollFd.intValue(), ch.socket.intValue(), ch.flags());
+    @Override
+    public boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return EpollIoHandle.class.isAssignableFrom(handleType);
     }
 
-    /**
-     * Deregister the given channel from this {@link EpollHandler}.
-     */
-    private void remove(AbstractEpollChannel<?> ch) throws IOException {
-        int fd = ch.socket.intValue();
-
-        AbstractEpollChannel<?> old = channels.remove(fd);
-        if (old != null && old != ch) {
-            // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
-            channels.put(fd, old);
-
-            // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
-            assert !ch.isOpen();
-        } else if (ch.isOpen()) {
-            // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
-            // removed once the file-descriptor is closed.
-            Native.epollCtlDel(epollFd.intValue(), fd);
+    @Override
+    public void wakeup(EventLoop eventLoop) {
+        if (!eventLoop.inEventLoop() && nextWakeupNanos.getAndSet(AWAKE) != AWAKE) {
+            // write to the evfd which will then wake-up epoll_wait(...)
+            Native.eventFdWrite(eventFd.intValue(), 1L);
         }
     }
 
@@ -409,10 +447,10 @@ public class EpollHandler implements IoHandler {
     public void prepareToDestroy() {
         // Using the intermediate collection to prevent ConcurrentModificationException.
         // In the `close()` method, the channel is deleted from `channels` map.
-        AbstractEpollChannel<?>[] localChannels = channels.values().toArray(new AbstractEpollChannel[0]);
+        DefaultEpollIoRegistration[] copy = registrations.values().toArray(new DefaultEpollIoRegistration[0]);
 
-        for (AbstractEpollChannel<?> ch: localChannels) {
-            ch.closeTransportNow();
+        for (DefaultEpollIoRegistration reg: copy) {
+            reg.close();
         }
     }
 
@@ -428,42 +466,9 @@ public class EpollHandler implements IoHandler {
             } else {
                 final long ev = events.events(i);
 
-                AbstractEpollChannel<?> ch = channels.get(fd);
-                if (ch != null) {
-                    // Don't change the ordering of processing EPOLLOUT | EPOLLRDHUP / EPOLLIN if you're not 100%
-                    // sure about it!
-                    // Re-ordering can easily introduce bugs and bad side-effects, as we found out painfully in the
-                    // past.
-
-                    // First check for EPOLLOUT as we may need to fail the connect Promise before try
-                    // to read from the file descriptor.
-                    // See https://github.com/netty/netty/issues/3785
-                    //
-                    // It is possible for an EPOLLOUT or EPOLLERR to be generated when a connection is refused.
-                    // In either case epollOutReady() will do the correct thing (finish connecting, or fail
-                    // the connection).
-                    // See https://github.com/netty/netty/issues/3848
-                    if ((ev & (Native.EPOLLERR | Native.EPOLLOUT)) != 0) {
-                        // Force flush of data as the epoll is writable again
-                        ch.epollOutReady();
-                    }
-
-                    // Check EPOLLIN before EPOLLRDHUP to ensure all data is read before shutting down the input.
-                    // See https://github.com/netty/netty/issues/4317.
-                    //
-                    // If EPOLLIN or EPOLLERR was received and the channel is still open call epollInReady(). This will
-                    // try to read from the underlying file descriptor and so notify the user about the error.
-                    if ((ev & (Native.EPOLLERR | Native.EPOLLIN)) != 0) {
-                        // The Channel is still open and there is something to read. Do it now.
-                        ch.epollInReady();
-                    }
-
-                    // Check if EPOLLRDHUP was set, this will notify us for connection-reset in which case
-                    // we may close the channel directly or try to read more data depending on the state of the
-                    // Channel and als depending on the AbstractEpollChannel subtype.
-                    if ((ev & Native.EPOLLRDHUP) != 0) {
-                        ch.epollRdHupReady();
-                    }
+                DefaultEpollIoRegistration registration = registrations.get(fd);
+                if (registration != null) {
+                    registration.handle(ev);
                 } else {
                     // We received an event for an fd which we not use anymore. Remove it from the epoll_event set.
                     try {
@@ -539,10 +544,5 @@ public class EpollHandler implements IoHandler {
         } catch (IOException e) {
             logger.warn("Failed to close the epoll fd.", e);
         }
-    }
-
-    @Override
-    public boolean isCompatible(Class<? extends IoHandle> handleType) {
-        return AbstractEpollChannel.class.isAssignableFrom(handleType);
     }
 }

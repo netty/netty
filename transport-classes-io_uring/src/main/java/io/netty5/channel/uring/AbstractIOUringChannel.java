@@ -24,6 +24,9 @@ import io.netty5.channel.ChannelException;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
+import io.netty5.channel.IoEvent;
+import io.netty5.channel.IoHandle;
+import io.netty5.channel.IoRegistration;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.WriteHandleFactory;
 import io.netty5.channel.socket.SocketProtocolFamily;
@@ -51,7 +54,6 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.ObjLongConsumer;
 
 import static io.netty5.channel.unix.UnixChannelUtil.computeRemoteAddr;
@@ -61,7 +63,6 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         implements UnixChannel {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractIOUringChannel.class);
     private static final int MAX_READ_AHEAD_PACKETS = 8;
-    private static final AtomicInteger CONNECT_ID_COUNTER = new AtomicInteger();
 
     static final FutureContextListener<Buffer, Void> CLOSE_BUFFER = (b, f) -> SilentDispose.dispose(b, LOGGER);
 
@@ -74,7 +75,8 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
     protected volatile SocketAddress local;
     protected volatile SocketAddress remote;
 
-    protected SubmissionQueue submissionQueue;
+    private short opsId = Short.MIN_VALUE;
+
     protected WriteSink writeSink;
     protected int currentCompletionResult;
     protected short currentCompletionData;
@@ -83,6 +85,58 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
     private final Runnable pendingRead;
     private final Runnable rdHupRead;
 
+    private final IOUringIoHandle handle = new IOUringIoHandle() {
+        @Override
+        public void handle(IoRegistration registration, IoEvent ioEvent) {
+            IOUringIoRegistration reg = (IOUringIoRegistration) registration;
+            IOUringIoEvent event = (IOUringIoEvent) ioEvent;
+            byte op = event.opcode();
+            int res = event.res();
+            short data = event.data();
+            long udata = UserData.encode(event.id(), op, data);
+            switch (op) {
+                case Native.IORING_OP_RECV:
+                case Native.IORING_OP_ACCEPT:
+                case Native.IORING_OP_RECVMSG:
+                case Native.IORING_OP_READ:
+                    readComplete(res, udata);
+
+                    break;
+                case Native.IORING_OP_WRITEV:
+                case Native.IORING_OP_SEND:
+                case Native.IORING_OP_SENDMSG:
+                case Native.IORING_OP_WRITE:
+                    writeComplete(res, udata);
+
+                    break;
+                case Native.IORING_OP_POLL_ADD:
+                    //pollAddComplete(res, data);
+                    break;
+                case Native.IORING_OP_POLL_REMOVE:
+                    // fd reuse can replace a closed channel (with pending POLL_REMOVE CQEs)
+                    // with a new one: better not making it to mess-up with its state!
+                    if (res == 0) {
+                        //clearPollFlag(data);
+                    }
+                    break;
+                case Native.IORING_OP_ASYNC_CANCEL:
+                    break;
+                case Native.IORING_OP_CONNECT:
+                    connectComplete(res, udata);
+
+                    break;
+                case Native.IORING_OP_CLOSE:
+
+                    break;
+            }
+        }
+
+        @Override
+        public void close() throws Exception {
+            closeTransportNow();
+        }
+    };
+
     private short lastReadId;
     private boolean readPendingRegister;
     private boolean readPendingConnect;
@@ -90,14 +144,15 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
     private boolean scheduledRdHup;
     private boolean receivedRdHup;
     private boolean submittedClose;
-
-    private short lastConnectId;
+    private long pollRdhupId;
+    private long lastConnectId;
 
     protected AbstractIOUringChannel(P parent, EventLoop eventLoop, boolean supportingDisconnect,
                                      ReadHandleFactory defaultReadHandleFactory,
                                      WriteHandleFactory defaultWriteHandleFactory,
                                      LinuxSocket socket, SocketAddress remote, boolean active) {
-        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory);
+        super(parent, eventLoop, supportingDisconnect, defaultReadHandleFactory, defaultWriteHandleFactory,
+                IOUringIoHandle.class);
         this.socket = socket;
         this.active = active;
         if (active) {
@@ -113,6 +168,11 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         readsPending = new ObjectRing<>();
         readsCompleted = new ObjectRing<>();
         cancelledReads = new LongObjectHashMap<>(8);
+    }
+
+    @Override
+    protected IoHandle ioHandle() {
+        return handle;
     }
 
     @Override
@@ -152,7 +212,7 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
     @Override
     protected void doRead(boolean wasReadPendingAlready) throws Exception {
         // Schedule a read operation. When completed, we'll get a callback to readComplete.
-        if (submissionQueue == null) {
+        if (!isRegistered()) {
             readPendingRegister = true;
             return;
         }
@@ -163,7 +223,7 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
 
     private void submitRead() {
         // Submit reads until read handle says stop, we fill the submission queue, or hit max limit
-        int maxPackets = Math.min(submissionQueue.remaining(), MAX_READ_AHEAD_PACKETS);
+        int maxPackets = Math.min(registration().ioHandler().remaining(), MAX_READ_AHEAD_PACKETS);
         int sumPackets = 0;
         int bufferSize = nextReadBufferSize();
         boolean morePackets = bufferSize > 0;
@@ -174,9 +234,8 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
             assert readBuffer.countWritableComponents() == 1;
             sumPackets++;
             morePackets = sumPackets < maxPackets && (bufferSize = nextReadBufferSize()) > 0;
-            submissionQueue.link(morePackets);
-            short readId = ++lastReadId;
-            submitReadForReadBuffer(readBuffer, readId, sumPackets > 1, readsPending);
+            lastReadId = nextOpsId();
+            submitReadForReadBuffer(readBuffer, lastReadId, sumPackets > 1, morePackets, readsPending);
         }
     }
 
@@ -189,8 +248,8 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         Buffer readBuffer = readBufferAllocator().allocate(bufferSize);
         assert readBuffer.isDirect();
         assert readBuffer.countWritableComponents() == 1;
-        short readId = ++lastReadId;
-        submitReadForReadBuffer(readBuffer, readId, true, readsPending);
+        lastReadId = nextOpsId();
+        submitReadForReadBuffer(readBuffer, lastReadId, true, false, readsPending);
     }
 
     private void submitReadForPending() {
@@ -209,28 +268,33 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         return readHandle().prepareRead();
     }
 
-    protected void submitReadForReadBuffer(Buffer buffer, short readId, boolean nonBlocking,
+    protected void submitReadForReadBuffer(Buffer buffer, short readId, boolean nonBlocking, boolean link,
                                              ObjLongConsumer<Object> pendingConsumer) {
         try (var itr = buffer.forEachComponent()) {
             var cmp = itr.firstWritable();
             assert cmp != null;
             long address = cmp.writableNativeAddress();
-            int flags = nonBlocking ? Native.MSG_DONTWAIT : 0;
-            long udata = submissionQueue.addRecv(
-                    fd().intValue(), address, 0, cmp.writableBytes(), flags, readId);
+            int msgFlags = nonBlocking ? Native.MSG_DONTWAIT : 0;
+            int flags = link ? Native.IOSQE_LINK : 0;
+            long udata = registration().submit(IOUringIoOps.newRecv(
+                    fd().intValue(), flags, msgFlags, address, cmp.writableBytes(), readId));
             pendingConsumer.accept(buffer, udata);
         }
     }
 
     @Override
     protected void doClearScheduledRead() {
-        // Using the lastReadId to differentiate our reads, means we avoid accidentally cancelling any future read.
-        while (readsPending.poll()) {
-            Object obj = readsPending.getPolledObject();
-            long udata = readsPending.getPolledStamp();
-            Resource.touch(obj, "read cancelled");
-            cancelledReads.put(udata, obj);
-            submissionQueue.addCancel(fd().intValue(), udata);
+        if (isRegistered()) {
+            IOUringIoRegistration registration = registration();
+            // Using the lastReadId to differentiate our reads, means we avoid accidentally cancelling any future read.
+            while (readsPending.poll()) {
+                Object obj = readsPending.getPolledObject();
+                long udata = readsPending.getPolledStamp();
+                Resource.touch(obj, "read cancelled");
+                cancelledReads.put(udata, obj);
+
+                registration.submit(IOUringIoOps.newAsyncCancel(fd().intValue(), 0, udata, Native.IORING_OP_RECV));
+            }
         }
     }
 
@@ -360,7 +424,8 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
     protected void doWriteNow(WriteSink writeSink) {
         submitAllWriteMessages(writeSink);
         // We *MUST* submit all our messages, since we'll be releasing the outbound buffers after the doWriteNow call.
-        submissionQueue.submit();
+
+        registration().ioHandler().submit();
     }
 
     protected abstract void submitAllWriteMessages(WriteSink writeSink);
@@ -396,29 +461,20 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         try (var itr = addrBuf.forEachComponent()) {
             var cmp = itr.firstWritable();
             SockaddrIn.write(socket.isIpv6(), cmp.writableNativeAddress(), remoteSocketAddr);
-            lastConnectId = nextConnectId();
-            submissionQueue.addConnect(fd().intValue(), cmp.writableNativeAddress(),
-                    Native.SIZEOF_SOCKADDR_STORAGE, lastConnectId);
+            IOUringIoRegistration registration = registration();
+            IOUringIoOps ops = IOUringIoOps.newConnect(
+                    fd().intValue(), 0, cmp.writableNativeAddress(), nextOpsId());
+            lastConnectId = registration.submit(ops);
         }
         connectRemoteAddressMem = addrBuf;
     }
 
-    private static short nextConnectId() {
-        // Compute the next connect id, but skip 0, because that's the default value for lastConnectId.
-        short result;
-        do {
-            result = (short) CONNECT_ID_COUNTER.incrementAndGet();
-        } while (result == 0);
-        return result;
-    }
-
     void connectComplete(int res, long udata) {
-        short connectId = UserData.decodeData(udata);
-        if (connectId != lastConnectId) {
+        if (udata != lastConnectId) {
             // This can happen with file descriptor reuse, where the connect completion was for a now-closed channel.
             logger().debug("Ignoring connect completion for unrecognized connect call id: " +
                             "{} for fd {} (last connect id: {})",
-                    connectId, fd().intValue(), lastConnectId);
+                    udata, fd().intValue(), lastConnectId);
             return;
         }
         currentCompletionResult = res;
@@ -471,8 +527,17 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         return false;
     }
 
+    @Override
+    protected IOUringIoRegistration registration() {
+        return (IOUringIoRegistration) super.registration();
+    }
+
     private void submitPollRdHup() {
-        submissionQueue.addPollRdHup(fd().intValue());
+        int fd = fd().intValue();
+        IOUringIoRegistration registration = registration();
+        IOUringIoOps ops = IOUringIoOps.newPollAdd(
+                fd, 0, Native.POLLRDHUP, (short) Native.POLLRDHUP);
+        pollRdhupId = registration.submit(ops);
         scheduledRdHup = true;
     }
 
@@ -488,15 +553,19 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
         }
     }
 
-    void completeChannelRegister(SubmissionQueue submissionQueue) {
-        this.submissionQueue = submissionQueue;
-        if (active) {
-            submitPollRdHup();
-        }
-        if (readPendingRegister) {
-            readPendingRegister = false;
-            read();
-        }
+    @Override
+    public Future<Void> register() {
+        return super.register().addListener(f -> {
+            if (f.isSuccess()) {
+                if (active) {
+                    submitPollRdHup();
+                }
+                if (readPendingRegister) {
+                    readPendingRegister = false;
+                    read();
+                }
+            }
+        });
     }
 
     @Override
@@ -508,17 +577,25 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
     protected Future<Executor> prepareToClose() {
         // Prevent more operations from being submitted.
         active = false;
-        // Cancel any pending connect.
-        if (isConnectPending()) {
-            submissionQueue.addCancel(fd().intValue(),
-                    UserData.encode(fd().intValue(), Native.IORING_OP_CONNECT, lastConnectId));
-        }
+
         // Cancel all pending reads.
         doClearScheduledRead();
-        // Cancel any RDHUP poll
-        if (scheduledRdHup) {
-            submissionQueue.addPollRemove(fd().intValue(), Native.POLLRDHUP);
+        // Cancel any pending connect.
+
+        if (isRegistered()) {
+            IOUringIoRegistration registration = registration();
+            if (isConnectPending()) {
+                registration.submit(IOUringIoOps.newAsyncCancel(fd().intValue(), 0, lastConnectId,
+                        Native.IORING_OP_CONNECT));
+            }
+
+            // Cancel any RDHUP poll
+            if (scheduledRdHup) {
+                registration.submit(IOUringIoOps.newPollRemove(
+                        fd().intValue(), 0, pollRdhupId, (short) Native.POLLRDHUP));
+            }
         }
+
         closeTransportNow();
         return prepareClosePromise.asFuture();
     }
@@ -541,7 +618,7 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
 
     void closeTransportNow() {
         if (!submittedClose) {
-            submissionQueue.addClose(socket.intValue(), false, (short) 0);
+            registration().submit(IOUringIoOps.newClose(socket.intValue(), 0, nextOpsId()));
             submittedClose = true;
         } else {
             logger().warn("Double-close attempted for {}", this);
@@ -563,6 +640,21 @@ abstract class AbstractIOUringChannel<P extends UnixChannel>
     @Override
     public FileDescriptor fd() {
         return socket;
+    }
+
+    /**
+     * Returns the next id that should be used when submitting {@link IOUringIoOps}.
+     *
+     * @return  opsId
+     */
+    protected final short nextOpsId() {
+        short id = opsId++;
+
+        // We use 0 for "none".
+        if (id == 0) {
+            id = opsId++;
+        }
+        return id;
     }
 
     @Override

@@ -18,8 +18,8 @@ package io.netty5.resolver.dns;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.local.LocalHandler;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.local.LocalIoHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.util.NetUtil;
 import org.junit.jupiter.api.Test;
 
@@ -38,7 +38,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
                 InetAddress.getByAddress("ns1", new byte[] { 10, 0, 0, 1 }), 53);
         InetSocketAddress resolved2 = new InetSocketAddress(
                 InetAddress.getByAddress("ns2", new byte[] { 10, 0, 0, 2 }), 53);
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -70,7 +70,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
     }
 
     private static void testExpireWithTTL0(int days) {
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -87,7 +87,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
                 InetAddress.getByAddress("ns1", new byte[] { 10, 0, 0, 1 }), 53);
         InetSocketAddress resolved2 = new InetSocketAddress(
                 InetAddress.getByAddress("ns2", new byte[] { 10, 0, 0, 2 }), 53);
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -111,7 +111,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
                 InetAddress.getByAddress("ns2", new byte[] { 10, 0, 0, 2 }), 53);
         InetSocketAddress resolved2 = new InetSocketAddress(
                 InetAddress.getByAddress("ns1", new byte[] { 10, 0, 0, 1 }), 53);
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -149,7 +149,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
         InetSocketAddress unresolved = InetSocketAddress.createUnresolved("ns1", 53);
         InetSocketAddress resolved = new InetSocketAddress(
                 InetAddress.getByAddress("ns2", new byte[] { 10, 0, 0, 2 }), 53);
-        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();

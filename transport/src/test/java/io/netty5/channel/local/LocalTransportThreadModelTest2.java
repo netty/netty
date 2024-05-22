@@ -41,15 +41,15 @@ public class LocalTransportThreadModelTest2 {
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         LocalHandler serverHandler = new LocalHandler("SERVER");
         serverBootstrap
-                .group(new MultithreadEventLoopGroup(io.netty5.channel.local.LocalHandler.newFactory()),
-                        new MultithreadEventLoopGroup(io.netty5.channel.local.LocalHandler.newFactory()))
+                .group(new MultithreadEventLoopGroup(LocalIoHandler.newFactory()),
+                        new MultithreadEventLoopGroup(LocalIoHandler.newFactory()))
                 .channel(LocalServerChannel.class)
                 .childHandler(serverHandler);
 
         Bootstrap clientBootstrap = new Bootstrap();
         LocalHandler clientHandler = new LocalHandler("CLIENT");
         clientBootstrap
-                .group(new MultithreadEventLoopGroup(io.netty5.channel.local.LocalHandler.newFactory()))
+                .group(new MultithreadEventLoopGroup(LocalIoHandler.newFactory()))
                 .channel(LocalChannel.class)
                 .remoteAddress(address).handler(clientHandler);
 

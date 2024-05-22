@@ -22,7 +22,7 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.example.util.ServerUtil;
@@ -42,8 +42,8 @@ public final class EchoServer {
         final SslContext sslCtx = ServerUtil.buildSslContext();
 
         // Configure the server.
-        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioHandler.newFactory());
-        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());
+        EventLoopGroup workerGroup = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         final EchoServerHandler serverHandler = new EchoServerHandler();
         try {
             ServerBootstrap b = new ServerBootstrap();

@@ -41,6 +41,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -472,17 +473,17 @@ public class SingleThreadEventLoopTest {
         }
 
         @Override
-        public Future<Void> registerForIo(IoHandle handle) {
-            return newSucceededFuture(null);
-        }
-
-        @Override
-        public Future<Void> deregisterForIo(IoHandle handle) {
-            return newSucceededFuture(null);
+        public Future<IoRegistration> register(IoHandle handle) {
+            return newSucceededFuture(new TestIoRegistration());
         }
 
         @Override
         public boolean isCompatible(Class<? extends IoHandle> handleType) {
+            return true;
+        }
+
+        @Override
+        public boolean isIoType(Class<? extends IoHandler> handlerType) {
             return true;
         }
     }
@@ -523,18 +524,40 @@ public class SingleThreadEventLoopTest {
         }
 
         @Override
-        public Future<Void> registerForIo(IoHandle handleType) {
-            return newSucceededFuture(null);
-        }
-
-        @Override
-        public Future<Void> deregisterForIo(IoHandle handleType) {
-            return newSucceededFuture(null);
+        public Future<IoRegistration> register(IoHandle handle) {
+            return newSucceededFuture(new TestIoRegistration());
         }
 
         @Override
         public boolean isCompatible(Class<? extends IoHandle> handleType) {
             return true;
+        }
+
+        @Override
+        public boolean isIoType(Class<? extends IoHandler> handlerType) {
+            return true;
+        }
+    }
+
+    private static final class TestIoRegistration extends AtomicBoolean implements IoRegistration {
+        @Override
+        public long submit(IoOps ops) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isValid() {
+            return get();
+        }
+
+        @Override
+        public void cancel() {
+            set(false);
+        }
+
+        @Override
+        public IoHandler ioHandler() {
+            return null;
         }
     }
 }

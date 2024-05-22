@@ -23,7 +23,7 @@ import io.netty5.channel.ChannelFactory;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
@@ -62,10 +62,10 @@ public class SocketTestPermutation {
 
     protected final EventLoopGroup nioBossGroup =
             new MultithreadEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-nio-boss", true),
-                    NioHandler.newFactory());
+                    NioIoHandler.newFactory());
     protected final EventLoopGroup nioWorkerGroup =
             new MultithreadEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-nio-worker", true),
-                    NioHandler.newFactory());
+                    NioIoHandler.newFactory());
 
     protected <A extends AbstractBootstrap<?, ?, ?>, B extends AbstractBootstrap<?, ?, ?>>
     List<BootstrapComboFactory<A, B>> combo(List<BootstrapFactory<A>> sbfs, List<BootstrapFactory<B>> cbfs) {

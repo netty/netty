@@ -19,7 +19,7 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 
 /**
@@ -33,7 +33,7 @@ public final class QuoteOfTheMomentServer {
     private static final int PORT = Integer.parseInt(System.getProperty("port", "7686"));
 
     public static void main(String[] args) throws Exception {
-        EventLoopGroup group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
         try {
             Bootstrap b = new Bootstrap();
             b.group(group)

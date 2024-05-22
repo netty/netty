@@ -271,7 +271,7 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixCha
     }
 
     @Override
-    protected void submitReadForReadBuffer(Buffer buffer, short readId, boolean nonBlocking,
+    protected void submitReadForReadBuffer(Buffer buffer, short readId, boolean nonBlocking, boolean link,
                                            ObjLongConsumer<Object> pendingConsumer) {
         try (var itr = buffer.forEachComponent()) {
             var cmp = itr.firstWritable();
@@ -281,7 +281,8 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixCha
             int flags = nonBlocking ? Native.MSG_DONTWAIT : 0;
             if (connected) {
                 // Call recv(2) because we have a known peer.
-                long udata = submissionQueue.addRecv(fd().intValue(), address, 0, writableBytes, flags, readId);
+                IOUringIoOps ioOps = IOUringIoOps.newRecv(fd().intValue(), 0, flags, address, writableBytes, readId);
+                long udata = registration().submit(ioOps);
                 pendingConsumer.accept(buffer, udata);
                 return;
             }
@@ -290,7 +291,8 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixCha
             CachedMsgHdrMemory msgHdr = nextMsgHdr();
             msgHdr.write(socket, null, address, writableBytes, segmentSize);
             msgHdr.attachment = buffer;
-            long udata = submissionQueue.addRecvmsg(fd().intValue(), msgHdr.address(), readId);
+            IOUringIoOps ioOps = IOUringIoOps.newRecvmsg(fd().intValue(), 0, flags, msgHdr.address(), readId);
+            long udata = registration().submit(ioOps);
             pendingConsumer.accept(msgHdr, udata);
         }
     }
@@ -429,13 +431,16 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixCha
         try (var itr = data.forEachComponent()) {
             var cmp = itr.firstReadable();
             assert cmp != null;
-            int fd = fd().intValue();
             if (connected) {
-                submissionQueue.addSend(fd, cmp.readableNativeAddress(), 0, cmp.readableBytes(), pendingId);
+                IOUringIoOps ops = IOUringIoOps.newSend(fd().intValue(), 0, 0, cmp.readableNativeAddress(),
+                        cmp.readableBytes(), pendingId);
+                registration().submit(ops);
             } else {
                 CachedMsgHdrMemory msgHdr = nextMsgHdr();
                 msgHdr.write(socket, remoteAddress, cmp.readableNativeAddress(), cmp.readableBytes(), segmentSize);
-                submissionQueue.addSendmsg(fd, msgHdr.address(), 0, pendingId);
+                IOUringIoOps ops = IOUringIoOps.newSendmsg(fd().intValue(), 0, 0, msgHdr.address(), pendingId);
+                registration().submit(ops);
+
                 promise.asFuture().addListener(msgHdr);
             }
         }

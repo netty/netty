@@ -25,7 +25,7 @@ import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.DefaultFileRegion;
 import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
-import io.netty5.channel.nio.NioHandler;
+import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.SocketChannel;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
@@ -77,7 +77,7 @@ public class FileRegionThrottleTest {
 
     @BeforeEach
     public void setUp() {
-        group = new MultithreadEventLoopGroup(NioHandler.newFactory());
+        group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
     }
 
     @Disabled("This test is flaky, need more investigation")

@@ -36,7 +36,7 @@ public class EpollServerSocketChannelConfigTest {
 
     @BeforeAll
     public static void before() throws Exception {
-        group = new MultithreadEventLoopGroup(1, EpollHandler.newFactory());
+        group = new MultithreadEventLoopGroup(1, EpollIoHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (EpollServerSocketChannel) bootstrap.group(group)
                                                  .channel(EpollServerSocketChannel.class)

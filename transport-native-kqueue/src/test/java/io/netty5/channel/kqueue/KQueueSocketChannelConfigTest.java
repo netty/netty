@@ -47,7 +47,7 @@ public class KQueueSocketChannelConfigTest {
     @BeforeAll
     public static void beforeClass() {
         rand = new Random();
-        group = new MultithreadEventLoopGroup(1, KQueueHandler.newFactory());
+        group = new MultithreadEventLoopGroup(1, KQueueIoHandler.newFactory());
     }
 
     @AfterAll

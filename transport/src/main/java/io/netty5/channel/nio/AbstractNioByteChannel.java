@@ -49,7 +49,7 @@ public abstract class AbstractNioByteChannel<P extends Channel, L extends Socket
     protected AbstractNioByteChannel(P parent, EventLoop eventLoop, WriteHandleFactory defaultWriteHandleFactory,
                                      SelectableChannel ch) {
         super(parent, eventLoop, false, new AdaptiveReadHandleFactory(), defaultWriteHandleFactory,
-                ch, SelectionKey.OP_READ);
+                ch, NioIoOps.READ);
     }
 
     @Override

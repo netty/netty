@@ -49,10 +49,10 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
     static final EventLoopGroup EPOLL_BOSS_GROUP =
             new MultithreadEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-epoll-boss", true),
-                    EpollHandler.newFactory());
+                    EpollIoHandler.newFactory());
     static final EventLoopGroup EPOLL_WORKER_GROUP =
             new MultithreadEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-epoll-worker", true),
-                    EpollHandler.newFactory());
+                    EpollIoHandler.newFactory());
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
