@@ -83,6 +83,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -274,7 +275,7 @@ public class DnsNameResolver extends InetNameResolver {
     private final boolean retryWithTcpOnTimeout;
 
     private final int maxNumConsolidation;
-    private final BackupRequestPolicy backupRequestPolicy;
+    final BackupRequestPolicy backupRequestPolicy;
     private final Map<String, Future<List<InetAddress>>> inflightLookups;
 
     /**
@@ -1254,7 +1255,7 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             DnsQuestion question, Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
-        return query(nextNameServerAddress(), question, Collections.<DnsRecord>emptyList(), promise);
+        return query(nextNameServerAddress(), question, Collections.emptyList(), promise);
     }
 
     private InetSocketAddress nextNameServerAddress() {
@@ -1268,8 +1269,7 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question) {
 
         return doQuery(ch, channelReadyPromise, nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
-                EMPTY_ADDITIONALS, true,
-                ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
+                EMPTY_ADDITIONALS, true, ch.eventLoop().newPromise());
     }
 
     /**
@@ -1279,8 +1279,7 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question, Iterable<DnsRecord> additionals) {
 
         return doQuery(ch, channelReadyPromise, nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
-                toArray(additionals, false), true,
-                ch.eventLoop().<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>>newPromise());
+                toArray(additionals, false), true, ch.eventLoop().newPromise());
     }
 
     /**
@@ -1324,43 +1323,7 @@ public class DnsNameResolver extends InetNameResolver {
         return cause != null && cause.getCause() instanceof DnsNameResolverTimeoutException;
     }
 
-    final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> doQuery(
-            Channel channel, Future<? extends Channel> channelReadyFuture,
-            InetSocketAddress nameServerAddr, DnsQuestion question,
-            final DnsQueryLifecycleObserver queryLifecycleObserver,
-            DnsRecord[] additionals, boolean flush,
-            Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
-        Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> result = doQuery0(channel, channelReadyFuture,
-                nameServerAddr, question, queryLifecycleObserver, additionals, flush, promise);
-
-        // TODO: nameServerAddr pins us to a specific server: that is probably not what we want for the backup request.
-        //   Some calls to this actually pin the address, in which case we want to use the same one. Others use
-        //   `nextNameServerAddress()`.
-
-        if (backupRequestPolicy != null) {
-            Future<?> backupTimer = ch.eventLoop().schedule(() -> {
-                if (!result.isDone() && backupRequestPolicy.attemptBackupRequest()) {
-                    // TODO: should we make a new Promise or just continue to use the old one?
-                    //  And what of the DnsQueryLifecycleObserver? These will make that results confusing at best.
-
-                    Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> backupResult =
-                            doQuery0(channel, channelReadyFuture,
-                            nextNameServerAddress(), question, queryLifecycleObserver, additionals, true, promise);
-                    backupResult.addListener(future -> {
-                        logger.info("Backup finished.");
-                    });
-                }
-            }, backupRequestPolicy.backupDelayMs(), TimeUnit.MILLISECONDS);
-            // Cancel the backup request timer to be more gc-friendly.
-            result.addListener(future -> {
-                logger.info("Original request finished with result: " + result.get());
-                backupTimer.cancel(true);
-            });
-        }
-        return result;
-    }
-
-    private Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> doQuery0(
+    Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> doQuery(
             Channel channel, Future<? extends Channel> channelReadyFuture,
             InetSocketAddress nameServerAddr, DnsQuestion question,
             final DnsQueryLifecycleObserver queryLifecycleObserver,

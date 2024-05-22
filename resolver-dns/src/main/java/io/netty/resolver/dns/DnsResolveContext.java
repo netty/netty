@@ -60,6 +60,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.dns.DnsResponseCode.NXDOMAIN;
 import static io.netty.handler.codec.dns.DnsResponseCode.SERVFAIL;
@@ -452,14 +453,50 @@ abstract class DnsResolveContext<T> {
                        final boolean flush,
                        final Promise<List<T>> promise,
                        final Throwable cause) {
+        final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
+                channel.eventLoop().newPromise();
+        query0(nameServerAddrStream, nameServerAddrStreamIndex, question, queryLifecycleObserver,
+                 flush, promise, cause, false, queryPromise);
+        if (parent.backupRequestPolicy != null) {
+            Future<?> backupTimer = channel.eventLoop().schedule(() -> {
+                if (!promise.isDone() && parent.backupRequestPolicy.attemptBackupRequest()) {
+                    // Todo: what of the DnsQueryLifecycleObserver? These will make that results confusing at best.
+                    query0(nameServerAddrStream, nameServerAddrStreamIndex + 1, question, queryLifecycleObserver,
+                            true, promise, cause, true, queryPromise);
+                    queryPromise.addListener(future -> {
+                        logger.info("Backup finished.");
+                    });
+                }
+            }, parent.backupRequestPolicy.backupDelayMs(), TimeUnit.MILLISECONDS);
+            // Cancel the backup request timer to be more gc-friendly.
+            queryPromise.addListener(future -> {
+                logger.info("Original request finished with result: " + future.get());
+                backupTimer.cancel(true);
+            });
+        }
+    }
+
+    private void query0(final DnsServerAddressStream nameServerAddrStream,
+                       final int nameServerAddrStreamIndex,
+                       final DnsQuestion question,
+                       final DnsQueryLifecycleObserver queryLifecycleObserver,
+                       final boolean flush,
+                       final Promise<List<T>> promise,
+                       final Throwable cause,
+                       final boolean isBackup,
+                       final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise) {
         if (completeEarly || nameServerAddrStreamIndex >= nameServerAddrStream.size() ||
                 allowedQueries == 0 || originalPromise.isCancelled() || promise.isCancelled()) {
-            tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question, queryLifecycleObserver,
-                               promise, cause);
+            if (!isBackup) {
+                tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question, queryLifecycleObserver,
+                        promise, cause);
+            }
             return;
         }
 
-        --allowedQueries;
+        if (!isBackup) {
+            --allowedQueries;
+        }
 
         final InetSocketAddress nameServerAddr = nameServerAddrStream.next();
         if (nameServerAddr.isUnresolved()) {
@@ -480,9 +517,11 @@ abstract class DnsResolveContext<T> {
 
         final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f =
                 parent.doQuery(channel, channelReadyFuture, nameServerAddr, question,
-                        queryLifecycleObserver, additionals, flush, channel.eventLoop().newPromise());
+                        queryLifecycleObserver, additionals, flush, queryPromise);
 
-        queriesInProgress.add(f);
+        if (!isBackup) {
+            queriesInProgress.add(f);
+        }
 
         f.addListener(new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
             @Override

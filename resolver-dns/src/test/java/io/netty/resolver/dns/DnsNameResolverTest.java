@@ -3593,13 +3593,12 @@ public class DnsNameResolverTest {
                 })
                 .build();
 
-        AddressedEnvelope<DnsResponse, InetSocketAddress> result = resolver.query(
+        List<DnsRecord> result = resolver.resolveAll(
                 new DefaultDnsQuestion("netty.io", DnsRecordType.A)).get();
         try {
             assertThat(isQuerySentToSecondServer.get(), is(true));
             assertThat(backupStarted.get(), is(true));
         } finally {
-            result.release();
             latch.countDown();
             dnsServer1.stop();
             dnsServer2.stop();
