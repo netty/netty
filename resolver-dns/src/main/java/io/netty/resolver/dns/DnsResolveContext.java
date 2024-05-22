@@ -455,25 +455,9 @@ abstract class DnsResolveContext<T> {
                        final Throwable cause) {
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
                 channel.eventLoop().newPromise();
-        query0(nameServerAddrStream, nameServerAddrStreamIndex, question, queryLifecycleObserver,
-                 flush, promise, cause, false, queryPromise);
-        if (parent.backupRequestPolicy != null) {
-            Future<?> backupTimer = channel.eventLoop().schedule(() -> {
-                if (!promise.isDone() && parent.backupRequestPolicy.attemptBackupRequest()) {
-                    // Todo: what of the DnsQueryLifecycleObserver? These will make that results confusing at best.
-                    query0(nameServerAddrStream, nameServerAddrStreamIndex + 1, question, queryLifecycleObserver,
-                            true, promise, cause, true, queryPromise);
-                    queryPromise.addListener(future -> {
-                        logger.info("Backup finished.");
-                    });
-                }
-            }, parent.backupRequestPolicy.backupDelayMs(), TimeUnit.MILLISECONDS);
-            // Cancel the backup request timer to be more gc-friendly.
-            queryPromise.addListener(future -> {
-                logger.info("Original request finished with result: " + future.get());
-                backupTimer.cancel(true);
-            });
-        }
+        parent.withBackup(queryPromise, (isBackup) ->
+            query0(nameServerAddrStream, nameServerAddrStreamIndex + (isBackup ? 1 : 0),
+                    question, queryLifecycleObserver, isBackup ? true : flush, promise, cause, isBackup, queryPromise));
     }
 
     private void query0(final DnsServerAddressStream nameServerAddrStream,

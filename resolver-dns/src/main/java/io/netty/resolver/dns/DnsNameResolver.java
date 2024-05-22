@@ -84,6 +84,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.DNS_PORT;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -1239,7 +1240,8 @@ public class DnsNameResolver extends InetNameResolver {
      * Sends a DNS query with the specified question.
      */
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(DnsQuestion question) {
-        return query(nextNameServerAddress(), question);
+        return doQueryWithBackup(ch, channelReadyPromise, this::nextNameServerAddress, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                EMPTY_ADDITIONALS, ch.eventLoop().newPromise());
     }
 
     /**
@@ -1247,7 +1249,9 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             DnsQuestion question, Iterable<DnsRecord> additionals) {
-        return query(nextNameServerAddress(), question, additionals);
+        return doQueryWithBackup(ch, channelReadyPromise, this::nextNameServerAddress, question,
+                NoopDnsQueryLifecycleObserver.INSTANCE,
+                toArray(additionals, false),  ch.eventLoop().newPromise());
     }
 
     /**
@@ -1255,7 +1259,8 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             DnsQuestion question, Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
-        return query(nextNameServerAddress(), question, Collections.emptyList(), promise);
+        return doQueryWithBackup(ch, channelReadyPromise, this::nextNameServerAddress, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                toArray(Collections.emptyList(), false), promise);
     }
 
     private InetSocketAddress nextNameServerAddress() {
@@ -1268,8 +1273,8 @@ public class DnsNameResolver extends InetNameResolver {
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             InetSocketAddress nameServerAddr, DnsQuestion question) {
 
-        return doQuery(ch, channelReadyPromise, nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
-                EMPTY_ADDITIONALS, true, ch.eventLoop().newPromise());
+        return doQueryWithBackup(ch, channelReadyPromise, () -> nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                EMPTY_ADDITIONALS, ch.eventLoop().newPromise());
     }
 
     /**
@@ -1278,8 +1283,8 @@ public class DnsNameResolver extends InetNameResolver {
     public Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> query(
             InetSocketAddress nameServerAddr, DnsQuestion question, Iterable<DnsRecord> additionals) {
 
-        return doQuery(ch, channelReadyPromise, nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
-                toArray(additionals, false), true, ch.eventLoop().newPromise());
+        return doQueryWithBackup(ch, channelReadyPromise, () -> nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                toArray(additionals, false), ch.eventLoop().newPromise());
     }
 
     /**
@@ -1289,8 +1294,8 @@ public class DnsNameResolver extends InetNameResolver {
             InetSocketAddress nameServerAddr, DnsQuestion question,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        return doQuery(ch, channelReadyPromise, nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
-                EMPTY_ADDITIONALS, true, promise);
+        return doQueryWithBackup(ch, channelReadyPromise, () -> nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                EMPTY_ADDITIONALS, promise);
     }
 
     /**
@@ -1301,8 +1306,8 @@ public class DnsNameResolver extends InetNameResolver {
             Iterable<DnsRecord> additionals,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
-        return doQuery(ch, channelReadyPromise, nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
-                toArray(additionals, false), true, promise);
+        return doQueryWithBackup(ch, channelReadyPromise, () -> nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
+                toArray(additionals, false), promise);
     }
 
     /**
@@ -1321,6 +1326,17 @@ public class DnsNameResolver extends InetNameResolver {
      */
     public static boolean isTimeoutError(Throwable cause) {
         return cause != null && cause.getCause() instanceof DnsNameResolverTimeoutException;
+    }
+
+    private Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> doQueryWithBackup(
+            Channel channel, Future<? extends Channel> channelReadyFuture,
+            Supplier<InetSocketAddress> nameServerAddr, DnsQuestion question,
+            final DnsQueryLifecycleObserver queryLifecycleObserver,
+            DnsRecord[] additionals, Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
+        withBackup(promise, (isBackup) -> {
+            doQuery(channel, channelReadyFuture, nameServerAddr.get(), question, queryLifecycleObserver, additionals, true, promise);
+        });
+        return cast(promise);
     }
 
     Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> doQuery(
@@ -1399,6 +1415,22 @@ public class DnsNameResolver extends InetNameResolver {
             } else {
                 logger.warn("{} Unexpected exception: UDP", ctx.channel(), cause);
             }
+        }
+    }
+
+    void withBackup(Promise<?> promise, Consumer<Boolean> requester) {
+        requester.accept(false);
+        if (backupRequestPolicy != null) {
+            Future<?> backupTimer = ch.eventLoop().schedule(() -> {
+                if (!promise.isDone() && backupRequestPolicy.attemptBackupRequest()) {
+                    requester.accept(true);
+                }
+            }, backupRequestPolicy.backupDelayMs(), TimeUnit.MILLISECONDS);
+            // Cancel the backup request timer to be more gc-friendly.
+            promise.addListener(future -> {
+                logger.debug("Original request finished with result: " + future);
+                backupTimer.cancel(true);
+            });
         }
     }
 }
