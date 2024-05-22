@@ -75,6 +75,7 @@ public final class DnsNameResolverBuilder {
     private boolean decodeIdn = true;
 
     private int maxNumConsolidation;
+    private BackupRequestPolicy backupRequestPolicy;
 
     /**
      * Creates a new builder.
@@ -240,6 +241,17 @@ public final class DnsNameResolverBuilder {
     public DnsNameResolverBuilder dnsQueryLifecycleObserverFactory(DnsQueryLifecycleObserverFactory
                                                                            lifecycleObserverFactory) {
         this.dnsQueryLifecycleObserverFactory = checkNotNull(lifecycleObserverFactory, "lifecycleObserverFactory");
+        return this;
+    }
+
+    /**
+     * Set the backup request policy.
+     *
+     * @param backupRequestPolicy the backup request policy, or {@code null} if no backup requests are desired.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder backupRequestPolicy(BackupRequestPolicy backupRequestPolicy) {
+        this.backupRequestPolicy = backupRequestPolicy;
         return this;
     }
 
@@ -615,7 +627,8 @@ public final class DnsNameResolverBuilder {
                 ndots,
                 decodeIdn,
                 completeOncePreferredResolved,
-                maxNumConsolidation);
+                maxNumConsolidation,
+                backupRequestPolicy);
     }
 
     /**
@@ -685,6 +698,7 @@ public final class DnsNameResolverBuilder {
         copiedBuilder.completeOncePreferredResolved(completeOncePreferredResolved);
         copiedBuilder.localAddress(localAddress);
         copiedBuilder.consolidateCacheSize(maxNumConsolidation);
+        copiedBuilder.backupRequestPolicy(backupRequestPolicy);
         return copiedBuilder;
     }
 }
