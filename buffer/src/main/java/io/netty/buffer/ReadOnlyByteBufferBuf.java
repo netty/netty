@@ -483,4 +483,14 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     public long memoryAddress() {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public ByteBuf duplicate() {
+        return new ReadOnlyByteBufferBuf(allocator, buffer);
+    }
+
+    @Override
+    public ByteBuf slice(int index, int length) {
+        return new ReadOnlyByteBufferBuf(allocator, (ByteBuffer) buffer.duplicate().position(index).limit(length));
+    }
 }

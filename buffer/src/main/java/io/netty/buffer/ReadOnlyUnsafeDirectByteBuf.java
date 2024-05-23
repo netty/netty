@@ -121,4 +121,14 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
     private long addr(int index) {
         return memoryAddress + index;
     }
+
+    @Override
+    public ByteBuf duplicate() {
+        return new ReadOnlyUnsafeDirectByteBuf(alloc(), buffer);
+    }
+
+    @Override
+    public ByteBuf slice(int index, int length) {
+        return new ReadOnlyUnsafeDirectByteBuf(alloc(), (ByteBuffer) buffer.duplicate().position(index).limit(length));
+    }
 }

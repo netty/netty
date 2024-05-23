@@ -18,6 +18,8 @@ package io.netty.buffer;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -419,6 +421,57 @@ public class ReadOnlyDirectByteBufferBufTest {
             } catch (UnsupportedOperationException expected) {
                 // expected
             }
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testDuplicate() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            assertEquals(buf.getClass(), buf.duplicate().getClass());
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
+    public void testSlice() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        try {
+            assertEquals(buf.getClass(), buf.slice().getClass());
+        } finally {
+            buf.release();
+        }
+    }
+
+    enum WritableParam {
+        None,
+        Duplicate,
+        Slice
+    }
+
+    @ParameterizedTest
+    @EnumSource(WritableParam.class)
+    void testIsWritable(WritableParam param) {
+        ByteBuffer buffer = allocate(24);
+        ByteBuf buf = buffer(buffer.asReadOnlyBuffer());
+        buf.writerIndex(8);
+
+        switch (param) {
+            case None:
+                break;
+            case Duplicate:
+                buf = buf.duplicate();
+                break;
+            case Slice:
+                buf = buf.slice(0, buf.capacity()).writerIndex(8);
+                break;
+        }
+        try {
+            assertFalse(buf.isWritable());
+            assertFalse(buf.isWritable(1));
         } finally {
             buf.release();
         }
