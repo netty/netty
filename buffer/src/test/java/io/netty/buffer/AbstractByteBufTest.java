@@ -2238,6 +2238,11 @@ public abstract class AbstractByteBufTest {
     public void testToStringMultipleThreads() throws Throwable {
         buffer.clear();
         buffer.writeBytes("Hello, World!".getBytes(CharsetUtil.ISO_8859_1));
+        testToStringMultipleThreads0(buffer);
+    }
+
+    static void testToStringMultipleThreads0(final ByteBuf buffer) throws Throwable {
+        final String expected = buffer.toString(CharsetUtil.ISO_8859_1);
 
         final AtomicInteger counter = new AtomicInteger(30000);
         final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
@@ -2248,7 +2253,7 @@ public abstract class AbstractByteBufTest {
                 public void run() {
                     try {
                         while (errorRef.get() == null && counter.decrementAndGet() > 0) {
-                            assertEquals("Hello, World!", buffer.toString(CharsetUtil.ISO_8859_1));
+                            assertEquals(expected, buffer.toString(CharsetUtil.ISO_8859_1));
                         }
                     } catch (Throwable cause) {
                         errorRef.compareAndSet(null, cause);
@@ -2268,6 +2273,59 @@ public abstract class AbstractByteBufTest {
         Throwable error = errorRef.get();
         if (error != null) {
             throw error;
+        }
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testCopyMultipleThreads0() throws Throwable {
+        byte[] bytes = new byte[8];
+        random.nextBytes(bytes);
+        buffer.clear();
+        buffer.writeBytes(bytes);
+        testCopyMultipleThreads0(buffer);
+    }
+
+    static void testCopyMultipleThreads0(final ByteBuf buffer) throws Throwable {
+        final ByteBuf expected = buffer.copy();
+        try {
+            final AtomicInteger counter = new AtomicInteger(30000);
+            final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
+            List<Thread> threads = new ArrayList<Thread>();
+            for (int i = 0; i < 10; i++) {
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            while (errorRef.get() == null && counter.decrementAndGet() > 0) {
+                                ByteBuf copy = buffer.copy();
+                                try {
+                                    assertEquals(expected, copy);
+                                } finally {
+                                    copy.release();
+                                }
+                            }
+                        } catch (Throwable cause) {
+                            errorRef.compareAndSet(null, cause);
+                        }
+                    }
+                });
+                threads.add(thread);
+            }
+            for (Thread thread : threads) {
+                thread.start();
+            }
+
+            for (Thread thread : threads) {
+                thread.join();
+            }
+
+            Throwable error = errorRef.get();
+            if (error != null) {
+                throw error;
+            }
+        } finally {
+            expected.release();
         }
     }
 
@@ -2600,20 +2658,35 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testDuplicateReadGatheringByteChannelMultipleThreads() throws Exception {
-        testReadGatheringByteChannelMultipleThreads(false);
-    }
-
-    @Test
-    public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
-        testReadGatheringByteChannelMultipleThreads(true);
-    }
-
-    private void testReadGatheringByteChannelMultipleThreads(final boolean slice) throws Exception {
         final byte[] bytes = new byte[8];
         random.nextBytes(bytes);
 
         final ByteBuf buffer = newBuffer(8);
         buffer.writeBytes(bytes);
+        try {
+            testReadGatheringByteChannelMultipleThreads(buffer, bytes, false);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
+        final byte[] bytes = new byte[8];
+        random.nextBytes(bytes);
+
+        final ByteBuf buffer = newBuffer(8);
+        buffer.writeBytes(bytes);
+        try {
+            testReadGatheringByteChannelMultipleThreads(buffer, bytes, true);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    static void testReadGatheringByteChannelMultipleThreads(
+            final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
+        assertEquals(buffer.readableBytes(), expectedBytes.length);
         final CountDownLatch latch = new CountDownLatch(60000);
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {
@@ -2637,7 +2710,7 @@ public abstract class AbstractByteBufTest {
                                 return;
                             }
                         }
-                        assertArrayEquals(bytes, channel.writtenBytes());
+                        assertArrayEquals(expectedBytes, channel.writtenBytes());
                         latch.countDown();
                     }
                     try {
@@ -2650,25 +2723,38 @@ public abstract class AbstractByteBufTest {
         }
         latch.await(10, TimeUnit.SECONDS);
         barrier.await(5, TimeUnit.SECONDS);
-        buffer.release();
     }
 
     @Test
     public void testDuplicateReadOutputStreamMultipleThreads() throws Exception {
-        testReadOutputStreamMultipleThreads(false);
-    }
-
-    @Test
-    public void testSliceReadOutputStreamMultipleThreads() throws Exception {
-        testReadOutputStreamMultipleThreads(true);
-    }
-
-    private void testReadOutputStreamMultipleThreads(final boolean slice) throws Exception {
         final byte[] bytes = new byte[8];
         random.nextBytes(bytes);
 
         final ByteBuf buffer = newBuffer(8);
         buffer.writeBytes(bytes);
+        try {
+            testReadOutputStreamMultipleThreads(buffer, bytes, false);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testSliceReadOutputStreamMultipleThreads() throws Exception {
+        final byte[] bytes = new byte[8];
+        random.nextBytes(bytes);
+
+        final ByteBuf buffer = newBuffer(8);
+        buffer.writeBytes(bytes);
+        try {
+            testReadOutputStreamMultipleThreads(buffer, bytes, true);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    static void testReadOutputStreamMultipleThreads(
+            final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
         final CountDownLatch latch = new CountDownLatch(60000);
         final CyclicBarrier barrier = new CyclicBarrier(11);
         for (int i = 0; i < 10; i++) {
@@ -2692,7 +2778,7 @@ public abstract class AbstractByteBufTest {
                                 return;
                             }
                         }
-                        assertArrayEquals(bytes, out.toByteArray());
+                        assertArrayEquals(expectedBytes, out.toByteArray());
                         latch.countDown();
                     }
                     try {
@@ -2705,25 +2791,38 @@ public abstract class AbstractByteBufTest {
         }
         latch.await(10, TimeUnit.SECONDS);
         barrier.await(5, TimeUnit.SECONDS);
-        buffer.release();
     }
 
     @Test
     public void testDuplicateBytesInArrayMultipleThreads() throws Exception {
-        testBytesInArrayMultipleThreads(false);
-    }
-
-    @Test
-    public void testSliceBytesInArrayMultipleThreads() throws Exception {
-        testBytesInArrayMultipleThreads(true);
-    }
-
-    private void testBytesInArrayMultipleThreads(final boolean slice) throws Exception {
         final byte[] bytes = new byte[8];
         random.nextBytes(bytes);
 
         final ByteBuf buffer = newBuffer(8);
         buffer.writeBytes(bytes);
+        try {
+            testBytesInArrayMultipleThreads(buffer, bytes, false);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testSliceBytesInArrayMultipleThreads() throws Exception {
+        final byte[] bytes = new byte[8];
+        random.nextBytes(bytes);
+
+        final ByteBuf buffer = newBuffer(8);
+        buffer.writeBytes(bytes);
+        try {
+            testBytesInArrayMultipleThreads(buffer, bytes, true);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    static void testBytesInArrayMultipleThreads(
+            final ByteBuf buffer, final byte[] expectedBytes, final boolean slice) throws Exception {
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final CountDownLatch latch = new CountDownLatch(60000);
         final CyclicBarrier barrier = new CyclicBarrier(11);
@@ -2742,11 +2841,11 @@ public abstract class AbstractByteBufTest {
                         byte[] array = new byte[8];
                         buf.readBytes(array);
 
-                        assertArrayEquals(bytes, array);
+                        assertArrayEquals(expectedBytes, array);
 
                         Arrays.fill(array, (byte) 0);
                         buf.getBytes(0, array);
-                        assertArrayEquals(bytes, array);
+                        assertArrayEquals(expectedBytes, array);
 
                         latch.countDown();
                     }
@@ -2761,7 +2860,6 @@ public abstract class AbstractByteBufTest {
         latch.await(10, TimeUnit.SECONDS);
         barrier.await(5, TimeUnit.SECONDS);
         assertNull(cause.get());
-        buffer.release();
     }
 
     @Test
