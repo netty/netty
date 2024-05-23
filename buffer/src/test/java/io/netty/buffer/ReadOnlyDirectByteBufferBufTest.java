@@ -15,8 +15,10 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayInputStream;
@@ -26,7 +28,13 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
 
+import static io.netty.buffer.AbstractByteBufTest.testBytesInArrayMultipleThreads;
+import static io.netty.buffer.AbstractByteBufTest.testCopyMultipleThreads0;
+import static io.netty.buffer.AbstractByteBufTest.testReadGatheringByteChannelMultipleThreads;
+import static io.netty.buffer.AbstractByteBufTest.testReadOutputStreamMultipleThreads;
+import static io.netty.buffer.AbstractByteBufTest.testToStringMultipleThreads0;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -421,6 +429,128 @@ public class ReadOnlyDirectByteBufferBufTest {
             }
         } finally {
             buf.release();
+        }
+    }
+
+    @Test
+    public void testDuplicateReadGatheringByteChannelMultipleThreads() throws Exception {
+        final byte[] bytes = new byte[8];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ByteBuffer nioBuffer = allocate(bytes.length);
+        nioBuffer.put(bytes);
+        nioBuffer.flip();
+        final ByteBuf buffer = buffer(nioBuffer.asReadOnlyBuffer());
+        try {
+            testReadGatheringByteChannelMultipleThreads(buffer, bytes, false);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
+        final byte[] bytes = new byte[8];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ByteBuffer nioBuffer = allocate(bytes.length);
+        nioBuffer.put(bytes);
+        nioBuffer.flip();
+        final ByteBuf buffer = buffer(nioBuffer.asReadOnlyBuffer());
+        try {
+            testReadGatheringByteChannelMultipleThreads(buffer, bytes, true);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testDuplicateReadOutputStreamMultipleThreads() throws Exception {
+        final byte[] bytes = new byte[8];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ByteBuffer nioBuffer = allocate(bytes.length);
+        nioBuffer.put(bytes);
+        nioBuffer.flip();
+        final ByteBuf buffer = buffer(nioBuffer.asReadOnlyBuffer());
+        try {
+            testReadOutputStreamMultipleThreads(buffer, bytes, false);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testSliceReadOutputStreamMultipleThreads() throws Exception {
+        final byte[] bytes = new byte[8];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ByteBuffer nioBuffer = allocate(bytes.length);
+        nioBuffer.put(bytes);
+        nioBuffer.flip();
+        final ByteBuf buffer = buffer(nioBuffer.asReadOnlyBuffer());
+        try {
+            testReadOutputStreamMultipleThreads(buffer, bytes, true);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testDuplicateBytesInArrayMultipleThreads() throws Exception {
+        final byte[] bytes = new byte[8];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ByteBuffer nioBuffer = allocate(bytes.length);
+        nioBuffer.put(bytes);
+        nioBuffer.flip();
+        final ByteBuf buffer = buffer(nioBuffer.asReadOnlyBuffer());
+        try {
+            testBytesInArrayMultipleThreads(buffer, bytes, false);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testSliceBytesInArrayMultipleThreads() throws Exception {
+        final byte[] bytes = new byte[8];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ByteBuffer nioBuffer = allocate(bytes.length);
+        nioBuffer.put(bytes);
+        nioBuffer.flip();
+        final ByteBuf buffer = buffer(nioBuffer.asReadOnlyBuffer());
+        try {
+            testBytesInArrayMultipleThreads(buffer, bytes, true);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testToStringMultipleThreads1() throws Throwable {
+        String expected = "Hello, World!";
+        byte[] bytes = expected.getBytes(CharsetUtil.ISO_8859_1);
+        ByteBuffer nioBuffer = allocate(bytes.length);
+        nioBuffer.put(bytes);
+        nioBuffer.flip();
+        final ByteBuf buffer = buffer(nioBuffer.asReadOnlyBuffer());
+        try {
+            testToStringMultipleThreads0(buffer);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testCopyMultipleThreads() throws Throwable {
+        final byte[] bytes = new byte[8];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ByteBuffer nioBuffer = allocate(bytes.length);
+        nioBuffer.put(bytes);
+        nioBuffer.flip();
+        final ByteBuf buffer = buffer(nioBuffer.asReadOnlyBuffer());
+        try {
+            testCopyMultipleThreads0(buffer);
+        } finally {
+            buffer.release();
         }
     }
 }
