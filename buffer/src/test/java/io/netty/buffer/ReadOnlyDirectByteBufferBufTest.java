@@ -430,7 +430,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     public void testDuplicate() {
         ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
         try {
-            assertEquals(buf.getClass(), buf.duplicate().getClass());
+            assertTrue(buf.duplicate().isReadOnly());
         } finally {
             buf.release();
         }
@@ -440,7 +440,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     public void testSlice() {
         ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
         try {
-            assertEquals(buf.getClass(), buf.slice().getClass());
+            assertTrue(buf.slice().isReadOnly());
         } finally {
             buf.release();
         }
