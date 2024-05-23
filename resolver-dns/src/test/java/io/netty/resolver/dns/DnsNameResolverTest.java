@@ -3590,6 +3590,11 @@ public class DnsNameResolverTest {
                     public long backupDelayMs() {
                         return 1000;
                     }
+
+                    @Override
+                    public void instrumentRequest(long requestDurationMs) {
+                        // noop.
+                    }
                 })
                 .build();
 

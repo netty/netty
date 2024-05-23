@@ -1421,6 +1421,7 @@ public class DnsNameResolver extends InetNameResolver {
     void withBackup(Promise<?> promise, Consumer<Boolean> requester) {
         requester.accept(false);
         if (backupRequestPolicy != null) {
+            final long startTime = System.nanoTime();
             Future<?> backupTimer = ch.eventLoop().schedule(() -> {
                 if (!promise.isDone() && backupRequestPolicy.attemptBackupRequest()) {
                     requester.accept(true);
@@ -1429,7 +1430,12 @@ public class DnsNameResolver extends InetNameResolver {
             // Cancel the backup request timer to be more gc-friendly.
             promise.addListener(future -> {
                 logger.debug("Original request finished with result: " + future);
-                backupTimer.cancel(true);
+                if (backupTimer.cancel(true)) {
+                    // Successfully cancelled the timer. That means the initial request
+                    // finished first, so we should measure the time.
+                    backupRequestPolicy.instrumentRequest(
+                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime));
+                }
             });
         }
     }

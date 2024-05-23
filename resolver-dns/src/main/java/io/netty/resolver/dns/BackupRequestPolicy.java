@@ -18,4 +18,6 @@ package io.netty.resolver.dns;
 interface BackupRequestPolicy {
     boolean attemptBackupRequest();
     long backupDelayMs();
+
+    void instrumentRequest(long requestDurationMs);
 }
