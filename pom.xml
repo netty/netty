@@ -1827,6 +1827,14 @@
                   <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Can only be called from Java8 as class is package-private")</annotation>
                   <justification>Java baseline version changed.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.socket.nio.NioDomainSocketChannel::doShutdownOutput() throws java.lang.Exception</old>
+                  <new>method void io.netty.channel.socket.nio.NioDomainSocketChannel::doShutdownOutput() throws java.lang.Exception</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "guarded by version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
