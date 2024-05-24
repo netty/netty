@@ -661,4 +661,20 @@ public class ReadOnlyDirectByteBufferBufTest {
         assertTrue(derived.release());
         assertEquals(0, parent.refCnt());
     }
+
+    @Test
+    public void ensureWritableWithForceAsReadyOnly() {
+        ensureWritableReadOnly(true);
+    }
+
+    @Test
+    public void ensureWritableWithOutForceAsReadOnly() {
+        ensureWritableReadOnly(false);
+    }
+
+    private void ensureWritableReadOnly(boolean force) {
+        ByteBuf buffer = buffer(allocate(8).asReadOnlyBuffer());
+        assertEquals(1, buffer.ensureWritable(8, force));
+        buffer.release();
+    }
 }

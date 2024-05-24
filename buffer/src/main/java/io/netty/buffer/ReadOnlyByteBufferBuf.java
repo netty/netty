@@ -607,6 +607,11 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
         public boolean isWritable(int numBytes) {
             return false;
         }
+
+        @Override
+        public int ensureWritable(int minWritableBytes, boolean force) {
+            return 1;
+        }
     }
 
     @SuppressWarnings("deprecation")
@@ -638,6 +643,11 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
         @Override
         public boolean isWritable(int numBytes) {
             return false;
+        }
+
+        @Override
+        public int ensureWritable(int minWritableBytes, boolean force) {
+            return 1;
         }
     }
 }
