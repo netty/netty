@@ -561,4 +561,15 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     private ByteBuffer nioBuffer(boolean internal) {
         return internal ? internalNioBuffer() : buffer.duplicate();
     }
+
+    @Override
+    public ByteBuf duplicate() {
+        return new ReadOnlyByteBufferBuf(allocator, buffer);
+    }
+
+    @Override
+    public ByteBuf slice(int index, int length) {
+        return new ReadOnlyByteBufferBuf(allocator,
+                (ByteBuffer) buffer.duplicate().position(index).limit(index + length));
+    }
 }
