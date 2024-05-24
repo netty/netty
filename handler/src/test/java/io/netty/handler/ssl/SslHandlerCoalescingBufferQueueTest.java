@@ -35,7 +35,7 @@ public class SslHandlerCoalescingBufferQueueTest {
     @ValueSource(booleans = { true, false })
     public void testCumulation(boolean readOnlyAndDuplicate) {
         EmbeddedChannel channel = new EmbeddedChannel();
-        SslHandlerCoalescingBufferQueue queue = new SslHandlerCoalescingBufferQueue(channel, 16, false) {
+        SslHandlerCoalescingBufferQueue queue = new SslHandlerCoalescingBufferQueue(channel, 16, false, false) {
             @Override
             protected int wrapDataSize() {
                 return 128;
@@ -72,5 +72,69 @@ public class SslHandlerCoalescingBufferQueueTest {
         assertTrue(queue.isEmpty());
         assertEquals(0, first.refCnt());
         assertEquals(0, second.refCnt());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void testSmallerBufferThanRequestedBytesGetsCopiedWhenWantsMutableBuffer(boolean wantsMutableBuffer) {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        SslHandlerCoalescingBufferQueue queue =
+                new SslHandlerCoalescingBufferQueue(channel, 16, false, wantsMutableBuffer) {
+                    @Override
+                    protected int wrapDataSize() {
+                        return 128;
+                    }
+                };
+
+        ByteBuf buf = Unpooled.buffer(64);
+        buf.writeZero(64);
+        buf = buf.asReadOnly();
+        queue.add(buf);
+
+        ChannelPromise promise = channel.newPromise();
+        ByteBuf buffer = queue.remove(UnpooledByteBufAllocator.DEFAULT, 128, promise);
+        try {
+            assertEquals(64, buffer.readableBytes());
+            // Ensure that the buffer is a copy if we want a mutable buffer.
+            assertEquals(wantsMutableBuffer, buf != buffer);
+            // Ensure that the buffer is not read-only if we want a mutable buffer.
+            assertEquals(wantsMutableBuffer, !buffer.isReadOnly());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void testLargerBufferThanRequestedBytesGetsCopiedWhenWantsMutableBuffer(boolean wantsMutableBuffer) {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        SslHandlerCoalescingBufferQueue queue =
+                new SslHandlerCoalescingBufferQueue(channel, 16, false, wantsMutableBuffer) {
+                    @Override
+                    protected int wrapDataSize() {
+                        return 128;
+                    }
+                };
+
+        ByteBuf buf = Unpooled.buffer(256);
+        buf.writeZero(256);
+        buf = buf.asReadOnly();
+        queue.add(buf);
+
+        ChannelPromise promise = channel.newPromise();
+        for (;;) {
+            ByteBuf buffer = queue.remove(UnpooledByteBufAllocator.DEFAULT, 128, promise);
+            if (buffer == null) {
+                break;
+            }
+            try {
+                assertEquals(128, buffer.readableBytes());
+                // Ensure that the buffer is not read-only if we want a mutable buffer.
+                assertEquals(wantsMutableBuffer, !buffer.isReadOnly());
+            } finally {
+                buffer.release();
+            }
+        }
+        assertTrue(queue.isEmpty());
     }
 }

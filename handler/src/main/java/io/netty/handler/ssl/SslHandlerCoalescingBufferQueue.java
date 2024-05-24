@@ -32,10 +32,13 @@ import static io.netty.buffer.ByteBufUtil.ensureWritableSuccess;
 abstract class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQueue {
 
     private final boolean wantsDirectBuffer;
+    private final boolean wantsMutableBuffer;
 
-    SslHandlerCoalescingBufferQueue(Channel channel, int initSize, boolean wantsDirectBuffer) {
+    SslHandlerCoalescingBufferQueue(Channel channel, int initSize, boolean wantsDirectBuffer,
+                                    boolean wantsMutableBuffer) {
         super(channel, initSize);
         this.wantsDirectBuffer = wantsDirectBuffer;
+        this.wantsMutableBuffer = wantsMutableBuffer;
     }
 
     protected abstract int wrapDataSize();
@@ -74,6 +77,11 @@ abstract class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQ
             composite.release();
         }
         return first;
+    }
+
+    @Override
+    protected ByteBuf returnFirst(ByteBufAllocator allocator, ByteBuf first) {
+        return SslHandler.cloneBufferIfReadOnlyAndWantsMutable(allocator, first, wantsMutableBuffer, wantsDirectBuffer);
     }
 
     @Override

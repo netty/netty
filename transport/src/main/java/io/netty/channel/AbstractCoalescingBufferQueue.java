@@ -172,7 +172,7 @@ public abstract class AbstractCoalescingBufferQueue {
                             // Take a slice of what we can consume and retain it.
                             entryBuffer = entryBuffer.readRetainedSlice(bytes);
                             // we end here, so if this is the only buffer to return, skip composing
-                            toReturn = toReturn == null ? entryBuffer
+                            toReturn = toReturn == null ? returnFirst(alloc, entryBuffer)
                                     : compose(alloc, toReturn, entryBuffer);
                             bytes = 0;
                         }
@@ -183,7 +183,7 @@ public abstract class AbstractCoalescingBufferQueue {
                     if (toReturn == null) {
                         // if there are no more bytes in the queue after this, there's no reason to compose
                         toReturn = bufferBytes == readableBytes
-                                ? entryBuffer
+                                ? returnFirst(alloc, entryBuffer)
                                 : composeFirst(alloc, entryBuffer);
                     } else {
                         toReturn = compose(alloc, toReturn, entryBuffer);
@@ -335,6 +335,14 @@ public abstract class AbstractCoalescingBufferQueue {
      * {@link #compose(ByteBufAllocator, ByteBuf, ByteBuf)}.
      */
     protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first) {
+        return first;
+    }
+
+    /**
+     * Calculate the first {@link ByteBuf} which will be used as the return value
+     * to {@link #remove(ByteBufAllocator, int, ChannelPromise)} when no composition is needed.
+     */
+    protected ByteBuf returnFirst(ByteBufAllocator allocator, ByteBuf first) {
         return first;
     }
 

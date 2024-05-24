@@ -199,7 +199,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private static final int MAX_PLAINTEXT_LENGTH = 16 * 1024;
 
     private enum SslEngineType {
-        TCNATIVE(true, COMPOSITE_CUMULATOR) {
+        TCNATIVE(true, COMPOSITE_CUMULATOR, false) {
             @Override
             SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException {
                 int nioBufferCount = in.nioBufferCount();
@@ -250,7 +250,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 return ((ReferenceCountedOpenSslEngine) engine).jdkCompatibilityMode;
             }
         },
-        CONSCRYPT(true, COMPOSITE_CUMULATOR) {
+        CONSCRYPT(true, COMPOSITE_CUMULATOR, false) {
             @Override
             SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException {
                 int nioBufferCount = in.nioBufferCount();
@@ -299,7 +299,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 return true;
             }
         },
-        JDK(false, MERGE_CUMULATOR) {
+        JDK(false, MERGE_CUMULATOR, true) {
+            // set wantsMutableBuffer to true for all JDKs, although JDK-8283577/JDK-8285603 is fixed since Java 19
+            // See: https://bugs.openjdk.org/browse/JDK-8283577
+
             @Override
             SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException {
                 int writerIndex = out.writerIndex();
@@ -361,9 +364,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                    engine instanceof ConscryptAlpnSslEngine ? CONSCRYPT : JDK;
         }
 
-        SslEngineType(boolean wantsDirectBuffer, Cumulator cumulator) {
+        SslEngineType(boolean wantsDirectBuffer, Cumulator cumulator, boolean wantsMutableBuffer) {
             this.wantsDirectBuffer = wantsDirectBuffer;
             this.cumulator = cumulator;
+            this.wantsMutableBuffer = wantsMutableBuffer;
         }
 
         abstract SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException;
@@ -396,6 +400,14 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
          * and which does not need to do extra memory copies.
          */
         final Cumulator cumulator;
+
+        /**
+         * {@code true} if and only if {@link SSLEngine} expects a mutable buffer.
+         * This applies to JDK {@link SSLEngine} only and is used to determine if we need to create a copy of a
+         * read-only input {@link ByteBuf}. See https://bugs.openjdk.org/browse/JDK-8283577
+         * and https://bugs.openjdk.org/browse/JDK-8285603 for more details.
+         */
+        final boolean wantsMutableBuffer;
     }
 
     private volatile ChannelHandlerContext ctx;
@@ -837,7 +849,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 ChannelPromise promise = ctx.newPromise();
                 ByteBuf buf = wrapDataSize > 0 ?
                         pendingUnencryptedWrites.remove(alloc, wrapDataSize, promise) :
-                        pendingUnencryptedWrites.removeFirst(promise);
+                        cloneBufferIfReadOnlyAndWantsMutable(alloc, pendingUnencryptedWrites.removeFirst(promise),
+                                                             engineType.wantsMutableBuffer,
+                                                             engineType.wantsDirectBuffer);
                 if (buf == null) {
                     break;
                 }
@@ -949,6 +963,31 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 setState(STATE_NEEDS_FLUSH);
             }
         }
+    }
+
+    static ByteBuf cloneBufferIfReadOnlyAndWantsMutable(ByteBufAllocator allocator, ByteBuf buf,
+                                                        boolean wantsMutableBuffer, boolean wantsDirectBuffer) {
+        if (wantsMutableBuffer && buf != null && buf.isReadOnly()) {
+            return cloneBuffer(allocator, buf, wantsDirectBuffer);
+        }
+        return buf;
+    }
+
+    static ByteBuf cloneBuffer(ByteBufAllocator allocator, ByteBuf buf, boolean wantsDirectBuffer) {
+        ByteBuf copyOfBuf;
+        if (wantsDirectBuffer) {
+            copyOfBuf = allocator.directBuffer(buf.readableBytes());
+        } else {
+            copyOfBuf = allocator.heapBuffer(buf.readableBytes());
+        }
+        try {
+            copyOfBuf.writeBytes(buf);
+        } catch (Throwable cause) {
+            copyOfBuf.release();
+            PlatformDependent.throwException(cause);
+        }
+        buf.release();
+        return copyOfBuf;
     }
 
     /**
@@ -1092,6 +1131,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private SSLEngineResult wrap(ByteBufAllocator alloc, SSLEngine engine, ByteBuf in, ByteBuf out)
             throws SSLException {
         ByteBuf newDirectIn = null;
+        ByteBuf[] newMutableBuffers = null;
         try {
             int readerIndex = in.readerIndex();
             int readableBytes = in.readableBytes();
@@ -1122,6 +1162,36 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 in0[0] = newDirectIn.internalNioBuffer(newDirectIn.readerIndex(), readableBytes);
             }
 
+            // Check if the engine type wants a mutable buffer and if so replace all readonly buffers with mutable ones.
+            if (engineType.wantsMutableBuffer) {
+                // count the number of readonly buffers to avoid an extra allocation if no readonly buffers are found.
+                int readOnlyBufferCount = 0;
+                for (int i = 0; i < in0.length; i++) {
+                    if (in0[i].isReadOnly()) {
+                        readOnlyBufferCount++;
+                    }
+                }
+                if (readOnlyBufferCount > 0) {
+                    newMutableBuffers = new ByteBuf[readOnlyBufferCount];
+                    int newMutableBufferIndex = 0;
+                    for (int i = 0; i < in0.length; i++) {
+                        if (in0[i].isReadOnly()) {
+                            ByteBuffer original = in0[i];
+                            ByteBuf copyOfNioBuffer;
+                            if (engineType.wantsDirectBuffer) {
+                                copyOfNioBuffer = alloc.directBuffer(original.remaining());
+                            } else {
+                                copyOfNioBuffer = alloc.buffer(original.remaining());
+                            }
+                            copyOfNioBuffer.writeBytes(original);
+                            in0[i] = copyOfNioBuffer.internalNioBuffer(copyOfNioBuffer.readerIndex(),
+                                                                       copyOfNioBuffer.readableBytes());
+                            newMutableBuffers[newMutableBufferIndex++] = copyOfNioBuffer;
+                        }
+                    }
+                }
+            }
+
             for (;;) {
                 // Use toByteBuffer(...) which might be able to return the internal ByteBuffer and so reduce
                 // allocations.
@@ -1142,6 +1212,12 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
             if (newDirectIn != null) {
                 newDirectIn.release();
+            }
+
+            if (newMutableBuffers != null) {
+                for (ByteBuf buf: newMutableBuffers) {
+                    buf.release();
+                }
             }
         }
     }
@@ -2076,7 +2152,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
         Channel channel = ctx.channel();
-        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(channel, 16, engineType.wantsDirectBuffer) {
+        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(channel, 16, engineType.wantsDirectBuffer,
+                                                                       engineType.wantsMutableBuffer) {
             @Override
             protected int wrapDataSize() {
                 return SslHandler.this.wrapDataSize;
