@@ -64,6 +64,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -2914,6 +2915,23 @@ public abstract class AbstractByteBufTest {
         buffer.release();
     }
 
+    @Test
+    public void ensureWritableWithForceAsReadyOnly() {
+        ensureWritableReadOnly(true);
+    }
+
+    @Test
+    public void ensureWritableWithOutForceAsReadOnly() {
+        ensureWritableReadOnly(false);
+    }
+
+    private void ensureWritableReadOnly(boolean force) {
+        final ByteBuf buffer = newBuffer(8);
+        buffer.writerIndex(buffer.capacity());
+        assertEquals(1, buffer.asReadOnly().ensureWritable(8, force));
+        buffer.release();
+    }
+
     // See:
     // - https://github.com/netty/netty/issues/2587
     // - https://github.com/netty/netty/issues/2580
@@ -5549,6 +5567,14 @@ public abstract class AbstractByteBufTest {
         ByteBuf buf = newBuffer(8);
         assertEquals(1, buf.refCnt());
         assertTrue(buf.duplicate().release());
+        assertEquals(0, buf.refCnt());
+    }
+
+    @Test
+    public void testReadOnlyRelease() {
+        ByteBuf buf = newBuffer(8);
+        assertEquals(1, buf.refCnt());
+        assertTrue(buf.asReadOnly().release());
         assertEquals(0, buf.refCnt());
     }
 
