@@ -64,6 +64,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -5552,6 +5553,14 @@ public abstract class AbstractByteBufTest {
         assertEquals(0, buf.refCnt());
     }
 
+    @Test
+    public void testReadOnlyRelease() {
+        ByteBuf buf = newBuffer(8);
+        assertEquals(1, buf.refCnt());
+        assertTrue(buf.asReadOnly().release());
+        assertEquals(0, buf.refCnt());
+    }
+
     // Test-case trying to reproduce:
     // https://github.com/netty/netty/issues/2843
     @Test
@@ -6127,4 +6136,5 @@ public abstract class AbstractByteBufTest {
         buffer.setDoubleLE(0, Double.longBitsToDouble(0x0102030405060708L));
         assertEquals(0x0102030405060708L, Double.doubleToRawLongBits(buffer.getDoubleLE(0)));
     }
+
 }

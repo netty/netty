@@ -606,4 +606,59 @@ public class ReadOnlyDirectByteBufferBufTest {
             buffer.release();
         }
     }
+
+    @Test
+    public void testReadOnlyRelease() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        buf.writerIndex(4);
+        testRelease(buf, buf.asReadOnly());
+    }
+
+    @Test
+    public void testDuplicateRelease() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        buf.writerIndex(4);
+        testRelease(buf, buf.duplicate());
+    }
+
+    @Test
+    public void testSliceRelease() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        buf.writerIndex(4);
+        testRelease(buf, buf.slice());
+    }
+
+    @Test
+    public void testDuplicateDuplicateRelease() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        buf.writerIndex(4);
+        testRelease(buf, buf.duplicate().duplicate());
+    }
+
+    @Test
+    public void testDuplicateSliceRelease() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        buf.writerIndex(4);
+        testRelease(buf, buf.duplicate().duplicate());
+    }
+
+    @Test
+    public void testSliceDuplicateRelease() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        buf.writerIndex(4);
+        testRelease(buf, buf.slice().duplicate());
+    }
+
+    @Test
+    public void testSliceSliceRelease() {
+        ByteBuf buf = buffer(allocate(8).asReadOnlyBuffer());
+        buf.writerIndex(4);
+        testRelease(buf, buf.slice().slice());
+    }
+
+    private static void testRelease(ByteBuf parent, ByteBuf derived) {
+        assertEquals(1, parent.refCnt());
+        assertTrue(derived.release());
+        assertEquals(0, parent.refCnt());
+    }
 }
