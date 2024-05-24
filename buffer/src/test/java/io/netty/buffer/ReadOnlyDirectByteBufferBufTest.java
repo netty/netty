@@ -32,6 +32,10 @@ import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.buffer.AbstractByteBufTest.assertReadyOnlyNioBuffer;
+import static io.netty.buffer.AbstractByteBufTest.assertReadyOnlyNioBufferWithPositionLength;
+import static io.netty.buffer.AbstractByteBufTest.assertReadyOnlyNioBuffers;
+import static io.netty.buffer.AbstractByteBufTest.assertReadyOnlyNioBuffersWithPositionLength;
 import static io.netty.buffer.AbstractByteBufTest.testBytesInArrayMultipleThreads;
 import static io.netty.buffer.AbstractByteBufTest.testCopyMultipleThreads0;
 import static io.netty.buffer.AbstractByteBufTest.testReadGatheringByteChannelMultipleThreads;
@@ -454,15 +458,15 @@ public class ReadOnlyDirectByteBufferBufTest {
         }
     }
 
-    enum WritableParam {
+    enum DerivedParam {
         None,
         Duplicate,
         Slice
     }
 
     @ParameterizedTest
-    @EnumSource(WritableParam.class)
-    void testIsWritable(WritableParam param) {
+    @EnumSource(DerivedParam.class)
+    void testIsWritable(DerivedParam param) {
         ByteBuffer buffer = allocate(24);
         ByteBuf buf = buffer(buffer.asReadOnlyBuffer());
         buf.writerIndex(8);
@@ -594,12 +598,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testCopyMultipleThreads() throws Throwable {
-        final byte[] bytes = new byte[8];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
-        ByteBuffer nioBuffer = allocate(bytes.length);
-        nioBuffer.put(bytes);
-        nioBuffer.flip();
-        final ByteBuf buffer = buffer(nioBuffer.asReadOnlyBuffer());
+        final ByteBuf buffer = newRandomReadOnlyBuffer();
         try {
             testCopyMultipleThreads0(buffer);
         } finally {
@@ -676,5 +675,133 @@ public class ReadOnlyDirectByteBufferBufTest {
         ByteBuf buffer = buffer(allocate(8).asReadOnlyBuffer());
         assertEquals(1, buffer.ensureWritable(8, force));
         buffer.release();
+    }
+
+    @Test
+    public void testReadyOnlyNioBuffer() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBuffer(buffer);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testReadyOnlySliceNioBuffer() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBuffer(buffer.slice());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testReadyOnlyDuplicateNioBuffer() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBuffer(buffer.duplicate());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testReadyOnlyNioBufferWithPositionLength() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBufferWithPositionLength(buffer);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testReadyOnlySliceNioBufferWithPositionLength() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBufferWithPositionLength(buffer.slice());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testReadyOnlyDuplicateNioBufferWithPositionLength() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBufferWithPositionLength(buffer.duplicate());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testReadyOnlyNioBuffers() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBuffers(buffer);
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testReadyOnlySliceNioBuffers() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBuffers(buffer.slice());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testReadyOnlyDuplicateNioBuffers() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBuffers(buffer.duplicate());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testReadyOnlyNioBuffersWithPositionLength() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBuffersWithPositionLength(buffer);
+        } finally {
+            buffer.release();
+        }
+    }
+    @Test
+    public void testReadyOnlySliceNioBuffersWithPositionLength() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBuffersWithPositionLength(buffer.slice());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testReadyOnlyDuplicateNioBuffersWithPositionLength() {
+        ByteBuf buffer = newRandomReadOnlyBuffer();
+        try {
+            assertReadyOnlyNioBuffersWithPositionLength(buffer.duplicate());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    private ByteBuf newRandomReadOnlyBuffer() {
+        final byte[] bytes = new byte[8];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ByteBuffer nioBuffer = allocate(bytes.length);
+        nioBuffer.put(bytes);
+        nioBuffer.flip();
+        return buffer(nioBuffer.asReadOnlyBuffer());
     }
 }
