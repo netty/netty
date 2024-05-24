@@ -564,12 +564,90 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public ByteBuf duplicate() {
-        return new ReadOnlyByteBufferBuf(allocator, buffer);
+        return new ReadOnlyDuplicatedByteBuf(this);
     }
 
     @Override
     public ByteBuf slice(int index, int length) {
-        return new ReadOnlyByteBufferBuf(allocator,
-                (ByteBuffer) buffer.duplicate().position(index).limit(index + length));
+        return new ReadOnlySlicedByteBuf(this, index, length);
+    }
+
+    @Override
+    public ByteBuf asReadOnly() {
+        return this;
+    }
+
+    @SuppressWarnings("deprecation")
+    private static final class ReadOnlySlicedByteBuf extends SlicedByteBuf {
+        ReadOnlySlicedByteBuf(ByteBuf buffer, int index, int length) {
+            super(buffer, index, length);
+        }
+
+        @Override
+        public ByteBuf asReadOnly() {
+            return this;
+        }
+
+        @Override
+        public ByteBuf slice(int index, int length) {
+            return new ReadOnlySlicedByteBuf(this, index, length);
+        }
+
+        @Override
+        public ByteBuf duplicate() {
+            return new ReadOnlyDuplicatedByteBuf(this);
+        }
+
+        @Override
+        public boolean isWritable() {
+            return false;
+        }
+
+        @Override
+        public boolean isWritable(int numBytes) {
+            return false;
+        }
+
+        @Override
+        public int ensureWritable(int minWritableBytes, boolean force) {
+            return 1;
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private static final class ReadOnlyDuplicatedByteBuf extends DuplicatedByteBuf {
+        ReadOnlyDuplicatedByteBuf(ByteBuf buffer) {
+            super(buffer);
+        }
+
+        @Override
+        public ByteBuf asReadOnly() {
+            return this;
+        }
+
+        @Override
+        public ByteBuf slice(int index, int length) {
+            return new ReadOnlySlicedByteBuf(this, index, length);
+        }
+
+        @Override
+        public ByteBuf duplicate() {
+            return new ReadOnlyDuplicatedByteBuf(this);
+        }
+
+        @Override
+        public boolean isWritable() {
+            return false;
+        }
+
+        @Override
+        public boolean isWritable(int numBytes) {
+            return false;
+        }
+
+        @Override
+        public int ensureWritable(int minWritableBytes, boolean force) {
+            return 1;
+        }
     }
 }

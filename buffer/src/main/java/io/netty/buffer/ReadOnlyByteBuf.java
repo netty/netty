@@ -295,7 +295,7 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf slice(int index, int length) {
-        return Unpooled.unmodifiableBuffer(unwrap().slice(index, length));
+        return new ReadOnlyByteBuf(unwrap().slice(index, length));
     }
 
     @Override
