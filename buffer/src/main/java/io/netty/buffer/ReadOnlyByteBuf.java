@@ -400,7 +400,14 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuffer[] nioBuffers(int index, int length) {
-        return unwrap().nioBuffers(index, length);
+        ByteBuffer[] buffers = unwrap().nioBuffers(index, length);
+        for (int i = 0; i < buffers.length; i++) {
+            ByteBuffer buf = buffers[i];
+            if (!buf.isReadOnly()) {
+                buffers[i] = buf.asReadOnlyBuffer();
+            }
+        }
+        return buffers;
     }
 
     @Override
