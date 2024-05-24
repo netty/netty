@@ -6153,4 +6153,88 @@ public abstract class AbstractByteBufTest {
         buffer.setDoubleLE(0, Double.longBitsToDouble(0x0102030405060708L));
         assertEquals(0x0102030405060708L, Double.doubleToRawLongBits(buffer.getDoubleLE(0)));
     }
+
+    @Test
+    public void testReadyOnlyNioBuffer() {
+        assertReadyOnlyNioBuffer(buffer.asReadOnly());
+    }
+
+    @Test
+    public void testReadyOnlySliceNioBuffer() {
+        assertReadyOnlyNioBuffer(buffer.asReadOnly().slice());
+    }
+
+    @Test
+    public void testReadyOnlyDuplicateNioBuffer() {
+        assertReadyOnlyNioBuffer(buffer.asReadOnly().duplicate());
+    }
+
+    static void assertReadyOnlyNioBuffer(ByteBuf buffer) {
+        assertTrue(buffer.isReadOnly());
+        assertTrue(buffer.nioBuffer().isReadOnly());
+    }
+
+    @Test
+    public void testReadyOnlyNioBufferWithPositionLength() {
+        assertReadyOnlyNioBufferWithPositionLength(buffer.asReadOnly());
+    }
+
+    @Test
+    public void testReadyOnlySliceNioBufferWithPositionLength() {
+        assertReadyOnlyNioBufferWithPositionLength(buffer.asReadOnly().slice());
+    }
+
+    @Test
+    public void testReadyOnlyDuplicateNioBufferWithPositionLength() {
+        assertReadyOnlyNioBufferWithPositionLength(buffer.asReadOnly().duplicate());
+    }
+
+    static void assertReadyOnlyNioBufferWithPositionLength(ByteBuf buffer) {
+        assertTrue(buffer.isReadOnly());
+        assertTrue(buffer.nioBuffer(0, buffer.capacity()).isReadOnly());
+    }
+
+    @Test
+    public void testReadyOnlyNioBuffers() {
+        assertReadyOnlyNioBuffers(buffer.asReadOnly());
+    }
+
+    @Test
+    public void testReadyOnlySliceNioBuffers() {
+        assertReadyOnlyNioBuffers(buffer.asReadOnly().slice());
+    }
+
+    @Test
+    public void testReadyOnlyDuplicateNioBuffers() {
+        assertReadyOnlyNioBuffers(buffer.asReadOnly().duplicate());
+    }
+
+    static void assertReadyOnlyNioBuffers(ByteBuf buffer) {
+        assertTrue(buffer.isReadOnly());
+        for (ByteBuffer nioBuffer: buffer.nioBuffers()) {
+            assertTrue(nioBuffer.isReadOnly());
+        }
+    }
+
+    @Test
+    public void testReadyOnlyNioBuffersWithPositionLength() {
+        assertReadyOnlyNioBuffersWithPositionLength(buffer.asReadOnly());
+    }
+
+    @Test
+    public void testReadyOnlySliceNioBuffersWithPositionLength() {
+        assertReadyOnlyNioBuffersWithPositionLength(buffer.asReadOnly().slice());
+    }
+
+    @Test
+    public void testReadyOnlyDuplicateNioBuffersWithPositionLength() {
+        assertReadyOnlyNioBuffersWithPositionLength(buffer.asReadOnly().duplicate());
+    }
+
+    static void assertReadyOnlyNioBuffersWithPositionLength(ByteBuf buffer) {
+        assertTrue(buffer.isReadOnly());
+        for (ByteBuffer nioBuffer: buffer.asReadOnly().nioBuffers(0, buffer.capacity())) {
+            assertTrue(nioBuffer.isReadOnly());
+        }
+    }
 }
