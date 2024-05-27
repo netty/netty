@@ -418,7 +418,14 @@ public class HashedWheelTimer implements Timer {
                 assert closed;
             }
         }
-        return worker.unprocessedTimeouts();
+        Set<Timeout> unprocessed = worker.unprocessedTimeouts();
+        Set<Timeout> cancelled = new HashSet<Timeout>(unprocessed.size());
+        for (Timeout timeout : unprocessed) {
+            if (timeout.cancel()) {
+                cancelled.add(timeout);
+            }
+        }
+        return cancelled;
     }
 
     @Override
