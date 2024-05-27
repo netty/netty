@@ -280,6 +280,24 @@ public class HashedWheelTimerTest {
         timer.stop();
     }
 
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testStopTimerCancelsPendingTasks() throws InterruptedException {
+        final Timer timerUnprocessed = new HashedWheelTimer();
+        for (int i = 0; i < 5; i ++) {
+            timerUnprocessed.newTimeout(new TimerTask() {
+                @Override
+                public void run(Timeout timeout) throws Exception {
+                }
+            }, 5, TimeUnit.SECONDS);
+        }
+        Thread.sleep(1000L); // sleep for a second
+
+        for (Timeout timeout : timerUnprocessed.stop()) {
+            assertTrue(timeout.isCancelled(), "All unprocessed tasks should be canceled");
+        }
+    }
+
     private static TimerTask createNoOpTimerTask() {
         return new TimerTask() {
             @Override
