@@ -513,11 +513,17 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
-    private DnsCache newCache() {
+    public DnsCache newCache() {
+        if (this.resolveCache != null) {
+            return this.resolveCache;
+        }
         return new DefaultDnsCache(intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE), intValue(negativeTtl, 0));
     }
 
-    private AuthoritativeDnsServerCache newAuthoritativeDnsServerCache() {
+    public AuthoritativeDnsServerCache newAuthoritativeDnsServerCache() {
+        if (this.authoritativeDnsServerCache != null) {
+            return this.authoritativeDnsServerCache;
+        }
         return new DefaultAuthoritativeDnsServerCache(
                 intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE),
                 // Let us use the sane ordering as DnsNameResolver will be used when returning
@@ -530,7 +536,10 @@ public final class DnsNameResolverBuilder {
         return new ThreadLocalNameServerAddressStream(dnsServerAddressStreamProvider);
     }
 
-    private DnsCnameCache newCnameCache() {
+    public DnsCnameCache newCnameCache() {
+        if (this.cnameCache != null) {
+            return this.cnameCache;
+        }
         return new DefaultDnsCnameCache(
                 intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE));
     }
@@ -583,10 +592,9 @@ public final class DnsNameResolverBuilder {
             logger.debug("authoritativeDnsServerCache and TTLs are mutually exclusive. TTLs are ignored.");
         }
 
-        DnsCache resolveCache = this.resolveCache != null ? this.resolveCache : newCache();
-        DnsCnameCache cnameCache = this.cnameCache != null ? this.cnameCache : newCnameCache();
-        AuthoritativeDnsServerCache authoritativeDnsServerCache = this.authoritativeDnsServerCache != null ?
-                this.authoritativeDnsServerCache : newAuthoritativeDnsServerCache();
+        DnsCache resolveCache = newCache();
+        DnsCnameCache cnameCache = newCnameCache();
+        AuthoritativeDnsServerCache authoritativeDnsServerCache = newAuthoritativeDnsServerCache();
 
         DnsServerAddressStream queryDnsServerAddressStream = this.queryDnsServerAddressStream != null ?
                 this.queryDnsServerAddressStream : newQueryServerAddressStream(dnsServerAddressStreamProvider);
