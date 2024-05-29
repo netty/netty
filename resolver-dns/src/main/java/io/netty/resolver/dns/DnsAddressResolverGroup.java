@@ -47,8 +47,8 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
     public DnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {
         this.dnsResolverBuilder = dnsResolverBuilder.copy();
         this.dnsResolverBuilder
-                .resolveCache(dnsResolverBuilder.newCache()).cnameCache(dnsResolverBuilder.newCnameCache())
-                .authoritativeDnsServerCache(dnsResolverBuilder.newAuthoritativeDnsServerCache());
+                .resolveCache(dnsResolverBuilder.getOrNewCache()).cnameCache(dnsResolverBuilder.getOrNewCnameCache())
+                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
     }
 
     public DnsAddressResolverGroup(
@@ -56,8 +56,8 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
             DnsServerAddressStreamProvider nameServerProvider) {
         this.dnsResolverBuilder = new DnsNameResolverBuilder();
         dnsResolverBuilder.channelType(channelType).nameServerProvider(nameServerProvider)
-                .resolveCache(dnsResolverBuilder.newCache()).cnameCache(dnsResolverBuilder.newCnameCache())
-                .authoritativeDnsServerCache(dnsResolverBuilder.newAuthoritativeDnsServerCache());
+                .resolveCache(dnsResolverBuilder.getOrNewCache()).cnameCache(dnsResolverBuilder.getOrNewCnameCache())
+                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
     }
 
     public DnsAddressResolverGroup(
@@ -65,8 +65,8 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
             DnsServerAddressStreamProvider nameServerProvider) {
         this.dnsResolverBuilder = new DnsNameResolverBuilder();
         dnsResolverBuilder.channelFactory(channelFactory).nameServerProvider(nameServerProvider)
-                .resolveCache(dnsResolverBuilder.newCache()).cnameCache(dnsResolverBuilder.newCnameCache())
-                .authoritativeDnsServerCache(dnsResolverBuilder.newAuthoritativeDnsServerCache());
+                .resolveCache(dnsResolverBuilder.getOrNewCache()).cnameCache(dnsResolverBuilder.getOrNewCnameCache())
+                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
     }
 
     @SuppressWarnings("deprecation")
