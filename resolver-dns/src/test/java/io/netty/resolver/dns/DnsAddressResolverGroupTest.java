@@ -79,18 +79,18 @@ public class DnsAddressResolverGroupTest {
         DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
                 .eventLoop(loop).channelType(NioDatagramChannel.class);
         DnsAddressResolverGroup resolverGroup = new DnsAddressResolverGroup(builder);
-
-
         DefaultEventLoopGroup defaultEventLoopGroup = new DefaultEventLoopGroup(2);
         EventLoop eventLoop1 = defaultEventLoopGroup.next();
         EventLoop eventLoop2 = defaultEventLoopGroup.next();
         try {
             final Promise<InetSocketAddress> promise1 = loop.newPromise();
             InetSocketAddressResolver resolver1 = (InetSocketAddressResolver) resolverGroup.getResolver(eventLoop1);
-            InetAddress address1 = resolve(resolver1, InetSocketAddress.createUnresolved("netty.io", 80), promise1);
+            InetAddress address1 =
+                    resolve(resolver1, InetSocketAddress.createUnresolved("netty.io", 80), promise1);
             final Promise<InetSocketAddress> promise2 = loop.newPromise();
             InetSocketAddressResolver resolver2 = (InetSocketAddressResolver) resolverGroup.getResolver(eventLoop2);
-            InetAddress address2 = resolve(resolver2, InetSocketAddress.createUnresolved("netty.io", 80), promise2);
+            InetAddress address2 =
+                    resolve(resolver2, InetSocketAddress.createUnresolved("netty.io", 80), promise2);
             assertSame(address1, address2);
         } finally {
             resolverGroup.close();
@@ -100,7 +100,8 @@ public class DnsAddressResolverGroupTest {
     }
 
     private InetAddress resolve(InetSocketAddressResolver resolver, SocketAddress socketAddress,
-                                final Promise<InetSocketAddress> promise) throws InterruptedException, ExecutionException {
+                                final Promise<InetSocketAddress> promise)
+            throws InterruptedException, ExecutionException {
         resolver.resolve(socketAddress)
                 .addListener(new FutureListener<InetSocketAddress>() {
                     @Override
