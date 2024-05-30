@@ -1106,9 +1106,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // which is better then walking the composed ByteBuf in most cases.
                 if (!(in instanceof CompositeByteBuf) && in.nioBufferCount() == 1) {
                     in0 = singleBuffer;
-                    // We know its only backed by 1 ByteBuffer so use internalNioBuffer to keep object allocation
-                    // to a minimum.
-                    in0[0] = in.internalNioBuffer(readerIndex, readableBytes);
+                    // use nioBuffer method since calling internalNioBuffer isn't thread safe
+                    in0[0] = in.nioBuffer(readerIndex, readableBytes);
                 } else {
                     in0 = in.nioBuffers();
                 }

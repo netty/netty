@@ -43,9 +43,10 @@ public class SslHandlerCoalescingBufferQueueTest {
         };
 
         ByteBuffer nioBuffer = ByteBuffer.allocateDirect(128);
-        nioBuffer.putLong(0);
-        nioBuffer.putLong(0);
-        nioBuffer.putLong(0);
+        nioBuffer.putLong(1);
+        nioBuffer.putLong(2);
+        // use the whole buffer so that the wrapper will have the capacity of 128
+        nioBuffer.position(nioBuffer.limit());
         nioBuffer.flip();
         ByteBuf first;
         if (readOnlyAndDuplicate) {
@@ -55,8 +56,9 @@ public class SslHandlerCoalescingBufferQueueTest {
             first = Unpooled.wrappedBuffer(nioBuffer);
             first.writerIndex(8);
         }
+        first.retain();
         queue.add(first);
-        ByteBuf second = Unpooled.copyLong(1);
+        ByteBuf second = Unpooled.copyLong(3);
         queue.add(second);
 
         ChannelPromise promise = channel.newPromise();
@@ -64,12 +66,15 @@ public class SslHandlerCoalescingBufferQueueTest {
         ByteBuf buffer = queue.remove(UnpooledByteBufAllocator.DEFAULT, 128, promise);
         try {
             assertEquals(16, buffer.readableBytes());
-            assertEquals(0, buffer.readLong());
             assertEquals(1, buffer.readLong());
+            assertEquals(3, buffer.readLong());
         } finally {
             buffer.release();
         }
         assertTrue(queue.isEmpty());
+        assertEquals(8, first.writerIndex());
+        assertEquals(2, first.getLong(first.writerIndex()));
+        first.release();
         assertEquals(0, first.refCnt());
         assertEquals(0, second.refCnt());
     }

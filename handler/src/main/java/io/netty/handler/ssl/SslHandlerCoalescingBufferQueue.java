@@ -42,38 +42,27 @@ abstract class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQ
 
     @Override
     protected ByteBuf compose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
-        final int wrapDataSize = wrapDataSize();
-        if (cumulation instanceof CompositeByteBuf) {
-            CompositeByteBuf composite = (CompositeByteBuf) cumulation;
-            int numComponents = composite.numComponents();
-            if (numComponents == 0 ||
-                    !attemptCopyToCumulation(composite.internalComponent(numComponents - 1), next, wrapDataSize)) {
-                composite.addComponent(true, next);
-            }
-            return composite;
-        }
-        return attemptCopyToCumulation(cumulation, next, wrapDataSize) ? cumulation :
+        return attemptCopyToCumulation(cumulation, next, wrapDataSize()) ? cumulation :
                 copyAndCompose(alloc, cumulation, next);
     }
 
     @Override
-    protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first) {
-        if (first instanceof CompositeByteBuf) {
-            CompositeByteBuf composite = (CompositeByteBuf) first;
-            if (wantsDirectBuffer) {
-                first = allocator.directBuffer(composite.readableBytes());
-            } else {
-                first = allocator.heapBuffer(composite.readableBytes());
-            }
-            try {
-                first.writeBytes(composite);
-            } catch (Throwable cause) {
-                first.release();
-                PlatformDependent.throwException(cause);
-            }
-            composite.release();
+    protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first, int bufferSize) {
+        ByteBuf newFirst;
+        if (wantsDirectBuffer) {
+            newFirst = allocator.directBuffer(bufferSize);
+        } else {
+            newFirst = allocator.heapBuffer(bufferSize);
         }
-        return first;
+        try {
+            newFirst.writeBytes(first);
+        } catch (Throwable cause) {
+            newFirst.release();
+            PlatformDependent.throwException(cause);
+        }
+        assert !first.isReadable();
+        first.release();
+        return newFirst;
     }
 
     @Override
