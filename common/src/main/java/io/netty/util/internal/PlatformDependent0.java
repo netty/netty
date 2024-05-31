@@ -25,7 +25,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.nio.file.NoSuchFileException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicLong;
@@ -180,7 +179,8 @@ final class PlatformDependent0 {
                             cls.getDeclaredMethod("putLong", long.class, long.class);
                             cls.getDeclaredMethod("putLong", Object.class, long.class, long.class);
                             cls.getDeclaredMethod("addressSize");
-                            // The following may throw UnsupportedOperationException:
+                            // The following tests the methods are usable.
+                            // Will throw UnsupportedOperationException if unsafe memory access is denied:
                             long address = finalUnsafe.allocateMemory(Long.BYTES);
                             finalUnsafe.putLong(address, 42);
                             finalUnsafe.freeMemory(address);
