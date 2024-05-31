@@ -334,6 +334,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * Calculate the first {@link ByteBuf} which will be used in subsequent calls to
      * {@link #compose(ByteBufAllocator, ByteBuf, ByteBuf)}.
      * @param bufferSize the optimal size of the buffer needed for cumulation
+     * @return the first buffer
      */
     protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first, int bufferSize) {
         return composeFirst(allocator, first);
@@ -344,6 +345,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * {@link #compose(ByteBufAllocator, ByteBuf, ByteBuf)}.
      * This method is deprecated and will be removed in the future. Implementing classes should
      * override {@link #composeFirst(ByteBufAllocator, ByteBuf, int)} instead.
+     * @deprecated Use {AbstractCoalescingBufferQueue#composeFirst(ByteBufAllocator, ByteBuf, int)}
      */
     @Deprecated
     protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first) {

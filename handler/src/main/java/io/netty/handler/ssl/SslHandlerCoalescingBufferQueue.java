@@ -48,7 +48,7 @@ abstract class SslHandlerCoalescingBufferQueue extends AbstractCoalescingBufferQ
 
     @Override
     protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first, int bufferSize) {
-        ByteBuf newFirst;
+        final ByteBuf newFirst;
         if (wantsDirectBuffer) {
             newFirst = allocator.directBuffer(bufferSize);
         } else {
