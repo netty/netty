@@ -23,6 +23,7 @@ import com.ning.compress.lzf.util.ChunkEncoderFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.util.internal.PlatformDependent;
 
 import static com.ning.compress.lzf.LZFChunk.MAX_CHUNK_LEN;
 
@@ -39,6 +40,7 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      * less than {@link #MIN_BLOCK_TO_COMPRESS} will write as uncompressed.
      */
     private static final int MIN_BLOCK_TO_COMPRESS = 16;
+    private static final boolean DEFAULT_SAFE = !PlatformDependent.hasUnsafe();
 
     /**
      * Compress threshold for LZF format. When the amount of input data is less than compressThreshold,
@@ -66,7 +68,7 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      * non-standard platforms it may be necessary to use {@link #LzfEncoder(boolean)} with {@code true} param.
      */
     public LzfEncoder() {
-        this(false);
+        this(DEFAULT_SAFE);
     }
 
     /**
@@ -77,7 +79,9 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      *                     Otherwise encoder will try to use highly optimized {@link ChunkEncoder}
      *                     implementation that uses Sun JDK's {@link sun.misc.Unsafe}
      *                     class (which may be included by other JDK's as well).
+     * @deprecated Use the constructor without the {@code safeInstance} parameter.
      */
+    @Deprecated
     public LzfEncoder(boolean safeInstance) {
         this(safeInstance, MAX_CHUNK_LEN);
     }
@@ -92,7 +96,9 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      *                          class (which may be included by other JDK's as well).
      * @param totalLength       Expected total length of content to compress; only matters for outgoing messages
      *                          that is smaller than maximum chunk size (64k), to optimize encoding hash tables.
+     * @deprecated Use the constructor without the {@code safeInstance} parameter.
      */
+    @Deprecated
     public LzfEncoder(boolean safeInstance, int totalLength) {
         this(safeInstance, totalLength, MIN_BLOCK_TO_COMPRESS);
     }
@@ -106,7 +112,20 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      *                    to optimize encoding hash tables.
      */
     public LzfEncoder(int totalLength) {
-        this(false, totalLength);
+        this(DEFAULT_SAFE, totalLength);
+    }
+
+    /**
+     * Creates a new LZF encoder with specified settings.
+     *
+     * @param totalLength           Expected total length of content to compress; only matters for outgoing messages
+     *                              that is smaller than maximum chunk size (64k), to optimize encoding hash tables.
+     * @param compressThreshold     Compress threshold for LZF format. When the amount of input data is less than
+     *                              compressThreshold, we will construct an uncompressed output according
+     *                              to the LZF format.
+     */
+    public LzfEncoder(int totalLength, int compressThreshold) {
+        this(DEFAULT_SAFE, totalLength, compressThreshold);
     }
 
     /**
@@ -122,7 +141,9 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      * @param compressThreshold     Compress threshold for LZF format. When the amount of input data is less than
      *                              compressThreshold, we will construct an uncompressed output according
      *                              to the LZF format.
+     * @deprecated Use the constructor without the {@code safeInstance} parameter.
      */
+    @Deprecated
     public LzfEncoder(boolean safeInstance, int totalLength, int compressThreshold) {
         super(false);
         if (totalLength < MIN_BLOCK_TO_COMPRESS || totalLength > MAX_CHUNK_LEN) {
