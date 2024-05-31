@@ -601,6 +601,12 @@
       </properties>
     </profile>
     <profile>
+      <id>jdk23DenyUnsafe</id>
+      <properties>
+        <argLine.noUnsafe>--sun-misc-unsafe-memory-access=deny</argLine.noUnsafe>
+      </properties>
+    </profile>
+    <profile>
       <!-- Skip many checks for faster turn-around in local builds. -->
       <id>fast</id>
       <properties>
