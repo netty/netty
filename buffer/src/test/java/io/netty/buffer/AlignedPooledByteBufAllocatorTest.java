@@ -22,10 +22,12 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTest {
     @Override
     protected PooledByteBufAllocator newAllocator(boolean preferDirect) {
+        assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         int directMemoryCacheAlignment = 1;
         return new PooledByteBufAllocator(
                 preferDirect,
@@ -42,6 +44,7 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
     // https://github.com/netty/netty/issues/11955
     @Test
     public void testCorrectElementSize() {
+        assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         ByteBufAllocator allocator = new PooledByteBufAllocator(
                 true,
                 PooledByteBufAllocator.defaultNumHeapArena(),
@@ -69,6 +72,7 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
 
     @Test
     public void testDirectSubpageReleaseLock() {
+        assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         int initialCapacity = 0;
         int directMemoryCacheAlignment = 32;
         PooledByteBufAllocator allocator = new PooledByteBufAllocator(

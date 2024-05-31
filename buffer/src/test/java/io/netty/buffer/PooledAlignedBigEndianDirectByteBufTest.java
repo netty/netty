@@ -21,6 +21,7 @@ import org.junit.jupiter.api.BeforeAll;
 import java.nio.ByteOrder;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PooledAlignedBigEndianDirectByteBufTest extends PooledBigEndianDirectByteBufTest {
     private static final int directMemoryCacheAlignment = 1;
@@ -28,6 +29,7 @@ public class PooledAlignedBigEndianDirectByteBufTest extends PooledBigEndianDire
 
     @BeforeAll
     public static void setUpAllocator() {
+        assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         allocator = new PooledByteBufAllocator(
                 true,
                 PooledByteBufAllocator.defaultNumHeapArena(),
