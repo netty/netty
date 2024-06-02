@@ -595,7 +595,7 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
 
         @Override
         public ByteBuf duplicate() {
-            return new ReadOnlyDuplicatedByteBuf(this);
+            return slice(0, capacity()).setIndex(readerIndex(), writerIndex());
         }
 
         @Override
