@@ -2138,6 +2138,52 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testDuplicateOfSliceHasTheSameCapacityAsTheSlice() {
+        ByteBuf slice = buffer.slice();
+        ByteBuf duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+
+        slice = buffer.slice(0, buffer.capacity() - 2);
+        duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+
+        slice = buffer.slice();
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        duplicate.release();
+
+        slice = buffer.slice(0, buffer.capacity() - 2);
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        duplicate.release();
+    }
+
+    @Test
+    public void testDuplicateOfRetainedSliceHasTheSameCapacityAsTheSlice() {
+        ByteBuf slice = buffer.retainedSlice();
+        ByteBuf duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+
+        slice = buffer.retainedSlice(0, buffer.capacity() - 2);
+        duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+
+        slice = buffer.retainedSlice();
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+        duplicate.release();
+
+        slice = buffer.retainedSlice(0, buffer.capacity() - 2);
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+        duplicate.release();
+    }
+
+    @Test
     @SuppressWarnings("ObjectEqualsNull")
     public void testEquals() {
         assertFalse(buffer.equals(null));
