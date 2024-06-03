@@ -181,10 +181,10 @@ public abstract class AbstractCoalescingBufferQueue {
 
                     bytes -= bufferBytes;
                     if (toReturn == null) {
-                        // if there are no more bytes in the queue after this, there's no reason to compose
-                        toReturn = bufferBytes == readableBytes
+                        // if there are no more bytes to read, there's no reason to compose
+                        toReturn = bytes == 0
                                 ? entryBuffer
-                                : composeFirst(alloc, entryBuffer);
+                                : composeFirst(alloc, entryBuffer, bufferBytes + bytes);
                     } else {
                         toReturn = compose(alloc, toReturn, entryBuffer);
                     }
@@ -333,7 +333,21 @@ public abstract class AbstractCoalescingBufferQueue {
     /**
      * Calculate the first {@link ByteBuf} which will be used in subsequent calls to
      * {@link #compose(ByteBufAllocator, ByteBuf, ByteBuf)}.
+     * @param bufferSize the optimal size of the buffer needed for cumulation
+     * @return the first buffer
      */
+    protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first, int bufferSize) {
+        return composeFirst(allocator, first);
+    }
+
+    /**
+     * Calculate the first {@link ByteBuf} which will be used in subsequent calls to
+     * {@link #compose(ByteBufAllocator, ByteBuf, ByteBuf)}.
+     * This method is deprecated and will be removed in the future. Implementing classes should
+     * override {@link #composeFirst(ByteBufAllocator, ByteBuf, int)} instead.
+     * @deprecated Use {AbstractCoalescingBufferQueue#composeFirst(ByteBufAllocator, ByteBuf, int)}
+     */
+    @Deprecated
     protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first) {
         return first;
     }
