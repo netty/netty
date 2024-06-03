@@ -5909,6 +5909,223 @@
                   <exception>java.lang.CloneNotSupportedException</exception>
                   <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;::addRepeatedField(com.google.protobuf.Descriptors.FieldDescriptor, java.lang.Object)</old>
+                  <new>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;::addRepeatedField(com.google.protobuf.Descriptors.FieldDescriptor, java.lang.Object)</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;::clear()</old>
+                  <new>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;::clear()</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;::clearField(com.google.protobuf.Descriptors.FieldDescriptor)</old>
+                  <new>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;::clearField(com.google.protobuf.Descriptors.FieldDescriptor)</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;::clearOneof(com.google.protobuf.Descriptors.OneofDescriptor)</old>
+                  <new>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;::clearOneof(com.google.protobuf.Descriptors.OneofDescriptor)</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;::clone()</old>
+                  <new>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;::clone()</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(byte[]) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(byte[]) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(com.google.protobuf.ByteString) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(com.google.protobuf.ByteString) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(com.google.protobuf.CodedInputStream) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(com.google.protobuf.CodedInputStream) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(com.google.protobuf.Message) @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(com.google.protobuf.Message) @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.parameterTypeChanged</code>
+                  <old>parameter BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(===java.io.InputStream===) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>parameter BuilderType com.google.protobuf.AbstractMessageLite.Builder&lt;MessageType extends com.google.protobuf.AbstractMessageLite&lt;MessageType, BuilderType&gt;, BuilderType extends com.google.protobuf.AbstractMessageLite.Builder&lt;MessageType, BuilderType&gt;&gt;::mergeFrom(===com.google.protobuf.MessageLite===) @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <parameterIndex>0</parameterIndex>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(java.io.InputStream) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessageLite.Builder&lt;MessageType extends com.google.protobuf.AbstractMessageLite&lt;MessageType, BuilderType&gt;, BuilderType extends com.google.protobuf.AbstractMessageLite.Builder&lt;MessageType, BuilderType&gt;&gt;::mergeFrom(com.google.protobuf.MessageLite) @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.exception.checkedRemoved</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(java.io.InputStream) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessageLite.Builder&lt;MessageType extends com.google.protobuf.AbstractMessageLite&lt;MessageType, BuilderType&gt;, BuilderType extends com.google.protobuf.AbstractMessageLite.Builder&lt;MessageType, BuilderType&gt;&gt;::mergeFrom(com.google.protobuf.MessageLite) @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <exception>java.io.IOException</exception>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.numberOfParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(byte[], com.google.protobuf.ExtensionRegistryLite) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(java.io.InputStream) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(byte[], com.google.protobuf.ExtensionRegistryLite) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(java.io.InputStream) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.exception.checkedAdded</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(byte[], com.google.protobuf.ExtensionRegistryLite) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(java.io.InputStream) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <exception>java.io.IOException</exception>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.exception.checkedRemoved</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(byte[], com.google.protobuf.ExtensionRegistryLite) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(java.io.InputStream) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <exception>com.google.protobuf.InvalidProtocolBufferException</exception>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(com.google.protobuf.ByteString, com.google.protobuf.ExtensionRegistryLite) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(com.google.protobuf.ByteString, com.google.protobuf.ExtensionRegistryLite) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(com.google.protobuf.CodedInputStream, com.google.protobuf.ExtensionRegistryLite) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(com.google.protobuf.CodedInputStream, com.google.protobuf.ExtensionRegistryLite) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(java.io.InputStream, com.google.protobuf.ExtensionRegistryLite) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(java.io.InputStream, com.google.protobuf.ExtensionRegistryLite) throws java.io.IOException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.numberOfParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(byte[], int, int) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(byte[], com.google.protobuf.ExtensionRegistryLite) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(byte[], int, int) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(byte[], com.google.protobuf.ExtensionRegistryLite) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.numberOfParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(byte[], int, int, com.google.protobuf.ExtensionRegistryLite) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(byte[], int, int) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&gt;::mergeFrom(byte[], int, int, com.google.protobuf.ExtensionRegistryLite) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>method BuilderType com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.AbstractMessage.Builder&lt;BuilderType&gt;&gt;::mergeFrom(byte[], int, int) throws com.google.protobuf.InvalidProtocolBufferException @ com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;::mergeUnknownFields(com.google.protobuf.UnknownFieldSet)</old>
+                  <new>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;::mergeUnknownFields(com.google.protobuf.UnknownFieldSet)</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;::setField(com.google.protobuf.Descriptors.FieldDescriptor, java.lang.Object)</old>
+                  <new>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;::setField(com.google.protobuf.Descriptors.FieldDescriptor, java.lang.Object)</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;::setRepeatedField(com.google.protobuf.Descriptors.FieldDescriptor, int, java.lang.Object)</old>
+                  <new>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;::setRepeatedField(com.google.protobuf.Descriptors.FieldDescriptor, int, java.lang.Object)</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeTypeParametersChanged</code>
+                  <old>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;::setUnknownFields(com.google.protobuf.UnknownFieldSet)</old>
+                  <new>method BuilderType com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;::setUnknownFields(com.google.protobuf.UnknownFieldSet)</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.generics.formalTypeParameterChanged</code>
+                  <old>class com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>class com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.superTypeTypeParametersChanged</code>
+                  <old>class com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</old>
+                  <new>class com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</new>
+                  <oldSuperType>com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&gt;</oldSuperType>
+                  <newSuperType>com.google.protobuf.AbstractMessage.Builder&lt;BuilderType extends com.google.protobuf.GeneratedMessage.Builder&lt;BuilderType&gt;&gt;</newSuperType>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.serialVersionUIDUnchanged</code>
+                  <old>field com.google.protobuf.GeneratedMessage.serialVersionUID</old>
+                  <new>field com.google.protobuf.GeneratedMessage.serialVersionUID</new>
+                  <serialVersionUID>1</serialVersionUID>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
