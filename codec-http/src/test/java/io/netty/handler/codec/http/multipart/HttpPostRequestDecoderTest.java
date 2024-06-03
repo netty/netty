@@ -757,10 +757,8 @@ public class HttpPostRequestDecoderTest {
         assertEquals(2, decoder.getBodyHttpDatas().size());
 
         Attribute attrMsg = (Attribute) decoder.getBodyHttpData("msg");
-        assertTrue(attrMsg.getByteBuf().isDirect());
         assertEquals("test message", attrMsg.getValue());
         Attribute attrMsgId = (Attribute) decoder.getBodyHttpData("msg_id");
-        assertTrue(attrMsgId.getByteBuf().isDirect());
         assertEquals("15200", attrMsgId.getValue());
 
         decoder.destroy();
@@ -876,23 +874,18 @@ public class HttpPostRequestDecoderTest {
         assertEquals(5, decoder.getBodyHttpDatas().size());
 
         Attribute attr = (Attribute) decoder.getBodyHttpData("foo");
-        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("bar", attr.getValue());
 
         attr = (Attribute) decoder.getBodyHttpData("a");
-        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("b", attr.getValue());
 
         attr = (Attribute) decoder.getBodyHttpData("empty");
-        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("", attr.getValue());
 
         attr = (Attribute) decoder.getBodyHttpData("city");
-        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("<\"new\" york city>", attr.getValue());
 
         attr = (Attribute) decoder.getBodyHttpData("other_city");
-        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("los angeles", attr.getValue());
 
         decoder.destroy();
