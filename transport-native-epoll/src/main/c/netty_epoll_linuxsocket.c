@@ -698,6 +698,9 @@ static jobject netty_epoll_linuxsocket_getPeerCredentials(JNIEnv *env, jclass cl
          return NULL;
      }
      jintArray gids = (*env)->NewIntArray(env, 1);
+     if (gids == NULL) {
+        return NULL;
+     }
      (*env)->SetIntArrayRegion(env, gids, 0, 1, (jint*) &credentials.gid);
 
      NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, peerCredentialsClass, peerCredentialsClassWeak, error);

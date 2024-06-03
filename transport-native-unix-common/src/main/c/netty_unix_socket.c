@@ -384,6 +384,9 @@ static jint _sendToDomainSocket(JNIEnv* env, jint fd, void* buffer, jint pos, ji
     addr.sun_family = AF_UNIX;
 
     jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
+    if (socket_path == NULL) {
+        return -1;
+    }
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
     if (socket_path_len > sizeof(addr.sun_path)) {
         socket_path_len = sizeof(addr.sun_path);
@@ -805,6 +808,9 @@ static jint netty_unix_socket_sendToAddressesDomainSocket(JNIEnv* env, jclass cl
     addr.sun_family = AF_UNIX;
 
     jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
+    if (socket_path == NULL) {
+        return -1;
+    }
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
     if (socket_path_len > sizeof(addr.sun_path)) {
         socket_path_len = sizeof(addr.sun_path);
@@ -857,6 +863,9 @@ static jint netty_unix_socket_bindDomainSocket(JNIEnv* env, jclass clazz, jint f
     addr.sun_family = AF_UNIX;
 
     jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
+    if (socket_path == NULL) {
+        return -1;
+    }
     jint socket_path_len = (*env)->GetArrayLength(env, socketPath);
 
     if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
@@ -886,6 +895,9 @@ static jint netty_unix_socket_connectDomainSocket(JNIEnv* env, jclass clazz, jin
     addr.sun_family = AF_UNIX;
 
     jbyte* socket_path = (*env)->GetByteArrayElements(env, socketPath, 0);
+    if (socket_path == NULL) {
+        return -1;
+    }
     socket_path_len = (*env)->GetArrayLength(env, socketPath);
 
     if (socket_path_len > sizeof(addr.sun_path) || (socket_path_len == sizeof(addr.sun_path) && socket_path[socket_path_len] != '\0')) {
@@ -1157,6 +1169,9 @@ static void netty_unix_socket_setIntOpt(JNIEnv* env, jclass clazz, jint fd, jint
 
 static void netty_unix_socket_setRawOptArray(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname, jbyteArray inArray, jint offset, jint len) {
     jbyte* optval = (*env)->GetByteArrayElements(env, inArray, 0);
+    if (optval == NULL) {
+        return:
+    }
     netty_unix_socket_setOption(env, fd, level, optname, optval + offset, len);
     (*env)->ReleaseByteArrayElements(env, inArray, optval, 0);
 }
@@ -1175,6 +1190,9 @@ static jint netty_unix_socket_getIntOpt(JNIEnv* env, jclass clazz, jint fd, jint
 
 static void netty_unix_socket_getRawOptArray(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname, jbyteArray outArray, jint offset, jint len) {
     jbyte* optval = (*env)->GetByteArrayElements(env, outArray, 0);
+    if (optval == NULL) {
+        return;
+    }
     netty_unix_socket_getOption(env, fd, level, optname, optval + offset, len);
     (*env)->ReleaseByteArrayElements(env, outArray, optval, 0);
 }
