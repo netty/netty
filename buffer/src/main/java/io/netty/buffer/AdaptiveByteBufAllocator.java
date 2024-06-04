@@ -22,6 +22,8 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import static io.netty.util.internal.PlatformDependent.javaVersion;
+
 /**
  * An auto-tuning pooling {@link ByteBufAllocator}, that follows an anti-generational hypothesis.
  * <p>
@@ -43,8 +45,8 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
                      DEFAULT_USE_CACHED_MAGAZINES_FOR_NON_EVENT_LOOP_THREADS);
     }
 
-    private final AdaptivePoolingAllocator direct;
-    private final AdaptivePoolingAllocator heap;
+    private final AdaptiveAllocatorApi direct;
+    private final AdaptiveAllocatorApi heap;
 
     public AdaptiveByteBufAllocator() {
         this(PlatformDependent.directBufferPreferred());
@@ -56,6 +58,10 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
 
     public AdaptiveByteBufAllocator(boolean preferDirect, boolean useCacheForNonEventLoopThreads) {
         super(preferDirect);
+        if (javaVersion() < 8) {
+            // The implementation uses StampedLock, which was introduced in Java 8.
+            throw new IllegalStateException("This allocator require Java 8 or newer.");
+        }
         MagazineCaching magazineCaching = useCacheForNonEventLoopThreads?
                 MagazineCaching.FastThreadLocalThreads : MagazineCaching.EventLoopThreads;
         direct = new AdaptivePoolingAllocator(new DirectChunkAllocator(this), magazineCaching);
@@ -90,6 +96,11 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
     @Override
     public ByteBufAllocatorMetric metric() {
         return this;
+    }
+
+    interface AdaptiveAllocatorApi {
+        ByteBuf allocate(int initialCapacity, int maxCapacity);
+        long usedMemory();
     }
 
     private static final class HeapChunkAllocator implements AdaptivePoolingAllocator.ChunkAllocator {
