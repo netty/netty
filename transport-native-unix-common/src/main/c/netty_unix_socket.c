@@ -1170,7 +1170,7 @@ static void netty_unix_socket_setIntOpt(JNIEnv* env, jclass clazz, jint fd, jint
 static void netty_unix_socket_setRawOptArray(JNIEnv* env, jclass clazz, jint fd, jint level, jint optname, jbyteArray inArray, jint offset, jint len) {
     jbyte* optval = (*env)->GetByteArrayElements(env, inArray, 0);
     if (optval == NULL) {
-        return:
+        return;
     }
     netty_unix_socket_setOption(env, fd, level, optname, optval + offset, len);
     (*env)->ReleaseByteArrayElements(env, inArray, optval, 0);
