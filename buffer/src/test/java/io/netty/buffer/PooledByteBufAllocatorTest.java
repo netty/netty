@@ -277,7 +277,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     public void testCollapse() {
         int pageSize = 8192;
         //no cache
-        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 0, 1, 8192, 9, 0, 0, 0);
+        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 9, 0, 0, 0);
 
         ByteBuf b1 = allocator.buffer(pageSize * 4);
         ByteBuf b2 = allocator.buffer(pageSize * 5);
@@ -310,7 +310,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     @Test
     public void testAllocateSmallOffset() {
         int pageSize = 8192;
-        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 0, 1, 8192, 9, 0, 0, 0);
+        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 9, 0, 0, 0);
 
         int size = pageSize * 5;
 

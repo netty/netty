@@ -23,6 +23,6 @@ public class LengthAwareLzfIntegrationTest extends LzfIntegrationTest {
 
     @Override
     protected EmbeddedChannel createEncoder() {
-        return new EmbeddedChannel(new LzfEncoder(false, MAX_CHUNK_LEN, 2 * 1024 * 1024));
+        return new EmbeddedChannel(new LzfEncoder(MAX_CHUNK_LEN, 2 * 1024 * 1024));
     }
 }

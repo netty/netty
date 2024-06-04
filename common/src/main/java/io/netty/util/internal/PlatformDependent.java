@@ -535,31 +535,47 @@ public final class PlatformDependent {
     }
 
     public static byte getByte(byte[] data, int index) {
-        return PlatformDependent0.getByte(data, index);
+        return hasUnsafe() ? PlatformDependent0.getByte(data, index) : data[index];
     }
 
     public static byte getByte(byte[] data, long index) {
-        return PlatformDependent0.getByte(data, index);
+        return hasUnsafe() ? PlatformDependent0.getByte(data, index) : data[toIntExact(index)];
     }
 
     public static short getShort(byte[] data, int index) {
-        return PlatformDependent0.getShort(data, index);
+        return hasUnsafe() ? PlatformDependent0.getShort(data, index) : data[index];
     }
 
     public static int getInt(byte[] data, int index) {
-        return PlatformDependent0.getInt(data, index);
+        return hasUnsafe() ? PlatformDependent0.getInt(data, index) : data[index];
     }
 
     public static int getInt(int[] data, long index) {
-        return PlatformDependent0.getInt(data, index);
+        return hasUnsafe() ? PlatformDependent0.getInt(data, index) : data[toIntExact(index)];
     }
 
     public static long getLong(byte[] data, int index) {
-        return PlatformDependent0.getLong(data, index);
+        return hasUnsafe() ? PlatformDependent0.getLong(data, index) : data[index];
     }
 
     public static long getLong(long[] data, long index) {
-        return PlatformDependent0.getLong(data, index);
+        return hasUnsafe() ? PlatformDependent0.getLong(data, index) : data[toIntExact(index)];
+    }
+
+    private static int toIntExact(long value) {
+        if (javaVersion() >= 8) {
+            return toIntExact8(value);
+        }
+        int result = (int) value;
+        if (result != value) {
+            throw new ArithmeticException("Cannot convert to exact int: " + value);
+        }
+        return result;
+    }
+
+    @SuppressJava6Requirement(reason = "version checked")
+    private static int toIntExact8(long value) {
+        return Math.toIntExact(value);
     }
 
     private static long getLongSafe(byte[] bytes, int offset) {

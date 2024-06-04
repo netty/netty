@@ -705,6 +705,7 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public byte[] array() {
+            ensureAccessible();
             return rootParent.array();
         }
 

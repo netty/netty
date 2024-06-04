@@ -138,6 +138,76 @@ final class PlatformDependent0 {
                 logger.debug("sun.misc.Unsafe.theUnsafe: available");
             }
 
+            // ensure the unsafe supports all necessary methods to work around the mistake in the latest OpenJDK,
+            // or that they haven't been removed by JEP 471.
+            // https://github.com/netty/netty/issues/1061
+            // https://www.mail-archive.com/jdk6-dev@openjdk.java.net/msg00698.html
+            // https://openjdk.org/jeps/471
+            if (unsafe != null) {
+                final Unsafe finalUnsafe = unsafe;
+                final Object maybeException = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                    @Override
+                    public Object run() {
+                        try {
+                            // Other methods like storeFence() and invokeCleaner() are tested for elsewhere.
+                            Class<? extends Unsafe> cls = finalUnsafe.getClass();
+                            cls.getDeclaredMethod("objectFieldOffset", Field.class);
+                            cls.getDeclaredMethod("staticFieldOffset", Field.class);
+                            cls.getDeclaredMethod("staticFieldBase", Field.class);
+                            cls.getDeclaredMethod("arrayBaseOffset", Class.class);
+                            cls.getDeclaredMethod("arrayIndexScale", Class.class);
+                            cls.getDeclaredMethod("allocateMemory", long.class);
+                            cls.getDeclaredMethod("reallocateMemory", long.class, long.class);
+                            cls.getDeclaredMethod("freeMemory", long.class);
+                            cls.getDeclaredMethod("setMemory", long.class, long.class, byte.class);
+                            cls.getDeclaredMethod("setMemory", Object.class, long.class, long.class, byte.class);
+                            cls.getDeclaredMethod(
+                                    "copyMemory", Object.class, long.class, Object.class, long.class, long.class);
+                            cls.getDeclaredMethod("getBoolean", Object.class, long.class);
+                            cls.getDeclaredMethod("getByte", long.class);
+                            cls.getDeclaredMethod("getByte", Object.class, long.class);
+                            cls.getDeclaredMethod("getInt", long.class);
+                            cls.getDeclaredMethod("getInt", Object.class, long.class);
+                            cls.getDeclaredMethod("getLong", long.class);
+                            cls.getDeclaredMethod("getLong", Object.class, long.class);
+                            cls.getDeclaredMethod("putByte", long.class, byte.class);
+                            cls.getDeclaredMethod("putByte", Object.class, long.class, byte.class);
+                            cls.getDeclaredMethod("putInt", long.class, int.class);
+                            cls.getDeclaredMethod("putInt", Object.class, long.class, int.class);
+                            cls.getDeclaredMethod("putLong", long.class, long.class);
+                            cls.getDeclaredMethod("putLong", Object.class, long.class, long.class);
+                            cls.getDeclaredMethod("addressSize");
+                            // The following tests the methods are usable.
+                            // Will throw UnsupportedOperationException if unsafe memory access is denied:
+                            long address = finalUnsafe.allocateMemory(Long.BYTES);
+                            finalUnsafe.putLong(address, 42);
+                            finalUnsafe.freeMemory(address);
+                            return null;
+                        } catch (UnsupportedOperationException e) {
+                            return e;
+                        } catch (NoSuchMethodException e) {
+                            return e;
+                        } catch (SecurityException e) {
+                            return e;
+                        }
+                    }
+                });
+
+                if (maybeException == null) {
+                    logger.debug("sun.misc.Unsafe base methods: all available");
+                } else {
+                    // Unsafe.copyMemory(Object, long, Object, long, long) unavailable.
+                    unsafe = null;
+                    unsafeUnavailabilityCause = (Throwable) maybeException;
+                    if (logger.isTraceEnabled()) {
+                        logger.debug("sun.misc.Unsafe method unavailable:", unsafeUnavailabilityCause);
+                    } else {
+                        logger.debug("sun.misc.Unsafe method unavailable: {}",
+                                ((Throwable) maybeException).getMessage());
+                    }
+                }
+            }
+
             if (unsafe != null) {
                 final Unsafe finalUnsafe = unsafe;
 
@@ -434,8 +504,15 @@ final class PlatformDependent0 {
     }
 
     private static Throwable explicitNoUnsafeCause0() {
-        final boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
+        boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
         logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
+
+        // See JDK 23 JEP 471 https://openjdk.org/jeps/471 and sun.misc.Unsafe.beforeMemoryAccess() on JDK 23+.
+        String unsafeMemoryAccess = SystemPropertyUtil.get("sun.misc.unsafe.memory.access", "<unspecified>");
+        if (!("allow".equals(unsafeMemoryAccess) || "<unspecified>".equals(unsafeMemoryAccess))) {
+            logger.debug("--sun-misc-unsafe-memory-access={}", unsafeMemoryAccess);
+            noUnsafe = true;
+        }
 
         if (noUnsafe) {
             logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
