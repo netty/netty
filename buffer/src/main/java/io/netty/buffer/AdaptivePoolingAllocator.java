@@ -48,8 +48,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.StampedLock;
 
-import static io.netty.util.internal.PlatformDependent.javaVersion;
-
 /**
  * An auto-tuning pooling allocator, that follows an anti-generational hypothesis.
  * <p>
@@ -78,7 +76,7 @@ import static io.netty.util.internal.PlatformDependent.javaVersion;
  */
 @SuppressJava6Requirement(reason = "Guarded by version check")
 @UnstableApi
-final class AdaptivePoolingAllocator {
+final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.AdaptiveAllocatorApi {
 
     enum MagazineCaching {
         EventLoopThreads,
@@ -125,10 +123,6 @@ final class AdaptivePoolingAllocator {
         ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
         ObjectUtil.checkNotNull(magazineCaching, "magazineCaching");
         this.chunkAllocator = chunkAllocator;
-        if (javaVersion() < 8) {
-            // The implementation uses StampedLock, which was introduced in Java 8.
-            throw new IllegalStateException("This allocator require Java 8 or newer.");
-        }
         centralQueue = ObjectUtil.checkNotNull(createSharedChunkQueue(), "centralQueue");
         magazineExpandLock = new StampedLock();
         if (magazineCaching != MagazineCaching.None) {
@@ -191,7 +185,8 @@ final class AdaptivePoolingAllocator {
         return PlatformDependent.newFixedMpmcQueue(CENTRAL_QUEUE_CAPACITY);
     }
 
-    ByteBuf allocate(int size, int maxCapacity) {
+    @Override
+    public ByteBuf allocate(int size, int maxCapacity) {
         if (size <= MAX_CHUNK_SIZE) {
             Thread currentThread = Thread.currentThread();
             boolean willCleanupFastThreadLocals = FastThreadLocalThread.willCleanupFastThreadLocals(currentThread);
@@ -253,7 +248,8 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    long usedMemory() {
+    @Override
+    public long usedMemory() {
         long sum = 0;
         for (Chunk chunk : centralQueue) {
             sum += chunk.capacity();
