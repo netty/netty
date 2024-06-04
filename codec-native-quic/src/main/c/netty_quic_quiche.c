@@ -473,6 +473,9 @@ static jobjectArray netty_quiche_conn_peer_error0(JNIEnv* env, jclass clazz, jlo
                             &reason_len);
     if (peer_error) {
         jobjectArray array = (*env)->NewObjectArray(env, 3, object_class, NULL);
+        if (array == NULL) {
+            return NULL;
+        }
         (*env)->SetObjectArrayElement(env, array, 0, (*env)->CallStaticObjectMethod(env, boolean_class, boolean_class_valueof, is_app ? JNI_TRUE : JNI_FALSE));
         (*env)->SetObjectArrayElement(env, array, 1, (*env)->CallStaticObjectMethod(env, integer_class, integer_class_valueof, (jint) error_code));
         (*env)->SetObjectArrayElement(env, array, 2, to_byte_array(env, reason, reason_len));
@@ -742,6 +745,9 @@ static jobjectArray netty_quiche_conn_path_stats(JNIEnv* env, jclass clazz, jlon
     }
 
     jobjectArray array = (*env)->NewObjectArray(env, 16, object_class, NULL);
+    if (array == NULL) {
+        return NULL;
+    }
     (*env)->SetObjectArrayElement(env, array, 0, localAddr);
     (*env)->SetObjectArrayElement(env, array, 1, peerAddr);
     (*env)->SetObjectArrayElement(env, array, 2, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) stats.validation_state));
@@ -779,6 +785,9 @@ static jobjectArray netty_quiche_path_event_new(JNIEnv* env, jclass clazz, jlong
     }
 
     jobjectArray array = (*env)->NewObjectArray(env, 2, object_class, NULL);
+    if (array == NULL) {
+        return NULL;
+    }
     (*env)->SetObjectArrayElement(env, array, 0, localAddr);
     (*env)->SetObjectArrayElement(env, array, 1, peerAddr);
     return array;
@@ -802,6 +811,9 @@ static jobjectArray netty_quiche_path_event_validated(JNIEnv* env, jclass clazz,
     }
 
     jobjectArray array = (*env)->NewObjectArray(env, 2, object_class, NULL);
+    if (array == NULL) {
+        return NULL;
+    }
     (*env)->SetObjectArrayElement(env, array, 0, localAddr);
     (*env)->SetObjectArrayElement(env, array, 1, peerAddr);
     return array;
@@ -825,6 +837,9 @@ static jobjectArray netty_quiche_path_event_failed_validation(JNIEnv* env, jclas
     }
 
     jobjectArray array = (*env)->NewObjectArray(env, 2, object_class, NULL);
+    if (array == NULL) {
+        return NULL;
+    }
     (*env)->SetObjectArrayElement(env, array, 0, localAddr);
     (*env)->SetObjectArrayElement(env, array, 1, peerAddr);
     return array;
@@ -848,6 +863,9 @@ static jobjectArray netty_quiche_path_event_closed(JNIEnv* env, jclass clazz, jl
     }
 
     jobjectArray array = (*env)->NewObjectArray(env, 2, object_class, NULL);
+    if (array == NULL) {
+        return NULL;
+    }
     (*env)->SetObjectArrayElement(env, array, 0, localAddr);
     (*env)->SetObjectArrayElement(env, array, 1, peerAddr);
     return array;
@@ -883,6 +901,9 @@ static jobjectArray netty_quiche_path_event_reused_source_connection_id(JNIEnv* 
         return NULL;
     }
     jobjectArray array = (*env)->NewObjectArray(env, 5, object_class, NULL);
+    if (array == NULL) {
+        return NULL;
+    }
     (*env)->SetObjectArrayElement(env, array, 0, (*env)->CallStaticObjectMethod(env, long_class, long_class_valueof, (jlong) id));
     (*env)->SetObjectArrayElement(env, array, 1, localOldAddr);
     (*env)->SetObjectArrayElement(env, array, 2, peerOldAddr);
@@ -908,6 +929,9 @@ static jobjectArray netty_quiche_path_event_peer_migrated(JNIEnv* env, jclass cl
     }
 
     jobjectArray array = (*env)->NewObjectArray(env, 2, object_class, NULL);
+    if (array == NULL) {
+        return NULL;
+    }
     (*env)->SetObjectArrayElement(env, array, 0, localAddr);
     (*env)->SetObjectArrayElement(env, array, 1, peerAddr);
     return array;
