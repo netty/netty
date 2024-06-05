@@ -218,6 +218,9 @@ static jboolean netty5_io_uring_probe(JNIEnv *env, jclass clazz, jint ring_fd, j
 
     jsize opsLen = (*env)->GetArrayLength(env, ops);
     jint *opsElements = (*env)->GetIntArrayElements(env, ops, 0);
+    if (opsElements == NULL) {
+        goto done;
+    }
     int i;
     for (i = 0; i < opsLen; i++) {
         int op = opsElements[i];
