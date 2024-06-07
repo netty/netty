@@ -112,16 +112,30 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             throws Exception {
         ByteBuffer dcidByteBuffer = dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes());
         QuicheQuicChannel channel = getChannel(dcidByteBuffer);
-        if (channel == null && type == QuicPacketType.ZERO_RTT && connectionIdAddressGenerator.isIdempotent()) {
-            // 0 rtt packet should obtain the server generated dcid
-            channel = getChannel(connectionIdAddressGenerator.newId(dcidByteBuffer, localConnIdLength));
+        if (channel != null) {
+            return channel;
         }
-        if (channel == null) {
-            return handleServer(ctx, sender, recipient, type, version, scid, dcid, token,
-                    senderSockaddrMemory, recipientSockaddrMemory, freeTask, localConnIdLength, config);
+        switch (type) {
+            case ZERO_RTT:
+                if (connectionIdAddressGenerator.isIdempotent()) {
+                    // Try to see if we can find the channel by generate the previous used DCID again.
+                    channel = getChannel(connectionIdAddressGenerator.newId(dcidByteBuffer, localConnIdLength));
+                    if (channel == null) {
+                        return null;
+                    }
+                } else {
+                    return null;
+                }
+            case INITIAL:
+                // We only want to possibility create a new QuicChannel if this is the initial packet, otherwise
+                // drop the packet on the floor if we did not find a mapping before.
+                return handleServer(ctx, sender, recipient, type, version, scid, dcid, token,
+                        senderSockaddrMemory, recipientSockaddrMemory, freeTask, localConnIdLength, config);
+            default:
+                // Drop the packet on the floor.
+                return null;
         }
 
-        return channel;
     }
 
     @Nullable
