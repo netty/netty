@@ -121,6 +121,18 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         return channel;
     }
 
+    private static void writePacket(ChannelHandlerContext ctx, int res, ByteBuf buffer, InetSocketAddress sender)
+            throws Exception {
+        if (res < 0) {
+            buffer.release();
+            if (res != Quiche.QUICHE_ERR_DONE) {
+                throw Quiche.convertToException(res);
+            }
+        } else {
+            ctx.writeAndFlush(new DatagramPacket(buffer.writerIndex(buffer.writerIndex() + res), sender));
+        }
+    }
+
     @Nullable
     private QuicheQuicChannel handleServer(ChannelHandlerContext ctx, InetSocketAddress sender,
                                            InetSocketAddress recipient,
@@ -132,20 +144,12 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         if (!Quiche.quiche_version_is_supported(version)) {
             // Version is not supported, try to negotiate it.
             ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
-            int outWriterIndex = out.writerIndex();
 
             int res = Quiche.quiche_negotiate_version(
                     Quiche.readerMemoryAddress(scid), scid.readableBytes(),
                     Quiche.readerMemoryAddress(dcid), dcid.readableBytes(),
                     Quiche.writerMemoryAddress(out), out.writableBytes());
-            if (res < 0) {
-                out.release();
-                if (res != Quiche.QUICHE_ERR_DONE) {
-                    throw Quiche.convertToException(res);
-                }
-            } else {
-                ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + res), sender));
-            }
+            writePacket(ctx, res, out, sender);
             return null;
         }
 
@@ -172,14 +176,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                         version,
                         Quiche.writerMemoryAddress(out), out.writableBytes());
 
-                if (written < 0) {
-                    out.release();
-                    if (written != Quiche.QUICHE_ERR_DONE) {
-                        throw Quiche.convertToException(written);
-                    }
-                } else {
-                    ctx.writeAndFlush(new DatagramPacket(out.writerIndex(outWriterIndex + written), sender));
-                }
+                writePacket(ctx, written, out, sender);
                 return null;
             }
             offset = 0;
