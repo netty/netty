@@ -112,30 +112,13 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             throws Exception {
         ByteBuffer dcidByteBuffer = dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes());
         QuicheQuicChannel channel = getChannel(dcidByteBuffer);
-        if (channel != null) {
-            return channel;
+        if (channel == null && type == QuicPacketType.INITIAL) {
+            // We only want to possibility create a new QuicChannel if this is the initial packet, otherwise
+            // drop the packet on the floor if we did not find a mapping before.
+            return handleServer(ctx, sender, recipient, type, version, scid, dcid, token,
+                    senderSockaddrMemory, recipientSockaddrMemory, freeTask, localConnIdLength, config);
         }
-        switch (type) {
-            case ZERO_RTT:
-                if (connectionIdAddressGenerator.isIdempotent()) {
-                    // Try to see if we can find the channel by generate the previous used DCID again.
-                    channel = getChannel(connectionIdAddressGenerator.newId(dcidByteBuffer, localConnIdLength));
-                    if (channel == null) {
-                        return null;
-                    }
-                } else {
-                    return null;
-                }
-            case INITIAL:
-                // We only want to possibility create a new QuicChannel if this is the initial packet, otherwise
-                // drop the packet on the floor if we did not find a mapping before.
-                return handleServer(ctx, sender, recipient, type, version, scid, dcid, token,
-                        senderSockaddrMemory, recipientSockaddrMemory, freeTask, localConnIdLength, config);
-            default:
-                // Drop the packet on the floor.
-                return null;
-        }
-
+        return channel;
     }
 
     @Nullable
@@ -145,8 +128,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                                            ByteBuf scid, ByteBuf dcid, ByteBuf token,
                                            ByteBuf senderSockaddrMemory, ByteBuf recipientSockaddrMemory,
                                            Consumer<QuicheQuicChannel> freeTask, int localConnIdLength,
-                                           QuicheConfig config)
-            throws Exception {
+                                           QuicheConfig config) throws Exception {
         if (!Quiche.quiche_version_is_supported(version)) {
             // Version is not supported, try to negotiate it.
             ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
@@ -246,6 +228,11 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                 ctx.channel(), key, recipient, sender, config.isDatagramSupported(),
                 streamHandler, streamOptionsArray, streamAttrsArray, freeTask, sslTaskExecutor,
                 connectionIdAddressGenerator, resetTokenGenerator);
+
+        // We also need to add the original id as there might be multiple INITIAL packets.
+        byte[] originalId = new byte[dcid.readableBytes()];
+        dcid.getBytes(dcid.readerIndex(), originalId);
+        channel.sourceConnectionIds().add(ByteBuffer.wrap(originalId));
 
         Quic.setupChannel(channel, optionsArray, attrsArray, handler, LOGGER);
         QuicSslEngine engine = sslEngineProvider.apply(channel);
