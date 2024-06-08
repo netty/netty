@@ -181,7 +181,7 @@ final class PlatformDependent0 {
                             cls.getDeclaredMethod("addressSize");
                             // The following tests the methods are usable.
                             // Will throw UnsupportedOperationException if unsafe memory access is denied:
-                            long address = finalUnsafe.allocateMemory(Long.BYTES);
+                            long address = finalUnsafe.allocateMemory(8);
                             finalUnsafe.putLong(address, 42);
                             finalUnsafe.freeMemory(address);
                             return null;
