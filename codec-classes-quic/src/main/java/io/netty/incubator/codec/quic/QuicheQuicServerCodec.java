@@ -214,8 +214,8 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         } else {
             scidAddr = Quiche.readerMemoryAddress(dcid);
             scidLen = localConnIdLength;
-            ocidAddr = Quiche.memoryAddress(token, offset, token.readableBytes());
             ocidLen = token.readableBytes() - offset;
+            ocidAddr = Quiche.memoryAddress(token, offset, ocidLen);
             // Now create the key to store the channel in the map.
             byte[] bytes = new byte[localConnIdLength];
             dcid.getBytes(dcid.readerIndex(), bytes);
