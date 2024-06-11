@@ -39,7 +39,7 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
                           Executor sslTaskExecutor, int localConnIdLength, FlushStrategy flushStrategy) {
         // Let's just use Quic.MAX_DATAGRAM_SIZE as the maximum size for a token on the client side. This should be
         // safe enough and as we not have too many codecs at the same time this should be ok.
-        super(config, localConnIdLength, Quic.MAX_DATAGRAM_SIZE, flushStrategy);
+        super(config, localConnIdLength, flushStrategy);
         this.sslEngineProvider = sslEngineProvider;
         this.sslTaskExecutor = sslTaskExecutor;
     }
@@ -48,7 +48,7 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
     @Nullable
     protected QuicheQuicChannel quicPacketRead(
             ChannelHandlerContext ctx, InetSocketAddress sender, InetSocketAddress recipient,
-            QuicPacketType type, int version, ByteBuf scid, ByteBuf dcid,
+            QuicPacketType type, long version, ByteBuf scid, ByteBuf dcid,
             ByteBuf token, ByteBuf senderSockaddrMemory, ByteBuf recipientSockaddrMemory,
             Consumer<QuicheQuicChannel> freeTask, int localConnIdLength, QuicheConfig config) {
         ByteBuffer key = dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes());

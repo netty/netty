@@ -49,7 +49,6 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private final Queue<QuicheQuicChannel> delayedRemoval = new ArrayDeque<>();
 
     private final Consumer<QuicheQuicChannel> freeTask = this::removeChannel;
-    private final int maxTokenLength;
     private final FlushStrategy flushStrategy;
     private final int localConnIdLength;
     private final QuicheConfig config;
@@ -66,10 +65,9 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private ByteBuf senderSockaddrMemory;
     private ByteBuf recipientSockaddrMemory;
 
-    QuicheQuicCodec(QuicheConfig config, int localConnIdLength, int maxTokenLength, FlushStrategy flushStrategy) {
+    QuicheQuicCodec(QuicheConfig config, int localConnIdLength, FlushStrategy flushStrategy) {
         this.config = config;
         this.localConnIdLength = localConnIdLength;
-        this.maxTokenLength = maxTokenLength;
         this.flushStrategy = flushStrategy;
     }
 
@@ -132,7 +130,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     public final void handlerAdded(ChannelHandlerContext ctx) {
         senderSockaddrMemory = allocateNativeOrder(Quiche.SIZEOF_SOCKADDR_STORAGE);
         recipientSockaddrMemory = allocateNativeOrder(Quiche.SIZEOF_SOCKADDR_STORAGE);
-        headerParser = new QuicHeaderParser(maxTokenLength, localConnIdLength);
+        headerParser = new QuicHeaderParser(localConnIdLength);
         parserCallback = new QuicCodecHeaderProcessor(ctx);
         estimatorHandle = ctx.channel().config().getMessageSizeEstimator().newHandle();
         handlerAdded(ctx, localConnIdLength);
@@ -229,7 +227,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
      */
     @Nullable
     protected abstract QuicheQuicChannel quicPacketRead(ChannelHandlerContext ctx, InetSocketAddress sender,
-                                                        InetSocketAddress recipient, QuicPacketType type, int version,
+                                                        InetSocketAddress recipient, QuicPacketType type, long version,
                                                         ByteBuf scid, ByteBuf dcid, ByteBuf token,
                                                         ByteBuf senderSockaddrMemory, ByteBuf recipientSockaddrMemory,
                                                         Consumer<QuicheQuicChannel> freeTask,
@@ -362,7 +360,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
         @Override
         public void process(InetSocketAddress sender, InetSocketAddress recipient, ByteBuf buffer, QuicPacketType type,
-                            int version, ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
+                            long version, ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception {
             QuicheQuicChannel channel = quicPacketRead(ctx, sender, recipient,
                     type, version, scid,
                     dcid, token, senderSockaddrMemory, recipientSockaddrMemory, freeTask, localConnIdLength, config);

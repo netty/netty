@@ -20,63 +20,33 @@ import io.netty.buffer.Unpooled;
 
 import java.net.InetSocketAddress;
 
-import static io.netty.incubator.codec.quic.Quiche.QUICHE_ERR_DONE;
-import static io.netty.incubator.codec.quic.Quiche.allocateNativeOrder;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Parses the QUIC packet header and notifies a callback once parsing was successful.
- *
+ * <p>
  * Once the parser is not needed anymore the user needs to call {@link #close()} to ensure all resources are
  * released. Failed to do so may lead to memory leaks.
- *
+ * <p>
  * This class can be used for advanced use-cases. Usually you want to just use {@link QuicClientCodecBuilder} or
  * {@link QuicServerCodecBuilder}.
  */
 public final class QuicHeaderParser implements AutoCloseable {
-    private final int maxTokenLength;
+    // See https://datatracker.ietf.org/doc/rfc7714/
+    private static final int AES_128_GCM_TAG_LENGTH = 16;
+    // https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2
+    private static final int MAX_CONN_ID_LEN = 20;
     private final int localConnectionIdLength;
-    private final ByteBuf versionBuffer;
-    private final ByteBuf typeBuffer;
-    private final ByteBuf scidLenBuffer;
-    private final ByteBuf scidBuffer;
-    private final ByteBuf dcidLenBuffer;
-    private final ByteBuf dcidBuffer;
-    private final ByteBuf tokenBuffer;
-    private final ByteBuf tokenLenBuffer;
     private boolean closed;
 
-    public QuicHeaderParser(int maxTokenLength, int localConnectionIdLength) {
-        Quic.ensureAvailability();
-        this.maxTokenLength = checkPositiveOrZero(maxTokenLength, "maxTokenLength");
+    public QuicHeaderParser(int localConnectionIdLength) {
         this.localConnectionIdLength = checkPositiveOrZero(localConnectionIdLength, "localConnectionIdLength");
-        // Allocate the buffer from which we read primative values like integer/long with native order to ensure
-        // we read the right value.
-        versionBuffer = allocateNativeOrder(Integer.BYTES);
-        typeBuffer = allocateNativeOrder(Byte.BYTES);
-        scidLenBuffer = allocateNativeOrder(Integer.BYTES);
-        dcidLenBuffer = allocateNativeOrder(Integer.BYTES);
-        tokenLenBuffer = allocateNativeOrder(Integer.BYTES);
-
-        // Now allocate the buffers that dont need native ordering and so will be cheaper to access when we slice into
-        // these or obtain a view into these via internalNioBuffer(...).
-        scidBuffer = Unpooled.directBuffer(Quiche.QUICHE_MAX_CONN_ID_LEN);
-        dcidBuffer = Unpooled.directBuffer(Quiche.QUICHE_MAX_CONN_ID_LEN);
-        tokenBuffer = Unpooled.directBuffer(maxTokenLength);
     }
 
     @Override
     public void close() {
         if (!closed) {
             closed = true;
-            versionBuffer.release();
-            typeBuffer.release();
-            scidBuffer.release();
-            scidLenBuffer.release();
-            dcidBuffer.release();
-            dcidLenBuffer.release();
-            tokenLenBuffer.release();
-            tokenBuffer.release();
         }
     }
 
@@ -96,44 +66,195 @@ public final class QuicHeaderParser implements AutoCloseable {
      * @throws Exception    thrown if we couldn't parse the header or if the {@link QuicHeaderProcessor} throws an
      *                      exception.
      */
-    public void parse(InetSocketAddress sender,
-                      InetSocketAddress recipient, ByteBuf packet, QuicHeaderProcessor callback) throws Exception {
+    public void parse(InetSocketAddress sender, InetSocketAddress recipient, ByteBuf packet,
+                      QuicHeaderProcessor callback) throws Exception {
         if (closed) {
             throw new IllegalStateException(QuicHeaderParser.class.getSimpleName() + " is already closed");
         }
 
-        // Set various len values so quiche_header_info can make use of these.
-        scidLenBuffer.setInt(0, Quiche.QUICHE_MAX_CONN_ID_LEN);
-        dcidLenBuffer.setInt(0, Quiche.QUICHE_MAX_CONN_ID_LEN);
-        tokenLenBuffer.setInt(0, maxTokenLength);
+        // See https://datatracker.ietf.org/doc/html/rfc9000#section-17
+        int offset = 0;
+        int readable = packet.readableBytes();
 
-        // TODO: Maybe we should implement this by ourself and just save the extra JNI call and memory copies.
-        //       Parsing should be relative straight forward.
-        //       See https://datatracker.ietf.org/doc/html/rfc9000#section-17
-        int res = Quiche.quiche_header_info(
-                Quiche.readerMemoryAddress(packet), packet.readableBytes(),
-                localConnectionIdLength,
-                Quiche.memoryAddress(versionBuffer, 0, versionBuffer.capacity()),
-                Quiche.memoryAddress(typeBuffer, 0, typeBuffer.capacity()),
-                Quiche.memoryAddress(scidBuffer, 0, scidBuffer.capacity()),
-                Quiche.memoryAddress(scidLenBuffer, 0, scidLenBuffer.capacity()),
-                Quiche.memoryAddress(dcidBuffer, 0, dcidBuffer.capacity()),
-                Quiche.memoryAddress(dcidLenBuffer, 0, dcidLenBuffer.capacity()),
-                Quiche.memoryAddress(tokenBuffer, 0, tokenBuffer.capacity()),
-                Quiche.writerMemoryAddress(tokenLenBuffer));
-        if (res >= 0) {
-            int version = versionBuffer.getInt(0);
-            byte type = typeBuffer.getByte(0);
-            int scidLen = scidLenBuffer.getInt(0);
-            int dcidLen = dcidLenBuffer.getInt(0);
-            int tokenLen = tokenLenBuffer.getInt(0);
+        checkReadable(offset, readable, Byte.BYTES);
+        byte first = packet.getByte(offset);
+        offset += Byte.BYTES;
 
-            callback.process(sender, recipient, packet, QuicPacketType.of(type), version,
-                    scidBuffer.setIndex(0, scidLen),
-                    dcidBuffer.setIndex(0, dcidLen),
-                    tokenBuffer.setIndex(0, tokenLen));
-        } else if (res != QUICHE_ERR_DONE) {
-            throw Quiche.convertToException(res);
+        final QuicPacketType type;
+        final long version;
+        final ByteBuf dcid;
+        final ByteBuf scid;
+        final ByteBuf token;
+
+        if (hasShortHeader(first)) {
+            // See https://www.rfc-editor.org/rfc/rfc9000.html#section-17.3
+            // 1-RTT Packet {
+            //  Header Form (1) = 0,
+            //  Fixed Bit (1) = 1,
+            //  Spin Bit (1),
+            //  Reserved Bits (2),
+            //  Key Phase (1),
+            //  Packet Number Length (2),
+            //  Destination Connection ID (0..160),
+            //  Packet Number (8..32),
+            //  Packet Payload (8..),
+            //}
+            version = 0;
+            type = QuicPacketType.SHORT;
+            // Short packets have no source connection id and no token.
+            scid = Unpooled.EMPTY_BUFFER;
+            token = Unpooled.EMPTY_BUFFER;
+            dcid = sliceCid(packet, offset, localConnectionIdLength);
+        } else {
+            // See https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2
+            // Long Header Packet {
+            //  Header Form (1) = 1,
+            //  Fixed Bit (1) = 1,
+            //  Long Packet Type (2),
+            //  Type-Specific Bits (4),
+            //  Version (32),
+            //  Destination Connection ID Length (8),
+            //  Destination Connection ID (0..160),
+            //  Source Connection ID Length (8),
+            //  Source Connection ID (0..160),
+            //  Type-Specific Payload (..),
+            //}
+            checkReadable(offset, readable, Integer.BYTES);
+
+            // Version uses an unsigned int:
+            // https://www.rfc-editor.org/rfc/rfc9000.html#section-15
+            version = packet.getUnsignedInt(offset);
+            offset += Integer.BYTES;
+            type = typeOfLongHeader(first, version);
+
+            int dcidLen = packet.getUnsignedByte(offset);
+            checkCidLength(dcidLen);
+            offset += Byte.BYTES;
+            dcid = sliceCid(packet, offset, dcidLen);
+            offset += dcidLen;
+
+            int scidLen = packet.getUnsignedByte(offset);
+            checkCidLength(scidLen);
+            offset += Byte.BYTES;
+            scid = sliceCid(packet, offset, scidLen);
+            offset += scidLen;
+            token = sliceToken(type, packet, offset, readable);
+        }
+        callback.process(sender, recipient, packet, type, version, scid, dcid, token);
+    }
+
+    // Check if the connection id is not longer then 20. This is what is the maximum for QUIC version 1.
+    // See https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2
+    private void checkCidLength(int length) throws QuicException{
+        if (length > MAX_CONN_ID_LEN) {
+            throw new QuicException("connection id to large: "  + length + " > " + MAX_CONN_ID_LEN,
+                    QuicTransportError.PROTOCOL_VIOLATION);
+        }
+    }
+
+    private static ByteBuf sliceToken(QuicPacketType type, ByteBuf packet, int offset, int readable)
+            throws QuicException {
+        switch (type) {
+            case INITIAL:
+                // See
+                checkReadable(offset, readable, Byte.BYTES);
+                int numBytes = numBytesForVariableLengthInteger(packet.getByte(offset));
+                int len = (int) getVariableLengthInteger(packet, offset, numBytes);
+                offset += numBytes;
+
+                checkReadable(offset, readable, len);
+                return packet.slice(offset, len);
+            case RETRY:
+                // Exclude the integrity tag from the token.
+                // See https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2.5
+                checkReadable(offset, readable, AES_128_GCM_TAG_LENGTH);
+                int tokenLen = readable - offset - AES_128_GCM_TAG_LENGTH;
+                return packet.slice(offset, tokenLen);
+            default:
+                // No token included.
+                return Unpooled.EMPTY_BUFFER;
+        }
+    }
+    private static QuicException newProtocolViolationException(String message) {
+        return new QuicException(message, QuicTransportError.PROTOCOL_VIOLATION);
+    }
+
+    static ByteBuf sliceCid(ByteBuf buffer, int offset, int len) throws QuicException {
+        checkReadable(offset, buffer.readableBytes(), len);
+        return buffer.slice(offset, len);
+    }
+
+    private static void checkReadable(int offset, int readable, int needed) throws QuicException {
+        int r = readable - offset;
+        if (r < needed) {
+            throw newProtocolViolationException("Not enough bytes to read, " + r + " < " + needed);
+        }
+    }
+
+    /**
+     * Read the variable length integer from the {@link ByteBuf}.
+     * See <a href="https://tools.ietf.org/html/draft-ietf-quic-transport-32#section-16">
+     *     Variable-Length Integer Encoding </a>
+     */
+    private static long getVariableLengthInteger(ByteBuf in, int offset, int len) throws QuicException {
+        checkReadable(offset, in.readableBytes(), len);
+        switch (len) {
+            case 1:
+                return in.getUnsignedByte(offset);
+            case 2:
+                return in.getUnsignedShort(offset) & 0x3fff;
+            case 4:
+                return in.getUnsignedInt(offset) & 0x3fffffff;
+            case 8:
+                return in.getLong(offset) & 0x3fffffffffffffffL;
+            default:
+                throw newProtocolViolationException("Unsupported length:" + len);
+        }
+    }
+
+    /**
+     * Returns the number of bytes that were encoded into the byte for a variable length integer to read.
+     * See <a href="https://tools.ietf.org/html/draft-ietf-quic-transport-32#section-16">
+     *     Variable-Length Integer Encoding </a>
+     */
+    private static int numBytesForVariableLengthInteger(byte b) {
+        byte val = (byte) (b >> 6);
+        if ((val & 1) != 0) {
+            if ((val & 2) != 0) {
+                return 8;
+            }
+            return 2;
+        }
+        if ((val & 2) != 0) {
+            return 4;
+        }
+        return 1;
+    }
+
+    static boolean hasShortHeader(byte b) {
+        return (b & 0x80) == 0;
+    }
+
+    private static QuicPacketType typeOfLongHeader(byte first, long version) throws QuicException {
+        if (version == 0) {
+            // If we parsed a version of 0 we are sure it's a version negotiation packet:
+            // https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2.1
+            //
+            // This also means we should ignore everything that is left in 'first'.
+            return QuicPacketType.VERSION_NEGOTIATION;
+        }
+        int packetType = (first & 0x30) >> 4;
+        switch (packetType) {
+            case 0x00:
+                return QuicPacketType.INITIAL;
+            case 0x01:
+                return QuicPacketType.ZERO_RTT;
+            case 0x02:
+                return QuicPacketType.HANDSHAKE;
+            case 0x03:
+                return QuicPacketType.RETRY;
+            default:
+                throw newProtocolViolationException("Unknown packet type: " + packetType);
         }
     }
 
@@ -162,6 +283,6 @@ public final class QuicHeaderParser implements AutoCloseable {
          * @throws Exception    throws if an error happens during processing.
          */
         void process(InetSocketAddress sender, InetSocketAddress recipient, ByteBuf packet,
-                     QuicPacketType type, int version, ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception;
+                     QuicPacketType type, long version, ByteBuf scid, ByteBuf dcid, ByteBuf token) throws Exception;
     }
 }

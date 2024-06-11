@@ -23,38 +23,32 @@ public enum QuicPacketType {
     /**
      * Initial packet.
      */
-    INITIAL((byte) 1),
+    INITIAL,
 
     /**
      * Retry packet.
      */
-    RETRY((byte) 2),
+    RETRY,
 
     /**
      * Handshake packet.
      */
-    HANDSHAKE((byte) 3),
+    HANDSHAKE,
 
     /**
      * 0-RTT packet.
      */
-    ZERO_RTT((byte) 4),
+    ZERO_RTT,
 
     /**
      * 1-RTT short header packet.
      */
-    SHORT((byte) 5),
+    SHORT,
 
     /**
      * Version negotiation packet.
      */
-    VERSION_NEGOTIATION((byte) 6);
-
-    final byte type;
-
-    QuicPacketType(byte type) {
-        this.type = type;
-    }
+    VERSION_NEGOTIATION;
 
     /**
      * Return the {@link QuicPacketType} for the given byte.

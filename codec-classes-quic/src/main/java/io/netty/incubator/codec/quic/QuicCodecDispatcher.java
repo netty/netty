@@ -193,7 +193,7 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
      */
     // Package-private for testing
     @Nullable
-    static ByteBuf getDestinationConnectionId(ByteBuf buffer, int localConnectionIdLength) {
+    static ByteBuf getDestinationConnectionId(ByteBuf buffer, int localConnectionIdLength) throws QuicException{
         if (buffer.readableBytes() > Byte.BYTES) {
             int offset = buffer.readerIndex();
             boolean shortHeader = hasShortHeader(buffer);
@@ -213,9 +213,7 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
                 //  Packet Number (8..32),
                 //  Packet Payload (8..),
                 //}
-                if (buffer.readableBytes() >= offset + localConnectionIdLength) {
-                    return buffer.slice(offset, localConnectionIdLength);
-                }
+                return QuicHeaderParser.sliceCid(buffer, offset, localConnectionIdLength);
             }
         }
         return null;
@@ -223,7 +221,7 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
 
     // Package-private for testing
     static boolean hasShortHeader(ByteBuf buffer) {
-        return (buffer.getByte(buffer.readerIndex()) & 0x80) == 0;
+        return QuicHeaderParser.hasShortHeader(buffer.getByte(buffer.readerIndex()));
     }
 
     // Package-private for testing

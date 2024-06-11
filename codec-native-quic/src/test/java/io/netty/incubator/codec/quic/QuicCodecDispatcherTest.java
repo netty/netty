@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class QuicCodecDispatcherTest {
 
     @Test
-    public void testPacketsAreDispatchedToCorrectChannel() {
+    public void testPacketsAreDispatchedToCorrectChannel() throws QuicException {
         short localConnectionIdLength = 16;
 
         AtomicInteger initChannelCalled = new AtomicInteger();

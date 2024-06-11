@@ -32,6 +32,17 @@ public final class QuicException extends Exception {
         this.error = error;
     }
 
+    public QuicException(Throwable cause, QuicTransportError error) {
+        super(cause);
+        this.error = error;
+    }
+
+    public QuicException(String message, Throwable cause, QuicTransportError error) {
+        super(message, cause);
+        this.error = error;
+    }
+
+
     /**
      * Returns the {@link QuicTransportError} which was the cause of the {@link QuicException}.
      *

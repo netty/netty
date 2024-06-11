@@ -70,7 +70,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                           ChannelHandler streamHandler,
                           Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                           Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray) {
-        super(config, localConnIdLength, tokenHandler.maxTokenLength(), flushStrategy);
+        super(config, localConnIdLength, flushStrategy);
         this.tokenHandler = tokenHandler;
         this.connectionIdAddressGenerator = connectionIdAddressGenerator;
         this.resetTokenGenerator = resetTokenGenerator;
@@ -104,7 +104,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     @Override
     @Nullable
     protected QuicheQuicChannel quicPacketRead(ChannelHandlerContext ctx, InetSocketAddress sender,
-                                               InetSocketAddress recipient, QuicPacketType type, int version,
+                                               InetSocketAddress recipient, QuicPacketType type, long version,
                                                ByteBuf scid, ByteBuf dcid, ByteBuf token,
                                                ByteBuf senderSockaddrMemory, ByteBuf recipientSockaddrMemory,
                                                Consumer<QuicheQuicChannel> freeTask, int localConnIdLength,
@@ -136,12 +136,13 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     @Nullable
     private QuicheQuicChannel handleServer(ChannelHandlerContext ctx, InetSocketAddress sender,
                                            InetSocketAddress recipient,
-                                           @SuppressWarnings("unused") QuicPacketType type, int version,
+                                           @SuppressWarnings("unused") QuicPacketType type, long version,
                                            ByteBuf scid, ByteBuf dcid, ByteBuf token,
                                            ByteBuf senderSockaddrMemory, ByteBuf recipientSockaddrMemory,
                                            Consumer<QuicheQuicChannel> freeTask, int localConnIdLength,
                                            QuicheConfig config) throws Exception {
-        if (!Quiche.quiche_version_is_supported(version)) {
+        // Version is an unsigned int.
+        if (!Quiche.quiche_version_is_supported((int) version)) {
             // Version is not supported, try to negotiate it.
             ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
 
@@ -167,13 +168,13 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                 connIdBuffer.writeBytes(connId);
 
                 ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
-                int outWriterIndex = out.writerIndex();
                 int written = Quiche.quiche_retry(
                         Quiche.readerMemoryAddress(scid), scid.readableBytes(),
                         Quiche.readerMemoryAddress(dcid), dcid.readableBytes(),
                         Quiche.readerMemoryAddress(connIdBuffer), connIdBuffer.readableBytes(),
                         Quiche.readerMemoryAddress(mintTokenBuffer), mintTokenBuffer.readableBytes(),
-                        version,
+                        // unsigned int.
+                        (int) version,
                         Quiche.writerMemoryAddress(out), out.writableBytes());
 
                 writePacket(ctx, written, out, sender);
