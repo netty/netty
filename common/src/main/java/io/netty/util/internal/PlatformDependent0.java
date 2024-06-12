@@ -180,6 +180,8 @@ final class PlatformDependent0 {
                                 cls.getDeclaredMethod("putLong", long.class, long.class);
                                 cls.getDeclaredMethod("putLong", Object.class, long.class, long.class);
                                 cls.getDeclaredMethod("addressSize");
+                            }
+                            if (javaVersion() >= 23) {
                                 // The following tests the methods are usable.
                                 // Will throw UnsupportedOperationException if unsafe memory access is denied:
                                 long address = finalUnsafe.allocateMemory(8);
