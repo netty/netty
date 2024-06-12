@@ -54,6 +54,15 @@ public class WebSocketUtf8FrameValidatorTest {
         assertEquals(0, frame.refCnt());
     }
 
+    @Test
+    void testCloseWithStatusInTheMiddleOfFragmentAllowed() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator(false));
+        final TextWebSocketFrame frame = new TextWebSocketFrame(false, 0, "text");
+        final CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(WebSocketCloseStatus.NORMAL_CLOSURE);
+        channel.writeInbound(frame);
+        channel.writeInbound(closeFrame);
+    }
+
     private void assertCorruptedFrameExceptionHandling(byte[] data) {
         final EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator());
         final TextWebSocketFrame frame = new TextWebSocketFrame(Unpooled.copiedBuffer(data));
