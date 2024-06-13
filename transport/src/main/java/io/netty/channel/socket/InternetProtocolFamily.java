@@ -22,7 +22,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 
 /**
- * Internet Protocol (IP) families used byte the {@link DatagramChannel}
+ * Internet Protocol (IP) families used by the {@link DatagramChannel}
  *
  * @deprecated use {@link SocketProtocolFamily}.
  */
