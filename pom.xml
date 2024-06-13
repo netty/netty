@@ -6156,6 +6156,13 @@
                   <serialVersionUID>1</serialVersionUID>
                   <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
                 </item>
+
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method io.netty.resolver.ResolvedAddressTypes io.netty.resolver.dns.DnsNameResolverBuilder::computeResolvedAddressTypes(io.netty.channel.socket.SocketProtocolFamily[])</old>
+                  <justification>Ignore changes in Alpha releases</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>

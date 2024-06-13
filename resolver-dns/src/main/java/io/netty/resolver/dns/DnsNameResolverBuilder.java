@@ -326,7 +326,7 @@ public final class DnsNameResolverBuilder {
      *
      * @param internetProtocolFamilies a valid sequence of {@link InternetProtocolFamily}s
      * @return a {@link ResolvedAddressTypes}
-     * @deprecated use {@link #computeResolvedAddressTypes(SocketProtocolFamily...)}
+     * @deprecated use {@link #toResolvedAddressTypes(SocketProtocolFamily...)}
      */
     @Deprecated
     public static ResolvedAddressTypes computeResolvedAddressTypes(InternetProtocolFamily... internetProtocolFamilies) {
@@ -336,7 +336,7 @@ public final class DnsNameResolverBuilder {
         if (internetProtocolFamilies.length > 2) {
             throw new IllegalArgumentException("No more than 2 InternetProtocolFamilies");
         }
-        return computeResolvedAddressTypes(toSocketProtocolFamilies(internetProtocolFamilies));
+        return toResolvedAddressTypes(toSocketProtocolFamilies(internetProtocolFamilies));
     }
 
     private static SocketProtocolFamily[] toSocketProtocolFamilies(InternetProtocolFamily... internetProtocolFamilies) {
@@ -357,7 +357,7 @@ public final class DnsNameResolverBuilder {
      * @param socketProtocolFamilies a valid sequence of {@link SocketProtocolFamily}s
      * @return a {@link ResolvedAddressTypes}
      */
-    public static ResolvedAddressTypes computeResolvedAddressTypes(SocketProtocolFamily... socketProtocolFamilies) {
+    public static ResolvedAddressTypes toResolvedAddressTypes(SocketProtocolFamily... socketProtocolFamilies) {
         if (socketProtocolFamilies == null || socketProtocolFamilies.length == 0) {
             return DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
         }
