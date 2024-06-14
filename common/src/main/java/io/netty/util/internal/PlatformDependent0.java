@@ -591,6 +591,7 @@ final class PlatformDependent0 {
         try {
             return (ByteBuffer) ALIGN_SLICE.invokeExact(buffer, alignment);
         } catch (Throwable e) {
+            rethrowIfPossible(e);
             throw new LinkageError("ByteBuffer.alignedSlice not available", e);
         }
     }
@@ -603,6 +604,7 @@ final class PlatformDependent0 {
         try {
             return (byte[]) ALLOCATE_ARRAY_METHOD.invokeExact(byte.class, size);
         } catch (Throwable e) {
+            rethrowIfPossible(e);
             throw new LinkageError("Unsafe.allocateUninitializedArray not available", e);
         }
     }
@@ -613,10 +615,17 @@ final class PlatformDependent0 {
         try {
             return (ByteBuffer) DIRECT_BUFFER_CONSTRUCTOR.invokeExact(address, capacity);
         } catch (Throwable cause) {
-            if (cause instanceof Error) {
-                throw (Error) cause; // Let OutOfMemoryError etc. pass through.
-            }
+            rethrowIfPossible(cause);
             throw new LinkageError("DirectByteBuffer constructor not available", cause);
+        }
+    }
+
+    private static void rethrowIfPossible(Throwable cause) {
+        if (cause instanceof Error) {
+            throw (Error) cause;
+        }
+        if (cause instanceof RuntimeException) {
+            throw (RuntimeException) cause;
         }
     }
 
