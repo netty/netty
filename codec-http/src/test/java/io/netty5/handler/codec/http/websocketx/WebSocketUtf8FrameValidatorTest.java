@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.codec.http.websocketx;
 
+import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class WebSocketUtf8FrameValidatorTest {
 
@@ -66,5 +68,31 @@ public class WebSocketUtf8FrameValidatorTest {
 
         assertFalse(frame.isAccessible());
         assertFalse(channel.finish());
+    }
+
+    @Test
+    void testCloseWithStatusInTheMiddleOfFragmentAllowed() {
+        testControlFrameInTheMiddleOfFragmentAllowed(new CloseWebSocketFrame(
+                BufferAllocator.offHeapUnpooled(), WebSocketCloseStatus.NORMAL_CLOSURE));
+    }
+
+    @Test
+    void testPingInTheMiddleOfFragmentAllowed() {
+        testControlFrameInTheMiddleOfFragmentAllowed(new PingWebSocketFrame(
+                BufferAllocator.offHeapUnpooled().allocate(0)));
+    }
+
+    @Test
+    void testPongInTheMiddleOfFragmentAllowed() {
+        testControlFrameInTheMiddleOfFragmentAllowed(new PongWebSocketFrame(
+                BufferAllocator.offHeapUnpooled().allocate(0)));
+    }
+
+    private static void testControlFrameInTheMiddleOfFragmentAllowed(WebSocketFrame controlFrame) {
+        final EmbeddedChannel channel = new EmbeddedChannel(new Utf8FrameValidator(false));
+        final TextWebSocketFrame frame = new TextWebSocketFrame(channel.bufferAllocator(), false, 0, "text");
+        assertTrue(channel.writeInbound(frame));
+        assertTrue(channel.writeInbound(controlFrame));
+        assertTrue(channel.finishAndReleaseAll());
     }
 }

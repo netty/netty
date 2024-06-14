@@ -38,6 +38,13 @@ public class Utf8FrameValidator implements ChannelHandler {
         this.closeOnProtocolViolation = closeOnProtocolViolation;
     }
 
+    // See https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.
+    private static boolean isControlFrame(WebSocketFrame frame) {
+        return frame instanceof CloseWebSocketFrame ||
+                frame instanceof PingWebSocketFrame ||
+                frame instanceof PongWebSocketFrame;
+    }
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof WebSocketFrame) {
@@ -46,15 +53,18 @@ public class Utf8FrameValidator implements ChannelHandler {
             try {
                 // Processing for possible fragmented messages for text and binary
                 // frames
-                if (((WebSocketFrame) msg).isFinalFragment()) {
-                    // Final frame of the sequence. Apparently ping frames are
-                    // allowed in the middle of a fragmented message
-                    if (!(frame instanceof PingWebSocketFrame)) {
+                if (frame.isFinalFragment()) {
+                    // Control frames are allowed between fragments
+                    // See https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.
+                    if (!isControlFrame(frame)) {
+
+                        // Final frame of the sequence.
                         fragmentedFramesCount = 0;
 
                         // Check text for UTF8 correctness
                         if (frame instanceof TextWebSocketFrame ||
                             utf8Validator != null && utf8Validator.isChecking()) {
+
                             // Check UTF-8 correctness for this payload
                             checkUTF8String(frame.binaryData());
 
