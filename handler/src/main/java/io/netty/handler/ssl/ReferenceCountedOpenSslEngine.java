@@ -188,7 +188,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
 
-    private String endPointIdentificationAlgorithm;
+    private String endpointIdentificationAlgorithm;
     // Store as object as AlgorithmConstraints only exists since java 7.
     private Object algorithmConstraints;
     private List<String> sniHostNames;
@@ -227,7 +227,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      * @param leakDetection {@code true} to enable leak detection of this object.
      */
     ReferenceCountedOpenSslEngine(ReferenceCountedOpenSslContext context, final ByteBufAllocator alloc, String peerHost,
-                                  int peerPort, boolean jdkCompatibilityMode, boolean leakDetection) {
+                                  int peerPort, boolean jdkCompatibilityMode, boolean leakDetection,
+                                  String endpointIdentificationAlgorithm) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
         engineMap = context.engineMap;
@@ -236,6 +237,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         this.alloc = checkNotNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
         clientMode = context.isClient();
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
 
         session = new ExtendedOpenSslSession(new DefaultOpenSslSession(context.sessionContext())) {
             private String[] peerSupportedSignatureAlgorithms;
@@ -380,6 +382,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
                 // setMode may impact the overhead.
                 calculateMaxWrapOverhead();
+
+                // Configure any endpoint verification specified by the SslContext.
+                configureEndpointVerification(endpointIdentificationAlgorithm);
             } catch (Throwable cause) {
                 // Call shutdown so we are sure we correctly release all native memory and also guard against the
                 // case when shutdown() will be called by the finalizer again.
@@ -2187,7 +2192,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     public final synchronized SSLParameters getSSLParameters() {
         SSLParameters sslParameters = super.getSSLParameters();
 
-        sslParameters.setEndpointIdentificationAlgorithm(endPointIdentificationAlgorithm);
+        sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
         sslParameters.setAlgorithmConstraints((AlgorithmConstraints) algorithmConstraints);
         if (sniHostNames != null) {
             sslParameters.setServerNames(getSniHostNames(sniHostNames));
@@ -2234,17 +2239,21 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
         matchers = sslParameters.getSNIMatchers();
 
-        final String endPointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
+        final String endpointIdentificationAlgorithm = sslParameters.getEndpointIdentificationAlgorithm();
         if (!isDestroyed) {
-            // If the user asks for hostname verification we must ensure we verify the peer.
-            // If the user disables hostname verification we leave it up to the user to change the mode manually.
-            if (clientMode && isEndPointVerificationEnabled(endPointIdentificationAlgorithm)) {
-                SSL.setVerify(ssl, SSL.SSL_CVERIFY_REQUIRED, -1);
-            }
+            configureEndpointVerification(endpointIdentificationAlgorithm);
         }
-        this.endPointIdentificationAlgorithm = endPointIdentificationAlgorithm;
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         algorithmConstraints = sslParameters.getAlgorithmConstraints();
         super.setSSLParameters(sslParameters);
+    }
+
+    private void configureEndpointVerification(String endpointIdentificationAlgorithm) {
+        // If the user asks for hostname verification we must ensure we verify the peer.
+        // If the user disables hostname verification we leave it up to the user to change the mode manually.
+        if (clientMode && isEndPointVerificationEnabled(endpointIdentificationAlgorithm)) {
+            SSL.setVerify(ssl, SSL.SSL_CVERIFY_REQUIRED, -1);
+        }
     }
 
     private static List<String> getSniHostNames(SSLParameters sslParameters) {

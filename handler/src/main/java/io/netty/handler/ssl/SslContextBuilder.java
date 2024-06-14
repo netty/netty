@@ -209,10 +209,14 @@ public final class SslContextBuilder {
     private boolean enableOcsp;
     private SecureRandom secureRandom;
     private String keyStoreType = KeyStore.getDefaultType();
+    private String endpointIdentificationAlgorithm;
     private final Map<SslContextOption<?>, Object> options = new HashMap<SslContextOption<?>, Object>();
 
     private SslContextBuilder(boolean forServer) {
         this.forServer = forServer;
+        if (!forServer) {
+            endpointIdentificationAlgorithm = "HTTPS";
+        }
     }
 
     /**
@@ -618,6 +622,21 @@ public final class SslContextBuilder {
     }
 
     /**
+     * Specify the endpoint identification algorithm (aka. hostname verification algorithm) that clients will use as
+     * part of authenticating servers.
+     * <p>
+     * See <a href="https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#jssenames">
+     *     Java Security Standard Names</a> for a list of supported algorithms.
+     *
+     * @param algorithm either {@code "HTTPS"}, {@code "LDAPS"}, or {@code null} (disables hostname verification).
+     * @see javax.net.ssl.SSLParameters#setEndpointIdentificationAlgorithm(String)
+     */
+    public SslContextBuilder endpointIdentificationAlgorithm(String algorithm) {
+        endpointIdentificationAlgorithm = algorithm;
+        return this;
+    }
+
+    /**
      * Create new {@code SslContext} instance with configured settings.
      * <p>If {@link #sslProvider(SslProvider)} is set to {@link SslProvider#OPENSSL_REFCNT} then the caller is
      * responsible for releasing this object, or else native memory may leak.
@@ -632,7 +651,7 @@ public final class SslContextBuilder {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize,
-                    sessionTimeout, enableOcsp, secureRandom, keyStoreType,
+                    sessionTimeout, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
                     toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }

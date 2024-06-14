@@ -151,6 +151,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final Certificate[] keyCertChain;
     final ClientAuth clientAuth;
     final String[] protocols;
+    final String endpointIdentificationAlgorithm;
     final boolean hasTLSv13Cipher;
 
     final boolean enableOcsp;
@@ -206,7 +207,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     ReferenceCountedOpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                                    OpenSslApplicationProtocolNegotiator apn, int mode, Certificate[] keyCertChain,
-                                   ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
+                                   ClientAuth clientAuth, String[] protocols, boolean startTls,
+                                   String endpointIdentificationAlgorithm, boolean enableOcsp,
                                    boolean leakDetection, Map.Entry<SslContextOption<?>, Object>... ctxOptions)
             throws SSLException {
         super(startTls);
@@ -262,6 +264,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         this.mode = mode;
         this.clientAuth = isServer() ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         this.protocols = protocols == null ? OpenSsl.defaultProtocols(mode == SSL.SSL_MODE_CLIENT) : protocols;
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
         this.enableOcsp = enableOcsp;
 
         this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
@@ -489,7 +492,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     }
 
     SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
-        return new ReferenceCountedOpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode, true);
+        return new ReferenceCountedOpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode, true,
+                endpointIdentificationAlgorithm);
     }
 
     /**

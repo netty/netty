@@ -190,6 +190,7 @@ public class JdkSslContext extends SslContext {
     private final ClientAuth clientAuth;
     private final SSLContext sslContext;
     private final boolean isClient;
+    private final String endpointIdentificationAlgorithm;
 
     /**
      * Creates a new {@link JdkSslContext} from a pre-configured {@link SSLContext}.
@@ -259,10 +260,18 @@ public class JdkSslContext extends SslContext {
     @SuppressWarnings("deprecation")
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                   JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls) {
+        this(sslContext, isClient, ciphers, cipherFilter, apn, clientAuth, protocols, startTls, null);
+    }
+
+    @SuppressWarnings("deprecation")
+    JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
+                  JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls,
+                  String endpointIdentificationAlgorithm) {
         super(startTls);
         this.apn = checkNotNull(apn, "apn");
         this.clientAuth = checkNotNull(clientAuth, "clientAuth");
         this.sslContext = checkNotNull(sslContext, "sslContext");
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
 
         final List<String> defaultCiphers;
         final Set<String> supportedCiphers;
@@ -370,6 +379,9 @@ public class JdkSslContext extends SslContext {
         if (factory instanceof JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) {
             return ((JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) factory)
                     .wrapSslEngine(engine, alloc, apn, isServer());
+        }
+        if (endpointIdentificationAlgorithm != null) {
+            engine.getSSLParameters().setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
         }
         return factory.wrapSslEngine(engine, apn, isServer());
     }

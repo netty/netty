@@ -178,18 +178,18 @@ public final class OpenSslClientContext extends OpenSslContext {
         this(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, null, sessionCacheSize,
-                sessionTimeout, false, KeyStore.getDefaultType());
+                sessionTimeout, false, KeyStore.getDefaultType(), null);
     }
 
     OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                          X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
-                                KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
-                                CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
-                                long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
-                         Map.Entry<SslContextOption<?>, Object>... options)
+                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
+                         CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
+                         long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
+                         String endpointIdentificationAlgorithm, Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain,
-                ClientAuth.NONE, protocols, false, enableOcsp, options);
+                ClientAuth.NONE, protocols, false, endpointIdentificationAlgorithm, enableOcsp, options);
         boolean success = false;
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
