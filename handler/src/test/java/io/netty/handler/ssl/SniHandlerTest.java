@@ -82,6 +82,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 
 public class SniHandlerTest {
@@ -133,7 +134,10 @@ public class SniHandlerTest {
 
         File crtFile = ResourcesUtil.getFile(SniHandlerTest.class, "test.crt");
 
-        SslContextBuilder sslCtxBuilder = SslContextBuilder.forClient().trustManager(crtFile).sslProvider(provider);
+        SslContextBuilder sslCtxBuilder = SslContextBuilder.forClient()
+                .trustManager(crtFile)
+                .endpointIdentificationAlgorithm(null)
+                .sslProvider(provider);
         if (apn) {
             sslCtxBuilder.applicationProtocolConfig(newApnConfig());
         }
