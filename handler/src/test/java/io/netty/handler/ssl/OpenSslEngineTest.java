@@ -1190,6 +1190,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .trustManager(cert.certificate())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .sslProvider(OPENSSL).build());
         final SSLEngine clientEngine =
                 wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
