@@ -203,6 +203,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
         return new Http2MultiplexCodecStreamChannel(newStream(), null);
     }
 
+    final Http2StreamChannel newOutboundStream(int streamId) {
+        return new Http2MultiplexCodecStreamChannel(newStream(streamId), null);
+    }
+
     @Override
     final void onHttp2FrameStreamException(ChannelHandlerContext ctx, Http2FrameStreamException cause) {
         Http2FrameStream stream = cause.stream();
