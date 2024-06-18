@@ -82,14 +82,20 @@ public class SocketStartTlsTest extends AbstractSocketTest {
         serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build());
 
         List<SslContext> clientContexts = new ArrayList<>();
-        clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK).trustManager(CERT_FILE).build());
-
+        clientContexts.add(SslContextBuilder.forClient()
+                .sslProvider(SslProvider.JDK)
+                .trustManager(CERT_FILE)
+                .endpointIdentificationAlgorithm(null)
+                .build());
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
             serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
                                                 .sslProvider(SslProvider.OPENSSL).build());
-            clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL)
-                                                .trustManager(CERT_FILE).build());
+            clientContexts.add(SslContextBuilder.forClient()
+                    .sslProvider(SslProvider.OPENSSL)
+                    .trustManager(CERT_FILE)
+                    .endpointIdentificationAlgorithm(null)
+                    .build());
         } else {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }

@@ -189,6 +189,7 @@ public class JdkSslContext extends SslContext {
     private final ClientAuth clientAuth;
     private final SSLContext sslContext;
     private final boolean isClient;
+    private final String endpointIdentificationAlgorithm;
 
     /**
      * Creates a new {@link JdkSslContext} from a pre-configured {@link SSLContext}.
@@ -203,7 +204,7 @@ public class JdkSslContext extends SslContext {
     public JdkSslContext(SSLContext sslContext, boolean isClient,
                          ClientAuth clientAuth) throws Exception {
         this(sslContext, isClient, null, IdentityCipherSuiteFilter.INSTANCE,
-                JdkDefaultApplicationProtocolNegotiator.INSTANCE, clientAuth, null, false);
+                JdkDefaultApplicationProtocolNegotiator.INSTANCE, clientAuth, null, false, null);
     }
 
     /**
@@ -252,17 +253,19 @@ public class JdkSslContext extends SslContext {
                 toNegotiator(apn, !isClient),
                 clientAuth,
                 protocols == null ? null : protocols.clone(),
-                startTls);
+                startTls, null);
     }
 
     @SuppressWarnings("deprecation")
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
-                  JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls)
+                  JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls,
+                  String endpointIdentificationAlgorithm)
             throws Exception {
         super(startTls);
         this.apn = requireNonNull(apn, "apn");
         this.clientAuth = requireNonNull(clientAuth, "clientAuth");
         this.sslContext = requireNonNull(sslContext, "sslContext");
+        this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
 
         final List<String> defaultCiphers;
         final Set<String> supportedCiphers;
@@ -368,6 +371,9 @@ public class JdkSslContext extends SslContext {
         if (factory instanceof JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) {
             return ((JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) factory)
                     .wrapSslEngine(engine, alloc, apn, isServer());
+        }
+        if (endpointIdentificationAlgorithm != null) {
+            engine.getSSLParameters().setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
         }
         return factory.wrapSslEngine(engine, apn, isServer());
     }

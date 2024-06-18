@@ -55,7 +55,7 @@ final class OpenSslServerContext extends OpenSslContext {
             boolean enableOcsp, String keyStore, Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, options);
+                clientAuth, protocols, startTls, enableOcsp, null, options);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {

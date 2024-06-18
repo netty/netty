@@ -90,6 +90,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
             serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
                                                 .sslProvider(SslProvider.OPENSSL).build());
             clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL)
+                                                .endpointIdentificationAlgorithm(null)
                                                 .trustManager(CERT_FILE).build());
         } else {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());

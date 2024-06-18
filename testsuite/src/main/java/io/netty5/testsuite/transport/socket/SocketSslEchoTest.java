@@ -134,6 +134,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                                             .trustManager(CERT_FILE)
                                             // As we test renegotiation we should use a protocol that support it.
                                             .protocols("TLSv1.2")
+                                            .endpointIdentificationAlgorithm(null)
                                             .build());
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
@@ -148,6 +149,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                                                 .trustManager(CERT_FILE)
                                                 // As we test renegotiation we should use a protocol that support it.
                                                 .protocols("TLSv1.2")
+                                                .endpointIdentificationAlgorithm(null)
                                                 .build());
         } else {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
