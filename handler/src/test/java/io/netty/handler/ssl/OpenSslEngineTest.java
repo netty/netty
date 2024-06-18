@@ -685,6 +685,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
@@ -767,6 +768,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
@@ -858,6 +860,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
@@ -939,6 +942,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(UnpooledByteBufAllocator.DEFAULT).engine());
 
@@ -1186,6 +1190,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .trustManager(cert.certificate())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .sslProvider(OPENSSL).build());
         final SSLEngine clientEngine =
                 wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));

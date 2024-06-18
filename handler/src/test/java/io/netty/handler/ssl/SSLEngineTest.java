@@ -143,6 +143,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.verify;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -800,29 +801,28 @@ public abstract class SSLEngineTest {
                                      ClientAuth clientAuth, final boolean failureExpected,
                                      final boolean serverInitEngine)
             throws SSLException, InterruptedException {
-        serverSslCtx =
-                wrapContext(param, SslContextBuilder.forServer(serverKMF)
-                                 .protocols(param.protocols())
-                                 .ciphers(param.ciphers())
-                                 .sslProvider(sslServerProvider())
-                                 .sslContextProvider(serverSslContextProvider())
-                                 .trustManager(serverTrustManager)
-                                 .clientAuth(clientAuth)
-                                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                                 .sessionCacheSize(0)
-                                 .sessionTimeout(0).build());
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(serverKMF)
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .trustManager(serverTrustManager)
+                .clientAuth(clientAuth)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .sessionCacheSize(0)
+                .sessionTimeout(0).build());
 
-        clientSslCtx =
-                wrapContext(param, SslContextBuilder.forClient()
-                                 .protocols(param.protocols())
-                                 .ciphers(param.ciphers())
-                                 .sslProvider(sslClientProvider())
-                                 .sslContextProvider(clientSslContextProvider())
-                                 .trustManager(clientTrustManager)
-                                 .keyManager(clientKMF)
-                                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                                 .sessionCacheSize(0)
-                                 .sessionTimeout(0).build());
+        clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .trustManager(clientTrustManager)
+                .keyManager(clientKMF)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .sessionCacheSize(0)
+                .endpointIdentificationAlgorithm(null)
+                .sessionTimeout(0).build());
 
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
@@ -1159,27 +1159,26 @@ public abstract class SSLEngineTest {
             File servertTrustCrtFile, File serverKeyFile, final File serverCrtFile, String serverKeyPassword,
             File clientTrustCrtFile, File clientKeyFile, final File clientCrtFile, String clientKeyPassword)
             throws InterruptedException, SSLException {
-        serverSslCtx =
-                wrapContext(param, SslContextBuilder.forServer(serverCrtFile, serverKeyFile, serverKeyPassword)
-                                 .sslProvider(sslServerProvider())
-                                 .sslContextProvider(serverSslContextProvider())
-                                 .protocols(param.protocols())
-                                 .ciphers(param.ciphers())
-                                 .trustManager(servertTrustCrtFile)
-                                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                                 .sessionCacheSize(0)
-                                 .sessionTimeout(0).build());
-        clientSslCtx =
-                wrapContext(param, SslContextBuilder.forClient()
-                                 .sslProvider(sslClientProvider())
-                                 .sslContextProvider(clientSslContextProvider())
-                                 .protocols(param.protocols())
-                                 .ciphers(param.ciphers())
-                                 .trustManager(clientTrustCrtFile)
-                                 .keyManager(clientCrtFile, clientKeyFile, clientKeyPassword)
-                                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                                 .sessionCacheSize(0)
-                                 .sessionTimeout(0).build());
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(serverCrtFile, serverKeyFile, serverKeyPassword)
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .trustManager(servertTrustCrtFile)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .sessionCacheSize(0)
+                .sessionTimeout(0).build());
+        clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .trustManager(clientTrustCrtFile)
+                .keyManager(clientCrtFile, clientKeyFile, clientKeyPassword)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .sessionCacheSize(0)
+                .endpointIdentificationAlgorithm(null)
+                .sessionTimeout(0).build());
 
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
@@ -2043,14 +2042,16 @@ public abstract class SSLEngineTest {
         chainStream.write(Files.readAllBytes(clientCert.certificate().toPath()));
         chainStream.write(Files.readAllBytes(serverCert.certificate().toPath()));
 
-        clientSslCtx =
-                wrapContext(param, SslContextBuilder.forClient().keyManager(
+        clientSslCtx = wrapContext(param, SslContextBuilder.forClient().keyManager(
                         new ByteArrayInputStream(chainStream.toByteArray()),
                         new FileInputStream(clientCert.privateKey()))
                 .trustManager(new FileInputStream(serverCert.certificate()))
                 .sslProvider(sslClientProvider())
                 .sslContextProvider(clientSslContextProvider())
-                .protocols(param.protocols()).ciphers(param.ciphers()).build());
+                .endpointIdentificationAlgorithm(null)
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .build());
         cb = new Bootstrap();
         cb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
@@ -2080,6 +2081,7 @@ public abstract class SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -2178,6 +2180,7 @@ public abstract class SSLEngineTest {
                 .trustManager(cert.cert())
                 .sslProvider(sslClientProvider())
                 .protocols(clientProtocols)
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -2298,6 +2301,7 @@ public abstract class SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -2512,6 +2516,7 @@ public abstract class SSLEngineTest {
                 .trustManager(cert.cert())
                 .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
+                .endpointIdentificationAlgorithm(null)
                 // This test only works for non TLSv1.3 for now
                 .protocols(SslProtocols.TLS_v1_2)
                 .build());
@@ -2672,6 +2677,7 @@ public abstract class SSLEngineTest {
                 .sslContextProvider(clientSslContextProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -2718,6 +2724,7 @@ public abstract class SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -2800,6 +2807,7 @@ public abstract class SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -2871,6 +2879,7 @@ public abstract class SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -2949,6 +2958,7 @@ public abstract class SSLEngineTest {
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
                 .build());
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
