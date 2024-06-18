@@ -14,14 +14,43 @@
       "typeReachable": "sun.misc.Unsafe"
     },
     "name": "sun.misc.Unsafe",
-    "allDeclaredFields": true
+    "allDeclaredFields": true,
+    "allPublicMethods": true
   },
   {
     "condition": {
       "typeReachable": "jdk.internal.misc.Unsafe"
     },
     "name": "jdk.internal.misc.Unsafe",
-    "allPublicMethods": true
+    "methods": [
+      {"name": "copyMemory", "parameterTypes": ["java.lang.Object", "long", "java.lang.Object", "long", "long"]},
+      {"name": "objectFieldOffset", "parameterTypes": ["java.lang.reflect.Field"]},
+      {"name": "staticFieldOffset", "parameterTypes": ["java.lang.reflect.Field"]},
+      {"name": "staticFieldBase", "parameterTypes": ["java.lang.reflect.Field"]},
+      {"name": "arrayBaseOffset", "parameterTypes": ["java.lang.Class"]},
+      {"name": "arrayIndexScale", "parameterTypes": ["java.lang.Class"]},
+      {"name": "allocateMemory", "parameterTypes": ["long"]},
+      {"name": "reallocateMemory", "parameterTypes": ["long", "long"]},
+      {"name": "freeMemory", "parameterTypes": ["long"]},
+      {"name": "setMemory", "parameterTypes": ["long", "long", "byte"]},
+      {"name": "setMemory", "parameterTypes": ["java.lang.Object", "long", "long", "byte"]},
+      {"name": "getBoolean", "parameterTypes": ["java.lang.Object", "long"]},
+      {"name": "getByte", "parameterTypes": ["long"]},
+      {"name": "getByte", "parameterTypes": ["java.lang.Object", "long"]},
+      {"name": "getInt", "parameterTypes": ["long"]},
+      {"name": "getInt", "parameterTypes": ["java.lang.Object", "long"]},
+      {"name": "getLong", "parameterTypes": ["long"]},
+      {"name": "getLong", "parameterTypes": ["java.lang.Object", "long"]},
+      {"name": "putByte", "parameterTypes": ["long", "byte"]},
+      {"name": "putByte", "parameterTypes": ["java.lang.Object", "long", "byte"]},
+      {"name": "putInt", "parameterTypes": ["long", "int"]},
+      {"name": "putInt", "parameterTypes": ["java.lang.Object", "long", "int"]},
+      {"name": "putLong", "parameterTypes": ["long", "long"]},
+      {"name": "putLong", "parameterTypes": ["java.lang.Object", "long", "long"]},
+      {"name": "addressSize", "parameterTypes": []},
+      {"name": "allocateMemory", "parameterTypes": ["long"]},
+      {"name": "freeMemory", "parameterTypes": ["long"]}
+    ]
   },
   {
     "condition": {
