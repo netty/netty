@@ -58,6 +58,7 @@ import reactor.blockhound.BlockHound;
 import reactor.blockhound.BlockingOperationError;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -295,7 +296,8 @@ public class NettyBlockHoundIntegrationTest {
                 SslContextBuilder.forClient()
                                  .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                  .sslProvider(SslProvider.JDK)
-                                 .build();
+                        .endpointIdentificationAlgorithm(null)
+                        .build();
         BufferAllocator alloc = offHeapAllocator();
         final SslHandler sslHandler = sslClientCtx.newHandler(alloc);
         final EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
@@ -452,23 +454,20 @@ public class NettyBlockHoundIntegrationTest {
     }
 
     private static void testTrustManagerVerify(SslProvider provider, String tlsVersion) throws Exception {
-        final SslContext sslClientCtx =
-                SslContextBuilder.forClient()
-                                 .sslProvider(provider)
-                                 .protocols(tlsVersion)
-                                 .trustManager(ResourcesUtil.getFile(
-                                         NettyBlockHoundIntegrationTest.class, "mutual_auth_ca.pem"))
-                                 .build();
+        final SslContext sslClientCtx = SslContextBuilder.forClient()
+                .sslProvider(provider)
+                .protocols(tlsVersion)
+                .endpointIdentificationAlgorithm(null)
+                .trustManager(ResourcesUtil.getFile(
+                        NettyBlockHoundIntegrationTest.class, "mutual_auth_ca.pem"))
+                .build();
 
-        final SslContext sslServerCtx =
-                SslContextBuilder.forServer(ResourcesUtil.getFile(
-                        NettyBlockHoundIntegrationTest.class, "localhost_server.pem"),
-                                            ResourcesUtil.getFile(
-                                                    NettyBlockHoundIntegrationTest.class, "localhost_server.key"),
-                                            null)
-                                 .sslProvider(provider)
-                                 .protocols(tlsVersion)
-                                 .build();
+        File cert = ResourcesUtil.getFile(NettyBlockHoundIntegrationTest.class, "localhost_server.pem");
+        File key = ResourcesUtil.getFile(NettyBlockHoundIntegrationTest.class, "localhost_server.key");
+        final SslContext sslServerCtx = SslContextBuilder.forServer(cert, key, null)
+                .sslProvider(provider)
+                .protocols(tlsVersion)
+                .build();
 
         final SslHandler clientSslHandler = sslClientCtx.newHandler(offHeapAllocator());
         final SslHandler serverSslHandler = sslServerCtx.newHandler(offHeapAllocator());
@@ -479,6 +478,7 @@ public class NettyBlockHoundIntegrationTest {
     private static void testHandshakeWithExecutor(Executor executor, String tlsVersion) throws Exception {
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .endpointIdentificationAlgorithm(null)
                 .sslProvider(SslProvider.JDK).protocols(tlsVersion).build();
 
         final SelfSignedCertificate cert = new SelfSignedCertificate();

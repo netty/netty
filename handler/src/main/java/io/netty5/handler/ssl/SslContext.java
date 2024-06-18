@@ -807,7 +807,7 @@ public abstract class SslContext {
                                             toX509Certificates(keyCertChainFile), toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter,
                                             apn, null, sessionCacheSize, sessionTimeout, false,
-                                            null, KeyStore.getDefaultType());
+                                            null, KeyStore.getDefaultType(), "HTTPS");
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -823,7 +823,7 @@ public abstract class SslContext {
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
             long sessionCacheSize, long sessionTimeout, boolean enableOcsp,
-            SecureRandom secureRandom, String keyStoreType,
+            SecureRandom secureRandom, String keyStoreType, String endpointIdentificationAlgorithm,
             Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
         if (provider == null) {
             provider = defaultClientProvider();
@@ -837,7 +837,7 @@ public abstract class SslContext {
                     return new JdkSslClientContext(sslContextProvider,
                             trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                             keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize,
-                            sessionTimeout, secureRandom, keyStoreType);
+                            sessionTimeout, secureRandom, keyStoreType, endpointIdentificationAlgorithm);
                 } catch (SSLException e) {
                     throw e;
                 } catch (Exception e) {
@@ -849,14 +849,14 @@ public abstract class SslContext {
                 return new OpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
-                        enableOcsp, keyStoreType, options);
+                        enableOcsp, keyStoreType, endpointIdentificationAlgorithm, options);
             case OPENSSL_REFCNT:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 OpenSsl.ensureAvailability();
                 return new ReferenceCountedOpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
-                        enableOcsp, keyStoreType, options);
+                        enableOcsp, keyStoreType, endpointIdentificationAlgorithm, options);
             default:
                 throw new Error(provider.toString());
         }

@@ -133,7 +133,10 @@ public class SniHandlerTest {
 
         File crtFile = ResourcesUtil.getFile(SniHandlerTest.class, "test.crt");
 
-        SslContextBuilder sslCtxBuilder = SslContextBuilder.forClient().trustManager(crtFile).sslProvider(provider);
+        SslContextBuilder sslCtxBuilder = SslContextBuilder.forClient()
+                .trustManager(crtFile)
+                .endpointIdentificationAlgorithm(null)
+                .sslProvider(provider);
         if (alpn) {
             sslCtxBuilder.applicationProtocolConfig(newAlpnConfig());
         }

@@ -29,25 +29,27 @@ import java.util.Map;
 public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
                    int mode, Certificate[] keyCertChain,
-                   ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
+                   ClientAuth clientAuth, String[] protocols, boolean startTls,
+                   boolean enableOcsp, String endpointIdentificationAlgorithm,
                    Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apnCfg), mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, false, options);
+                clientAuth, protocols, startTls, enableOcsp, false, endpointIdentificationAlgorithm, options);
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
                    int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
-                   Map.Entry<SslContextOption<?>, Object>... options)
+                   String endpointIdentificationAlgorithm, Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, false, options);
+                clientAuth, protocols, startTls, enableOcsp, false, endpointIdentificationAlgorithm, options);
     }
 
     @Override
     final SSLEngine newEngine0(BufferAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
-        return new OpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode);
+        return new OpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode,
+                endpointIdentificationAlgorithm);
     }
 
     @Override
