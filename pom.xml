@@ -1235,6 +1235,7 @@
           </dependency>
         </dependencies>
         <configuration>
+          <versionFormat>.*\.Final</versionFormat>
           <analysisConfiguration>
             <revapi.filter>
               <elements>
