@@ -48,6 +48,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private Boolean disableActiveMigration;
     private Boolean enableHystart;
     private QuicCongestionControlAlgorithm congestionControlAlgorithm;
+    private Integer initialCongestionWindowPackets;
     private int localConnIdLength;
     private Function<QuicChannel, ? extends QuicSslEngine> sslEngineProvider;
     private FlushStrategy flushStrategy = FlushStrategy.DEFAULT;
@@ -86,6 +87,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         this.disableActiveMigration = builder.disableActiveMigration;
         this.enableHystart = builder.enableHystart;
         this.congestionControlAlgorithm = builder.congestionControlAlgorithm;
+        this.initialCongestionWindowPackets = builder.initialCongestionWindowPackets;
         this.localConnIdLength = builder.localConnIdLength;
         this.sslEngineProvider = builder.sslEngineProvider;
         this.flushStrategy = builder.flushStrategy;
@@ -129,6 +131,19 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      */
     public final B congestionControlAlgorithm(QuicCongestionControlAlgorithm congestionControlAlgorithm) {
         this.congestionControlAlgorithm = congestionControlAlgorithm;
+        return self();
+    }
+
+    /**
+     * Sets initial congestion window size in terms of packet count.
+     *
+     * The default value is 10.
+     *
+     * @param numPackets number of packets for the initial congestion window
+     * @return
+     */
+    public final B initialCongestionWindowPackets(int numPackets) {
+        this.initialCongestionWindowPackets = numPackets;
         return self();
     }
 
@@ -455,7 +470,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
                 initialMaxStreamDataBidiLocal, initialMaxStreamDataBidiRemote,
                 initialMaxStreamDataUni, initialMaxStreamsBidi, initialMaxStreamsUni,
                 ackDelayExponent, maxAckDelay, disableActiveMigration, enableHystart,
-                congestionControlAlgorithm, recvQueueLen, sendQueueLen, activeConnectionIdLimit, statelessResetToken);
+                congestionControlAlgorithm, initialCongestionWindowPackets, recvQueueLen, sendQueueLen, activeConnectionIdLimit, statelessResetToken);
     }
 
     /**

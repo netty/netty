@@ -690,6 +690,14 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://github.com/cloudflare/quiche/blob/0.21.0/quiche/include/quiche.h#L222">
+     *     quiche_config_set_initial_congestion_window_packets</a>
+     *
+     */
+    static native void quiche_config_set_initial_congestion_window_packets(long configAddr, int numPackets);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#184">
      *     quiche_config_enable_hystart</a>.
      */

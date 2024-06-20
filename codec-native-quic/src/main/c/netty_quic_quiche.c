@@ -1006,6 +1006,10 @@ static void netty_quiche_config_set_cc_algorithm(JNIEnv* env, jclass clazz, jlon
     quiche_config_set_cc_algorithm((quiche_config*) config, (enum quiche_cc_algorithm) algo);
 }
 
+static void netty_quiche_config_set_initial_congestion_window_packets(JNIEnv* env, jclass clazz, jlong config, jint value) {
+    quiche_config_set_initial_congestion_window_packets((quiche_config*) config, (size_t) value);
+}
+
 static void netty_quiche_config_enable_hystart(JNIEnv* env, jclass clazz, jlong config, jboolean value) {
     quiche_config_enable_hystart((quiche_config*) config, value == JNI_TRUE ? true : false);
 }
@@ -1227,6 +1231,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_config_set_max_ack_delay", "(JJ)V", (void *) netty_quiche_config_set_max_ack_delay },
   { "quiche_config_set_disable_active_migration", "(JZ)V", (void *) netty_quiche_config_set_disable_active_migration },
   { "quiche_config_set_cc_algorithm", "(JI)V", (void *) netty_quiche_config_set_cc_algorithm },
+  { "quiche_config_set_initial_congestion_window_packets", "(JI)V", (void *) netty_quiche_config_set_initial_congestion_window_packets },
   { "quiche_config_enable_hystart", "(JZ)V", (void *) netty_quiche_config_enable_hystart },
   { "quiche_config_set_active_connection_id_limit", "(JJ)V", (void *) netty_quiche_config_set_active_connection_id_limit },
   { "quiche_config_set_stateless_reset_token", "(J[B)V", (void *) netty_quiche_config_set_stateless_reset_token },

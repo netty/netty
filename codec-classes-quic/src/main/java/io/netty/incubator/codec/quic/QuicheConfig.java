@@ -26,7 +26,7 @@ final class QuicheConfig {
                  @Nullable Long initialMaxStreamDataBidiLocal, @Nullable Long initialMaxStreamDataBidiRemote,
                  @Nullable Long initialMaxStreamDataUni, @Nullable Long initialMaxStreamsBidi, @Nullable Long initialMaxStreamsUni,
                  @Nullable Long ackDelayExponent, @Nullable Long maxAckDelay, @Nullable Boolean disableActiveMigration, @Nullable Boolean enableHystart,
-                 @Nullable QuicCongestionControlAlgorithm congestionControlAlgorithm,
+                 @Nullable QuicCongestionControlAlgorithm congestionControlAlgorithm, @Nullable Integer initialCongestionWindowPackets,
                  @Nullable Integer recvQueueLen, @Nullable Integer sendQueueLen,
                  @Nullable Long activeConnectionIdLimit, byte @Nullable [] statelessResetToken) {
         long config = Quiche.quiche_config_new(version);
@@ -88,6 +88,9 @@ final class QuicheConfig {
                         throw new IllegalArgumentException(
                                 "Unknown congestionControlAlgorithm: " + congestionControlAlgorithm);
                 }
+            }
+            if (initialCongestionWindowPackets != null) {
+                Quiche.quiche_config_set_initial_congestion_window_packets(config, initialCongestionWindowPackets);
             }
             if (recvQueueLen != null && sendQueueLen != null) {
                 isDatagramSupported = true;
