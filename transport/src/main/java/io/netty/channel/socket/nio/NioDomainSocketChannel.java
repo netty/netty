@@ -342,11 +342,10 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
 
     @Override
     protected void doClose() throws Exception {
-        super.doClose();
-        javaChannel().close();
-        SocketAddress local = localAddress();
-        if (local != null) {
-            NioDomainSocketUtil.deleteSocketFile(local);
+        try {
+            super.doClose();
+        } finally {
+            javaChannel().close();
         }
     }
 

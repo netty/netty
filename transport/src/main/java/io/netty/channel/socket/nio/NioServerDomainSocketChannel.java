@@ -16,17 +16,13 @@
 
 package io.netty.channel.socket.nio;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -176,10 +172,16 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
 
     @Override
     protected void doClose() throws Exception {
-        javaChannel().close();
+        // Obtain the localAddress before we close the channel so it will not return null if we did not retrieve
+        // it before.
         SocketAddress local = localAddress();
-        if (local != null) {
-            NioDomainSocketUtil.deleteSocketFile(local);
+        try {
+            super.doClose();
+        } finally {
+            javaChannel().close();
+            if (local != null) {
+                NioDomainSocketUtil.deleteSocketFile(local);
+            }
         }
     }
 
