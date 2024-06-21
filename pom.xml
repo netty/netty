@@ -207,6 +207,7 @@
         -->
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.release>8</maven.compiler.release>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
         <revapi.skip>true</revapi.skip>
@@ -238,6 +239,7 @@
         <jdk>21</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <argLine.java9.extras />
@@ -257,6 +259,7 @@
         <jdk>20</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <argLine.java9.extras />
@@ -277,6 +280,7 @@
         <jdk>19</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <argLine.java9.extras />
@@ -297,6 +301,7 @@
         <jdk>18</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <argLine.java9.extras />
@@ -317,6 +322,7 @@
         <jdk>17</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <argLine.java9.extras />
@@ -338,6 +344,7 @@
         <jdk>16</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
         <argLine.alpnAgent />
         <argLine.java9.extras />
@@ -358,6 +365,7 @@
         <jdk>15</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -377,6 +385,7 @@
         <jdk>14</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -396,6 +405,7 @@
         <jdk>13</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -416,6 +426,7 @@
         <jdk>12</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -436,6 +447,7 @@
         <jdk>11</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -456,6 +468,7 @@
         <jdk>10</jdk>
       </activation>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny --add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
@@ -473,6 +486,7 @@
     <profile>
       <id>java9</id>
       <properties>
+        <maven.compiler.release>8</maven.compiler.release>
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny --add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
@@ -644,7 +658,7 @@
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
-    <maven.compiler.release>8</maven.compiler.release>
+    <maven.compiler.release/>
     <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>

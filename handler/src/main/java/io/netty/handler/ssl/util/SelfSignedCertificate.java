@@ -239,7 +239,6 @@ public final class SelfSignedCertificate {
             // Try Bouncy Castle first as otherwise we will see an IllegalAccessError on more recent JDKs.
             paths = BouncyCastleSelfSignedCertGenerator.generate(
                     fqdn, keypair, random, notBefore, notAfter, algorithm);
-            throw new Exception();
         } catch (Throwable t) {
             if (!isBouncyCastleAvailable()) {
                 logger.debug("Failed to generate a self-signed X.509 certificate because " +
