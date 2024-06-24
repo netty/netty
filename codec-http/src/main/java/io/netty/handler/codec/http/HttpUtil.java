@@ -551,7 +551,6 @@ public final class HttpUtil {
                 // If IPv6 address already contains brackets, let's return as is.
                 return hostString;
             }
-            }
 
             return '[' + hostString + ']';
         }
