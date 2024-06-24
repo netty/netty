@@ -304,7 +304,7 @@ public final class PlatformDependent {
      * Returns {@code true} if and only if the current platform is Android
      */
     public static boolean isAndroid() {
-        return PlatformDependent0.isAndroid();
+        return JavaVersion.isAndroid();
     }
 
     /**
@@ -333,7 +333,7 @@ public final class PlatformDependent {
      * Return the version of Java under which this library is used.
      */
     public static int javaVersion() {
-        return PlatformDependent0.javaVersion();
+        return JavaVersion.javaVersion();
     }
 
     /**
@@ -974,13 +974,18 @@ public final class PlatformDependent {
                 unsafe = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                     @Override
                     public Object run() {
-                        // force JCTools to initialize unsafe
-                        return UnsafeAccess.UNSAFE;
+                        // force JCTools to initialize unsafe. We do this via reflection so we don't reference
+                        // sun.misc.Unsafe.
+                        try {
+                            return UnsafeAccess.class.getField("UNSAFE");
+                        } catch (NoSuchFieldException | SecurityException e) {
+                            return e;
+                        }
                     }
                 });
             }
 
-            if (unsafe == null) {
+            if (unsafe == null || unsafe instanceof Throwable) {
                 logger.debug("org.jctools-core.MpscChunkedArrayQueue: unavailable");
                 USE_MPSC_CHUNKED_ARRAY_QUEUE = false;
             } else {

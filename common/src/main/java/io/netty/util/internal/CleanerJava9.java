@@ -17,7 +17,6 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import sun.misc.Unsafe;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -38,18 +37,18 @@ final class CleanerJava9 implements Cleaner {
     static {
         final MethodHandle method;
         final Throwable error;
-        if (PlatformDependent0.hasUnsafe()) {
+        if (SunMiscUnsafeAccess.isAvailabile()) {
             final ByteBuffer buffer = ByteBuffer.allocateDirect(1);
             Object maybeInvokeMethod = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
                 public Object run() {
                     try {
                         // See https://bugs.openjdk.java.net/browse/JDK-8171377
-                        Class<? extends Unsafe> unsafeClass = PlatformDependent0.UNSAFE.getClass();
+                        Class<?> unsafeClass = SunMiscUnsafeAccess.UNSAFE.getClass();
                         MethodHandles.Lookup lookup = MethodHandles.lookup();
                         MethodHandle invokeCleaner = lookup.findVirtual(
                                 unsafeClass, "invokeCleaner", methodType(void.class, ByteBuffer.class));
-                        invokeCleaner = invokeCleaner.bindTo(PlatformDependent0.UNSAFE);
+                        invokeCleaner = invokeCleaner.bindTo(SunMiscUnsafeAccess.UNSAFE);
                         invokeCleaner.invokeExact(buffer);
                         return invokeCleaner;
                     } catch (Throwable e) {
@@ -67,7 +66,8 @@ final class CleanerJava9 implements Cleaner {
             }
         } else {
             method = null;
-            error = new UnsupportedOperationException("sun.misc.Unsafe unavailable");
+            error = new UnsupportedOperationException("sun.misc.Unsafe unavailable",
+                    SunMiscUnsafeAccess.unavailabilityCause());
         }
         if (error == null) {
             logger.debug("java.nio.ByteBuffer.cleaner(): available");
