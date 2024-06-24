@@ -548,7 +548,14 @@ public final class HttpUtil {
             if (!addr.isUnresolved()) {
                 hostString = NetUtil.toAddressString(addr.getAddress());
             }
-            return '[' + hostString + ']';
+
+            // If IPv6 address already contains brackets, let's return as is.
+            if (hostString.charAt(0) == '[' && hostString.charAt(hostString.length() - 1) == ']') {
+                return hostString;
+            } else {
+                // Add brackets to the IPv6 address.
+                return '[' + hostString + ']';
+            }
         }
         return hostString;
     }
