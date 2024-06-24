@@ -89,12 +89,13 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.0</version>
+        <version>3.13.0</version>
         <configuration>
           <compilerVersion>1.8</compilerVersion>
           <fork>true</fork>
           <source>1.8</source>
           <target>1.8</target>
+          <release>8</release>
           <debug>true</debug>
           <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
