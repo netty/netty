@@ -380,9 +380,7 @@ public class JdkSslContext extends SslContext {
             return ((JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) factory)
                     .wrapSslEngine(engine, alloc, apn, isServer());
         }
-        if (endpointIdentificationAlgorithm != null) {
-            engine.getSSLParameters().setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
-        }
+        engine.getSSLParameters().setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
         return factory.wrapSslEngine(engine, apn, isServer());
     }
 
