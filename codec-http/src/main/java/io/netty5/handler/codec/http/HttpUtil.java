@@ -505,7 +505,11 @@ public final class HttpUtil {
         if (NetUtil.isValidIpV6Address(hostString)) {
             if (!addr.isUnresolved()) {
                 hostString = NetUtil.toAddressString(addr.getAddress());
+            } else if (hostString.charAt(0) == '[' && hostString.charAt(hostString.length() - 1) == ']') {
+                // If IPv6 address already contains brackets, let's return as is.
+                return hostString;
             }
+
             return '[' + hostString + ']';
         }
         return hostString;

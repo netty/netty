@@ -380,6 +380,12 @@ public class HttpUtilTest {
     }
 
     @Test
+    public void testIpv6UnresolvedExplicitAddress()  {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("[2001:4860:4860:0:0:0:0:8888]", 8080);
+        assertEquals("[2001:4860:4860:0:0:0:0:8888]", HttpUtil.formatHostnameForHttp(socketAddress));
+    }
+
+    @Test
     public void testIpv4() throws Exception  {
         InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("10.0.0.1"), 8080);
         assertEquals("10.0.0.1", HttpUtil.formatHostnameForHttp(socketAddress));
