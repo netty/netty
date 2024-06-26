@@ -455,7 +455,7 @@ abstract class DnsResolveContext<T> {
                        final Throwable cause) {
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
                 channel.eventLoop().newPromise();
-        parent.withBackup(queryPromise, (isBackup) ->
+        parent.withBackup(queryLifecycleObserver, queryPromise, (isBackup) ->
             query0(nameServerAddrStream, nameServerAddrStreamIndex + (isBackup ? 1 : 0),
                     question, queryLifecycleObserver, isBackup ? true : flush, promise, cause, isBackup, queryPromise));
     }

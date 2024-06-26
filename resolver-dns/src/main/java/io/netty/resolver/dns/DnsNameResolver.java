@@ -1333,9 +1333,9 @@ public class DnsNameResolver extends InetNameResolver {
             Supplier<InetSocketAddress> nameServerAddr, DnsQuestion question,
             final DnsQueryLifecycleObserver queryLifecycleObserver,
             DnsRecord[] additionals, Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
-        withBackup(promise, (isBackup) -> {
-            doQuery(channel, channelReadyFuture, nameServerAddr.get(), question, queryLifecycleObserver, additionals, true, promise);
-        });
+        withBackup(queryLifecycleObserver, promise, (isBackup) ->
+            doQuery(channel, channelReadyFuture, nameServerAddr.get(),
+                    question, queryLifecycleObserver, additionals, true, promise));
         return cast(promise);
     }
 
@@ -1418,12 +1418,13 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
-    void withBackup(Promise<?> promise, Consumer<Boolean> requester) {
+    void withBackup(DnsQueryLifecycleObserver lifecycleObserver, Promise<?> promise, Consumer<Boolean> requester) {
         requester.accept(false);
         if (backupRequestPolicy != null) {
             final long startTime = System.nanoTime();
             Future<?> backupTimer = ch.eventLoop().schedule(() -> {
                 if (!promise.isDone() && backupRequestPolicy.attemptBackupRequest()) {
+                    lifecycleObserver.backupStarted();
                     requester.accept(true);
                 }
             }, backupRequestPolicy.backupDelayMs(), TimeUnit.MILLISECONDS);
