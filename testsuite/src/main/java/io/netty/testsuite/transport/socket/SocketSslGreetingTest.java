@@ -84,7 +84,8 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build());
 
         List<SslContext> clientContexts = new ArrayList<SslContext>();
-        clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK).trustManager(CERT_FILE).build());
+        clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK)
+                .endpointIdentificationAlgorithm(null).trustManager(CERT_FILE).build());
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
