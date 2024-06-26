@@ -33,7 +33,6 @@ import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.internal.PlatformDependent;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -83,7 +82,8 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build());
 
         List<SslContext> clientContexts = new ArrayList<>();
-        clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK).trustManager(CERT_FILE).build());
+        clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK)
+                .endpointIdentificationAlgorithm(null).trustManager(CERT_FILE).build());
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {

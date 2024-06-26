@@ -24,6 +24,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSessionContext;
 import java.io.File;
 import java.io.IOException;
@@ -367,13 +368,19 @@ public class JdkSslContext extends SslContext {
                     throw new Error("Unknown auth " + clientAuth);
             }
         }
+        configureEndpointVerification(engine);
         JdkApplicationProtocolNegotiator.SslEngineWrapperFactory factory = apn.wrapperFactory();
         if (factory instanceof JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) {
             return ((JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) factory)
                     .wrapSslEngine(engine, alloc, apn, isServer());
         }
-        engine.getSSLParameters().setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
         return factory.wrapSslEngine(engine, apn, isServer());
+    }
+
+    private void configureEndpointVerification(SSLEngine engine) {
+        SSLParameters params = engine.getSSLParameters();
+        params.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
+        engine.setSSLParameters(params);
     }
 
     @Override
