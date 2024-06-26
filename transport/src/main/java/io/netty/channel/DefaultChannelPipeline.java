@@ -66,7 +66,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final Channel channel;
     private final ChannelFuture succeededFuture;
     private final VoidChannelPromise voidPromise;
-    private final boolean touch = ResourceLeakDetector.isEnabled();
 
     private Map<EventExecutorGroup, EventExecutor> childExecutors;
     private volatile MessageSizeEstimator.Handle estimatorHandle;
@@ -112,7 +111,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     final Object touch(Object msg, AbstractChannelHandlerContext next) {
-        return touch ? ReferenceCountUtil.touch(msg, next) : msg;
+        return ResourceLeakDetector.isEnabled() ? ReferenceCountUtil.touch(msg, next) : msg;
     }
 
     private AbstractChannelHandlerContext newContext(EventExecutorGroup group, String name, ChannelHandler handler) {
