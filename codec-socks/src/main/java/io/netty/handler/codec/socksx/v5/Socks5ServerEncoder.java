@@ -75,7 +75,7 @@ public class Socks5ServerEncoder extends MessageToByteEncoder<Socks5Message> {
     }
 
     private static void encodePasswordAuthResponse(Socks5PasswordAuthResponse msg, ByteBuf out) {
-        out.writeByte(0x01);
+        out.writeByte(msg.authMethod().byteValue());
         out.writeByte(msg.status().byteValue());
     }
 

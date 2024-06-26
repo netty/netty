@@ -24,10 +24,21 @@ import io.netty.util.internal.StringUtil;
  */
 public class DefaultSocks5PasswordAuthResponse extends AbstractSocks5Message implements Socks5PasswordAuthResponse {
 
+    private final Socks5AuthMethod authMethod;
     private final Socks5PasswordAuthStatus status;
 
     public DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus status) {
+        this(Socks5AuthMethod.PASSWORD, status);
+    }
+
+    public DefaultSocks5PasswordAuthResponse(Socks5AuthMethod authMethod, Socks5PasswordAuthStatus status) {
+        this.authMethod = ObjectUtil.checkNotNull(authMethod, "authMethod");
         this.status = ObjectUtil.checkNotNull(status, "status");
+    }
+
+    @Override
+    public Socks5AuthMethod authMethod() {
+        return authMethod;
     }
 
     @Override
