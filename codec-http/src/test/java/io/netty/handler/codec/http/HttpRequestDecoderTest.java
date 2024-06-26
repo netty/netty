@@ -17,9 +17,12 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -640,6 +643,42 @@ public class HttpRequestDecoderTest {
         assertEquals(LastHttpContent.EMPTY_LAST_CONTENT, last);
         last.release();
         assertFalse(channel.finish());
+    }
+
+    @Test
+    void reentrantClose() {
+        String requestStr = "GET / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 0\r\n" +
+                "\r\n" +
+                "GET / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 0\r\n" +
+                "\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(), new ChannelInboundHandlerAdapter() {
+            private int i;
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                if (i == 0) {
+                    assertInstanceOf(HttpRequest.class, msg);
+                } else if (i == 1) {
+                    assertInstanceOf(LastHttpContent.class, msg);
+                } else if (i == 2) {
+                    assertInstanceOf(HttpRequest.class, msg);
+                } else if (i == 3) {
+                    assertInstanceOf(LastHttpContent.class, msg);
+                }
+                ReferenceCountUtil.release(msg);
+
+                if (++i == 1) {
+                    // first request
+                    ctx.close();
+                }
+            }
+        });
+
+        assertFalse(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
     }
 
     @Test
