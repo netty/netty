@@ -306,8 +306,13 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
             scheduledTaskQueue().removeTyped(task);
         } else {
             // task will remove itself from scheduled task queue when it runs
-            lazyExecute(task);
+            scheduleRemoveScheduled(task);
         }
+    }
+
+    void scheduleRemoveScheduled(final ScheduledFutureTask<?> task) {
+        // task will remove itself from scheduled task queue when it runs
+        lazyExecute(task);
     }
 
     /**

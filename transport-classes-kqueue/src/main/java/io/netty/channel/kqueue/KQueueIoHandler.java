@@ -31,6 +31,8 @@ import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -40,7 +42,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static java.lang.Math.min;
@@ -364,7 +365,8 @@ public final class KQueueIoHandler implements IoHandler {
         return KQueueIoHandle.class.isAssignableFrom(handleType);
     }
 
-    private final class DefaultKqueueIoRegistration extends AtomicBoolean implements KQueueIoRegistration {
+    private final class DefaultKqueueIoRegistration implements KQueueIoRegistration {
+        private final Promise<?> cancellationPromise;
         private final KQueueIoEvent event = new KQueueIoEvent();
 
         final KQueueIoHandle handle;
@@ -374,6 +376,7 @@ public final class KQueueIoHandler implements IoHandler {
         DefaultKqueueIoRegistration(IoEventLoop eventLoop, KQueueIoHandle handle) {
             this.eventLoop = eventLoop;
             this.handle = handle;
+            this.cancellationPromise = eventLoop.newPromise();
         }
 
         @Override
@@ -408,13 +411,8 @@ public final class KQueueIoHandler implements IoHandler {
         }
 
         @Override
-        public boolean isValid() {
-            return !get();
-        }
-
-        @Override
         public void cancel() {
-            if (getAndSet(true)) {
+            if (!cancellationPromise.trySuccess(null)) {
                 return;
             }
             if (eventLoop.inEventLoop()) {
@@ -422,6 +420,11 @@ public final class KQueueIoHandler implements IoHandler {
             } else {
                 eventLoop.execute(this::cancel0);
             }
+        }
+
+        @Override
+        public Future<?> cancelFuture() {
+            return cancellationPromise;
         }
 
         private void cancel0() {

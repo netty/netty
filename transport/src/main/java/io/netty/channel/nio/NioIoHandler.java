@@ -26,6 +26,8 @@ import io.netty.channel.IoOps;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.IntSupplier;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReflectionUtil;
@@ -315,12 +317,15 @@ public final class NioIoHandler implements IoHandler {
     }
 
     final class DefaultNioRegistration implements NioIoRegistration {
+        private final Promise<?> cancellationPromise;
         private final NioIoHandle handle;
         private volatile SelectionKey key;
 
-        DefaultNioRegistration(NioIoHandle handle, NioIoOps initialOps, Selector selector) throws IOException {
+        DefaultNioRegistration(IoEventLoop eventLoop, NioIoHandle handle, NioIoOps initialOps, Selector selector)
+                throws IOException {
             this.handle = handle;
             key = handle.selectableChannel().register(selector, initialOps.value, this);
+            this.cancellationPromise = eventLoop.newPromise();
         }
 
         NioIoHandle handle() {
@@ -352,12 +357,20 @@ public final class NioIoHandler implements IoHandler {
 
         @Override
         public void cancel() {
+            if (!cancellationPromise.trySuccess(null)) {
+                return;
+            }
             key.cancel();
             cancelledKeys++;
             if (cancelledKeys >= CLEANUP_INTERVAL) {
                 cancelledKeys = 0;
                 needsToSelectAgain = true;
             }
+        }
+
+        @Override
+        public Future<?> cancelFuture() {
+            return cancellationPromise;
         }
 
         void close() {
@@ -387,7 +400,7 @@ public final class NioIoHandler implements IoHandler {
         boolean selected = false;
         for (;;) {
             try {
-                return new DefaultNioRegistration(nioHandle, ops, unwrappedSelector());
+                return new DefaultNioRegistration(eventLoop, nioHandle, ops, unwrappedSelector());
             } catch (CancelledKeyException e) {
                 if (!selected) {
                     // Force the Selector to select now as the "canceled" SelectionKey may still be
