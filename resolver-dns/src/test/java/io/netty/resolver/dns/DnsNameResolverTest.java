@@ -2754,8 +2754,7 @@ public class DnsNameResolverTest {
             assertEquals(1, cached.size());
             assertEquals(cached, cached2);
 
-            DefaultPromise<List<InetAddress>> promise =
-                    new DefaultPromise<List<InetAddress>>(GlobalEventExecutor.INSTANCE);
+            Promise<List<InetAddress>> promise = GlobalEventExecutor.INSTANCE.newPromise();
             boolean isCached = DnsNameResolver.doResolveAllCached("test", null, promise, cache,
                     resolver.searchDomains(), resolver.ndots(), resolver.resolvedInternetProtocolFamiliesUnsafe());
             assertTrue(isCached);
