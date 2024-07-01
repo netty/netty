@@ -94,7 +94,7 @@ public class SingleThreadEventExecutorTest {
 
         @Override
         protected void run() {
-            while (!confirmShutdown() && !canSuspend()) {
+            while (!confirmShutdown() && !isSuspending()) {
                 Runnable task = takeTask();
                 if (task != null) {
                     task.run();

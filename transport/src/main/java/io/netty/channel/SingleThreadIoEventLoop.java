@@ -153,7 +153,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             runAllTasks(maxTasksPerRun);
 
             // We should continue with our loop until we either confirmed a shutdown or we can suspend it.
-        } while (!confirmShutdown() && !canSuspend());
+        } while (!confirmShutdown() && !isSuspending());
     }
 
     protected final IoHandler ioHandler() {

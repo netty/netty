@@ -58,11 +58,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             InternalLoggerFactory.getInstance(SingleThreadEventExecutor.class);
 
     private static final int ST_NOT_STARTED = 1;
-    private static final int ST_SUSPENDED = 2;
-    private static final int ST_STARTED = 3;
-    private static final int ST_SHUTTING_DOWN = 4;
-    private static final int ST_SHUTDOWN = 5;
-    private static final int ST_TERMINATED = 6;
+    private static final int ST_SUSPENDING = 2;
+    private static final int ST_SUSPENDED = 3;
+    private static final int ST_STARTED = 4;
+    private static final int ST_SHUTTING_DOWN = 5;
+    private static final int ST_SHUTDOWN = 6;
+    private static final int ST_TERMINATED = 7;
 
     private static final Runnable NOOP_TASK = new Runnable() {
         @Override
@@ -691,6 +692,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 switch (oldState) {
                     case ST_NOT_STARTED:
                     case ST_STARTED:
+                    case ST_SUSPENDING:
                     case ST_SUSPENDED:
                         newState = ST_SHUTTING_DOWN;
                         break;
@@ -748,6 +750,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 switch (oldState) {
                     case ST_NOT_STARTED:
                     case ST_STARTED:
+                    case ST_SUSPENDING:
                     case ST_SUSPENDED:
                     case ST_SHUTTING_DOWN:
                         newState = ST_SHUTDOWN;
@@ -791,28 +794,30 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     @Override
     public boolean isSuspended() {
-        return state == ST_SUSPENDED;
+        return state == ST_SUSPENDED || state == ST_SUSPENDING;
     }
 
     @Override
     public boolean trySuspend() {
         if (supportSuspension) {
-            if (STATE_UPDATER.compareAndSet(this, ST_STARTED, ST_SUSPENDED)) {
+            if (STATE_UPDATER.compareAndSet(this, ST_STARTED, ST_SUSPENDING)) {
                 wakeup(inEventLoop());
                 return true;
             }
-            return state == ST_SUSPENDED;
+            int currentState = state;
+            return currentState == ST_SUSPENDED || currentState == ST_SUSPENDING;
         }
         return false;
     }
 
-    protected boolean canSuspend() {
+    protected boolean isSuspending() {
         return canSuspend(state);
     }
 
     private boolean canSuspend(int state) {
         assert inEventLoop();
-        return supportSuspension && state == ST_SUSPENDED && !hasTasks() && nextScheduledTaskDeadlineNanos() == -1;
+        return supportSuspension && (state == ST_SUSPENDED || state == ST_SUSPENDING)
+                && !hasTasks() && nextScheduledTaskDeadlineNanos() == -1;
     }
 
     /**
@@ -1094,21 +1099,34 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 boolean success = false;
                 updateLastExecutionTime();
                 try {
-                    SingleThreadEventExecutor.this.run();
-                    success = true;
+                    for (;;) {
+                        SingleThreadEventExecutor.this.run();
+                        success = true;
+
+                        if (state == ST_SUSPENDING && !hasTasks() && nextScheduledTaskDeadlineNanos() == -1) {
+                            if (!STATE_UPDATER.compareAndSet(SingleThreadEventExecutor.this,
+                                    ST_SUSPENDING, ST_SUSPENDED)) {
+                                // Try again
+                                continue;
+                            }
+                        }
+                        break;
+                    }
+
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception from an event executor: ", t);
                 } finally {
                     int oldState = state;
-                    for (;;) {
-                        if (oldState == ST_SUSPENDED || oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
-                                SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
-                            break;
+                    boolean suspend = oldState == ST_SUSPENDING ||
+                            oldState == ST_SUSPENDED;
+                    if (!suspend) {
+                        for (;;) {
+                            if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
+                                    SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
+                                break;
+                            }
                         }
-                    }
-
-                    if (success) {
-                        if (oldState != ST_SUSPENDED && gracefulShutdownStartTime == 0) {
+                        if (success && gracefulShutdownStartTime == 0) {
                             // Check if confirmShutdown() was called at the end of the loop.
                             if (logger.isErrorEnabled()) {
                                 logger.error("Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
@@ -1119,7 +1137,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     }
 
                     try {
-                        if (oldState != ST_SUSPENDED) {
+                        if (!suspend) {
                             // Run all remaining tasks and shutdown hooks. At this point the event loop
                             // is in ST_SHUTTING_DOWN state still accepting tasks which is needed for
                             // graceful shutdown with quietPeriod.
