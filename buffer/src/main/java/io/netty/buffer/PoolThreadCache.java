@@ -103,6 +103,10 @@ final class PoolThreadCache {
         freeOnFinalize = useFinalizer ? new FreeOnFinalize(this) : null;
     }
 
+    static boolean requiresDebuggingLeaks() {
+        return logger.isDebugEnabled();
+    }
+
     private static <T> MemoryRegionCache<T>[] createSubPageCaches(
             int cacheSize, int numCaches) {
         if (cacheSize > 0 && numCaches > 0) {
@@ -205,14 +209,22 @@ final class PoolThreadCache {
         // As free() may be called either by the finalizer or by FastThreadLocal.onRemoval(...) we need to ensure
         // we only call this one time.
         if (freed.compareAndSet(false, true)) {
+            // If we're not debugging leaks, we can aggressively cut the ties between
+            // the freeOnFinalize object and its PoolThreadCache.
+            // This can still race with the finalizer which could check for leaks, but will decide on its
+            // own to null out its cache field and the same applies if the caller is the finalizer itself.
+            if (!finalizer && !requiresDebuggingLeaks() && freeOnFinalize != null) {
+                // Help GC: this can still race with the finalizer, which will try to report the leak
+                freeOnFinalize.cache = null;
+            }
             int numFreed = free(smallSubPageDirectCaches, finalizer) +
-                    free(normalDirectCaches, finalizer) +
-                    free(smallSubPageHeapCaches, finalizer) +
-                    free(normalHeapCaches, finalizer);
+                           free(normalDirectCaches, finalizer) +
+                           free(smallSubPageHeapCaches, finalizer) +
+                           free(normalHeapCaches, finalizer);
 
             if (numFreed > 0 && logger.isDebugEnabled()) {
                 logger.debug("Freed {} thread-local buffer(s) from thread: {}", numFreed,
-                        Thread.currentThread().getName());
+                             Thread.currentThread().getName());
             }
 
             if (directArena != null) {
@@ -224,10 +236,12 @@ final class PoolThreadCache {
             }
         } else {
             // See https://github.com/netty/netty/issues/12749
-            checkCacheMayLeak(smallSubPageDirectCaches, "SmallSubPageDirectCaches");
-            checkCacheMayLeak(normalDirectCaches, "NormalDirectCaches");
-            checkCacheMayLeak(smallSubPageHeapCaches, "SmallSubPageHeapCaches");
-            checkCacheMayLeak(normalHeapCaches, "NormalHeapCaches");
+            if (requiresDebuggingLeaks()) {
+                checkCacheMayLeak(smallSubPageDirectCaches, "SmallSubPageDirectCaches");
+                checkCacheMayLeak(normalDirectCaches, "NormalDirectCaches");
+                checkCacheMayLeak(smallSubPageHeapCaches, "SmallSubPageHeapCaches");
+                checkCacheMayLeak(normalHeapCaches, "NormalHeapCaches");
+            }
         }
     }
 
@@ -484,7 +498,8 @@ final class PoolThreadCache {
     }
 
     private static final class FreeOnFinalize {
-        private final PoolThreadCache cache;
+
+        private volatile PoolThreadCache cache;
 
         private FreeOnFinalize(PoolThreadCache cache) {
             this.cache = cache;
@@ -497,7 +512,14 @@ final class PoolThreadCache {
             try {
                 super.finalize();
             } finally {
-                cache.free(true);
+                PoolThreadCache cache = this.cache;
+                // help GC: this can race with the FastThreadLocalThread::onRemoval(...)
+                // which call free(false), but we don't care this anymore before we're supposed to finalize just once,
+                // and we're the owner of this field.
+                this.cache = null;
+                if (cache != null) {
+                    cache.free(true);
+                }
             }
         }
     }
