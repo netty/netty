@@ -53,6 +53,12 @@ public final class Quic {
     }
 
     /**
+     * The maximum length of the <a href="https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2">connection id</a>.
+     *
+     */
+    public static final int MAX_CONN_ID_LEN = 20;
+
+    /**
      * Return if the given QUIC version is supported.
      *
      * @param version   the version.

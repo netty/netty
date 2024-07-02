@@ -276,7 +276,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         ChannelStateVerifyHandler serverQuicStreamHandler = new ChannelStateVerifyHandler();
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor)
                         .localConnectionIdLength(serverIdLength),
-                InsecureQuicTokenHandler.INSTANCE, serverQuicChannelHandler, serverQuicStreamHandler);
+                TestQuicTokenHandler.INSTANCE, serverQuicChannelHandler, serverQuicStreamHandler);
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor)
                 .localConnectionIdLength(clientIdLength));
@@ -662,7 +662,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                 .applicationProtocols(QuicTestUtils.PROTOS)
                                 .earlyData(true)
                                 .build()),
-                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
                     @Override
                     public boolean isSharable() {
                         return true;
@@ -938,7 +938,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                 QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
                                         QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
                                 .applicationProtocols("my-protocol").build()),
-                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
 
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
@@ -1008,7 +1008,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                 QuicTestUtils.SELF_SIGNED_CERTIFICATE.privateKey(), null,
                                         QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
                                 .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.NONE).build()),
-                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
@@ -1070,7 +1070,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                 .applicationProtocols(QuicTestUtils.PROTOS)
                                 .clientAuth(mode == MutalAuthTestMode.REQUIRED ?
                                         ClientAuth.REQUIRE : ClientAuth.OPTIONAL).build()),
-                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
 
@@ -1166,7 +1166,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                         QuicTestUtils.SELF_SIGNED_CERTIFICATE.certificate())
                                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                 .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.REQUIRE).build()),
-                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                         causeRef.compareAndSet(null, cause);
@@ -1230,7 +1230,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                 .add(hostname, sniServerSslContext).build());
 
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor, serverSslContext),
-                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt instanceof SniCompletionEvent) {
@@ -1306,7 +1306,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         .add("quic.netty.io", sniServerSslContext).build());
 
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor, serverSslContext),
-                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter(),
                 new ChannelInboundHandlerAdapter());
 
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
@@ -1403,7 +1403,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor,
                         QuicSslContextBuilder.forServer(factory, null)
                                 .applicationProtocols(QuicTestUtils.PROTOS).clientAuth(ClientAuth.NONE).build()),
-                InsecureQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
+                TestQuicTokenHandler.INSTANCE, new ChannelInboundHandlerAdapter() {
                     @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                         causeRef.set(cause);
@@ -1475,7 +1475,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
         CountDownLatch serverSslCompletionEventLatch = new CountDownLatch(2);
         Channel server = QuicTestUtils.newServer(QuicTestUtils.newQuicServerBuilder(executor, sslServerCtx),
-                InsecureQuicTokenHandler.INSTANCE,
+                TestQuicTokenHandler.INSTANCE,
                 new ChannelInboundHandlerAdapter() {
                     @Override
                     public boolean isSharable() {

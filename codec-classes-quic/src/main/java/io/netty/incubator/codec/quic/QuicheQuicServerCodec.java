@@ -16,6 +16,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
@@ -87,7 +88,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     @Override
     protected void handlerAdded(ChannelHandlerContext ctx, int localConnIdLength) {
         connIdBuffer = Quiche.allocateNativeOrder(localConnIdLength);
-        mintTokenBuffer = allocateNativeOrder(tokenHandler.maxTokenLength());
+        mintTokenBuffer = Unpooled.directBuffer(tokenHandler.maxTokenLength());
     }
 
     @Override

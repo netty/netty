@@ -30,7 +30,8 @@ public interface QuicTokenHandler {
      * {@code false}.
      *
      * @param out       {@link ByteBuf} into which the token will be written.
-     * @param dcid      the destination connection id.
+     * @param dcid      the destination connection id. The {@link ByteBuf#readableBytes()} will be at most
+     *                  {@link Quic#MAX_CONN_ID_LEN}.
      * @param address   the {@link InetSocketAddress} of the sender.
      * @return          {@code true} if a token was written and so validation should happen, {@code false} otherwise.
      */

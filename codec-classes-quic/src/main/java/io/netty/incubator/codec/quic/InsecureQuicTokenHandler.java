@@ -36,7 +36,7 @@ public final class InsecureQuicTokenHandler implements QuicTokenHandler {
             Unpooled.wrappedBuffer(SERVER_NAME_BYTES)).asReadOnly();
 
     // Just package-private for unit tests
-    static final int MAX_TOKEN_LEN = Quiche.QUICHE_MAX_CONN_ID_LEN +
+    static final int MAX_TOKEN_LEN = Quic.MAX_CONN_ID_LEN +
             NetUtil.LOCALHOST6.getAddress().length + SERVER_NAME_BYTES.length;
 
     private InsecureQuicTokenHandler() {

@@ -34,8 +34,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 public final class QuicHeaderParser implements AutoCloseable {
     // See https://datatracker.ietf.org/doc/rfc7714/
     private static final int AES_128_GCM_TAG_LENGTH = 16;
-    // https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2
-    private static final int MAX_CONN_ID_LEN = 20;
+
     private final int localConnectionIdLength;
     private boolean closed;
 
@@ -146,8 +145,8 @@ public final class QuicHeaderParser implements AutoCloseable {
     // Check if the connection id is not longer then 20. This is what is the maximum for QUIC version 1.
     // See https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2
     private void checkCidLength(int length) throws QuicException{
-        if (length > MAX_CONN_ID_LEN) {
-            throw new QuicException("connection id to large: "  + length + " > " + MAX_CONN_ID_LEN,
+        if (length > Quic.MAX_CONN_ID_LEN) {
+            throw new QuicException("connection id to large: "  + length + " > " + Quic.MAX_CONN_ID_LEN,
                     QuicTransportError.PROTOCOL_VIOLATION);
         }
     }
