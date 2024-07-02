@@ -68,7 +68,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
      */
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, ThreadFactory threadFactory,
                                    IoHandler ioHandler) {
-        super(parent, threadFactory, false);
+        super(parent, threadFactory, false, true);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
 
@@ -80,7 +80,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
      * @param ioHandler         the {@link IoHandler} used to run all IO.
      */
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor, IoHandler ioHandler) {
-        super(parent, executor, false);
+        super(parent, executor, false, true);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
 
@@ -99,7 +99,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, ThreadFactory threadFactory,
                                    IoHandler ioHandler, int maxPendingTasks,
                                    RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, threadFactory, false, maxPendingTasks, rejectedExecutionHandler);
+        super(parent, threadFactory, false, true, maxPendingTasks, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
 
@@ -118,7 +118,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor,
                                    IoHandler ioHandler, int maxPendingTasks,
                                    RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, false, maxPendingTasks, rejectedExecutionHandler);
+        super(parent, executor, false, true, maxPendingTasks, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
 
@@ -137,9 +137,8 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     protected SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor,
                                       IoHandler ioHandler, Queue<Runnable> taskQueue,
                                       Queue<Runnable> tailTaskQueue,
-
                                       RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, false, taskQueue, tailTaskQueue, rejectedExecutionHandler);
+        super(parent, executor, false, true, taskQueue, tailTaskQueue, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
 
@@ -152,7 +151,9 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
                 ioHandler.prepareToDestroy();
             }
             runAllTasks(maxTasksPerRun);
-        } while (!confirmShutdown());
+
+            // We should continue with our loop until we either confirmed a shutdown or we can suspend it.
+        } while (!confirmShutdown() && !isSuspending());
     }
 
     protected final IoHandler ioHandler() {
