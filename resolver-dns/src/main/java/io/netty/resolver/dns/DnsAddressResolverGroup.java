@@ -46,20 +46,27 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
 
     public DnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {
         this.dnsResolverBuilder = dnsResolverBuilder.copy();
+        this.dnsResolverBuilder
+                .resolveCache(dnsResolverBuilder.getOrNewCache()).cnameCache(dnsResolverBuilder.getOrNewCnameCache())
+                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
     }
 
     public DnsAddressResolverGroup(
             Class<? extends DatagramChannel> channelType,
             DnsServerAddressStreamProvider nameServerProvider) {
         this.dnsResolverBuilder = new DnsNameResolverBuilder();
-        dnsResolverBuilder.channelType(channelType).nameServerProvider(nameServerProvider);
+        dnsResolverBuilder.channelType(channelType).nameServerProvider(nameServerProvider)
+                .resolveCache(dnsResolverBuilder.getOrNewCache()).cnameCache(dnsResolverBuilder.getOrNewCnameCache())
+                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
     }
 
     public DnsAddressResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory,
             DnsServerAddressStreamProvider nameServerProvider) {
         this.dnsResolverBuilder = new DnsNameResolverBuilder();
-        dnsResolverBuilder.channelFactory(channelFactory).nameServerProvider(nameServerProvider);
+        dnsResolverBuilder.channelFactory(channelFactory).nameServerProvider(nameServerProvider)
+                .resolveCache(dnsResolverBuilder.getOrNewCache()).cnameCache(dnsResolverBuilder.getOrNewCnameCache())
+                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
     }
 
     @SuppressWarnings("deprecation")
