@@ -8,6 +8,8 @@ ENV NINJA_VERSION 1.7.2
 ENV GO_VERSION 1.9.3
 ENV MAVEN_VERSION 3.9.1
 
+# Update to use the vault
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/7.9.2009\//g' /etc/yum.repos.d/CentOS-Base.repo
 
 # install dependencies
 RUN yum install -y \
@@ -32,6 +34,10 @@ RUN mkdir $SOURCE_DIR
 WORKDIR $SOURCE_DIR
 
 RUN yum install -y centos-release-scl
+
+# Update to use the vault
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^# baseurl=http:\/\/mirror.centos.org\/centos\/7\/sclo\/$basearch\/sclo\//baseurl=https:\/\/vault.centos.org\/centos\/7\/sclo\/$basearch\/sclo\//g' /etc/yum.repos.d/CentOS-SCLo-scl.repo
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/7\/sclo\/$basearch\/rh\//baseurl=https:\/\/vault.centos.org\/centos\/7\/sclo\/$basearch\/rh\//g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
 
 RUN yum -y install devtoolset-11-gcc devtoolset-11-gcc-c++
 RUN echo 'source /opt/rh/devtoolset-11/enable' >> ~/.bashrc

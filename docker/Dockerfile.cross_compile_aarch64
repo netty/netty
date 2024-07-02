@@ -2,9 +2,13 @@ FROM centos:7.6.1810
 
 ARG GCC_VERSION=10.2-2020.11
 ENV MAVEN_VERSION 3.9.1
+ENV CMAKE_VERSION_BASE 3.26
+ENV CMAKE_VERSION $CMAKE_VERSION_BASE.4
 ENV SOURCE_DIR /root/source
 ENV WORKSPACE_DIR /root/workspace
 ENV PROJECT_DIR /root/workspace/project
+
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/vault.centos.org\/\/7.6.1810\//g' /etc/yum.repos.d/CentOS-Base.repo
 
 # We want to have git 2.x for the maven scm plugin and also for boringssl
 RUN yum install -y http://opensource.wandisco.com/centos/6/git/x86_64/wandisco-git-release-6-1.noarch.rpm
@@ -45,7 +49,7 @@ RUN wget https://developer.arm.com/-/media/Files/downloads/gnu-a/$GCC_VERSION/bi
 ENV PATH="/opt/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu/bin:${PATH}"
 
 # Install CMake
-RUN yum install -y cmake3 && ln -s /usr/bin/cmake3 /usr/bin/cmake
+RUN curl -s https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz --output cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zvxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
 
 # install rust and setup PATH and install correct toolchain
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
