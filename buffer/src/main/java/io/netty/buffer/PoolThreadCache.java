@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * Acts a Thread cache for allocations. This implementation is moduled after
@@ -102,6 +101,10 @@ final class PoolThreadCache {
                     + freeSweepAllocationThreshold + " (expected: > 0)");
         }
         freeOnFinalize = useFinalizer ? new FreeOnFinalize(this) : null;
+    }
+
+    static boolean requiresDebuggingLeaks() {
+        return logger.isDebugEnabled();
     }
 
     private static <T> MemoryRegionCache<T>[] createSubPageCaches(
@@ -210,7 +213,7 @@ final class PoolThreadCache {
             // the freeOnFinalize object and its PoolThreadCache.
             // This can still race with the finalizer which could check for leaks, but will decide on its
             // own to null out its cache field and the same applies if the caller is the finalizer itself.
-            if (!finalizer && !logger.isDebugEnabled() && freeOnFinalize != null) {
+            if (!finalizer && !requiresDebuggingLeaks() && freeOnFinalize != null) {
                 // Help GC: this can still race with the finalizer, which will try to report the leak
                 freeOnFinalize.cache = null;
             }
@@ -233,7 +236,7 @@ final class PoolThreadCache {
             }
         } else {
             // See https://github.com/netty/netty/issues/12749
-            if (logger.isDebugEnabled()) {
+            if (requiresDebuggingLeaks()) {
                 checkCacheMayLeak(smallSubPageDirectCaches, "SmallSubPageDirectCaches");
                 checkCacheMayLeak(normalDirectCaches, "NormalDirectCaches");
                 checkCacheMayLeak(smallSubPageHeapCaches, "SmallSubPageHeapCaches");
