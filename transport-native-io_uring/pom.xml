@@ -277,11 +277,14 @@
       </properties>
     </profile>
     <profile>
-      <id>linux-aarch64-native</id>
+      <id>linux-riscv64</id>
       <properties>
-        <!-- use aarch_64 as this is also what os.detected.arch will use on an aarch64 system -->
-        <jniArch>aarch_64</jniArch>
-        <extraConfigureArg>--host=aarch64-linux-gnu</extraConfigureArg>
+        <!-- use riscv64 as this is also what os.detected.arch will use on an riscv64 system -->
+        <jniArch>riscv64</jniArch>
+        <!-- As we cross-compile just skip the tests because we could not load this lib on the system anyway -->
+        <skipTests>true</skipTests>
+        <extraConfigureArg>--host=riscv64-linux-gnu</extraConfigureArg>
+        <extraConfigureArg2>CC=riscv64-none-linux-gnu-gcc</extraConfigureArg2>
       </properties>
     </profile>
     <profile>
