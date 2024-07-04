@@ -29,12 +29,23 @@ public class DoHClient {
             DnsQuestion question = msg.recordAt(DnsSection.QUESTION, 0);
             System.out.printf("name: %s%n", question.name());
         }
+        if (msg.count(DnsSection.ADDITIONAL) > 0) {
+            DnsRecord record = msg.recordAt(DnsSection.ADDITIONAL, 0);
+            System.out.printf("name: %s%n", record.name());
+        }
+        if (msg.count(DnsSection.AUTHORITY) > 0) {
+            DnsRecord record = msg.recordAt(DnsSection.AUTHORITY, 0);
+            System.out.printf("name: %s%n", record.name());
+        }
         for (int i = 0, count = msg.count(DnsSection.ANSWER); i < count; i++) {
             DnsRecord record = msg.recordAt(DnsSection.ANSWER, i);
             if (record.type() == DnsRecordType.A || record.type() == DnsRecordType.AAAA) {
                 //just print the IP after query
                 DnsRawRecord raw = (DnsRawRecord) record;
                 System.out.println(NetUtil.bytesToIpAddress(ByteBufUtil.getBytes(raw.content())));
+            } else {
+                DnsRawRecord raw = (DnsRawRecord) record;
+                System.out.println(new String(ByteBufUtil.getBytes(raw.content())));
             }
         }
     }
