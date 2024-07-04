@@ -18,8 +18,11 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class DoHClient {
-    public static final String HOST = "dns.google";
-    public static final int PORT = 443;
+    private final DohProviders.DohProvider dohProvider;
+
+    public DoHClient(DohProviders.DohProvider dohProvider) {
+        this.dohProvider = dohProvider;
+    }
 
     private static void handleQueryResp(DefaultDnsResponse msg) {
         if (msg.count(DnsSection.QUESTION) > 0) {
@@ -48,11 +51,12 @@ public class DoHClient {
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) {
-                            ch.pipeline().addLast(sslCtx.newHandler(ch.alloc(), HOST, PORT));
-//                        ch.pipeline().addLast(new LoggingHandler(LogLevel.ERROR));
+                            ch.pipeline().addLast(sslCtx.newHandler(ch.alloc(), dohProvider.host(),
+                                    dohProvider.port()));
+//                            ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
                             ch.pipeline().addLast(new HttpClientCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(65536));
-                            ch.pipeline().addLast(new DohRecordEncoder());
+                            ch.pipeline().addLast(new DohRecordEncoder(dohProvider));
                             ch.pipeline().addLast(new DohResponseDecoder());
 
                             ch.pipeline().addLast(new SimpleChannelInboundHandler<DefaultDnsResponse>() {
@@ -69,7 +73,7 @@ public class DoHClient {
                     });
 
 
-            ChannelFuture f = b.connect(HOST, PORT).sync();
+            ChannelFuture f = b.connect(dohProvider.host(), dohProvider.port()).sync();
             Channel channel = f.channel();
 
             DefaultDnsQuestion defaultDnsQuestion = new DefaultDnsQuestion("example.com.",
@@ -94,6 +98,6 @@ public class DoHClient {
     }
 
     public static void main(String[] args) throws InterruptedException, SSLException {
-        new DoHClient().start();
+        new DoHClient(DohProviders.GOOGLE).start();
     }
 }
