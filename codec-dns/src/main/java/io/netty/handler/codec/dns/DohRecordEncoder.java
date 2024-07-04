@@ -11,18 +11,10 @@ public class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        ByteBuf buf = ctx.alloc().heapBuffer();
-        ByteBuf content;
-        try {
-            dohQueryEncoder.encode(ctx, (DnsQuery) msg, buf);
-            content = buf;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        ByteBuf content = ctx.alloc().heapBuffer();
+        dohQueryEncoder.encode(ctx, (DnsQuery) msg, content);
 
-        HttpRequest request = new DefaultFullHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.POST, "/dns-query", content
-        );
+        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/dns-query", content);
 
         request.headers().set(HttpHeaderNames.HOST, "dns.google");
         request.headers().set(HttpHeaderNames.ACCEPT, "application/dns-message");
