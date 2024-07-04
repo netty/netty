@@ -6,6 +6,8 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.*;
 
+import java.util.Base64;
+
 public class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
     private final DohQueryEncoder dohQueryEncoder = new DohQueryEncoder();
 
@@ -20,14 +22,32 @@ public class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
         ByteBuf content = ctx.alloc().heapBuffer();
         dohQueryEncoder.encode(ctx, (DnsQuery) msg, content);
 
-        HttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, dohProvider.uri(),
-                content);
+        HttpRequest request = dohProvider.usePost() ? createPostRequest(content) : createGetRequest(content);
 
         request.headers().set(HttpHeaderNames.HOST, dohProvider.host());
         request.headers().set(HttpHeaderNames.ACCEPT, "application/dns-message");
         request.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/dns-message");
-        request.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+
+        if (dohProvider.usePost()) {
+            request.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+        }
 
         super.write(ctx, request, promise);
+    }
+
+    private DefaultFullHttpRequest createPostRequest(ByteBuf content) {
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, dohProvider.uri(), content);
+    }
+
+    private DefaultFullHttpRequest createGetRequest(ByteBuf content) {
+        QueryStringEncoder queryString = new QueryStringEncoder(dohProvider.uri());
+        queryString.addParam("dns", Base64.getUrlEncoder().withoutPadding().encodeToString(toByteArray(content)));
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, queryString.toString());
+    }
+
+    private byte[] toByteArray(ByteBuf content) {
+        byte[] contentBytes = new byte[content.readableBytes()];
+        content.readBytes(contentBytes);
+        return contentBytes;
     }
 }
