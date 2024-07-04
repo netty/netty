@@ -1,6 +1,8 @@
-FROM centos:7
+FROM centos:7.6.1810
 
 ENV SOURCE_DIR /root/source
+
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/vault.centos.org\/\/7.6.1810\//g' /etc/yum.repos.d/CentOS-Base.repo
 
 # install dependencies
 RUN yum install -y \
