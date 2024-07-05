@@ -29,6 +29,7 @@
   <name>Netty/Codec/HTTP</name>
 
   <properties>
+    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.http</javaModuleName>
   </properties>
 
@@ -57,6 +58,7 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-compression</artifactId>
       <version>${project.version}</version>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -134,5 +136,20 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>
 

@@ -233,6 +233,9 @@
           <checkCompileClasspath>true</checkCompileClasspath>
           <checkRuntimeClasspath>true</checkRuntimeClasspath>
           <checkTestClasspath>false</checkTestClasspath>
+          <ignoredClassPatterns>
+            <ignoredClassPattern>^META-INF.versions.*$</ignoredClassPattern>
+          </ignoredClassPatterns>
           <preferLocal>true</preferLocal>
           <useResultFile>true</useResultFile>
           <resultFile>${project.build.directory}/duplicate-finder-result.xml</resultFile>

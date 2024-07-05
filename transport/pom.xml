@@ -29,6 +29,7 @@
   <name>Netty/Transport</name>
 
   <properties>
+    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.transport</javaModuleName>
   </properties>
 
@@ -62,5 +63,20 @@
       <artifactId>gson</artifactId>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>
 

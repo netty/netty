@@ -29,6 +29,7 @@
   <name>Netty/Codec/DNS</name>
 
   <properties>
+    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.dns</javaModuleName>
   </properties>
 
@@ -77,5 +78,20 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>
 

@@ -28,7 +28,8 @@
 
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
-    <javaModuleName>io.netty.transport.io_uring</javaModuleName>
+    <fallbackModuleName>io.netty.transport.io_uring</fallbackModuleName>
+    <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
     <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
@@ -36,6 +37,7 @@
     <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
     <jni.compiler.args.ldflags>LDFLAGS=-L${unix.common.lib.unpacked.dir} -Wl,--no-as-needed -lrt -ldl -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+    <fallbackOutputDirectory>${project.build.directory}/fallback-classes</fallbackOutputDirectory>
     <skipTests>true</skipTests>
     <jniArch>${os.detected.arch}</jniArch>
     <jni.classifier>${os.detected.name}-${jniArch}</jni.classifier>
@@ -152,7 +154,7 @@
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_transport_native_io_uring_${os.detected.arch}.so; osname=Linux; processor=${os.detected.arch},*</Bundle-NativeCode>
                       <Fragment-Host>io.netty.transport-classes-io_uring</Fragment-Host>
-                      <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                      <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
@@ -367,22 +369,40 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
+          </execution>
+          <execution>
+            <id>fallback-module-info</id>
+            <phase>process-classes</phase>
+            <configuration>
+              <moduleName>${fallbackModuleName}</moduleName>
+              <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
+            </configuration>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
           <!-- Generate the fallback JAR that does not contain the native library. -->
           <execution>
             <id>default-jar</id>
             <configuration>
-              <excludes>
-                <exclude>META-INF/native/**</exclude>
-              </excludes>
+              <classesDirectory>${fallbackOutputDirectory}</classesDirectory>
               <archive>
                 <manifest>
                   <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                   <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                 </manifest>
                 <manifestEntries>
-                  <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                  <Multi-Release>true</Multi-Release>
                 </manifestEntries>
                 <index>true</index>
                 <manifestFile>${project.build.directory}/manifests/MANIFEST.MF</manifestFile>
@@ -395,6 +415,24 @@
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
+          <!-- Copy files for the fallback JAR that does not contain the native library
+               and a different module declaration -->
+          <execution>
+            <id>copy-to-native-output</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+
+                <copy todir="${fallbackOutputDirectory}" includeEmptyDirs="false">
+                  <zipfileset dir="${project.build.outputDirectory}" excludes="META-INF/versions/**,META-INF/native/**" />
+                </copy>
+              </target>
+            </configuration>
+          </execution>
           <!-- Copy the manifest file that we populated so far so we can use it as a starting point when generating the jars and adding more things to it. -->
           <execution>
             <id>copy-manifest</id>

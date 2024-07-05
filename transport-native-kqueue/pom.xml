@@ -112,7 +112,7 @@
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_${os.detected.arch}.jnilib; osname=MacOSX; processor=${os.detected.arch}</Bundle-NativeCode>
                       <Fragment-Host>io.netty.transport-classes-kqueue</Fragment-Host>
-                      <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                      <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
@@ -221,7 +221,7 @@
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_aarch_64.jnilib; osname=MacOSX; processor=aarch64</Bundle-NativeCode>
                       <Fragment-Host>io.netty.transport-classes-kqueue</Fragment-Host>
-                      <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                      <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
@@ -330,7 +330,7 @@
                     <manifestEntries>
                       <Bundle-NativeCode>META-INF/native/libnetty_transport_native_kqueue_x86_64.jnilib; osname=MacOSX; processor=x86_64</Bundle-NativeCode>
                       <Fragment-Host>io.netty.transport-classes-kqueue</Fragment-Host>
-                      <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                      <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
                     <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
@@ -592,7 +592,8 @@
 
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
-    <javaModuleName>io.netty.transport.kqueue.${javaModuleNameClassifier}</javaModuleName>
+    <fallbackModuleName>io.netty.transport.kqueue</fallbackModuleName>
+    <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
     <!-- Needed as we use SelfSignedCertificate in our tests -->
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
     <!-- Always check JNI during test run so we catch bugs that could cause crashes -->
@@ -604,6 +605,7 @@
     <jni.compiler.args.cflags>CFLAGS=-O3 -Werror -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
     <jni.compiler.args.ldflags>LDFLAGS=-z now -L${unix.common.lib.unpacked.dir} -Wl,--whole-archive -l${unix.common.lib.name} -Wl,--no-whole-archive</jni.compiler.args.ldflags>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+    <fallbackOutputDirectory>${project.build.directory}/fallback-classes</fallbackOutputDirectory>
   </properties>
 
   <dependencies>
@@ -680,15 +682,56 @@
         </executions>
       </plugin>
       <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <!-- Copy files for the fallback JAR that does not contain the native library
+               and a different module declaration -->
+          <execution>
+            <id>copy-to-native-output</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+
+                <copy todir="${fallbackOutputDirectory}" includeEmptyDirs="false">
+                  <zipfileset dir="${project.build.outputDirectory}" excludes="META-INF/versions/**,META-INF/native/**" />
+                </copy>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
+          </execution>
+          <execution>
+            <id>fallback-module-info</id>
+            <phase>process-classes</phase>
+            <configuration>
+              <moduleName>${fallbackModuleName}</moduleName>
+              <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
+            </configuration>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
           <!-- Generate the fallback JAR that does not contain the native library. -->
           <execution>
             <id>default-jar</id>
             <configuration>
-              <excludes>
-                <exclude>META-INF/native/**</exclude>
-              </excludes>
+              <classesDirectory>${fallbackOutputDirectory}</classesDirectory>
             </configuration>
           </execution>
         </executions>

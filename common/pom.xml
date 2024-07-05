@@ -30,6 +30,7 @@
   <name>Netty/Common</name>
 
   <properties>
+    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.common</javaModuleName>
     <collection.template.dir>${project.basedir}/src/main/templates</collection.template.dir>
     <collection.template.test.dir>${project.basedir}/src/test/templates</collection.template.test.dir>
@@ -219,6 +220,15 @@
                 <Import-Package>!org.jctools.*;sun.misc;resolution:=optional;*</Import-Package>
               </instructions>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
           </execution>
         </executions>
       </plugin>
