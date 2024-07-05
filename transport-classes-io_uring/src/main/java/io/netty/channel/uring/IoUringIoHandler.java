@@ -422,6 +422,6 @@ public final class IoUringIoHandler implements IoHandler {
     public static IoHandlerFactory newFactory(int ringSize) {
         IoUring.ensureAvailability();
         ObjectUtil.checkPositive(ringSize, "ringSize");
-        return () -> new IoUringIoHandler(Native.createRingBuffer());
+        return () -> new IoUringIoHandler(Native.createRingBuffer(ringSize));
     }
 }
