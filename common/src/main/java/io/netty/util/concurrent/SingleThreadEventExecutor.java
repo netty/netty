@@ -794,7 +794,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     @Override
     public boolean isSuspended() {
-        return state == ST_SUSPENDED || state == ST_SUSPENDING;
+        int currentState = state;
+        return currentState == ST_SUSPENDED || currentState == ST_SUSPENDING;
     }
 
     @Override
