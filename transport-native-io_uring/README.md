@@ -42,14 +42,14 @@ When you tried to use io_uring but saw an exception that looked like this please
 
 ```
 Exception in thread "main" java.lang.UnsatisfiedLinkError: failed to load the required native library
-	at io.netty.channel.uring.IOUring.ensureAvailability(IOUring.java:63)
+	at io.netty.channel.uring.IoUring.ensureAvailability(IoUring.java:63)
         ...
         ...
 Caused by: java.lang.RuntimeException: failed to create io_uring ring fd Cannot allocate memory
 	at io.netty.channel.uring.Native.ioUringSetup(Native Method)
 	at io.netty.channel.uring.Native.createRingBuffer(Native.java:141)
 	at io.netty.channel.uring.Native.createRingBuffer(Native.java:174)
-	at io.netty.channel.uring.IOUring.<clinit>(IOUring.java:36)
+	at io.netty.channel.uring.IoUring.<clinit>(IoUring.java:36)
 	... 17 more
 ```
 

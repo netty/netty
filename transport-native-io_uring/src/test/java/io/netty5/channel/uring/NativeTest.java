@@ -51,7 +51,7 @@ public class NativeTest {
 
     @BeforeAll
     public static void loadJNI() {
-        assumeTrue(IOUring.isAvailable());
+        assumeTrue(IoUring.isAvailable());
     }
 
     /*

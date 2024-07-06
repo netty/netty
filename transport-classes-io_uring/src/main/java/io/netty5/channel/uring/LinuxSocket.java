@@ -215,7 +215,7 @@ final class LinuxSocket extends Socket {
         return getTimeToLive(intValue());
     }
 
-    void getTcpInfo(IOUringTcpInfo info) throws IOException {
+    void getTcpInfo(IoUringTcpInfo info) throws IOException {
         getTcpInfo(intValue(), info.info);
     }
 

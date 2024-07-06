@@ -174,7 +174,7 @@
                 </goals>
                 <configuration>
                   <includes>
-                    <include>**/CombinationOfIOUringAndEpollTest.java</include>
+                    <include>**/CombinationOfIoUringAndEpollTest.java</include>
                   </includes>
                   <reuseForks>false</reuseForks>
                 </configuration>
@@ -187,7 +187,7 @@
                 </goals>
                 <configuration>
                   <includes>
-                    <include>**/CombinationOfEpollAndIOUringTest.java</include>
+                    <include>**/CombinationOfEpollAndIoUringTest.java</include>
                   </includes>
                   <runOrder>random</runOrder>
                   <systemPropertyVariables>
