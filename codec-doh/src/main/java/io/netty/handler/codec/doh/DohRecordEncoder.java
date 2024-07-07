@@ -1,9 +1,10 @@
-package io.netty.handler.codec.dns;
+package io.netty.handler.codec.doh;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.http.*;
 
 import java.util.Base64;

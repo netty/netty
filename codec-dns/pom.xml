@@ -76,12 +76,6 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-codec-http2</artifactId>
-      <version>4.1.112.Final-SNAPSHOT</version>
-      <scope>compile</scope>
-    </dependency>
   </dependencies>
 </project>
 

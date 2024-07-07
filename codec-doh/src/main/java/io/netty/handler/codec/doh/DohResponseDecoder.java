@@ -1,8 +1,9 @@
-package io.netty.handler.codec.dns;
+package io.netty.handler.codec.doh;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.dns.*;
 import io.netty.handler.codec.http.FullHttpResponse;
 
 import java.net.SocketAddress;

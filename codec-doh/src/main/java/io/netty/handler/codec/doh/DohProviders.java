@@ -1,4 +1,4 @@
-package io.netty.handler.codec.dns;
+package io.netty.handler.codec.doh;
 
 public class DohProviders {
 
