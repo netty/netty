@@ -25,8 +25,17 @@ public class DohResponseDecoder extends SimpleChannelInboundHandler<FullHttpResp
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) throws Exception {
         ByteBuf content = msg.content();
-        DnsResponse dnsResponse = responseDecoder.decode(ctx.channel().remoteAddress(), ctx.channel().localAddress(),
-                content);
+        SocketAddress sender;
+        SocketAddress recipient;
+
+        try {
+            sender = ctx.channel().remoteAddress();
+            recipient = ctx.channel().localAddress();
+        } catch (Exception e) {
+            throw new RuntimeException("Connection exception happened.", e);
+        }
+
+        DnsResponse dnsResponse = responseDecoder.decode(sender, recipient, content);
 
         ctx.fireChannelRead(dnsResponse);
     }
