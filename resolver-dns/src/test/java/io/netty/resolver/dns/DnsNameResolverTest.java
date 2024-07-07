@@ -45,9 +45,7 @@ import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
@@ -2754,10 +2752,7 @@ public class DnsNameResolverTest {
             assertEquals(1, cached.size());
             assertEquals(cached, cached2);
 
-            Promise<List<InetAddress>> promise = GlobalEventExecutor.INSTANCE.newPromise();
-            boolean isCached = DnsNameResolver.doResolveAllCached("test", null, promise, cache,
-                    resolver.searchDomains(), resolver.ndots(), resolver.resolvedInternetProtocolFamiliesUnsafe());
-            assertTrue(isCached);
+            resolver.resolve("test").syncUninterruptibly();
             List<? extends DnsCacheEntry> entries = cache.cacheHits.get("test.netty.io");
             assertFalse(entries.isEmpty());
         } finally {

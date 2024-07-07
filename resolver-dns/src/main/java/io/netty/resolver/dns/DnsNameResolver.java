@@ -1095,8 +1095,7 @@ public class DnsNameResolver extends InetNameResolver {
             return;
         }
 
-        if (!doResolveAllCached(hostname, additionals, promise, resolveCache, this.searchDomains(),
-            ndots(), resolvedInternetProtocolFamilies)) {
+        if (!doResolveAllCached(hostname, additionals, promise, resolveCache, resolvedInternetProtocolFamilies)) {
             doResolveAllUncached(hostname, additionals, promise, promise,
                                  resolveCache, completeOncePreferredResolved);
         }
@@ -1106,19 +1105,8 @@ public class DnsNameResolver extends InetNameResolver {
                                       DnsRecord[] additionals,
                                       Promise<List<InetAddress>> promise,
                                       DnsCache resolveCache,
-                                      String[] searchDomains,
-                                      int ndots,
                                       InternetProtocolFamily[] resolvedInternetProtocolFamilies) {
-        List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (searchDomains != null && ndots != 0 && !StringUtil.endsWith(hostname, '.')) {
-            for (String searchDomain : searchDomains) {
-                if (cachedEntries != null && !cachedEntries.isEmpty()) {
-                    break;
-                }
-                final String initialHostname = hostname + '.' + searchDomain;
-                cachedEntries = resolveCache.get(initialHostname, additionals);
-            }
-        }
+        final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
         if (cachedEntries == null || cachedEntries.isEmpty()) {
             return false;
         }
