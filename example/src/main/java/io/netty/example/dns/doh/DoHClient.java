@@ -22,6 +22,11 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class DoHClient {
+    private final static InetSocketAddress DOH_SRV_GOOGLE = SocketUtils.socketAddress("dns.google", 443);
+    private final static InetSocketAddress DOH_SRV_CLOUDFLARE = SocketUtils.socketAddress("1.1.1.1", 443);
+    private final static InetSocketAddress DOH_SRV_QUAD9 = SocketUtils.socketAddress("dns.quad9.net", 443);
+
+
     private final InetSocketAddress dohServer;
 
     public DoHClient(InetSocketAddress dohServer) {
@@ -113,6 +118,8 @@ public class DoHClient {
     }
 
     public static void main(String[] args) throws InterruptedException, SSLException {
-        new DoHClient(SocketUtils.socketAddress("dns.google", 443)).start();
+        new DoHClient(DOH_SRV_GOOGLE).start();
+        new DoHClient(DOH_SRV_CLOUDFLARE).start();
+        new DoHClient(DOH_SRV_QUAD9).start();
     }
 }
