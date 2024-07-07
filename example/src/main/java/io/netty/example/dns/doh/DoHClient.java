@@ -7,7 +7,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.dns.*;
-import io.netty.handler.codec.doh.DohProviders;
 import io.netty.handler.codec.doh.DohRecordEncoder;
 import io.netty.handler.codec.doh.DohResponseDecoder;
 import io.netty.handler.codec.http.HttpClientCodec;
@@ -15,16 +14,18 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.SocketUtils;
 
 import javax.net.ssl.SSLException;
+import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class DoHClient {
-    private final DohProviders.DohProvider dohProvider;
+    private final InetSocketAddress dohServer;
 
-    public DoHClient(DohProviders.DohProvider dohProvider) {
-        this.dohProvider = dohProvider;
+    public DoHClient(InetSocketAddress dohServer) {
+        this.dohServer = dohServer;
     }
 
     private static void handleQueryResp(DefaultDnsResponse msg) {
@@ -65,12 +66,12 @@ public class DoHClient {
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) {
-                            ch.pipeline().addLast(sslCtx.newHandler(ch.alloc(), dohProvider.host(),
-                                    dohProvider.port()));
+                            ch.pipeline().addLast(sslCtx.newHandler(ch.alloc(), dohServer.getHostName(),
+                                    dohServer.getPort()));
 //                            ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
                             ch.pipeline().addLast(new HttpClientCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(65536));
-                            ch.pipeline().addLast(new DohRecordEncoder(dohProvider));
+                            ch.pipeline().addLast(new DohRecordEncoder(dohServer));
                             ch.pipeline().addLast(new DohResponseDecoder());
 
                             ch.pipeline().addLast(new SimpleChannelInboundHandler<DefaultDnsResponse>() {
@@ -87,7 +88,7 @@ public class DoHClient {
                     });
 
 
-            ChannelFuture f = b.connect(dohProvider.host(), dohProvider.port()).sync();
+            ChannelFuture f = b.connect(dohServer.getHostName(), dohServer.getPort()).sync();
             Channel channel = f.channel();
 
             DefaultDnsQuestion defaultDnsQuestion = new DefaultDnsQuestion("example.com.",
@@ -112,6 +113,6 @@ public class DoHClient {
     }
 
     public static void main(String[] args) throws InterruptedException, SSLException {
-        new DoHClient(DohProviders.GOOGLE).start();
+        new DoHClient(SocketUtils.socketAddress("dns.google", 443)).start();
     }
 }
