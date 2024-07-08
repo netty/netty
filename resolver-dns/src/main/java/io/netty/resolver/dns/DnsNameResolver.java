@@ -1102,6 +1102,10 @@ public class DnsNameResolver extends InetNameResolver {
         }
     }
 
+    private static boolean hasEntries(List<? extends DnsCacheEntry> cachedEntries) {
+        return cachedEntries != null && !cachedEntries.isEmpty();
+    }
+
     static boolean doResolveAllCached(String hostname,
                                       DnsRecord[] additionals,
                                       Promise<List<InetAddress>> promise,
@@ -1110,16 +1114,17 @@ public class DnsNameResolver extends InetNameResolver {
                                       int ndots,
                                       InternetProtocolFamily[] resolvedInternetProtocolFamilies) {
         List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (searchDomains != null && ndots != 0 && !StringUtil.endsWith(hostname, '.')) {
+        if (!hasEntries(cachedEntries) && searchDomains != null && ndots != 0
+                && !StringUtil.endsWith(hostname, '.')) {
             for (String searchDomain : searchDomains) {
-                if (cachedEntries != null && !cachedEntries.isEmpty()) {
-                    break;
-                }
                 final String initialHostname = hostname + '.' + searchDomain;
                 cachedEntries = resolveCache.get(initialHostname, additionals);
+                if (hasEntries(cachedEntries)) {
+                    break;
+                }
             }
         }
-        if (cachedEntries == null || cachedEntries.isEmpty()) {
+        if (!hasEntries(cachedEntries)) {
             return false;
         }
 
