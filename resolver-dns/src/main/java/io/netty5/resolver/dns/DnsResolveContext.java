@@ -558,8 +558,7 @@ abstract class DnsResolveContext<T> {
         });
         DnsCache resolveCache = resolveCache();
         if (!DnsNameResolver.doResolveAllCached(nameServerName, additionals, resolverPromise, resolveCache,
-                parent.resolvedProtocolFamiliesUnsafe())) {
-
+                 parent.searchDomains(), parent.ndots(), parent.resolvedProtocolFamiliesUnsafe())) {
             new DnsAddressResolveContext(parent, channel, channelReadyFuture,
                     originalPromise, nameServerName, additionals, parent.newNameServerAddressStream(nameServerName),
                     // Resolving the unresolved nameserver must be limited by allowedQueries

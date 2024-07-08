@@ -96,7 +96,8 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     void doSearchDomainQuery(String hostname, Promise<List<InetAddress>> nextPromise) {
         // Query the cache for the hostname first and only do a query if we could not find it in the cache.
         if (!DnsNameResolver.doResolveAllCached(
-                hostname, additionals, nextPromise, resolveCache, parent.resolvedProtocolFamiliesUnsafe())) {
+                hostname, additionals, nextPromise, resolveCache, parent.searchDomains(), parent.ndots(),
+                parent.resolvedProtocolFamiliesUnsafe())) {
             super.doSearchDomainQuery(hostname, nextPromise);
         }
     }

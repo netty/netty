@@ -44,6 +44,7 @@ import io.netty5.resolver.dns.TestDnsServer.TestResourceRecord;
 import io.netty5.util.NetUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SocketUtils;
@@ -2684,7 +2685,12 @@ public class DnsNameResolverTest {
             assertEquals(1, cached.size());
             assertEquals(cached, cached2);
 
-            resolver.resolve("test").asStage().sync();
+            Promise<List<InetAddress>> promise = ImmediateEventExecutor.INSTANCE.newPromise();
+            boolean isCached = DnsNameResolver.doResolveAllCached("test", null, promise, cache,
+                    resolver.searchDomains(), resolver.ndots(), resolver.resolvedProtocolFamiliesUnsafe());
+            assertTrue(isCached);
+            promise.asFuture().asStage().sync();
+
             List<? extends DnsCacheEntry> entries = cache.cacheHits.get("test.netty.io");
             assertFalse(entries.isEmpty());
         } finally {
