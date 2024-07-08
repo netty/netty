@@ -562,7 +562,7 @@ abstract class DnsResolveContext<T> {
         });
         DnsCache resolveCache = resolveCache();
         if (!DnsNameResolver.doResolveAllCached(nameServerName, additionals, resolverPromise, resolveCache,
-                parent.resolvedInternetProtocolFamiliesUnsafe())) {
+                parent.searchDomains(), parent.ndots(), parent.resolvedInternetProtocolFamiliesUnsafe())) {
 
             new DnsAddressResolveContext(parent, channel, channelReadyFuture,
                     originalPromise, nameServerName, additionals, parent.newNameServerAddressStream(nameServerName),

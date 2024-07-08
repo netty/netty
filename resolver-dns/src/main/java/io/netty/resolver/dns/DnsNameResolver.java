@@ -1115,19 +1115,36 @@ public class DnsNameResolver extends InetNameResolver {
             return;
         }
 
-        if (!doResolveAllCached(hostname, additionals, promise, resolveCache, resolvedInternetProtocolFamilies)) {
+        if (!doResolveAllCached(hostname, additionals, promise, resolveCache, this.searchDomains(),
+                ndots(), resolvedInternetProtocolFamilies)) {
             doResolveAllUncached(hostname, additionals, promise, promise,
                                  resolveCache, completeOncePreferredResolved);
         }
+    }
+
+    private static boolean hasEntries(List<? extends DnsCacheEntry> cachedEntries) {
+        return cachedEntries != null && !cachedEntries.isEmpty();
     }
 
     static boolean doResolveAllCached(String hostname,
                                       DnsRecord[] additionals,
                                       Promise<List<InetAddress>> promise,
                                       DnsCache resolveCache,
+                                      String[] searchDomains,
+                                      int ndots,
                                       SocketProtocolFamily[] resolvedInternetProtocolFamilies) {
-        final List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
-        if (cachedEntries == null || cachedEntries.isEmpty()) {
+        List<? extends DnsCacheEntry> cachedEntries = resolveCache.get(hostname, additionals);
+        if (!hasEntries(cachedEntries) && searchDomains != null && ndots != 0
+                && !StringUtil.endsWith(hostname, '.')) {
+            for (String searchDomain : searchDomains) {
+                final String initialHostname = hostname + '.' + searchDomain;
+                cachedEntries = resolveCache.get(initialHostname, additionals);
+                if (hasEntries(cachedEntries)) {
+                    break;
+                }
+            }
+        }
+        if (!hasEntries(cachedEntries)) {
             return false;
         }
 
