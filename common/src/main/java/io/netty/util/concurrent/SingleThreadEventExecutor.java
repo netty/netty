@@ -1110,7 +1110,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                         SingleThreadEventExecutor.this.run();
                         success = true;
 
-                        if (state == ST_SUSPENDING && !hasTasks() && nextScheduledTaskDeadlineNanos() == -1) {
+                        if (canSuspend(state)) {
                             if (!STATE_UPDATER.compareAndSet(SingleThreadEventExecutor.this,
                                     ST_SUSPENDING, ST_SUSPENDED)) {
                                 // Try again
