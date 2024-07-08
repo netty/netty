@@ -54,12 +54,12 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>netty-codec-http2</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>netty-codec-dns</artifactId>
             <version>${project.version}</version>
         </dependency>
