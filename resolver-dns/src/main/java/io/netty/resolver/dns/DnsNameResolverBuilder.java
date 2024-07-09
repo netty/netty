@@ -513,14 +513,14 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
-    public DnsCache getOrNewCache() {
+   DnsCache getOrNewCache() {
         if (this.resolveCache != null) {
             return this.resolveCache;
         }
         return new DefaultDnsCache(intValue(minTtl, 0), intValue(maxTtl, Integer.MAX_VALUE), intValue(negativeTtl, 0));
     }
 
-    public AuthoritativeDnsServerCache getOrNewAuthoritativeDnsServerCache() {
+   AuthoritativeDnsServerCache getOrNewAuthoritativeDnsServerCache() {
         if (this.authoritativeDnsServerCache != null) {
             return this.authoritativeDnsServerCache;
         }
@@ -536,7 +536,7 @@ public final class DnsNameResolverBuilder {
         return new ThreadLocalNameServerAddressStream(dnsServerAddressStreamProvider);
     }
 
-    public DnsCnameCache getOrNewCnameCache() {
+   DnsCnameCache getOrNewCnameCache() {
         if (this.cnameCache != null) {
             return this.cnameCache;
         }
