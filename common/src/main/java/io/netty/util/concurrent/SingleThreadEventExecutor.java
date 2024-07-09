@@ -1180,10 +1180,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                         }
                     } finally {
                         try {
-                            if (!shutdown) {
-                                // Lets remove all FastThreadLocals for the Thread as we are about to terminate it.
-                                FastThreadLocal.removeAll();
-                            } else {
+                            if (shutdown) {
                                 try {
                                     cleanup();
                                 } finally {
@@ -1202,6 +1199,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                     }
                                     terminationFuture.setSuccess(null);
                                 }
+                            } else {
+                                // Lets remove all FastThreadLocals for the Thread as we are about to terminate it.
+                                FastThreadLocal.removeAll();
                             }
                         } finally {
                             thread = null;
