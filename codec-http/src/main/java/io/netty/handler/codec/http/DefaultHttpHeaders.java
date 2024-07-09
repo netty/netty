@@ -21,6 +21,7 @@ import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.DefaultHeaders.NameValidator;
 import io.netty.handler.codec.DefaultHeaders.ValueValidator;
 import io.netty.handler.codec.DefaultHeadersImpl;
+import io.netty.handler.codec.Headers;
 import io.netty.handler.codec.HeadersUtils;
 import io.netty.handler.codec.ValueConverter;
 
@@ -149,6 +150,10 @@ public class DefaultHttpHeaders extends HttpHeaders {
 
     protected DefaultHttpHeaders(DefaultHeaders<CharSequence, CharSequence, ?> headers) {
         this.headers = headers;
+    }
+
+    public Headers<CharSequence, CharSequence, ?> unwrap() {
+        return headers;
     }
 
     @Override
