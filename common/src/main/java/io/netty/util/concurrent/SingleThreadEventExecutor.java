@@ -1119,11 +1119,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                 continue;
                             }
 
-                            if (!canSuspend(ST_SUSPENDED)) {
-                                // Seems like there was something added to the task queue again in the meantime,
-                                // let's try to update the state to started and try again to execute the run loop.
-                                STATE_UPDATER.compareAndSet(SingleThreadEventExecutor.this,
-                                        currentState, ST_STARTED);
+                            if (!canSuspend(ST_SUSPENDED) && STATE_UPDATER.compareAndSet(SingleThreadEventExecutor.this,
+                                        ST_SUSPENDED, ST_STARTED)) {
+                                // Seems like there was something added to the task queue again in the meantime but we
+                                // were able to re-engage this thread as the event loop thread.
                                 continue;
                             }
                             suspend = true;
