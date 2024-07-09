@@ -214,6 +214,23 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     }
 
     @Test
+    public void readPriorityFrame() {
+        LastInboundHandler handler = new LastInboundHandler();
+
+        Http2StreamChannel channel = newInboundStream(3, true, handler);
+        frameInboundWriter.writeInboundPriority(channel.stream().id(), 0, (short) 2, false);
+
+        // header frame should be multiplexed via fireChannelRead(...)
+        verifyFramesMultiplexedToCorrectChannel(channel, handler, 1);
+
+        Http2PriorityFrame priorityFrame = handler.readUserEvent();
+        assertEquals(channel.stream(), priorityFrame.stream());
+        assertEquals(0, priorityFrame.streamDependency());
+        assertEquals(2, priorityFrame.weight());
+        assertFalse(priorityFrame.exclusive());
+    }
+
+    @Test
     public void headerAndDataFramesShouldBeDelivered() {
         LastInboundHandler inboundHandler = new LastInboundHandler();
 
