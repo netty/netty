@@ -1105,46 +1105,57 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
                 boolean success = false;
                 updateLastExecutionTime();
+                boolean suspend = false;
                 try {
                     for (;;) {
                         SingleThreadEventExecutor.this.run();
                         success = true;
 
-                        if (canSuspend(state)) {
+                        int currentState = state;
+                        if (canSuspend(currentState)) {
                             if (!STATE_UPDATER.compareAndSet(SingleThreadEventExecutor.this,
                                     ST_SUSPENDING, ST_SUSPENDED)) {
-                                // Try again
+                                // Try again as the CAS failed.
                                 continue;
                             }
+
+                            if (!canSuspend(ST_SUSPENDED)) {
+                                // Seems like there was something added to the task queue again in the meantime,
+                                // let's try to update the state to started and try again to execute the run loop.
+                                STATE_UPDATER.compareAndSet(SingleThreadEventExecutor.this,
+                                        currentState, ST_STARTED);
+                                continue;
+                            }
+                            suspend = true;
                         }
                         break;
                     }
-
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception from an event executor: ", t);
                 } finally {
-                    int oldState = state;
-                    boolean suspend = oldState == ST_SUSPENDING ||
-                            oldState == ST_SUSPENDED;
+                    boolean shutdown = false;
                     if (!suspend) {
                         for (;;) {
+                            // We are re-fetching the state as it might have been shutdown in the meantime.
+                            int oldState = state;
                             if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
                                     SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
+                                shutdown = true;
                                 break;
-                            }
-                        }
-                        if (success && gracefulShutdownStartTime == 0) {
-                            // Check if confirmShutdown() was called at the end of the loop.
-                            if (logger.isErrorEnabled()) {
-                                logger.error("Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
-                                        SingleThreadEventExecutor.class.getSimpleName() + ".confirmShutdown() must " +
-                                        "be called before run() implementation terminates.");
                             }
                         }
                     }
 
+                    if (shutdown && success && gracefulShutdownStartTime == 0) {
+                        // Check if confirmShutdown() was called at the end of the loop.
+                        if (logger.isErrorEnabled()) {
+                            logger.error("Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
+                                    SingleThreadEventExecutor.class.getSimpleName() + ".confirmShutdown() must " +
+                                    "be called before run() implementation terminates.");
+                        }
+                    }
                     try {
-                        if (!suspend) {
+                        if (shutdown) {
                             // Run all remaining tasks and shutdown hooks. At this point the event loop
                             // is in ST_SHUTTING_DOWN state still accepting tasks which is needed for
                             // graceful shutdown with quietPeriod.
@@ -1167,15 +1178,16 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                             // We have the final set of tasks in the queue now, no more can be added, run all remaining.
                             // No need to loop here, this is the final pass.
                             confirmShutdown();
+                        } else {
+                            for (;;) {
+                                if (!runAllTasks()) {
+                                    break;
+                                }
+                            }
                         }
                     } finally {
                         try {
-                            if (oldState == ST_SUSPENDED) {
-                                for (;;) {
-                                    if (!runAllTasks()) {
-                                        break;
-                                    }
-                                }
+                            if (!shutdown) {
                                 // Lets remove all FastThreadLocals for the Thread as we are about to terminate it.
                                 FastThreadLocal.removeAll();
                             } else {
