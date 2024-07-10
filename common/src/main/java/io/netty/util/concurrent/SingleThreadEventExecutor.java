@@ -1141,27 +1141,26 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception from an event executor: ", t);
                 } finally {
-                    boolean shutdown = false;
-                    if (!suspend) {
+                    boolean shutdown = !suspend;
+                    if (shutdown) {
                         for (;;) {
                             // We are re-fetching the state as it might have been shutdown in the meantime.
                             int oldState = state;
                             if (oldState >= ST_SHUTTING_DOWN || STATE_UPDATER.compareAndSet(
                                     SingleThreadEventExecutor.this, oldState, ST_SHUTTING_DOWN)) {
-                                shutdown = true;
                                 break;
+                            }
+                        }
+                        if (success && gracefulShutdownStartTime == 0) {
+                            // Check if confirmShutdown() was called at the end of the loop.
+                            if (logger.isErrorEnabled()) {
+                                logger.error("Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
+                                        SingleThreadEventExecutor.class.getSimpleName() + ".confirmShutdown() must " +
+                                        "be called before run() implementation terminates.");
                             }
                         }
                     }
 
-                    if (shutdown && success && gracefulShutdownStartTime == 0) {
-                        // Check if confirmShutdown() was called at the end of the loop.
-                        if (logger.isErrorEnabled()) {
-                            logger.error("Buggy " + EventExecutor.class.getSimpleName() + " implementation; " +
-                                    SingleThreadEventExecutor.class.getSimpleName() + ".confirmShutdown() must " +
-                                    "be called before run() implementation terminates.");
-                        }
-                    }
                     try {
                         if (shutdown) {
                             // Run all remaining tasks and shutdown hooks. At this point the event loop
