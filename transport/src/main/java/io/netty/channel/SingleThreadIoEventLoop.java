@@ -168,7 +168,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     }
 
     @Override
-    protected final boolean canSuspend(int state) {
+    protected boolean canSuspend(int state) {
         // We should only allow to suspend if there are no registrations on this loop atm.
         return super.canSuspend(state) && numRegistrations == 0;
     }
