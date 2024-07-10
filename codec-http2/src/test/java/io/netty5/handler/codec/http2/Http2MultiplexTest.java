@@ -265,6 +265,7 @@ public class Http2MultiplexTest {
         DATA_END_STREAM,
         TRAILERS_END_STREAM;
     }
+
     @ParameterizedTest
     @EnumSource(RstFrameTestMode.class)
     void noRstFrameSentOnCloseViaListener(final RstFrameTestMode mode) throws Exception {
@@ -1279,6 +1280,23 @@ public class Http2MultiplexTest {
         parentChannel.flushInbound();
 
         childChannel.closeFuture().asStage().sync();
+    }
+
+    @Test
+    public void readPriorityFrame() throws Exception {
+        LastInboundHandler handler = new LastInboundHandler();
+
+        Http2StreamChannel channel = newInboundStream(3, true, handler);
+        frameInboundWriter.writeInboundPriority(channel.stream().id(), 0, (short) 2, false);
+
+        // header frame should be multiplexed via fireChannelRead(...)
+        verifyFramesMultiplexedToCorrectChannel(channel, handler, 1);
+
+        Http2PriorityFrame priorityFrame = handler.readUserEvent();
+        assertEquals(channel.stream(), priorityFrame.stream());
+        assertEquals(0, priorityFrame.streamDependency());
+        assertEquals(2, priorityFrame.weight());
+        assertFalse(priorityFrame.exclusive());
     }
 
     private boolean useUserEventForResetFrame() {
