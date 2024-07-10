@@ -15,12 +15,14 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+
 /**
  * The {@link EventExecutor} is a special {@link EventExecutorGroup} which comes
  * with some handy methods to see if a {@link Thread} is executed in a event loop.
  * Besides this, it also extends the {@link EventExecutorGroup} to allow for a generic
  * way to access methods.
- *
  */
 public interface EventExecutor extends EventExecutorGroup {
 
@@ -72,5 +74,36 @@ public interface EventExecutor extends EventExecutorGroup {
      */
     default <V> Future<V> newFailedFuture(Throwable cause) {
         return new FailedFuture<>(this, cause);
+    }
+
+    /**
+     * Returns {@code true} if the {@link EventExecutor} is considered suspended.
+     *
+     * @return {@code true} if suspended, {@code false} otherwise.
+     */
+    default boolean isSuspended() {
+        return false;
+    }
+
+    /**
+     * Try to suspend this {@link EventExecutor} and return {@code true} if suspension was successful.
+     * Suspending an {@link EventExecutor} will allow it to free up resources, like for example a {@link Thread} that
+     * is backing the {@link EventExecutor}. Once an {@link EventExecutor} was suspended it will be started again
+     * by submitting work to it via one of the following methods:
+     * <ul>
+     *   <li>{@link #execute(Runnable)}</li>
+     *   <li>{@link #schedule(Runnable, long, TimeUnit)}</li>
+     *   <li>{@link #schedule(Callable, long, TimeUnit)}</li>
+     *   <li>{@link #scheduleAtFixedRate(Runnable, long, long, TimeUnit)}</li>
+     *   <li>{@link #scheduleWithFixedDelay(Runnable, long, long, TimeUnit)}</li>
+     * </ul>
+     *
+     * Even if this method returns {@code true} it might take some time for the {@link EventExecutor} to fully suspend
+     * itself.
+     *
+     * @return {@code true} if suspension was successful, otherwise {@code false}.
+     */
+    default boolean trySuspend() {
+        return false;
     }
 }

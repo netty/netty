@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.Future;
+
 /**
  * A registration for IO.
  *
@@ -35,7 +37,9 @@ public interface IoRegistration {
      *
      * @return  valid.
      */
-    boolean isValid();
+    default boolean isValid() {
+        return !cancelFuture().isDone();
+    }
 
     /**
      * Cancel the registration.
@@ -48,4 +52,11 @@ public interface IoRegistration {
      * @return  ioHandler.
      */
     IoHandler ioHandler();
+
+    /**
+     * Returns a {@link Future} that is notified once this {@link IoRegistration} was cancelled.
+     *
+     * @return future that is notified once registration is cancelled.
+     */
+    Future<?> cancelFuture();
 }

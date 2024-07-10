@@ -14,10 +14,14 @@
  * under the License.
  */
 package io.netty.channel;
-
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadFactory;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -51,12 +55,47 @@ public class SingleThreadIoEventLoopTest {
         group.shutdownGracefully();
     }
 
-    private static class TestIoHandler implements IoHandler {
+    private static final class TestThreadFactory implements ThreadFactory {
+        final LinkedBlockingQueue<Thread> threads = new LinkedBlockingQueue<>();
         @Override
-        public int run(IoExecutionContext context) {
-            return 0;
+        public Thread newThread(Runnable r) {
+            Thread thread = new Thread(r);
+            threads.add(thread);
+            return thread;
         }
+    }
 
+    @Test
+    void testSuspendingWhileRegistrationActive() throws Exception {
+        TestThreadFactory threadFactory = new TestThreadFactory();
+        IoHandler handler = new TestIoHandler() {
+            @Override
+            public boolean isCompatible(Class<? extends IoHandle> handleType) {
+                return true;
+            }
+        };
+        IoEventLoop loop = new SingleThreadIoEventLoop(null, threadFactory, handler);
+        assertFalse(loop.isSuspended());
+        IoRegistration registration = loop.register(new TestIoHandle()).sync().getNow();
+        Thread currentThread = threadFactory.threads.take();
+        assertTrue(currentThread.isAlive());
+        assertTrue(loop.trySuspend());
+
+        // Still should be alive as until the registration is cancelled we can not suspend the loop.
+        assertTrue(currentThread.isAlive());
+
+        registration.cancel();
+        registration.cancelFuture().sync();
+
+        // The current thread should be able to die now.
+        currentThread.join();
+
+        assertTrue(threadFactory.threads.isEmpty());
+        loop.shutdownGracefully();
+    }
+
+    private static class TestIoHandler implements IoHandler {
+        private final Semaphore semaphore = new Semaphore(0);
         @Override
         public void prepareToDestroy() {
             // NOOP
@@ -68,13 +107,44 @@ public class SingleThreadIoEventLoopTest {
         }
 
         @Override
-        public IoRegistration register(IoEventLoop eventLoop, IoHandle handle) {
-            return null;
+        public IoRegistration register(final IoEventLoop eventLoop, final IoHandle handle) {
+            return new IoRegistration() {
+                private final Promise<?> cancellationPromise = eventLoop.newPromise();
+                @Override
+                public long submit(IoOps ops) {
+                    return 0;
+                }
+
+                @Override
+                public void cancel() {
+                    cancellationPromise.trySuccess(null);
+                }
+
+                @Override
+                public IoHandler ioHandler() {
+                    return TestIoHandler.this;
+                }
+
+                @Override
+                public Future<?> cancelFuture() {
+                    return cancellationPromise;
+                }
+            };
         }
 
         @Override
         public void wakeup(IoEventLoop eventLoop) {
-            // NOOP
+            semaphore.release();
+        }
+
+        @Override
+        public int run(IoExecutionContext context) {
+            try {
+                semaphore.acquire();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return 0;
         }
 
         @Override
@@ -83,7 +153,7 @@ public class SingleThreadIoEventLoopTest {
         }
     }
 
-    private class TestIoHandle implements IoHandle {
+    private static class TestIoHandle implements IoHandle {
         @Override
         public void handle(IoRegistration registration, IoEvent readyOps) {
             // NOOP

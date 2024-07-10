@@ -25,6 +25,8 @@ import io.netty.channel.IoRegistration;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -266,7 +268,8 @@ public final class IoUringIoHandler implements IoHandler {
         return id;
     }
 
-    private final class DefaultIoUringIoRegistration extends AtomicBoolean implements IoUringIoRegistration {
+    private final class DefaultIoUringIoRegistration implements IoUringIoRegistration {
+        private final Promise<?> cancellationPromise;
         private final IoEventLoop eventLoop;
         private final IoUringIoEvent event = new IoUringIoEvent(0, 0, (byte) 0, (short) 0);
         final IoUringIoHandle handle;
@@ -278,6 +281,7 @@ public final class IoUringIoHandler implements IoHandler {
         DefaultIoUringIoRegistration(IoEventLoop eventLoop, IoUringIoHandle handle) {
             this.eventLoop = eventLoop;
             this.handle = handle;
+            this.cancellationPromise = eventLoop.newPromise();
         }
 
         void setId(int id) {
@@ -311,13 +315,8 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         @Override
-        public boolean isValid() {
-            return !get();
-        }
-
-        @Override
         public void cancel() {
-            if (getAndSet(true)) {
+            if (cancellationPromise.trySuccess(null)) {
                 return;
             }
             if (eventLoop.inEventLoop()) {
@@ -325,6 +324,11 @@ public final class IoUringIoHandler implements IoHandler {
             } else {
                 eventLoop.execute(this::tryRemove);
             }
+        }
+
+        @Override
+        public Future<?> cancelFuture() {
+            return cancellationPromise;
         }
 
         private void tryRemove() {

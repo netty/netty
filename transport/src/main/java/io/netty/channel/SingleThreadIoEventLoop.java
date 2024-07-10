@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -59,6 +60,12 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     private final IoHandler ioHandler;
 
+    private int numRegistrations;
+    private final FutureListener<Object> decrementRegistrationListener = f -> {
+        assert inEventLoop();
+        numRegistrations--;
+    };
+
     /**
      *  Creates a new instance
      *
@@ -68,7 +75,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
      */
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, ThreadFactory threadFactory,
                                    IoHandler ioHandler) {
-        super(parent, threadFactory, false);
+        super(parent, threadFactory, false, true);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
 
@@ -80,7 +87,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
      * @param ioHandler         the {@link IoHandler} used to run all IO.
      */
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor, IoHandler ioHandler) {
-        super(parent, executor, false);
+        super(parent, executor, false, true);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
 
@@ -99,7 +106,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, ThreadFactory threadFactory,
                                    IoHandler ioHandler, int maxPendingTasks,
                                    RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, threadFactory, false, maxPendingTasks, rejectedExecutionHandler);
+        super(parent, threadFactory, false, true, maxPendingTasks, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
 
@@ -118,7 +125,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor,
                                    IoHandler ioHandler, int maxPendingTasks,
                                    RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, false, maxPendingTasks, rejectedExecutionHandler);
+        super(parent, executor, false, true, maxPendingTasks, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
 
@@ -137,9 +144,8 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     protected SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor,
                                       IoHandler ioHandler, Queue<Runnable> taskQueue,
                                       Queue<Runnable> tailTaskQueue,
-
                                       RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, false, taskQueue, tailTaskQueue, rejectedExecutionHandler);
+        super(parent, executor, false, true, taskQueue, tailTaskQueue, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
     }
 
@@ -152,11 +158,19 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
                 ioHandler.prepareToDestroy();
             }
             runAllTasks(maxTasksPerRun);
-        } while (!confirmShutdown());
+
+            // We should continue with our loop until we either confirmed a shutdown or we can suspend it.
+        } while (!confirmShutdown() && !canSuspend());
     }
 
     protected final IoHandler ioHandler() {
         return ioHandler;
+    }
+
+    @Override
+    protected boolean canSuspend(int state) {
+        // We should only allow to suspend if there are no registrations on this loop atm.
+        return super.canSuspend(state) && numRegistrations == 0;
     }
 
     /**
@@ -196,6 +210,8 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             promise.setFailure(e);
             return;
         }
+        registration.cancelFuture().addListener(decrementRegistrationListener);
+        numRegistrations++;
         promise.setSuccess(registration);
     }
 

@@ -31,6 +31,8 @@ import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -42,7 +44,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.Math.min;
@@ -256,13 +257,15 @@ public class EpollIoHandler implements IoHandler {
         }
     }
 
-    private final class DefaultEpollIoRegistration extends AtomicBoolean implements EpollIoRegistration {
+    private final class DefaultEpollIoRegistration implements EpollIoRegistration {
+        private final Promise<?> cancellationPromise;
         private final IoEventLoop eventLoop;
         final EpollIoHandle handle;
 
         DefaultEpollIoRegistration(IoEventLoop eventLoop, EpollIoHandle handle) {
             this.eventLoop = eventLoop;
             this.handle = handle;
+            this.cancellationPromise = eventLoop.newPromise();
         }
 
         @Override
@@ -287,13 +290,8 @@ public class EpollIoHandler implements IoHandler {
         }
 
         @Override
-        public boolean isValid() {
-            return !get();
-        }
-
-        @Override
         public void cancel() throws IOException {
-            if (getAndSet(true)) {
+            if (!cancellationPromise.trySuccess(null)) {
                 return;
             }
             if (handle.fd().isOpen()) {
@@ -332,6 +330,11 @@ public class EpollIoHandler implements IoHandler {
             } catch (Exception e) {
                 logger.debug("Exception during closing " + handle, e);
             }
+        }
+
+        @Override
+        public Future<?> cancelFuture() {
+            return cancellationPromise;
         }
 
         void handle(long ev) {

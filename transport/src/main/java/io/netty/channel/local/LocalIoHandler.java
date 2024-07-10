@@ -22,11 +22,12 @@ import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 
 public final class LocalIoHandler implements IoHandler {
@@ -105,13 +106,15 @@ public final class LocalIoHandler implements IoHandler {
         return LocalIoHandle.class.isAssignableFrom(handleType);
     }
 
-    private final class LocalIoRegistration extends AtomicBoolean implements IoRegistration {
+    private final class LocalIoRegistration implements IoRegistration {
+        private final Promise<?> cancellationPromise;
         private final IoEventLoop eventLoop;
         private final LocalIoHandle handle;
 
         LocalIoRegistration(IoEventLoop eventLoop, LocalIoHandle handle) {
             this.eventLoop = eventLoop;
             this.handle = handle;
+            this.cancellationPromise = eventLoop.newPromise();
         }
 
         @Override
@@ -120,13 +123,8 @@ public final class LocalIoHandler implements IoHandler {
         }
 
         @Override
-        public boolean isValid() {
-            return !get();
-        }
-
-        @Override
         public void cancel() {
-            if (getAndSet(true)) {
+            if (!cancellationPromise.trySuccess(null)) {
                 return;
             }
             if (eventLoop.inEventLoop()) {
@@ -134,6 +132,11 @@ public final class LocalIoHandler implements IoHandler {
             } else {
                 eventLoop.execute(this::cancel0);
             }
+        }
+
+        @Override
+        public Future<?> cancelFuture() {
+            return cancellationPromise;
         }
 
         private void cancel0() {
