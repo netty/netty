@@ -817,11 +817,20 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      *
      * @return  if suspension is possible at the moment.
      */
-    protected boolean canSuspend() {
+    protected final boolean canSuspend() {
         return canSuspend(state);
     }
 
-    private boolean canSuspend(int state) {
+    /**
+     * Returns {@code true} if this {@link SingleThreadEventExecutor} can be suspended at the moment, {@code false}
+     * otherwise.
+     *
+     * Subclasses might override this method to add extra checks.
+     *
+     * @param   state   the current internal state of the {@link SingleThreadEventExecutor}.
+     * @return          if suspension is possible at the moment.
+     */
+    protected boolean canSuspend(int state) {
         assert inEventLoop();
         return supportSuspension && (state == ST_SUSPENDED || state == ST_SUSPENDING)
                 && !hasTasks() && nextScheduledTaskDeadlineNanos() == -1;
@@ -928,7 +937,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 @Override
                 public void run() {
                     task.run();
-                    if (canSuspend(currentState)) {
+                    if (canSuspend(ST_SUSPENDED)) {
                         // Try suspending again to recover the state before we submitted the new task that will
                         // handle cancellation itself.
                         trySuspend();
@@ -1202,6 +1211,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                             } else {
                                 // Lets remove all FastThreadLocals for the Thread as we are about to terminate it.
                                 FastThreadLocal.removeAll();
+
+                                // Reset the stored threadProperties in case of suspension.
+                                threadProperties = null;
                             }
                         } finally {
                             thread = null;
