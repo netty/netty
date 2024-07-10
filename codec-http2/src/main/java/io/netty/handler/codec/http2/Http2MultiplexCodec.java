@@ -142,16 +142,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
             Http2StreamFrame msg = (Http2StreamFrame) frame;
             AbstractHttp2StreamChannel channel  = (AbstractHttp2StreamChannel)
                     ((DefaultHttp2FrameStream) msg.stream()).attachment;
-            if (msg instanceof Http2ResetFrame || msg instanceof Http2PriorityFrame) {
-                // Reset and Priority frames needs to be propagated via user events as these are not flow-controlled and
-                // so must not be controlled by suppressing channel.read() on the child channel.
-                channel.pipeline().fireUserEventTriggered(msg);
-
-                // RST frames will also trigger closing of the streams which then will call
-                // AbstractHttp2StreamChannel.streamClosed()
-            } else {
-                channel.fireChildRead(msg);
-            }
+            channel.fireChildRead(msg);
             return;
         }
         if (frame instanceof Http2GoAwayFrame) {
