@@ -87,7 +87,7 @@ public interface EventExecutor extends EventExecutorGroup {
 
     /**
      * Try to suspend this {@link EventExecutor} and return {@code true} if suspension was successful.
-     * Suspending an {@link EventExecutor} will allow it to free up resources (like for example a {@link Thread} that
+     * Suspending an {@link EventExecutor} will allow it to free up resources, like for example a {@link Thread} that
      * is backing the {@link EventExecutor}. Once an {@link EventExecutor} was suspended it will be started again
      * by submitting work to it via one of the following methods:
      * <ul>
@@ -101,7 +101,7 @@ public interface EventExecutor extends EventExecutorGroup {
      * Even if this method returns {@code true} it might take some time for the {@link EventExecutor} to fully suspend
      * itself.
      *
-     * @return {@code true} if suspension was successful, {@code false otherwise}.
+     * @return {@code true} if suspension was successful, otherwise {@code false}.
      */
     default boolean trySuspend() {
         return false;
