@@ -817,7 +817,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      *
      * @return  if suspension is possible at the moment.
      */
-    protected final boolean canSuspend() {
+    protected boolean canSuspend() {
         return canSuspend(state);
     }
 
