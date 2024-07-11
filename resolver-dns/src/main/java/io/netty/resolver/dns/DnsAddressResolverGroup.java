@@ -45,21 +45,29 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
     private final ConcurrentMap<String, Promise<List<InetAddress>>> resolveAllsInProgress = newConcurrentHashMap();
 
     public DnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {
-        this.dnsResolverBuilder = dnsResolverBuilder.copy();
+        this.dnsResolverBuilder = withSharedCaches(dnsResolverBuilder.copy());
     }
 
     public DnsAddressResolverGroup(
             Class<? extends DatagramChannel> channelType,
             DnsServerAddressStreamProvider nameServerProvider) {
-        this.dnsResolverBuilder = new DnsNameResolverBuilder();
+        this.dnsResolverBuilder = withSharedCaches(new DnsNameResolverBuilder());
         dnsResolverBuilder.channelType(channelType).nameServerProvider(nameServerProvider);
     }
 
     public DnsAddressResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory,
             DnsServerAddressStreamProvider nameServerProvider) {
-        this.dnsResolverBuilder = new DnsNameResolverBuilder();
+        this.dnsResolverBuilder = withSharedCaches(new DnsNameResolverBuilder());
         dnsResolverBuilder.channelFactory(channelFactory).nameServerProvider(nameServerProvider);
+    }
+
+    private static DnsNameResolverBuilder withSharedCaches(DnsNameResolverBuilder dnsResolverBuilder) {
+        /// To avoid each member of the group having its own cache we either use the configured cache
+        // or create a new one to share among the entire group.
+        return dnsResolverBuilder.resolveCache(dnsResolverBuilder.getOrNewCache())
+                .cnameCache(dnsResolverBuilder.getOrNewCnameCache())
+                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
     }
 
     @SuppressWarnings("deprecation")
