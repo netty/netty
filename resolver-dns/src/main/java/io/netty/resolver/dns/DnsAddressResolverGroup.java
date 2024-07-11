@@ -45,9 +45,14 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
     private final ConcurrentMap<String, Promise<List<InetAddress>>> resolveAllsInProgress = newConcurrentHashMap();
 
     public DnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {
-        this.dnsResolverBuilder = dnsResolverBuilder.copy();
-        this.dnsResolverBuilder
-                .resolveCache(dnsResolverBuilder.getOrNewCache()).cnameCache(dnsResolverBuilder.getOrNewCnameCache())
+        this.dnsResolverBuilder = withSharedCaches(dnsResolverBuilder.copy());
+    }
+
+    private static DnsNameResolverBuilder withSharedCaches(DnsNameResolverBuilder dnsResolverBuilder) {
+        /// To avoid each member of the group having its own cache we either use the configured cache
+        // or create a new one to share among the entire group.
+        return dnsResolverBuilder.resolveCache(dnsResolverBuilder.getOrNewCache())
+                .cnameCache(dnsResolverBuilder.getOrNewCnameCache())
                 .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
     }
 
