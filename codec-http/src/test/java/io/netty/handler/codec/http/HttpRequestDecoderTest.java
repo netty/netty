@@ -21,6 +21,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -674,8 +676,15 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
+    @ParameterizedTest
+    // See https://www.unicode.org/charts/nameslist/n_0000.html
+    @ValueSource(strings = { "\r", "\u000b", "\u000c" })
+    public void testHeaderValueWithInvalidSuffix(String suffix) {
+        testInvalidHeaders0("GET / HTTP/1.1\r\nHost: whatever\r\nTest-Key: test-value" + suffix + "\r\n\r\n");
+    }
+
     private static void testInvalidHeaders0(String requestStr) {
-        testInvalidHeaders0(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII));
+        testInvalidHeaders0(Unpooled.copiedBuffer(requestStr, CharsetUtil.UTF_8));
     }
 
     private static void testInvalidHeaders0(ByteBuf requestBuffer) {

@@ -1113,8 +1113,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private static int findEndOfString(byte[] sb, int start, int end) {
         for (int result = end - 1; result > start; --result) {
-            if (!isWhitespace(sb[result])) {
+            byte c = sb[result];
+            if (!isWhitespace(c)) {
                 return result + 1;
+            } else if (!isOWS(c)) {
+                // Only OWS is supported for whitespace
+                // See https://datatracker.ietf.org/doc/html/rfc9110#section-5.5
+                throw new IllegalArgumentException("Invalid end of value, only a space or horizontal tab allowed," +
+                        " but received a '" + c + "' (0x" + Integer.toHexString(c) + ")");
             }
         }
         return 0;
