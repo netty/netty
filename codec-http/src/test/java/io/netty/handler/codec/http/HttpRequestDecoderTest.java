@@ -684,7 +684,7 @@ public class HttpRequestDecoderTest {
     }
 
     private static void testInvalidHeaders0(String requestStr) {
-        testInvalidHeaders0(Unpooled.copiedBuffer(requestStr, CharsetUtil.UTF_8));
+        testInvalidHeaders0(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII));
     }
 
     private static void testInvalidHeaders0(ByteBuf requestBuffer) {
