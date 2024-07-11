@@ -1116,7 +1116,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (!isOWS(sb[result])) {
                 return result + 1;
             }
-            }
         }
         return 0;
     }
