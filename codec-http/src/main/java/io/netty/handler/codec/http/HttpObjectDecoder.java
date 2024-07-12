@@ -951,7 +951,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         if (isControlOrWhitespaceAsciiChar(asciiBytes[end - 1])) {
             // There should no extra control or whitespace char.
             // See https://datatracker.ietf.org/doc/html/rfc2616#section-5.1
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("Illegal character in request line: 0x" + Integer.ToHexString(char));
         }
 
         final int aStart = findNonSPLenient(asciiBytes, startContent, end);
