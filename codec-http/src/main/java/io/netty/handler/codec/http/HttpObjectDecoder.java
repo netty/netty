@@ -948,10 +948,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         final int end = startContent + asciiBuffer.readableBytes();
 
-        if (isControlOrWhitespaceAsciiChar(asciiBytes[end - 1])) {
+        byte lastByte = asciiBytes[end - 1];
+        if (isControlOrWhitespaceAsciiChar(lastByte)) {
             // There should no extra control or whitespace char.
             // See https://datatracker.ietf.org/doc/html/rfc2616#section-5.1
-            throw new IllegalArgumentException("Illegal character in request line: 0x" + Integer.ToHexString(char));
+            throw new IllegalArgumentException("Illegal character in request line: 0x" + Integer.toHexString(lastByte));
         }
 
         final int aStart = findNonSPLenient(asciiBytes, startContent, end);
