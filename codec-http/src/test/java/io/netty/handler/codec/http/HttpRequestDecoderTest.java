@@ -674,6 +674,11 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
+    @Test
+    public void testNulInInitialLine() {
+        testInvalidHeaders0("GET / HTTP/1.1\r\u0000\nHost: whatever\r\n\r\n");
+    }
+
     private static void testInvalidHeaders0(String requestStr) {
         testInvalidHeaders0(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII));
     }

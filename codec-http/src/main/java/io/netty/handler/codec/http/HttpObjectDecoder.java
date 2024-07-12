@@ -948,6 +948,12 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         final int end = startContent + asciiBuffer.readableBytes();
 
+        if (isControlOrWhitespaceAsciiChar(asciiBytes[end - 1])) {
+            // There should no extra control or whitespace char.
+            // See https://datatracker.ietf.org/doc/html/rfc2616#section-5.1
+            throw new IllegalArgumentException();
+        }
+
         final int aStart = findNonSPLenient(asciiBytes, startContent, end);
         final int aEnd = findSPLenient(asciiBytes, aStart, end);
 
