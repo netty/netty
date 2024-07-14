@@ -139,10 +139,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     @Override
     final void onHttp2Frame(ChannelHandlerContext ctx, Http2Frame frame) {
         if (frame instanceof Http2StreamFrame) {
-            Http2StreamFrame streamFrame = (Http2StreamFrame) frame;
+            Http2StreamFrame msg = (Http2StreamFrame) frame;
             AbstractHttp2StreamChannel channel  = (AbstractHttp2StreamChannel)
-                    ((DefaultHttp2FrameStream) streamFrame.stream()).attachment;
-            channel.fireChildRead(streamFrame);
+                    ((DefaultHttp2FrameStream) msg.stream()).attachment;
+            channel.fireChildRead(msg);
             return;
         }
         if (frame instanceof Http2GoAwayFrame) {

@@ -182,9 +182,9 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     (DefaultHttp2FrameStream) streamFrame.stream();
 
             AbstractHttp2StreamChannel channel = (AbstractHttp2StreamChannel) s.attachment;
-            if (msg instanceof Http2ResetFrame) {
-                // Reset frames needs to be propagated via user events as these are not flow-controlled and so
-                // must not be controlled by suppressing channel.read() on the child channel.
+            if (msg instanceof Http2ResetFrame || msg instanceof Http2PriorityFrame) {
+                // Reset and Priority frames needs to be propagated via user events as these are not flow-controlled and
+                // so must not be controlled by suppressing channel.read() on the child channel.
                 channel.pipeline().fireUserEventTriggered(msg);
 
                 // RST frames will also trigger closing of the streams which then will call
