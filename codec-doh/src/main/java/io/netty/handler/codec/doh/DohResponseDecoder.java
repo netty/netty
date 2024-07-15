@@ -32,6 +32,9 @@ public final class DohResponseDecoder extends SimpleChannelInboundHandler<FullHt
 
     private final DnsResponseDecoder<SocketAddress> responseDecoder;
 
+    /**
+     * Creates a new instance.
+     */
     public DohResponseDecoder() {
         responseDecoder = new DnsResponseDecoder<SocketAddress>(DnsRecordDecoder.DEFAULT) {
             @Override

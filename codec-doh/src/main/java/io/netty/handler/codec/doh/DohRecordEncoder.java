@@ -38,18 +38,42 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
     private final boolean useHttpPost;
     private final String uri;
 
+    /**
+     * Creates a new instance.
+     *
+     * @param dohServer the dohServer address
+     */
     public DohRecordEncoder(InetSocketAddress dohServer) {
         this(dohServer, true, DEFAULT_DOH_PATH);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param dohServer the dohServer address
+     * @param useHttpPost the http request method that can be used to connect to dohServer
+     */
     public DohRecordEncoder(InetSocketAddress dohServer, boolean useHttpPost) {
         this(dohServer, useHttpPost, DEFAULT_DOH_PATH);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param dohServer the dohServer address
+     * @param uri the http request uri that can be used as address path
+     */
     public DohRecordEncoder(InetSocketAddress dohServer, String uri) {
         this(dohServer, true, uri);
     }
 
+    /**
+     * Creates a new instance.
+     *
+     * @param dohServer the dohServer address
+     * @param useHttpPost the http request method that can be used to connect to dohServer
+     * @param uri the http request uri that can be used as address path
+     */
     public DohRecordEncoder(InetSocketAddress dohServer, boolean useHttpPost, String uri) {
         this.dohServer = dohServer;
         this.useHttpPost = useHttpPost;
