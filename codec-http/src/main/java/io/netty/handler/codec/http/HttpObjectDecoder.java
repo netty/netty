@@ -1113,7 +1113,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private static int findEndOfString(byte[] sb, int start, int end) {
         for (int result = end - 1; result > start; --result) {
-            if (!isWhitespace(sb[result])) {
+            if (!isOWS(sb[result])) {
                 return result + 1;
             }
         }
