@@ -1002,7 +1002,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     private void splitHeader(byte[] line, int start, int length) {
         final int end = start + length;
         int nameEnd;
-        final int nameStart = findNonWhitespace(line, start, end);
+        final int nameStart = start;
         // hoist this load out of the loop, because it won't change!
         final boolean isDecodingRequest = isDecodingRequest();
         for (nameEnd = nameStart; nameEnd < end; nameEnd ++) {
@@ -1120,7 +1120,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private static int findEndOfString(byte[] sb, int start, int end) {
         for (int result = end - 1; result > start; --result) {
-            if (!isWhitespace(sb[result])) {
+            if (!isOWS(sb[result])) {
                 return result + 1;
             }
         }
