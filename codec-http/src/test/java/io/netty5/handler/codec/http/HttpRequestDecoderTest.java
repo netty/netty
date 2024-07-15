@@ -23,6 +23,8 @@ import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Iterator;
 
@@ -543,6 +545,13 @@ public class HttpRequestDecoderTest {
                             (extraLine? "0\r\n\r\n" : "") +
                             "something\r\n\r\n";
         testInvalidHeaders0(requestStr);
+    }
+
+    @ParameterizedTest
+    // See https://www.unicode.org/charts/nameslist/n_0000.html
+    @ValueSource(strings = { "\r", "\u000b", "\u000c" })
+    public void testHeaderValueWithInvalidSuffix(String suffix) {
+        testInvalidHeaders0("GET / HTTP/1.1\r\nHost: whatever\r\nTest-Key: test-value" + suffix + "\r\n\r\n");
     }
 
     private void testInvalidHeaders0(String request) {

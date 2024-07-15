@@ -871,7 +871,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private static int findEndOfString(AppendableCharSequence sb) {
         for (int result = sb.length() - 1; result > 0; --result) {
-            if (!Character.isWhitespace(sb.charAtUnsafe(result))) {
+            if (!isOWS(sb.charAtUnsafe(result))) {
                 return result + 1;
             }
         }
