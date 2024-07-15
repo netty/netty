@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.example.dns.doh;
 
 import io.netty.bootstrap.Bootstrap;
@@ -22,9 +37,9 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class DoHClient {
-    private final static InetSocketAddress DOH_SRV_GOOGLE = SocketUtils.socketAddress("dns.google", 443);
-    private final static InetSocketAddress DOH_SRV_CLOUDFLARE = SocketUtils.socketAddress("1.1.1.1", 443);
-    private final static InetSocketAddress DOH_SRV_QUAD9 = SocketUtils.socketAddress("dns.quad9.net", 443);
+    private static final InetSocketAddress DOH_SRV_GOOGLE = SocketUtils.socketAddress("dns.google", 443);
+    private static final InetSocketAddress DOH_SRV_CLOUDFLARE = SocketUtils.socketAddress("1.1.1.1", 443);
+    private static final InetSocketAddress DOH_SRV_QUAD9 = SocketUtils.socketAddress("dns.quad9.net", 443);
 
 
     private final InetSocketAddress dohServer;
