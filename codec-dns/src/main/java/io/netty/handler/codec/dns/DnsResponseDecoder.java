@@ -29,7 +29,7 @@ public abstract class DnsResponseDecoder<A extends SocketAddress> {
     /**
      * Creates a new decoder with the specified {@code recordDecoder}.
      */
-    public DnsResponseDecoder(DnsRecordDecoder recordDecoder) {
+    protected DnsResponseDecoder(DnsRecordDecoder recordDecoder) {
         this.recordDecoder = checkNotNull(recordDecoder, "recordDecoder");
     }
 
