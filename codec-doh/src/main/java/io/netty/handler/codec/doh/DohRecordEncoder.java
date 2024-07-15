@@ -56,7 +56,7 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
         ByteBuf content = ctx.alloc().heapBuffer();
         dohQueryEncoder.encode(ctx, (DnsQuery) msg, content);
 
-        HttpRequest request = useHttpPost ? createPostRequest(content) : createGetRequest(content);
+        HttpRequest request = useHttpPost ? createPostRequest(content, uri) : createGetRequest(content, uri);
 
         request.headers().set(HttpHeaderNames.HOST, dohServer.getHostName());
         request.headers().set(HttpHeaderNames.ACCEPT, "application/dns-message");
@@ -69,11 +69,11 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
         super.write(ctx, request, promise);
     }
 
-    private static DefaultFullHttpRequest createPostRequest(ByteBuf content) {
+    private static DefaultFullHttpRequest createPostRequest(ByteBuf content, String uri) {
         return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri, content);
     }
 
-    private DefaultFullHttpRequest createGetRequest(ByteBuf content) {
+    private static DefaultFullHttpRequest createGetRequest(ByteBuf content, String uri) {
         QueryStringEncoder queryString = new QueryStringEncoder(uri);
         queryString.addParam("dns", Base64.getUrlEncoder().withoutPadding().encodeToString(toByteArray(content)));
         return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, queryString.toString());
