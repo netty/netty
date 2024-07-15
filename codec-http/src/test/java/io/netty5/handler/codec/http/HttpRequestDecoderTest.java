@@ -559,6 +559,11 @@ public class HttpRequestDecoderTest {
         testInvalidHeaders0("POST / HTTP/1.1\r\n\tContent-Length: 1\r\n\r\nX");
     }
 
+    @Test
+    public void testNulInInitialLine() {
+        testInvalidHeaders0("GET / HTTP/1.1\r\u0000\nHost: whatever\r\n\r\n");
+    }
+
     private void testInvalidHeaders0(String request) {
         testInvalidHeaders0(allocator.copyOf(request, US_ASCII));
     }

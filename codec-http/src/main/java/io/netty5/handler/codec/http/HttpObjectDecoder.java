@@ -757,6 +757,12 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         int bEnd;
         int cStart;
         int cEnd;
+        byte lastByte = (byte) sb.charAt(sb.length() - 1);
+        if (isControlOrWhitespaceAsciiChar(lastByte)) {
+            // There should no extra control or whitespace char.
+            // See https://datatracker.ietf.org/doc/html/rfc2616#section-5.1
+            throw new IllegalArgumentException("Illegal character in request line: 0x" + Integer.toHexString(lastByte));
+        }
 
         aStart = findNonSPLenient(sb, 0);
         aEnd = findSPLenient(sb, aStart);
@@ -970,5 +976,26 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         protected TooLongFrameException newException(int maxLength) {
             return new TooLongHttpLineException("An HTTP line is larger than " + maxLength + " bytes.");
         }
+    }
+
+    private static final boolean[] ISO_CONTROL_OR_WHITESPACE;
+
+    static {
+        ISO_CONTROL_OR_WHITESPACE = new boolean[256];
+        for (byte b = Byte.MIN_VALUE; b < Byte.MAX_VALUE; b++) {
+            ISO_CONTROL_OR_WHITESPACE[128 + b] = Character.isISOControl(b) || Character.isWhitespace(b);
+        }
+    }
+
+    private static final ByteProcessor SKIP_CONTROL_CHARS_BYTES = new ByteProcessor() {
+
+        @Override
+        public boolean process(byte value) {
+            return ISO_CONTROL_OR_WHITESPACE[128 + value];
+        }
+    };
+
+    private static boolean isControlOrWhitespaceAsciiChar(byte b) {
+        return ISO_CONTROL_OR_WHITESPACE[128 + b];
     }
 }
