@@ -740,6 +740,13 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
+    @ParameterizedTest
+    // See https://www.unicode.org/charts/nameslist/n_0000.html
+    @ValueSource(strings = { "\r", "\u000b", "\u000c" })
+    public void testHeaderValueWithInvalidSuffix(String suffix) {
+        testInvalidHeaders0("GET / HTTP/1.1\r\nHost: whatever\r\nTest-Key: test-value" + suffix + "\r\n\r\n");
+    }
+
     private static void testInvalidHeaders0(String requestStr) {
         testInvalidHeaders0(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII));
     }
