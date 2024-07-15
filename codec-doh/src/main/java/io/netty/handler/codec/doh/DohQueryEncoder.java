@@ -21,6 +21,7 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQueryEncoder;
 import io.netty.handler.codec.dns.DnsRecordEncoder;
+import io.netty.util.internal.ObjectUtil;
 
 public final class DohQueryEncoder extends MessageToByteEncoder<DnsQuery> {
 
@@ -37,6 +38,8 @@ public final class DohQueryEncoder extends MessageToByteEncoder<DnsQuery> {
      * Creates a new encoder with the specified {@code recordEncoder}.
      */
     public DohQueryEncoder(DnsRecordEncoder recordEncoder) {
+        ObjectUtil.checkNotNull(recordEncoder, "recordEncoder");
+
         this.encoder = new DnsQueryEncoder(recordEncoder);
     }
 

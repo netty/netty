@@ -26,6 +26,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringEncoder;
+import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
 import java.util.Base64;
@@ -75,6 +76,9 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
      * @param uri the http request uri that can be used as address path
      */
     public DohRecordEncoder(InetSocketAddress dohServer, boolean useHttpPost, String uri) {
+        ObjectUtil.checkNotNull(dohServer, "dohServer");
+        ObjectUtil.checkNotNull(uri, "uri");
+
         this.dohServer = dohServer;
         this.useHttpPost = useHttpPost;
         this.uri = uri;

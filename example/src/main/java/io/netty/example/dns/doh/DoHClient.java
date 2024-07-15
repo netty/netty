@@ -44,6 +44,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 
 import javax.net.ssl.SSLException;
@@ -60,6 +61,8 @@ public class DoHClient {
     private final InetSocketAddress dohServer;
 
     public DoHClient(InetSocketAddress dohServer) {
+        ObjectUtil.checkNotNull(dohServer, "dohServer");
+
         this.dohServer = dohServer;
     }
 
