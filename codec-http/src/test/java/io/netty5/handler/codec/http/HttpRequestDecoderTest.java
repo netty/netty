@@ -554,6 +554,11 @@ public class HttpRequestDecoderTest {
         testInvalidHeaders0("GET / HTTP/1.1\r\nHost: whatever\r\nTest-Key: test-value" + suffix + "\r\n\r\n");
     }
 
+    @Test
+    public void testLeadingWhitespaceInFirstHeaderName() {
+        testInvalidHeaders0("POST / HTTP/1.1\r\n\tContent-Length: 1\r\n\r\nX");
+    }
+
     private void testInvalidHeaders0(String request) {
         testInvalidHeaders0(allocator.copyOf(request, US_ASCII));
     }

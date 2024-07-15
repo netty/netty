@@ -775,13 +775,12 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private void splitHeader(AppendableCharSequence sb) {
         final int length = sb.length();
-        int nameStart;
+        int nameStart = 0;
         int nameEnd;
         int colonEnd;
         int valueStart;
         int valueEnd;
 
-        nameStart = findNonWhitespace(sb, 0);
         for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
             char ch = sb.charAtUnsafe(nameEnd);
             // https://tools.ietf.org/html/rfc7230#section-3.2.4
