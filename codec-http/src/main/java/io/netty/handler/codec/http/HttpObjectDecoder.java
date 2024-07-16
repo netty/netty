@@ -950,9 +950,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         byte lastByte = asciiBytes[end - 1];
         if (isControlOrWhitespaceAsciiChar(lastByte)) {
-            // There should no extra control or whitespace char.
-            // See https://datatracker.ietf.org/doc/html/rfc2616#section-5.1
-            throw new IllegalArgumentException("Illegal character in request line: 0x" + Integer.toHexString(lastByte));
+            if (isDecodingRequest() || !isOWS(lastByte)) {
+                // There should no extra control or whitespace char in case of a request.
+                // In case of a response there might be a SP if there is no reason-phrase given.
+                // See
+                //  - https://datatracker.ietf.org/doc/html/rfc2616#section-5.1
+                //  - https://datatracker.ietf.org/doc/html/rfc9112#name-status-line
+                throw new IllegalArgumentException(
+                        "Illegal character in request line: 0x" + Integer.toHexString(lastByte));
+            }
         }
 
         final int aStart = findNonSPLenient(asciiBytes, startContent, end);
