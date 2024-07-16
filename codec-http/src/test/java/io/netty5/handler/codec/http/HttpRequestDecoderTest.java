@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.HOST;
@@ -370,6 +371,20 @@ public class HttpRequestDecoderTest {
         HttpRequest request = parseRequest(requestStr);
         assertTrue(request.decoderResult().isFailure());
         assertTrue(request.decoderResult().cause() instanceof TooLongHttpHeaderException);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testStatusWithoutReasonPhrase() {
+        String responseStr = "HTTP/1.1 200 \r\n" +
+                "Content-Length: 0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(allocator.copyOf(responseStr, StandardCharsets.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertEquals(HttpResponseStatus.OK, response.status());
+        HttpContent c = channel.readInbound();
+        c.close();
         assertFalse(channel.finish());
     }
 
