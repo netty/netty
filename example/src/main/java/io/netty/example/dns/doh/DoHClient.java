@@ -61,9 +61,7 @@ public class DoHClient {
     private final InetSocketAddress dohServer;
 
     public DoHClient(InetSocketAddress dohServer) {
-        ObjectUtil.checkNotNull(dohServer, "dohServer");
-
-        this.dohServer = dohServer;
+        this.dohServer = ObjectUtil.checkNotNull(dohServer, "dohServer");
     }
 
     private static void handleQueryResp(DefaultDnsResponse msg) {
