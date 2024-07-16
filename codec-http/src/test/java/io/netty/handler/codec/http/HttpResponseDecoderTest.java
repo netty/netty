@@ -1046,6 +1046,20 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void testStatusWithoutReasonPhrase() {
+        String responseStr = "HTTP/1.1 200 \r\n" +
+                "Content-Length: 0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertEquals(HttpResponseStatus.OK, response.status());
+        HttpContent c = channel.readInbound();
+        c.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void testHeaderNameStartsWithControlChar1c() {
         testHeaderNameStartsWithControlChar(0x1c);
     }
