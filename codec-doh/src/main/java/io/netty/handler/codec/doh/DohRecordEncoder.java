@@ -83,20 +83,26 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        DnsQuery query = (DnsQuery) msg
         ByteBuf content = ctx.alloc().buffer();
-        dohQueryEncoder.encode(ctx, (DnsQuery) msg, content);
+        try {
+            dohQueryEncoder.encode(ctx, query, content);
 
-        HttpRequest request = useHttpPost ? createPostRequest(content, uri) : createGetRequest(content, uri);
+            HttpRequest request = useHttpPost ? createPostRequest(content, uri) : createGetRequest(content, uri);
 
-        request.headers().set(HttpHeaderNames.HOST, dohServer.getHostName());
-        request.headers().set(HttpHeaderNames.ACCEPT, "application/dns-message");
-        request.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/dns-message");
+            request.headers().set(HttpHeaderNames.HOST, dohServer.getHostName());
+            request.headers().set(HttpHeaderNames.ACCEPT, "application/dns-message");
+            request.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/dns-message");
 
-        if (useHttpPost) {
-            request.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+            if (useHttpPost) {
+                request.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
+           }
+
+           ctx.write(request, promise);
+        } finally {
+            content.release();
+            query.release();
         }
-
-        super.write(ctx, request, promise);
     }
 
     private static DefaultFullHttpRequest createPostRequest(ByteBuf content, String uri) {
