@@ -99,6 +99,9 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
     }
 
     public long delayNanos() {
+        if (deadlineNanos == 0L) {
+            return 0L;
+        }
         return delayNanos(scheduledExecutor().getCurrentTimeNanos());
     }
 
