@@ -83,7 +83,7 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        ByteBuf content = ctx.alloc().heapBuffer();
+        ByteBuf content = ctx.alloc().buffer();
         dohQueryEncoder.encode(ctx, (DnsQuery) msg, content);
 
         HttpRequest request = useHttpPost ? createPostRequest(content, uri) : createGetRequest(content, uri);
