@@ -76,12 +76,9 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
      * @param uri the http request uri that can be used as address path
      */
     public DohRecordEncoder(InetSocketAddress dohServer, boolean useHttpPost, String uri) {
-        ObjectUtil.checkNotNull(dohServer, "dohServer");
-        ObjectUtil.checkNotNull(uri, "uri");
-
-        this.dohServer = dohServer;
+        this.dohServer = ObjectUtil.checkNotNull(dohServer, "dohServer");
         this.useHttpPost = useHttpPost;
-        this.uri = uri;
+        this.uri = ObjectUtil.checkNotNull(uri, "uri");
     }
 
     @Override
