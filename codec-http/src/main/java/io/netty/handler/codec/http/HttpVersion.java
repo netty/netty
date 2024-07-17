@@ -34,7 +34,8 @@ public class HttpVersion implements Comparable<HttpVersion> {
 
     private static final Pattern VERSION_PATTERN =
         Pattern.compile("(\\S+)/(\\d+)\\.(\\d+)");
-
+    private static final Pattern VERSION_PATTERN_STRICT =
+            Pattern.compile("(HTTP)/(\\d+)\\.(\\d+)");
     static final String HTTP_1_0_STRING = "HTTP/1.0";
     static final String HTTP_1_1_STRING = "HTTP/1.1";
 
@@ -57,12 +58,17 @@ public class HttpVersion implements Comparable<HttpVersion> {
      * returned.
      */
     public static HttpVersion valueOf(String text) {
+        return valueOf(text, false);
+    }
+
+    static HttpVersion valueOf(String text, boolean strict) {
         ObjectUtil.checkNotNull(text, "text");
 
         // super fast-path
         if (text == HTTP_1_1_STRING) {
             return HTTP_1_1;
-        } else if (text == HTTP_1_0_STRING) {
+        }
+        if (text == HTTP_1_0_STRING) {
             return HTTP_1_0;
         }
 
@@ -82,7 +88,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         //
         HttpVersion version = version0(text);
         if (version == null) {
-            version = new HttpVersion(text, true);
+            version = new HttpVersion(text, strict,true);
         }
         return version;
     }
@@ -116,9 +122,13 @@ public class HttpVersion implements Comparable<HttpVersion> {
      *        the {@code "Connection"} header is set to {@code "close"} explicitly.
      */
     public HttpVersion(String text, boolean keepAliveDefault) {
+        this(text, false, keepAliveDefault);
+    }
+
+    HttpVersion(String text, boolean strict, boolean keepAliveDefault) {
         text = checkNonEmptyAfterTrim(text, "text").toUpperCase();
 
-        Matcher m = VERSION_PATTERN.matcher(text);
+        Matcher m = strict ? VERSION_PATTERN_STRICT.matcher(text) : VERSION_PATTERN.matcher(text);
         if (!m.matches()) {
             throw new IllegalArgumentException("invalid version format: " + text);
         }
