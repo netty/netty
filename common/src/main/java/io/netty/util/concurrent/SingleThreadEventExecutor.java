@@ -829,7 +829,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     private void execute(Runnable task, boolean immediate) {
-        if(isShutdown()){
+        if (isShutdown()) {
             reject();
         }
         boolean inEventLoop = inEventLoop();
