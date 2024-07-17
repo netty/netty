@@ -35,7 +35,7 @@ public class NativeInetAddressTest {
         InetSocketAddress address = NativeInetAddress.address(buffer.array(), 0, buffer.capacity());
         assertEquals(port, address.getPort());
         assertInstanceOf(Inet6Address.class, address.getAddress());
-        assertFalse((address.getAddress().isLinkLocalAddress()));
+        assertFalse(address.getAddress().isLinkLocalAddress());
         assertEquals("3030:3030:3030:3030:3030:3030:3030:3031", address.getAddress().getHostName());
     }
 
@@ -50,7 +50,7 @@ public class NativeInetAddressTest {
         InetSocketAddress address = NativeInetAddress.address(buffer.array(), 0, buffer.capacity());
         assertEquals(port, address.getPort());
         assertInstanceOf(Inet6Address.class, address.getAddress());
-        assertTrue((address.getAddress().isLinkLocalAddress()));
+        assertTrue(address.getAddress().isLinkLocalAddress());
         assertEquals("fe80:3030:3030:3030:3030:3030:3030:3031%0", address.getAddress().getHostName());
     }
 }
