@@ -23,7 +23,6 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import sun.nio.cs.US_ASCII;
 
 import java.util.Arrays;
 import java.util.ArrayList;
