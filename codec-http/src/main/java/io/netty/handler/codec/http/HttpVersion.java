@@ -135,8 +135,8 @@ public class HttpVersion implements Comparable<HttpVersion> {
                 throw new IllegalArgumentException("invalid version format: " + text);
             }
             protocolName = "HTTP";
-            majorVersion = Integer.parseInt(text.charAt(5) + "");
-            minorVersion = Integer.parseInt(text.charAt(7) + "");
+            majorVersion = toDecimal(text.charAt(5));
+            minorVersion = toDecimal(text.charAt(7));
         } else {
             Matcher m = VERSION_PATTERN.matcher(text);
             if (!m.matches()) {
@@ -151,6 +151,14 @@ public class HttpVersion implements Comparable<HttpVersion> {
         this.text = protocolName + '/' + majorVersion + '.' + minorVersion;
         this.keepAliveDefault = keepAliveDefault;
         bytes = null;
+    }
+
+    private static int toDecimal(final int value) {
+        if (value < '0' || value > '9') {
+            throw new IllegalArgumentException("Invalid version number, only 0-9 (0x30-0x39) allowed," +
+                    " but received a '" + (char) value + "' (0x" + Integer.toHexString(value) + ")");
+        }
+        return value - '0';
     }
 
     /**

@@ -677,7 +677,8 @@ public class HttpRequestDecoderTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "HTP/1.1", "HTTP", "HTTP/1x", "Something/1.1", "HTTP/1", "HTTP/1.11", "HTTP/11.1" })
+    @ValueSource(strings = { "HTP/1.1", "HTTP", "HTTP/1x", "Something/1.1", "HTTP/1",
+            "HTTP/1.11", "HTTP/11.1", "HTTP/A.1", "HTTP/1.B"})
     public void testInvalidVersion(String version) {
         testInvalidHeaders0("GET / " + version + "\r\nHost: whatever\r\n\r\n");
     }
