@@ -86,7 +86,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
         //
         HttpVersion version = version0(text);
         if (version == null) {
-            version = new HttpVersion(text, strict,true);
+            version = new HttpVersion(text, strict, true);
         }
         return version;
     }
