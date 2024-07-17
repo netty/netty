@@ -1132,7 +1132,7 @@ public class HttpResponseDecoderTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "HTP/1.1", "HTTP", "HTTP/1x", "Something/1.1" })
+    @ValueSource(strings = { "HTP/1.1", "HTTP", "HTTP/1x", "Something/1.1", "HTTP/1", "HTTP/1.11", "HTTP/11.1" })
     public void testInvalidVersion(String version) {
         testInvalidHeaders0(Unpooled.copiedBuffer(
                 version + " 200 OK\n\r\nHost: whatever\r\n\r\n", CharsetUtil.US_ASCII));

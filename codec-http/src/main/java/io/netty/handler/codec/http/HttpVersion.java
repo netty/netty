@@ -34,8 +34,6 @@ public class HttpVersion implements Comparable<HttpVersion> {
 
     private static final Pattern VERSION_PATTERN =
         Pattern.compile("(\\S+)/(\\d+)\\.(\\d+)");
-    private static final Pattern VERSION_PATTERN_STRICT =
-            Pattern.compile("(HTTP)/(\\d+)\\.(\\d+)");
     static final String HTTP_1_0_STRING = "HTTP/1.0";
     static final String HTTP_1_1_STRING = "HTTP/1.1";
 
@@ -128,14 +126,28 @@ public class HttpVersion implements Comparable<HttpVersion> {
     HttpVersion(String text, boolean strict, boolean keepAliveDefault) {
         text = checkNonEmptyAfterTrim(text, "text").toUpperCase();
 
-        Matcher m = strict ? VERSION_PATTERN_STRICT.matcher(text) : VERSION_PATTERN.matcher(text);
-        if (!m.matches()) {
-            throw new IllegalArgumentException("invalid version format: " + text);
+        if (strict) {
+            // Only single digit major / minor version is allowed.
+            // See
+            //  - https://datatracker.ietf.org/doc/html/rfc7230#section-2.6
+            //  - https://datatracker.ietf.org/doc/html/rfc9110#name-protocol-version
+            if (text.length() != 8 || !text.startsWith("HTTP/") || text.charAt(6) != '.') {
+                throw new IllegalArgumentException("invalid version format: " + text);
+            }
+            protocolName = "HTTP";
+            majorVersion = Integer.parseInt(text.charAt(5) + "");
+            minorVersion = Integer.parseInt(text.charAt(7) + "");
+        } else {
+            Matcher m = VERSION_PATTERN.matcher(text);
+            if (!m.matches()) {
+                throw new IllegalArgumentException("invalid version format: " + text);
+            }
+
+            protocolName = m.group(1);
+            majorVersion = Integer.parseInt(m.group(2));
+            minorVersion = Integer.parseInt(m.group(3));
         }
 
-        protocolName = m.group(1);
-        majorVersion = Integer.parseInt(m.group(2));
-        minorVersion = Integer.parseInt(m.group(3));
         this.text = protocolName + '/' + majorVersion + '.' + minorVersion;
         this.keepAliveDefault = keepAliveDefault;
         bytes = null;
