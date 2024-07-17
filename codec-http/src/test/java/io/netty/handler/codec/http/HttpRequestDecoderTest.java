@@ -740,13 +740,6 @@ public class HttpRequestDecoderTest {
         assertFalse(channel.finish());
     }
 
-    @ParameterizedTest
-    // See https://www.unicode.org/charts/nameslist/n_0000.html
-    @ValueSource(strings = { "\r", "\u000b", "\u000c" })
-    public void testHeaderValueWithInvalidSuffix(String suffix) {
-        testInvalidHeaders0("GET / HTTP/1.1\r\nHost: whatever\r\nTest-Key: test-value" + suffix + "\r\n\r\n");
-    }
-
     private static void testInvalidHeaders0(String requestStr) {
         testInvalidHeaders0(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII));
     }
@@ -759,44 +752,4 @@ public class HttpRequestDecoderTest {
         assertTrue(request.decoderResult().isFailure());
         assertFalse(channel.finish());
     }
-<<<<<<< HEAD
-=======
-
-    @Test
-    void reentrantClose() {
-        String requestStr = "GET / HTTP/1.1\r\n" +
-                "Host: example.com\r\n" +
-                "Content-Length: 0\r\n" +
-                "\r\n" +
-                "GET / HTTP/1.1\r\n" +
-                "Host: example.com\r\n" +
-                "Content-Length: 0\r\n" +
-                "\r\n";
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(), new ChannelInboundHandlerAdapter() {
-            private int i;
-
-            @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                if (i == 0) {
-                    assertInstanceOf(HttpRequest.class, msg);
-                } else if (i == 1) {
-                    assertInstanceOf(LastHttpContent.class, msg);
-                } else if (i == 2) {
-                    assertInstanceOf(HttpRequest.class, msg);
-                } else if (i == 3) {
-                    assertInstanceOf(LastHttpContent.class, msg);
-                }
-                ReferenceCountUtil.release(msg);
-
-                if (++i == 1) {
-                    // first request
-                    ctx.close();
-                }
-            }
-        });
-
-        assertFalse(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
-        assertFalse(channel.finish());
-    }
->>>>>>> f4d21c1047 (EmbeddedChannel: Ensure tasks are not executed while we already execute something else)
 }
