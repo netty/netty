@@ -677,6 +677,12 @@ public class HttpRequestDecoderTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = { "HTP/1.1", "HTTP", "HTTP/1x", "Something/1.1" })
+    public void testInvalidVersion(String version) {
+        testInvalidHeaders0("GET / " + version + "\r\nHost: whatever\r\n\r\n");
+    }
+
+    @ParameterizedTest
     // See https://www.unicode.org/charts/nameslist/n_0000.html
     @ValueSource(strings = { "\r", "\u000b", "\u000c" })
     public void testHeaderValueWithInvalidSuffix(String suffix) {

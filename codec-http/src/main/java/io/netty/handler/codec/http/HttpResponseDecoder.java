@@ -190,8 +190,13 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
 
     @Override
     protected HttpMessage createMessage(String[] initialLine) {
+        // Check that the version starts with HTTP/. The rest of the validation happens in HttpVersion itself.
+        String httpVersionStr = initialLine[0].trim();
+        if (!httpVersionStr.startsWith("HTTP/")) {
+            throw new IllegalArgumentException("Invalid HTTP version: " + httpVersionStr);
+        }
         return new DefaultHttpResponse(
-                HttpVersion.valueOf(initialLine[0]),
+                HttpVersion.valueOf(httpVersionStr),
                 HttpResponseStatus.valueOf(Integer.parseInt(initialLine[1]), initialLine[2]), headersFactory);
     }
 
