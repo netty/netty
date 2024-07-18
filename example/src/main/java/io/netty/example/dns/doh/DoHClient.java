@@ -45,23 +45,23 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.SocketUtils;
 
 import javax.net.ssl.SSLException;
-import java.net.InetSocketAddress;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class DoHClient {
-    private static final InetSocketAddress DOH_SRV_GOOGLE = SocketUtils.socketAddress("dns.google", 443);
-    private static final InetSocketAddress DOH_SRV_CLOUDFLARE = SocketUtils.socketAddress("1.1.1.1", 443);
-    private static final InetSocketAddress DOH_SRV_QUAD9 = SocketUtils.socketAddress("dns.quad9.net", 443);
+
+    private static final int PORT = 443;
+    private static final String DOH_SRV_GOOGLE = "dns.google";
+    private static final String DOH_SRV_CLOUDFLARE = "1.1.1.1";
+    private static final String DOH_SRV_QUAD9 = "dns.quad9.net";
 
 
-    private final InetSocketAddress dohServer;
+    private final String host;
 
-    public DoHClient(InetSocketAddress dohServer) {
-        this.dohServer = ObjectUtil.checkNotNull(dohServer, "dohServer");
+    public DoHClient(String host) {
+        this.host = ObjectUtil.checkNotNull(host, "host");
     }
 
     private static void handleQueryResp(DefaultDnsResponse msg) {
@@ -102,12 +102,12 @@ public class DoHClient {
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) {
-                            ch.pipeline().addLast(sslCtx.newHandler(ch.alloc(), dohServer.getHostName(),
-                                    dohServer.getPort()));
+                            ch.pipeline().addLast(sslCtx.newHandler(ch.alloc(), host,
+                                    PORT));
 //                            ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
                             ch.pipeline().addLast(new HttpClientCodec());
                             ch.pipeline().addLast(new HttpObjectAggregator(65536));
-                            ch.pipeline().addLast(new DohRecordEncoder(dohServer));
+                            ch.pipeline().addLast(new DohRecordEncoder(host));
                             ch.pipeline().addLast(new DohResponseDecoder());
 
                             ch.pipeline().addLast(new SimpleChannelInboundHandler<DefaultDnsResponse>() {
@@ -124,7 +124,7 @@ public class DoHClient {
                     });
 
 
-            ChannelFuture f = b.connect(dohServer.getHostName(), dohServer.getPort()).sync();
+            ChannelFuture f = b.connect(host, PORT).sync();
             Channel channel = f.channel();
 
             DefaultDnsQuestion defaultDnsQuestion = new DefaultDnsQuestion("example.com.",

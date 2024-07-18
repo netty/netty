@@ -28,77 +28,76 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.util.internal.ObjectUtil;
 
-import java.net.InetSocketAddress;
 import java.util.Base64;
 
 public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
     private static final String DEFAULT_DOH_PATH = "/dns-query";
     private final DohQueryEncoder dohQueryEncoder = new DohQueryEncoder();
 
-    private final InetSocketAddress dohServer;
+    private final String host;
     private final boolean useHttpPost;
     private final String uri;
 
     /**
      * Creates a new instance.
      *
-     * @param dohServer the dohServer address
+     * @param host the host address
      */
-    public DohRecordEncoder(InetSocketAddress dohServer) {
-        this(dohServer, true, DEFAULT_DOH_PATH);
+    public DohRecordEncoder(String host) {
+        this(host, true, DEFAULT_DOH_PATH);
     }
 
     /**
      * Creates a new instance.
      *
-     * @param dohServer the dohServer address
+     * @param host        the host address
      * @param useHttpPost the http request method that can be used to connect to dohServer
      */
-    public DohRecordEncoder(InetSocketAddress dohServer, boolean useHttpPost) {
-        this(dohServer, useHttpPost, DEFAULT_DOH_PATH);
+    public DohRecordEncoder(String host, boolean useHttpPost) {
+        this(host, useHttpPost, DEFAULT_DOH_PATH);
     }
 
     /**
      * Creates a new instance.
      *
-     * @param dohServer the dohServer address
-     * @param uri the http request uri that can be used as address path
+     * @param host the host address
+     * @param uri  the http request uri that can be used as address path
      */
-    public DohRecordEncoder(InetSocketAddress dohServer, String uri) {
-        this(dohServer, true, uri);
+    public DohRecordEncoder(String host, String uri) {
+        this(host, true, uri);
     }
 
     /**
      * Creates a new instance.
      *
-     * @param dohServer the dohServer address
+     * @param host        the host address
      * @param useHttpPost the http request method that can be used to connect to dohServer
-     * @param uri the http request uri that can be used as address path
+     * @param uri         the http request uri that can be used as address path
      */
-    public DohRecordEncoder(InetSocketAddress dohServer, boolean useHttpPost, String uri) {
-        this.dohServer = ObjectUtil.checkNotNull(dohServer, "dohServer");
+    public DohRecordEncoder(String host, boolean useHttpPost, String uri) {
+        this.host = ObjectUtil.checkNotNull(host, "host");
         this.useHttpPost = useHttpPost;
         this.uri = ObjectUtil.checkNotNull(uri, "uri");
     }
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        DnsQuery query = (DnsQuery) msg
+        DnsQuery query = (DnsQuery) msg;
         ByteBuf content = ctx.alloc().buffer();
         try {
             dohQueryEncoder.encode(ctx, query, content);
 
             HttpRequest request = useHttpPost ? createPostRequest(content, uri) : createGetRequest(content, uri);
 
-            request.headers().set(HttpHeaderNames.HOST, dohServer.getHostName());
+            request.headers().set(HttpHeaderNames.HOST, host);
             request.headers().set(HttpHeaderNames.ACCEPT, "application/dns-message");
             request.headers().set(HttpHeaderNames.CONTENT_TYPE, "application/dns-message");
 
             if (useHttpPost) {
                 request.headers().set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
-           }
+            }
 
-           ctx.write(request, promise);
+            ctx.write(request, promise);
         } finally {
             content.release();
             query.release();
@@ -106,7 +105,7 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
     }
 
     private static DefaultFullHttpRequest createPostRequest(ByteBuf content, String uri) {
-        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri, content);
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri, content.copy());
     }
 
     private static DefaultFullHttpRequest createGetRequest(ByteBuf content, String uri) {
