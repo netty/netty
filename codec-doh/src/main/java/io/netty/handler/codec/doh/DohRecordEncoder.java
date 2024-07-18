@@ -105,7 +105,7 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
     }
 
     private static DefaultFullHttpRequest createPostRequest(ByteBuf content, String uri) {
-        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri, content.copy());
+        return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri, content.retain());
     }
 
     private static DefaultFullHttpRequest createGetRequest(ByteBuf content, String uri) {
