@@ -23,6 +23,9 @@ import io.netty.handler.codec.dns.DnsQueryEncoder;
 import io.netty.handler.codec.dns.DnsRecordEncoder;
 import io.netty.util.internal.ObjectUtil;
 
+/**
+ * Represents a DoH query encoder.
+ */
 public final class DohQueryEncoder extends MessageToByteEncoder<DnsQuery> {
 
     private final DnsQueryEncoder encoder;

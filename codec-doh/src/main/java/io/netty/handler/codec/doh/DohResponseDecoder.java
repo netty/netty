@@ -28,6 +28,9 @@ import io.netty.handler.codec.http.FullHttpResponse;
 
 import java.net.SocketAddress;
 
+/**
+ * Decodes DNS-over-HTTPS (DoH) responses to extract DNS records and other relevant information.
+ */
 public final class DohResponseDecoder extends SimpleChannelInboundHandler<FullHttpResponse> {
 
     private final DnsResponseDecoder<SocketAddress> responseDecoder;

@@ -22,6 +22,9 @@ import java.net.SocketAddress;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+/**
+ * Decodes DNS responses to extract DNS records and relevant information.
+ */
 public abstract class DnsResponseDecoder<A extends SocketAddress> {
 
     private final DnsRecordDecoder recordDecoder;

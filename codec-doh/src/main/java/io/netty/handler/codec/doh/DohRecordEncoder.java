@@ -30,6 +30,9 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.Base64;
 
+/**
+ * Encodes DNS records into DNS-over-HTTPS (DoH) request format.
+ */
 public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
     private static final String DEFAULT_DOH_PATH = "/dns-query";
     private final DohQueryEncoder dohQueryEncoder = new DohQueryEncoder();

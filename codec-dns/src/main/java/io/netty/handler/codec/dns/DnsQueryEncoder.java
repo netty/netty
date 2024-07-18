@@ -19,6 +19,9 @@ import io.netty.buffer.ByteBuf;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+/**
+ * Represents a Dns query encoder.
+ */
 public final class DnsQueryEncoder {
 
     private final DnsRecordEncoder recordEncoder;
