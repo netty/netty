@@ -26,8 +26,11 @@ import io.netty5.handler.codec.http.headers.HttpSetCookie.SameSite;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -744,6 +747,14 @@ public class HttpResponseDecoderTest {
         responseBuffer.writeByte((byte) controlChar);
         responseBuffer.writeCharSequence("Transfer-Encoding: chunked\r\n\r\n", US_ASCII);
         testInvalidHeaders0(responseBuffer);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "HTP/1.1", "HTTP", "HTTP/1x", "Something/1.1", "HTTP/1",
+            "HTTP/1.11", "HTTP/11.1", "HTTP/A.1", "HTTP/1.B"})
+    public void testInvalidVersion(String version) {
+        testInvalidHeaders0(allocator.copyOf(
+                version + " 200 OK\n\r\nHost: whatever\r\n\r\n", StandardCharsets.US_ASCII));
     }
 
     private void testInvalidHeaders0(Buffer responseBuffer) {

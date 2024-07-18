@@ -95,7 +95,8 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
     @Override
     protected HttpMessage createMessage(String[] initialLine) throws Exception {
         return new DefaultHttpRequest(
-                HttpVersion.valueOf(initialLine[2]),
+                // Do strict version checking
+                HttpVersion.valueOf(initialLine[2], true),
                 HttpMethod.valueOf(initialLine[0]), initialLine[1], headersFactory);
     }
 
