@@ -61,6 +61,9 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     @Test
     @Timeout(value = 5000, unit = MILLISECONDS)
     public void testHalfClosureReceiveDataOnFinalWait2StateWhenSoLingerSet(TestInfo testInfo) throws Throwable {
+        if (true) {
+            throw new Exception("sad");
+        }
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
             public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
@@ -264,6 +267,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
+            // client.
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
@@ -334,6 +338,142 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             if (serverChannel != null) {
                 serverChannel.close().sync();
             }
+        }
+    }
+
+    @Test
+    public void testAllDataReadAfterHalfClosureRepro(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                reproducer(serverBootstrap, bootstrap);
+            }
+        });
+    }
+
+    private void reproducer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        final int totalServerBytesWritten = 1024 * 16;
+        final CountDownLatch serverInitializedLatch = new CountDownLatch(1);
+        final CountDownLatch clientReadAllDataLatch = new CountDownLatch(1);
+        final CountDownLatch clientHalfClosedLatch = new CountDownLatch(1);
+        final CountDownLatch clientHalfClosedAllBytesRead = new CountDownLatch(1);
+        final AtomicInteger clientReadCompletes = new AtomicInteger();
+        final AtomicInteger clientZeroDataReadCompletes = new AtomicInteger();
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        try {
+            cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
+                    .option(ChannelOption.AUTO_READ, false);
+
+//            sb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
+//                    .option(ChannelOption.AUTO_READ, false);
+
+            sb.option(ChannelOption.AUTO_READ, false);
+
+            sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                            ctx.channel().config().setAutoClose(false);
+                            ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
+                            buf.writerIndex(buf.capacity());
+                            ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture future) throws Exception {
+                                    ((DuplexChannel) future.channel()).shutdownOutput();
+                                }
+                            });
+                            serverInitializedLatch.countDown();
+                        }
+
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                            ctx.close();
+                        }
+                    });
+                }
+            });
+
+            // client.
+            cb.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) throws Exception {
+                    ch.config().setAutoClose(false);
+                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        private int bytesRead;
+                        private int bytesSinceReadComplete;
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                            ByteBuf buf = (ByteBuf) msg;
+                            bytesRead += buf.readableBytes();
+                            bytesSinceReadComplete += buf.readableBytes();
+                            buf.release();
+                        }
+
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                            if (evt == ChannelInputShutdownEvent.INSTANCE) {
+                                clientHalfClosedLatch.countDown();
+                            } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                                clientHalfClosedAllBytesRead.countDown();
+                                ctx.close();
+                            }
+                        }
+
+                        @Override
+                        public void channelReadComplete(ChannelHandlerContext ctx) {
+                            if (bytesSinceReadComplete == 0) {
+                                clientZeroDataReadCompletes.incrementAndGet();
+                            } else {
+                                bytesSinceReadComplete = 0;
+                            }
+                            clientReadCompletes.incrementAndGet();
+                            if (bytesRead == totalServerBytesWritten) {
+                                clientReadAllDataLatch.countDown();
+                            }
+                            ctx.read();
+                        }
+
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                            ctx.close();
+                        }
+                    });
+                }
+            });
+
+            serverChannel = sb.bind().sync().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            clientChannel.read();
+
+            checkAwait(serverInitializedLatch);
+            checkAwait(clientReadAllDataLatch);
+            checkAwait(clientHalfClosedLatch);
+            checkAwait(clientHalfClosedAllBytesRead);
+            // In practice this should be much less, as we allow numReadsPerReadLoop per wakeup, but we limit the
+            // number of bytes to 1 per read so in theory we may need more. We check below that readComplete is called
+            // when data is actually read.
+            assertTrue(totalServerBytesWritten > clientReadCompletes.get(),
+                    "too many read complete events: " + clientReadCompletes.get());
+            assertTrue(clientZeroDataReadCompletes.get() <= maxReadCompleteWithNoDataAfterInputShutdown(),
+                    "too many readComplete with no data: " + clientZeroDataReadCompletes.get() + " readComplete: " +
+                            clientReadCompletes.get());
+        } finally {
+            if (clientChannel != null) {
+                clientChannel.close().sync();
+            }
+            if (serverChannel != null) {
+                serverChannel.close().sync();
+            }
+        }
+    }
+
+    private static void checkAwait(CountDownLatch latch) throws Throwable {
+        if (!latch.await(10, TimeUnit.SECONDS)) {
+            throw new Exception("Timeout");
         }
     }
 
