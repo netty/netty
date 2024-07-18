@@ -59,9 +59,4 @@ public final class DohResponseDecoder extends SimpleChannelInboundHandler<FullHt
 
         ctx.fireChannelRead(dnsResponse);
     }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        ctx.close();
-    }
 }
