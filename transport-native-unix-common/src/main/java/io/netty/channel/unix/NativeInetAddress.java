@@ -71,7 +71,6 @@ public final class NativeInetAddress {
         // The last 4 bytes are always the port
         final int port = decodeInt(addr, offset + len - 4);
         final InetAddress address;
-
         try {
             switch (len) {
                 // 8 bytes:
@@ -91,7 +90,14 @@ public final class NativeInetAddress {
                     byte[] ipv6 = new byte[16];
                     System.arraycopy(addr, offset, ipv6, 0, 16);
                     int scopeId = decodeInt(addr, offset + len  - 8);
-                    address = Inet6Address.getByAddress(null, ipv6, scopeId);
+                    // Only include the scopeId if its either non 0 or if this is a link-local address
+                    // as scopeId is only supported with it:
+                    // See also https://man7.org/linux/man-pages/man7/ipv6.7.html
+                    if (scopeId != 0 || (ipv6[0] == (byte) 0xfe && ipv6[1] == (byte) 0x80)) {
+                        address = Inet6Address.getByAddress(null, ipv6, scopeId);
+                    } else {
+                        address = InetAddress.getByAddress(null, ipv6);
+                    }
                     break;
                 default:
                     throw new Error();
