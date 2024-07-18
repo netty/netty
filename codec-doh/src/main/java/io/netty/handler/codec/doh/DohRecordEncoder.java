@@ -34,6 +34,7 @@ import java.util.Base64;
  * Encodes DNS records into DNS-over-HTTPS (DoH) request format.
  */
 public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
+    private static final java.util.Base64.Encoder DEFAULT_URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final String DEFAULT_DOH_PATH = "/dns-query";
     private final DohQueryEncoder dohQueryEncoder = new DohQueryEncoder();
 
@@ -113,7 +114,7 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
 
     private static DefaultFullHttpRequest createGetRequest(ByteBuf content, String uri) {
         QueryStringEncoder queryString = new QueryStringEncoder(uri);
-        queryString.addParam("dns", Base64.getUrlEncoder().withoutPadding().encodeToString(toByteArray(content)));
+        queryString.addParam("dns", DEFAULT_URL_ENCODER.encodeToString(toByteArray(content)));
         return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, queryString.toString());
     }
 
