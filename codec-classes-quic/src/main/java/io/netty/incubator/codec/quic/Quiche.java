@@ -889,7 +889,10 @@ final class Quiche {
 
     static Exception convertToException(int result) {
         QuicTransportErrorHolder holder = ERROR_MAPPINGS.get(result);
-        assert holder != null;
+        if (holder == null) {
+            // There is no mapping to a transport error, it's something internal so throw it directly.
+            return new QuicException(QuicheError.valueOf(result).message());
+        }
         Exception exception = new QuicException(holder.error + ": " + holder.quicheErrorName, holder.error);
         if (result == QUICHE_ERR_TLS_FAIL) {
             String lastSslError = BoringSSL.ERR_last_error();

@@ -79,6 +79,4 @@ enum QuicheError {
         }
         return errorCode;
     }
-
-
 }

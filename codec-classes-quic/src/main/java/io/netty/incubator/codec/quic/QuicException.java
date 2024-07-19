@@ -15,12 +15,19 @@
  */
 package io.netty.incubator.codec.quic;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Exception produced while processing {@code QUIC}.
  */
 public final class QuicException extends Exception {
 
     private final QuicTransportError error;
+
+    QuicException(String message) {
+        super(message);
+        this.error = null;
+    }
 
     public QuicException(QuicTransportError error) {
         super(error.name());
@@ -42,12 +49,13 @@ public final class QuicException extends Exception {
         this.error = error;
     }
 
-
     /**
      * Returns the {@link QuicTransportError} which was the cause of the {@link QuicException}.
      *
-     * @return  the {@link QuicTransportError} that caused this {@link QuicException}.
+     * @return  the {@link QuicTransportError} that caused this {@link QuicException} or {@code null} if
+     *          it was caused by something different.
      */
+    @Nullable
     public QuicTransportError error() {
         return error;
     }
