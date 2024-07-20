@@ -74,7 +74,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     private EpollIoRegistration registration;
     boolean inputClosedSeenErrorOnRead;
-    boolean epollInReadyRunnablePending;
     private EpollIoOps ops;
     private EpollIoOps inital;
 
@@ -294,10 +293,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old EventLoop
-        // make sure the epollInReadyRunnablePending variable is reset so we will be able to execute the Runnable on the
-        // new EventLoop.
-        epollInReadyRunnablePending = false;
         ((IoEventLoop) eventLoop()).register((AbstractEpollUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (EpollIoRegistration) f.getNow();
@@ -439,13 +434,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe implements EpollIoHandle {
         boolean readPending;
         private EpollRecvByteAllocatorHandle allocHandle;
-        private final Runnable epollInReadyRunnable = new Runnable() {
-            @Override
-            public void run() {
-                epollInReadyRunnablePending = false;
-                epollInReady();
-            }
-        };
 
         Channel channel() {
             return AbstractEpollChannel.this;
@@ -533,6 +521,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // Just to be safe make sure the input marked as closed.
                 shutdownInput(true);
             }
+            // By now we should have drained the socket.
+            assert socket.isInputShutdown();
+            assert allocHandle.lastBytesRead() < 0;
+            finishInputShutdown();
 
             // Clear the EPOLLRDHUP flag to prevent continuously getting woken up on this event.
             clearEpollRdHup();
@@ -574,7 +566,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 } else {
                     close(voidPromise());
                 }
-            } else if (!rdHup && !inputClosedSeenErrorOnRead) {
+            } else if (!rdHup) {
+                finishInputShutdown();
+            }
+        }
+
+        private void finishInputShutdown() {
+            if (!inputClosedSeenErrorOnRead) {
                 inputClosedSeenErrorOnRead = true;
                 pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
             }
