@@ -6,7 +6,7 @@ services:
     image: netty-codec-http3-centos7:centos-7-1.8
     build:
       args:
-        java_version : "8.0.412-zulu"
+        java_version : "8.0.422-zulu"
 
   build:
     image: netty-codec-http3-centos7:centos-7-1.8
