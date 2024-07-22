@@ -209,6 +209,37 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
         return config().getAllocator();
     }
 
+    /**
+     * Return the value of the given {@link ChannelOption}
+     */
+    default <T> T getOption(ChannelOption<T> option) {
+        return config().getOption(option);
+    }
+
+    /**
+     * Sets a configuration property with the specified name and value.
+     * To override this method properly, you must call the super class:
+     * <pre>
+     * public boolean setOption(ChannelOption&lt;T&gt; option, T value) {
+     *     if (super.setOption(option, value)) {
+     *         return true;
+     *     }
+     *
+     *     if (option.equals(additionalOption)) {
+     *         ....
+     *         return true;
+     *     }
+     *
+     *     return false;
+     * }
+     * </pre>
+     *
+     * @return {@code true} if and only if the property has been set
+     */
+    default <T> boolean setOption(ChannelOption<T> option, T value) {
+        return config().setOption(option, value);
+    }
+
     @Override
     default Channel read() {
         pipeline().read();
