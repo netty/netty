@@ -43,7 +43,6 @@ import static io.netty.channel.epoll.EpollSocketTestPermutation.EPOLL_WORKER_GRO
 
 public class EpollSocketHalfClosedReproTest extends AbstractSocketTest {
 
-
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return Arrays.asList(new TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>() {
