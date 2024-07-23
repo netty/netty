@@ -15,7 +15,6 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -29,8 +28,6 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractSocketTest;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -46,12 +43,6 @@ import static io.netty.channel.epoll.EpollSocketTestPermutation.EPOLL_WORKER_GRO
 
 public class EpollSocketHalfClosedReproTest extends AbstractSocketTest {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(
-            EpollSocketHalfClosedReproTest.class);
-
-    protected int maxReadCompleteWithNoDataAfterInputShutdown() {
-        return 2; // nio needs read flag to detect full closure.
-    }
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
@@ -75,12 +66,12 @@ public class EpollSocketHalfClosedReproTest extends AbstractSocketTest {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
             public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
-                reproducer(serverBootstrap, bootstrap);
+                pipelineEmitsAllDataAndEventsOnHalfClosed(serverBootstrap, bootstrap);
             }
         });
     }
 
-    private void reproducer(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+    private void pipelineEmitsAllDataAndEventsOnHalfClosed(ServerBootstrap sb, Bootstrap cb) throws Throwable {
         final int totalServerBytesWritten = 1;
         final CountDownLatch clientReadAllDataLatch = new CountDownLatch(1);
         final CountDownLatch clientHalfClosedLatch = new CountDownLatch(1);
@@ -88,7 +79,7 @@ public class EpollSocketHalfClosedReproTest extends AbstractSocketTest {
         final AtomicInteger clientReadCompletes = new AtomicInteger();
         final AtomicInteger clientZeroDataReadCompletes = new AtomicInteger();
         Channel serverChannel = null;
-        AtomicReference<Channel> clientChannel = new AtomicReference<>();
+        Channel clientChannel = null;
         AtomicReference<Channel> serverChildChannel = new AtomicReference<>();
         try {
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
@@ -120,8 +111,7 @@ public class EpollSocketHalfClosedReproTest extends AbstractSocketTest {
             // client.
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(Channel ch) throws Exception {
-                    logger.info("{} Client Channel", ch);
+                protected void initChannel(Channel ch) {
                     ch.config().setAutoClose(false);
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         private int bytesRead;
@@ -138,10 +128,8 @@ public class EpollSocketHalfClosedReproTest extends AbstractSocketTest {
                         @Override
                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                             if (evt == ChannelInputShutdownEvent.INSTANCE) {
-                                logger.info("ChannelInputShutdownEvent received");
                                 clientHalfClosedLatch.countDown();
                             } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
-                                logger.info("Should be finished?");
                                 clientHalfClosedAllBytesRead.countDown();
                                 ctx.close();
                             }
@@ -156,7 +144,6 @@ public class EpollSocketHalfClosedReproTest extends AbstractSocketTest {
                             }
                             clientReadCompletes.incrementAndGet();
                             if (bytesRead == totalServerBytesWritten) {
-                                logger.info("channelReadComplete() finished.");
                                 // Bounce this through the event loop to make sure it happens after we're done
                                 // with the read operation.
                                 ch.eventLoop().execute(new Runnable() {
@@ -180,8 +167,8 @@ public class EpollSocketHalfClosedReproTest extends AbstractSocketTest {
             });
 
             serverChannel = sb.bind().sync().channel();
-            clientChannel.set(cb.connect(serverChannel.localAddress()).sync().channel());
-            clientChannel.get().read();
+            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            clientChannel.read();
 
             clientReadAllDataLatch.await();
 
@@ -191,8 +178,8 @@ public class EpollSocketHalfClosedReproTest extends AbstractSocketTest {
             clientHalfClosedLatch.await();
             clientHalfClosedAllBytesRead.await(); // failing here.
         } finally {
-            if (clientChannel.get() != null) {
-                clientChannel.get().close().sync();
+            if (clientChannel != null) {
+                clientChannel.close().sync();
             }
             if (serverChannel != null) {
                 serverChannel.close().sync();
