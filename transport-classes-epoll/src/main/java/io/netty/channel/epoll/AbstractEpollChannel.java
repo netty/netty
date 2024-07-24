@@ -519,12 +519,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 epollInReady();
             } else {
                 // Just to be safe make sure the input marked as closed.
-                shutdownInput(true);
+                shutdownInput(false);
             }
-            // By now we should have drained the socket.
-            assert socket.isInputShutdown();
-            assert allocHandle.lastBytesRead() < 0;
-            finishInputShutdown();
 
             // Clear the EPOLLRDHUP flag to prevent continuously getting woken up on this event.
             clearEpollRdHup();
@@ -545,7 +541,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         /**
          * Shutdown the input side of the channel.
          */
-        void shutdownInput(boolean rdHup) {
+        void shutdownInput(boolean allDataRead) {
             if (!socket.isInputShutdown()) {
                 if (isAllowHalfClosure(config())) {
                     try {
@@ -565,14 +561,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());
+                    return;
                 }
-            } else if (!rdHup) {
-                finishInputShutdown();
             }
-        }
 
-        private void finishInputShutdown() {
-            if (!inputClosedSeenErrorOnRead) {
+            if (allDataRead && !inputClosedSeenErrorOnRead) {
                 inputClosedSeenErrorOnRead = true;
                 pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
             }
