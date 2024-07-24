@@ -52,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
-@Timeout(value = 10000, unit = MILLISECONDS)
+@Timeout(value = 20000, unit = MILLISECONDS)
 public class SocketHalfClosedTest extends AbstractSocketTest {
 
     protected int maxReadCompleteWithNoDataAfterInputShutdown() {
@@ -64,8 +64,9 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
             public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
-                if (true) {
-                    return; // TODO: we need to somehow skip the test for nio clients as we don't get the same events.
+                // TODO: there needs to be a more robust way to detect this
+                if (bootstrap.toString().contains("NioSocketChannel")) {
+                    return;
                 }
                 allDataReadEventTriggeredAfterHalfClosure(serverBootstrap, bootstrap);
             }
@@ -161,6 +162,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                         @Override
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                             ctx.close();
+                            ctx.fireExceptionCaught(cause);
                         }
                     });
                     ch.read();

@@ -33,6 +33,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.SocketAddress;
 import java.io.IOException;
 
+import static io.netty.channel.unix.Errors.ERRNO_ENOTCONN_NEGATIVE;
 import static io.netty.channel.unix.Errors.ioResult;
 
 abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel implements DuplexChannel {
