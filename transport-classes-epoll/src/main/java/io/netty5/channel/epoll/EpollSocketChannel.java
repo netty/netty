@@ -106,6 +106,8 @@ import static java.util.Objects.requireNonNull;
  * </tr><tr>
  * <td>{@link ChannelOption#TCP_FASTOPEN_CONNECT}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
+ * <td>{@link EpollChannelOption#IP_BIND_ADDRESS_NO_PORT}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
  * <td>{@link EpollChannelOption#IP_TRANSPARENT}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
  * <td>{@link EpollChannelOption#SO_BUSY_POLL}</td><td>X</td><td>X</td><td>-</td>
@@ -518,6 +520,9 @@ public final class EpollSocketChannel
             if (option == EpollChannelOption.TCP_QUICKACK) {
                 return (T) Boolean.valueOf(isTcpQuickAck());
             }
+            if (option == EpollChannelOption.IP_BIND_ADDRESS_NO_PORT) {
+                return (T) Boolean.valueOf(isIpBindAddressNoPort());
+            }
             if (option == EpollChannelOption.IP_TRANSPARENT) {
                 return (T) Boolean.valueOf(isIpTransparent());
             }
@@ -570,6 +575,8 @@ public final class EpollSocketChannel
                 setTcpKeepIntvl((Integer) value);
             } else if (option == EpollChannelOption.TCP_USER_TIMEOUT) {
                 setTcpUserTimeout((Integer) value);
+            } else if (option == EpollChannelOption.IP_BIND_ADDRESS_NO_PORT) {
+                setIpBindAddressNoPort((Boolean) value);
             } else if (option == EpollChannelOption.IP_TRANSPARENT) {
                 setIpTransparent((Boolean) value);
             } else if (option == EpollChannelOption.TCP_MD5SIG) {
@@ -610,9 +617,9 @@ public final class EpollSocketChannel
         return newSupportedIdentityOptionsSet(SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER,
                 IP_TOS, EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_KEEPIDLE, EpollChannelOption.TCP_KEEPCNT,
                 EpollChannelOption.TCP_KEEPINTVL, EpollChannelOption.TCP_USER_TIMEOUT,
-                EpollChannelOption.IP_TRANSPARENT, EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK,
-                ChannelOption.TCP_FASTOPEN_CONNECT, EpollChannelOption.SO_BUSY_POLL,
-                EpollChannelOption.TCP_NOTSENT_LOWAT, EpollChannelOption.TCP_INFO);
+                EpollChannelOption.IP_BIND_ADDRESS_NO_PORT, EpollChannelOption.IP_TRANSPARENT,
+                EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK, ChannelOption.TCP_FASTOPEN_CONNECT,
+                EpollChannelOption.SO_BUSY_POLL, EpollChannelOption.TCP_NOTSENT_LOWAT, EpollChannelOption.TCP_INFO);
     }
 
     private static Set<ChannelOption<?>> supportedOptionsDomainSocket() {
@@ -889,12 +896,36 @@ public final class EpollSocketChannel
     }
 
     /**
+     * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_BIND_ADDRESS_NO_PORT</a> is
+     * enabled, {@code false} otherwise.
+     */
+    public boolean isIpBindAddressNoPort() {
+        try {
+            return socket.isIpBindAddressNoPort();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
     public boolean isIpTransparent() {
         try {
             return socket.isIpTransparent();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_BIND_ADDRESS_NO_PORT</a> is
+     * enabled, {@code false} for disable it. Default is disabled.
+     */
+    private void setIpBindAddressNoPort(boolean ipBindAddressNoPort) {
+        try {
+            socket.setIpBindAddressNoPort(ipBindAddressNoPort);
         } catch (IOException e) {
             throw new ChannelException(e);
         }

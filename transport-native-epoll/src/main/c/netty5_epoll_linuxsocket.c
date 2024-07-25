@@ -63,6 +63,11 @@
 #define UDP_GRO 104
 #endif
 
+// IP_BIND_ADDRESS_NO_PORT is defined in linux 4.2. We define this here so older kernels can compile.
+#ifndef IP_BIND_ADDRESS_NO_PORT
+#define IP_BIND_ADDRESS_NO_PORT 24
+#endif
+
 static jweak peerCredentialsClassWeak = NULL;
 static jmethodID peerCredentialsMethodId = NULL;
 
@@ -230,6 +235,10 @@ static void netty5_epoll_linuxsocket_setTcpKeepCnt(JNIEnv* env, jclass clazz, ji
 
 static void netty5_epoll_linuxsocket_setTcpUserTimeout(JNIEnv* env, jclass clazz, jint fd, jint optval) {
     netty5_unix_socket_setOption(env, fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &optval, sizeof(optval));
+}
+
+static void netty5_epoll_linuxsocket_setIpBindAddressNoPort(JNIEnv* env, jclass clazz, jint fd, jint optval) {
+    netty5_unix_socket_setOption(env, fd, IPPROTO_IP, IP_BIND_ADDRESS_NO_PORT, &optval, sizeof(optval));
 }
 
 static void netty5_epoll_linuxsocket_setIpFreeBind(JNIEnv* env, jclass clazz, jint fd, jint optval) {
@@ -585,6 +594,14 @@ static jint netty5_epoll_linuxsocket_getTcpUserTimeout(JNIEnv* env, jclass clazz
      return optval;
 }
 
+static jint netty5_epoll_linuxsocket_isIpBindAddressNoPort(JNIEnv* env, jclass clazz, jint fd) {
+     int optval;
+     if (netty5_unix_socket_getOption(env, fd, IPPROTO_IP, IP_BIND_ADDRESS_NO_PORT, &optval, sizeof(optval)) == -1) {
+         return -1;
+     }
+     return optval;
+}
+
 static jint netty5_epoll_linuxsocket_isIpFreeBind(JNIEnv* env, jclass clazz, jint fd) {
      int optval;
      if (netty5_unix_socket_getOption(env, fd, IPPROTO_IP, IP_FREEBIND, &optval, sizeof(optval)) == -1) {
@@ -790,6 +807,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setTcpKeepIntvl", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpKeepIntvl },
   { "setTcpKeepCnt", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpKeepCnt },
   { "setTcpUserTimeout", "(II)V", (void *) netty5_epoll_linuxsocket_setTcpUserTimeout },
+  { "setIpBindAddressNoPort", "(II)V", (void *) netty5_epoll_linuxsocket_setIpBindAddressNoPort },
   { "setIpFreeBind", "(II)V", (void *) netty5_epoll_linuxsocket_setIpFreeBind },
   { "setIpTransparent", "(II)V", (void *) netty5_epoll_linuxsocket_setIpTransparent },
   { "setIpRecvOrigDestAddr", "(II)V", (void *) netty5_epoll_linuxsocket_setIpRecvOrigDestAddr },
@@ -797,6 +815,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "getTcpKeepIntvl", "(I)I", (void *) netty5_epoll_linuxsocket_getTcpKeepIntvl },
   { "getTcpKeepCnt", "(I)I", (void *) netty5_epoll_linuxsocket_getTcpKeepCnt },
   { "getTcpUserTimeout", "(I)I", (void *) netty5_epoll_linuxsocket_getTcpUserTimeout },
+  { "isIpBindAddressNoPort", "(I)I", (void *) netty5_epoll_linuxsocket_isIpBindAddressNoPort },
   { "isIpFreeBind", "(I)I", (void *) netty5_epoll_linuxsocket_isIpFreeBind },
   { "isIpTransparent", "(I)I", (void *) netty5_epoll_linuxsocket_isIpTransparent },
   { "isIpRecvOrigDestAddr", "(I)I", (void *) netty5_epoll_linuxsocket_isIpRecvOrigDestAddr },
