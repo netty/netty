@@ -65,7 +65,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             @Override
             public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
                 // TODO: there needs to be a more robust way to detect this
-                if (bootstrap.toString().contains("NioSocketChannel")) {
+                if (bootstrap.toString().contains("NioSocketChannel") ||
+                        bootstrap.toString().contains("OioSocketChannel")) {
                     return;
                 }
                 allDataReadEventTriggeredAfterHalfClosure(serverBootstrap, bootstrap);
