@@ -18,6 +18,8 @@ package io.netty5.channel.epoll;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.util.internal.SystemPropertyUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tells if <a href="https://netty.io/wiki/native-transports.html">{@code netty-transport-native-epoll}</a> is
@@ -58,7 +60,14 @@ public final class Epoll {
                 }
             }
         }
-
+        if (cause != null) {
+            Logger logger = LoggerFactory.getLogger(Epoll.class);
+            if (logger.isTraceEnabled()) {
+                logger.debug("Epoll support is not available", cause);
+            } else if (logger.isDebugEnabled()) {
+                logger.debug("Epoll support is not available: {}", cause.getMessage());
+            }
+        }
         UNAVAILABILITY_CAUSE = cause;
     }
 

@@ -19,6 +19,8 @@ import io.netty5.channel.ChannelOption;
 import io.netty5.channel.unix.FileDescriptor;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.UnstableApi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * If KQueue is available the JNI resources will be loaded when this class loads.
@@ -48,7 +50,14 @@ public final class KQueue {
                 }
             }
         }
-
+        if (cause != null) {
+            Logger logger = LoggerFactory.getLogger(KQueue.class);
+            if (logger.isTraceEnabled()) {
+                logger.debug("KQueue support is not available", cause);
+            } else if (logger.isDebugEnabled()) {
+                logger.debug("KQueue support is not available: {}", cause.getMessage());
+            }
+        }
         UNAVAILABILITY_CAUSE = cause;
     }
 
