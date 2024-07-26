@@ -89,15 +89,17 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                     .option(ChannelOption.AUTO_CLOSE, false)
                     .option(ChannelOption.AUTO_READ, false);
 
+            sb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
+                    .option(ChannelOption.AUTO_CLOSE, false)
+                    .childOption(ChannelOption.TCP_NODELAY, true);
+
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     serverChildChannel.set(ch);
-                    ch.config().setOption(ChannelOption.ALLOW_HALF_CLOSURE, true);
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                            ctx.channel().config().setAutoClose(false);
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
                             buf.writerIndex(buf.capacity());
                             ctx.writeAndFlush(buf);
@@ -115,7 +117,6 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.config().setAutoClose(false);
                     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                         private int bytesRead;
                         private int bytesSinceReadComplete;
@@ -162,8 +163,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
                         @Override
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                            ctx.close();
                             ctx.fireExceptionCaught(cause);
+                            ctx.close();
                         }
                     });
                     ch.read();
@@ -180,7 +181,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             ((DuplexChannel) serverChildChannel.get()).shutdownOutput();
 
             clientHalfClosedLatch.await();
-            clientHalfClosedAllBytesRead.await(); // failing here.
+            clientHalfClosedAllBytesRead.await();
         } finally {
             if (clientChannel != null) {
                 clientChannel.close().sync();
