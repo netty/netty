@@ -18,6 +18,8 @@ package io.netty.channel.uring;
 import io.netty.channel.ChannelOption;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 public final class IoUring {
 
@@ -55,6 +57,14 @@ public final class IoUring {
             }
         } catch (Throwable t) {
             cause = t;
+        }
+        if (cause != null) {
+            InternalLogger logger = InternalLoggerFactory.getInstance(IoUring.class);
+            if (logger.isTraceEnabled()) {
+                logger.debug("IoUring support is not available", cause);
+            } else if (logger.isDebugEnabled()) {
+                logger.debug("IoUring support is not available: {}", cause.getMessage());
+            }
         }
         UNAVAILABILITY_CAUSE = cause;
         IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED = supported;
