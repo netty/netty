@@ -282,7 +282,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         protected void readComplete0(int res, int flags, int data, int outstanding) {
             assert readId != 0;
             readId = 0;
-            boolean close = false;
+            boolean allDataRead = false;
 
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             final ChannelPipeline pipeline = pipeline();
@@ -310,10 +310,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     // nothing was read, release the buffer.
                     byteBuf.release();
                     byteBuf = null;
-                    close = allocHandle.lastBytesRead() < 0;
-                    if (close) {
+                    allDataRead = allocHandle.lastBytesRead() < 0;
+                    if (allDataRead) {
                         // There is nothing left to read as we received an EOF.
-                        shutdownInput(false);
+                        shutdownInput(true);
                     }
                     allocHandle.readComplete();
                     pipeline.fireChannelReadComplete();
@@ -338,12 +338,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     pipeline.fireChannelReadComplete();
                 }
             } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, close, allocHandle);
+                handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
             }
         }
 
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
-                                         Throwable cause, boolean close,
+                                         Throwable cause, boolean allDataRead,
                                          IoUringRecvByteAllocatorHandle allocHandle) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
@@ -355,8 +355,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
             pipeline.fireExceptionCaught(cause);
-            if (close || cause instanceof IOException) {
-                shutdownInput(false);
+            if (allDataRead || cause instanceof IOException) {
+                shutdownInput(true);
             }
         }
 
