@@ -711,7 +711,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<State> {
         nameStart = findNonWhitespace(sb, 0);
         for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
             char ch = sb.charAt(nameEnd);
-            if (ch == ':' || Character.isWhitespace(ch)) {
+            if (ch == ':') {
                 break;
             }
         }
