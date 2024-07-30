@@ -87,7 +87,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         final AtomicInteger clientZeroDataReadCompletes = new AtomicInteger();
         Channel serverChannel = null;
         Channel clientChannel = null;
-        AtomicReference<Channel> serverChildChannel = new AtomicReference<>();
+        AtomicReference<Channel> serverChildChannel = new AtomicReference<Channel>();
         try {
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
                     .option(ChannelOption.AUTO_CLOSE, false)
