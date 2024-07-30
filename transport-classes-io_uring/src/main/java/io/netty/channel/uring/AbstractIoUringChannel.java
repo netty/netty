@@ -34,6 +34,7 @@ import io.netty.channel.IoEvent;
 import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -126,11 +127,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             this.remote = socket.remoteAddress();
         }
 
-        if (parent != null) {
-            logger.trace("Create Channel Socket: {}", socket.intValue());
-        } else {
-            logger.trace("Create Server Socket: {}", socket.intValue());
-        }
+        logger.trace("Create {} Socket: {}", this instanceof ServerChannel ? "Server" : "Channel", socket.intValue());
     }
 
     AbstractIoUringChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
@@ -277,7 +274,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // We already have a read pending.
             return;
         }
-        if (inReadComplete) {
+        if (inReadComplete || !isActive()) {
             // We are currently in the readComplete(...) callback which might issue more reads by itself. Just
             // mark it as a pending read. If readComplete(...) will not issue more reads itself it will pick up
             // the readPending flag, reset it and call doBeginReadNow().
@@ -600,7 +597,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             return allocHandle;
         }
 
-        final void shutdownInput(boolean rdHup) {
+        final void shutdownInput(boolean allDataRead) {
             logger.trace("shutdownInput Fd: {}", fd().intValue());
             if (!socket.isInputShutdown()) {
                 if (isAllowHalfClosure(config())) {
@@ -618,8 +615,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
                     close(voidPromise());
+                    return;
                 }
-            } else if (!rdHup) {
+            }
+            if (allDataRead && !inputClosedSeenErrorOnRead) {
                 inputClosedSeenErrorOnRead = true;
                 pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
             }
@@ -686,7 +685,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 scheduleFirstReadIfNeeded();
             } else {
                 // Just to be safe make sure the input marked as closed.
-                shutdownInput(true);
+                shutdownInput(false);
             }
         }
 
@@ -878,6 +877,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 try {
                     if (res == 0) {
                         fulfillConnectPromise(connectPromise, active);
+                        if (readPending) {
+                            doBeginReadNow();
+                        }
                     } else if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
                         try {
                             Errors.throwConnectException("io_uring connect", res);

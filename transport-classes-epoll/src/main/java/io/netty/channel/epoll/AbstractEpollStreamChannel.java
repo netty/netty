@@ -709,8 +709,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return super.prepareToClose();
         }
 
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
-                EpollRecvByteAllocatorHandle allocHandle) {
+        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause,
+                                         boolean allDataRead, EpollRecvByteAllocatorHandle allocHandle) {
             if (byteBuf != null) {
                 if (byteBuf.isReadable()) {
                     readPending = false;
@@ -725,8 +725,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
             // If oom will close the read event, release connection.
             // See https://github.com/netty/netty/issues/10434
-            if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
-                shutdownInput(false);
+            if (allDataRead || cause instanceof OutOfMemoryError || cause instanceof IOException) {
+                shutdownInput(true);
             }
         }
 
@@ -748,7 +748,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             allocHandle.reset(config);
 
             ByteBuf byteBuf = null;
-            boolean close = false;
+            boolean allDataRead = false;
             Queue<SpliceInTask> sQueue = null;
             try {
                 do {
@@ -758,7 +758,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                             boolean spliceInResult = spliceTask.spliceIn(allocHandle);
 
                             if (allocHandle.isReceivedRdHup()) {
-                                shutdownInput(true);
+                                shutdownInput(false);
                             }
                             if (spliceInResult) {
                                 // We need to check if it is still active as if not we removed all SpliceTasks in
@@ -781,8 +781,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         // nothing was read, release the buffer.
                         byteBuf.release();
                         byteBuf = null;
-                        close = allocHandle.lastBytesRead() < 0;
-                        if (close) {
+                        allDataRead = allocHandle.lastBytesRead() < 0;
+                        if (allDataRead) {
                             // There is nothing left to read as we received an EOF.
                             readPending = false;
                         }
@@ -812,11 +812,11 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
 
-                if (close) {
-                    shutdownInput(false);
+                if (allDataRead) {
+                    shutdownInput(true);
                 }
             } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, close, allocHandle);
+                handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
             } finally {
                 if (sQueue == null) {
                     if (shouldStopReading(config)) {
