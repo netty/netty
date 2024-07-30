@@ -711,6 +711,7 @@ public abstract class HttpMessageDecoder extends ReplayingDecoder<State> {
         nameStart = findNonWhitespace(sb, 0);
         for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
             char ch = sb.charAt(nameEnd);
+            // https://github.com/netty/netty/pull/9585
             // https://tools.ietf.org/html/rfc7230#section-3.2.4
             //
             // No whitespace is allowed between the header field-name and colon. In
