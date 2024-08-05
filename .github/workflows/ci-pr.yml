@@ -201,10 +201,10 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Build docker image
-        run: docker-compose ${{ matrix.docker-compose-build }}
+        run: docker compose ${{ matrix.docker-compose-build }}
 
       - name: Build project with leak detection
-        run: docker-compose ${{ matrix.docker-compose-run }} | tee build-leak.output
+        run: docker compose ${{ matrix.docker-compose-run }} | tee build-leak.output
 
       - name: Checking for test failures
         run: ./.github/scripts/check_build_result.sh build-leak.output
