@@ -44,10 +44,10 @@ jobs:
             build-cache-m2-repository-
 
       - name: Build docker image
-        run: docker-compose -f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml build
+        run: docker compose -f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml build
 
       - name: Execute project build without leak detection
-        run: docker-compose -f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml run build | tee build-leak.output
+        run: docker compose -f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml run build | tee build-leak.output
 
       - name: Checking for test failures
         run: ./.github/scripts/check_build_result.sh build-leak.output
