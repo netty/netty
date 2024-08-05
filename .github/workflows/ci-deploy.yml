@@ -67,10 +67,10 @@ jobs:
         run: mkdir -p ~/local-staging
 
       - name: Build docker image
-        run: docker-compose ${{ matrix.docker-compose-build }}
+        run: docker compose ${{ matrix.docker-compose-build }}
 
       - name: Stage snapshots to local staging directory
-        run: docker-compose ${{ matrix.docker-compose-run }}
+        run: docker compose ${{ matrix.docker-compose-run }}
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4

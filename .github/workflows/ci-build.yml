@@ -45,10 +45,10 @@ jobs:
             build-linux-x86_64-maven-cache-
 
       - name: Build docker image
-        run: docker-compose -f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml build
+        run: docker compose -f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml build
 
       - name: Build project without leak detection
-        run: docker-compose -f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml run build | tee build.output
+        run: docker compose -f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml run build | tee build.output
 
       - name: Checking for test failures
         run: ./.github/scripts/check_build_result.sh build.output
@@ -84,10 +84,10 @@ jobs:
             build-linux-aarch64-maven-cache-
 
       - name: Build docker image
-        run: docker-compose -f docker/docker-compose.centos-7-cross.yaml build
+        run: docker compose -f docker/docker-compose.centos-7-cross.yaml build
 
       - name: Build project without leak detection
-        run: docker-compose -f docker/docker-compose.centos-7-cross.yaml run cross-compile-aarch64-build
+        run: docker compose -f docker/docker-compose.centos-7-cross.yaml run cross-compile-aarch64-build
 
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
