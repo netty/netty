@@ -404,8 +404,7 @@ public final class SelfSignedCertificate {
          * @return This builder
          */
         public Builder fqdn(String fqdn) {
-            ObjectUtil.checkNotNullWithIAE(fqdn, "fqdn");
-            this.fqdn = fqdn;
+            this.fqdn = ObjectUtil.checkNotNullWithIAE(fqdn, "fqdn");
             return this;
         }
 
@@ -438,8 +437,7 @@ public final class SelfSignedCertificate {
          * @return This builder
          */
         public Builder notBefore(Date notBefore) {
-            ObjectUtil.checkNotNullWithIAE(notBefore, "notBefore");
-            this.notBefore = notBefore;
+            this.notBefore = ObjectUtil.checkNotNullWithIAE(notBefore, "notBefore");
             return this;
         }
 
@@ -450,8 +448,7 @@ public final class SelfSignedCertificate {
          * @return This builder
          */
         public Builder notAfter(Date notAfter) {
-            ObjectUtil.checkNotNullWithIAE(notAfter, "notAfter");
-            this.notAfter = notAfter;
+            this.notAfter = ObjectUtil.checkNotNullWithIAE(notAfter, "notAfter");
             return this;
         }
 
@@ -489,7 +486,7 @@ public final class SelfSignedCertificate {
                 keypair = keyGen.generateKeyPair();
             } catch (NoSuchAlgorithmException e) {
                 // Should not reach here because every Java implementation must have RSA and EC key pair generator.
-                throw new Error(e);
+                throw new IllegalStateException(e);
             }
             privateKey = keypair.getPrivate();
         }

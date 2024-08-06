@@ -110,15 +110,19 @@ final class KeytoolSelfSignedCertGenerator {
 
             if (process.exitValue() != 0) {
                 ByteBuf buffer = Unpooled.buffer();
-                try (InputStream stream = process.getInputStream()) {
-                    while (true) {
-                        if (buffer.writeBytes(stream, 4096) == -1) {
-                            break;
+                try {
+                    try (InputStream stream = process.getInputStream()) {
+                        while (true) {
+                            if (buffer.writeBytes(stream, 4096) == -1) {
+                                break;
+                            }
                         }
                     }
+                    String log = buffer.toString(StandardCharsets.UTF_8);
+                    throw new IOException("Keytool exited with status " + process.exitValue() + ": " + log);
+                } finally {
+                    buffer.release();
                 }
-                String log = buffer.toString(StandardCharsets.UTF_8);
-                throw new IOException("Keytool exited with status " + process.exitValue() + ": " + log);
             }
 
             KeyStore ks = KeyStore.getInstance(KEY_STORE_TYPE);
