@@ -17,6 +17,7 @@ package io.netty5.handler.ssl.util;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.base64.Base64;
+import io.netty5.util.internal.ObjectUtil;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import org.jetbrains.annotations.TestOnly;
@@ -88,7 +89,7 @@ public final class SelfSignedCertificate {
      * <p> Algorithm: RSA </p>
      */
     public SelfSignedCertificate() throws CertificateException {
-        this(DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA", DEFAULT_KEY_LENGTH_BITS);
+        this(new Builder());
     }
 
     /**
@@ -100,7 +101,7 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(Date notBefore, Date notAfter)
             throws CertificateException {
-        this("localhost", notBefore, notAfter, "RSA", DEFAULT_KEY_LENGTH_BITS);
+        this(new Builder().notBefore(notBefore).notAfter(notAfter));
     }
 
     /**
@@ -113,7 +114,7 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(Date notBefore, Date notAfter, String algorithm, int bits)
             throws CertificateException {
-        this("localhost", notBefore, notAfter, algorithm, bits);
+        this(new Builder().notBefore(notBefore).notAfter(notAfter).algorithm(algorithm).bits(bits));
     }
 
     /**
@@ -123,7 +124,7 @@ public final class SelfSignedCertificate {
      * @param fqdn a fully qualified domain name
      */
     public SelfSignedCertificate(String fqdn) throws CertificateException {
-        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA", DEFAULT_KEY_LENGTH_BITS);
+        this(new Builder().fqdn(fqdn));
     }
 
     /**
@@ -134,7 +135,7 @@ public final class SelfSignedCertificate {
      * @param bits      the number of bits of the generated private key
      */
     public SelfSignedCertificate(String fqdn, String algorithm, int bits) throws CertificateException {
-        this(fqdn, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, algorithm, bits);
+        this(new Builder().fqdn(fqdn).algorithm(algorithm).bits(bits));
     }
 
     /**
@@ -146,9 +147,7 @@ public final class SelfSignedCertificate {
      * @param notAfter  Certificate is not valid after this time
      */
     public SelfSignedCertificate(String fqdn, Date notBefore, Date notAfter) throws CertificateException {
-        // Bypass entropy collection by using insecure random generator.
-        // We just want to generate it without any delay because it's for testing purposes only.
-        this(fqdn, ThreadLocalInsecureRandom.current(), DEFAULT_KEY_LENGTH_BITS, notBefore, notAfter, "RSA");
+        this(new Builder().fqdn(fqdn).notBefore(notBefore).notAfter(notAfter));
     }
 
     /**
@@ -162,9 +161,7 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(String fqdn, Date notBefore, Date notAfter, String algorithm, int bits)
             throws CertificateException {
-        // Bypass entropy collection by using insecure random generator.
-        // We just want to generate it without any delay because it's for testing purposes only.
-        this(fqdn, ThreadLocalInsecureRandom.current(), bits, notBefore, notAfter, algorithm);
+        this(new Builder().fqdn(fqdn).notBefore(notBefore).notAfter(notAfter).algorithm(algorithm).bits(bits));
     }
 
     /**
@@ -177,7 +174,7 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(String fqdn, SecureRandom random, int bits)
             throws CertificateException {
-        this(fqdn, random, bits, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, "RSA");
+        this(new Builder().fqdn(fqdn).random(random).bits(bits));
     }
 
     /**
@@ -190,7 +187,7 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(String fqdn, SecureRandom random, String algorithm, int bits)
             throws CertificateException {
-        this(fqdn, random, bits, DEFAULT_NOT_BEFORE, DEFAULT_NOT_AFTER, algorithm);
+        this(new Builder().fqdn(fqdn).random(random).algorithm(algorithm).bits(bits));
     }
 
     /**
@@ -205,7 +202,7 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, Date notBefore, Date notAfter)
             throws CertificateException {
-        this(fqdn, random, bits, notBefore, notAfter, "RSA");
+        this(new Builder().fqdn(fqdn).notBefore(notBefore).notAfter(notAfter).random(random).bits(bits));
     }
 
     /**
@@ -220,57 +217,31 @@ public final class SelfSignedCertificate {
      */
     public SelfSignedCertificate(String fqdn, SecureRandom random, int bits, Date notBefore, Date notAfter,
                                  String algorithm) throws CertificateException {
+        this(new Builder().fqdn(fqdn).random(random).algorithm(algorithm).bits(bits)
+                .notBefore(notBefore).notAfter(notAfter));
+    }
 
-        if (!"EC".equalsIgnoreCase(algorithm) && !"RSA".equalsIgnoreCase(algorithm)) {
-            throw new IllegalArgumentException("Algorithm not valid: " + algorithm);
-        }
-
-        final KeyPair keypair;
-        try {
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance(algorithm);
-            keyGen.initialize(bits, random);
-            keypair = keyGen.generateKeyPair();
-        } catch (NoSuchAlgorithmException e) {
-            // Should not reach here because every Java implementation must have RSA and EC key pair generator.
-            throw new Error(e);
-        }
-
-        String[] paths;
-        try {
-            paths = BouncyCastleSelfSignedCertGenerator.generate(
-                    fqdn, keypair, random, notBefore, notAfter, algorithm);
-        } catch (Throwable throwable) {
-            if (!isBouncyCastleAvailable()) {
-                logger.debug("Failed to generate a self-signed X.509 certificate because " +
-                        "BouncyCastle PKIX is not available in classpath");
-            } else {
-                logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", throwable);
+    private SelfSignedCertificate(Builder builder) throws CertificateException {
+        if (!builder.generateBc()) {
+            if (!builder.generateKeytool()) {
+                throw new CertificateException(
+                        "No provider succeeded to generate a self-signed certificate. " +
+                                "See debug log for the root cause.", builder.failure);
             }
-            throw new CertificateException(
-                    "No provider succeeded to generate a self-signed certificate. " +
-                    "See debug log for the root cause.", throwable);
         }
 
-        certificate = new File(paths[0]);
-        privateKey = new File(paths[1]);
-        key = keypair.getPrivate();
-        FileInputStream certificateInput = null;
-        try {
-            certificateInput = new FileInputStream(certificate);
+        certificate = new File(builder.paths[0]);
+        privateKey = new File(builder.paths[1]);
+        key = builder.privateKey;
+        try (FileInputStream certificateInput = new FileInputStream(certificate)) {
             cert = (X509Certificate) CertificateFactory.getInstance("X509").generateCertificate(certificateInput);
         } catch (Exception e) {
             throw new CertificateEncodingException(e);
-        } finally {
-            if (certificateInput != null) {
-                try {
-                    certificateInput.close();
-                } catch (IOException e) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn("Failed to close a file: " + certificate, e);
-                    }
-                }
-            }
         }
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 
     /**
@@ -391,6 +362,176 @@ public final class SelfSignedCertificate {
             return true;
         } catch (ClassNotFoundException e) {
             return false;
+        }
+    }
+
+    public static final class Builder {
+        // user fields
+        String fqdn = "localhost";
+        SecureRandom random;
+        int bits = DEFAULT_KEY_LENGTH_BITS;
+        Date notBefore = DEFAULT_NOT_BEFORE;
+        Date notAfter = DEFAULT_NOT_AFTER;
+        String algorithm = "RSA";
+
+        // fields that are populated on demand
+        Throwable failure;
+        KeyPair keypair;
+        PrivateKey privateKey;
+        String[] paths;
+
+        private Builder() {
+        }
+
+        /**
+         * Set the fully-qualified domain name of the certificate that should be generated.
+         *
+         * @param fqdn The FQDN
+         * @return This builder
+         */
+        public Builder fqdn(String fqdn) {
+            this.fqdn = ObjectUtil.checkNotNullWithIAE(fqdn, "fqdn");
+            return this;
+        }
+
+        /**
+         * Set the RNG to use for key generation. This setting is not supported by the keytool-based generator.
+         *
+         * @param random The CSPRNG
+         * @return This builder
+         */
+        public Builder random(SecureRandom random) {
+            this.random = random;
+            return this;
+        }
+
+        /**
+         * Set the key size.
+         *
+         * @param bits The key size
+         * @return This builder
+         */
+        public Builder bits(int bits) {
+            this.bits = bits;
+            return this;
+        }
+
+        /**
+         * Set the start of the certificate validity period.
+         *
+         * @param notBefore The start date
+         * @return This builder
+         */
+        public Builder notBefore(Date notBefore) {
+            this.notBefore = ObjectUtil.checkNotNullWithIAE(notBefore, "notBefore");
+            return this;
+        }
+
+        /**
+         * Set the end of the certificate validity period.
+         *
+         * @param notAfter The start date
+         * @return This builder
+         */
+        public Builder notAfter(Date notAfter) {
+            this.notAfter = ObjectUtil.checkNotNullWithIAE(notAfter, "notAfter");
+            return this;
+        }
+
+        /**
+         * Set the key algorithm. Only RSA and EC are supported.
+         *
+         * @param algorithm The key algorithm
+         * @return This builder
+         */
+        public Builder algorithm(String algorithm) {
+            if ("EC".equalsIgnoreCase(algorithm)) {
+                this.algorithm = "EC";
+            } else if ("RSA".equalsIgnoreCase(algorithm)) {
+                this.algorithm = "RSA";
+            } else {
+                throw new IllegalArgumentException("Algorithm not valid: " + algorithm);
+            }
+            return this;
+        }
+
+        private SecureRandom randomOrDefault() {
+            // Bypass entropy collection by using insecure random generator.
+            // We just want to generate it without any delay because it's for testing purposes only.
+            return random == null ? ThreadLocalInsecureRandom.current() : random;
+        }
+
+        private void generateKeyPairLocally() {
+            if (keypair != null) {
+                return;
+            }
+
+            try {
+                KeyPairGenerator keyGen = KeyPairGenerator.getInstance(algorithm);
+                keyGen.initialize(bits, randomOrDefault());
+                keypair = keyGen.generateKeyPair();
+            } catch (NoSuchAlgorithmException e) {
+                // Should not reach here because every Java implementation must have RSA and EC key pair generator.
+                throw new IllegalStateException(e);
+            }
+            privateKey = keypair.getPrivate();
+        }
+
+        private void addFailure(Throwable t) {
+            if (failure != null) {
+                t.addSuppressed(failure);
+            }
+            failure = t;
+        }
+
+        boolean generateBc() {
+            if (!isBouncyCastleAvailable()) {
+                // no need to even try. We can avoid generating the key pair with this check.
+                logger.debug("Failed to generate a self-signed X.509 certificate because " +
+                        "BouncyCastle PKIX is not available in classpath");
+                return false;
+            }
+            generateKeyPairLocally();
+            try {
+                // Try Bouncy Castle first as otherwise we will see an IllegalAccessError on more recent JDKs.
+                paths = BouncyCastleSelfSignedCertGenerator.generate(
+                        fqdn, keypair, randomOrDefault(), notBefore, notAfter, algorithm);
+                return true;
+            } catch (Throwable t) {
+                logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t);
+                addFailure(t);
+                return false;
+            }
+        }
+
+        boolean generateKeytool() {
+            if (!KeytoolSelfSignedCertGenerator.isAvailable()) {
+                logger.debug("Not attempting to generate certificate with keytool because keytool is missing");
+                return false;
+            }
+            if (random != null) {
+                logger.debug("Not attempting to generate certificate with keytool because of explicitly set " +
+                        "SecureRandom");
+                return false;
+            }
+            try {
+                KeytoolSelfSignedCertGenerator.generate(this);
+                return true;
+            } catch (Throwable t) {
+                logger.debug("Failed to generate a self-signed X.509 certificate using keytool:", t);
+                addFailure(t);
+                return false;
+            }
+        }
+
+        /**
+         * Build the certificate. This builder must not be used again after this method is called.
+         *
+         * @return The certificate
+         * @throws CertificateException If generation fails
+         */
+        public SelfSignedCertificate build() throws CertificateException {
+            return new SelfSignedCertificate(this);
         }
     }
 }
