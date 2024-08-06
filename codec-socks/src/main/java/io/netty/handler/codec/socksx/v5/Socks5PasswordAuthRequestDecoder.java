@@ -53,16 +53,14 @@ public class Socks5PasswordAuthRequestDecoder extends ReplayingDecoder<State> {
             case INIT: {
                 final int startOffset = in.readerIndex();
                 final byte version = in.getByte(startOffset);
-                if (version != 1) {
-                    throw new DecoderException("unsupported subnegotiation version: " + version + " (expected: 1)");
-                }
-
+                final Socks5AuthMethod authMethod = Socks5AuthMethod.valueOf(version);
                 final int usernameLength = in.getUnsignedByte(startOffset + 1);
                 final int passwordLength = in.getUnsignedByte(startOffset + 2 + usernameLength);
                 final int totalLength = usernameLength + passwordLength + 3;
 
                 in.skipBytes(totalLength);
                 out.add(new DefaultSocks5PasswordAuthRequest(
+                        authMethod,
                         in.toString(startOffset + 2, usernameLength, CharsetUtil.US_ASCII),
                         in.toString(startOffset + 3 + usernameLength, passwordLength, CharsetUtil.US_ASCII)));
 
@@ -92,7 +90,7 @@ public class Socks5PasswordAuthRequestDecoder extends ReplayingDecoder<State> {
 
         checkpoint(State.FAILURE);
 
-        Socks5Message m = new DefaultSocks5PasswordAuthRequest("", "");
+        Socks5Message m = new DefaultSocks5PasswordAuthRequest(Socks5AuthMethod.PASSWORD, "", "");
         m.setDecoderResult(DecoderResult.failure(cause));
         out.add(m);
     }
