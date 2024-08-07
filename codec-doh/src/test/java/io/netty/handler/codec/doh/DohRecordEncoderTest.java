@@ -50,8 +50,7 @@ public class DohRecordEncoderTest {
     @Test
     public void testEncode() {
         DefaultDnsQuestion defaultDnsQuestion = new DefaultDnsQuestion("example.com.", DnsRecordType.AAAA);
-        int randomID = new Random().nextInt(60000 - 1000) + 1000;
-        DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY).setRecord(DnsSection.QUESTION,
+        DnsQuery query = new DefaultDnsQuery(1, DnsOpCode.QUERY).setRecord(DnsSection.QUESTION,
                 defaultDnsQuestion);
 
         assertTrue(channel.writeOutbound(query));
