@@ -682,7 +682,7 @@ public class DefaultHttp2Connection implements Http2Connection {
     /**
      * Simple endpoint implementation.
      */
-    private final class DefaultEndpoint<F extends Http2FlowController> implements Endpoint<F> {
+    final class DefaultEndpoint<F extends Http2FlowController> implements Endpoint<F> {
         private final boolean server;
         /**
          * This is an always increasing sequence number used to hash {@link DefaultStream} instances.
@@ -738,6 +738,38 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public int incrementAndGetNextStreamId() {
             return nextReservationStreamId >= 0 ? nextReservationStreamId += 2 : nextReservationStreamId;
+        }
+
+        /**
+         * Set a custom stream ID which will be created on next stream initialization.
+         *
+         * @param streamId Custom stream ID
+         * @throws IllegalArgumentException If custom Stream ID is not valid
+         */
+        void setReservationStreamId(int streamId) {
+            if (!(streamId > nextReservationStreamId && nextReservationStreamId >= 0)) {
+                throw new IllegalArgumentException("Stream ID must be greater then previous stream ID " +
+                        "and must be greater than 0");
+            }
+
+            final int nextRequestedStreamId = nextReservationStreamId + 2;
+            if (server) {
+                // Server Stream ID must be even. If stream ID is valid then we will update 'nextReservationStreamId'.
+                // Else, if Stream ID not even then we will throw an exception.
+                if (nextRequestedStreamId % 2 == 0) {
+                    nextReservationStreamId = streamId;
+                } else {
+                    throw new IllegalArgumentException("Server Stream ID must be even");
+                }
+            } else {
+                // Client Stream ID must be odd. If stream ID is valid then we will update 'nextReservationStreamId'.
+                // Else, if Stream ID not odd then we will throw an exception.
+                if (nextRequestedStreamId % 2 != 0) {
+                    throw new IllegalArgumentException("Client Stream ID must be odd");
+                } else {
+                    nextReservationStreamId = streamId;
+                }
+            }
         }
 
         private void incrementExpectedStreamId(int streamId) {
