@@ -47,8 +47,7 @@ public class DohTest {
     public void testQueryDecode() {
         EmbeddedChannel channel = new EmbeddedChannel(new DohResponseDecoder());
 
-        int randomID = new Random().nextInt(60000 - 1000) + 1000;
-        DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
+        DnsQuery query = new DefaultDnsQuery(1, DnsOpCode.QUERY)
                 .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
         assertTrue(channel.writeInbound(query));
 
