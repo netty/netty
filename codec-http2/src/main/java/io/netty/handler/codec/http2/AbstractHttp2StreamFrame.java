@@ -49,7 +49,7 @@ public abstract class AbstractHttp2StreamFrame implements Http2StreamFrame {
     public int hashCode() {
         Http2FrameStream stream = this.stream;
         if (stream == null) {
-            return super.hashCode();
+            return 31;
         }
         return stream.hashCode();
     }
