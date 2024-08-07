@@ -136,7 +136,6 @@ public class DoHClient {
 
             channel.writeAndFlush(query).sync();
 
-
             boolean success = channel.closeFuture().await(100, TimeUnit.SECONDS);
             if (!success) {
                 System.err.println("dns query timeout!");
