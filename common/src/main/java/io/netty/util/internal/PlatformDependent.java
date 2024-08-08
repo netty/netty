@@ -15,6 +15,7 @@
  */
 package io.netty.util.internal;
 
+import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MpmcArrayQueue;
@@ -422,7 +423,16 @@ public final class PlatformDependent {
      * Raises an exception bypassing compiler checks for checked exceptions.
      */
     public static void throwException(Throwable t) {
-        PlatformDependent0.throwException(t);
+        if (hasUnsafe()) {
+            PlatformDependent0.throwException(t);
+        } else {
+            throwException0(t);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void throwException0(Throwable t) throws E {
+        throw (E) t;
     }
 
     /**
@@ -969,18 +979,13 @@ public final class PlatformDependent {
                 unsafe = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                     @Override
                     public Object run() {
-                        // force JCTools to initialize unsafe. We do this via reflection so we don't reference
-                        // sun.misc.Unsafe.
-                        try {
-                            return UnsafeAccess.class.getField("UNSAFE");
-                        } catch (NoSuchFieldException | SecurityException e) {
-                            return e;
-                        }
+                        // force JCTools to initialize unsafe
+                        return UnsafeAccess.UNSAFE;
                     }
                 });
             }
 
-            if (unsafe == null || unsafe instanceof Throwable) {
+            if (unsafe == null) {
                 logger.debug("org.jctools-core.MpscChunkedArrayQueue: unavailable");
                 USE_MPSC_CHUNKED_ARRAY_QUEUE = false;
             } else {

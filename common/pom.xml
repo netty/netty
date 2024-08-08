@@ -45,6 +45,14 @@
       <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
       <scope>provided</scope>
     </dependency>
+
+    <!-- sun.misc.Unsafe stubs -->
+    <dependency>
+      <groupId>org.jboss</groupId>
+      <artifactId>jdk-misc</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.jctools</groupId>
       <artifactId>jctools-core</artifactId>
