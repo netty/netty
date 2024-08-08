@@ -15,7 +15,6 @@
  */
 package io.netty.util.internal;
 
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jctools.queues.MpmcArrayQueue;
@@ -423,16 +422,7 @@ public final class PlatformDependent {
      * Raises an exception bypassing compiler checks for checked exceptions.
      */
     public static void throwException(Throwable t) {
-        if (hasUnsafe()) {
-            PlatformDependent0.throwException(t);
-        } else {
-            throwException0(t);
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> void throwException0(Throwable t) throws E {
-        throw (E) t;
+        PlatformDependent0.throwException(t);
     }
 
     /**

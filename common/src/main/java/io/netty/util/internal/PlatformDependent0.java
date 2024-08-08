@@ -564,8 +564,12 @@ final class PlatformDependent0 {
     }
 
     static void throwException(Throwable cause) {
-        // JVM has been observed to crash when passing a null argument. See https://github.com/netty/netty/issues/4131.
-        UNSAFE.throwException(checkNotNull(cause, "cause"));
+        throwException0(cause);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable> void throwException0(Throwable t) throws E {
+        throw (E) t;
     }
 
     static boolean hasDirectBufferNoCleanerConstructor() {
