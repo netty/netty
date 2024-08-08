@@ -34,12 +34,12 @@ public class PollRemoveTest {
 
     @BeforeAll
     public static void loadJNI() {
-        assumeTrue(IOUring.isAvailable());
+        assumeTrue(IoUring.isAvailable());
     }
 
     private static void ioUringTest() throws Exception {
-        Class<? extends ServerSocketChannel> clazz = IOUringServerSocketChannel.class;
-        final EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, IOUringIoHandler.newFactory());
+        Class<? extends ServerSocketChannel> clazz = IoUringServerSocketChannel.class;
+        final EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, IoUringIoHandler.newFactory());
 
         try {
             ServerBootstrap b = new ServerBootstrap();

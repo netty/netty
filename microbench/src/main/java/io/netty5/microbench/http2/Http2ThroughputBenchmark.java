@@ -232,7 +232,7 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
             case nio: return NioIoHandler.newFactory();
             case epoll: factoryClass = Class.forName("io.netty5.channel.epoll.EpollIoHandler"); break;
             case kqueue: factoryClass = Class.forName("io.netty5.channel.kqueue.KQueueIoHandler"); break;
-            case io_uring: factoryClass = Class.forName("io.netty5.channel.uring.IOUring"); break;
+            case io_uring: factoryClass = Class.forName("io.netty5.channel.uring.IoUring"); break;
             default: throw new UnsupportedOperationException("Unrecognized transport: " + transport);
         }
         Method newFactory = factoryClass.getDeclaredMethod("newFactory");
@@ -249,7 +249,7 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
             case kqueue: return (Class<? extends ServerSocketChannel>) Class.forName(
                     "io.netty5.channel.kqueue.KQueueServerSocketChannel");
             case io_uring: return (Class<? extends ServerSocketChannel>) Class.forName(
-                    "io.netty5.channel.uring.IOUringServerSocketChannel");
+                    "io.netty5.channel.uring.IoUringServerSocketChannel");
             default: throw new UnsupportedOperationException("Unrecognized transport: " + transport);
         }
     }
@@ -264,7 +264,7 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
             case kqueue: return (Class<? extends SocketChannel>) Class.forName(
                     "io.netty5.channel.kqueue.KQueueSocketChannel");
             case io_uring: return (Class<? extends SocketChannel>) Class.forName(
-                    "io.netty5.channel.uring.IOUringSocketChannel");
+                    "io.netty5.channel.uring.IoUringSocketChannel");
             default: throw new UnsupportedOperationException("Unrecognized transport: " + transport);
         }
     }

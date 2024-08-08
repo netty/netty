@@ -35,7 +35,7 @@ public class SockaddrInTest {
 
     @BeforeAll
     public static void loadJNI() {
-        assumeTrue(IOUring.isAvailable());
+        assumeTrue(IoUring.isAvailable());
     }
 
     @Test
