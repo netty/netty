@@ -969,18 +969,13 @@ public final class PlatformDependent {
                 unsafe = AccessController.doPrivileged(new PrivilegedAction<Object>() {
                     @Override
                     public Object run() {
-                        // force JCTools to initialize unsafe. We do this via reflection so we don't reference
-                        // sun.misc.Unsafe.
-                        try {
-                            return UnsafeAccess.class.getField("UNSAFE");
-                        } catch (NoSuchFieldException | SecurityException e) {
-                            return e;
-                        }
+                        // force JCTools to initialize unsafe
+                        return UnsafeAccess.UNSAFE;
                     }
                 });
             }
 
-            if (unsafe == null || unsafe instanceof Throwable) {
+            if (unsafe == null) {
                 logger.debug("org.jctools-core.MpscChunkedArrayQueue: unavailable");
                 USE_MPSC_CHUNKED_ARRAY_QUEUE = false;
             } else {
