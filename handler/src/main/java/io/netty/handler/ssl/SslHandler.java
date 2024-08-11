@@ -1472,6 +1472,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     } else {
                         ctx.fireChannelRead(decodeOut);
                     }
+                    if (decodeOut.refCnt() > 0) {
+                        decodeOut.release();
+                    }
                     decodeOut = null;
                 }
 

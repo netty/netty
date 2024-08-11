@@ -183,6 +183,7 @@ public abstract class SSLEngineTest {
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+            msg.retain();
             receiver.messageReceived(msg);
             latch.countDown();
         }
@@ -1313,10 +1314,15 @@ public abstract class SSLEngineTest {
             verify(receiver).messageReceived(captor.capture());
             dataCapture = captor.getAllValues();
             assertEquals(message, dataCapture.get(0));
+            for (ByteBuf data : dataCapture) {
+                assertEquals(1, data.refCnt());
+            }
         } finally {
             if (dataCapture != null) {
                 for (ByteBuf data : dataCapture) {
-                    data.release();
+                    if (data.refCnt() > 0) {
+                        data.release();
+                    }
                 }
             }
         }
