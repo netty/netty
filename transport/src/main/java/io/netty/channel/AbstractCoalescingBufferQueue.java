@@ -154,9 +154,10 @@ public abstract class AbstractCoalescingBufferQueue {
         ByteBuf toReturn = null;
         ByteBuf entryBuffer = null;
         int originalBytes = bytes;
+        Object entry = null;
         try {
             for (;;) {
-                Object entry = bufAndListenerPairs.poll();
+                entry = bufAndListenerPairs.poll();
                 if (entry == null) {
                     break;
                 }
@@ -196,6 +197,18 @@ public abstract class AbstractCoalescingBufferQueue {
                 }
             }
         } catch (Throwable cause) {
+            // Always decrement to keep things consistent. We decrement directly here and not in a finally-block
+            // to ensure that the state is consistent even if it would be accessed via a listener that is
+            // attached to the promise that we fail below.
+            decrementReadableBytes(originalBytes - bytes);
+
+            // Poll the next element if it's a listener that belongs to the ByteBuf.
+            entry = bufAndListenerPairs.peek();
+            if (entry instanceof ChannelFutureListener) {
+                aggregatePromise.addListener((ChannelFutureListener) entry);
+                bufAndListenerPairs.poll();
+            }
+
             safeRelease(entryBuffer);
             safeRelease(toReturn);
             aggregatePromise.setFailure(cause);
