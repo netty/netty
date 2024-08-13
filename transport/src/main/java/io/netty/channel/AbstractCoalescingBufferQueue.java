@@ -202,14 +202,13 @@ public abstract class AbstractCoalescingBufferQueue {
             // attached to the promise that we fail below.
             decrementReadableBytes(originalBytes - bytes);
 
-            if (entry instanceof ByteBuf) {
-                // Poll the next element if it's a listener that belongs to the ByteBuf.
-                entry = bufAndListenerPairs.peek();
-                if (entry instanceof ChannelFutureListener) {
-                    aggregatePromise.addListener((ChannelFutureListener) entry);
-                    bufAndListenerPairs.poll();
-                }
+            // Poll the next element if it's a listener that belongs to the ByteBuf.
+            entry = bufAndListenerPairs.peek();
+            if (entry instanceof ChannelFutureListener) {
+                aggregatePromise.addListener((ChannelFutureListener) entry);
+                bufAndListenerPairs.poll();
             }
+
             safeRelease(entryBuffer);
             safeRelease(toReturn);
             aggregatePromise.setFailure(cause);
