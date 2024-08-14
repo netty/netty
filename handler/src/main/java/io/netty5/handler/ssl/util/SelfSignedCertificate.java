@@ -72,12 +72,12 @@ public final class SelfSignedCertificate {
             "io.netty5.selfSignedCertificate.defaultNotAfter", 253402300799000L));
 
     /**
-     * FIPS 140-2 encryption requires the RSA key length to be 2048 bits or greater.
-     * Let's use that as a sane default but allow the default to be set dynamically
+     * FIPS 140-2 level 3 encryption requires the ECC key length to be 224 bits or greater.
+     * Let's use 256 bits (prime256v1) as a default but allow the default to be set dynamically
      * for those that need more stringent security requirements.
      */
     private static final int DEFAULT_KEY_LENGTH_BITS =
-            SystemPropertyUtil.getInt("io.netty5.handler.ssl.util.selfSignedKeyStrength", 2048);
+            SystemPropertyUtil.getInt("io.netty5.handler.ssl.util.selfSignedKeyStrength", 256);
 
     private final File certificate;
     private final File privateKey;
@@ -86,7 +86,7 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
-     * <p> Algorithm: RSA </p>
+     * <p> Algorithm: EC </p>
      */
     public SelfSignedCertificate() throws CertificateException {
         this(new Builder());
@@ -94,7 +94,7 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
-     * <p> Algorithm: RSA </p>
+     * <p> Algorithm: EC </p>
      *
      * @param notBefore Certificate is not valid before this time
      * @param notAfter  Certificate is not valid after this time
@@ -119,7 +119,7 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
-     * <p> Algorithm: RSA </p>
+     * <p> Algorithm: EC </p>
      *
      * @param fqdn a fully qualified domain name
      */
@@ -140,7 +140,7 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
-     * <p> Algorithm: RSA </p>
+     * <p> Algorithm: EC </p>
      *
      * @param fqdn      a fully qualified domain name
      * @param notBefore Certificate is not valid before this time
@@ -166,7 +166,7 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
-     * <p> Algorithm: RSA </p>
+     * <p> Algorithm: EC </p>
      *
      * @param fqdn      a fully qualified domain name
      * @param random    the {@link SecureRandom} to use
@@ -192,7 +192,7 @@ public final class SelfSignedCertificate {
 
     /**
      * Creates a new instance.
-     * <p> Algorithm: RSA </p>
+     * <p> Algorithm: EC </p>
      *
      * @param fqdn      a fully qualified domain name
      * @param random    the {@link SecureRandom} to use
@@ -372,7 +372,7 @@ public final class SelfSignedCertificate {
         int bits = DEFAULT_KEY_LENGTH_BITS;
         Date notBefore = DEFAULT_NOT_BEFORE;
         Date notAfter = DEFAULT_NOT_AFTER;
-        String algorithm = "RSA";
+        String algorithm = "EC";
 
         // fields that are populated on demand
         Throwable failure;
