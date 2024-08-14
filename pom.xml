@@ -6187,6 +6187,13 @@
                   <old>method io.netty.resolver.ResolvedAddressTypes io.netty.resolver.dns.DnsNameResolverBuilder::computeResolvedAddressTypes(io.netty.channel.socket.SocketProtocolFamily[])</old>
                   <justification>Ignore changes in Alpha releases</justification>
                 </item>
+                <!-- Issue 14228 -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.xml.XmlFrameDecoder</old>
+                  <justification>Remove split io.netty.handler.codec.xml split package between netty-codec and netty-codec-xml</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
