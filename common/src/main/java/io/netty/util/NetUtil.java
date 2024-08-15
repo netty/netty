@@ -216,10 +216,7 @@ public final class NetUtil {
                     }
                 }
             } catch (Exception e) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Failed to get SOMAXCONN from sysctl and file {}. Default: {}",
-                            file, somaxconn, e);
-                }
+                logger.warn("Failed to get SOMAXCONN from sysctl and file {}. Default: {}", file, somaxconn, e);
             } finally {
                 if (in != null) {
                     try {
