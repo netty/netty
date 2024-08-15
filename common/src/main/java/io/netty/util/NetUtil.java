@@ -175,7 +175,14 @@ public final class NetUtil {
             // - Windows NT Server 4.0+: 200
             // - Mac OS X: 128
             // - Linux kernel > 5.4 : 4096
-            int somaxconn = PlatformDependent.isWindows() ? 200 : (PlatformDependent.isOsx() ? 128 : 4096);
+            int somaxconn;
+            if (PlatformDependent.isWindows()) {
+                somaxconn = 200;
+            } else if (PlatformDependent.isOsx()) {
+                somaxconn = 128;
+            } else {
+                somaxconn = 4096;
+            }
             File file = new File("/proc/sys/net/core/somaxconn");
             BufferedReader in = null;
             try {
