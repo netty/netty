@@ -439,12 +439,5 @@
       "typeReachable": "io.netty.handler.codec.string.StringEncoder"
     },
     "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.netty.handler.codec.xml.XmlFrameDecoder",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.xml.XmlFrameDecoder"
-    },
-    "queryAllPublicMethods": true
   }
 ]

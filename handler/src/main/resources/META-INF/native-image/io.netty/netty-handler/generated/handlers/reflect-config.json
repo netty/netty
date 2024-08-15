@@ -455,13 +455,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.handler.codec.xml.XmlFrameDecoder",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.xml.XmlFrameDecoder"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.netty.handler.flow.FlowControlHandler",
     "condition": {
       "typeReachable": "io.netty.handler.flow.FlowControlHandler"
