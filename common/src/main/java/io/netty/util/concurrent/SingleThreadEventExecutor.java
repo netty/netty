@@ -269,6 +269,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
 
                 if (task != null) {
+                    if (task == WAKEUP_TASK) {
+                        task = null;
+                    }
                     return task;
                 }
             }
