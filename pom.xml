@@ -194,8 +194,6 @@
         <jdk>23</jdk>
       </activation>
       <properties>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -219,8 +217,6 @@
         <jdk>22</jdk>
       </activation>
       <properties>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -240,8 +236,6 @@
       </activation>
       <properties>
         <maven.compiler.release>8</maven.compiler.release>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -260,8 +254,6 @@
       </activation>
       <properties>
         <maven.compiler.release>8</maven.compiler.release>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -281,8 +273,6 @@
       </activation>
       <properties>
         <maven.compiler.release>8</maven.compiler.release>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -302,8 +292,6 @@
       </activation>
       <properties>
         <maven.compiler.release>8</maven.compiler.release>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -323,8 +311,6 @@
       </activation>
       <properties>
         <maven.compiler.release>8</maven.compiler.release>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -345,8 +331,6 @@
       </activation>
       <properties>
         <maven.compiler.release>8</maven.compiler.release>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
@@ -369,8 +353,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -389,8 +371,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -409,8 +389,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -430,8 +408,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -451,8 +427,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- Not use alpn agent as Java11+ supports alpn out of the box -->
-        <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -472,8 +446,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny --add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
-        <!-- Not use alpn agent as Java10 supports alpn out of the box -->
-        <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
         <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
@@ -490,8 +462,6 @@
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny --add-modules java.xml.bind ${argLine.java9.extras}</argLine.java9>
-        <!-- Not use alpn agent as Java9 supports alpn out of the box -->
-        <argLine.alpnAgent />
         <!-- Skip as maven plugin not works with Java9 yet -->
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
@@ -636,23 +606,6 @@
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
       </properties>
     </profile>
-    <profile>
-      <!--
-      This profile exists because either ALPN or NPN can exits on the class path at once, but not both.
-      The JDK version is typically used to distinguish which should be used but there is some overlap
-      where both could be used.  ALPN is the default and this profile is enabled with a -Dforcenpn=true arugument
-      -->
-      <id>forcenpn</id>
-      <activation>
-        <property>
-          <name>forcenpn</name>
-          <value>true</value>
-        </property>
-      </activation>
-      <properties>
-        <jetty.alpnAgent.option>forceNpn=true</jetty.alpnAgent.option>
-      </properties>
-    </profile>
   </profiles>
 
   <properties>
@@ -665,16 +618,12 @@
     <netty.build.version>31</netty.build.version>
     <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
     <bouncycastle.version>1.78.1</bouncycastle.version>
-    <jetty.alpnAgent.version>2.0.10</jetty.alpnAgent.version>
-    <jetty.alpnAgent.path>"${settings.localRepository}"/org/mortbay/jetty/alpn/jetty-alpn-agent/${jetty.alpnAgent.version}/jetty-alpn-agent-${jetty.alpnAgent.version}.jar</jetty.alpnAgent.path>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
       -XX:+HeapDumpOnOutOfMemoryError
     </argLine.common>
     <argLine.jni>-D_</argLine.jni>
-    <!-- Default to ALPN. See forcenpn profile to force NPN -->
-    <argLine.alpnAgent>-javaagent:${jetty.alpnAgent.path}=${jetty.alpnAgent.option}</argLine.alpnAgent>
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
@@ -804,12 +753,6 @@
         <version>1.1.1.v20141010</version>
         <scope>provided</scope> <!-- Provided by npn-boot -->
       </dependency>
-      <dependency>
-        <groupId>org.eclipse.jetty.alpn</groupId>
-        <artifactId>alpn-api</artifactId>
-        <version>1.1.2.v20150522</version>
-        <scope>provided</scope> <!-- Provided by alpn-boot -->
-      </dependency>
 
       <!-- Google Protocol Buffers - completely optional -->
       <dependency>
@@ -870,17 +813,6 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk18on</artifactId>
-        <version>${bouncycastle.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!--
-        Completely optional and only needed for ALPN.
-      -->
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bctls-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
@@ -6347,24 +6279,6 @@
           <useDefaultFormatFileSet>false</useDefaultFormatFileSet>
         </configuration>
       </plugin>
-      <!-- Download the npn-boot.jar in advance to add it to the boot classpath. -->
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>get-jetty-alpn-agent</id>
-            <phase>validate</phase>
-            <goals>
-              <goal>get</goal>
-            </goals>
-            <configuration>
-              <groupId>org.mortbay.jetty.alpn</groupId>
-              <artifactId>jetty-alpn-agent</artifactId>
-              <version>${jetty.alpnAgent.version}</version>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
@@ -6384,7 +6298,7 @@
             <nativeImage.handlerMetadataGroupId>${project.groupId}</nativeImage.handlerMetadataGroupId>
             <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
-          <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
+          <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
           <properties>
             <property>
               <name>listener</name>
@@ -6417,7 +6331,7 @@
               <instructions>
                 <Export-Package>${project.groupId}.*</Export-Package>
                 <!-- enforce JVM vendor package as optional -->
-                <Import-Package>sun.net.dns.*;resolution:=optional,sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.eclipse.jetty.alpn;version="[1,2)";resolution:=optional,org.bouncycastle.jcajce.provider;version="[1.0,2)";resolution:=optional,*</Import-Package>
+                <Import-Package>sun.net.dns.*;resolution:=optional,sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.bouncycastle.jcajce.provider;version="[1.0,2)";resolution:=optional,*</Import-Package>
                 <!-- override "internal" private package convention -->
                 <Private-Package>!*</Private-Package>
               </instructions>

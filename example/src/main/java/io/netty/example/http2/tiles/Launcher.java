@@ -30,8 +30,6 @@ import io.netty.channel.nio.NioIoHandler;
  * <p>
  * Please note that if you intent to use the JDK provider for SSL, you MUST use JDK 1.8.
  * Previous JDK versions don't have any cipher suite that is suitable for use with HTTP/2.
- * The associated ALPN library for your JDK version can be found here:
- * https://eclipse.org/jetty/documentation/current/alpn-chapter.html#alpn-versions.
  * Alternatively, you can use the OpenSsl provider. Please make sure that you run OpenSsl
  * version 1.0.2 or greater.
  * </p>

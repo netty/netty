@@ -58,23 +58,6 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 return null;
             }
         },
-        ALPN_JETTY {
-            @Override
-            boolean isAvailable() {
-                return JettyAlpnSslEngine.isAvailable();
-            }
-
-            @Override
-            Protocol protocol() {
-                return Protocol.ALPN;
-            }
-
-            @Override
-            Provider provider() {
-                // Use the default provider.
-                return null;
-            }
-        },
         ALPN_JAVA {
             @Override
             boolean isAvailable() {
