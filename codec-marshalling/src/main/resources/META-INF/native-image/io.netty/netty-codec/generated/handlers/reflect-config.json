@@ -1,0 +1,30 @@
+[
+  {
+    "name": "io.netty.handler.codec.marshalling.CompatibleMarshallingDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.marshalling.CompatibleMarshallingDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.marshalling.CompatibleMarshallingEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.marshalling.CompatibleMarshallingEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.marshalling.MarshallingDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.marshalling.MarshallingDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.marshalling.MarshallingEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.marshalling.MarshallingEncoder"
+    },
+    "queryAllPublicMethods": true
+  }
+]

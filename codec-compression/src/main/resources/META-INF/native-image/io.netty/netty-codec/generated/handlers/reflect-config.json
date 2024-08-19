@@ -1,0 +1,163 @@
+[
+  {
+    "name": "io.netty.handler.codec.compression.BrotliDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.BrotliDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.BrotliEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.BrotliEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.Bzip2Decoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.Bzip2Decoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.Bzip2Encoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.Bzip2Encoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.FastLzFrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.FastLzFrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.FastLzFrameEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.FastLzFrameEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.JdkZlibDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.JdkZlibDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.JdkZlibEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.JdkZlibEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.JZlibDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.JZlibDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.JZlibEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.JZlibEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.Lz4FrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.Lz4FrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.Lz4FrameEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.Lz4FrameEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.LzfDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.LzfDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.LzfEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.LzfEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.LzmaFrameEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.LzmaFrameEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.SnappyFramedDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.SnappyFramedDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.SnappyFrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.SnappyFrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.SnappyFramedEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.SnappyFramedEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.SnappyFrameEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.SnappyFrameEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.ZlibDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.ZlibDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.ZlibEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.ZlibEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.ZstdEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.ZstdEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.compression.ZstdDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.compression.ZstdDecoder"
+    },
+    "queryAllPublicMethods": true
+  }
+]

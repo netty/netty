@@ -48,6 +48,9 @@ are listed below:
  * `io.netty.codec.socks`
  * `io.netty.codec.stomp`
  * `io.netty.codec.xml`
+ * `io.netty.codec.compression`
+ * `io.netty.codec.marshalling`
+ * `io.netty.codec.protobuf`
  * `io.netty.common`
  * `io.netty.handler`
  * `io.netty.handler.proxy`

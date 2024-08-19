@@ -680,6 +680,9 @@
     <module>codec-socks</module>
     <module>codec-stomp</module>
     <module>codec-xml</module>
+    <module>codec-compression</module>
+    <module>codec-protobuf</module>
+    <module>codec-marshalling</module>
     <module>resolver</module>
     <module>resolver-dns</module>
     <module>resolver-dns-classes-macos</module>
@@ -6124,6 +6127,991 @@
                   <code>java.class.removed</code>
                   <old>class io.netty.handler.ssl.JdkNpnApplicationProtocolNegotiator</old>
                   <justification>Remove io.netty.handler.ssl.JdkNpnApplicationProtocolNegotiator dropped</justification>
+                </item>
+
+                <!-- Protobuf moved to netty-codec-protobuf -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.protobuf.ProtobufDecoder</old>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.protobuf.ProtobufDecoderNano</old>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.protobuf.ProtobufEncoder</old>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.protobuf.ProtobufEncoderNano</old>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder</old>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender</old>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.ByteString</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.CodedInputStream</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.CodedOutputStream</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.DescriptorProto</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.DescriptorProtoOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.EnumDescriptorProto</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.EnumDescriptorProtoOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.EnumOptions</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.EnumOptionsOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.EnumValueDescriptorProto</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.EnumValueDescriptorProtoOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.EnumValueOptionsOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.FieldDescriptorProto</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.FieldDescriptorProtoOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.FieldOptions</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.FieldOptionsOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.FileDescriptorProto</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.FileOptions"</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.FileOptionsOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.MessageOptions</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.MessageOptionsOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.MethodDescriptorProto</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.MethodDescriptorProtoOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.MethodOptions</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.MethodOptionsOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.OneofDescriptorProto</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.OneofDescriptorProtoOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.ServiceDescriptorProto</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.ServiceDescriptorProtoOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.ServiceOptions</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.ServiceOptionsOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.SourceCodeInfo</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.SourceCodeInfoOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.UninterpretedOption</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.UninterpretedOptionOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.Descriptors.Descriptor</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.Descriptors.DescriptorValidationException</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.Descriptors.EnumDescriptor</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.Descriptors.EnumValueDescriptor</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.Descriptors.FieldDescriptor</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.Descriptors.MethodDescriptor</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.Descriptors.FileDescriptor</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.Descriptors.OneofDescriptor</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.Descriptors.ServiceDescriptor</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.Extension&lt;ContainingType extends com.google.protobuf.MessageLite, Type&gt;</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.ExtensionRegistry</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.ExtensionRegistryLite</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.Internal.EnumLite</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.Internal.EnumLiteMap&lt;T extends com.google.protobuf.Internal.EnumLite&gt;</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.InvalidProtocolBufferException</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.LazyFieldLite</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.Message</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.MessageLite</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.MessageLiteOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.Parser&lt;MessageType&gt;</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.ProtocolStringList</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.UninitializedMessageException</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.UnknownFieldSet</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>enum com.google.protobuf.WireFormat.FieldType</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>enum com.google.protobuf.WireFormat.JavaType</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.nano.CodedInputByteBufferNano</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.nano.CodedOutputByteBufferNano</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.nano.InvalidProtocolBufferNanoException</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.nano.MessageNano</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.EnumValueOptions</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.FileOptions</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.AbstractMessage.BuilderParent</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.AbstractMessageLite&lt;MessageType extends com.google.protobuf.AbstractMessageLite&lt;MessageType, BuilderType>, BuilderType extends com.google.protobuf.AbstractMessageLite.Builder&lt;MessageType, BuilderType&gt;&gt;</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.ExtensionRangeOptions</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.ExtensionRangeOptionsOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.OneofOptions</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.OneofOptionsOrBuilder"</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.ExtensionLite&lt;ContainingType extends com.google.protobuf.MessageLite, Type&gt;</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.GeneratedMessageV3</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.Internal.BooleanList</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.Internal.DoubleList</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.Internal.FloatList</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.Internal.IntList</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.Internal.LongList</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.MapEntry&lt;K, V&gt;</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.MapField&lt;K, V&gt;</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.MutabilityOracle</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.OneofOptionsOrBuilder</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.nonPublicPartOfAPI</code>
+                  <new>interface com.google.protobuf.MutabilityOracle</new>
+                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                </item>
+
+                <!-- Marshalling moved to netty-codec-marshalling -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.marshalling.CompatibleMarshallingDecoder</old>
+                  <justification>Marshalling moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.marshalling.CompatibleMarshallingEncoder</old>
+                  <justification>Marshalling moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.marshalling.ContextBoundUnmarshallerProvider</old>
+                  <justification>Marshalling moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.marshalling.DefaultMarshallerProvider</old>
+                  <justification>Marshalling moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.marshalling.DefaultUnmarshallerProvider</old>
+                  <justification>Marshalling moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>interface io.netty.handler.codec.marshalling.MarshallerProvider</old>
+                  <justification>Marshalling moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.marshalling.MarshallingDecoder</old>
+                  <justification>Marshalling moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.marshalling.MarshallingEncoder</old>
+                  <justification>Marshalling moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.marshalling.ThreadLocalMarshallerProvider</old>
+                  <justification>Marshalling moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.marshalling.ThreadLocalUnmarshallerProvider</old>
+                  <justification>Marshalling moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>interface io.netty.handler.codec.marshalling.UnmarshallerProvider</old>
+                  <justification>Marshalling moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.Creator</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.ByteInput</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.ByteOutput</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.ClassExternalizerFactory</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.ClassResolver</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.ClassTable</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.ExceptionListener</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.Externalizer</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.Marshaller</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.MarshallerFactory</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class org.jboss.marshalling.MarshallingConfiguration</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.ObjectResolver</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.ObjectTable</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.SerializabilityChecker</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.StreamHeader</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface org.jboss.marshalling.Unmarshaller</new>
+                  <justification>Protobuf moved to netty-codec-marshalling</justification>
+                </item>
+
+                <!-- Compression moved to netty-codec-compression -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.Brotli</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.BrotliDecoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.BrotliEncoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.BrotliOptions</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.Bzip2Decoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.Bzip2Encoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.CompressionException</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>interface io.netty.handler.codec.compression.CompressionOptions</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.DecompressionException</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.DeflateOptions</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.FastLzFrameDecoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.FastLzFrameEncoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.GzipOptions</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.JZlibDecoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.JZlibEncoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.JdkZlibDecoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.JdkZlibEncoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.Lz4FrameDecoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.Lz4FrameEncoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.Lz4XXHash32</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.LzfDecoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.LzfEncoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.LzmaFrameEncoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.Snappy</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.SnappyFrameDecoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.SnappyFrameEncoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.SnappyFramedDecoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.SnappyFramedEncoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.SnappyOptions</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.StandardCompressionOptions</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.ZlibCodecFactory</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.ZlibDecoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.ZlibEncoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>enum io.netty.handler.codec.compression.ZlibWrapper</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.Zstd</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.ZstdDecoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.ZstdEncoder</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.ZstdOptions</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>enum com.aayushatharva.brotli4j.encoder.Encoder.Mode</new>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.aayushatharva.brotli4j.encoder.Encoder.Parameters</new>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class net.jpountz.lz4.LZ4Compressor</new>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface net.jpountz.lz4.LZ4Decompressor</new>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class net.jpountz.lz4.LZ4Factory</new>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class net.jpountz.lz4.LZ4FastDecompressor</new>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class net.jpountz.lz4.LZ4SafeDecompressor</new>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface net.jpountz.lz4.LZ4UnknownSizeDecompressor</new>
+                  <justification>Compression moved to netty-codec-compression</justification>
                 </item>
               </differences>
             </revapi.differences>
