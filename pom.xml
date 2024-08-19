@@ -746,14 +746,6 @@
         <optional>true</optional>
       </dependency>
 
-      <!-- SPDY and HTTP/2 - completely optional -->
-      <dependency>
-        <groupId>org.eclipse.jetty.npn</groupId>
-        <artifactId>npn-api</artifactId>
-        <version>1.1.1.v20141010</version>
-        <scope>provided</scope> <!-- Provided by npn-boot -->
-      </dependency>
-
       <!-- Google Protocol Buffers - completely optional -->
       <dependency>
         <groupId>com.google.protobuf</groupId>
@@ -6126,6 +6118,13 @@
                   <old>class io.netty.handler.codec.xml.XmlFrameDecoder</old>
                   <justification>Remove split io.netty.handler.codec.xml split package between netty-codec and netty-codec-xml</justification>
                 </item>
+                <!-- Issue -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.ssl.JdkNpnApplicationProtocolNegotiator</old>
+                  <justification>Remove io.netty.handler.ssl.JdkNpnApplicationProtocolNegotiator dropped</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
@@ -6338,7 +6337,7 @@
               <instructions>
                 <Export-Package>${project.groupId}.*</Export-Package>
                 <!-- enforce JVM vendor package as optional -->
-                <Import-Package>sun.net.dns.*;resolution:=optional,sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.bouncycastle.jcajce.provider;version="[1.0,2)";resolution:=optional,*</Import-Package>
+                <Import-Package>sun.net.dns.*;resolution:=optional,sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.bouncycastle.jcajce.provider;version="[1.0,2)";resolution:=optional,*</Import-Package>
                 <!-- override "internal" private package convention -->
                 <Private-Package>!*</Private-Package>
               </instructions>
