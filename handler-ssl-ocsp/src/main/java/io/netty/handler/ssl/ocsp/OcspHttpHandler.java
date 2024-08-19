@@ -34,8 +34,8 @@ final class OcspHttpHandler extends SimpleChannelInboundHandler<FullHttpResponse
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(OcspHttpHandler.class);
     private final Promise<OCSPResp> responseFuture;
 
-    public static final String OCSP_REQUEST_TYPE = "application/ocsp-request";
-    public static final String OCSP_RESPONSE_TYPE = "application/ocsp-response";
+    static final String OCSP_REQUEST_TYPE = "application/ocsp-request";
+    static final String OCSP_RESPONSE_TYPE = "application/ocsp-response";
 
     /**
      * Create new {@link OcspHttpHandler} instance
