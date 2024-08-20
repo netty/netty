@@ -184,7 +184,10 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             offset = 0;
             noToken = true;
         } else {
-            offset = tokenHandler.validateToken(token, sender);
+            // Slice the token before pass it ot the QuicTokenHandler as the implementation might modify
+            // the readerIndex.
+            // See https://github.com/netty/netty-incubator-codec-quic/issues/742
+            offset = tokenHandler.validateToken(token.slice(), sender);
             if (offset == -1) {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("invalid token: {}", token.toString(CharsetUtil.US_ASCII));

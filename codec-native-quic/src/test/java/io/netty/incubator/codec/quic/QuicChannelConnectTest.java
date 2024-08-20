@@ -593,6 +593,84 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         }
     }
 
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testConnectWithTokenValidation(Executor executor) throws Throwable {
+        int numBytes = 8;
+        ChannelActiveVerifyHandler serverQuicChannelHandler = new ChannelActiveVerifyHandler();
+        CountDownLatch serverLatch = new CountDownLatch(1);
+        CountDownLatch clientLatch = new CountDownLatch(1);
+
+        // Disable token validation
+        Channel server = QuicTestUtils.newServer(executor, new QuicTokenHandler() {
+                    @Override
+                    public boolean writeToken(ByteBuf out, ByteBuf dcid, InetSocketAddress address) {
+                        out.writeInt(0)
+                                .writeBytes(dcid, dcid.readerIndex(), dcid.readableBytes());
+                        return true;
+                    }
+
+                    @Override
+                    public int validateToken(ByteBuf token, InetSocketAddress address) {
+                        // Use readInt() so we adjust the readerIndex of the token.
+                        assertEquals(0, token.readInt());
+                        return token.readerIndex();
+                    }
+
+                    @Override
+                    public int maxTokenLength() {
+                        return 96;
+                    }
+                },
+                serverQuicChannelHandler, new BytesCountingHandler(serverLatch, numBytes));
+        InetSocketAddress address = (InetSocketAddress) server.localAddress();
+        Channel channel = QuicTestUtils.newClient(executor);
+        try {
+            ChannelActiveVerifyHandler clientQuicChannelHandler = new ChannelActiveVerifyHandler();
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(clientQuicChannelHandler)
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(address)
+                    .connect()
+                    .get();
+            QuicConnectionAddress localAddress = (QuicConnectionAddress) quicChannel.localAddress();
+            QuicConnectionAddress remoteAddress = (QuicConnectionAddress) quicChannel.remoteAddress();
+            assertNotNull(localAddress);
+            assertNotNull(remoteAddress);
+
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new BytesCountingHandler(clientLatch, numBytes)).get();
+            stream.writeAndFlush(Unpooled.directBuffer().writeZero(numBytes)).sync();
+            clientLatch.await();
+
+            QuicheQuicSslEngine quicheQuicSslEngine = (QuicheQuicSslEngine) quicChannel.sslEngine();
+            assertNotNull(quicheQuicSslEngine);
+            assertEquals(QuicTestUtils.PROTOS[0],
+                    // Just do the cast as getApplicationProtocol() only exists in SSLEngine itself since Java9+ and
+                    // we may run on an earlier version
+                    quicheQuicSslEngine.getApplicationProtocol());
+            stream.close().sync();
+            quicChannel.close().sync();
+            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            assertTrue(closeFuture.isSuccess());
+
+            clientQuicChannelHandler.assertState();
+            serverQuicChannelHandler.assertState();
+
+            assertEquals(serverQuicChannelHandler.localAddress(), remoteAddress);
+            assertEquals(serverQuicChannelHandler.remoteAddress(), localAddress);
+        } finally {
+            serverLatch.await();
+
+            server.close().sync();
+            // Close the parent Datagram channel as well.
+            channel.close().sync();
+
+            shutdown(executor);
+        }
+    }
+
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
     public void testConnectWithoutTokenValidation(Executor executor) throws Throwable {
