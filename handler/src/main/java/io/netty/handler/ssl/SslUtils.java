@@ -305,15 +305,15 @@ final class SslUtils {
      * Return how much bytes can be read out of the encrypted data. Be aware that this method will not increase
      * the readerIndex of the given {@link ByteBuf}.
      *
-     * @param   buffer
-     *                  The {@link ByteBuf} to read from.
-     * @return length
-     *                  The length of the encrypted packet that is included in the buffer or
-     *                  {@link #SslUtils#NOT_ENOUGH_DATA} if not enough data is present in the
-     *                  {@link ByteBuf}. This will return {@link SslUtils#NOT_ENCRYPTED} if
-     *                  the given {@link ByteBuf} is not encrypted at all.
+     * @param   buffer      The {@link ByteBuf} to read from.
+     * @param   offset      The offset to start from.
+     * @param   probeSSLv2  {@code true} if the input {@code buffer} might be SSLv2.
+     * @return              The length of the encrypted packet that is included in the buffer or
+     *                      {@link #SslUtils#NOT_ENOUGH_DATA} if not enough data is present in the
+     *                      {@link ByteBuf}. This will return {@link SslUtils#NOT_ENCRYPTED} if
+     *                      the given {@link ByteBuf} is not encrypted at all.
      */
-    static int getEncryptedPacketLength(ByteBuf buffer, int offset) {
+    static int getEncryptedPacketLength(ByteBuf buffer, int offset, boolean probeSSLv2) {
         int packetLength = 0;
 
         // SSLv3 or TLS - Check ContentType
@@ -328,6 +328,9 @@ final class SslUtils {
                 break;
             default:
                 // SSLv2 or bad data
+                if (!probeSSLv2) {
+                    return NOT_ENCRYPTED;
+                }
                 tls = false;
         }
 

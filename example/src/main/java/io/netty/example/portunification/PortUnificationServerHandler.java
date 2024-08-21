@@ -82,7 +82,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
 
     private boolean isSsl(ByteBuf buf) {
         if (detectSsl) {
-            return SslHandler.isEncrypted(buf);
+            return SslHandler.isEncrypted(buf, false);
         }
         return false;
     }
