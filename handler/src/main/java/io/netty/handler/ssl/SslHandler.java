@@ -1287,7 +1287,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      */
     @Deprecated
     public static boolean isEncrypted(ByteBuf buffer) {
-        return isEncrypted(buffer, true);
+        return isEncrypted(buffer, false);
     }
 
     /**
