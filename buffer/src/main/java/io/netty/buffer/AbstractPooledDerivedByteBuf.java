@@ -83,6 +83,8 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
         // otherwise it is possible that the same AbstractPooledDerivedByteBuf is again obtained and init(...) is
         // called before we actually have a chance to call release(). This leads to call release() on the wrong parent.
         ByteBuf parent = this.parent;
+        // Remove references to parent and root so that they can be GCed for leak detection [netty/netty#14247]
+        this.parent = this.rootParent = null;
         recyclerHandle.unguardedRecycle(this);
         parent.release();
     }
