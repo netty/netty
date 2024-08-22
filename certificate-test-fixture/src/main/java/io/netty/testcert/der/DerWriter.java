@@ -500,16 +500,6 @@ public final class DerWriter implements ByteBufHolder, AutoCloseable {
         return this;
     }
 
-//    public DerWriter writeSet(Consumer<DerWriter> setWriter) {
-//        // Encoding-wise, there's no structural difference between SEQUENCE and SET.
-//        return writeSequence(TAG_SET, setWriter);
-//    }
-//
-//    public DerWriter writeSet(int tag, Consumer<DerWriter> setWriter) {
-//        // Encoding-wise, there's no structural difference between SEQUENCE and SET.
-//        return writeSequence(tag, setWriter);
-//    }
-
     private static final DateTimeFormatter UTC_TIME = new DateTimeFormatterBuilder()
             .appendValueReduced(YEAR, 2, 2, ChronoLocalDate.from(LocalDate.of(1900, 1, 1)))
             .appendValue(MONTH_OF_YEAR, 2)
@@ -611,6 +601,7 @@ public final class DerWriter implements ByteBufHolder, AutoCloseable {
         }
     }
 
+    @FunctionalInterface
     public interface WritableSequence {
         void writeSequence(DerWriter writer);
     }

@@ -23,7 +23,7 @@
     <version>4.2.0.Alpha3-SNAPSHOT</version>
   </parent>
 
-  <artifactId>certificate-test-fixture</artifactId>
+  <artifactId>netty-certificate-test-fixture</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/CertificateTestFixture</name>

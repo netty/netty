@@ -447,7 +447,7 @@ public final class CertificateBuilder {
         for (KeyUsage usage : keyUsages) {
             maxBit = Math.max(usage.bitId, maxBit);
         }
-        boolean[] bits = new boolean[maxBit];
+        boolean[] bits = new boolean[maxBit + 1];
         for (KeyUsage usage : keyUsages) {
             bits[usage.bitId] = true;
         }
@@ -555,7 +555,7 @@ public final class CertificateBuilder {
         }
         KeyPair keyPair = generateKeyPair();
 
-        TBSCertBuilder builder = createCertBuilder(subject, subject, keyPair);
+        TBSCertBuilder builder = createCertBuilder(subject, subject, keyPair, algorithm.signatureType);
 
         addExtensions(builder);
 
@@ -591,7 +591,7 @@ public final class CertificateBuilder {
         }
 
         X500Principal issuerPrincipal = issuerBundle.getCertificate().getSubjectX500Principal();
-        TBSCertBuilder builder = createCertBuilder(issuerPrincipal, subject, keyPair);
+        TBSCertBuilder builder = createCertBuilder(issuerPrincipal, subject, keyPair, signAlg);
 
         addExtensions(builder);
 
@@ -600,7 +600,7 @@ public final class CertificateBuilder {
             throw new IllegalArgumentException(
                     "Cannot sign certificate with issuer bundle that does not have a private key.");
         }
-        Signed signed = new Signed(() -> builder.getEncoded(), algorithm.signatureType, issuerPrivateKey);
+        Signed signed = new Signed(() -> builder.getEncoded(), signAlg, issuerPrivateKey);
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
         X509Certificate cert = (X509Certificate) factory.generateCertificate(signed.toInputStream());
         X509Certificate[] issuerPath = issuerBundle.getCertificatePath();
@@ -633,6 +633,15 @@ public final class CertificateBuilder {
         if (key instanceof DSAPublicKey) {
             throw new IllegalArgumentException("DSA keys are not supported because they are obsolete.");
         }
+        if ("EdDSA".equals(key.getAlgorithm())) {
+            byte[] encoded = key.getEncoded();
+            if (encoded.length <= 44) {
+                return "Ed25519";
+            }
+            if (encoded.length <= 69) {
+                return "Ed448";
+            }
+        }
         throw new IllegalArgumentException("Don't know what signature algorithm is best for " + key);
     }
 
@@ -650,10 +659,11 @@ public final class CertificateBuilder {
         }
     }
 
-    private TBSCertBuilder createCertBuilder(X500Principal issuer, X500Principal subject, KeyPair keyPair) {
+    private TBSCertBuilder createCertBuilder(
+            X500Principal issuer, X500Principal subject, KeyPair keyPair, String signAlg) {
         BigInteger serial = this.serial != null ? this.serial : new BigInteger(159, getSecureRandom());
         PublicKey pubKey = keyPair.getPublic();
-        return new TBSCertBuilder(issuer, subject, serial, notBefore, notAfter, pubKey, algorithm.signatureType);
+        return new TBSCertBuilder(issuer, subject, serial, notBefore, notAfter, pubKey, signAlg);
     }
 
     private SecureRandom getSecureRandom() {
@@ -785,7 +795,7 @@ public final class CertificateBuilder {
     public enum KeyUsage {
         /**
          * For verifying digital signatures, for entity authentication,
-         * for entity authenticatino, or for integrity verification.
+         * for entity authentication, or for integrity verification.
          */
         digitalSignature(0),
         /**
