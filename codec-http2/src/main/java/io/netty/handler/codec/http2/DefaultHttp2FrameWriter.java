@@ -587,9 +587,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 } else {
                     flags = flags.endOfHeaders(true);
                     writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
-                    ctx.write(buf, promiseAggregator.newPromise());
                 }
-
+                ctx.write(buf, promiseAggregator.newPromise());
                 ctx.write(fragment, promiseAggregator.newPromise());
 
             } while (headerBlock.isReadable());
