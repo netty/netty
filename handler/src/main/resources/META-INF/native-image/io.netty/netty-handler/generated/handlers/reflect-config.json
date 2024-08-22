@@ -294,13 +294,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.handler.ssl.ocsp.OcspClientHandler",
-    "condition": {
-      "typeReachable": "io.netty.handler.ssl.ocsp.OcspClientHandler"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.netty.handler.ssl.OptionalSslHandler",
     "condition": {
       "typeReachable": "io.netty.handler.ssl.OptionalSslHandler"

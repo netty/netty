@@ -7113,6 +7113,14 @@
                   <new>interface net.jpountz.lz4.LZ4UnknownSizeDecompressor</new>
                   <justification>Compression moved to netty-codec-compression</justification>
                 </item>
+
+                <!-- Split package fix #14244 -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.ssl.ocsp.OcspClientHandler</old>
+                  <justification>OcspClientHandler moved to netty-codec-ssl-ocsp</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
