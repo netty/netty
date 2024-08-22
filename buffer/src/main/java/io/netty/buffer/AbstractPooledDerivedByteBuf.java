@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.internal.ObjectPool.Handle;
 
@@ -51,6 +52,10 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
     @Override
     public final AbstractByteBuf unwrap() {
+        AbstractByteBuf rootParent = this.rootParent;
+        if (rootParent == null) {
+            throw new IllegalReferenceCountException();
+        }
         return rootParent;
     }
 
