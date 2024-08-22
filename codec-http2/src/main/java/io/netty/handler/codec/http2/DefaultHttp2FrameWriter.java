@@ -580,16 +580,16 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                     if (buf == null) {
                         buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
                         writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
-                        ctx.write(buf, promiseAggregator.newPromise());
                     } else {
-                        ctx.write(buf.retainedSlice(), promiseAggregator.newPromise());
+                        assert !flags.endOfHeaders();
+                        buf = buf.retainedSlice();
                     }
                 } else {
                     flags = flags.endOfHeaders(true);
                     buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
                     writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
-                    ctx.write(buf, promiseAggregator.newPromise());
                 }
+                ctx.write(buf, promiseAggregator.newPromise());
                 ctx.write(fragment, promiseAggregator.newPromise());
 
             } while (headerBlock.isReadable());
