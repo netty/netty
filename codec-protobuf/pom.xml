@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2012 The Netty Project
+  ~ Copyright 2024 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,13 +23,13 @@
     <version>4.2.0.Alpha3-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-codec</artifactId>
+  <artifactId>netty-codec-protobuf</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/Codec</name>
+  <name>Netty/Codec/Protobuf</name>
 
   <properties>
-    <javaModuleName>io.netty.codec</javaModuleName>
+    <javaModuleName>io.netty.codec.protobuf</javaModuleName>
   </properties>
 
   <dependencies>
@@ -48,17 +48,18 @@
       <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
-
     <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec</artifactId>
+      <version>${project.version}</version>
     </dependency>
-
-    <!-- Test dependency for Bzip2 compression codec -->
     <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-compress</artifactId>
-      <scope>test</scope>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.protobuf.nano</groupId>
+      <artifactId>protobuf-javanano</artifactId>
     </dependency>
 
     <!-- Automatic native-image reflection metadata generation for handlers dependencies -->

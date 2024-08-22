@@ -239,6 +239,11 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-compression</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-http</artifactId>
       <scope>compile</scope>
     </dependency>
@@ -287,6 +292,16 @@
           <artifactId>aalto-xml</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-protobuf</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-marshalling</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>

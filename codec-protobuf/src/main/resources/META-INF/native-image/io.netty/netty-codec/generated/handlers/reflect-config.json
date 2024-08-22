@@ -1,0 +1,44 @@
+[
+  {
+    "name": "io.netty.handler.codec.protobuf.ProtobufDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.protobuf.ProtobufDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.protobuf.ProtobufDecoderNano",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.protobuf.ProtobufDecoderNano"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.protobuf.ProtobufEncoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.protobuf.ProtobufEncoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.protobuf.ProtobufEncoderNano",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.protobuf.ProtobufEncoderNano"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender"
+    },
+    "queryAllPublicMethods": true
+  }
+]

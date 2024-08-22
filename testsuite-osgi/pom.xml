@@ -148,6 +148,24 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-protobuf</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-marshalling</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-compression</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>netty-common</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
@@ -240,6 +258,7 @@
             <configuration>
               <name>%bundle.symbolicName%.link</name>
               <value>%url%</value>
+              <separator>${line.separator}</separator>
               <dependencySet>
                 <scope>test</scope>
               </dependencySet>
