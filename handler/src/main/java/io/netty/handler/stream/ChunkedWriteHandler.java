@@ -207,7 +207,11 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     private void doFlush(final ChannelHandlerContext ctx) {
         final Channel channel = ctx.channel();
         if (!channel.isActive()) {
+            // Even after discarding all previous queued objects we should propagate the flush through
+            // to ensure previous written objects via writeAndFlush(...) that were not queued will be flushed and
+            // so eventually fail the promise.
             discard(null);
+            ctx.flush();
             return;
         }
 
