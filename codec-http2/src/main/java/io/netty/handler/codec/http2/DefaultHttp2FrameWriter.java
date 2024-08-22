@@ -572,15 +572,15 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             int fragmentReadableBytes;
             ByteBuf buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
             // When the headerBlock is readable, use this flag to allocate byteBuf once and re-use
-            boolean readableInit = false;
+            boolean reUse = false;
             do {
                 fragmentReadableBytes = min(headerBlock.readableBytes(), maxFrameSize);
                 ByteBuf fragment = headerBlock.readRetainedSlice(fragmentReadableBytes);
 
                 if (headerBlock.isReadable()) {
-                    if (!readableInit) {
+                    if (!reUse) {
                         writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
-                        readableInit = true;
+                        reUse = true;
                     } else {
                         ctx.write(buf.retainedSlice(), promiseAggregator.newPromise());
                     }
