@@ -51,6 +51,11 @@ public class Http2MultiplexHandlerTest extends Http2MultiplexTest<Http2FrameCode
         return true;
     }
 
+    @Override
+    protected boolean useUserEventForPriorityFrame() {
+        return true;
+    }
+
     @Test
     public void sslExceptionTriggersChildChannelException() {
         final LastInboundHandler inboundHandler = new LastInboundHandler();

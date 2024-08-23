@@ -21,6 +21,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -1046,6 +1048,20 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void testStatusWithoutReasonPhrase() {
+        String responseStr = "HTTP/1.1 200 \r\n" +
+                "Content-Length: 0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertEquals(HttpResponseStatus.OK, response.status());
+        HttpContent c = channel.readInbound();
+        c.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void testHeaderNameStartsWithControlChar1c() {
         testHeaderNameStartsWithControlChar(0x1c);
     }
@@ -1112,6 +1128,14 @@ public class HttpResponseDecoderTest {
         responseBuffer.writeByte(controlChar);
         responseBuffer.writeCharSequence(": chunked\r\n\r\n", CharsetUtil.US_ASCII);
         testInvalidHeaders0(responseBuffer);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "HTP/1.1", "HTTP", "HTTP/1x", "Something/1.1", "HTTP/1",
+            "HTTP/1.11", "HTTP/11.1", "HTTP/A.1", "HTTP/1.B"})
+    public void testInvalidVersion(String version) {
+        testInvalidHeaders0(Unpooled.copiedBuffer(
+                version + " 200 OK\n\r\nHost: whatever\r\n\r\n", CharsetUtil.US_ASCII));
     }
 
     private static void testInvalidHeaders0(ByteBuf responseBuffer) {

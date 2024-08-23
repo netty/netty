@@ -207,6 +207,10 @@ public final class LinuxSocket extends Socket {
         setTcpUserTimeout(intValue(), milliseconds);
     }
 
+    void setIpBindAddressNoPort(boolean enabled) throws IOException {
+        setIpBindAddressNoPort(intValue(), enabled ? 1 : 0);
+    }
+
     void setIpFreeBind(boolean enabled) throws IOException {
         setIpFreeBind(intValue(), enabled ? 1 : 0);
     }
@@ -266,6 +270,10 @@ public final class LinuxSocket extends Socket {
 
     int getTcpUserTimeout() throws IOException {
         return getTcpUserTimeout(intValue());
+    }
+
+    boolean isIpBindAddressNoPort() throws IOException {
+        return isIpBindAddressNoPort(intValue()) != 0;
     }
 
     boolean isIpFreeBind() throws IOException {
@@ -442,6 +450,7 @@ public final class LinuxSocket extends Socket {
     private static native int getTcpKeepCnt(int fd) throws IOException;
     private static native int getTcpUserTimeout(int fd) throws IOException;
     private static native int getTimeToLive(int fd) throws IOException;
+    private static native int isIpBindAddressNoPort(int fd) throws IOException;
     private static native int isIpFreeBind(int fd) throws IOException;
     private static native int isIpTransparent(int fd) throws IOException;
     private static native int isIpRecvOrigDestAddr(int fd) throws IOException;
@@ -458,6 +467,7 @@ public final class LinuxSocket extends Socket {
     private static native void setTcpKeepIntvl(int fd, int seconds) throws IOException;
     private static native void setTcpKeepCnt(int fd, int probes) throws IOException;
     private static native void setTcpUserTimeout(int fd, int milliseconds)throws IOException;
+    private static native void setIpBindAddressNoPort(int fd, int ipBindAddressNoPort) throws IOException;
     private static native void setIpFreeBind(int fd, int freeBind) throws IOException;
     private static native void setIpTransparent(int fd, int transparent) throws IOException;
     private static native void setIpRecvOrigDestAddr(int fd, int transparent) throws IOException;

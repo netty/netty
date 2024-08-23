@@ -269,12 +269,13 @@ public final class JdkSslClientContext extends JdkSslContext {
                         X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                         ApplicationProtocolConfig apn, String[] protocols, long sessionCacheSize, long sessionTimeout,
-                        SecureRandom secureRandom, String keyStoreType)
+                        SecureRandom secureRandom, String keyStoreType, String endpointIdentificationAlgorithm)
             throws SSLException {
         super(newSSLContext(sslContextProvider, trustCertCollection, trustManagerFactory,
                             keyCertChain, key, keyPassword, keyManagerFactory, sessionCacheSize,
                             sessionTimeout, secureRandom, keyStoreType),
-                true, ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE, protocols, false);
+                true, ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE, protocols, false,
+                endpointIdentificationAlgorithm);
     }
 
     private static SSLContext newSSLContext(Provider sslContextProvider,
