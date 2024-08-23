@@ -570,7 +570,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         if (headerBlock.isReadable()) {
             // The frame header (and padding) only changes on the last frame, so allocate it once and re-use
             int fragmentReadableBytes = min(headerBlock.readableBytes(), maxFrameSize);
-            ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
+            ByteBuf buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
             writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
 
             do {
@@ -583,7 +583,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                     // The frame header is different for the last frame, so re-allocate and release the old buffer
                     flags = flags.endOfHeaders(true);
                     buf.release();
-                    buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
+                    buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
                     writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
                     ctx.write(buf, promiseAggregator.newPromise());
                 }
