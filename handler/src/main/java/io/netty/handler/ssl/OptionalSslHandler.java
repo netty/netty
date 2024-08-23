@@ -44,7 +44,7 @@ public class OptionalSslHandler extends ByteToMessageDecoder {
         if (in.readableBytes() < SslUtils.SSL_RECORD_HEADER_LENGTH) {
             return;
         }
-        if (SslHandler.isEncrypted(in)) {
+        if (SslHandler.isEncrypted(in, false)) {
             handleSsl(context);
         } else {
             handleNonSsl(context);
