@@ -92,7 +92,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     protected DefaultChannelPipeline(Channel channel) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
         succeededFuture = new SucceededChannelFuture(channel, null);
-        voidPromise =  new VoidChannelPromise(channel, true);
+        voidPromise = new VoidChannelPromise(channel, true);
 
         tail = new TailContext(this);
         head = new HeadContext(this);
@@ -152,7 +152,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return addFirst(null, name, handler);
     }
 
-    private ChannelPipeline internalAdd(EventExecutorGroup group, String name, ChannelHandler handler, String baseName, BiConsumer<AbstractChannelHandlerContext,AbstractChannelHandlerContext> addMethod){
+    private ChannelPipeline internalAdd(EventExecutorGroup group, String name, ChannelHandler handler, String baseName, AddStrategy addStrategy) {
         final AbstractChannelHandlerContext newCtx;
         final AbstractChannelHandlerContext ctx;
         synchronized (this) {
@@ -166,7 +166,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             newCtx = newContext(group, name, handler);
 
-            addMethod.accept(ctx, newCtx);
+            addStrategy.add(ctx, newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
             // In this case we add the context to the pipeline and add a task that will call
@@ -187,17 +187,24 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
-    @Override
-    public final ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, null, (ctx, newCtx) -> addFirst0(newCtx));
+    private interface AddStrategy {
+        void add(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx);
     }
 
-    private void addFirst0(AbstractChannelHandlerContext newCtx) {
-        AbstractChannelHandlerContext nextCtx = head.next;
-        newCtx.prev = head;
-        newCtx.next = nextCtx;
-        head.next = newCtx;
-        nextCtx.prev = newCtx;
+    @Override
+    public final ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler) {
+        return internalAdd(group, name, handler, null, new AddFirstStrategy());
+    }
+
+    private class AddFirstStrategy implements AddStrategy {
+        @Override
+        public void add(AbstractChannelHandlerContext ignore, AbstractChannelHandlerContext newCtx) {
+            AbstractChannelHandlerContext nextCtx = head.next;
+            newCtx.prev = head;
+            newCtx.next = nextCtx;
+            head.next = newCtx;
+            nextCtx.prev = newCtx;
+        }
     }
 
     @Override
@@ -207,15 +214,18 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, null, (ctx, newCtx) -> addLast0(newCtx));
+        return internalAdd(group, name, handler, null, new AddLastStrategy());
     }
 
-    private void addLast0(AbstractChannelHandlerContext newCtx) {
-        AbstractChannelHandlerContext prev = tail.prev;
-        newCtx.prev = prev;
-        newCtx.next = tail;
-        prev.next = newCtx;
-        tail.prev = newCtx;
+    private class AddLastStrategy implements AddStrategy {
+        @Override
+        public void add(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
+            AbstractChannelHandlerContext prev = tail.prev;
+            newCtx.prev = prev;
+            newCtx.next = tail;
+            prev.next = newCtx;
+            tail.prev = newCtx;
+        }
     }
 
     @Override
@@ -226,14 +236,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public final ChannelPipeline addBefore(
             EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, baseName, DefaultChannelPipeline::addBefore0);
+        return internalAdd(group, name, handler, baseName, AddBeforeStrategy.INSTANCE);
     }
 
-    private static void addBefore0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
-        newCtx.prev = ctx.prev;
-        newCtx.next = ctx;
-        ctx.prev.next = newCtx;
-        ctx.prev = newCtx;
+    private enum AddBeforeStrategy implements AddStrategy {
+        INSTANCE;
+
+        @Override
+        public void add(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
+            newCtx.prev = ctx.prev;
+            newCtx.next = ctx;
+            ctx.prev.next = newCtx;
+            ctx.prev = newCtx;
+        }
     }
 
     private String filterName(String name, ChannelHandler handler) {
@@ -252,14 +267,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public final ChannelPipeline addAfter(
             EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, baseName, DefaultChannelPipeline::addAfter0);
+        return internalAdd(group, name, handler, baseName, AddAfterStrategy.INSTANCE);
     }
 
-    private static void addAfter0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
-        newCtx.prev = ctx;
-        newCtx.next = ctx.next;
-        ctx.next.prev = newCtx;
-        ctx.next = newCtx;
+    private enum AddAfterStrategy implements AddStrategy {
+        INSTANCE;
+
+        @Override
+        public void add(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
+            newCtx.prev = ctx;
+            newCtx.next = ctx.next;
+            ctx.next.prev = newCtx;
+            ctx.next = newCtx;
+        }
     }
 
     public final ChannelPipeline addFirst(ChannelHandler handler) {
