@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 
 import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty5.handler.ssl.SslUtils.NOT_ENCRYPTED;
 import static io.netty5.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static io.netty5.handler.ssl.SslUtils.DTLS_1_0;
 import static io.netty5.handler.ssl.SslUtils.DTLS_1_2;
@@ -34,6 +35,7 @@ import static io.netty5.handler.ssl.SslUtils.DTLS_1_3;
 import static io.netty5.handler.ssl.SslUtils.NOT_ENOUGH_DATA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,8 +57,8 @@ public class SslUtilsTest {
             try (var iterator = buffer.forEachComponent()) {
                 var component = iterator.firstReadable();
                 ByteBuffer[] byteBuffers = { component.readableBuffer() };
-                assertEquals(getEncryptedPacketLength(byteBuffers, 0),
-                             getEncryptedPacketLength(copy, 0));
+                assertEquals(getEncryptedPacketLength(byteBuffers, 0, true),
+                             getEncryptedPacketLength(copy, 0, true));
                 assertNull(component.nextReadable()); // Only one component expected here.
             }
         }
@@ -86,7 +88,7 @@ public class SslUtilsTest {
                               .writeByte((byte) SslUtils.SSL_CONTENT_TYPE_HANDSHAKE)
                               .writeShort((short) SslUtils.GMSSL_PROTOCOL_VERSION)
                               .writeShort((short) bodyLength)) {
-            int packetLength = getEncryptedPacketLength(buf, 0);
+            int packetLength = getEncryptedPacketLength(buf, 0, true);
             assertEquals(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH, packetLength);
         }
     }
@@ -101,7 +103,7 @@ public class SslUtilsTest {
             try (var iterable = buf.forEachComponent()) {
                 var component = iterable.firstReadable();
                 assertNotNull(component);
-                int packetLength = getEncryptedPacketLength(new ByteBuffer[]{ component.readableBuffer() }, 0);
+                int packetLength = getEncryptedPacketLength(new ByteBuffer[]{ component.readableBuffer() }, 0, true);
                 assertEquals(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH, packetLength);
             }
         }
@@ -118,7 +120,7 @@ public class SslUtilsTest {
                 .writeBytes(new byte[6]) // sequence number
                 .writeShort(bodyLength)) {
 
-            int packetLength = getEncryptedPacketLength(buf, 0);
+            int packetLength = getEncryptedPacketLength(buf, 0, true);
             // bodyLength + DTLS_RECORD_HEADER_LENGTH = 65 + 13 = 78
             assertEquals(78, packetLength);
         }
@@ -141,7 +143,7 @@ public class SslUtilsTest {
                 .writeBytes(new byte[6]) // sequence number
                 .writeShort(bodyLength)
                 .writeBytes(new byte[65])) {
-            int packetLength = getEncryptedPacketLength(buf, 0);
+            int packetLength = getEncryptedPacketLength(buf, 0, true);
             assertEquals(78, packetLength);
         }
     }
@@ -156,7 +158,7 @@ public class SslUtilsTest {
                 .writeShort((short) 0) // epoch
                 .writeBytes(new byte[6]) // sequence number
                 .writeByte((byte) 0)) {
-            int packetLength = getEncryptedPacketLength(buf, 0);
+            int packetLength = getEncryptedPacketLength(buf, 0, true);
             assertEquals(NOT_ENOUGH_DATA, packetLength);
         }
     }
@@ -169,5 +171,19 @@ public class SslUtilsTest {
         // see https://datatracker.ietf.org/doc/html/rfc6066#section-3
         // it has to be test.local to qualify as SNI
         assertFalse(SslUtils.isValidHostNameForSNI("test"), "SNI has to be FQDN");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    public void probeForSSLv2(boolean probeSSLv2) {
+        try (Buffer buf = offHeapAllocator().copyOf(
+                new byte[] { 0x30, (byte) 0x82, 0x0c, 0x48, 0x02, 0x01, 0x01, 0x01 })) {
+            int packetLength = getEncryptedPacketLength(buf, 0, probeSSLv2);
+            if (probeSSLv2) {
+                assertNotEquals(NOT_ENCRYPTED, packetLength);
+            } else {
+                assertEquals(NOT_ENCRYPTED, packetLength);
+            }
+        }
     }
 }

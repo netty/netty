@@ -1147,7 +1147,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                     return newResultMayFinishHandshake(BUFFER_UNDERFLOW, status, 0, 0);
                 }
 
-                packetLength = SslUtils.getEncryptedPacketLength(srcs, srcsOffset);
+                packetLength = SslUtils.getEncryptedPacketLength(srcs, srcsOffset, true);
                 if (packetLength == SslUtils.NOT_ENCRYPTED) {
                     throw new NotSslRecordException("not an SSL/TLS record");
                 }

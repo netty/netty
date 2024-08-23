@@ -75,7 +75,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder {
                         case SslUtils.SSL_CONTENT_TYPE_CHANGE_CIPHER_SPEC:
                             // fall-through
                         case SslUtils.SSL_CONTENT_TYPE_ALERT:
-                            final int len = SslUtils.getEncryptedPacketLength(in, readerIndex);
+                            final int len = SslUtils.getEncryptedPacketLength(in, readerIndex, true);
 
                             // Not an SSL/TLS packet
                             if (len == SslUtils.NOT_ENCRYPTED) {

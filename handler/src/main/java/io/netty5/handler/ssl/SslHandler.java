@@ -1120,13 +1120,35 @@ public class SslHandler extends ByteToMessageDecoder {
      *                  {@code true} if the {@link Buffer} is encrypted, {@code false} otherwise.
      * @throws IllegalArgumentException
      *                  Is thrown if the given {@link Buffer} has not at least 5 bytes to read.
+     * @deprecated use {@link #isEncrypted(Buffer, boolean)}.
      */
+    @Deprecated
     public static boolean isEncrypted(Buffer buffer) {
+        return isEncrypted(buffer, false);
+    }
+
+    /**
+     * Returns {@code true} if the given {@link Buffer} is encrypted. Be aware that this method
+     * will not increase the readerIndex of the given {@link Buffer}.
+     *
+     * @param   buffer
+     *                  The {@link Buffer} to read from. Be aware that it must have at least 5 bytes to read,
+     *                  otherwise it will throw an {@link IllegalArgumentException}.
+     * @return encrypted
+     *                  {@code true} if the {@link Buffer} is encrypted, {@code false} otherwise.
+     * @param probeSSLv2
+     *                  {@code true} if the input {@code buffer} might be SSLv2. If {@code true} is used this
+     *                  methods might produce false-positives in some cases so it's strongly suggested to
+     *                  use {@code false}.
+     * @throws IllegalArgumentException
+     *                  Is thrown if the given {@link Buffer} has not at least 5 bytes to read.
+     */
+    public static boolean isEncrypted(Buffer buffer, boolean probeSSLv2) {
         if (buffer.readableBytes() < SslUtils.SSL_RECORD_HEADER_LENGTH) {
             throw new IllegalArgumentException(
                     "buffer must have at least " + SslUtils.SSL_RECORD_HEADER_LENGTH + " readable bytes");
         }
-        return getEncryptedPacketLength(buffer, buffer.readerOffset()) != SslUtils.NOT_ENCRYPTED;
+        return getEncryptedPacketLength(buffer, buffer.readerOffset(), probeSSLv2) != SslUtils.NOT_ENCRYPTED;
     }
 
     private void decodeJdkCompatible(ChannelHandlerContext ctx, Buffer in) throws NotSslRecordException {
@@ -1142,7 +1164,7 @@ public class SslHandler extends ByteToMessageDecoder {
             if (readableBytes < SslUtils.SSL_RECORD_HEADER_LENGTH) {
                 return;
             }
-            packetLength = getEncryptedPacketLength(in, in.readerOffset());
+            packetLength = getEncryptedPacketLength(in, in.readerOffset(), true);
             if (packetLength == SslUtils.NOT_ENCRYPTED) {
                 // Not an SSL/TLS packet
                 NotSslRecordException e = new NotSslRecordException(

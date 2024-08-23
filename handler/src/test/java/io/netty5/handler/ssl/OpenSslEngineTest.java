@@ -521,7 +521,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
             // flip the buffer so we can verify we produced a full length buffer.
             dst.flip();
 
-            int length = SslUtils.getEncryptedPacketLength(new ByteBuffer[] { dst }, 0);
+            int length = SslUtils.getEncryptedPacketLength(new ByteBuffer[] { dst }, 0, true);
             assertEquals(length, dst.remaining());
         } finally {
             cleanupClientSslEngine(clientEngine);

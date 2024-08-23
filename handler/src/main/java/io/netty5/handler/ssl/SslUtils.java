@@ -305,20 +305,15 @@ final class SslUtils {
      * Return how many bytes can be read out of the encrypted data. Be aware this method will not increase
      * the readerIndex of the given {@link Buffer}.
      *
-     * @param   buffer
-     *                  The {@link Buffer} to read from. Be aware it must have at least
-     *                  {@link #SSL_RECORD_HEADER_LENGTH} bytes to read,
-     *                  otherwise it will throw an {@link IllegalArgumentException}.
-     * @return length
-     *                  The length of the encrypted packet that is included in the buffer or
-     *                  {@link #SslUtils#NOT_ENOUGH_DATA} if not enough data is present in the
-     *                  {@link Buffer}. This will return {@link SslUtils#NOT_ENCRYPTED} if
-     *                  the given {@link Buffer} is not encrypted at all.
-     * @throws IllegalArgumentException
-     *                  Is thrown if the given {@link Buffer} has not at least {@link #SSL_RECORD_HEADER_LENGTH}
-     *                  bytes to read.
+     * @param   buffer      The {@link Buffer} to read from.
+     * @param   offset      The offset to start from.
+     * @param   probeSSLv2  {@code true} if the input {@code buffer} might be SSLv2.
+     * @return              The length of the encrypted packet that is included in the buffer or
+     *                      {@link #SslUtils#NOT_ENOUGH_DATA} if not enough data is present in the
+     *                      {@link Buffer}. This will return {@link SslUtils#NOT_ENCRYPTED} if
+     *                      the given {@link Buffer} is not encrypted at all.
      */
-    static int getEncryptedPacketLength(Buffer buffer, int offset) {
+    static int getEncryptedPacketLength(Buffer buffer, int offset, boolean probeSSLv2) {
         int packetLength = 0;
 
         // SSLv3 or TLS - Check ContentType
@@ -333,6 +328,9 @@ final class SslUtils {
                 break;
             default:
                 // SSLv2 or bad data
+                if (!probeSSLv2) {
+                    return NOT_ENCRYPTED;
+                }
                 tls = false;
         }
 
@@ -393,12 +391,12 @@ final class SslUtils {
                 buffer.getShort(offset) : Short.reverseBytes(buffer.getShort(offset));
     }
 
-    static int getEncryptedPacketLength(ByteBuffer[] buffers, int offset) {
+    static int getEncryptedPacketLength(ByteBuffer[] buffers, int offset, boolean probeSSLv2) {
         ByteBuffer buffer = buffers[offset];
 
         // Check if everything we need is in one ByteBuffer. If so we can make use of the fast-path.
         if (buffer.remaining() >= SSL_RECORD_HEADER_LENGTH) {
-            return getEncryptedPacketLength(buffer);
+            return getEncryptedPacketLength(buffer, probeSSLv2);
         }
 
         // We need to copy 5 bytes into a temporary buffer, so we can parse out the packet length easily.
@@ -414,10 +412,10 @@ final class SslUtils {
 
         // Done, flip the buffer so we can read from it.
         tmp.flip();
-        return getEncryptedPacketLength(tmp);
+        return getEncryptedPacketLength(tmp, probeSSLv2);
     }
 
-    private static int getEncryptedPacketLength(ByteBuffer buffer) {
+    private static int getEncryptedPacketLength(ByteBuffer buffer, boolean probeSSLv2) {
         int packetLength = 0;
         int pos = buffer.position();
         // SSLv3 or TLS - Check ContentType
@@ -432,6 +430,9 @@ final class SslUtils {
                 break;
             default:
                 // SSLv2 or bad data
+                if (!probeSSLv2) {
+                    return NOT_ENCRYPTED;
+                }
                 tls = false;
         }
 
