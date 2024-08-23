@@ -37,7 +37,6 @@ import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.BiConsumer;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
