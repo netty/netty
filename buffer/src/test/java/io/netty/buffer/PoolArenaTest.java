@@ -146,6 +146,10 @@ public class PoolArenaTest {
         assertEquals(1, metric.numSmallAllocations());
         assertEquals(1, metric.numNormalDeallocations());
         assertEquals(1, metric.numNormalAllocations());
+
+        assertEquals(1, metric.numChunkAllocations());
+        assertEquals(0, metric.numChunkDeallocations());
+        assertEquals(1, metric.numActiveChunks());
     }
 
     @Test

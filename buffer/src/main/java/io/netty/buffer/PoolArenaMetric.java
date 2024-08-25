@@ -93,6 +93,11 @@ public interface PoolArenaMetric extends SizeClassesMetric {
     long numHugeAllocations();
 
     /**
+     * Return the number of chunks allocations done via the arena.
+     */
+    long numChunkAllocations();
+
+    /**
      * Return the number of deallocations done via the arena. This includes all sizes.
      */
     long numDeallocations();
@@ -121,6 +126,11 @@ public interface PoolArenaMetric extends SizeClassesMetric {
     long numHugeDeallocations();
 
     /**
+     * Return the number of chunk deallocations done via the arena.
+     */
+    long numChunkDeallocations();
+
+    /**
      * Return the number of currently active allocations.
      */
     long numActiveAllocations();
@@ -147,6 +157,11 @@ public interface PoolArenaMetric extends SizeClassesMetric {
      * Return the number of currently active huge allocations.
      */
     long numActiveHugeAllocations();
+
+    /**
+     * Return the number of currently active chunks.
+     */
+    long numActiveChunks();
 
     /**
      * Return the number of active bytes that are currently allocated by the arena.
