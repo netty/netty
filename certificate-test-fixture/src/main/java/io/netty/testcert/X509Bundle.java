@@ -133,7 +133,7 @@ public final class X509Bundle {
      * @return The certificate path list.
      */
     public List<X509Certificate> getCertificatePathList() {
-        return List.of(certPath);
+        return Arrays.asList(certPath);
     }
 
     /**

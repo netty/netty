@@ -25,6 +25,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,7 +50,7 @@ public final class RevocationServer {
                     return;
                 }
                 byte[] crl = generateCrl(info);
-                exchange.getResponseHeaders().put("Content-Type", List.of("application/pkix-crl"));
+                exchange.getResponseHeaders().put("Content-Type", Collections.singletonList("application/pkix-crl"));
                 exchange.sendResponseHeaders(200, crl.length);
                 try (OutputStream out = exchange.getResponseBody()) {
                     out.write(crl);
