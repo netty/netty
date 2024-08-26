@@ -15,9 +15,10 @@
  */
 package io.netty.testcert.x509;
 
-import io.netty.buffer.ByteBufInputStream;
+import io.netty.testcert.X509Bundle;
 import io.netty.testcert.der.DerWriter;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -27,10 +28,14 @@ import java.security.SignatureException;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-public class Signed {
+public final class Signed {
     private final byte[] toBeSigned;
     private final String algorithmIdentifier;
     private final PrivateKey privateKey;
+
+    public Signed(Supplier<byte[]> toBeSigned, X509Bundle signer) {
+        this(toBeSigned, signer.getCertificate().getSigAlgName(), signer.getKeyPair().getPrivate());
+    }
 
     public Signed(Supplier<byte[]> toBeSigned, String algorithmIdentifier, PrivateKey privateKey) {
         this.toBeSigned = toBeSigned.get();
@@ -38,7 +43,7 @@ public class Signed {
         this.privateKey = privateKey;
     }
 
-    public InputStream toInputStream() throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    public byte[] getEncoded() throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         Signature signature = Signature.getInstance(algorithmIdentifier);
         signature.initSign(privateKey);
         signature.update(toBeSigned);
@@ -49,7 +54,11 @@ public class Signed {
                 AlgorithmIdentifier.writeAlgorithmId(algorithmIdentifier, writer);
                 writer.writeBitString(signatureBytes, 0);
             });
-            return new ByteBufInputStream(der.retain().content(), true);
+            return der.getBytes();
         }
+    }
+
+    public InputStream toInputStream() throws NoSuchAlgorithmException, SignatureException, InvalidKeyException {
+        return new ByteArrayInputStream(getEncoded());
     }
 }

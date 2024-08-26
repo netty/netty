@@ -23,16 +23,16 @@ public final class AlgorithmIdentifier {
 
     public static void writeAlgorithmId(String algorithmIdentifier, DerWriter writer) {
         switch (algorithmIdentifier) {
-            case "SHA256WITHECDSA":
+            case "SHA256withECDSA":
                 writer.writeSequence(w -> w.writeObjectIdentifier("1.2.840.10045.4.3.2"));
                 break;
-            case "SHA384WITHECDSA":
+            case "SHA384withECDSA":
                 writer.writeSequence(w -> w.writeObjectIdentifier("1.2.840.10045.4.3.3"));
                 break;
-            case "SHA256WITHRSA":
+            case "SHA256withRSA":
                 writer.writeSequence(w -> w.writeObjectIdentifier("1.2.840.113549.1.1.11"));
                 break;
-            case "SHA384WITHRSA":
+            case "SHA384withRSA":
                 writer.writeSequence(w -> w.writeObjectIdentifier("1.2.840.113549.1.1.12"));
                 break;
             case "Ed25519":

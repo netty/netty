@@ -42,6 +42,7 @@ import java.util.function.Consumer;
 
 import static java.time.temporal.ChronoField.DAY_OF_MONTH;
 import static java.time.temporal.ChronoField.HOUR_OF_DAY;
+import static java.time.temporal.ChronoField.MILLI_OF_SECOND;
 import static java.time.temporal.ChronoField.MINUTE_OF_HOUR;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
@@ -577,6 +578,10 @@ public final class DerWriter implements ByteBufHolder, AutoCloseable {
             .appendValue(HOUR_OF_DAY, 2)
             .appendValue(MINUTE_OF_HOUR, 2)
             .appendValue(SECOND_OF_MINUTE, 2)
+            .optionalStart()
+            .appendLiteral('.')
+            .appendValue(MILLI_OF_SECOND)
+            .optionalEnd()
             .optionalStart()
             .appendOffset("+HHMM", "Z")
             .toFormatter(Locale.ROOT);

@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.security.auth.x500.X500Principal;
 
-public class TBSCertBuilder implements DerWriter.WritableSequence {
+public final class TBSCertBuilder implements DerWriter.WritableSequence {
     private final X500Principal issuer;
     private final X500Principal subject;
     private final BigInteger serial;

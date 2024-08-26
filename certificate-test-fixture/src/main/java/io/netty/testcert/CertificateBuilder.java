@@ -629,21 +629,21 @@ public final class CertificateBuilder {
         if (key instanceof RSAPublicKey) {
             RSAPublicKey rsa = (RSAPublicKey) key;
             if (rsa.getModulus().bitLength() < 4096) {
-                return "SHA256WITHRSA";
+                return "SHA256withRSA";
             }
-            return "SHA384WITHRSA";
+            return "SHA384withRSA";
         }
         if (key instanceof ECPublicKey) {
             ECPublicKey ec = (ECPublicKey) key;
             int size = ec.getW().getAffineX().bitLength();
             // Note: the coords are not guaranteed to use up all available bits, hence less-than-or-equal checks.
             if (size <= 256) {
-                return "SHA256WITHECDSA";
+                return "SHA256withECDSA";
             }
             if (size <= 384) {
-                return "SHA384WITHECDSA";
+                return "SHA384withECDSA";
             }
-            return "SHA512WITHECDSA";
+            return "SHA512withECDSA";
         }
         if (key instanceof DSAPublicKey) {
             throw new IllegalArgumentException("DSA keys are not supported because they are obsolete.");
@@ -736,42 +736,42 @@ public final class CertificateBuilder {
          * <p>
          * This algorithm is older than the Edwards curves, and are more widely supported.
          */
-        ecp256("EC", new ECGenParameterSpec("secp256r1"), "SHA256WITHECDSA"),
+        ecp256("EC", new ECGenParameterSpec("secp256r1"), "SHA256withECDSA"),
         /**
          * The NIST P-384 elliptic curve algorithm, offer fast key generation, signing, and verification,
          * with small keys and signatures, at 192-bits of security strength.
          * <p>
          * This algorithm is older than the Edwards curves, and are more widely supported.
          */
-        ecp384("EC", new ECGenParameterSpec("secp384r1"), "SHA384WITHECDSA"),
+        ecp384("EC", new ECGenParameterSpec("secp384r1"), "SHA384withECDSA"),
         /**
          * The 2048-bit RSA algorithm offer roughly 112-bits of security strength, at the cost of large keys
          * and slightly expensive key generation.
          * <p>
          * This algorithm enjoy the widest support and compatibility, though.
          */
-        rsa2048("RSA", new RSAKeyGenParameterSpec(2048, RSAKeyGenParameterSpec.F4), "SHA256WITHRSA"),
+        rsa2048("RSA", new RSAKeyGenParameterSpec(2048, RSAKeyGenParameterSpec.F4), "SHA256withRSA"),
         /**
          * The 3072-bit RSA algorithm offer roughly 128-bits of security strength, at the cost of large keys
          * and fairly expensive key generation.
          * <p>
          * RSA enjoy pretty wide compatibility, though not all systems support keys this large.
          */
-        rsa3072("RSA", new RSAKeyGenParameterSpec(3072, RSAKeyGenParameterSpec.F4), "SHA256WITHRSA"),
+        rsa3072("RSA", new RSAKeyGenParameterSpec(3072, RSAKeyGenParameterSpec.F4), "SHA256withRSA"),
         /**
          * The 4096-bit RSA algorithm offer roughly greater than 128-bits of security strength,
          * at the cost of large keys and very expensive key generation.
          * <p>
          * RSA enjoy pretty wide compatibility, though not all systems support keys this large.
          */
-        rsa4096("RSA", new RSAKeyGenParameterSpec(4096, RSAKeyGenParameterSpec.F4), "SHA384WITHRSA"),
+        rsa4096("RSA", new RSAKeyGenParameterSpec(4096, RSAKeyGenParameterSpec.F4), "SHA384withRSA"),
         /**
          * The 8192-bit RSA algorithm offer roughly greater than 192-bits of security strength,
          * at the cost of very large keys and extremely expensive key generation.
          * <p>
          * RSA enjoy pretty wide compatibility, though not all systems support keys this large.
          */
-        rsa8192("RSA", new RSAKeyGenParameterSpec(8192, RSAKeyGenParameterSpec.F4), "SHA384WITHRSA"),
+        rsa8192("RSA", new RSAKeyGenParameterSpec(8192, RSAKeyGenParameterSpec.F4), "SHA384withRSA"),
         /**
          * The Ed25519 algorithm offer fast key generation, signing, and verification,
          * with very small keys and signatures, at 128-bits of security strength.

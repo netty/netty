@@ -35,7 +35,7 @@ public final class DistributionPoint implements DerWriter.WritableSequence {
     @Override
     public void writeSequence(DerWriter writer) {
         GeneralNames fullNames = new GeneralNames(fullName);
-        writer.writeExplicit(DerWriter.TAG_CONTEXT,
+        writer.writeExplicit(DerWriter.TAG_CONTEXT|DerWriter.TAG_CONSTRUCTED,
                 w -> fullNames.writeTo(DerWriter.TAG_CONSTRUCTED|DerWriter.TAG_CONTEXT, w));
         if (issuer != null) {
             GeneralNames issuerNames = new GeneralNames(issuer);

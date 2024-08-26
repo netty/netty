@@ -45,8 +45,11 @@ public final class GeneralName {
 
     public static GeneralName otherName(String oid, byte[] value) {
         try (DerWriter der = new DerWriter()) {
-            der.writeObjectIdentifier(oid);
-            der.writeRawDER(value);
+            der.writeSequence(DerWriter.TAG_CONTEXT|DerWriter.TAG_CONSTRUCTED, w -> {
+                w.writeObjectIdentifier(oid);
+                w.writeExplicit(DerWriter.TAG_CONTEXT|DerWriter.TAG_CONSTRUCTED,
+                        valueWriter -> valueWriter.writeRawDER(value));
+            });
             return new GeneralName(der.getBytes());
         }
     }
@@ -74,8 +77,12 @@ public final class GeneralName {
         return directoryName(new X500Principal(x500Name));
     }
 
-    public static GeneralName directoryName(X500Principal x500Principal) {
-        return new GeneralName(x500Principal.getEncoded());
+    public static GeneralName directoryName(X500Principal name) {
+        try (DerWriter der = new DerWriter()) {
+            der.writeExplicit(DerWriter.TAG_CONTEXT|DerWriter.TAG_CONSTRUCTED|4,
+                    w -> w.writeRawDER(name.getEncoded()));
+            return new GeneralName(der.getBytes());
+        }
     }
 
     public static GeneralName uriName(String uri) throws URISyntaxException {

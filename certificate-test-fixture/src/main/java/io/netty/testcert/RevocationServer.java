@@ -16,38 +16,26 @@
 package io.netty.testcert;
 
 import com.sun.net.httpserver.HttpServer;
-//import org.bouncycastle.asn1.ASN1Encodable;
-//import org.bouncycastle.asn1.ASN1EncodableVector;
-//import org.bouncycastle.asn1.ASN1Integer;
-//import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-//import org.bouncycastle.asn1.DERBitString;
-//import org.bouncycastle.asn1.DERSequence;
-//import org.bouncycastle.asn1.x500.X500Name;
-//import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
-//import org.bouncycastle.asn1.x509.CertificateList;
-//import org.bouncycastle.asn1.x509.TBSCertList;
-//import org.bouncycastle.asn1.x509.Time;
+import io.netty.testcert.x509.CertificateList;
+import io.netty.testcert.x509.Signed;
 
-import java.io.IOException;
 import java.io.OutputStream;
-import java.io.UncheckedIOException;
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-final class RevocationServer {
+public final class RevocationServer {
     private final HttpServer crlServer;
     private final String crlBaseAddress;
     private final ConcurrentHashMap<String, CrlInfo> paths;
 
     RevocationServer() throws Exception {
+        // Use the built-in HttpServer to avoid any circular dependencies.
         crlServer = HttpServer.create(new InetSocketAddress(0), 0);
         crlBaseAddress = "http://localhost:" + crlServer.getAddress().getPort();
         paths = new ConcurrentHashMap<>();
@@ -109,11 +97,11 @@ final class RevocationServer {
         }
     }
 
-    public void revoke(X509Bundle cert, Date date) {
+    public void revoke(X509Bundle cert, Instant time) {
         X509Certificate issuer = cert.getCertificatePathWithRoot()[1];
         for (CrlInfo info : paths.values()) {
             if (info.issuer.getCertificate().equals(issuer)) {
-                info.revokedCerts.put(cert, date);
+                info.revokedCerts.put(cert.getCertificate().getSerialNumber(), time);
                 return;
             }
         }
@@ -129,52 +117,22 @@ final class RevocationServer {
     }
 
     private static byte[] generateCrl(CrlInfo info) {
-        X509Bundle root = info.issuer;
-        Map<X509Bundle, Date> certs = info.revokedCerts;
-
-//        ASN1EncodableVector revokedCertsVector = new ASN1EncodableVector(certs.size());
-//        for (Map.Entry<X509Bundle, Date> entry : certs.entrySet()) {
-//            ASN1EncodableVector vector = new ASN1EncodableVector(3);
-//            vector.add(new ASN1Integer(entry.getKey().getCertificate().getSerialNumber()));
-//            vector.add(new Time(entry.getValue()));
-//            revokedCertsVector.add(new DERSequence(vector));
-//        }
-//
-//        ASN1EncodableVector tbsListVector = new ASN1EncodableVector(6);
-//        tbsListVector.add(new ASN1Integer(1L)); // Version v2
-//        String algorithmOID = root.getCertificate().getSigAlgOID();
-//        AlgorithmIdentifier algorithm = new AlgorithmIdentifier(new ASN1ObjectIdentifier(algorithmOID));
-//        tbsListVector.add(algorithm);
-//        tbsListVector.add(X500Name.getInstance(root.getCertificate().getSubjectX500Principal().getEncoded()));
-//        Instant now = Instant.now();
-//        tbsListVector.add(new Time(new Date(now.toEpochMilli())));
-//        tbsListVector.add(new Time(new Date(now.plus(1, ChronoUnit.MINUTES).toEpochMilli())));
-//        tbsListVector.add(new DERSequence(revokedCertsVector));
-//        TBSCertList certList = new TBSCertList(new DERSequence(tbsListVector));
-//
-//        DERBitString signature;
-//        try {
-//            Signature sig = Signature.getInstance(root.getCertificate().getSigAlgName());
-//            sig.initSign(root.getKeyPair().getPrivate());
-//            sig.update(certList.getEncoded("DER"));
-//            signature = new DERBitString(sig.sign());
-//        } catch (Exception e) {
-//            throw new IllegalStateException("Failed to sign CRL", e);
-//        }
-//
-//        try {
-//            return CertificateList.getInstance(new DERSequence(
-//                    new ASN1Encodable[]{certList, algorithm, signature})).getEncoded("DER");
-//        } catch (IOException e) {
-//            throw new UncheckedIOException("Unexpectedly could not DER encode certificate revocation list", e);
-//        }
-        return null;
+        X509Bundle issuer = info.issuer;
+        Map<BigInteger, Instant> certs = info.revokedCerts;
+        Instant now = Instant.now();
+        CertificateList list = new CertificateList(issuer, now, now.plusMillis(100), certs.entrySet());
+        try {
+            Signed signed = new Signed(list::getEncoded, issuer);
+            return signed.getEncoded();
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to sign CRL", e);
+        }
     }
 
     private static final class CrlInfo {
         private final X509Bundle issuer;
         private final URI uri;
-        private final Map<X509Bundle, Date> revokedCerts;
+        private final Map<BigInteger, Instant> revokedCerts;
 
         CrlInfo(X509Bundle issuer, URI uri) {
             this.issuer = issuer;
