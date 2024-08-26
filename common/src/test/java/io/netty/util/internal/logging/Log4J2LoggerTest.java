@@ -17,8 +17,7 @@ package io.netty.util.internal.logging;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.lang.reflect.Method;
-import java.util.Arrays;
+import java.util.EnumMap;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -26,9 +25,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.spi.ExtendedLoggerWrapper;
-
-import io.netty.util.internal.ReflectionUtil;
-import org.junit.jupiter.api.Assumptions;
 
 /**
  * {@linkplain Log4J2Logger} extends {@linkplain ExtendedLoggerWrapper} implements {@linkplain InternalLogger}.<br>
@@ -53,21 +49,24 @@ public class Log4J2LoggerTest extends AbstractInternalLoggerTest<Logger> {
         };
     }
 
+    private static final EnumMap<InternalLogLevel, Level> DISABLING_LEVEL = new EnumMap<>(InternalLogLevel.class);
+
+    static {
+        DISABLING_LEVEL.put(InternalLogLevel.TRACE, Level.DEBUG);
+        DISABLING_LEVEL.put(InternalLogLevel.DEBUG, Level.INFO);
+        DISABLING_LEVEL.put(InternalLogLevel.INFO, Level.WARN);
+        DISABLING_LEVEL.put(InternalLogLevel.WARN, Level.ERROR);
+        DISABLING_LEVEL.put(InternalLogLevel.ERROR, Level.FATAL);
+    }
+
     @Override
-    protected void setLevelEnable(InternalLogLevel level, boolean enable) throws Exception {
+    protected void setLevelEnable(InternalLogLevel level, boolean enable) {
         Level targetLevel = Level.valueOf(level.name());
         if (!enable) {
-            Level[] levels = Level.values();
-            Arrays.sort(levels);
-            int pos = Arrays.binarySearch(levels, targetLevel);
-            targetLevel = levels[pos - 1];
+            targetLevel = DISABLING_LEVEL.get(level);
         }
 
-        Method method = mockLog.getClass().getDeclaredMethod("setLevel", Level.class);
-        if (!method.isAccessible()) {
-            Assumptions.assumeTrue(ReflectionUtil.trySetAccessible(method, true) == null);
-        }
-        method.invoke(mockLog, targetLevel);
+        ((org.apache.logging.log4j.core.Logger) mockLog).setLevel(targetLevel);
     }
 
     @Override
