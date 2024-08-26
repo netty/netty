@@ -487,18 +487,14 @@ public final class DerWriter implements ByteBufHolder, AutoCloseable {
 
     private static long expandSlow(long value, long mask) {
         long result = 0;
-        long valueBit = 1;
-        long maskBit = 1;
-        int outShift = 0;
-        do {
-            if ((mask & maskBit) != 0) {
-                result += value & valueBit << outShift;
-                valueBit <<= 1;
-            } else {
-                outShift++;
+        for (int i = 0, j = 0; i < Long.SIZE; i++) {
+            long bit = 1L << i;
+            if ((mask & bit) == bit) {
+                long val = value & 1L << j;
+                result |= val << i - j;
+                j++;
             }
-            maskBit <<= 1;
-        } while (maskBit != 0);
+        }
         return result;
     }
 
