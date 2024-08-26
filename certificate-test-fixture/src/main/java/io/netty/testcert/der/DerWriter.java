@@ -580,7 +580,7 @@ public final class DerWriter implements ByteBufHolder, AutoCloseable {
             .appendValue(SECOND_OF_MINUTE, 2)
             .optionalStart()
             .appendLiteral('.')
-            .appendValue(MILLI_OF_SECOND)
+            .appendValue(MILLI_OF_SECOND, 3)
             .optionalEnd()
             .optionalStart()
             .appendOffset("+HHMM", "Z")
