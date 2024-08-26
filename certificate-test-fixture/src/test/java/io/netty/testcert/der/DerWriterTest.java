@@ -352,19 +352,6 @@ class DerWriterTest {
         assertDer(writer.writeSequence(writer -> {}), 0x30, 0x00);
     }
 
-//    @Test
-//    void encodeSet() throws Exception {
-//        Consumer<DerWriter> setWriter = writer -> {
-//            writer.writeOctetString(new byte[]{0x54}); // 0x04, 0x01, 0x54
-//            writer.writeInteger(0x42); // 0x02, 0x01, 0x42
-//        };
-//        assertDer(writer.writeSet(setWriter),
-//                0x31, 0x06,
-//                0x04, 0x01, 0x54,
-//                0x02, 0x01, 0x42);
-//        assertDer(writer.writeSet(writer -> {}), 0x31, 0x00);
-//    }
-
     @Test
     void encodeExplicit() throws Exception {
         assertDer(writer.writeExplicit(0x21, writer -> writer.writeInteger(0x42)), 0x21, 0x03, 0x02, 0x01, 0x42);
