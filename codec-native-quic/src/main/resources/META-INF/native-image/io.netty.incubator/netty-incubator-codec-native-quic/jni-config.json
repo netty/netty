@@ -105,7 +105,7 @@
 {
   "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},
   "name":"java.lang.Integer",
-  "methods":[{"name":"<init>","parameterTypes":["int"] }]
+  "methods":[{"name":"<init>","parameterTypes":["int"] },{"name":"valueOf","parameterTypes":["int"]} ]
 },
 {
   "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},
@@ -114,5 +114,34 @@
 {
   "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},
   "name":"java.lang.String"
+},
+{
+  "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},
+  "name":"io.netty.incubator.codec.quic.BoringSSLSessionTicketCallback",
+  "methods":[{"name":"findSessionTicket","parameterTypes":["byte[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},
+  "name":"java.lang.Long",
+  "methods":[{"name":"valueOf","parameterTypes":["long"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},
+  "name":"java.net.Inet4Address"
+},
+{
+  "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},
+  "name":"java.net.Inet6Address",
+  "methods":[{"name":"getByAddress","parameterTypes":["java.lang.String","byte[]","int"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},
+  "name":"java.net.InetAddress",
+  "methods":[{"name":"getByAddress","parameterTypes":["byte[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.incubator.codec.quic.Quiche"},
+  "name":"java.net.InetSocketAddress",
+  "methods":[{"name":"<init>","parameterTypes":["java.net.InetAddress","int"] }]
 }
 ]
