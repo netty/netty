@@ -220,8 +220,13 @@ class CertificateBuilderTest {
         assertThat(sans.get(4)).isEqualTo(Arrays.asList(1, "san@netty.io"));
         assertThat(sans.get(5)).isEqualTo(Arrays.asList(8, "1.2.840.113635.100.1.2.42"));
         assertThat(sans.get(6)).isEqualTo(Arrays.asList(6, "spiffe://netty.io/example/san"));
-        assertThat(sans.get(7).get(2)).isEqualTo("1.2.840.113635.100.1.2.42");
-        assertThat(sans.get(7).get(3)).isEqualTo(new byte[] {0x01, 0x01, 0x00});
+        assertThat(sans.get(7).get(0)).isEqualTo(0);
+        assertThat(sans.get(7).get(1)).isEqualTo(new byte[] {
+                48, 19, 6, 10, 42, -122, 72, -122, -9, 99, 100, 1, 2, 42, -96, 5, -96, 3, 1, 1, 0});
+        if (sans.get(7).size() > 2) {
+            assertThat(sans.get(7).get(2)).isEqualTo("1.2.840.113635.100.1.2.42");
+            assertThat(sans.get(7).get(3)).isEqualTo(new byte[]{0x01, 0x01, 0x00});
+        }
     }
 
     @Test
