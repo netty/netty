@@ -17,6 +17,7 @@ package io.netty.testcert.x509;
 
 import io.netty.testcert.der.DerWriter;
 import io.netty.util.NetUtil;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -26,6 +27,7 @@ import javax.security.auth.x500.X500Principal;
  * Encodes a limited set of GeneralName types, no decoding is supported.
  * See ITU-T X.509 (10/2019) Section 9.3.2.1.
  */
+@UnstableApi
 public final class GeneralName {
     private static final int RFC822_NAME = 1;
     private static final int DNS_NAME = 2;
@@ -45,9 +47,9 @@ public final class GeneralName {
 
     public static GeneralName otherName(String oid, byte[] value) {
         try (DerWriter der = new DerWriter()) {
-            der.writeSequence(DerWriter.TAG_CONTEXT|DerWriter.TAG_CONSTRUCTED, w -> {
+            der.writeSequence(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED, w -> {
                 w.writeObjectIdentifier(oid);
-                w.writeExplicit(DerWriter.TAG_CONTEXT|DerWriter.TAG_CONSTRUCTED,
+                w.writeExplicit(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED,
                         valueWriter -> valueWriter.writeRawDER(value));
             });
             return new GeneralName(der.getBytes());
@@ -59,7 +61,7 @@ public final class GeneralName {
             throw new IllegalArgumentException("Invalid email address: " + emailAddress);
         }
         try (DerWriter der = new DerWriter()) {
-            der.writeIA5String(RFC822_NAME| DerWriter.TAG_CONTEXT, emailAddress);
+            der.writeIA5String(RFC822_NAME | DerWriter.TAG_CONTEXT, emailAddress);
             return new GeneralName(der.getBytes());
         }
     }
@@ -68,7 +70,7 @@ public final class GeneralName {
         URI uri = URI.create("ip://" + dnsName);
         String host = uri.getHost();
         try (DerWriter der = new DerWriter()) {
-            der.writeIA5String(DNS_NAME| DerWriter.TAG_CONTEXT, host);
+            der.writeIA5String(DNS_NAME | DerWriter.TAG_CONTEXT, host);
             return new GeneralName(der.getBytes());
         }
     }
@@ -79,7 +81,7 @@ public final class GeneralName {
 
     public static GeneralName directoryName(X500Principal name) {
         try (DerWriter der = new DerWriter()) {
-            der.writeExplicit(DerWriter.TAG_CONTEXT|DerWriter.TAG_CONSTRUCTED|4,
+            der.writeExplicit(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED | 4,
                     w -> w.writeRawDER(name.getEncoded()));
             return new GeneralName(der.getBytes());
         }
@@ -91,7 +93,7 @@ public final class GeneralName {
 
     public static GeneralName uriName(URI uri) {
         try (DerWriter der = new DerWriter()) {
-            der.writeIA5String(URI_NAME| DerWriter.TAG_CONTEXT, uri.toASCIIString());
+            der.writeIA5String(URI_NAME | DerWriter.TAG_CONTEXT, uri.toASCIIString());
             return new GeneralName(der.getBytes());
         }
     }
@@ -101,14 +103,15 @@ public final class GeneralName {
             throw new IllegalArgumentException("Not a valid IP address: " + ipAddress);
         }
         try (DerWriter der = new DerWriter()) {
-            der.writeOctetString(IP_ADDRESS| DerWriter.TAG_CONTEXT, NetUtil.createByteArrayFromIpAddressString(ipAddress));
+            der.writeOctetString(IP_ADDRESS | DerWriter.TAG_CONTEXT,
+                    NetUtil.createByteArrayFromIpAddressString(ipAddress));
             return new GeneralName(der.getBytes());
         }
     }
 
     public static GeneralName registeredId(String oid) {
         try (DerWriter der = new DerWriter()) {
-            der.writeObjectIdentifier(REGISTERED_ID| DerWriter.TAG_CONTEXT, oid);
+            der.writeObjectIdentifier(REGISTERED_ID | DerWriter.TAG_CONTEXT, oid);
             return new GeneralName(der.getBytes());
         }
     }

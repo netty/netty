@@ -16,9 +16,11 @@
 package io.netty.testcert.x509;
 
 import io.netty.testcert.der.DerWriter;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Objects;
 
+@UnstableApi
 public final class DistributionPoint implements DerWriter.WritableSequence {
     final GeneralName fullName;
     final GeneralName issuer;
@@ -35,11 +37,11 @@ public final class DistributionPoint implements DerWriter.WritableSequence {
     @Override
     public void writeSequence(DerWriter writer) {
         GeneralNames fullNames = new GeneralNames(fullName);
-        writer.writeExplicit(DerWriter.TAG_CONTEXT|DerWriter.TAG_CONSTRUCTED,
-                w -> fullNames.writeTo(DerWriter.TAG_CONSTRUCTED|DerWriter.TAG_CONTEXT, w));
+        writer.writeExplicit(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED,
+                w -> fullNames.writeTo(DerWriter.TAG_CONSTRUCTED | DerWriter.TAG_CONTEXT, w));
         if (issuer != null) {
             GeneralNames issuerNames = new GeneralNames(issuer);
-            writer.writeExplicit(DerWriter.TAG_CONTEXT|2,
+            writer.writeExplicit(DerWriter.TAG_CONTEXT | 2,
                     w -> issuerNames.writeTo(w));
         }
     }

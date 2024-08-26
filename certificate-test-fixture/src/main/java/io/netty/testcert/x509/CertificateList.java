@@ -17,12 +17,14 @@ package io.netty.testcert.x509;
 
 import io.netty.testcert.X509Bundle;
 import io.netty.testcert.der.DerWriter;
+import io.netty.util.internal.UnstableApi;
 
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Map;
 
+@UnstableApi
 public final class CertificateList implements DerWriter.WritableSequence {
     private final X509Bundle issuer;
     private final Instant thisUpdate;

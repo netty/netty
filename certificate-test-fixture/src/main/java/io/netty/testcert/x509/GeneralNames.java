@@ -16,11 +16,13 @@
 package io.netty.testcert.x509;
 
 import io.netty.testcert.der.DerWriter;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
 
+@UnstableApi
 public final class GeneralNames implements DerWriter.WritableSequence {
     private final Collection<GeneralName> names;
 

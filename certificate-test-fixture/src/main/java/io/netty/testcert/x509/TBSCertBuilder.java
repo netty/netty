@@ -16,6 +16,7 @@
 package io.netty.testcert.x509;
 
 import io.netty.testcert.der.DerWriter;
+import io.netty.util.internal.UnstableApi;
 
 import java.math.BigInteger;
 import java.security.PublicKey;
@@ -24,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.security.auth.x500.X500Principal;
 
+@UnstableApi
 public final class TBSCertBuilder implements DerWriter.WritableSequence {
     private final X500Principal issuer;
     private final X500Principal subject;
@@ -62,7 +64,7 @@ public final class TBSCertBuilder implements DerWriter.WritableSequence {
 
     @Override
     public void writeSequence(DerWriter writer) {
-        writer.writeExplicit(DerWriter.TAG_CONTEXT|DerWriter.TAG_CONSTRUCTED, w -> w.writeInteger(2));
+        writer.writeExplicit(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED, w -> w.writeInteger(2));
         writer.writeInteger(serial);
         AlgorithmIdentifier.writeAlgorithmId(signatureAlgorithmIdentifier, writer);
         writer.writeRawDER(issuer.getEncoded());
@@ -73,7 +75,7 @@ public final class TBSCertBuilder implements DerWriter.WritableSequence {
         // BouncyCastle likewise makes this assumption, so it's not unheard of.
         writer.writeRawDER(pubKey.getEncoded());
         if (!extensions.isEmpty()) {
-            writer.writeExplicit(DerWriter.TAG_CONTEXT|DerWriter.TAG_CONSTRUCTED|3, extensionWriter -> {
+            writer.writeExplicit(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED | 3, extensionWriter -> {
                 extensionWriter.writeSequence(w -> extensions.forEach(extension -> extension.encode(w)));
             });
         }

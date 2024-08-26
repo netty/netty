@@ -13,26 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testcert.x509;
 
-import io.netty.testcert.der.DerWriter;
-import io.netty.util.internal.UnstableApi;
-
-import java.util.Collection;
-
-@UnstableApi
-public final class CrlDistributionPoints {
-    private CrlDistributionPoints() {
-    }
-
-    public static byte[] distributionPoints(Collection<DistributionPoint> points) {
-        if (points.isEmpty()) {
-            throw new IllegalArgumentException("Points cannot be empty");
-        }
-        try (DerWriter der = new DerWriter()) {
-            return der.writeSequence(w -> {
-                points.forEach(p -> p.writeTo(w));
-            }).getBytes();
-        }
-    }
-}
+/**
+ * Internal ASN.1 DER writing utility used by {@link io.netty.testcert.CertificateBuilder}.
+ */
+package io.netty.testcert.der;

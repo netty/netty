@@ -29,7 +29,7 @@
   <name>Netty/CertificateTestFixture</name>
 
   <properties>
-      <javaModuleName>io.netty.testcert</javaModuleName>
+    <javaModuleName>io.netty.testcert</javaModuleName>
   </properties>
 
   <dependencies>

@@ -16,9 +16,11 @@
 package io.netty.testcert.x509;
 
 import io.netty.testcert.der.DerWriter;
+import io.netty.util.internal.UnstableApi;
 
 import java.util.Collection;
 
+@UnstableApi
 public final class ExtendedKeyUsage {
     private ExtendedKeyUsage() {
     }

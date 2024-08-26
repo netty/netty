@@ -17,6 +17,7 @@ package io.netty.testcert.x509;
 
 import io.netty.testcert.X509Bundle;
 import io.netty.testcert.der.DerWriter;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -28,6 +29,7 @@ import java.security.SignatureException;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+@UnstableApi
 public final class Signed {
     private final byte[] toBeSigned;
     private final String algorithmIdentifier;

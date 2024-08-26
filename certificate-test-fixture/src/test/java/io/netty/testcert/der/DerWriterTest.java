@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.testcert.der;
 
 import io.netty.buffer.ByteBuf;
@@ -304,7 +319,7 @@ class DerWriterTest {
                 0x06, 0x0A, 0x2B, 0x06, 0x01, 0x04, 0x01, 0x82, 0x37, 0x14, 0x02, 0x02);
 
         // Largest supported child-identifier
-        assertDer(writer.writeObjectIdentifier("2." + (0x00FFFFFF_FFFFFFFFL-80)),
+        assertDer(writer.writeObjectIdentifier("2." + (0x00FFFFFF_FFFFFFFFL - 80)),
                 0x06, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F);
         // Largest supported sub-identifier
         assertDer(writer.writeObjectIdentifier("0.0." + 0x00FFFFFF_FFFFFFFFL),
@@ -342,14 +357,14 @@ class DerWriterTest {
     @Test
     void encodeSequence() throws Exception {
         DerWriter.WritableSequence sequenceWriter = writer -> {
-            writer.writeOctetString(new byte[]{0x54}); // 0x04, 0x01, 0x54
+            writer.writeOctetString(new byte[] { 0x54 }); // 0x04, 0x01, 0x54
             writer.writeInteger(0x42); // 0x02, 0x01, 0x42
         };
         assertDer(writer.writeSequence(sequenceWriter),
                 0x30, 0x06,
                 0x04, 0x01, 0x54,
                 0x02, 0x01, 0x42);
-        assertDer(writer.writeSequence(writer -> {}), 0x30, 0x00);
+        assertDer(writer.writeSequence(writer -> { }), 0x30, 0x00);
     }
 
     @Test
@@ -377,11 +392,14 @@ class DerWriterTest {
     @Test
     void encodeGeneralizedTime() throws Exception {
         assertDer(writer.writeGeneralizedTime(ZonedDateTime.parse("2007-12-03T10:15:30.00Z")),
-                0x18, 0x13, '2', '0', '0', '7', '1', '2', '0', '3', '1', '0', '1', '5', '3', '0', '.', '0', '0', '0', 'Z');
+                0x18, 0x13, '2', '0', '0', '7', '1', '2', '0', '3', '1', '0', '1', '5', '3', '0',
+                '.', '0', '0', '0', 'Z');
         assertDer(writer.writeGeneralizedTime(ZonedDateTime.parse("2007-12-03T10:15:30-05")),
-                0x18, 0x17, '2', '0', '0', '7', '1', '2', '0', '3', '1', '0', '1', '5', '3', '0', '.', '0', '0', '0', '-', '0', '5', '0', '0');
+                0x18, 0x17, '2', '0', '0', '7', '1', '2', '0', '3', '1', '0', '1', '5', '3', '0',
+                '.', '0', '0', '0', '-', '0', '5', '0', '0');
         assertDer(writer.writeGeneralizedTime(ZonedDateTime.parse("1982-01-02T10:15:30+08")),
-                0x18, 0x17, '1', '9', '8', '2', '0', '1', '0', '2', '1', '0', '1', '5', '3', '0', '.', '0', '0', '0', '+', '0', '8', '0', '0');
+                0x18, 0x17, '1', '9', '8', '2', '0', '1', '0', '2', '1', '0', '1', '5', '3', '0',
+                '.', '0', '0', '0', '+', '0', '8', '0', '0');
 
         assertDer(writer.writeGeneralizedTime(LocalDateTime.parse("2007-12-03T10:15:30")),
                 0x18, 0x12, '2', '0', '0', '7', '1', '2', '0', '3', '1', '0', '1', '5', '3', '0', '.', '0', '0', '0');
@@ -389,13 +407,17 @@ class DerWriterTest {
                 0x18, 0x12, '1', '9', '8', '2', '0', '1', '0', '2', '1', '0', '1', '5', '3', '0', '.', '0', '0', '0');
 
         assertDer(writer.writeGeneralizedTime(Instant.parse("2007-12-03T10:15:30.000Z")),
-                0x18, 0x13, '2', '0', '0', '7', '1', '2', '0', '3', '1', '0', '1', '5', '3', '0', '.', '0', '0', '0', 'Z');
+                0x18, 0x13, '2', '0', '0', '7', '1', '2', '0', '3', '1', '0', '1', '5', '3', '0',
+                '.', '0', '0', '0', 'Z');
         assertDer(writer.writeGeneralizedTime(Instant.parse("1982-01-02T10:15:30.000Z")),
-                0x18, 0x13, '1', '9', '8', '2', '0', '1', '0', '2', '1', '0', '1', '5', '3', '0', '.', '0', '0', '0', 'Z');
+                0x18, 0x13, '1', '9', '8', '2', '0', '1', '0', '2', '1', '0', '1', '5', '3', '0',
+                '.', '0', '0', '0', 'Z');
         assertDer(writer.writeGeneralizedTime(Instant.parse("1982-01-02T10:15:30.123Z")),
-                0x18, 0x13, '1', '9', '8', '2', '0', '1', '0', '2', '1', '0', '1', '5', '3', '0', '.', '1', '2', '3', 'Z');
+                0x18, 0x13, '1', '9', '8', '2', '0', '1', '0', '2', '1', '0', '1', '5', '3', '0',
+                '.', '1', '2', '3', 'Z');
         assertDer(writer.writeGeneralizedTime(Instant.parse("1982-01-02T10:15:30.001Z")),
-                0x18, 0x13, '1', '9', '8', '2', '0', '1', '0', '2', '1', '0', '1', '5', '3', '0', '.', '0', '0', '1', 'Z');
+                0x18, 0x13, '1', '9', '8', '2', '0', '1', '0', '2', '1', '0', '1', '5', '3', '0',
+                '.', '0', '0', '1', 'Z');
 
         assertDer(writer.writeGeneralizedTime(LocalDate.parse("2007-12-03")),
                 0x18, 0x08, '2', '0', '0', '7', '1', '2', '0', '3');
