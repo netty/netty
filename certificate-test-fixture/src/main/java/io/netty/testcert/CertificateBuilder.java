@@ -43,7 +43,6 @@ import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.ECGenParameterSpec;
-import java.security.spec.NamedParameterSpec;
 import java.security.spec.RSAKeyGenParameterSpec;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -360,7 +359,11 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder algorithm(Algorithm algorithm) {
-        this.algorithm = requireNonNull(algorithm, "algorithm");
+        requireNonNull(algorithm, "algorithm");
+        if (algorithm.parameterSpec == Algorithm.UNSUPPORTED) {
+            throw new UnsupportedOperationException("This algorithm is not supported: " + algorithm);
+        }
+        this.algorithm = algorithm;
         return this;
     }
 
@@ -661,6 +664,9 @@ public final class CertificateBuilder {
     }
 
     private KeyPair generateKeyPair() throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+        if (algorithm.parameterSpec == Algorithm.UNSUPPORTED) {
+            throw new UnsupportedOperationException("This algorithm is not supported: " + algorithm);
+        }
         try {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance(algorithm.keyType);
             keyGen.initialize(algorithm.parameterSpec, getSecureRandom());
@@ -778,14 +784,14 @@ public final class CertificateBuilder {
          * <p>
          * This algorithm is relatively new, require Java 15 or newer, and may not be supported everywhere.
          */
-        ed25519("Ed25519", new NamedParameterSpec("Ed25519"), "Ed25519"),
+        ed25519("Ed25519", namedParameterSpec("Ed25519"), "Ed25519"),
         /**
          * The Ed448 algorithm offer fast key generation, signing, and verification,
          * with small keys and signatures, at 224-bits of security strength.
          * <p>
          * This algorithm is relatively new, require Java 15 or newer, and may not be supported everywhere.
          */
-        ed448("Ed448", new NamedParameterSpec("Ed448"), "Ed448");
+        ed448("Ed448", namedParameterSpec("Ed448"), "Ed448");
 
         final String keyType;
         final AlgorithmParameterSpec parameterSpec;
@@ -795,6 +801,18 @@ public final class CertificateBuilder {
             this.keyType = keyType;
             this.parameterSpec = parameterSpec;
             this.signatureType = signatureType;
+        }
+
+        static final AlgorithmParameterSpec UNSUPPORTED = new AlgorithmParameterSpec() {
+        };
+
+        private static AlgorithmParameterSpec namedParameterSpec(String name) {
+            try {
+                Class<?> cls = Class.forName("java.security.spec.NamedParameterSpec");
+                return (AlgorithmParameterSpec) cls.getConstructor(String.class).newInstance(name);
+            } catch (Exception e) {
+                return UNSUPPORTED;
+            }
         }
     }
 
