@@ -18,7 +18,6 @@ package io.netty.testcert;
 import io.netty.testcert.CertificateBuilder.Algorithm;
 import io.netty.testcert.CertificateBuilder.KeyUsage;
 import io.netty.util.internal.PlatformDependent;
-import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -281,23 +280,18 @@ class CertificateBuilderTest {
                 .setIsCertificateAuthority(true)
                 .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign, KeyUsage.cRLSign)
                 .buildSelfSigned();
-        RevocationServer server = new RevocationServer();
-        server.start();
-        try {
-            server.registerPath("/crl.crl", root);
-            X509Bundle cert = BASE.copy()
-                    .subject("CN=leaf.netty.io")
-                    .addCrlDistributionPoint(server.getCrlUri(root))
-                    .addExtendedKeyUsageClientAuth()
-                    .buildIssuedBy(root);
+        RevocationServer server = RevocationServer.getInstance();
+        server.register(root);
+        X509Bundle cert = BASE.copy()
+                .subject("CN=leaf.netty.io")
+                .addCrlDistributionPoint(server.getCrlUri(root))
+                .addExtendedKeyUsageClientAuth()
+                .buildIssuedBy(root);
 
-            X509TrustManager tm = getX509TrustManager(root);
+        X509TrustManager tm = getX509TrustManager(root);
 
-            // Assert that this does not throw:
-            tm.checkClientTrusted(cert.getCertificatePath(), "EC");
-        } finally {
-            server.stop(1);
-        }
+        // Assert that this does not throw:
+        tm.checkClientTrusted(cert.getCertificatePath(), "EC");
     }
 
     @Test
@@ -306,26 +300,21 @@ class CertificateBuilderTest {
                 .setIsCertificateAuthority(true)
                 .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign, KeyUsage.cRLSign)
                 .buildSelfSigned();
-        RevocationServer server = new RevocationServer();
-        server.start();
-        try {
-            server.registerPath("/crl.crl", root);
-            X509Bundle cert = BASE.copy()
-                    .subject("CN=leaf.netty.io")
-                    .addCrlDistributionPoint(server.getCrlUri(root))
-                    .addExtendedKeyUsageClientAuth()
-                    .buildIssuedBy(root);
-            server.revoke(cert, NOW);
+        RevocationServer server = RevocationServer.getInstance();
+        server.register(root);
+        X509Bundle cert = BASE.copy()
+                .subject("CN=leaf.netty.io")
+                .addCrlDistributionPoint(server.getCrlUri(root))
+                .addExtendedKeyUsageClientAuth()
+                .buildIssuedBy(root);
+        server.revoke(cert, NOW);
 
-            X509TrustManager tm = getX509TrustManager(root);
+        X509TrustManager tm = getX509TrustManager(root);
 
-            // Assert that this does not throw:
-            CertificateException ce = assertThrows(CertificateException.class,
-                    () -> tm.checkClientTrusted(cert.getCertificatePath(), "EC"));
-            assertThat(ce).hasMessageContaining("Certificate has been revoked");
-        } finally {
-            server.stop(1);
-        }
+        // Assert that this does not throw:
+        CertificateException ce = assertThrows(CertificateException.class,
+                () -> tm.checkClientTrusted(cert.getCertificatePath(), "EC"));
+        assertThat(ce).hasMessageContaining("Certificate has been revoked");
     }
 
     private static X509TrustManager getX509TrustManager(X509Bundle root) throws Exception {
