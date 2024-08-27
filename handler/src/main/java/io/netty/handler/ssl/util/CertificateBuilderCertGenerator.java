@@ -83,5 +83,7 @@ final class CertificateBuilderCertGenerator {
         }
         X509Bundle bundle = builder.buildSelfSigned();
         config.paths = newSelfSignedCertificate(fqdn, bundle.getKeyPair().getPrivate(), bundle.getCertificate());
+        config.keypair = bundle.getKeyPair();
+        config.privateKey = bundle.getKeyPair().getPrivate();
     }
 }

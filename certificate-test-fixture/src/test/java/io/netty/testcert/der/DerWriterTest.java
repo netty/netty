@@ -380,9 +380,9 @@ class DerWriterTest {
     void encodeUTCTime() throws Exception {
         assertDer(writer.writeUTCTime(ZonedDateTime.parse("2007-12-03T10:15:30.000Z")),
                 0x17, 0x0D, '0', '7', '1', '2', '0', '3', '1', '0', '1', '5', '3', '0', 'Z');
-        assertDer(writer.writeUTCTime(ZonedDateTime.parse("2007-12-03T10:15:30-05")),
+        assertDer(writer.writeUTCTime(ZonedDateTime.parse("2007-12-03T10:15:30-05:00")),
                 0x17, 0x11, '0', '7', '1', '2', '0', '3', '1', '0', '1', '5', '3', '0', '-', '0', '5', '0', '0');
-        assertDer(writer.writeUTCTime(ZonedDateTime.parse("1982-01-02T10:15:30+08")),
+        assertDer(writer.writeUTCTime(ZonedDateTime.parse("1982-01-02T10:15:30+08:00")),
                 0x17, 0x11, '8', '2', '0', '1', '0', '2', '1', '0', '1', '5', '3', '0', '+', '0', '8', '0', '0');
 
         assertDer(writer.writeUTCTime(Instant.parse("2007-12-03T10:15:30.000Z")),
@@ -394,10 +394,10 @@ class DerWriterTest {
         assertDer(writer.writeGeneralizedTime(ZonedDateTime.parse("2007-12-03T10:15:30.00Z")),
                 0x18, 0x13, '2', '0', '0', '7', '1', '2', '0', '3', '1', '0', '1', '5', '3', '0',
                 '.', '0', '0', '0', 'Z');
-        assertDer(writer.writeGeneralizedTime(ZonedDateTime.parse("2007-12-03T10:15:30-05")),
+        assertDer(writer.writeGeneralizedTime(ZonedDateTime.parse("2007-12-03T10:15:30-05:00")),
                 0x18, 0x17, '2', '0', '0', '7', '1', '2', '0', '3', '1', '0', '1', '5', '3', '0',
                 '.', '0', '0', '0', '-', '0', '5', '0', '0');
-        assertDer(writer.writeGeneralizedTime(ZonedDateTime.parse("1982-01-02T10:15:30+08")),
+        assertDer(writer.writeGeneralizedTime(ZonedDateTime.parse("1982-01-02T10:15:30+08:00")),
                 0x18, 0x17, '1', '9', '8', '2', '0', '1', '0', '2', '1', '0', '1', '5', '3', '0',
                 '.', '0', '0', '0', '+', '0', '8', '0', '0');
 
