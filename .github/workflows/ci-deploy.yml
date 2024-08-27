@@ -126,6 +126,15 @@ jobs:
           name: linux-x86_64-java8-local-staging
           path: ~/linux-x86_64-java8-local-staging
 
+      - name: Copy previous build artifacts to local maven repository
+        run: |
+          cp -r ~/linux-aarch64-local-staging/deferred/* ~/.m2/repository/
+          cp -r ~/linux-riscv64-local-staging/deferred/* ~/.m2/repository/
+          cp -r ~/linux-x86_64-java8-local-staging/deferred/* ~/.m2/repository/
+
+      - name: Generate netty-all and deploy to local staging.
+        run: ./mvnw -Plinux-native-dependencies -pl all org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/root/all-local-staging -DskipRemoteStaging=true -DskipTests=true
+
       - name: Merge staging repositories
         run: |
           mkdir -p ~/local-staging/deferred
@@ -135,6 +144,8 @@ jobs:
           cp -r ~/linux-riscv64-local-staging/deferred/* ~/local-staging/deferred/
           cat ~/linux-x86_64-java8-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
           cp -r ~/linux-x86_64-java8-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/all-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/all-local-staging/deferred/* ~/local-staging/deferred/
 
       - uses: s4u/maven-settings-action@v3.0.0
         with:
