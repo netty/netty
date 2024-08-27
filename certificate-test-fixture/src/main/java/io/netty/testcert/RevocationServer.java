@@ -21,6 +21,7 @@ import io.netty.testcert.x509.Signed;
 
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.cert.X509Certificate;
@@ -37,7 +38,7 @@ public final class RevocationServer {
 
     RevocationServer() throws Exception {
         // Use the built-in HttpServer to avoid any circular dependencies.
-        crlServer = HttpServer.create(new InetSocketAddress(0), 0);
+        crlServer = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         crlBaseAddress = "http://localhost:" + crlServer.getAddress().getPort();
         paths = new ConcurrentHashMap<>();
         crlServer.createContext("/", exchange -> {
