@@ -45,12 +45,7 @@ final class CertificateBuilderCertGenerator {
         SecureRandom random = config.random;
         int bits = config.bits;
         CertificateBuilder builder = new CertificateBuilder();
-        builder.setIsCertificateAuthority(true)
-                .setKeyUsage(true,
-                        CertificateBuilder.KeyUsage.digitalSignature,
-                        CertificateBuilder.KeyUsage.contentCommitment,
-                        CertificateBuilder.KeyUsage.keyCertSign,
-                        CertificateBuilder.KeyUsage.cRLSign);
+        builder.setIsCertificateAuthority(true);
         if (fqdn.contains("=")) {
             builder.subject(fqdn);
         } else {
