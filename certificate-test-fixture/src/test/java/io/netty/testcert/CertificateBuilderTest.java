@@ -46,6 +46,7 @@ import javax.net.ssl.X509TrustManager;
 import javax.security.auth.x500.X500Principal;
 
 import static java.time.temporal.ChronoUnit.DAYS;
+import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -270,8 +271,8 @@ class CertificateBuilderTest {
         assertThat(cert.getKeyUsage()).isEqualTo(
                 new boolean[] {true, false, false, false, false, true, false, false, false});
         cert.checkValidity();
-        assertThat(NOW.minus(1, DAYS).toEpochMilli()).isCloseTo(cert.getNotBefore().getTime(), Offset.offset(200L));
-        assertThat(NOW.plus(1, DAYS).toEpochMilli()).isCloseTo(cert.getNotAfter().getTime(), Offset.offset(200L));
+        assertThat(NOW.minus(1, DAYS).truncatedTo(SECONDS).toEpochMilli()).isEqualTo(cert.getNotBefore().getTime());
+        assertThat(NOW.plus(1, DAYS).truncatedTo(SECONDS).toEpochMilli()).isEqualTo(cert.getNotAfter().getTime());
     }
 
     @Test
