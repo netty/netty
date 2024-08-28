@@ -158,7 +158,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         ADD_AFTER;
     }
 
-    private ChannelPipeline internalAdd(EventExecutorGroup group, String name, ChannelHandler handler, String baseName, AddStrategy addStrategy) {
+    private ChannelPipeline internalAdd(EventExecutorGroup group, String name,
+                                        ChannelHandler handler, String baseName,
+                                        AddStrategy addStrategy) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
             checkMultiplicity(handler);
