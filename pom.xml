@@ -646,7 +646,7 @@
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
-    <log4j2.version>2.17.2</log4j2.version>
+    <log4j2.version>2.23.1</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.9.0</junit.version>
     <skipTests>false</skipTests>
@@ -945,7 +945,7 @@
       <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
-        <version>1.2</version>
+        <version>1.3.4</version>
       </dependency>
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
