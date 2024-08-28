@@ -273,6 +273,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             }
             destroyChunk = !chunk.parent.free(chunk, handle, normCapacity, nioBuffer);
             if (destroyChunk) {
+                // all other destroyChunk calls come from the arena itself being finalized, so don't need to be counted
                 ++pooledChunkDeallocations;
             }
         } finally {
