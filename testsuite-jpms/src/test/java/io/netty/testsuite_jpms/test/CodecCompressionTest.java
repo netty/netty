@@ -18,6 +18,8 @@ package io.netty.testsuite_jpms.test;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.handler.codec.compression.ZstdEncoder;
 import org.junit.jupiter.api.Test;
 import io.netty.handler.codec.compression.BrotliEncoder;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -26,11 +28,19 @@ import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CodecCompressionBrotli4jTest {
+public class CodecCompressionTest {
 
     @Test
-    public void testSimple() {
-        BrotliEncoder encoder = new BrotliEncoder();
+    public void testBrotli4j() {
+        testCompress(new BrotliEncoder());
+    }
+
+    @Test
+    public void testZstd() {
+        testCompress(new ZstdEncoder());
+    }
+
+    public void testCompress(MessageToByteEncoder<ByteBuf> encoder) {
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         ByteBuf data = Unpooled.copiedBuffer("some-string", StandardCharsets.UTF_8);
         assertTrue(channel.writeOutbound(data));
@@ -38,8 +48,11 @@ public class CodecCompressionBrotli4jTest {
         assertEquals(0, data.readableBytes());
         int size = 0;
         for (ByteBuf chunk = channel.readOutbound(); chunk != null; chunk = channel.readOutbound()) {
-            size += chunk.readableBytes();
-            assertTrue(chunk.release());
+            // Zstd can emit an empty buffer (flush)
+            if (chunk != Unpooled.EMPTY_BUFFER) {
+                size += chunk.readableBytes();
+                assertTrue(chunk.release());
+            }
         }
         assertTrue(size > 0);
     }
