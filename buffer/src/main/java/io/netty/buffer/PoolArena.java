@@ -61,6 +61,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private long deallocationsSmall;
     private long deallocationsNormal;
 
+    private long pooledChunkAllocations;
+    private long pooledChunkDeallocations;
+
     // We need to use the LongCounter here as this is not guarded via synchronized block.
     private final LongCounter deallocationsHuge = PlatformDependent.newLongCounter();
 
@@ -213,6 +216,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         boolean success = c.allocate(buf, reqCapacity, sizeIdx, threadCache);
         assert success;
         qInit.add(c);
+        ++pooledChunkAllocations;
     }
 
     private void incSmallAllocation() {
@@ -268,6 +272,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 }
             }
             destroyChunk = !chunk.parent.free(chunk, handle, normCapacity, nioBuffer);
+            if (destroyChunk) {
+                // all other destroyChunk calls come from the arena itself being finalized, so don't need to be counted
+                ++pooledChunkDeallocations;
+            }
         } finally {
             unlock();
         }
@@ -412,6 +420,16 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     @Override
+    public long numChunkAllocations() {
+        lock();
+        try {
+            return pooledChunkAllocations;
+        } finally {
+            unlock();
+        }
+    }
+
+    @Override
     public long numDeallocations() {
         final long deallocs;
         lock();
@@ -443,6 +461,16 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         lock();
         try {
             return deallocationsNormal;
+        } finally {
+            unlock();
+        }
+    }
+
+    @Override
+    public long numChunkDeallocations() {
+        lock();
+        try {
+            return pooledChunkDeallocations;
         } finally {
             unlock();
         }
@@ -487,6 +515,18 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         lock();
         try {
             val = allocationsNormal - deallocationsNormal;
+        } finally {
+            unlock();
+        }
+        return max(val, 0);
+    }
+
+    @Override
+    public long numActiveChunks() {
+        final long val;
+        lock();
+        try {
+            val = pooledChunkAllocations - pooledChunkDeallocations;
         } finally {
             unlock();
         }
