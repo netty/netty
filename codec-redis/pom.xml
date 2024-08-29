@@ -29,7 +29,6 @@
   <name>Netty/Codec/Redis</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.redis</javaModuleName>
   </properties>
 

@@ -27,7 +27,6 @@
   <packaging>jar</packaging>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.resolver.dns.classes.macos</javaModuleName>
   </properties>
 

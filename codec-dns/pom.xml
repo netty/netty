@@ -29,7 +29,6 @@
   <name>Netty/Codec/DNS</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.dns</javaModuleName>
   </properties>
 

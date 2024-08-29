@@ -29,7 +29,6 @@
   <name>Netty/Codec/SMTP</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.smtp</javaModuleName>
   </properties>
 

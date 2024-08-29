@@ -29,7 +29,6 @@
   <name>Netty/Codec/Stomp</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.stomp</javaModuleName>
   </properties>
 

@@ -29,7 +29,6 @@
   <name>Netty/Codec/Compression</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.compression</javaModuleName>
   </properties>
 

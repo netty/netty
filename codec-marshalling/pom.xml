@@ -29,7 +29,6 @@
   <name>Netty/Codec/Marshalling</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.marshalling</javaModuleName>
   </properties>
 

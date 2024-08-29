@@ -27,7 +27,6 @@
   <packaging>jar</packaging>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.transport.classes.io_uring</javaModuleName>
   </properties>
 

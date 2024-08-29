@@ -29,7 +29,6 @@
   <name>Netty/Codec/Memcache</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.memcache</javaModuleName>
   </properties>
 

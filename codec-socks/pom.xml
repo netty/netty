@@ -29,7 +29,6 @@
   <name>Netty/Codec/Socks</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.socks</javaModuleName>
   </properties>
 

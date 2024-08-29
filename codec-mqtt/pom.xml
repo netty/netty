@@ -29,7 +29,6 @@
   <name>Netty/Codec/MQTT</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.mqtt</javaModuleName>
   </properties>
 

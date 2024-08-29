@@ -29,7 +29,6 @@
   <name>Netty/Buffer</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.buffer</javaModuleName>
   </properties>
 

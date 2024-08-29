@@ -671,7 +671,7 @@
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
     <skipDeploy>false</skipDeploy>
-    <multiReleaseJar>false</multiReleaseJar>
+    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName></javaModuleName>
   </properties>
 

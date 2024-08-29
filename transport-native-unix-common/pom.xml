@@ -30,7 +30,6 @@
   </description>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.transport.unix.common</javaModuleName>
 
     <exe.make>make</exe.make>

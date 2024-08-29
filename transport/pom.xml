@@ -29,7 +29,6 @@
   <name>Netty/Transport</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.transport</javaModuleName>
   </properties>
 

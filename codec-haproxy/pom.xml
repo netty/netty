@@ -29,7 +29,6 @@
   <name>Netty/Codec/HAProxy</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.haproxy</javaModuleName>
   </properties>
 

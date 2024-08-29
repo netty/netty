@@ -29,7 +29,6 @@
   <name>Netty/Resolver/DNS</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.resolver.dns</javaModuleName>
   </properties>
 

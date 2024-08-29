@@ -29,7 +29,6 @@
   <name>Netty/Codec/XML</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.codec.xml</javaModuleName>
   </properties>
 

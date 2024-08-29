@@ -29,7 +29,6 @@
   <name>Netty/Resolver</name>
 
   <properties>
-    <multiReleaseJar>true</multiReleaseJar>
     <javaModuleName>io.netty.resolver</javaModuleName>
   </properties>
 
