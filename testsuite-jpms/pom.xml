@@ -356,6 +356,17 @@
                 </includes>
               </configuration>
             </execution>
+            <execution>
+              <id>commons-logging-test</id>
+              <goals>
+                <goal>test</goal>
+              </goals>
+              <configuration>
+                <includes>
+                  <include>io/netty/testsuite_jpms/it/CommonsLoggingTest.java</include>
+                </includes>
+              </configuration>
+            </execution>
           </executions>
         </plugin>
       </plugins>

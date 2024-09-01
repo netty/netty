@@ -47,4 +47,5 @@ open module io.netty.testsuite_jpms.test {
     requires static ch.qos.logback.classic;
     requires static org.apache.logging.log4j;
     requires static org.apache.logging.log4j.core;
+    requires static org.apache.commons.logging;
 }
