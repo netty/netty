@@ -1297,9 +1297,11 @@
               <differences>
                 <item>
                   <ignore>true</ignore>
-                  <code>java.field.modified</code>
-                  <class>io.netty.handler.codec.http2.Http2CodecUtil</class>
+                  <code>java.field.constantValueChanged</code>
+                  <classQualifiedName>io.netty.handler.codec.http2.Http2CodecUtil</classQualifiedName>
                   <field>CONTINUATION_FRAME_HEADER_LENGTH</field>
+                  <oldValue>10</oldValue>
+                  <newValue>9</newValue>
                   <justification>Padding was removed from CONTINUATION frame in http2-spec.</justification>
                 </item>
                 <item>
