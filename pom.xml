@@ -1218,6 +1218,15 @@
               <differences>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.field.constantValueChanged</code>
+                  <classQualifiedName>io.netty.handler.codec.http2.Http2CodecUtil</classQualifiedName>
+                  <field>CONTINUATION_FRAME_HEADER_LENGTH</field>
+                  <oldValue>10</oldValue>
+                  <newValue>9</newValue>
+                  <justification>Padding was removed from CONTINUATION frame in http2-spec.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.missing.oldClass</code> <!-- Missing in prior Netty versions -->
                   <old>missing-class org.slf4j.Logger</old>
                   <new>missing-class org.slf4j.Logger</new>
