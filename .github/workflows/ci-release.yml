@@ -69,6 +69,7 @@ jobs:
         with:
           name: prepare-release-workspace
           path: ${{ github.workspace }}/**
+          include-hidden-files: true
 
   stage-release-linux:
     runs-on: ubuntu-latest
@@ -245,6 +246,7 @@ jobs:
           name: windows-x86_64-local-staging
           path: ${{ github.workspace }}/prepare-release-workspace/local-staging
           if-no-files-found: error
+          include-hidden-files: true
 
       - name: Rollback release on failure
         working-directory: ${{ github.workspace }}/prepare-release-workspace

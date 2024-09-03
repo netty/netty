@@ -78,6 +78,7 @@ jobs:
           name: ${{ matrix.setup }}-local-staging
           path: ~/local-staging
           if-no-files-found: error
+          include-hidden-files: true
 
   stage-snapshot-windows-x86_64:
     runs-on: windows-2019
@@ -140,6 +141,7 @@ jobs:
           name: windows-x86_64-local-staging
           path: local-staging
           if-no-files-found: error
+          include-hidden-files: true
 
   deploy-staged-snapshots:
     runs-on: ubuntu-latest
