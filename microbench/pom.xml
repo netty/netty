@@ -39,7 +39,6 @@
          code -->
     <kqueue.classifier />
     <revapi.skip>true</revapi.skip>
-    <javaModuleName>io.netty.microbench</javaModuleName>
   </properties>
   <profiles>
     <profile>
@@ -136,6 +135,11 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-handler</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-compression</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
