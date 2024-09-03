@@ -76,6 +76,7 @@ jobs:
           name: ${{ matrix.setup }}-local-staging
           path: ~/local-staging
           if-no-files-found: error
+          include-hidden-files: true
 
   deploy-staged-snapshots:
     runs-on: ubuntu-latest
