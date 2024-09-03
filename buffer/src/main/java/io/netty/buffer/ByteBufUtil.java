@@ -78,7 +78,7 @@ public final class ByteBufUtil {
 
     static {
         String allocType = SystemPropertyUtil.get(
-                "io.netty.allocator.type", PlatformDependent.isAndroid() ? "unpooled" : "pooled");
+                "io.netty.allocator.type", "adaptive");
 
         ByteBufAllocator alloc;
         if ("unpooled".equals(allocType)) {

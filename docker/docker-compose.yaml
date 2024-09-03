@@ -68,9 +68,9 @@ services:
     <<: *common
     command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true"
 
-  build-leak-adaptive:
+  build-leak-pooled:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty.allocator.type=adaptive"
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty.allocator.type=pooled"
 
   build-boringssl-snapshot:
     <<: *common
