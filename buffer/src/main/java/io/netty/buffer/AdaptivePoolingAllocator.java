@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCounted;
@@ -592,6 +593,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private Chunk chunk;
         private int length;
         private ByteBuffer tmpNioBuf;
+        private boolean hasArray;
+        private boolean hasMemoryAddress;
 
         AdaptiveByteBuf(ObjectPool.Handle<AdaptiveByteBuf> recyclerHandle) {
             super(0);
@@ -605,8 +608,18 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             length = capacity;
             maxCapacity(maxCapacity);
             setIndex0(readerIndex, writerIndex);
+            hasArray = unwrapped.hasArray();
+            hasMemoryAddress = unwrapped.hasMemoryAddress();
             rootParent = unwrapped;
-            tmpNioBuf = rootParent.internalNioBuffer(adjustment, capacity).slice();
+            tmpNioBuf = unwrapped.internalNioBuffer(adjustment, capacity).slice();
+        }
+
+        private AbstractByteBuf rootParent() {
+            final AbstractByteBuf rootParent = this.rootParent;
+            if (rootParent != null) {
+                return rootParent;
+            }
+            throw new IllegalReferenceCountException();
         }
 
         @Override
@@ -647,12 +660,12 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         public ByteBufAllocator alloc() {
-            return rootParent.alloc();
+            return rootParent().alloc();
         }
 
         @Override
         public ByteOrder order() {
-            return rootParent.order();
+            return rootParent().order();
         }
 
         @Override
@@ -662,29 +675,29 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         public boolean isDirect() {
-            return rootParent.isDirect();
+            return rootParent().isDirect();
         }
 
         @Override
         public int arrayOffset() {
-            return idx(rootParent.arrayOffset());
+            return idx(rootParent().arrayOffset());
         }
 
         @Override
         public boolean hasMemoryAddress() {
-            return rootParent.hasMemoryAddress();
+            return hasMemoryAddress;
         }
 
         @Override
         public long memoryAddress() {
             ensureAccessible();
-            return rootParent.memoryAddress() + adjustment;
+            return rootParent().memoryAddress() + adjustment;
         }
 
         @Override
         public ByteBuffer nioBuffer(int index, int length) {
             checkIndex(index, length);
-            return rootParent.nioBuffer(idx(index), length);
+            return rootParent().nioBuffer(idx(index), length);
         }
 
         @Override
@@ -700,24 +713,24 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @Override
         public ByteBuffer[] nioBuffers(int index, int length) {
             checkIndex(index, length);
-            return rootParent.nioBuffers(idx(index), length);
+            return rootParent().nioBuffers(idx(index), length);
         }
 
         @Override
         public boolean hasArray() {
-            return rootParent.hasArray();
+            return hasArray;
         }
 
         @Override
         public byte[] array() {
             ensureAccessible();
-            return rootParent.array();
+            return rootParent().array();
         }
 
         @Override
         public ByteBuf copy(int index, int length) {
             checkIndex(index, length);
-            return rootParent.copy(idx(index), length);
+            return rootParent().copy(idx(index), length);
         }
 
         @Override
@@ -744,255 +757,255 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         public int nioBufferCount() {
-            return rootParent.nioBufferCount();
+            return rootParent().nioBufferCount();
         }
 
         @Override
         public byte getByte(int index) {
             checkIndex(index, 1);
-            return rootParent.getByte(idx(index));
+            return rootParent().getByte(idx(index));
         }
 
         @Override
         protected byte _getByte(int index) {
-            return rootParent._getByte(idx(index));
+            return rootParent()._getByte(idx(index));
         }
 
         @Override
         public short getShort(int index) {
             checkIndex(index, 2);
-            return rootParent.getShort(idx(index));
+            return rootParent().getShort(idx(index));
         }
 
         @Override
         protected short _getShort(int index) {
-            return rootParent._getShort(idx(index));
+            return rootParent()._getShort(idx(index));
         }
 
         @Override
         public short getShortLE(int index) {
             checkIndex(index, 2);
-            return rootParent.getShortLE(idx(index));
+            return rootParent().getShortLE(idx(index));
         }
 
         @Override
         protected short _getShortLE(int index) {
-            return rootParent._getShortLE(idx(index));
+            return rootParent()._getShortLE(idx(index));
         }
 
         @Override
         public int getUnsignedMedium(int index) {
             checkIndex(index, 3);
-            return rootParent.getUnsignedMedium(idx(index));
+            return rootParent().getUnsignedMedium(idx(index));
         }
 
         @Override
         protected int _getUnsignedMedium(int index) {
-            return rootParent._getUnsignedMedium(idx(index));
+            return rootParent()._getUnsignedMedium(idx(index));
         }
 
         @Override
         public int getUnsignedMediumLE(int index) {
             checkIndex(index, 3);
-            return rootParent.getUnsignedMediumLE(idx(index));
+            return rootParent().getUnsignedMediumLE(idx(index));
         }
 
         @Override
         protected int _getUnsignedMediumLE(int index) {
-            return rootParent._getUnsignedMediumLE(idx(index));
+            return rootParent()._getUnsignedMediumLE(idx(index));
         }
 
         @Override
         public int getInt(int index) {
             checkIndex(index, 4);
-            return rootParent.getInt(idx(index));
+            return rootParent().getInt(idx(index));
         }
 
         @Override
         protected int _getInt(int index) {
-            return rootParent._getInt(idx(index));
+            return rootParent()._getInt(idx(index));
         }
 
         @Override
         public int getIntLE(int index) {
             checkIndex(index, 4);
-            return rootParent.getIntLE(idx(index));
+            return rootParent().getIntLE(idx(index));
         }
 
         @Override
         protected int _getIntLE(int index) {
-            return rootParent._getIntLE(idx(index));
+            return rootParent()._getIntLE(idx(index));
         }
 
         @Override
         public long getLong(int index) {
             checkIndex(index, 8);
-            return rootParent.getLong(idx(index));
+            return rootParent().getLong(idx(index));
         }
 
         @Override
         protected long _getLong(int index) {
-            return rootParent._getLong(idx(index));
+            return rootParent()._getLong(idx(index));
         }
 
         @Override
         public long getLongLE(int index) {
             checkIndex(index, 8);
-            return rootParent.getLongLE(idx(index));
+            return rootParent().getLongLE(idx(index));
         }
 
         @Override
         protected long _getLongLE(int index) {
-            return rootParent._getLongLE(idx(index));
+            return rootParent()._getLongLE(idx(index));
         }
 
         @Override
         public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
             checkIndex(index, length);
-            rootParent.getBytes(idx(index), dst, dstIndex, length);
+            rootParent().getBytes(idx(index), dst, dstIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
             checkIndex(index, length);
-            rootParent.getBytes(idx(index), dst, dstIndex, length);
+            rootParent().getBytes(idx(index), dst, dstIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf getBytes(int index, ByteBuffer dst) {
             checkIndex(index, dst.remaining());
-            rootParent.getBytes(idx(index), dst);
+            rootParent().getBytes(idx(index), dst);
             return this;
         }
 
         @Override
         public ByteBuf setByte(int index, int value) {
             checkIndex(index, 1);
-            rootParent.setByte(idx(index), value);
+            rootParent().setByte(idx(index), value);
             return this;
         }
 
         @Override
         protected void _setByte(int index, int value) {
-            rootParent._setByte(idx(index), value);
+            rootParent()._setByte(idx(index), value);
         }
 
         @Override
         public ByteBuf setShort(int index, int value) {
             checkIndex(index, 2);
-            rootParent.setShort(idx(index), value);
+            rootParent().setShort(idx(index), value);
             return this;
         }
 
         @Override
         protected void _setShort(int index, int value) {
-            rootParent._setShort(idx(index), value);
+            rootParent()._setShort(idx(index), value);
         }
 
         @Override
         public ByteBuf setShortLE(int index, int value) {
             checkIndex(index, 2);
-            rootParent.setShortLE(idx(index), value);
+            rootParent().setShortLE(idx(index), value);
             return this;
         }
 
         @Override
         protected void _setShortLE(int index, int value) {
-            rootParent._setShortLE(idx(index), value);
+            rootParent()._setShortLE(idx(index), value);
         }
 
         @Override
         public ByteBuf setMedium(int index, int value) {
             checkIndex(index, 3);
-            rootParent.setMedium(idx(index), value);
+            rootParent().setMedium(idx(index), value);
             return this;
         }
 
         @Override
         protected void _setMedium(int index, int value) {
-            rootParent._setMedium(idx(index), value);
+            rootParent()._setMedium(idx(index), value);
         }
 
         @Override
         public ByteBuf setMediumLE(int index, int value) {
             checkIndex(index, 3);
-            rootParent.setMediumLE(idx(index), value);
+            rootParent().setMediumLE(idx(index), value);
             return this;
         }
 
         @Override
         protected void _setMediumLE(int index, int value) {
-            rootParent._setMediumLE(idx(index), value);
+            rootParent()._setMediumLE(idx(index), value);
         }
 
         @Override
         public ByteBuf setInt(int index, int value) {
             checkIndex(index, 4);
-            rootParent.setInt(idx(index), value);
+            rootParent().setInt(idx(index), value);
             return this;
         }
 
         @Override
         protected void _setInt(int index, int value) {
-            rootParent._setInt(idx(index), value);
+            rootParent()._setInt(idx(index), value);
         }
 
         @Override
         public ByteBuf setIntLE(int index, int value) {
             checkIndex(index, 4);
-            rootParent.setIntLE(idx(index), value);
+            rootParent().setIntLE(idx(index), value);
             return this;
         }
 
         @Override
         protected void _setIntLE(int index, int value) {
-            rootParent._setIntLE(idx(index), value);
+            rootParent()._setIntLE(idx(index), value);
         }
 
         @Override
         public ByteBuf setLong(int index, long value) {
             checkIndex(index, 8);
-            rootParent.setLong(idx(index), value);
+            rootParent().setLong(idx(index), value);
             return this;
         }
 
         @Override
         protected void _setLong(int index, long value) {
-            rootParent._setLong(idx(index), value);
+            rootParent()._setLong(idx(index), value);
         }
 
         @Override
         public ByteBuf setLongLE(int index, long value) {
             checkIndex(index, 8);
-            rootParent.setLongLE(idx(index), value);
+            rootParent().setLongLE(idx(index), value);
             return this;
         }
 
         @Override
         protected void _setLongLE(int index, long value) {
-            rootParent.setLongLE(idx(index), value);
+            rootParent().setLongLE(idx(index), value);
         }
 
         @Override
         public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
             checkIndex(index, length);
-            rootParent.setBytes(idx(index), src, srcIndex, length);
+            rootParent().setBytes(idx(index), src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
             checkIndex(index, length);
-            rootParent.setBytes(idx(index), src, srcIndex, length);
+            rootParent().setBytes(idx(index), src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuffer src) {
             checkIndex(index, src.remaining());
-            rootParent.setBytes(idx(index), src);
+            rootParent().setBytes(idx(index), src);
             return this;
         }
 
@@ -1022,6 +1035,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         public int setBytes(int index, InputStream in, int length)
                 throws IOException {
             checkIndex(index, length);
+            final AbstractByteBuf rootParent = rootParent();
             if (rootParent.hasArray()) {
                 return rootParent.setBytes(idx(index), in, length);
             }
@@ -1057,7 +1071,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @Override
         public int forEachByte(int index, int length, ByteProcessor processor) {
             checkIndex(index, length);
-            int ret = rootParent.forEachByte(idx(index), length, processor);
+            int ret = rootParent().forEachByte(idx(index), length, processor);
             if (ret < adjustment) {
                 return -1;
             }
@@ -1067,7 +1081,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @Override
         public int forEachByteDesc(int index, int length, ByteProcessor processor) {
             checkIndex(index, length);
-            int ret = rootParent.forEachByteDesc(idx(index), length, processor);
+            int ret = rootParent().forEachByteDesc(idx(index), length, processor);
             if (ret < adjustment) {
                 return -1;
             }
@@ -1076,7 +1090,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         public boolean isContiguous() {
-            return rootParent.isContiguous();
+            return rootParent().isContiguous();
         }
 
         private int idx(int index) {
@@ -1085,10 +1099,12 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         protected void deallocate() {
-            tmpNioBuf = null;
             if (chunk != null) {
                 chunk.release();
             }
+            tmpNioBuf = null;
+            chunk = null;
+            rootParent = null;
             if (handle instanceof Recycler.EnhancedHandle) {
                 ((Recycler.EnhancedHandle<?>) handle).unguardedRecycle(this);
             } else if (handle != null) {
