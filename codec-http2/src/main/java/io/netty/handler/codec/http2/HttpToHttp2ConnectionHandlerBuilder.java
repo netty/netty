@@ -81,6 +81,12 @@ public final class HttpToHttp2ConnectionHandlerBuilder extends
     }
 
     @Override
+    public HttpToHttp2ConnectionHandlerBuilder encoderIgnoreMaxHeaderListSize(
+            boolean encoderIgnoreMaxHeaderListSize) {
+        return super.encoderIgnoreMaxHeaderListSize(encoderIgnoreMaxHeaderListSize);
+    }
+
+    @Override
     @Deprecated
     public HttpToHttp2ConnectionHandlerBuilder initialHuffmanDecodeCapacity(int initialHuffmanDecodeCapacity) {
         return super.initialHuffmanDecodeCapacity(initialHuffmanDecodeCapacity);
