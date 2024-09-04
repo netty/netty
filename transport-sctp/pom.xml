@@ -78,6 +78,11 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
+          <archive>
+            <manifestEntries>
+              <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+            </manifestEntries>
+          </archive>
           <excludes>
             <!-- dont want to include com.sun in here -->
             <exclude>com/**</exclude>

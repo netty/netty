@@ -93,7 +93,7 @@
                 netty-testsuite-native,netty-testsuite-native-image,netty-testsuite-native-image-client,
                 netty-testsuite-native-image-client-runtime-init,netty-testsuite-osgi,netty-testsuite-shading,
                 netty-transport-blockhound-tests,netty-transport-native-unix-common-tests,netty-microbench,
-                netty-dev-tools,netty-example
+                netty-dev-tools,netty-example,testsuite-jpms
               </skippedModules>
               <sourceFileExcludes>
                 <exclude>**/com/sun/**/*.java</exclude>
@@ -473,6 +473,16 @@
     </profile>
 
     <profile>
+      <id>testsuite-jpms</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <modules>
+        <module>testsuite-jpms</module>
+      </modules>
+    </profile>
+
+    <profile>
       <id>boringssl-mac-aarch64</id>
       <activation>
         <os>
@@ -661,6 +671,8 @@
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
     <skipDeploy>false</skipDeploy>
+    <multiReleaseJar>true</multiReleaseJar>
+    <javaModuleName></javaModuleName>
   </properties>
 
   <modules>
@@ -842,7 +854,7 @@
       <dependency>
         <groupId>com.github.luben</groupId>
         <artifactId>zstd-jni</artifactId>
-        <version>1.5.5-11</version>
+        <version>1.5.6-5</version>
         <optional>true</optional>
       </dependency>
       <dependency>
@@ -1012,7 +1024,7 @@
       <dependency>
         <groupId>org.hamcrest</groupId>
         <artifactId>hamcrest-library</artifactId>
-        <version>1.3</version>
+        <version>2.2</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -7560,12 +7572,12 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.2</version>
+          <version>3.3.0</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.22.2</version>
+          <version>3.3.0</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
@@ -7624,7 +7636,7 @@
                     <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                   </manifest>
                   <manifestEntries>
-                    <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                    <Multi-Release>${multiReleaseJar}</Multi-Release>
                   </manifestEntries>
                   <index>true</index>
                   <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
@@ -7686,6 +7698,24 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
           <version>3.2.1</version>
+        </plugin>
+        <plugin>
+          <groupId>io.github.dmlloyd.module-info</groupId>
+          <artifactId>module-info</artifactId>
+          <version>2.1</version>
+          <executions>
+            <execution>
+              <id>module-info</id>
+              <phase>process-classes</phase>
+              <configuration>
+                <moduleName>${javaModuleName}</moduleName>
+                <outputDirectory>${project.build.outputDirectory}/META-INF/versions/11/</outputDirectory>
+              </configuration>
+              <goals>
+                <goal>generate</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
 
         <!-- Workaround for the 'M2E plugin execution not covered' problem.

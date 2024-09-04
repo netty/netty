@@ -29,9 +29,6 @@
 
   <name>Netty/Example</name>
 
-  <properties>
-    <javaModuleName>io.netty.example</javaModuleName>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -71,6 +68,11 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-handler-proxy</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-compression</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

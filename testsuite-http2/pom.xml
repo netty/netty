@@ -32,7 +32,6 @@
     <revapi.skip>true</revapi.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
-    <javaModuleName>io.netty.testsuite_http2</javaModuleName>
   </properties>
 
   <dependencies>
