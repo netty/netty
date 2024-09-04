@@ -703,6 +703,15 @@ public class HttpRequestDecoderTest {
         testInvalidHeaders0("GET / HTTP/1.1\r\u0000\nHost: whatever\r\n\r\n");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "(", ")", ",", "/", ":", ";", "<", "=", ">", "?", "@",
+            "\"", "[", "\\", "]", "{", "}", "\u0000", " ", "\u007f", "ÿ"
+    })
+    public void testMethodWithInvalidOctets(String invalidOctet) {
+        testInvalidHeaders0("GE" + invalidOctet + "T / HTTP/1.1\r\nHost: whatever\r\n\r\n");
+    }
+
     @Test
     void reentrantClose() {
         String requestStr = "GET / HTTP/1.1\r\n" +

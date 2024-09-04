@@ -20,6 +20,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.AsciiString;
 
+import java.util.BitSet;
+
 /**
  * Decodes {@link ByteBuf}s into {@link HttpRequest}s and {@link HttpContent}s.
  *
@@ -320,8 +322,46 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
         return maybePost == POST_AS_INT;
     }
 
+    private static int firstInvalidMethodOctet(final byte[] sb, int start, int length) {
+        int end = start + length;
+        for (int i = start; i < end; i++) {
+            if (sb[i] < 0 || !VALID_HTTP_METHOD_OCTETS.get(sb[i])) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static final BitSet VALID_HTTP_METHOD_OCTETS = validHttpMethodOctets();
+
+    private static BitSet validHttpMethodOctets() {
+        BitSet bits = new BitSet();
+        // https://datatracker.ietf.org/doc/html/rfc9110#name-tokens
+        // token          = 1*tchar
+        // tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+        //                 / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+        //                 / DIGIT / ALPHA
+        //                 ; any VCHAR, except delimiters
+        //Many HTTP field values are defined using common syntax components,
+        // separated by whitespace or specific delimiting characters. Delimiters
+        // are chosen from the set of US-ASCII visual characters not allowed in
+        // a token (DQUOTE and "(),/:;<=>?@[\]{}").
+        //VCHAR          =  %x21-7E
+        bits.set(0x21, 0x7f);
+        int[] delimiters = { '(', ')', ',', '/', ':', ';', '<', '=', '>', '?', '@', '"', '[', '\\', ']', '{', '}' };
+        for (int delimiter : delimiters) {
+            bits.set(delimiter, false);
+        }
+        return bits;
+    }
+
     @Override
     protected String splitFirstWordInitialLine(final byte[] sb, final int start, final int length) {
+        int firstInvalidOctet = firstInvalidMethodOctet(sb, start, length);
+        if (firstInvalidOctet != -1) {
+            throw new IllegalArgumentException(
+                    "HTTP Method contains an invalid character: " + sb[firstInvalidOctet]);
+        }
         if (length == 3) {
             if (isGetMethod(sb, start)) {
                 return HttpMethod.GET.name();
