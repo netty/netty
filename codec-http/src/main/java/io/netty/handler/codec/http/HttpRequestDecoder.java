@@ -360,7 +360,6 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
         int firstInvalidOctet = firstInvalidMethodOctet(sb, start, length);
         if (firstInvalidOctet != -1) {
             throw new IllegalArgumentException(
-            throw new IllegalArgumentException(
                     "Illegal character in "HTTP Method: 0x" + Integer.toHexString(sb[firstInvalidOctet]));
         }
         if (length == 3) {
