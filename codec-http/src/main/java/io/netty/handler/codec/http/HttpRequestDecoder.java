@@ -342,7 +342,7 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
         //                 / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
         //                 / DIGIT / ALPHA
         //                 ; any VCHAR, except delimiters
-        //Many HTTP field values are defined using common syntax components,
+        // Many HTTP field values are defined using common syntax components,
         // separated by whitespace or specific delimiting characters. Delimiters
         // are chosen from the set of US-ASCII visual characters not allowed in
         // a token (DQUOTE and "(),/:;<=>?@[\]{}").
@@ -360,7 +360,8 @@ public class HttpRequestDecoder extends HttpObjectDecoder {
         int firstInvalidOctet = firstInvalidMethodOctet(sb, start, length);
         if (firstInvalidOctet != -1) {
             throw new IllegalArgumentException(
-                    "HTTP Method contains an invalid character: " + sb[firstInvalidOctet]);
+            throw new IllegalArgumentException(
+                    "Illegal character in "HTTP Method: 0x" + Integer.toHexString(sb[firstInvalidOctet]));
         }
         if (length == 3) {
             if (isGetMethod(sb, start)) {
