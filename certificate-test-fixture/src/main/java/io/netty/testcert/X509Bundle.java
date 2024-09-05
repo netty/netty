@@ -169,7 +169,7 @@ public final class X509Bundle {
     }
 
     private static String toCertPem(X509Certificate... certs) {
-        Base64.Encoder encoder = Base64.getMimeEncoder();
+        Base64.Encoder encoder = getMimeEncoder();
         StringBuilder sb = new StringBuilder();
         for (X509Certificate cert : certs) {
             sb.append("-----BEGIN CERTIFICATE-----\r\n");
@@ -188,12 +188,16 @@ public final class X509Bundle {
      * @return The private key in PKCS#8 and PEM encoded string.
      */
     public String getPrivateKeyPEM() {
-        Base64.Encoder encoder = Base64.getMimeEncoder();
+        Base64.Encoder encoder = getMimeEncoder();
         StringBuilder sb = new StringBuilder();
         sb.append("-----BEGIN PRIVATE KEY-----\r\n");
         sb.append(encoder.encodeToString(keyPair.getPrivate().getEncoded()));
         sb.append("\r\n-----END PRIVATE KEY-----\r\n");
         return sb.toString();
+    }
+
+    private static Base64.Encoder getMimeEncoder() {
+        return Base64.getMimeEncoder(64, new byte[]{ '\r', '\n' });
     }
 
     /**
