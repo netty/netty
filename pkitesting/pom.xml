@@ -20,16 +20,16 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.0.Alpha4-SNAPSHOT</version>
+    <version>4.2.0.Alpha5-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-certificate-test-fixture</artifactId>
+  <artifactId>netty-pkitesting</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty/CertificateTestFixture</name>
+  <name>Netty/PKITesting</name>
 
   <properties>
-    <javaModuleName>io.netty.testcert</javaModuleName>
+    <javaModuleName>io.netty.pkitesting</javaModuleName>
   </properties>
 
   <dependencies>
@@ -39,4 +39,19 @@
       <version>${project.version}</version>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>

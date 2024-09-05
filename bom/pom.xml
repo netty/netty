@@ -222,7 +222,7 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty-certificate-test-fixture</artifactId>
+        <artifactId>netty-pkitesting</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
