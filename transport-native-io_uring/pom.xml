@@ -366,6 +366,18 @@
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
+          <!-- We must generate a -javadoc JAR file to publish on Maven Central -->
+          <execution>
+            <id>empty-javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+              <classesDirectory>${basedir}/javadoc</classesDirectory>
+            </configuration>
+          </execution>
           <!-- Generate the fallback JAR that does not contain the native library. -->
           <execution>
             <id>default-jar</id>
