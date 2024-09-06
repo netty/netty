@@ -33,7 +33,7 @@ public final class DefaultHttpHeadersFactory implements HttpHeadersFactory {
             if (name == null || name.length() == 0) {
                 throw new IllegalArgumentException("empty headers are not allowed [" + name + ']');
             }
-            int index = HttpUtil.validateToken(name);
+            int index = HttpHeaderValidationUtil.validateToken(name);
             if (index != -1) {
                 throw new IllegalArgumentException("a header name can only contain \"token\" characters, " +
                         "but found invalid character 0x" + Integer.toHexString(name.charAt(index)) +

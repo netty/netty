@@ -161,4 +161,21 @@ public final class HttpHeaderValidationUtil {
         }
         return -1;
     }
+
+    /**
+     * Validate a <a href="https://tools.ietf.org/html/rfc7230#section-3.2.6">token</a> contains only allowed
+     * characters.
+     * <p>
+     * The <a href="https://tools.ietf.org/html/rfc2616#section-2.2">token</a> format is used for variety of HTTP
+     * components, like  <a href="https://tools.ietf.org/html/rfc6265#section-4.1.1">cookie-name</a>,
+     * <a href="https://tools.ietf.org/html/rfc7230#section-3.2.6">field-name</a> of a
+     * <a href="https://tools.ietf.org/html/rfc7230#section-3.2">header-field</a>, or
+     * <a href="https://tools.ietf.org/html/rfc7231#section-4">request method</a>.
+     *
+     * @param token the token to validate.
+     * @return the index of the first invalid token character found, or {@code -1} if there are none.
+     */
+    public static int validateToken(CharSequence token) {
+        return HttpUtil.validateToken(token);
+    }
 }

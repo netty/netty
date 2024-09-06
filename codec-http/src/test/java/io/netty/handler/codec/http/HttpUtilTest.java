@@ -458,7 +458,7 @@ public class HttpUtilTest {
         });
     }
 
-    public static List<Character> validTokenChars() {
+    private static List<Character> validTokenChars() {
         List<Character> list = new ArrayList<Character>();
         for (char c = '0'; c <= '9'; c++) {
             list.add(c);
@@ -494,33 +494,24 @@ public class HttpUtilTest {
 
     @ParameterizedTest
     @MethodSource("validTokenChars")
-    void allTokenCharsAreValidFirstCharHeaderName(char tokenChar) {
-        AsciiString asciiString = new AsciiString(new byte[] {(byte) tokenChar, 'a'});
-        String string = tokenChar + "a";
-
-        assertEquals(-1, validateToken(asciiString));
-        assertEquals(-1, validateToken(string));
+    public void testValidTokenChars(char validChar) {
+        AsciiString asciiStringToken =
+                new AsciiString(new byte[] { 'G', 'E', (byte) validChar, 'T' });
+        String token = "GE" + validChar + 'T';
+        assertEquals(-1, validateToken(asciiStringToken));
+        assertEquals(-1, validateToken(token));
     }
 
     @ParameterizedTest
-    @MethodSource("validTokenChars")
-    void allTokenCharsAreValidSecondCharHeaderName(char tokenChar) {
-        AsciiString asciiString = new AsciiString(new byte[] {'a', (byte) tokenChar});
-        String string = "a" + tokenChar;
-
-        assertEquals(-1, validateToken(asciiString));
-        assertEquals(-1, validateToken(string));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "(", ")", ",", "/", ":", ";", "<", "=", ">", "?", "@",
-            "\"", "[", "\\", "]", "{", "}", "\u0000", " ", "\u007f", "ÿ"
+    @ValueSource(chars = {
+            '(', ')', ',', '/', ':', ';', '<', '=', '>', '?', '@',
+            '\"', '[', '\\', ']', '{', '}', '\u0000', ' ', '\u007f', 'ÿ'
     })
-    public void invalidTokenChars(String invalidOctet) {
-        AsciiString mehtodNameAscii = new AsciiString(new byte[] { 'G', 'E', (byte) invalidOctet.charAt(0), 'T' });
-        String mehtodName = "GE" + invalidOctet + 'T';
-        assertEquals(2, validateToken(mehtodNameAscii));
-        assertEquals(2, validateToken(mehtodName));
+    public void testInvalidTokenChars(char invalidChar) {
+        AsciiString asciiStringToken =
+                new AsciiString(new byte[] { 'G', 'E', (byte) invalidChar, 'T' });
+        String token = "GE" + invalidChar + 'T';
+        assertEquals(2, validateToken(asciiStringToken));
+        assertEquals(2, validateToken(token));
     }
 }
