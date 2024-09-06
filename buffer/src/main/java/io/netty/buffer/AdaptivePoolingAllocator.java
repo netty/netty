@@ -189,12 +189,19 @@ final class AdaptivePoolingAllocator {
             Thread currentThread = Thread.currentThread();
             boolean willCleanupFastThreadLocals = FastThreadLocalThread.willCleanupFastThreadLocals(currentThread);
             AdaptiveByteBuf buf = AdaptiveByteBuf.newInstance(willCleanupFastThreadLocals);
-            AdaptiveByteBuf result = allocate(size, maxCapacity, currentThread, buf);
-            if (result != null) {
-                return result;
+            try {
+                AdaptiveByteBuf result = allocate(size, maxCapacity, currentThread, buf);
+                if (result != null) {
+                    // The ownership of the buf is now part of the result that we return.
+                    buf = null;
+                    return result;
+                }
+            } finally {
+                if (buf != null) {
+                    // We didnt handover ownership of the buf, release it now so we don't leak.
+                    buf.release();
+                }
             }
-            // Return the buffer we pulled from the recycler but didn't use.
-            buf.release();
         }
         // The magazines failed us, or the buffer is too big to be pooled.
         return chunkAllocator.allocate(size, maxCapacity);
