@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-import static io.netty.handler.codec.http.HttpHeaderValidationUtil.validateToken;
+import static io.netty.handler.codec.http.HttpUtil.validateToken;
 import static io.netty.handler.codec.http.HttpHeaderValidationUtil.validateValidHeaderValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -522,63 +522,5 @@ public class HttpHeaderValidationUtilTest {
                     throw VALIDATION_EXCEPTION;
                 }
         }
-    }
-
-    public static List<Character> validTokenChars() {
-        List<Character> list = new ArrayList<Character>();
-        for (char c = '0'; c <= '9'; c++) {
-            list.add(c);
-        }
-        for (char c = 'a'; c <= 'z'; c++) {
-            list.add(c);
-        }
-        for (char c = 'A'; c <= 'Z'; c++) {
-            list.add(c);
-        }
-
-        // Unreserved characters:
-        list.add('-');
-        list.add('.');
-        list.add('_');
-        list.add('~');
-
-        // Token special characters:
-        list.add('!');
-        list.add('#');
-        list.add('$');
-        list.add('%');
-        list.add('&');
-        list.add('\'');
-        list.add('*');
-        list.add('+');
-        list.add('^');
-        list.add('`');
-        list.add('|');
-
-        return list;
-    }
-
-    @ParameterizedTest
-    @MethodSource("validTokenChars")
-    void allTokenCharsAreValidFirstCharHeaderName(char tokenChar) {
-        AsciiString asciiString = new AsciiString(new byte[] {(byte) tokenChar, 'a'});
-        CharSequence charSequence = asCharSequence(asciiString);
-        String string = tokenChar + "a";
-
-        assertEquals(-1, validateToken(asciiString));
-        assertEquals(-1, validateToken(charSequence));
-        assertEquals(-1, validateToken(string));
-    }
-
-    @ParameterizedTest
-    @MethodSource("validTokenChars")
-    void allTokenCharsAreValidSecondCharHeaderName(char tokenChar) {
-        AsciiString asciiString = new AsciiString(new byte[] {'a', (byte) tokenChar});
-        CharSequence charSequence = asCharSequence(asciiString);
-        String string = "a" + tokenChar;
-
-        assertEquals(-1, validateToken(asciiString));
-        assertEquals(-1, validateToken(charSequence));
-        assertEquals(-1, validateToken(string));
     }
 }

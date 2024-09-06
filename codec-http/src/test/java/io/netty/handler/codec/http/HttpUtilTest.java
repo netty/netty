@@ -15,10 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -29,6 +33,7 @@ import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.handler.codec.http.HttpUtil.normalizeAndGetContentLength;
+import static io.netty.handler.codec.http.HttpUtil.validateToken;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -451,5 +456,71 @@ public class HttpUtilTest {
                 normalizeAndGetContentLength(singletonList(contentLengthField), false, false);
             }
         });
+    }
+
+    public static List<Character> validTokenChars() {
+        List<Character> list = new ArrayList<Character>();
+        for (char c = '0'; c <= '9'; c++) {
+            list.add(c);
+        }
+        for (char c = 'a'; c <= 'z'; c++) {
+            list.add(c);
+        }
+        for (char c = 'A'; c <= 'Z'; c++) {
+            list.add(c);
+        }
+
+        // Unreserved characters:
+        list.add('-');
+        list.add('.');
+        list.add('_');
+        list.add('~');
+
+        // Token special characters:
+        list.add('!');
+        list.add('#');
+        list.add('$');
+        list.add('%');
+        list.add('&');
+        list.add('\'');
+        list.add('*');
+        list.add('+');
+        list.add('^');
+        list.add('`');
+        list.add('|');
+
+        return list;
+    }
+
+    @ParameterizedTest
+    @MethodSource("validTokenChars")
+    void allTokenCharsAreValidFirstCharHeaderName(char tokenChar) {
+        AsciiString asciiString = new AsciiString(new byte[] {(byte) tokenChar, 'a'});
+        String string = tokenChar + "a";
+
+        assertEquals(-1, validateToken(asciiString));
+        assertEquals(-1, validateToken(string));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validTokenChars")
+    void allTokenCharsAreValidSecondCharHeaderName(char tokenChar) {
+        AsciiString asciiString = new AsciiString(new byte[] {'a', (byte) tokenChar});
+        String string = "a" + tokenChar;
+
+        assertEquals(-1, validateToken(asciiString));
+        assertEquals(-1, validateToken(string));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "(", ")", ",", "/", ":", ";", "<", "=", ">", "?", "@",
+            "\"", "[", "\\", "]", "{", "}", "\u0000", " ", "\u007f", "ÿ"
+    })
+    public void invalidTokenChars(String invalidOctet) {
+        AsciiString mehtodNameAscii = new AsciiString(new byte[] { 'G', 'E', (byte) invalidOctet.charAt(0), 'T' });
+        String mehtodName = "GE" + invalidOctet + 'T';
+        assertEquals(2, validateToken(mehtodNameAscii));
+        assertEquals(2, validateToken(mehtodName));
     }
 }

@@ -76,7 +76,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
      * Create an HTTP headers object with the given name validator.
      * <p>
      * <b>Warning!</b> It is strongly recommended that the name validator implement validation that is at least as
-     * strict as {@link HttpHeaderValidationUtil#validateToken(CharSequence)}.
+     * strict as {@link HttpUtil#validateToken(CharSequence)}.
      * It is also strongly recommended that {@code validateValues} is enabled.
      * <p>
      * Without these validations in place, your code can be susceptible to
@@ -97,7 +97,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
      * Create an HTTP headers object with the given name and value validators.
      * <p>
      * <b>Warning!</b> It is strongly recommended that the name validator implement validation that is at least as
-     * strict as {@link HttpHeaderValidationUtil#validateToken(CharSequence)}.
+     * strict as {@link HttpUtil#validateToken(CharSequence)}.
      * And that the value validator is at least as strict as
      * {@link HttpHeaderValidationUtil#validateValidHeaderValue(CharSequence)}.
      * <p>
@@ -121,7 +121,7 @@ public class DefaultHttpHeaders extends HttpHeaders {
      * Create an HTTP headers object with the given name and value validators.
      * <p>
      * <b>Warning!</b> It is strongly recommended that the name validator implement validation that is at least as
-     * strict as {@link HttpHeaderValidationUtil#validateToken(CharSequence)}.
+     * strict as {@link HttpUtil#validateToken(CharSequence)}.
      * And that the value validator is at least as strict as
      * {@link HttpHeaderValidationUtil#validateValidHeaderValue(CharSequence)}.
      * <p>
