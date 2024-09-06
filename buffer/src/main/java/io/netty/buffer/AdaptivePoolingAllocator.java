@@ -763,20 +763,8 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public byte getByte(int index) {
-            checkIndex(index, 1);
-            return rootParent().getByte(idx(index));
-        }
-
-        @Override
         protected byte _getByte(int index) {
             return rootParent()._getByte(idx(index));
-        }
-
-        @Override
-        public short getShort(int index) {
-            checkIndex(index, 2);
-            return rootParent().getShort(idx(index));
         }
 
         @Override
@@ -785,20 +773,8 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public short getShortLE(int index) {
-            checkIndex(index, 2);
-            return rootParent().getShortLE(idx(index));
-        }
-
-        @Override
         protected short _getShortLE(int index) {
             return rootParent()._getShortLE(idx(index));
-        }
-
-        @Override
-        public int getUnsignedMedium(int index) {
-            checkIndex(index, 3);
-            return rootParent().getUnsignedMedium(idx(index));
         }
 
         @Override
@@ -807,20 +783,8 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public int getUnsignedMediumLE(int index) {
-            checkIndex(index, 3);
-            return rootParent().getUnsignedMediumLE(idx(index));
-        }
-
-        @Override
         protected int _getUnsignedMediumLE(int index) {
             return rootParent()._getUnsignedMediumLE(idx(index));
-        }
-
-        @Override
-        public int getInt(int index) {
-            checkIndex(index, 4);
-            return rootParent().getInt(idx(index));
         }
 
         @Override
@@ -829,31 +793,13 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public int getIntLE(int index) {
-            checkIndex(index, 4);
-            return rootParent().getIntLE(idx(index));
-        }
-
-        @Override
         protected int _getIntLE(int index) {
             return rootParent()._getIntLE(idx(index));
         }
 
         @Override
-        public long getLong(int index) {
-            checkIndex(index, 8);
-            return rootParent().getLong(idx(index));
-        }
-
-        @Override
         protected long _getLong(int index) {
             return rootParent()._getLong(idx(index));
-        }
-
-        @Override
-        public long getLongLE(int index) {
-            checkIndex(index, 8);
-            return rootParent().getLongLE(idx(index));
         }
 
         @Override
@@ -883,22 +829,8 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public ByteBuf setByte(int index, int value) {
-            checkIndex(index, 1);
-            rootParent().setByte(idx(index), value);
-            return this;
-        }
-
-        @Override
         protected void _setByte(int index, int value) {
             rootParent()._setByte(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setShort(int index, int value) {
-            checkIndex(index, 2);
-            rootParent().setShort(idx(index), value);
-            return this;
         }
 
         @Override
@@ -907,22 +839,8 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public ByteBuf setShortLE(int index, int value) {
-            checkIndex(index, 2);
-            rootParent().setShortLE(idx(index), value);
-            return this;
-        }
-
-        @Override
         protected void _setShortLE(int index, int value) {
             rootParent()._setShortLE(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setMedium(int index, int value) {
-            checkIndex(index, 3);
-            rootParent().setMedium(idx(index), value);
-            return this;
         }
 
         @Override
@@ -931,22 +849,8 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public ByteBuf setMediumLE(int index, int value) {
-            checkIndex(index, 3);
-            rootParent().setMediumLE(idx(index), value);
-            return this;
-        }
-
-        @Override
         protected void _setMediumLE(int index, int value) {
             rootParent()._setMediumLE(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setInt(int index, int value) {
-            checkIndex(index, 4);
-            rootParent().setInt(idx(index), value);
-            return this;
         }
 
         @Override
@@ -955,34 +859,13 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public ByteBuf setIntLE(int index, int value) {
-            checkIndex(index, 4);
-            rootParent().setIntLE(idx(index), value);
-            return this;
-        }
-
-        @Override
         protected void _setIntLE(int index, int value) {
             rootParent()._setIntLE(idx(index), value);
         }
 
         @Override
-        public ByteBuf setLong(int index, long value) {
-            checkIndex(index, 8);
-            rootParent().setLong(idx(index), value);
-            return this;
-        }
-
-        @Override
         protected void _setLong(int index, long value) {
             rootParent()._setLong(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setLongLE(int index, long value) {
-            checkIndex(index, 8);
-            rootParent().setLongLE(idx(index), value);
-            return this;
         }
 
         @Override
