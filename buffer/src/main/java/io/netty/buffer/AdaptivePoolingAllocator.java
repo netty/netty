@@ -197,8 +197,9 @@ final class AdaptivePoolingAllocator {
             try {
                 if (allocate(size, maxCapacity, currentThread, buf)) {
                     // Allocation did work, the ownership will is transferred to the caller.
+                    AdaptiveByteBuf result = buf;
                     buf = null;
-                    return buf;
+                    return result;
                 }
             } finally {
                 if (buf != null) {
