@@ -16,13 +16,15 @@
 
 package io.netty.buffer;
 
+import com.sun.management.ThreadMXBean;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +37,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
-import org.junit.jupiter.api.Timeout;
 
 import static io.netty.buffer.PoolChunk.runOffset;
 import static io.netty.buffer.PoolChunk.runPages;
@@ -45,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<PooledByteBufAllocator> {
 
@@ -154,13 +156,13 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
     @Test
     public void testArenaMetricsNoCacheAlign() {
-        Assumptions.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
+        assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 9, 0, 0, 0, true, 64), 100, 0, 100, 100);
     }
 
     @Test
     public void testArenaMetricsCacheAlign() {
-        Assumptions.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
+        assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 9, 1000, 1000, 1000, true, 64), 100, 1, 1, 0);
     }
 
@@ -956,5 +958,23 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
                 buffer.release();
             }
         }
+    }
+
+    @Test
+    public void shouldReuseChunks() {
+        int bufSize = 1024 * 1024;
+        ByteBufAllocator allocator = newAllocator(false);
+        allocator.heapBuffer(bufSize, bufSize).release();
+        ThreadMXBean threadMXBean = (ThreadMXBean) ManagementFactory.getThreadMXBean();
+        long allocBefore = threadMXBean.getThreadAllocatedBytes(Thread.currentThread().getId());
+        assumeTrue(allocBefore != -1);
+        for (int i = 0; i < 100; ++i) {
+            allocator.heapBuffer(bufSize, bufSize).release();
+        }
+        long allocAfter = threadMXBean.getThreadAllocatedBytes(Thread.currentThread().getId());
+        assumeTrue(allocAfter != -1);
+        assertThat(allocAfter - allocBefore)
+                .as("allocated MB: %.3f", (allocAfter - allocBefore) / 1024.0 / 1024.0)
+                .isLessThan(8 * 1024 * 1024);
     }
 }
