@@ -16,15 +16,17 @@
 
 package io.netty.buffer;
 
-import com.sun.management.ThreadMXBean;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import org.assertj.core.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,10 +44,12 @@ import static io.netty.buffer.PoolChunk.runOffset;
 import static io.netty.buffer.PoolChunk.runPages;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.abort;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<PooledByteBufAllocator> {
@@ -961,17 +965,25 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    public void shouldReuseChunks() {
+    public void shouldReuseChunks() throws Exception {
         int bufSize = 1024 * 1024;
         ByteBufAllocator allocator = newAllocator(false);
         allocator.heapBuffer(bufSize, bufSize).release();
-        ThreadMXBean threadMXBean = (ThreadMXBean) ManagementFactory.getThreadMXBean();
-        long allocBefore = threadMXBean.getThreadAllocatedBytes(Thread.currentThread().getId());
+        ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+        Class<?> cls = null;
+        try {
+            cls = Class.forName("com.sun.management.ThreadMXBean");
+        } catch (ClassNotFoundException e) {
+            abort("Internal ThreadMXBean not available");
+        }
+        assumeThat(threadMXBean).isInstanceOf(cls);
+        Method getThreadAllocatedBytes = cls.getDeclaredMethod("getThreadAllocatedBytes", long.class);
+        long allocBefore = (long) getThreadAllocatedBytes.invoke(threadMXBean, Thread.currentThread().getId());
         assumeTrue(allocBefore != -1);
         for (int i = 0; i < 100; ++i) {
             allocator.heapBuffer(bufSize, bufSize).release();
         }
-        long allocAfter = threadMXBean.getThreadAllocatedBytes(Thread.currentThread().getId());
+        long allocAfter = (long) getThreadAllocatedBytes.invoke(threadMXBean, Thread.currentThread().getId());
         assumeTrue(allocAfter != -1);
         assertThat(allocAfter - allocBefore)
                 .as("allocated MB: %.3f", (allocAfter - allocBefore) / 1024.0 / 1024.0)
