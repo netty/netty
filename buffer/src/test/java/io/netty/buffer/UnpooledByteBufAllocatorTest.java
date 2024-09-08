@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import org.junit.jupiter.api.Disabled;
+
 public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<UnpooledByteBufAllocator> {
 
     @Override
@@ -25,5 +27,10 @@ public class UnpooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<U
     @Override
     protected UnpooledByteBufAllocator newUnpooledAllocator() {
         return new UnpooledByteBufAllocator(false);
+    }
+
+    @Disabled("Not applicable for unpooled allocators")
+    @Override
+    public void shouldReuseChunks() throws Exception {
     }
 }
