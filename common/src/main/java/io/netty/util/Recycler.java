@@ -27,6 +27,7 @@ import org.jctools.queues.MessagePassingQueue;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -297,7 +298,7 @@ public abstract class Recycler<T> {
     private static final class LocalPool<T> implements MessagePassingQueue.Consumer<DefaultHandle<T>> {
         private final int ratioInterval;
         private final int chunkSize;
-        private final ArrayDeque<DefaultHandle<T>> batch;
+        private final ArrayList<DefaultHandle<T>> batch;
         private volatile Thread owner;
         private volatile MessagePassingQueue<DefaultHandle<T>> pooledHandles;
         private int ratioCounter;
@@ -306,7 +307,7 @@ public abstract class Recycler<T> {
         LocalPool(int maxCapacity, int ratioInterval, int chunkSize) {
             this.ratioInterval = ratioInterval;
             this.chunkSize = chunkSize;
-            batch = new ArrayDeque<DefaultHandle<T>>(chunkSize);
+            batch = new ArrayList<DefaultHandle<T>>(chunkSize);
             Thread currentThread = Thread.currentThread();
             owner = !BATCH_FAST_TL_ONLY || currentThread instanceof FastThreadLocalThread ? currentThread : null;
             if (BLOCKING_POOL) {
@@ -325,7 +326,7 @@ public abstract class Recycler<T> {
             if (batch.isEmpty()) {
                 handles.drain(this, chunkSize);
             }
-            DefaultHandle<T> handle = batch.pollFirst();
+            DefaultHandle<T> handle = batch.isEmpty() ? null : batch.remove(0);
             if (null != handle) {
                 handle.toClaimed();
             }
@@ -368,7 +369,7 @@ public abstract class Recycler<T> {
 
         @Override
         public void accept(DefaultHandle<T> e) {
-            batch.addLast(e);
+            batch.add(e);
         }
     }
 
