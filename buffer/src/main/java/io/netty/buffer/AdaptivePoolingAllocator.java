@@ -335,6 +335,10 @@ final class AdaptivePoolingAllocator {
         }
     }
 
+    static int sizeBucket(int size) {
+        return AllocationStatistics.sizeBucket(size);
+    }
+
     @SuppressWarnings("checkstyle:finalclass") // Checkstyle mistakenly believes this class should be final.
     private static class AllocationStatistics extends StampedLock {
         private static final long serialVersionUID = -8319929980932269688L;
@@ -345,6 +349,7 @@ final class AdaptivePoolingAllocator {
         private static final int HISTO_MAX_BUCKET_SHIFT = 20; // Biggest bucket is 1 << 20 = 1 MiB bytes in size.
         private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 8 buckets.
         private static final int HISTO_MAX_BUCKET_MASK = HISTO_BUCKET_COUNT - 1;
+        private static final int SIZE_MAX_MASK = MAX_CHUNK_SIZE - 1;
 
         protected final AdaptivePoolingAllocator parent;
         private final boolean shareable;
@@ -374,12 +379,15 @@ final class AdaptivePoolingAllocator {
         }
 
         static int sizeBucket(int size) {
+            if (size == 0) {
+                return 0;
+            }
             // Minimum chunk size is 128 KiB. We'll only make bigger chunks if the 99-percentile is 16 KiB or greater,
             // so we truncate and roll up the bottom part of the histogram to 8 KiB.
             // The upper size band is 1 MiB, and that gives us exactly 8 size buckets,
             // which is a magical number for JIT optimisations.
-            int normalizedSize = size - 1 >> HISTO_MIN_BUCKET_SHIFT;
-            return Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize) & HISTO_MAX_BUCKET_MASK;
+            int normalizedSize = size - 1 >> HISTO_MIN_BUCKET_SHIFT & SIZE_MAX_MASK;
+            return Math.min(Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize), HISTO_MAX_BUCKET_MASK);
         }
 
         private void rotateHistograms() {
