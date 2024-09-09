@@ -179,10 +179,13 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
 
     private void testSimpleSend(Bootstrap sb, Bootstrap cb, ByteBuf buf, boolean bindClient,
                                 final byte[] bytes, int count) throws Throwable {
-        for (WrapType type: WrapType.values()) {
-            testSimpleSend0(sb, cb, buf.retain(), bindClient, bytes, count, type);
+        try {
+            for (WrapType type: WrapType.values()) {
+                testSimpleSend0(sb, cb, buf.retain(), bindClient, bytes, count, type);
+            }
+        } finally {
+            assertTrue(buf.release());
         }
-        assertTrue(buf.release());
     }
 
     @Test

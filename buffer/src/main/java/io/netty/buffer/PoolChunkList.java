@@ -28,7 +28,7 @@ import static java.lang.Math.*;
 import java.nio.ByteBuffer;
 
 final class PoolChunkList<T> implements PoolChunkListMetric {
-    private static final Iterator<PoolChunkMetric> EMPTY_METRICS = Collections.<PoolChunkMetric>emptyList().iterator();
+    private static final Iterator<PoolChunkMetric> EMPTY_METRICS = Collections.emptyIterator();
     private final PoolArena<T> arena;
     private final PoolChunkList<T> nextList;
     private final int minUsage;
