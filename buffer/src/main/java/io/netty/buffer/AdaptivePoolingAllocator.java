@@ -319,7 +319,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private static final long serialVersionUID = -8319929980932269688L;
         private static final int MIN_DATUM_TARGET = 1024;
         private static final int MAX_DATUM_TARGET = 65534;
-        private static final int INIT_DATUM_TARGET = 8192;
+        private static final int INIT_DATUM_TARGET = 9;
         private static final int HISTO_MIN_BUCKET_SHIFT = 13; // Smallest bucket is 1 << 13 = 8192 bytes in size.
         private static final int HISTO_MAX_BUCKET_SHIFT = 20; // Biggest bucket is 1 << 20 = 1 MiB bytes in size.
         private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 8 buckets.
@@ -357,8 +357,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             // so we truncate and roll up the bottom part of the histogram to 8 KiB.
             // The upper size band is 1 MiB, and that gives us exactly 8 size buckets,
             // which is a magical number for JIT optimisations.
-            int normalizedSize = size - 1 >> HISTO_MIN_BUCKET_SHIFT & HISTO_MAX_BUCKET_MASK;
-            return Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize);
+            int normalizedSize = size - 1 >> HISTO_MIN_BUCKET_SHIFT;
+            return Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize) & HISTO_MAX_BUCKET_MASK;
         }
 
         private void rotateHistograms() {
@@ -524,7 +524,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             REF_CNT_UP_UPDATER.lazySet(this, 1);
         }
 
-        protected void deallocate() {
+        private void deallocate() {
             Magazine mag = magazine;
             AdaptivePoolingAllocator parent = mag.parent;
             int chunkSize = mag.preferredChunkSize();
