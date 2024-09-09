@@ -539,8 +539,18 @@ final class AdaptivePoolingAllocator {
         public AdaptiveByteBuf readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
             int startIndex = allocatedBytes;
             allocatedBytes = startIndex + size;
-            unguardedRetain();
-            buf.init(delegate, this, 0, 0, startIndex, size, maxCapacity);
+            Chunk chunk = this;
+            chunk.unguardedRetain();
+            try {
+                buf.init(delegate, chunk, 0, 0, startIndex, size, maxCapacity);
+                chunk = null;
+            } finally {
+                if (chunk != null) {
+                    // If chunk is not null we know that buf.init(...) failed and so we need to manually release
+                    // the chunk again as we retained it before calling buf.init(...).
+                    chunk.release();
+                }
+            }
             return buf;
         }
 
