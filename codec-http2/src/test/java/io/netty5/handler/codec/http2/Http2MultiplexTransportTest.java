@@ -607,7 +607,7 @@ public class Http2MultiplexTransportTest {
                                         (SslHandshakeCompletionEvent) evt;
                                 if (handshakeCompletionEvent.isSuccess()) {
                                     Http2StreamChannelBootstrap h2Bootstrap =
-                                            new Http2StreamChannelBootstrap(clientChannel);
+                                            new Http2StreamChannelBootstrap(ctx.channel());
                                     h2Bootstrap.handler(new ChannelHandler() {
                                         @Override
                                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
