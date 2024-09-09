@@ -645,7 +645,7 @@ public final class HttpUtil {
      * @param token the token to validate.
      * @return the index of the first invalid token character found, or {@code -1} if there are none.
      */
-    public static int validateToken(CharSequence token) {
+    static int validateToken(CharSequence token) {
         if (token instanceof AsciiString) {
             return validateAsciiStringToken((AsciiString) token);
         }
