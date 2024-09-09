@@ -753,7 +753,7 @@ final class AdaptivePoolingAllocator {
         @Override
         public ByteBuf slice(int index, int length) {
             checkIndex(index, length);
-            return new PooledNonRetainedSlicedByteBuf(this, rootParent, idx(index), length);
+            return new PooledNonRetainedSlicedByteBuf(this, this, index, length);
         }
 
         @Override
