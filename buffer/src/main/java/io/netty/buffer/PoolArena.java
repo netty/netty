@@ -621,7 +621,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         HeapArena(PooledByteBufAllocator parent, SizeClasses sizeClass) {
             super(parent, sizeClass);
-            lastDestroyedChunk = new AtomicReference<>();
+            lastDestroyedChunk = new AtomicReference<PoolChunk<byte[]>>();
         }
 
         private static byte[] newByteArray(int size) {

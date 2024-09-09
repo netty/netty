@@ -154,12 +154,12 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
         }
         assumeThat(threadMXBean).isInstanceOf(cls);
         Method getThreadAllocatedBytes = cls.getDeclaredMethod("getThreadAllocatedBytes", long.class);
-        long allocBefore = (long) getThreadAllocatedBytes.invoke(threadMXBean, Thread.currentThread().getId());
+        long allocBefore = (Long) getThreadAllocatedBytes.invoke(threadMXBean, Thread.currentThread().getId());
         assumeTrue(allocBefore != -1);
         for (int i = 0; i < 100; ++i) {
             allocator.heapBuffer(bufSize, bufSize).release();
         }
-        long allocAfter = (long) getThreadAllocatedBytes.invoke(threadMXBean, Thread.currentThread().getId());
+        long allocAfter = (Long) getThreadAllocatedBytes.invoke(threadMXBean, Thread.currentThread().getId());
         assumeTrue(allocAfter != -1);
         assertThat(allocAfter - allocBefore)
                 .as("allocated MB: %.3f", (allocAfter - allocBefore) / 1024.0 / 1024.0)
