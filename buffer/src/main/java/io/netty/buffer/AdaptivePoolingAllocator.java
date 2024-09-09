@@ -258,7 +258,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             // Create a one-off chunk for this allocation as the previous allocate call did not work out.
             AbstractByteBuf innerChunk = (AbstractByteBuf) chunkAllocator.allocate(size, maxCapacity);
             Chunk chunk = new Chunk(innerChunk, magazine, false);
-            chunk.readInitInto(into, size, maxCapacity);
+            try {
+                chunk.readInitInto(into, size, maxCapacity);
+            } finally {
+                // As the chunk is an one-off we need to always call release explicitly as readInitInto(...)
+                // will take care of retain once when successful. Once The AdaptiveByteBuf is released it will
+                // completely release the Chunk and so the contained innerChunk.
+                chunk.release();
+            }
         }
     }
 
