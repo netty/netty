@@ -41,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -125,7 +126,7 @@ public class HttpResponseDecoderTest {
         channel.writeInbound(allocator.copyOf("\r\n", US_ASCII));
 
         HttpResponse res = channel.readInbound();
-        assertTrue(res.decoderResult().cause() instanceof TooLongHttpHeaderException);
+        assertInstanceOf(TooLongHttpHeaderException.class, res.decoderResult().cause());
 
         assertFalse(channel.finish());
         assertNull(channel.readInbound());
@@ -754,15 +755,19 @@ public class HttpResponseDecoderTest {
             "HTTP/1.11", "HTTP/11.1", "HTTP/A.1", "HTTP/1.B"})
     public void testInvalidVersion(String version) {
         testInvalidHeaders0(allocator.copyOf(
-                version + " 200 OK\n\r\nHost: whatever\r\n\r\n", StandardCharsets.US_ASCII));
+                version + " 200 OK\n\r\nHost: whatever\r\n\r\n", US_ASCII));
     }
 
     private void testInvalidHeaders0(Buffer responseBuffer) {
         assertTrue(channel.writeInbound(responseBuffer));
         HttpResponse response = channel.readInbound();
-        assertThat(response.decoderResult().cause()).isInstanceOf(IllegalArgumentException.class);
-        assertTrue(response.decoderResult().isFailure());
-        assertFalse(channel.finish());
+        try {
+            assertThat(response.decoderResult().cause()).isInstanceOf(IllegalArgumentException.class);
+            assertTrue(response.decoderResult().isFailure());
+            assertFalse(channel.finish());
+        } finally {
+            Resource.dispose(response);
+        }
     }
 
     @Test
