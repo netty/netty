@@ -111,7 +111,7 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
         }
 
         @Override
-        public ByteBuf allocate(int initialCapacity, int maxCapacity) {
+        public AbstractByteBuf allocate(int initialCapacity, int maxCapacity) {
             return PlatformDependent.hasUnsafe() ?
                     new UnpooledUnsafeHeapByteBuf(allocator, initialCapacity, maxCapacity) :
                     new UnpooledHeapByteBuf(allocator, initialCapacity, maxCapacity);
@@ -126,7 +126,7 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
         }
 
         @Override
-        public ByteBuf allocate(int initialCapacity, int maxCapacity) {
+        public AbstractByteBuf allocate(int initialCapacity, int maxCapacity) {
             return PlatformDependent.hasUnsafe() ?
                     UnsafeByteBufUtil.newUnsafeDirectByteBuf(allocator, initialCapacity, maxCapacity) :
                     new UnpooledDirectByteBuf(allocator, initialCapacity, maxCapacity);
