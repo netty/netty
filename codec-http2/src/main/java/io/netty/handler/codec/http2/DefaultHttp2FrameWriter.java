@@ -583,6 +583,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                     }
                     ctx.write(buf.retainedSlice(), promiseAggregator.newPromise());
                 } else {
+                    // The frame header is different for the last frame, so re-allocate and release the old buffer
                     if (buf != null) {
                        buf.release();
                     }
