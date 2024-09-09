@@ -256,7 +256,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         Magazine magazine = into.chunk.magazine;
         if (!allocate(size, maxCapacity, Thread.currentThread(), into)) {
             // Create a one-off chunk for this allocation as the previous allocate call did not work out.
-            AbstractByteBuf innerChunk = (AbstractByteBuf) chunkAllocator.allocate(size, maxCapacity);
+            AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
             Chunk chunk = new Chunk(innerChunk, magazine, false);
             try {
                 chunk.readInitInto(into, size, maxCapacity);
@@ -475,7 +475,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 if (curr.remainingCapacity() < RETIRE_CAPACITY) {
                     curr.release();
                     current = newChunk;
-                } else if (!(boolean) NEXT_IN_LINE.compareAndSet(this, null, newChunk)) {
+                } else if (!trySetNextInLine(newChunk)) {
                     if (!parent.offerToQueue(newChunk)) {
                         // Next-in-line is occupied AND the central queue is full.
                         // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
@@ -488,12 +488,11 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private Chunk newChunkAllocation(int promptingSize) {
             int size = Math.max(promptingSize * BUFS_PER_CHUNK, preferredChunkSize());
             ChunkAllocator chunkAllocator = parent.chunkAllocator;
-            Chunk chunk = new Chunk((AbstractByteBuf) chunkAllocator.allocate(size, size), this, true);
-            return chunk;
+            return new Chunk(chunkAllocator.allocate(size, size), this, true);
         }
 
-        boolean trySetNextInLine(Chunk buffer) {
-            return NEXT_IN_LINE.compareAndSet(this, null, buffer);
+        boolean trySetNextInLine(Chunk chunk) {
+            return NEXT_IN_LINE.compareAndSet(this, null, chunk);
         }
     }
 
@@ -1192,13 +1191,13 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     /**
      * The strategy for how {@link AdaptivePoolingAllocator} should allocate chunk buffers.
      */
-    public interface ChunkAllocator {
+    interface ChunkAllocator {
         /**
-         * Allocate a buffer for a chunk. This can be any kind of {@link ByteBuf} implementation.
-         * @param initialCapacity The initial capacity of the returned {@link ByteBuf}.
-         * @param maxCapacity The maximum capacity of the returned {@link ByteBuf}.
+         * Allocate a buffer for a chunk. This can be any kind of {@link AbstractByteBuf} implementation.
+         * @param initialCapacity The initial capacity of the returned {@link AbstractByteBuf}.
+         * @param maxCapacity The maximum capacity of the returned {@link AbstractByteBuf}.
          * @return The buffer that represents the chunk memory.
          */
-        ByteBuf allocate(int initialCapacity, int maxCapacity);
+        AbstractByteBuf allocate(int initialCapacity, int maxCapacity);
     }
 }
