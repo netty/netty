@@ -95,11 +95,13 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         // When we unwrap the derived buffer we should get our original buffer of type AdaptiveByteBuf back.
         ByteBuf unwrapped = derived.unwrap();
         assertInstanceOf(unwrapped, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
+        assertSameBuffer(buffer, unwrapped);
 
         ByteBuf retainedDerived = slice ? buffer.retainedSlice(0, 4) : buffer.retainedDuplicate();
         // When we unwrap the derived buffer we should get our original buffer of type AdaptiveByteBuf back.
-        ByteBuf unwrappedRetainined = retainedDerived.unwrap();
-        assertInstanceOf(unwrappedRetainined, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
+        ByteBuf unwrappedRetained = retainedDerived.unwrap();
+        assertInstanceOf(unwrappedRetained, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
+        assertSameBuffer(buffer, unwrappedRetained);
         retainedDerived.release();
 
         assertTrue(buffer.release());

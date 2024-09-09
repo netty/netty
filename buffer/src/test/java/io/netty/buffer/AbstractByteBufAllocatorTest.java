@@ -19,6 +19,7 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -93,6 +94,11 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
     protected static void assertInstanceOf(ByteBuf buffer, Class<? extends ByteBuf> clazz) {
         // Unwrap if needed
         assertTrue(clazz.isInstance(buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer));
+    }
+
+    protected static void assertSameBuffer(ByteBuf expected, ByteBuf buffer) {
+        // Unwrap if needed
+        assertSame(expected, buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer);
     }
 
     @Test
