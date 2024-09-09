@@ -302,6 +302,32 @@ final class AdaptivePoolingAllocator {
         return centralQueue.offer(buffer);
     }
 
+    // Ensure that we release all previous pooled resources when this object is finalized. This is needed as otherwise
+    // we might end up with leaks. While these leaks are usually harmless in reality it would still at least be
+    // very confusing for users.
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            super.finalize();
+        } finally {
+            free();
+        }
+    }
+
+    private void free() {
+        for (;;) {
+            Chunk chunk = centralQueue.poll();
+            if (chunk == null) {
+                break;
+            }
+            chunk.release();
+        }
+
+        for (Magazine magazine : magazines) {
+            magazine.free();
+        }
+    }
+
     @SuppressWarnings("checkstyle:finalclass") // Checkstyle mistakenly believes this class should be final.
     private static class AllocationStatistics extends StampedLock {
         private static final long serialVersionUID = -8319929980932269688L;
@@ -482,6 +508,18 @@ final class AdaptivePoolingAllocator {
 
         boolean trySetNextInLine(Chunk buffer) {
             return NEXT_IN_LINE.compareAndSet(this, null, buffer);
+        }
+
+        void free() {
+            // Release the current Chunk and the next that was stored for later usage.
+            if (current != null) {
+                current.release();
+                current = null;
+            }
+            Chunk next = NEXT_IN_LINE.getAndSet(this, null);
+            if (next != null) {
+                next.release();
+            }
         }
     }
 
