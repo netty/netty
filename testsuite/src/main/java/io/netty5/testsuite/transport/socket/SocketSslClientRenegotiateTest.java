@@ -80,30 +80,29 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     public static Collection<Object[]> data() throws Exception {
         List<SslContext> serverContexts = new ArrayList<>();
         List<SslContext> clientContexts = new ArrayList<>();
-        clientContexts.add(
-          SslContextBuilder.forClient()
-            .trustManager(CERT_FILE)
-            .sslProvider(SslProvider.JDK)
-            .build()
+        clientContexts.add(SslContextBuilder.forClient()
+                .trustManager(CERT_FILE)
+                .sslProvider(SslProvider.JDK)
+                .endpointIdentificationAlgorithm("")
+                .build()
         );
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
-            serverContexts.add(
-              SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
-                .sslProvider(SslProvider.OPENSSL)
-                .build()
+            serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+                    .sslProvider(SslProvider.OPENSSL)
+                    .build()
             );
         } else {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
 
         List<Object[]> params = new ArrayList<>();
-        for (SslContext sc: serverContexts) {
-            for (SslContext cc: clientContexts) {
+        for (SslContext sc : serverContexts) {
+            for (SslContext cc : clientContexts) {
                 for (int i = 0; i < 32; i++) {
-                    params.add(new Object[] { sc, cc, true});
-                    params.add(new Object[] { sc, cc, false});
+                    params.add(new Object[]{sc, cc, true});
+                    params.add(new Object[]{sc, cc, false});
                 }
             }
         }
