@@ -18,7 +18,6 @@ package io.netty.buffer;
 import io.netty.buffer.AdaptivePoolingAllocator.MagazineCaching;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -30,7 +29,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  * <p>
  * See the {@link AdaptivePoolingAllocator} class documentation for implementation details.
  */
-@UnstableApi
 public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
         implements ByteBufAllocatorMetricProvider, ByteBufAllocatorMetric {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AdaptiveByteBufAllocator.class);
