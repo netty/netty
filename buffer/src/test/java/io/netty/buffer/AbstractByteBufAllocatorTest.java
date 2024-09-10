@@ -25,6 +25,7 @@ import java.lang.reflect.Method;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.abort;
@@ -101,6 +102,11 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
     protected static void assertInstanceOf(ByteBuf buffer, Class<? extends ByteBuf> clazz) {
         // Unwrap if needed
         assertTrue(clazz.isInstance(buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer));
+    }
+
+    protected static void assertSameBuffer(ByteBuf expected, ByteBuf buffer) {
+        // Unwrap if needed
+        assertSame(expected, buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer);
     }
 
     @Test

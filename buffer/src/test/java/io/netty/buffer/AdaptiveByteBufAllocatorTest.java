@@ -16,9 +16,12 @@
 package io.netty.buffer;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
@@ -78,5 +81,29 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assertEquals(2 * 128 * 1024, allocator.usedHeapMemory());
         b.release();
         assertEquals(2 * 128 * 1024, allocator.usedHeapMemory());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void sliceOrDuplicateUnwrapLetNotEscapeRootParent(boolean slice) {
+        AdaptiveByteBufAllocator allocator = newAllocator(false);
+        ByteBuf buffer = allocator.buffer(8);
+        assertInstanceOf(buffer, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
+        assertNull(buffer.unwrap());
+
+        ByteBuf derived = slice ? buffer.slice(0, 4) : buffer.duplicate();
+        // When we unwrap the derived buffer we should get our original buffer of type AdaptiveByteBuf back.
+        ByteBuf unwrapped = derived.unwrap();
+        assertInstanceOf(unwrapped, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
+        assertSameBuffer(buffer, unwrapped);
+
+        ByteBuf retainedDerived = slice ? buffer.retainedSlice(0, 4) : buffer.retainedDuplicate();
+        // When we unwrap the derived buffer we should get our original buffer of type AdaptiveByteBuf back.
+        ByteBuf unwrappedRetained = retainedDerived.unwrap();
+        assertInstanceOf(unwrappedRetained, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
+        assertSameBuffer(buffer, unwrappedRetained);
+        retainedDerived.release();
+
+        assertTrue(buffer.release());
     }
 }
