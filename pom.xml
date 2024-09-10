@@ -1436,6 +1436,7 @@
             <excludes>
               <exclude>@io.netty.util.internal.UnstableApi</exclude>
               <exclude>io.netty.util.internal.shaded</exclude>
+              <exclude>io.netty.buffer.AdaptivePoolingAllocator$ChunkAllocator</exclude>
             </excludes>
             <overrideCompatibilityChangeParameters>
               <overrideCompatibilityChangeParameter>
