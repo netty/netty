@@ -19,7 +19,6 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
 import io.netty.util.Recycler;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
@@ -800,28 +799,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         @Override
-        public ByteBuf slice(int index, int length) {
-            checkIndex(index, length);
-            return new PooledNonRetainedSlicedByteBuf(this, rootParent, idx(index), length);
-        }
-
-        @Override
-        public ByteBuf retainedSlice(int index, int length) {
-            return slice(index, length).retain();
-        }
-
-        @Override
-        public ByteBuf duplicate() {
-            ensureAccessible();
-            return new PooledNonRetainedDuplicateByteBuf(this, this).setIndex(readerIndex(), writerIndex());
-        }
-
-        @Override
-        public ByteBuf retainedDuplicate() {
-            return duplicate().retain();
-        }
-
-        @Override
         public int nioBufferCount() {
             return rootParent().nioBufferCount();
         }
@@ -1059,170 +1036,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             } else if (handle != null) {
                 handle.recycle(this);
             }
-        }
-    }
-
-    private static final class PooledNonRetainedDuplicateByteBuf extends UnpooledDuplicatedByteBuf {
-        private final ReferenceCounted referenceCountDelegate;
-
-        PooledNonRetainedDuplicateByteBuf(ReferenceCounted referenceCountDelegate, AbstractByteBuf buffer) {
-            super(buffer);
-            this.referenceCountDelegate = referenceCountDelegate;
-        }
-
-        @Override
-        boolean isAccessible0() {
-            return referenceCountDelegate.refCnt() != 0;
-        }
-
-        @Override
-        int refCnt0() {
-            return referenceCountDelegate.refCnt();
-        }
-
-        @Override
-        ByteBuf retain0() {
-            referenceCountDelegate.retain();
-            return this;
-        }
-
-        @Override
-        ByteBuf retain0(int increment) {
-            referenceCountDelegate.retain(increment);
-            return this;
-        }
-
-        @Override
-        ByteBuf touch0() {
-            referenceCountDelegate.touch();
-            return this;
-        }
-
-        @Override
-        ByteBuf touch0(Object hint) {
-            referenceCountDelegate.touch(hint);
-            return this;
-        }
-
-        @Override
-        boolean release0() {
-            return referenceCountDelegate.release();
-        }
-
-        @Override
-        boolean release0(int decrement) {
-            return referenceCountDelegate.release(decrement);
-        }
-
-        @Override
-        public ByteBuf duplicate() {
-            ensureAccessible();
-            return new PooledNonRetainedDuplicateByteBuf(referenceCountDelegate, unwrap());
-        }
-
-        @Override
-        public ByteBuf retainedDuplicate() {
-            return duplicate().retain();
-        }
-
-        @Override
-        public ByteBuf slice(int index, int length) {
-            checkIndex(index, length);
-            return new PooledNonRetainedSlicedByteBuf(referenceCountDelegate, unwrap(), index, length);
-        }
-
-        @Override
-        public ByteBuf retainedSlice() {
-            // Capacity is not allowed to change for a sliced ByteBuf, so length == capacity()
-            return retainedSlice(readerIndex(), capacity());
-        }
-
-        @Override
-        public ByteBuf retainedSlice(int index, int length) {
-            return slice(index, length).retain();
-        }
-    }
-
-    private static final class PooledNonRetainedSlicedByteBuf extends UnpooledSlicedByteBuf {
-        private final ReferenceCounted referenceCountDelegate;
-
-        PooledNonRetainedSlicedByteBuf(ReferenceCounted referenceCountDelegate,
-                                       AbstractByteBuf buffer, int index, int length) {
-            super(buffer, index, length);
-            this.referenceCountDelegate = referenceCountDelegate;
-        }
-
-        @Override
-        boolean isAccessible0() {
-            return referenceCountDelegate.refCnt() != 0;
-        }
-
-        @Override
-        int refCnt0() {
-            return referenceCountDelegate.refCnt();
-        }
-
-        @Override
-        ByteBuf retain0() {
-            referenceCountDelegate.retain();
-            return this;
-        }
-
-        @Override
-        ByteBuf retain0(int increment) {
-            referenceCountDelegate.retain(increment);
-            return this;
-        }
-
-        @Override
-        ByteBuf touch0() {
-            referenceCountDelegate.touch();
-            return this;
-        }
-
-        @Override
-        ByteBuf touch0(Object hint) {
-            referenceCountDelegate.touch(hint);
-            return this;
-        }
-
-        @Override
-        boolean release0() {
-            return referenceCountDelegate.release();
-        }
-
-        @Override
-        boolean release0(int decrement) {
-            return referenceCountDelegate.release(decrement);
-        }
-
-        @Override
-        public ByteBuf duplicate() {
-            ensureAccessible();
-            return new PooledNonRetainedSlicedByteBuf(referenceCountDelegate, unwrap(), idx(0), capacity())
-                    .setIndex(readerIndex(), writerIndex());
-        }
-
-        @Override
-        public ByteBuf retainedDuplicate() {
-            return duplicate().retain();
-        }
-
-        @Override
-        public ByteBuf slice(int index, int length) {
-            checkIndex(index, length);
-            return new PooledNonRetainedSlicedByteBuf(referenceCountDelegate, unwrap(), idx(index), length);
-        }
-
-        @Override
-        public ByteBuf retainedSlice() {
-            // Capacity is not allowed to change for a sliced ByteBuf, so length == capacity()
-            return retainedSlice(0, capacity());
-        }
-
-        @Override
-        public ByteBuf retainedSlice(int index, int length) {
-            return slice(index, length).retain();
         }
     }
 
