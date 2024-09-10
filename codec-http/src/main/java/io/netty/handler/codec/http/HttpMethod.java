@@ -129,14 +129,11 @@ public class HttpMethod implements Comparable<HttpMethod> {
      */
     public HttpMethod(String name) {
         name = checkNonEmptyAfterTrim(name, "name");
-
-        for (int i = 0; i < name.length(); i ++) {
-            char c = name.charAt(i);
-            if (Character.isISOControl(c) || Character.isWhitespace(c)) {
-                throw new IllegalArgumentException("invalid character in name");
-            }
+        int index = HttpUtil.validateToken(name);
+        if (index != -1) {
+            throw new IllegalArgumentException(
+                    "Illegal character in HTTP Method: 0x" + Integer.toHexString(name.charAt(index)));
         }
-
         this.name = AsciiString.cached(name);
     }
 
