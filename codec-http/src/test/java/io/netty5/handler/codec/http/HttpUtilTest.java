@@ -16,8 +16,12 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.handler.codec.http.headers.HttpHeaders;
+import io.netty5.util.AsciiString;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -27,6 +31,7 @@ import java.util.List;
 
 import static io.netty5.buffer.DefaultBufferAllocators.preferredAllocator;
 import static io.netty5.handler.codec.http.HttpUtil.normalizeAndGetContentLength;
+import static io.netty5.handler.codec.http.HttpUtil.validateToken;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -447,5 +452,62 @@ public class HttpUtilTest {
     private static void testNormalizeAndGetContentLengthInvalidContentLength(final CharSequence contentLengthField) {
         assertThrows(IllegalArgumentException.class,
                      () -> normalizeAndGetContentLength(List.of(contentLengthField).iterator(), false, false));
+    }
+
+    private static List<Character> validTokenChars() {
+        List<Character> list = new ArrayList<Character>();
+        for (char c = '0'; c <= '9'; c++) {
+            list.add(c);
+        }
+        for (char c = 'a'; c <= 'z'; c++) {
+            list.add(c);
+        }
+        for (char c = 'A'; c <= 'Z'; c++) {
+            list.add(c);
+        }
+
+        // Unreserved characters:
+        list.add('-');
+        list.add('.');
+        list.add('_');
+        list.add('~');
+
+        // Token special characters:
+        list.add('!');
+        list.add('#');
+        list.add('$');
+        list.add('%');
+        list.add('&');
+        list.add('\'');
+        list.add('*');
+        list.add('+');
+        list.add('^');
+        list.add('`');
+        list.add('|');
+
+        return list;
+    }
+
+    @ParameterizedTest
+    @MethodSource("validTokenChars")
+    public void testValidTokenChars(char validChar) {
+        AsciiString asciiStringToken =
+                new AsciiString(new byte[] { 'G', 'E', (byte) validChar, 'T' });
+        String token = "GE" + validChar + 'T';
+        assertEquals(-1, validateToken(asciiStringToken));
+        assertEquals(-1, validateToken(token));
+    }
+
+    @ParameterizedTest
+    @ValueSource(chars = {
+            '(', ')', ',', '/', ':', ';', '<', '=', '>', '?', '@',
+            '\"', '[', '\\', ']', '{', '}', '\u0000', ' ', '\u007f', 'ÿ'
+    })
+    public void testInvalidTokenChars(char invalidChar) {
+        AsciiString asciiStringToken =
+                new AsciiString(new byte[] { 'G', 'E', (byte) invalidChar, 'T' });
+        String token = "GE" + invalidChar + 'T';
+        assertEquals(2, validateToken(asciiStringToken));
+        assertEquals(2, validateToken(token));
     }
 }
