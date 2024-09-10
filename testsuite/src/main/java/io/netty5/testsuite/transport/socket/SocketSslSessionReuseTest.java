@@ -73,8 +73,15 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
     public static Collection<Object[]> data() throws Exception {
         return Collections.singletonList(new Object[] {
-          SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build(),
-          SslContextBuilder.forClient().trustManager(CERT_FILE).sslProvider(SslProvider.JDK).build()
+          SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+                  .sslProvider(SslProvider.JDK)
+                  .endpointIdentificationAlgorithm("")
+                  .build(),
+          SslContextBuilder.forClient()
+                  .trustManager(CERT_FILE)
+                  .sslProvider(SslProvider.JDK)
+                  .endpointIdentificationAlgorithm("")
+                  .build()
         });
     }
 
