@@ -26,6 +26,7 @@ import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ReferenceCountUpdater;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
@@ -45,6 +46,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.StampedLock;
@@ -593,15 +595,33 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
     }
 
-    private static final class Chunk extends AbstractReferenceCounted {
+    private static final class Chunk implements ReferenceCounted {
 
         private final AbstractByteBuf delegate;
         private final Magazine magazine;
         private final int capacity;
         private final boolean pooled;
         private int allocatedBytes;
-        private volatile int refCntUp;
-        private volatile int refCntDown;
+        private static final long REFCNT_FIELD_OFFSET =
+                ReferenceCountUpdater.getUnsafeOffset(Chunk.class, "refCnt");
+        private static final AtomicIntegerFieldUpdater<Chunk> AIF_UPDATER =
+                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCnt");
+
+        private static final ReferenceCountUpdater<Chunk> updater =
+                new ReferenceCountUpdater<Chunk>() {
+                    @Override
+                    protected AtomicIntegerFieldUpdater<Chunk> updater() {
+                        return AIF_UPDATER;
+                    }
+                    @Override
+                    protected long unsafeOffset() {
+                        return REFCNT_FIELD_OFFSET;
+                    }
+                };
+
+        // Value might not equal "real" reference count, all access should be via the updater
+        @SuppressWarnings({"unused", "FieldMayBeFinal"})
+        private volatile int refCnt;
 
         Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             this.delegate = delegate;
@@ -609,6 +629,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             this.pooled = pooled;
             this.capacity = delegate.capacity();
             magazine.usedMemory.getAndAdd(capacity);
+            updater.setInitialValue(this);
         }
 
         @Override
@@ -617,7 +638,44 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         @Override
-        protected void deallocate() {
+        public int refCnt() {
+            return updater.refCnt(this);
+        }
+
+        @Override
+        public Chunk retain() {
+            return updater.retain(this);
+        }
+
+        @Override
+        public Chunk retain(int increment) {
+            return updater.retain(this, increment);
+        }
+
+        @Override
+        public Chunk touch() {
+            return this;
+        }
+
+        @Override
+        public boolean release() {
+            if (updater.release(this)) {
+                deallocate();
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean release(int decrement) {
+            if (updater.release(this, decrement)) {
+                deallocate();
+                return true;
+            }
+            return false;
+        }
+
+        private void deallocate() {
             Magazine mag = magazine;
             AdaptivePoolingAllocator parent = mag.parent;
             int chunkSize = mag.preferredChunkSize();
@@ -628,7 +686,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 mag.usedMemory.getAndAdd(-capacity());
                 delegate.release();
             } else {
-                setRefCnt(1);
+                updater.resetRefCnt(this);
                 delegate.setIndex(0, 0);
                 allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
