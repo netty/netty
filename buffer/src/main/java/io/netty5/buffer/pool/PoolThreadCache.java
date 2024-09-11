@@ -182,7 +182,7 @@ final class PoolThreadCache {
     }
 
     /**
-     *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
+     *  Should be called if the Thread that uses this cache is about to exit to release resources out of the cache
      */
     void free() {
         if (arena != null) {
