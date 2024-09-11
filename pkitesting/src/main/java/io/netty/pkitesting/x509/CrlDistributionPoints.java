@@ -13,28 +13,26 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testcert.x509;
+package io.netty.pkitesting.x509;
 
-import io.netty.testcert.der.DerWriter;
+import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.internal.UnstableApi;
 
+import java.util.Collection;
+
 @UnstableApi
-public final class BasicConstraints {
-    private BasicConstraints() {
+public final class CrlDistributionPoints {
+    private CrlDistributionPoints() {
     }
 
-    public static byte[] withPathLength(int length) {
-        if (length < 0) {
-            throw new IllegalArgumentException("Length cannot be negative: " + length);
+    public static byte[] distributionPoints(Collection<DistributionPoint> points) {
+        if (points.isEmpty()) {
+            throw new IllegalArgumentException("Points cannot be empty");
         }
         try (DerWriter der = new DerWriter()) {
-            return der.writeSequence(w -> w.writeBoolean(true).writeInteger(length)).getBytes();
-        }
-    }
-
-    public static byte[] isCa(boolean isCa) {
-        try (DerWriter der = new DerWriter()) {
-            return der.writeSequence(w -> w.writeBoolean(isCa)).getBytes();
+            return der.writeSequence(w -> {
+                points.forEach(p -> p.writeTo(w));
+            }).getBytes();
         }
     }
 }

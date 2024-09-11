@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testcert;
+package io.netty.pkitesting;
 
 import com.sun.net.httpserver.HttpServer;
-import io.netty.testcert.x509.CertificateList;
-import io.netty.testcert.x509.Signed;
+import io.netty.pkitesting.x509.CertificateList;
+import io.netty.pkitesting.x509.Signed;
 
 import java.io.OutputStream;
 import java.math.BigInteger;

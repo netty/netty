@@ -17,4 +17,4 @@
 /**
  * Tools for generating X.509 certificates for testing.
  */
-package io.netty.testcert;
+package io.netty.pkitesting;

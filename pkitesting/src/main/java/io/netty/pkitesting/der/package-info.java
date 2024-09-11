@@ -15,6 +15,6 @@
  */
 
 /**
- * Internal ASN.1 DER writing utility used by {@link io.netty.testcert.CertificateBuilder}.
+ * Internal ASN.1 DER writing utility used by {@link io.netty.pkitesting.CertificateBuilder}.
  */
-package io.netty.testcert.der;
+package io.netty.pkitesting.der;

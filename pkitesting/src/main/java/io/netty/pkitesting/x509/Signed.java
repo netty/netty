@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testcert.x509;
+package io.netty.pkitesting.x509;
 
-import io.netty.testcert.X509Bundle;
-import io.netty.testcert.der.DerWriter;
+import io.netty.pkitesting.X509Bundle;
+import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.internal.UnstableApi;
 
 import java.io.ByteArrayInputStream;

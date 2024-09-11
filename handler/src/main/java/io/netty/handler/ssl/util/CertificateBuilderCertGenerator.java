@@ -15,8 +15,8 @@
  */
 package io.netty.handler.ssl.util;
 
-import io.netty.testcert.CertificateBuilder;
-import io.netty.testcert.X509Bundle;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 
 import java.security.SecureRandom;
 import java.time.Instant;

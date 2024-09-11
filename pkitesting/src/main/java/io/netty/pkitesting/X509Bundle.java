@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testcert;
+package io.netty.pkitesting;
 
 import java.io.File;
 import java.io.IOException;

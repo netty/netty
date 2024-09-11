@@ -15,6 +15,6 @@
  */
 
 /**
- * Internal X.509 utilities used by {@link io.netty.testcert.CertificateBuilder}.
+ * Internal X.509 utilities used by {@link io.netty.pkitesting.CertificateBuilder}.
  */
-package io.netty.testcert.x509;
+package io.netty.pkitesting.x509;

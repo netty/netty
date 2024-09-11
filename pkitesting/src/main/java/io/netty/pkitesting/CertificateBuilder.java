@@ -13,17 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testcert;
+package io.netty.pkitesting;
 
-import io.netty.testcert.der.DerWriter;
-import io.netty.testcert.x509.BasicConstraints;
-import io.netty.testcert.x509.CrlDistributionPoints;
-import io.netty.testcert.x509.DistributionPoint;
-import io.netty.testcert.x509.Extension;
-import io.netty.testcert.x509.GeneralName;
-import io.netty.testcert.x509.GeneralNames;
-import io.netty.testcert.x509.Signed;
-import io.netty.testcert.x509.TBSCertBuilder;
+import io.netty.pkitesting.der.DerWriter;
+import io.netty.pkitesting.x509.BasicConstraints;
+import io.netty.pkitesting.x509.CrlDistributionPoints;
+import io.netty.pkitesting.x509.DistributionPoint;
+import io.netty.pkitesting.x509.Extension;
+import io.netty.pkitesting.x509.GeneralName;
+import io.netty.pkitesting.x509.GeneralNames;
+import io.netty.pkitesting.x509.Signed;
+import io.netty.pkitesting.x509.TBSCertBuilder;
 
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -714,7 +714,7 @@ public final class CertificateBuilder {
         }
 
         if (!extendedKeyUsage.isEmpty()) {
-            byte[] der = io.netty.testcert.x509.ExtendedKeyUsage.extendedKeyUsage(extendedKeyUsage);
+            byte[] der = io.netty.pkitesting.x509.ExtendedKeyUsage.extendedKeyUsage(extendedKeyUsage);
             builder.addExtension(new Extension(OID_X509_EXTENDED_KEY_USAGE, false, der));
         }
 

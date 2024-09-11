@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.testcert;
+package io.netty.pkitesting;
 
-import io.netty.testcert.CertificateBuilder.Algorithm;
-import io.netty.testcert.CertificateBuilder.KeyUsage;
+import io.netty.pkitesting.CertificateBuilder.Algorithm;
+import io.netty.pkitesting.CertificateBuilder.KeyUsage;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
