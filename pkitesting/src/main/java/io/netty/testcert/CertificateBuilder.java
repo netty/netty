@@ -387,6 +387,23 @@ public final class CertificateBuilder {
         return algorithm(Algorithm.rsa2048);
     }
 
+    /**
+     * Instruct the certificate builder to not generate its own key pair, but to instead create a certificate that
+     * uses the given public key.
+     * <p>
+     * This method is useful if you want to use an existing key-pair, e.g. to emulate a certificate authority
+     * responding to a Certificate Signing Request (CSR).
+     * <p>
+     * If the given public key is {@code null} (the default) then a new key-pair will be generated instead.
+     *
+     * @param key The public key to wrap in a certificate.
+     * @return This certificate builder.
+     */
+    public CertificateBuilder publicKey(PublicKey key) {
+        publicKey = key;
+        return this;
+    }
+
     private CertificateBuilder addExtension(String identifierOid, boolean critical, byte[] value) {
         requireNonNull(identifierOid, "identifierOid");
         requireNonNull(value, "value");
@@ -664,20 +681,7 @@ public final class CertificateBuilder {
     }
 
     private KeyPair generateKeyPair() throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
-        if (algorithm.parameterSpec == Algorithm.UNSUPPORTED) {
-            throw new UnsupportedOperationException("This algorithm is not supported: " + algorithm);
-        }
-        try {
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance(algorithm.keyType);
-            keyGen.initialize(algorithm.parameterSpec, getSecureRandom());
-            return keyGen.generateKeyPair();
-        } catch (NoSuchAlgorithmException e) {
-            if (algorithm == Algorithm.ed25519 || algorithm == Algorithm.ed448) {
-                throw new NoSuchAlgorithmException(
-                        "The " + algorithm + " algorithm is only supported on Java 15 or newer.", e);
-            }
-            throw e;
-        }
+        return algorithm.generateKeyPair(getSecureRandom());
     }
 
     private TBSCertBuilder createCertBuilder(
@@ -812,6 +816,26 @@ public final class CertificateBuilder {
                 return (AlgorithmParameterSpec) cls.getConstructor(String.class).newInstance(name);
             } catch (Exception e) {
                 return UNSUPPORTED;
+            }
+        }
+
+        public KeyPair generateKeyPair(SecureRandom secureRandom)
+                throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+            requireNonNull(secureRandom, "secureRandom");
+
+            if (parameterSpec == UNSUPPORTED) {
+                throw new UnsupportedOperationException("This algorithm is not supported: " + this);
+            }
+            try {
+                KeyPairGenerator keyGen = KeyPairGenerator.getInstance(keyType);
+                keyGen.initialize(parameterSpec, secureRandom);
+                return keyGen.generateKeyPair();
+            } catch (NoSuchAlgorithmException e) {
+                if (this == ed25519 || this == ed448) {
+                    throw new NoSuchAlgorithmException(
+                            "The " + this + " algorithm is only supported on Java 15 or newer.", e);
+                }
+                throw e;
             }
         }
     }

@@ -25,6 +25,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.math.BigInteger;
+import java.security.KeyPair;
+import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.CertPathBuilder;
 import java.security.cert.CertificateException;
@@ -315,6 +317,22 @@ class CertificateBuilderTest {
         CertificateException ce = assertThrows(CertificateException.class,
                 () -> tm.checkClientTrusted(cert.getCertificatePath(), "EC"));
         assertThat(ce).hasMessageContaining("Certificate has been revoked");
+    }
+
+    @Test
+    void generateCertificateWithGivenPublicKey() throws Exception {
+        X509Bundle root = BASE.copy()
+                .setIsCertificateAuthority(true)
+                .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign, KeyUsage.cRLSign)
+                .buildSelfSigned();
+        KeyPair keyPair = Algorithm.ecp256.generateKeyPair(new SecureRandom());
+        X509Bundle bundle = BASE.copy()
+                .subject("CN=leaf.netty.io")
+                .publicKey(keyPair.getPublic())
+                .buildIssuedBy(root);
+        assertThat(bundle.getKeyPair().getPublic()).isSameAs(keyPair.getPublic());
+        assertThat(bundle.getKeyPair().getPrivate()).isNull();
+        assertThrows(NullPointerException.class, () -> bundle.getPrivateKeyPEM());
     }
 
     private static X509TrustManager getX509TrustManager(X509Bundle root) throws Exception {
