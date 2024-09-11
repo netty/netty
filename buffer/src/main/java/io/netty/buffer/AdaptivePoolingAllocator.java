@@ -484,10 +484,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 curr.readInitInto(buf, size, maxCapacity);
                 return;
             }
+            int transResult = 0;
             if (curr != null) {
-                curr.release();
+                if (curr.remainingCapacity() < RETIRE_CAPACITY) {
+                    curr.release();
+                } else {
+                    transResult = transChunk(curr);
+                }
             }
-            if (nextInLine != null) {
+            if (TransResult.TO_NEXT_IN_LINE != transResult && nextInLine != null) {
                 curr = NEXT_IN_LINE.getAndSet(this, null);
             } else {
                 curr = parent.centralQueue.poll();
@@ -508,14 +513,36 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 if (curr.remainingCapacity() < RETIRE_CAPACITY) {
                     curr.release();
                     current = newChunk;
-                } else if (!trySetNextInLine(newChunk)) {
-                    if (!parent.offerToQueue(newChunk)) {
-                        // Next-in-line is occupied AND the central queue is full.
-                        // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
-                        newChunk.release();
-                    }
+                } else {
+                    transChunk(newChunk);
                 }
             }
+        }
+
+        /**
+         * Returns an integer type result for the caller to perceive the transfer situation.*
+         * @param current
+         * @return
+         */
+        private int transChunk(Chunk current) {
+            if (NEXT_IN_LINE.compareAndSet(this, null, current)) {
+                return TransResult.TO_NEXT_IN_LINE;
+            }
+            if (parent.offerToQueue(current)) {
+                return TransResult.TO_CENTER_QUEUE;
+            }
+            Chunk nextChunk = NEXT_IN_LINE.get(this);
+            if (current.remainingCapacity() > nextChunk.remainingCapacity()) {
+                if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
+                    nextChunk.release();
+                    return TransResult.TO_NEXT_IN_LINE;
+                } else {
+                    // Next-in-line is occupied AND the central queue is full.
+                    // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+                    current.release();
+                }
+            }
+            return TransResult.TO_RELEASE;
         }
 
         private Chunk newChunkAllocation(int promptingSize) {
@@ -539,6 +566,12 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 next.release();
             }
         }
+    }
+
+    private interface TransResult{
+        int TO_RELEASE = -1;
+        int TO_NEXT_IN_LINE = 1;
+        int TO_CENTER_QUEUE = 2;
     }
 
     private static final class Chunk {
