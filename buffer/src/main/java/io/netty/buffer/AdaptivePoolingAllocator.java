@@ -437,7 +437,6 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by version check")
     private static final class Magazine extends AllocationStatistics {
         private static final AtomicReferenceFieldUpdater<Magazine, Chunk> NEXT_IN_LINE;
         static {
