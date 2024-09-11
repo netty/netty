@@ -696,6 +696,36 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         @Override
+        public ByteBuf retainedSlice() {
+            if (handle == null) {
+                return super.retainedSlice();
+            }
+            // If the handle is not null we can use the Pooled variants that use a Recycler.
+            ensureAccessible();
+            return PooledSlicedByteBuf.newInstance(this, this, readerIndex(), readableBytes());
+        }
+
+        @Override
+        public ByteBuf retainedSlice(int index, int length) {
+            if (handle == null) {
+                return super.retainedSlice(index, length);
+            }
+            // If the handle is not null we can use the Pooled variants that use a Recycler.
+            ensureAccessible();
+            return PooledSlicedByteBuf.newInstance(this, this, index, length);
+        }
+
+        @Override
+        public ByteBuf retainedDuplicate() {
+            if (handle == null) {
+                return super.retainedDuplicate();
+            }
+            // If the handle is not null we can use the Pooled variants that use a Recycler.
+            ensureAccessible();
+            return PooledDuplicatedByteBuf.newInstance(this, this, readerIndex(), writerIndex());
+        }
+
+        @Override
         public int capacity() {
             return length;
         }
