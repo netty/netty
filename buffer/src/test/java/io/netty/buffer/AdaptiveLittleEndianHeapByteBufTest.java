@@ -15,26 +15,20 @@
  */
 package io.netty.buffer;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 
-public class AdaptivePooledByteBufTest extends AbstractPooledByteBufTest {
-    private final AdaptiveByteBufAllocator allocator = new AdaptiveByteBufAllocator();
+import java.nio.ByteOrder;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
+public class AdaptiveLittleEndianHeapByteBufTest extends AbstractAdaptiveByteBufTest {
 
     @Override
-    protected ByteBuf alloc(int length, int maxCapacity) {
-        return allocator.buffer(length, maxCapacity);
-    }
-
-    @Disabled("Assumes the ByteBuf can be cast to PooledByteBuf")
-    @Test
-    @Override
-    public void testMaxFastWritableBytes() {
-    }
-
-    @Disabled("Assumes the ByteBuf can be cast to PooledByteBuf")
-    @Test
-    @Override
-    public void testEnsureWritableDoesntGrowTooMuch() {
+    protected ByteBuf alloc(AdaptiveByteBufAllocator allocator, int length, int maxCapacity) {
+        ByteBuf buffer = allocator.heapBuffer(length, maxCapacity)
+                .order(ByteOrder.LITTLE_ENDIAN);
+        assertSame(ByteOrder.LITTLE_ENDIAN, buffer.order());
+        assertFalse(buffer.isDirect());
+        return buffer;
     }
 }
