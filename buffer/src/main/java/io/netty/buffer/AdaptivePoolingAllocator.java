@@ -492,22 +492,35 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private void allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
             recordAllocationSize(sizeBucket);
             Chunk curr = current;
-            if (curr != null && curr.remainingCapacity() >= size) {
-                if (curr.remainingCapacity() == size) {
-                    current = null;
-                    try {
+            if (curr != null) {
+                if (curr.remainingCapacity() > size) {
+                    curr.readInitInto(buf, size, maxCapacity);
+                    // We still have some bytes left that we can use for the next allocation, just early return.
+                    return;
+                }
+
+                // At this point we know that this will be the last time current will be used, so directly set it to
+                // null and release it once we are done.
+                current = null;
+                try {
+                    if (curr.remainingCapacity() == size) {
                         curr.readInitInto(buf, size, maxCapacity);
                         return;
-                    } finally {
-                        curr.release();
                     }
+                } finally {
+                    curr.release();
                 }
-                curr.readInitInto(buf, size, maxCapacity);
-                return;
             }
-            if (curr != null) {
-                curr.release();
-            }
+
+            assert current == null;
+
+            // The fast-path for allocations did not work.
+            //
+            // Try to fetch the next "Magazine local" Chunk first, if this this fails as we don't have
+            // one setup we will poll our centralQueue. If this fails as well we will just allocate a new Chunk.
+            //
+            // In any case we will store the Chunk as the current so it will be used again for the next allocation and
+            // so be "reserved" by this Magazine for exclusive usage.
             if (nextInLine != null) {
                 curr = NEXT_IN_LINE.getAndSet(this, null);
             } else {
@@ -517,22 +530,39 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
             }
             current = curr;
+
+            assert current != null;
+
             if (curr.remainingCapacity() > size) {
                 curr.readInitInto(buf, size, maxCapacity);
             } else if (curr.remainingCapacity() == size) {
-                curr.readInitInto(buf, size, maxCapacity);
-                curr.release();
-                current = null;
+                try {
+                    curr.readInitInto(buf, size, maxCapacity);
+                } finally {
+                    // Release in a finally block so even if readInitInto(...) would throw we would still correctly
+                    // release the current chunk before null it out.
+                    curr.release();
+                    current = null;
+                }
             } else {
                 Chunk newChunk = newChunkAllocation(size);
-                newChunk.readInitInto(buf, size, maxCapacity);
-                if (curr.remainingCapacity() < RETIRE_CAPACITY) {
-                    curr.release();
-                    current = newChunk;
-                } else if (!trySetNextInLine(newChunk)) {
-                    if (!parent.offerToQueue(newChunk)) {
-                        // Next-in-line is occupied AND the central queue is full.
-                        // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+                try {
+                    newChunk.readInitInto(buf, size, maxCapacity);
+                    if (curr.remainingCapacity() < RETIRE_CAPACITY) {
+                        curr.release();
+                        current = newChunk;
+                    } else if (!trySetNextInLine(newChunk)) {
+                        if (!parent.offerToQueue(newChunk)) {
+                            // Next-in-line is occupied AND the central queue is full.
+                            // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+                            newChunk.release();
+                        }
+                    }
+                    newChunk = null;
+                } finally {
+                    if (newChunk != null) {
+                        assert current == null;
+                        // Something went wrong, let's ensure we not leak the newChunk.
                         newChunk.release();
                     }
                 }
@@ -682,7 +712,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         private final ObjectPool.Handle<AdaptiveByteBuf> handle;
 
-        int adjustment;
+        private int adjustment;
         private AbstractByteBuf rootParent;
         private Chunk chunk;
         private int length;
@@ -1057,16 +1087,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         public int forEachByte(int index, int length, ByteProcessor processor) {
             checkIndex(index, length);
             int ret = rootParent().forEachByte(idx(index), length, processor);
-            if (ret < adjustment) {
-                return -1;
-            }
-            return ret - adjustment;
+            return forEachResult(ret);
         }
 
         @Override
         public int forEachByteDesc(int index, int length, ByteProcessor processor) {
             checkIndex(index, length);
             int ret = rootParent().forEachByteDesc(idx(index), length, processor);
+            return forEachResult(ret);
+        }
+
+        private int forEachResult(int ret) {
             if (ret < adjustment) {
                 return -1;
             }
