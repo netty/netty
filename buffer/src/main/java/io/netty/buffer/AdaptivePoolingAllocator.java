@@ -220,7 +220,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
             Object mag = threadLocalMagazine.get();
             if (mag != NO_MAGAZINE) {
-                ((Magazine) mag).allocate(size, sizeBucket, maxCapacity, buf);
+                boolean allocated = ((Magazine) mag).tryAllocate(size, sizeBucket, maxCapacity, buf);
+                assert allocated : "Allocation of threadLocalMagazine must always succeed";
                 return true;
             }
         }
@@ -233,14 +234,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             int index = (int) (threadId & mask);
             for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
                 Magazine mag = mags[index + i & mask];
-                long writeLock = mag.tryWriteLock();
-                if (writeLock != 0) {
-                    try {
-                        mag.allocate(size, sizeBucket, maxCapacity, buf);
-                        return true;
-                    } finally {
-                        mag.unlockWrite(writeLock);
-                    }
+                if (mag.tryAllocate(size, sizeBucket, maxCapacity, buf)) {
+                    // Was able to allocate.
+                    return true;
                 }
             }
             expansions++;
@@ -342,10 +338,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         return AllocationStatistics.sizeBucket(size);
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by version check")
     @SuppressWarnings("checkstyle:finalclass") // Checkstyle mistakenly believes this class should be final.
-    private static class AllocationStatistics extends StampedLock {
-        private static final long serialVersionUID = -8319929980932269688L;
+    private static class AllocationStatistics {
         private static final int MIN_DATUM_TARGET = 1024;
         private static final int MAX_DATUM_TARGET = 65534;
         private static final int INIT_DATUM_TARGET = 9;
@@ -447,10 +441,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
     }
 
+    @SuppressJava6Requirement(reason = "Guarded by version check")
     private static final class Magazine extends AllocationStatistics {
-        private static final long serialVersionUID = -4068223712022528165L;
         private static final AtomicReferenceFieldUpdater<Magazine, Chunk> NEXT_IN_LINE;
-
         static {
             NEXT_IN_LINE = AtomicReferenceFieldUpdater.newUpdater(Magazine.class, Chunk.class, "nextInLine");
         }
@@ -458,6 +451,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @SuppressWarnings("unused") // updated via NEXT_IN_LINE
         private volatile Chunk nextInLine;
         private final AtomicLong usedMemory;
+        private final StampedLock allocationLock;
 
         Magazine(AdaptivePoolingAllocator parent) {
             this(parent, true);
@@ -465,10 +459,37 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         Magazine(AdaptivePoolingAllocator parent, boolean shareable) {
             super(parent, shareable);
+
+            // We only need the StampedLock if this Magazine will be shared across threads.
+            if (shareable) {
+                allocationLock = new StampedLock();
+            } else {
+                allocationLock = null;
+            }
             usedMemory = new AtomicLong();
         }
 
-        public void allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+        public boolean tryAllocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+            if (allocationLock == null) {
+                // This magazine is not shared across threads, just allocate directly.
+                allocate(size, sizeBucket, maxCapacity, buf);
+                return true;
+            }
+
+            // Try to retrieve the lock and if successful allocate.
+            long writeLock = allocationLock.tryWriteLock();
+            if (writeLock != 0) {
+                try {
+                    allocate(size, sizeBucket, maxCapacity, buf);
+                    return true;
+                } finally {
+                    allocationLock.unlockWrite(writeLock);
+                }
+            }
+            return false;
+        }
+
+        private void allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
             recordAllocationSize(sizeBucket);
             Chunk curr = current;
             if (curr != null && curr.remainingCapacity() >= size) {
