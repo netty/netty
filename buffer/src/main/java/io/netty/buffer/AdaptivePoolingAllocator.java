@@ -15,10 +15,12 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
 import io.netty.util.Recycler;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
@@ -43,7 +45,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.StampedLock;
@@ -592,16 +593,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
     }
 
-    private static final class Chunk {
-
-        /**
-         * We're using 2 separate counters for reference counting, one for the up-count and one for the down-count,
-         * in order to speed up the borrowing, which shouldn't need atomic operations, being single-threaded.
-         */
-        private static final AtomicIntegerFieldUpdater<Chunk> REF_CNT_UP_UPDATER =
-                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCntUp");
-        private static final AtomicIntegerFieldUpdater<Chunk> REF_CNT_DOWN_UPDATER =
-                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCntDown");
+    private static final class Chunk extends AbstractReferenceCounted {
 
         private final AbstractByteBuf delegate;
         private final Magazine magazine;
@@ -617,10 +609,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             this.pooled = pooled;
             this.capacity = delegate.capacity();
             magazine.usedMemory.getAndAdd(capacity);
-            REF_CNT_UP_UPDATER.lazySet(this, 1);
         }
 
-        private void deallocate() {
+        @Override
+        public Chunk touch(Object hint) {
+            return this;
+        }
+
+        @Override
+        protected void deallocate() {
             Magazine mag = magazine;
             AdaptivePoolingAllocator parent = mag.parent;
             int chunkSize = mag.preferredChunkSize();
@@ -631,8 +628,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 mag.usedMemory.getAndAdd(-capacity());
                 delegate.release();
             } else {
-                REF_CNT_UP_UPDATER.lazySet(this, 1);
-                REF_CNT_DOWN_UPDATER.lazySet(this, 0);
+                setRefCnt(1);
                 delegate.setIndex(0, 0);
                 allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
@@ -648,7 +644,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             int startIndex = allocatedBytes;
             allocatedBytes = startIndex + size;
             Chunk chunk = this;
-            chunk.unguardedRetain();
+            chunk.retain();
             try {
                 buf.init(delegate, chunk, 0, 0, startIndex, size, maxCapacity);
                 chunk = null;
@@ -667,27 +663,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         public int capacity() {
             return capacity;
-        }
-
-        private void unguardedRetain() {
-            REF_CNT_UP_UPDATER.lazySet(this, refCntUp + 1);
-        }
-
-        public void release() {
-            int refCntDown;
-            boolean deallocate;
-            do {
-                int refCntUp = this.refCntUp;
-                refCntDown = this.refCntDown;
-                int remaining = refCntUp - refCntDown;
-                if (remaining <= 0) {
-                    throw new IllegalStateException("RefCnt is already 0");
-                }
-                deallocate = remaining == 1;
-            } while (!REF_CNT_DOWN_UPDATER.compareAndSet(this, refCntDown, refCntDown + 1));
-            if (deallocate) {
-                deallocate();
-            }
         }
     }
 
