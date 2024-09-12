@@ -175,6 +175,7 @@ final class DnsQueryContextManager {
             if (result != null) {
                 idSpace.pushId(id);
             }
+            assert result != null : "DnsQueryContext not found, id: "  + id;
             return result;
         }
     }
