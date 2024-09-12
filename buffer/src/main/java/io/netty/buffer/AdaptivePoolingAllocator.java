@@ -19,11 +19,13 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
 import io.netty.util.Recycler;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ReferenceCountUpdater;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.UnstableApi;
@@ -587,24 +589,33 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    private static final class Chunk {
-
-        /**
-         * We're using 2 separate counters for reference counting, one for the up-count and one for the down-count,
-         * in order to speed up the borrowing, which shouldn't need atomic operations, being single-threaded.
-         */
-        private static final AtomicIntegerFieldUpdater<Chunk> REF_CNT_UP_UPDATER =
-                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCntUp");
-        private static final AtomicIntegerFieldUpdater<Chunk> REF_CNT_DOWN_UPDATER =
-                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCntDown");
+    private static final class Chunk implements ReferenceCounted {
 
         private final AbstractByteBuf delegate;
         private final Magazine magazine;
         private final int capacity;
         private final boolean pooled;
         private int allocatedBytes;
-        private volatile int refCntUp;
-        private volatile int refCntDown;
+        private static final long REFCNT_FIELD_OFFSET =
+                ReferenceCountUpdater.getUnsafeOffset(Chunk.class, "refCnt");
+        private static final AtomicIntegerFieldUpdater<Chunk> AIF_UPDATER =
+                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCnt");
+
+        private static final ReferenceCountUpdater<Chunk> updater =
+                new ReferenceCountUpdater<Chunk>() {
+                    @Override
+                    protected AtomicIntegerFieldUpdater<Chunk> updater() {
+                        return AIF_UPDATER;
+                    }
+                    @Override
+                    protected long unsafeOffset() {
+                        return REFCNT_FIELD_OFFSET;
+                    }
+                };
+
+        // Value might not equal "real" reference count, all access should be via the updater
+        @SuppressWarnings({"unused", "FieldMayBeFinal"})
+        private volatile int refCnt;
 
         Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             this.delegate = delegate;
@@ -612,7 +623,50 @@ final class AdaptivePoolingAllocator {
             this.pooled = pooled;
             this.capacity = delegate.capacity();
             magazine.usedMemory.getAndAdd(capacity);
-            REF_CNT_UP_UPDATER.lazySet(this, 1);
+            updater.setInitialValue(this);
+        }
+
+        @Override
+        public Chunk touch(Object hint) {
+            return this;
+        }
+
+        @Override
+        public int refCnt() {
+            return updater.refCnt(this);
+        }
+
+        @Override
+        public Chunk retain() {
+            return updater.retain(this);
+        }
+
+        @Override
+        public Chunk retain(int increment) {
+            return updater.retain(this, increment);
+        }
+
+        @Override
+        public Chunk touch() {
+            return this;
+        }
+
+        @Override
+        public boolean release() {
+            if (updater.release(this)) {
+                deallocate();
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean release(int decrement) {
+            if (updater.release(this, decrement)) {
+                deallocate();
+                return true;
+            }
+            return false;
         }
 
         private void deallocate() {
@@ -626,8 +680,7 @@ final class AdaptivePoolingAllocator {
                 mag.usedMemory.getAndAdd(-capacity());
                 delegate.release();
             } else {
-                REF_CNT_UP_UPDATER.lazySet(this, 1);
-                REF_CNT_DOWN_UPDATER.lazySet(this, 0);
+                updater.resetRefCnt(this);
                 delegate.setIndex(0, 0);
                 allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
@@ -643,7 +696,7 @@ final class AdaptivePoolingAllocator {
             int startIndex = allocatedBytes;
             allocatedBytes = startIndex + size;
             Chunk chunk = this;
-            chunk.unguardedRetain();
+            chunk.retain();
             try {
                 buf.init(delegate, chunk, 0, 0, startIndex, size, maxCapacity);
                 chunk = null;
@@ -662,27 +715,6 @@ final class AdaptivePoolingAllocator {
 
         public int capacity() {
             return capacity;
-        }
-
-        private void unguardedRetain() {
-            REF_CNT_UP_UPDATER.lazySet(this, refCntUp + 1);
-        }
-
-        public void release() {
-            int refCntDown;
-            boolean deallocate;
-            do {
-                int refCntUp = this.refCntUp;
-                refCntDown = this.refCntDown;
-                int remaining = refCntUp - refCntDown;
-                if (remaining <= 0) {
-                    throw new IllegalStateException("RefCnt is already 0");
-                }
-                deallocate = remaining == 1;
-            } while (!REF_CNT_DOWN_UPDATER.compareAndSet(this, refCntDown, refCntDown + 1));
-            if (deallocate) {
-                deallocate();
-            }
         }
     }
 
