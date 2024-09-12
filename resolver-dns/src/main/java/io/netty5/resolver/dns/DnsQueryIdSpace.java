@@ -61,8 +61,8 @@ final class DnsQueryIdSpace {
             } else if (freeIdx == -1 ||
                     // Let's make it somehow random which free slot is used.
                     ThreadLocalRandom.current().nextBoolean()) {
-                    // We have a slot that we can use to create a new bucket if we need to.
-                    freeIdx = bucketIdx;
+                // We have a slot that we can use to create a new bucket if we need to.
+                freeIdx = bucketIdx;
             }
         }
         if (freeIdx == -1) {
@@ -178,8 +178,15 @@ final class DnsQueryIdSpace {
             assert id <= startId + ids.length && id >= startId;
             // pick a slot for our index, and whatever was in that slot before will get moved to the tail.
             int insertionPosition = ThreadLocalRandom.current().nextInt(count + 1);
-            ids[count] = ids[insertionPosition];
-            ids[insertionPosition] = (short) id;
+
+            short moveId = ids[insertionPosition];
+            short insertId = (short) id;
+
+            // Assert that the ids are different or its the same index.
+            assert moveId != insertId || insertionPosition == count;
+
+            ids[count] = moveId;
+            ids[insertionPosition] = insertId;
             count++;
         }
 
