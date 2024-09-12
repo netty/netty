@@ -161,6 +161,11 @@ final class DnsQueryContextManager {
 
         synchronized int add(DnsQueryContext ctx) {
             int id = idSpace.nextId();
+            if (id == -1) {
+                // -1 means that we couldn't reserve an id to use. In this case return early and not store the
+                // context in the map.
+                return -1;
+            }
             DnsQueryContext oldCtx = map.put(id, ctx);
             assert oldCtx == null;
             return id;
