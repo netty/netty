@@ -568,26 +568,30 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
         Http2Flags flags = new Http2Flags();
 
         if (headerBlock.isReadable()) {
-            // The frame header (and padding) only changes on the last frame, so allocate it once and re-use
-            int fragmentReadableBytes = min(headerBlock.readableBytes(), maxFrameSize);
-            ByteBuf buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
-            writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
+
+            int fragmentReadableBytes;
+            ByteBuf buf = null;
 
             do {
                 fragmentReadableBytes = min(headerBlock.readableBytes(), maxFrameSize);
                 ByteBuf fragment = headerBlock.readRetainedSlice(fragmentReadableBytes);
 
                 if (headerBlock.isReadable()) {
+                    if (buf == null) {
+                        buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
+                        writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
+                    }
                     ctx.write(buf.retainedSlice(), promiseAggregator.newPromise());
                 } else {
                     // The frame header is different for the last frame, so re-allocate and release the old buffer
+                    if (buf != null) {
+                       buf.release();
+                    }
                     flags = flags.endOfHeaders(true);
-                    buf.release();
                     buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
                     writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
                     ctx.write(buf, promiseAggregator.newPromise());
                 }
-
                 ctx.write(fragment, promiseAggregator.newPromise());
 
             } while (headerBlock.isReadable());

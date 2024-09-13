@@ -15,15 +15,18 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
 import io.netty.util.Recycler;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ReferenceCountUpdater;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
@@ -220,7 +223,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
             Object mag = threadLocalMagazine.get();
             if (mag != NO_MAGAZINE) {
-                ((Magazine) mag).allocate(size, sizeBucket, maxCapacity, buf);
+                boolean allocated = ((Magazine) mag).tryAllocate(size, sizeBucket, maxCapacity, buf);
+                assert allocated : "Allocation of threadLocalMagazine must always succeed";
                 return true;
             }
         }
@@ -233,14 +237,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             int index = (int) (threadId & mask);
             for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
                 Magazine mag = mags[index + i & mask];
-                long writeLock = mag.tryWriteLock();
-                if (writeLock != 0) {
-                    try {
-                        mag.allocate(size, sizeBucket, maxCapacity, buf);
-                        return true;
-                    } finally {
-                        mag.unlockWrite(writeLock);
-                    }
+                if (mag.tryAllocate(size, sizeBucket, maxCapacity, buf)) {
+                    // Was able to allocate.
+                    return true;
                 }
             }
             expansions++;
@@ -342,10 +341,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         return AllocationStatistics.sizeBucket(size);
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by version check")
     @SuppressWarnings("checkstyle:finalclass") // Checkstyle mistakenly believes this class should be final.
-    private static class AllocationStatistics extends StampedLock {
-        private static final long serialVersionUID = -8319929980932269688L;
+    private static class AllocationStatistics {
         private static final int MIN_DATUM_TARGET = 1024;
         private static final int MAX_DATUM_TARGET = 65534;
         private static final int INIT_DATUM_TARGET = 9;
@@ -447,10 +444,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
     }
 
+    @SuppressJava6Requirement(reason = "Guarded by version check")
     private static final class Magazine extends AllocationStatistics {
-        private static final long serialVersionUID = -4068223712022528165L;
         private static final AtomicReferenceFieldUpdater<Magazine, Chunk> NEXT_IN_LINE;
-
         static {
             NEXT_IN_LINE = AtomicReferenceFieldUpdater.newUpdater(Magazine.class, Chunk.class, "nextInLine");
         }
@@ -458,6 +454,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @SuppressWarnings("unused") // updated via NEXT_IN_LINE
         private volatile Chunk nextInLine;
         private final AtomicLong usedMemory;
+        private final StampedLock allocationLock;
 
         Magazine(AdaptivePoolingAllocator parent) {
             this(parent, true);
@@ -465,25 +462,60 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         Magazine(AdaptivePoolingAllocator parent, boolean shareable) {
             super(parent, shareable);
+
+            // We only need the StampedLock if this Magazine will be shared across threads.
+            if (shareable) {
+                allocationLock = new StampedLock();
+            } else {
+                allocationLock = null;
+            }
             usedMemory = new AtomicLong();
         }
 
-        public void allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+        public boolean tryAllocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+            if (allocationLock == null) {
+                // This magazine is not shared across threads, just allocate directly.
+                allocate(size, sizeBucket, maxCapacity, buf);
+                return true;
+            }
+
+            // Try to retrieve the lock and if successful allocate.
+            long writeLock = allocationLock.tryWriteLock();
+            if (writeLock != 0) {
+                try {
+                    allocate(size, sizeBucket, maxCapacity, buf);
+                    return true;
+                } finally {
+                    allocationLock.unlockWrite(writeLock);
+                }
+            }
+            return false;
+        }
+
+        private void allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
             recordAllocationSize(sizeBucket);
             Chunk curr = current;
-            if (curr != null && curr.remainingCapacity() >= size) {
-                if (curr.remainingCapacity() == size) {
-                    current = null;
-                    try {
+            if (curr != null) {
+                if (curr.remainingCapacity() > size) {
+                    curr.readInitInto(buf, size, maxCapacity);
+                    // We still have some bytes left that we can use for the next allocation, just early return.
+                    return;
+                }
+
+                // At this point we know that this will be the last time current will be used, so directly set it to
+                // null and release it once we are done.
+                current = null;
+                try {
+                    if (curr.remainingCapacity() == size) {
                         curr.readInitInto(buf, size, maxCapacity);
                         return;
-                    } finally {
-                        curr.release();
                     }
+                } finally {
+                    curr.release();
                 }
-                curr.readInitInto(buf, size, maxCapacity);
-                return;
-            }
+ 
+            assert current == null;
+            
             int transResult = TransResult.NO_TRANS;
             if (curr != null) {
                 if (curr.remainingCapacity() < RETIRE_CAPACITY) {
@@ -492,6 +524,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     transResult = transChunk(curr);
                 }
             }
+           
+            // The fast-path for allocations did not work.
+            //
+            // Try to fetch the next "Magazine local" Chunk first, if this this fails as we don't have
+            // one setup we will poll our centralQueue. If this fails as well we will just allocate a new Chunk.
+            //
+            // In any case we will store the Chunk as the current so it will be used again for the next allocation and
+            // so be "reserved" by this Magazine for exclusive usage.
             if (TransResult.TO_NEXT_IN_LINE != transResult && nextInLine != null) {
                 curr = NEXT_IN_LINE.getAndSet(this, null);
             } else {
@@ -501,20 +541,37 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
             }
             current = curr;
+
+            assert current != null;
+
             if (curr.remainingCapacity() > size) {
                 curr.readInitInto(buf, size, maxCapacity);
             } else if (curr.remainingCapacity() == size) {
-                curr.readInitInto(buf, size, maxCapacity);
-                curr.release();
-                current = null;
+                try {
+                    curr.readInitInto(buf, size, maxCapacity);
+                } finally {
+                    // Release in a finally block so even if readInitInto(...) would throw we would still correctly
+                    // release the current chunk before null it out.
+                    curr.release();
+                    current = null;
+                }
             } else {
                 Chunk newChunk = newChunkAllocation(size);
-                newChunk.readInitInto(buf, size, maxCapacity);
-                if (curr.remainingCapacity() < RETIRE_CAPACITY) {
-                    curr.release();
-                    current = newChunk;
-                } else {
-                    transChunk(newChunk);
+                try {
+                    newChunk.readInitInto(buf, size, maxCapacity);
+                    if (curr.remainingCapacity() < RETIRE_CAPACITY) {
+                        curr.release();
+                        current = newChunk;
+                    } else {
+                        transChunk(newChunk);
+                    }
+                    newChunk = null;
+                } finally {
+                    if (newChunk != null) {
+                        assert current == null;
+                        // Something went wrong, let's ensure we not leak the newChunk.
+                        newChunk.release();
+                    } 
                 }
             }
         }
@@ -575,24 +632,33 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         int TO_CENTER_QUEUE = 2;
     }
 
-    private static final class Chunk {
-
-        /**
-         * We're using 2 separate counters for reference counting, one for the up-count and one for the down-count,
-         * in order to speed up the borrowing, which shouldn't need atomic operations, being single-threaded.
-         */
-        private static final AtomicIntegerFieldUpdater<Chunk> REF_CNT_UP_UPDATER =
-                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCntUp");
-        private static final AtomicIntegerFieldUpdater<Chunk> REF_CNT_DOWN_UPDATER =
-                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCntDown");
+    private static final class Chunk implements ReferenceCounted {
 
         private final AbstractByteBuf delegate;
         private final Magazine magazine;
         private final int capacity;
         private final boolean pooled;
         private int allocatedBytes;
-        private volatile int refCntUp;
-        private volatile int refCntDown;
+        private static final long REFCNT_FIELD_OFFSET =
+                ReferenceCountUpdater.getUnsafeOffset(Chunk.class, "refCnt");
+        private static final AtomicIntegerFieldUpdater<Chunk> AIF_UPDATER =
+                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCnt");
+
+        private static final ReferenceCountUpdater<Chunk> updater =
+                new ReferenceCountUpdater<Chunk>() {
+                    @Override
+                    protected AtomicIntegerFieldUpdater<Chunk> updater() {
+                        return AIF_UPDATER;
+                    }
+                    @Override
+                    protected long unsafeOffset() {
+                        return REFCNT_FIELD_OFFSET;
+                    }
+                };
+
+        // Value might not equal "real" reference count, all access should be via the updater
+        @SuppressWarnings({"unused", "FieldMayBeFinal"})
+        private volatile int refCnt;
 
         Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             this.delegate = delegate;
@@ -600,7 +666,50 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             this.pooled = pooled;
             this.capacity = delegate.capacity();
             magazine.usedMemory.getAndAdd(capacity);
-            REF_CNT_UP_UPDATER.lazySet(this, 1);
+            updater.setInitialValue(this);
+        }
+
+        @Override
+        public Chunk touch(Object hint) {
+            return this;
+        }
+
+        @Override
+        public int refCnt() {
+            return updater.refCnt(this);
+        }
+
+        @Override
+        public Chunk retain() {
+            return updater.retain(this);
+        }
+
+        @Override
+        public Chunk retain(int increment) {
+            return updater.retain(this, increment);
+        }
+
+        @Override
+        public Chunk touch() {
+            return this;
+        }
+
+        @Override
+        public boolean release() {
+            if (updater.release(this)) {
+                deallocate();
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean release(int decrement) {
+            if (updater.release(this, decrement)) {
+                deallocate();
+                return true;
+            }
+            return false;
         }
 
         private void deallocate() {
@@ -614,8 +723,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 mag.usedMemory.getAndAdd(-capacity());
                 delegate.release();
             } else {
-                REF_CNT_UP_UPDATER.lazySet(this, 1);
-                REF_CNT_DOWN_UPDATER.lazySet(this, 0);
+                updater.resetRefCnt(this);
                 delegate.setIndex(0, 0);
                 allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
@@ -631,7 +739,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             int startIndex = allocatedBytes;
             allocatedBytes = startIndex + size;
             Chunk chunk = this;
-            chunk.unguardedRetain();
+            chunk.retain();
             try {
                 buf.init(delegate, chunk, 0, 0, startIndex, size, maxCapacity);
                 chunk = null;
@@ -650,27 +758,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         public int capacity() {
             return capacity;
-        }
-
-        private void unguardedRetain() {
-            REF_CNT_UP_UPDATER.lazySet(this, refCntUp + 1);
-        }
-
-        public void release() {
-            int refCntDown;
-            boolean deallocate;
-            do {
-                int refCntUp = this.refCntUp;
-                refCntDown = this.refCntDown;
-                int remaining = refCntUp - refCntDown;
-                if (remaining <= 0) {
-                    throw new IllegalStateException("RefCnt is already 0");
-                }
-                deallocate = remaining == 1;
-            } while (!REF_CNT_DOWN_UPDATER.compareAndSet(this, refCntDown, refCntDown + 1));
-            if (deallocate) {
-                deallocate();
-            }
         }
     }
 
@@ -695,7 +782,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         private final ObjectPool.Handle<AdaptiveByteBuf> handle;
 
-        int adjustment;
+        private int adjustment;
         private AbstractByteBuf rootParent;
         private Chunk chunk;
         private int length;
@@ -1070,16 +1157,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         public int forEachByte(int index, int length, ByteProcessor processor) {
             checkIndex(index, length);
             int ret = rootParent().forEachByte(idx(index), length, processor);
-            if (ret < adjustment) {
-                return -1;
-            }
-            return ret - adjustment;
+            return forEachResult(ret);
         }
 
         @Override
         public int forEachByteDesc(int index, int length, ByteProcessor processor) {
             checkIndex(index, length);
             int ret = rootParent().forEachByteDesc(idx(index), length, processor);
+            return forEachResult(ret);
+        }
+
+        private int forEachResult(int ret) {
             if (ret < adjustment) {
                 return -1;
             }

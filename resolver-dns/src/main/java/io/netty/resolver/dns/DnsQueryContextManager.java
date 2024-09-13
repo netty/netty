@@ -46,6 +46,7 @@ final class DnsQueryContextManager {
      * @return                  the ID that should be used or {@code -1} if none could be generated.
      */
     int add(InetSocketAddress nameServerAddr, DnsQueryContext qCtx) {
+        assert !nameServerAddr.isUnresolved();
         final DnsQueryContextMap contexts = getOrCreateContextMap(nameServerAddr);
         return contexts.add(qCtx);
     }
@@ -59,6 +60,7 @@ final class DnsQueryContextManager {
      * @return                  The context or {@code null} if none could be found.
      */
     DnsQueryContext get(InetSocketAddress nameServerAddr, int id) {
+        assert !nameServerAddr.isUnresolved();
         final DnsQueryContextMap contexts = getContextMap(nameServerAddr);
         if (contexts == null) {
             return null;
@@ -75,6 +77,7 @@ final class DnsQueryContextManager {
      * @return                  The context or {@code null} if none could be removed.
      */
     DnsQueryContext remove(InetSocketAddress nameServerAddr, int id) {
+        assert !nameServerAddr.isUnresolved();
         final DnsQueryContextMap contexts = getContextMap(nameServerAddr);
         if (contexts == null) {
             return null;
@@ -161,6 +164,11 @@ final class DnsQueryContextManager {
 
         synchronized int add(DnsQueryContext ctx) {
             int id = idSpace.nextId();
+            if (id == -1) {
+                // -1 means that we couldn't reserve an id to use. In this case return early and not store the
+                // context in the map.
+                return -1;
+            }
             DnsQueryContext oldCtx = map.put(id, ctx);
             assert oldCtx == null;
             return id;
@@ -171,8 +179,12 @@ final class DnsQueryContextManager {
         }
 
         synchronized DnsQueryContext remove(int id) {
-            idSpace.pushId(id);
-            return map.remove(id);
+            DnsQueryContext result = map.remove(id);
+            if (result != null) {
+                idSpace.pushId(id);
+            }
+            assert result != null : "DnsQueryContext not found, id: "  + id;
+            return result;
         }
     }
 }
