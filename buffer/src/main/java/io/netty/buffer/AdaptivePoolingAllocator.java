@@ -569,7 +569,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                         assert current == null;
                         // Something went wrong, let's ensure we not leak the newChunk.
                         newChunk.release();
-                    } 
+                    }
                 }
             }
         }
