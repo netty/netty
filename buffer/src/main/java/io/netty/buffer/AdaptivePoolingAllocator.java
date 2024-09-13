@@ -513,6 +513,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 } finally {
                     curr.release();
                 }
+            }
  
             assert current == null;
             
