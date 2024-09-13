@@ -514,9 +514,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     curr.release();
                 }
             }
- 
             assert current == null;
-            
             int transResult = TransResult.NO_TRANS;
             if (curr != null) {
                 if (curr.remainingCapacity() < RETIRE_CAPACITY) {
@@ -525,7 +523,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     transResult = transChunk(curr);
                 }
             }
-           
             // The fast-path for allocations did not work.
             //
             // Try to fetch the next "Magazine local" Chunk first, if this this fails as we don't have
@@ -576,7 +573,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
             }
         }
-
         /**
          * Returns an integer type result for the caller to perceive the transfer situation.*
          * @param current
@@ -626,7 +622,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
     }
 
-    private interface TransResult{
+    private interface TransResult {
         int TO_RELEASE = -1;
         int NO_TRANS = 0;
         int TO_NEXT_IN_LINE = 1;
