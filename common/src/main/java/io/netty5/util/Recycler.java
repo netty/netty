@@ -280,7 +280,7 @@ public abstract class Recycler<T> {
             if (batch.isEmpty()) {
                 handles.drain(this, chunkSize);
             }
-            DefaultHandle<T> handle = batch.pollFirst();
+            DefaultHandle<T> handle = batch.pollLast();
             if (null != handle) {
                 handle.toClaimed();
             }
