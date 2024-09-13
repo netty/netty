@@ -484,7 +484,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 curr.readInitInto(buf, size, maxCapacity);
                 return;
             }
-            int transResult = 0;
+            int transResult = TransResult.NO_TRANS;
             if (curr != null) {
                 if (curr.remainingCapacity() < RETIRE_CAPACITY) {
                     curr.release();
@@ -570,6 +570,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
     private interface TransResult{
         int TO_RELEASE = -1;
+        int NO_TRANS = 0;
         int TO_NEXT_IN_LINE = 1;
         int TO_CENTER_QUEUE = 2;
     }
