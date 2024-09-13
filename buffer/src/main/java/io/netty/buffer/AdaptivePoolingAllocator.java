@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
@@ -113,6 +112,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     private static final int CENTRAL_QUEUE_CAPACITY = SystemPropertyUtil.getInt(
             "io.netty.allocator.centralQueueCapacity", NettyRuntime.availableProcessors());
 
+    /**
+     * The capacity if the magazine local buffer queue. This queue just pools the outer ByteBuf instance and not
+     * the actual memory and so helps to reduce GC pressure.
+     */
+    // TODO: Choose a good default.
+    private static final int MAGAZINE_BUFFER_QUEUE_CAPACITY = SystemPropertyUtil.getInt(
+            "io.netty.allocator.magazineBufferQueueCapacity", 4 * 1024);
+
     private static final Object NO_MAGAZINE = Boolean.TRUE;
 
     private final ChunkAllocator chunkAllocator;
@@ -196,36 +203,24 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     @Override
     public ByteBuf allocate(int size, int maxCapacity) {
         if (size <= MAX_CHUNK_SIZE) {
-            Thread currentThread = Thread.currentThread();
-            boolean willCleanupFastThreadLocals = FastThreadLocalThread.willCleanupFastThreadLocals(currentThread);
-            AdaptiveByteBuf buf = AdaptiveByteBuf.newInstance(willCleanupFastThreadLocals);
-            try {
-                if (allocate(size, maxCapacity, currentThread, buf)) {
-                    // Allocation did work, the ownership will is transferred to the caller.
-                    AdaptiveByteBuf result = buf;
-                    buf = null;
-                    return result;
-                }
-            } finally {
-                if (buf != null) {
-                    // We didn't handover ownership of the buf, release it now so we don't leak.
-                    buf.release();
-                }
+            AdaptiveByteBuf allocated = allocate(size, maxCapacity, Thread.currentThread());
+            if (allocated != null) {
+                return allocated;
             }
         }
         // The magazines failed us, or the buffer is too big to be pooled.
         return chunkAllocator.allocate(size, maxCapacity);
     }
 
-    private boolean allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
+    private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread) {
         int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
         FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
         if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
             Object mag = threadLocalMagazine.get();
             if (mag != NO_MAGAZINE) {
-                boolean allocated = ((Magazine) mag).tryAllocate(size, sizeBucket, maxCapacity, buf);
-                assert allocated : "Allocation of threadLocalMagazine must always succeed";
-                return true;
+                AdaptiveByteBuf allocated = ((Magazine) mag).tryAllocate(size, sizeBucket, maxCapacity);
+                assert allocated != null : "Allocation of threadLocalMagazine must always succeed";
+                return allocated;
             }
         }
         long threadId = currentThread.getId();
@@ -237,14 +232,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             int index = (int) (threadId & mask);
             for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
                 Magazine mag = mags[index + i & mask];
-                if (mag.tryAllocate(size, sizeBucket, maxCapacity, buf)) {
+                AdaptiveByteBuf allocated = mag.tryAllocate(size, sizeBucket, maxCapacity);
+                if (allocated != null) {
                     // Was able to allocate.
-                    return true;
+                    return allocated;
                 }
             }
             expansions++;
         } while (expansions <= EXPANSION_ATTEMPTS && tryExpandMagazines(mags.length));
-        return false;
+        return null;
     }
 
     /**
@@ -252,7 +248,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
      */
     void allocate(int size, int maxCapacity, AdaptiveByteBuf into) {
         Magazine magazine = into.chunk.magazine;
-        if (!allocate(size, maxCapacity, Thread.currentThread(), into)) {
+        int sizeBucket = AllocationStatistics.sizeBucket(size);
+        if (!into.chunk.magazine.tryAllocate(size, sizeBucket, maxCapacity, into)) {
             // Create a one-off chunk for this allocation as the previous allocate call did not work out.
             AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
             Chunk chunk = new Chunk(innerChunk, magazine, false);
@@ -455,6 +452,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private volatile Chunk nextInLine;
         private final AtomicLong usedMemory;
         private final StampedLock allocationLock;
+        private final Queue<AdaptiveByteBuf> bufferQueue =
+                PlatformDependent.newFixedMpscQueue(MAGAZINE_BUFFER_QUEUE_CAPACITY);
+
+        private final ObjectPool.Handle<AdaptiveByteBuf> handle = new ObjectPool.Handle<AdaptiveByteBuf>() {
+            @Override
+            public void recycle(AdaptiveByteBuf self) {
+                bufferQueue.offer(self);
+            }
+        };
 
         Magazine(AdaptivePoolingAllocator parent) {
             this(parent, true);
@@ -470,6 +476,39 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 allocationLock = null;
             }
             usedMemory = new AtomicLong();
+        }
+
+        private AdaptiveByteBuf newBuffer() {
+            AdaptiveByteBuf buffer = bufferQueue.poll();
+            if (buffer == null) {
+                buffer = new AdaptiveByteBuf(handle);
+            } else {
+                buffer.resetRefCnt();
+                buffer.discardMarks();
+            }
+            return buffer;
+        }
+
+        public AdaptiveByteBuf tryAllocate(int size, int sizeBucket, int maxCapacity) {
+            if (allocationLock == null) {
+                AdaptiveByteBuf buf = newBuffer();
+                // This magazine is not shared across threads, just allocate directly.
+                allocate(size, sizeBucket, maxCapacity, buf);
+                return buf;
+            }
+
+            // Try to retrieve the lock and if successful allocate.
+            long writeLock = allocationLock.tryWriteLock();
+            if (writeLock != 0) {
+                try {
+                    AdaptiveByteBuf buf = newBuffer();
+                    allocate(size, sizeBucket, maxCapacity, buf);
+                    return buf;
+                } finally {
+                    allocationLock.unlockWrite(writeLock);
+                }
+            }
+            return null;
         }
 
         public boolean tryAllocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
@@ -725,26 +764,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     }
 
     static final class AdaptiveByteBuf extends AbstractReferenceCountedByteBuf {
-        static final ObjectPool<AdaptiveByteBuf> RECYCLER = ObjectPool.newPool(
-                new ObjectPool.ObjectCreator<AdaptiveByteBuf>() {
-                    @Override
-                    public AdaptiveByteBuf newObject(ObjectPool.Handle<AdaptiveByteBuf> handle) {
-                        return new AdaptiveByteBuf(handle);
-                    }
-                });
-
-        static AdaptiveByteBuf newInstance(boolean useThreadLocal) {
-            if (useThreadLocal) {
-                AdaptiveByteBuf buf = RECYCLER.get();
-                buf.resetRefCnt();
-                buf.discardMarks();
-                return buf;
-            }
-            return new AdaptiveByteBuf(null);
-        }
 
         private final ObjectPool.Handle<AdaptiveByteBuf> handle;
-
         private int adjustment;
         private AbstractByteBuf rootParent;
         private Chunk chunk;
@@ -777,36 +798,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 return rootParent;
             }
             throw new IllegalReferenceCountException();
-        }
-
-        @Override
-        public ByteBuf retainedSlice() {
-            if (handle == null) {
-                return super.retainedSlice();
-            }
-            // If the handle is not null we can use the Pooled variants that use a Recycler.
-            ensureAccessible();
-            return PooledSlicedByteBuf.newInstance(this, this, readerIndex(), readableBytes());
-        }
-
-        @Override
-        public ByteBuf retainedSlice(int index, int length) {
-            if (handle == null) {
-                return super.retainedSlice(index, length);
-            }
-            // If the handle is not null we can use the Pooled variants that use a Recycler.
-            ensureAccessible();
-            return PooledSlicedByteBuf.newInstance(this, this, index, length);
-        }
-
-        @Override
-        public ByteBuf retainedDuplicate() {
-            if (handle == null) {
-                return super.retainedDuplicate();
-            }
-            // If the handle is not null we can use the Pooled variants that use a Recycler.
-            ensureAccessible();
-            return PooledDuplicatedByteBuf.newInstance(this, this, readerIndex(), writerIndex());
         }
 
         @Override
