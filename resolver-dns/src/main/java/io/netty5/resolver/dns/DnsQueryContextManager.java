@@ -46,6 +46,7 @@ final class DnsQueryContextManager {
      * @return                  the ID that should be used or {@code -1} if none could be generated.
      */
     int add(InetSocketAddress nameServerAddr, DnsQueryContext qCtx) {
+        assert !nameServerAddr.isUnresolved();
         final DnsQueryContextMap contexts = getOrCreateContextMap(nameServerAddr);
         return contexts.add(qCtx);
     }
@@ -59,6 +60,7 @@ final class DnsQueryContextManager {
      * @return                  The context or {@code null} if none could be found.
      */
     DnsQueryContext get(InetSocketAddress nameServerAddr, int id) {
+        assert !nameServerAddr.isUnresolved();
         final DnsQueryContextMap contexts = getContextMap(nameServerAddr);
         if (contexts == null) {
             return null;
@@ -75,6 +77,7 @@ final class DnsQueryContextManager {
      * @return                  The context or {@code null} if none could be removed.
      */
     DnsQueryContext remove(InetSocketAddress nameServerAddr, int id) {
+        assert !nameServerAddr.isUnresolved();
         final DnsQueryContextMap contexts = getContextMap(nameServerAddr);
         if (contexts == null) {
             return null;
