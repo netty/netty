@@ -176,8 +176,12 @@ final class DnsQueryContextManager {
         }
 
         synchronized DnsQueryContext remove(int id) {
-            idSpace.pushId(id);
-            return map.remove(id);
+            DnsQueryContext result = map.remove(id);
+            if (result != null) {
+                idSpace.pushId(id);
+            }
+            assert result != null : "DnsQueryContext not found, id: "  + id;
+            return result;
         }
     }
 }
