@@ -298,9 +298,10 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 int preferredChunkSize = mags[0].sharedPrefChunkSize;
                 Magazine[] expanded = new Magazine[mags.length * 2];
                 for (int i = 0, m = expanded.length; i < m; i++) {
-                    expanded[i] = new Magazine(this);
-                    expanded[i].localPrefChunkSize = preferredChunkSize;
-                    expanded[i].sharedPrefChunkSize = preferredChunkSize;
+                    Magazine m = new Magazine(this);
+                    m.localPrefChunkSize = preferredChunkSize;
+                    m.sharedPrefChunkSize = preferredChunkSize;
+                    expanded[i] = m
                 }
                 magazines = expanded;
                 for (Magazine magazine : mags) {
@@ -611,10 +612,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         void free() {
             // Release the current Chunk and the next that was stored for later usage.
-            Chunk next = NEXT_IN_LINE.getAndSet(this, MAGAZINE_FREED);
-            if (next != null && next != MAGAZINE_FREED) {
-                next.release();
-            }
+            restoreMagazineFreed();
             if (current != null) {
                 current.release();
                 current = null;
