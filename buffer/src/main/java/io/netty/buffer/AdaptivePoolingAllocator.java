@@ -533,7 +533,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             }
             current = curr;
             assert current != null;
-            
             if (least != null) {
                 if (least.remainingCapacity() < RETIRE_CAPACITY) {
                     least.release();
@@ -541,7 +540,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     transChunk(least);
                 }
             }
-            
             if (curr.remainingCapacity() > size) {
                 curr.readInitInto(buf, size, maxCapacity);
             } else if (curr.remainingCapacity() == size) {
