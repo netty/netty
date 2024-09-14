@@ -305,12 +305,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
                 magazines = expanded;
                 for (Magazine magazine : mags) {
-                    long stamp = magazine.allocationLock.writeLock();
-                    try {
-                        magazine.free();
-                    } finally {
-                        magazine.allocationLock.unlockWrite(stamp);
-                    }
+                    magazine.free();
                 }
             } finally {
                 magazineExpandLock.unlockWrite(writeLock);
@@ -613,9 +608,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         void free() {
             // Release the current Chunk and the next that was stored for later usage.
             restoreMagazineFreed();
-            if (current != null) {
-                current.release();
-                current = null;
+            long stamp = allocationLock.writeLock();
+            try {
+                if (current != null) {
+                    current.release();
+                    current = null;
+                }
+            } finally {
+                allocationLock.unlockWrite(stamp);
             }
         }
     }
