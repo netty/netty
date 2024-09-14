@@ -130,7 +130,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         magazineExpandLock = new StampedLock();
         if (magazineCaching != MagazineCaching.None) {
             assert magazineCaching == MagazineCaching.EventLoopThreads ||
-                   magazineCaching == MagazineCaching.FastThreadLocalThreads;
+                    magazineCaching == MagazineCaching.FastThreadLocalThreads;
             final boolean cachedMagazinesNonEventLoopThreads =
                     magazineCaching == MagazineCaching.FastThreadLocalThreads;
             final Set<Magazine> liveMagazines = new CopyOnWriteArraySet<Magazine>();
@@ -514,15 +514,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     curr.release();
                 }
             }
+            Chunk least = curr;
             assert current == null;
-            int transResult = TransResult.NO_TRANS;
-            if (curr != null) {
-                if (curr.remainingCapacity() < RETIRE_CAPACITY) {
-                    curr.release();
-                } else {
-                    transResult = transChunk(curr);
-                }
-            }
             // The fast-path for allocations did not work.
             //
             // Try to fetch the next "Magazine local" Chunk first, if this this fails as we don't have
@@ -530,7 +523,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             //
             // In any case we will store the Chunk as the current so it will be used again for the next allocation and
             // so be "reserved" by this Magazine for exclusive usage.
-            if (TransResult.TO_NEXT_IN_LINE != transResult && nextInLine != null) {
+            if (nextInLine != null) {
                 curr = NEXT_IN_LINE.getAndSet(this, null);
             } else {
                 curr = parent.centralQueue.poll();
@@ -539,9 +532,16 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
             }
             current = curr;
-
             assert current != null;
-
+            
+            if (least != null) {
+                if (least.remainingCapacity() < RETIRE_CAPACITY) {
+                    least.release();
+                } else {
+                    transChunk(least);
+                }
+            }
+            
             if (curr.remainingCapacity() > size) {
                 curr.readInitInto(buf, size, maxCapacity);
             } else if (curr.remainingCapacity() == size) {
@@ -573,30 +573,22 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
             }
         }
-        /**
-         * Returns an integer type result for the caller to perceive the transfer situation.*
-         * @param current
-         * @return
-         */
-        private int transChunk(Chunk current) {
-            if (NEXT_IN_LINE.compareAndSet(this, null, current)) {
-                return TransResult.TO_NEXT_IN_LINE;
-            }
-            if (parent.offerToQueue(current)) {
-                return TransResult.TO_CENTER_QUEUE;
+
+        private void transChunk(Chunk current) {
+            if (NEXT_IN_LINE.compareAndSet(this, null, current)
+                    || parent.offerToQueue(current)) {
+                return ;
             }
             Chunk nextChunk = NEXT_IN_LINE.get(this);
             if (current.remainingCapacity() > nextChunk.remainingCapacity()) {
                 if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
                     nextChunk.release();
-                    return TransResult.TO_NEXT_IN_LINE;
                 } else {
                     // Next-in-line is occupied AND the central queue is full.
                     // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
                     current.release();
                 }
             }
-            return TransResult.TO_RELEASE;
         }
 
         private Chunk newChunkAllocation(int promptingSize) {
@@ -620,13 +612,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 next.release();
             }
         }
-    }
-
-    private interface TransResult {
-        int TO_RELEASE = -1;
-        int NO_TRANS = 0;
-        int TO_NEXT_IN_LINE = 1;
-        int TO_CENTER_QUEUE = 2;
     }
 
     private static final class Chunk implements ReferenceCounted {
