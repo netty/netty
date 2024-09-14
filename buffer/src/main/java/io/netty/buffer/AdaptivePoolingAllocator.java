@@ -574,18 +574,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         private void transChunk(Chunk current) {
-            if (NEXT_IN_LINE.compareAndSet(this, null, current)
-                    || parent.offerToQueue(current)) {
-                return ;
-            }
-            Chunk nextChunk = NEXT_IN_LINE.get(this);
-            if (current.remainingCapacity() > nextChunk.remainingCapacity()) {
-                if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
-                    nextChunk.release();
-                } else {
-                    // Next-in-line is occupied AND the central queue is full.
-                    // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
-                    current.release();
+            if (!(NEXT_IN_LINE.compareAndSet(this, null, current)
+                    || parent.offerToQueue(current))) {
+                Chunk nextChunk = NEXT_IN_LINE.get(this);
+                if (current.remainingCapacity() > nextChunk.remainingCapacity()) {
+                    if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
+                        nextChunk.release();
+                    } else {
+                        // Next-in-line is occupied AND the central queue is full.
+                        // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+                        current.release();
+                    }
                 }
             }
         }
