@@ -297,11 +297,11 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
                 int preferredChunkSize = mags[0].sharedPrefChunkSize;
                 Magazine[] expanded = new Magazine[mags.length * 2];
-                for (int i = 0, m = expanded.length; i < m; i++) {
+                for (int i = 0, l = expanded.length; i < l; i++) {
                     Magazine m = new Magazine(this);
                     m.localPrefChunkSize = preferredChunkSize;
                     m.sharedPrefChunkSize = preferredChunkSize;
-                    expanded[i] = m
+                    expanded[i] = m;
                 }
                 magazines = expanded;
                 for (Magazine magazine : mags) {
@@ -616,9 +616,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             if (current != null) {
                 current.release();
                 current = null;
-            }
-            if (next == MAGAZINE_FREED) {
-                throw new IllegalStateException("Magazine has already been freed");
             }
         }
     }
