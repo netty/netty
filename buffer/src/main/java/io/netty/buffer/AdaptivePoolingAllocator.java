@@ -130,7 +130,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         magazineExpandLock = new StampedLock();
         if (magazineCaching != MagazineCaching.None) {
             assert magazineCaching == MagazineCaching.EventLoopThreads ||
-                    magazineCaching == MagazineCaching.FastThreadLocalThreads;
+                   magazineCaching == MagazineCaching.FastThreadLocalThreads;
             final boolean cachedMagazinesNonEventLoopThreads =
                     magazineCaching == MagazineCaching.FastThreadLocalThreads;
             final Set<Magazine> liveMagazines = new CopyOnWriteArraySet<Magazine>();
@@ -514,7 +514,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     }
                 }
             }
-            Chunk least = curr;
+            Chunk last = curr;
             assert current == null;
             // The fast-path for allocations did not work.
             //
@@ -533,11 +533,11 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             }
             current = curr;
             assert current != null;
-            if (least != null) {
-                if (least.remainingCapacity() < RETIRE_CAPACITY) {
-                    least.release();
+            if (last != null) {
+                if (last.remainingCapacity() < RETIRE_CAPACITY) {
+                    last.release();
                 } else {
-                    transChunk(least);
+                    transChunk(last);
                 }
             }
             if (curr.remainingCapacity() > size) {
