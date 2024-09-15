@@ -130,7 +130,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         magazineExpandLock = new StampedLock();
         if (magazineCaching != MagazineCaching.None) {
             assert magazineCaching == MagazineCaching.EventLoopThreads ||
-                   magazineCaching == MagazineCaching.FastThreadLocalThreads;
+                    magazineCaching == MagazineCaching.FastThreadLocalThreads;
             final boolean cachedMagazinesNonEventLoopThreads =
                     magazineCaching == MagazineCaching.FastThreadLocalThreads;
             final Set<Magazine> liveMagazines = new CopyOnWriteArraySet<Magazine>();
@@ -505,13 +505,13 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 // At this point we know that this will be the last time current will be used, so directly set it to
                 // null and release it once we are done.
                 current = null;
-                try {
-                    if (curr.remainingCapacity() == size) {
+                if (curr.remainingCapacity() == size) {
+                    try {
                         curr.readInitInto(buf, size, maxCapacity);
                         return;
+                    } finally {
+                        curr.release();
                     }
-                } finally {
-                    curr.release();
                 }
             }
             Chunk least = curr;
@@ -539,7 +539,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 } else {
                     transChunk(least);
                 }
-                least = null;
             }
             if (curr.remainingCapacity() > size) {
                 curr.readInitInto(buf, size, maxCapacity);
@@ -574,17 +573,18 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         private void transChunk(Chunk current) {
-            if (!(NEXT_IN_LINE.compareAndSet(this, null, current)
-                    || parent.offerToQueue(current))) {
-                Chunk nextChunk = NEXT_IN_LINE.get(this);
-                if (current.remainingCapacity() > nextChunk.remainingCapacity()) {
-                    if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
-                        nextChunk.release();
-                    } else {
-                        // Next-in-line is occupied AND the central queue is full.
-                        // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
-                        current.release();
-                    }
+            if (NEXT_IN_LINE.compareAndSet(this, null, current)
+                    || parent.offerToQueue(current)) {
+                return;
+            }
+            Chunk nextChunk = NEXT_IN_LINE.get(this);
+            if (current.remainingCapacity() > nextChunk.remainingCapacity()) {
+                if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
+                    nextChunk.release();
+                } else {
+                    // Next-in-line is occupied AND the central queue is full.
+                    // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+                    current.release();
                 }
             }
         }
