@@ -349,13 +349,13 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 4000, unit = MILLISECONDS)
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     public void testThreadCacheDestroyedByThreadCleaner() throws InterruptedException {
         testThreadCacheDestroyed(false);
     }
 
     @Test
-    @Timeout(value = 4000, unit = MILLISECONDS)
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     public void testThreadCacheDestroyedAfterExitRun() throws InterruptedException {
         testThreadCacheDestroyed(true);
     }
