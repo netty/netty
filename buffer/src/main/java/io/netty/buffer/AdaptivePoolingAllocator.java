@@ -572,7 +572,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             }
         }
 
-        private void transChunk(Chunk current) {
+        private void transferChunk(Chunk current) {
             if (NEXT_IN_LINE.compareAndSet(this, null, current)
                     || parent.offerToQueue(current)) {
                 return;
