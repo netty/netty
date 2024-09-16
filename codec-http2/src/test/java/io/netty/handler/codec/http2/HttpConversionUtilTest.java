@@ -188,6 +188,33 @@ public class HttpConversionUtilTest {
     }
 
     @Test
+    public void cookieNoSpace() {
+        final HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(COOKIE, "one=foo;two=bar");
+        final Http2Headers out = new DefaultHttp2Headers();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertEquals("one=foo;two=bar", out.get(COOKIE)); // not split
+    }
+
+    @Test
+    public void cookieTailSemicolon() {
+        final HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(COOKIE, "one=foo;");
+        final Http2Headers out = new DefaultHttp2Headers();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertEquals("one=foo;", out.get(COOKIE)); // not split
+    }
+
+    @Test
+    public void cookieNonAscii() {
+        final HttpHeaders inHeaders = new DefaultHttpHeaders();
+        inHeaders.add(COOKIE, "one=\uD83D\uDE43; two=ü");
+        final Http2Headers out = new DefaultHttp2Headers();
+        HttpConversionUtil.toHttp2Headers(inHeaders, out);
+        assertSame("one=\uD83D\uDE43; two=ü", out.get(COOKIE)); // not split
+    }
+
+    @Test
     public void handlesRequest() throws Exception {
         boolean validateHeaders = true;
         HttpRequest msg = new DefaultHttpRequest(

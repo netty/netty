@@ -40,18 +40,22 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class SocketStringEchoTest extends AbstractSocketTest {
 
-    static final Random random = new Random();
+    static final Random random = new Random(3);
     static final String[] data = new String[1024];
 
     static {
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < data.length; i ++) {
+            sb.setLength(0);
             int eLen = random.nextInt(512);
-            char[] e = new char[eLen];
-            for (int j = 0; j < eLen; j ++) {
-                e[j] = (char) ('a' + random.nextInt(26));
+            int j = 1;
+            while (sb.length() < eLen) {
+                sb.append(String.format("%03X/%x.", i, j++));
             }
-
-            data[i] = new String(e);
+            if (sb.length() > eLen) {
+                sb.setLength(eLen);
+            }
+            data[i] = sb.toString();
         }
     }
 

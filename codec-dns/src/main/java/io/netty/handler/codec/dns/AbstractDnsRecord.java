@@ -17,7 +17,6 @@ package io.netty.handler.codec.dns;
 
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.IDN;
 
@@ -27,7 +26,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 /**
  * A skeletal implementation of {@link DnsRecord}.
  */
-@UnstableApi
 public abstract class AbstractDnsRecord implements DnsRecord {
 
     private final String name;

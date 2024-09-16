@@ -18,8 +18,6 @@ package io.netty.handler.ssl.ocsp;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
@@ -32,11 +30,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.resolver.AddressResolver;
-import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.InetSocketAddressResolver;
 import io.netty.resolver.dns.DnsNameResolver;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -62,8 +56,6 @@ import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.security.cert.CertificateEncodingException;
@@ -142,7 +134,7 @@ final class OcspClient {
                         path = "/";
                     } else {
                         if (uri.getQuery() != null) {
-                            path = path + "?" + uri.getQuery();
+                            path = path + '?' + uri.getQuery();
                         }
                     }
 
@@ -194,6 +186,7 @@ final class OcspClient {
                     .group(ioTransport.eventLoop())
                     .option(ChannelOption.TCP_NODELAY, true)
                     .channelFactory(ioTransport.socketChannel())
+                    .attr(OcspServerCertificateValidator.OCSP_PIPELINE_ATTRIBUTE, Boolean.TRUE)
                     .handler(new Initializer(responsePromise));
 
             dnsNameResolver.resolve(host).addListener(new FutureListener<InetAddress>() {

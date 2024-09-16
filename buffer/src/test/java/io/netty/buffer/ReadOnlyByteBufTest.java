@@ -297,4 +297,59 @@ public class ReadOnlyByteBufTest {
         assertSame(readOnly, readOnly.asReadOnly());
         readOnly.release();
     }
+
+    @Test
+    public void testDuplicateOfSliceHasTheSameCapacityAsTheSlice() {
+        ByteBuf buffer = buffer(16);
+
+        ByteBuf slice = buffer.slice();
+        ByteBuf duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+
+        slice = buffer.slice(0, buffer.capacity() - 2);
+        duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+
+        slice = buffer.slice();
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        duplicate.release();
+
+        slice = buffer.slice(0, buffer.capacity() - 2);
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        duplicate.release();
+
+        buffer.release();
+    }
+
+    @Test
+    public void testDuplicateOfRetainedSliceHasTheSameCapacityAsTheSlice() {
+        ByteBuf buffer = buffer(16);
+
+        ByteBuf slice = buffer.retainedSlice();
+        ByteBuf duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+
+        slice = buffer.retainedSlice(0, buffer.capacity() - 2);
+        duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+
+        slice = buffer.retainedSlice();
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+        duplicate.release();
+
+        slice = buffer.retainedSlice(0, buffer.capacity() - 2);
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+        duplicate.release();
+
+        buffer.release();
+    }
+
 }

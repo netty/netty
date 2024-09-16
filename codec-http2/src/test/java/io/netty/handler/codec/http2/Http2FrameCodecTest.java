@@ -845,6 +845,13 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void writeHeadersVoidPromise() {
+        final Http2FrameStream stream = frameCodec.newStream();
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream),
+                channel.voidPromise());
+    }
+
+    @Test
     public void upgradeEventNoRefCntError() throws Exception {
         frameInboundWriter.writeInboundHeaders(Http2CodecUtil.HTTP_UPGRADE_STREAM_ID, request, 31, false);
         // Using reflect as the constructor is package-private and the class is final.

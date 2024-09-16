@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -22,7 +23,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import static io.netty.util.internal.EmptyArrays.*;
+import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -306,5 +307,48 @@ public class ByteBufStreamTest {
             buf.release();
             in.close();
         }
+    }
+
+    @Test
+    public void testReleaseOnCloseInByteBufOutputStream() throws Exception {
+        ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer(16);
+        buf.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6 });
+        final ByteBufOutputStream out = new ByteBufOutputStream(buf, true);
+        try {
+            out.writeBoolean(true);
+            out.writeBoolean(false);
+            out.writeByte(42);
+            out.writeByte(224);
+            out.writeBytes("Hello, World!");
+            out.write(new byte[]{1, 3, 3, 4}, 0, 0);
+        } finally {
+            out.close();
+        }
+        // When releaseOnClose is set to true, ByteBuf will be automatically released after calling the close method of
+        // ByteBufOutputStream.
+        assertEquals(0, out.buffer().refCnt());
+    }
+
+    @Test
+    public void testGeneralByteBufOutputStream() throws Exception {
+        // case1
+        ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer(16);
+        buf.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6 });
+        final ByteBufOutputStream out = new ByteBufOutputStream(buf, false);
+        try {
+            out.writeBoolean(true);
+            out.writeBoolean(false);
+            out.writeByte(42);
+            out.writeByte(224);
+            out.writeBytes("Hello, World!");
+            out.write(new byte[]{1, 3, 3, 4}, 0, 0);
+        } finally {
+            out.close();
+        }
+        assertEquals(1, out.buffer().refCnt());
+
+        // When releaseOnClose is not set or releaseOnClose is false, ByteBuf must be released manually.
+        out.buffer().release();
+        assertEquals(0, out.buffer().refCnt());
     }
 }

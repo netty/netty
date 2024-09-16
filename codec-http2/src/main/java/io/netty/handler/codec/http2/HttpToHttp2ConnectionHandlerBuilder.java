@@ -18,12 +18,10 @@ package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Builder which builds {@link HttpToHttp2ConnectionHandler} objects.
  */
-@UnstableApi
 public final class HttpToHttp2ConnectionHandlerBuilder extends
         AbstractHttp2ConnectionHandlerBuilder<HttpToHttp2ConnectionHandler, HttpToHttp2ConnectionHandlerBuilder> {
 
@@ -80,6 +78,12 @@ public final class HttpToHttp2ConnectionHandlerBuilder extends
     public HttpToHttp2ConnectionHandlerBuilder headerSensitivityDetector(
             SensitivityDetector headerSensitivityDetector) {
         return super.headerSensitivityDetector(headerSensitivityDetector);
+    }
+
+    @Override
+    public HttpToHttp2ConnectionHandlerBuilder encoderIgnoreMaxHeaderListSize(
+            boolean encoderIgnoreMaxHeaderListSize) {
+        return super.encoderIgnoreMaxHeaderListSize(encoderIgnoreMaxHeaderListSize);
     }
 
     @Override

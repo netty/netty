@@ -1,0 +1,10 @@
+{
+  name: "netty-on-alpine",
+  containerEnv: {
+    JAVA_HOME: "/usr/lib/jvm/default-jvm",
+    CPATH: "/usr/lib/jvm/default-jvm/include/:/usr/lib/jvm/default-jvm/include/linux/"
+  },
+  build: {
+    dockerfile: "Dockerfile",
+  }
+}

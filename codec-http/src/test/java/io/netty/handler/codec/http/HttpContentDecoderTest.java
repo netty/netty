@@ -67,6 +67,11 @@ public class HttpContentDecoderTest {
             -110, 82, -41, 102, -89, 20, 11, 10, -68, -31, 96, -116, -55, -80, -31, -91, 96, -64, 83, 51,
             -39, 13, -21, 92, -16, -119, 124, -31, 18, 78, -1, 91, 82, 105, -116, -95, -22, -11, -70, -45, 0};
 
+    private static final byte[] SAMPLE_ZSTD_BYTES = new byte[]{40, -75, 47, -3, 32, 73, 45, 2, 0, 2, -124, 14,
+            22, -112, -75, 109, 11, -112, 113, 101, -65, 53, 59, -25, -51, -51, -78, 40, -120, -69, -32, 110, -7,
+            -81, 28, -90, -112, 3, -23, -38, -89, -113, -98, 75, -32, -114, 1, 63, 38, 27, 97, -80, -23, -107, 66,
+            -119, 17, 47, -109, 9, 91, -80, -10, -122, -13, 108, 92, 22, -15, 69, 2, 0, 53, -27, 55, -125, 89, 6};
+
     @Test
     public void testBinaryDecompression() throws Exception {
         // baseline test: zlib library and test helpers work correctly.
@@ -258,6 +263,71 @@ public class HttpContentDecoderTest {
             boolean available = channel.writeInbound(Unpooled.wrappedBuffer(SAMPLE_BZ_BYTES, offset, len));
             offset += 1500;
             if (offset < SAMPLE_BZ_BYTES.length) {
+                assertFalse(available);
+            } else {
+                assertTrue(available);
+            }
+        }
+
+        Object o = channel.readInbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        FullHttpResponse resp = (FullHttpResponse) o;
+        assertEquals(SAMPLE_STRING, resp.content().toString(CharsetUtil.UTF_8),
+                "Response body should match uncompressed string");
+        resp.release();
+
+        assertHasInboundMessages(channel, false);
+        assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish()); // assert that no messages are left in channel
+    }
+
+    @Test
+    public void testResponseZstdDecompression() throws Throwable {
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(Integer.MAX_VALUE);
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
+
+        String headers = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: " + SAMPLE_ZSTD_BYTES.length + "\r\n" +
+                "Content-Encoding: zstd\r\n" +
+                "\r\n";
+        ByteBuf buf = Unpooled.wrappedBuffer(headers.getBytes(CharsetUtil.US_ASCII), SAMPLE_ZSTD_BYTES);
+        assertTrue(channel.writeInbound(buf));
+
+        Object o = channel.readInbound();
+        assertThat(o, is(instanceOf(FullHttpResponse.class)));
+        FullHttpResponse resp = (FullHttpResponse) o;
+        assertNull(resp.headers().get(HttpHeaderNames.CONTENT_ENCODING), "Content-Encoding header should be removed");
+        assertEquals(SAMPLE_STRING, resp.content().toString(CharsetUtil.UTF_8),
+                "Response body should match uncompressed string");
+        resp.release();
+
+        assertHasInboundMessages(channel, false);
+        assertHasOutboundMessages(channel, false);
+        assertFalse(channel.finish()); // assert that no messages are left in channel
+    }
+
+    @Test
+    public void testResponseChunksZstdDecompression() throws Throwable {
+        HttpResponseDecoder decoder = new HttpResponseDecoder();
+        HttpContentDecoder decompressor = new HttpContentDecompressor();
+        HttpObjectAggregator aggregator = new HttpObjectAggregator(Integer.MAX_VALUE);
+        EmbeddedChannel channel = new EmbeddedChannel(decoder, decompressor, aggregator);
+
+        String headers = "HTTP/1.1 200 OK\r\n" +
+                "Content-Length: " + SAMPLE_ZSTD_BYTES.length + "\r\n" +
+                "Content-Encoding: zstd\r\n" +
+                "\r\n";
+
+        assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(headers.getBytes(CharsetUtil.US_ASCII))));
+
+        int offset = 0;
+        while (offset < SAMPLE_ZSTD_BYTES.length) {
+            int len = Math.min(1500, SAMPLE_ZSTD_BYTES.length - offset);
+            boolean available = channel.writeInbound(Unpooled.wrappedBuffer(SAMPLE_ZSTD_BYTES, offset, len));
+            offset += 1500;
+            if (offset < SAMPLE_ZSTD_BYTES.length) {
                 assertFalse(available);
             } else {
                 assertTrue(available);

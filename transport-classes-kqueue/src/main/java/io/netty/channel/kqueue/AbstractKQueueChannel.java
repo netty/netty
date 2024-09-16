@@ -447,7 +447,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
          */
         void shutdownInput(boolean readEOF) {
             // We need to take special care of calling finishConnect() if readEOF is true and we not
-            // fullfilled the connectPromise yet. If we fail to do so the connectPromise will be failed
+            // fulfilled the connectPromise yet. If we fail to do so the connectPromise will be failed
             // with a ClosedChannelException as a close() will happen and so the FD is closed before we
             // have a chance to call finishConnect() later on. Calling finishConnect() here will ensure
             // we observe the correct exception in case of a connect failure.
@@ -545,7 +545,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         @Override
         public void connect(
                 final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+            // Don't mark the connect promise as uncancellable as in fact we can cancel it as it is using
+            // non-blocking io.
+            if (promise.isDone() || !ensureOpen(promise)) {
                 return;
             }
 
@@ -562,7 +564,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                     requestedRemoteAddress = remoteAddress;
 
                     // Schedule connect timeout.
-                    int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                    final int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
                         connectTimeoutFuture = eventLoop().schedule(new Runnable() {
                             @Override
@@ -570,7 +572,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                                 ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
                                 if (connectPromise != null && !connectPromise.isDone()
                                         && connectPromise.tryFailure(new ConnectTimeoutException(
-                                        "connection timed out: " + remoteAddress))) {
+                                                "connection timed out after " + connectTimeoutMillis + " ms: " +
+                                                        remoteAddress))) {
                                     close(voidPromise());
                                 }
                             }
@@ -579,7 +582,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
                     promise.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
+                            // If the connect future is cancelled we also cancel the timeout and close the
+                            // underlying socket.
                             if (future.isCancelled()) {
                                 if (connectTimeoutFuture != null) {
                                     connectTimeoutFuture.cancel(false);

@@ -31,7 +31,6 @@ import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -39,7 +38,6 @@ import java.nio.ByteBuffer;
 
 import static io.netty.channel.kqueue.BsdSocket.newSocketDomainDgram;
 
-@UnstableApi
 public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramChannel implements DomainDatagramChannel {
 
     private static final String EXPECTED_TYPES =

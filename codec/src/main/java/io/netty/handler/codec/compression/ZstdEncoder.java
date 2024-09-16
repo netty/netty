@@ -25,16 +25,24 @@ import io.netty.util.internal.ObjectUtil;
 import java.nio.ByteBuffer;
 
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_COMPRESSION_LEVEL;
+import static io.netty.handler.codec.compression.ZstdConstants.MIN_COMPRESSION_LEVEL;
+import static io.netty.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_LEVEL;
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.ZstdConstants.MAX_BLOCK_SIZE;
-import static io.netty.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_LEVEL;
 
 /**
  *  Compresses a {@link ByteBuf} using the Zstandard algorithm.
  *  See <a href="https://facebook.github.io/zstd">Zstandard</a>.
  */
 public final class ZstdEncoder extends MessageToByteEncoder<ByteBuf> {
-
+    // Don't use static here as we want to still allow to load the classes.
+    {
+        try {
+            io.netty.handler.codec.compression.Zstd.ensureAvailability();
+        } catch (Throwable throwable) {
+            throw new ExceptionInInitializerError(throwable);
+        }
+    }
     private final int blockSize;
     private final int compressionLevel;
     private final int maxEncodeSize;
@@ -81,7 +89,8 @@ public final class ZstdEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     public ZstdEncoder(int compressionLevel, int blockSize, int maxEncodeSize) {
         super(true);
-        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, MAX_COMPRESSION_LEVEL, "compressionLevel");
+        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel,
+                MIN_COMPRESSION_LEVEL, MAX_COMPRESSION_LEVEL, "compressionLevel");
         this.blockSize = ObjectUtil.checkPositive(blockSize, "blockSize");
         this.maxEncodeSize = ObjectUtil.checkPositive(maxEncodeSize, "maxEncodeSize");
     }

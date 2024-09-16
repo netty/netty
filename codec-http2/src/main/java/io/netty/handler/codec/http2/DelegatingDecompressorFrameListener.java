@@ -21,10 +21,11 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliDecoder;
+import io.netty.handler.codec.compression.Zstd;
+import io.netty.handler.codec.compression.ZstdDecoder;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.SnappyFrameDecoder;
-import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -35,6 +36,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.IDENTITY;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.SNAPPY;
+import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.streamError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -44,7 +46,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * An HTTP2 frame listener that will decompress data frames according to the {@code content-encoding} header for each
  * stream. The decompression provided by this class will be applied to the data for the entire stream.
  */
-@UnstableApi
 public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecorator {
 
     private final Http2Connection connection;
@@ -187,6 +188,10 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
                     ctx.channel().config(), new SnappyFrameDecoder());
+        }
+        if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
+            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                    ctx.channel().config(), new ZstdDecoder());
         }
         // 'identity' or unsupported
         return null;

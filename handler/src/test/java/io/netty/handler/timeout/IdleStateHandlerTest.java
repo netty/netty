@@ -100,6 +100,36 @@ public class IdleStateHandlerTest {
     }
 
     @Test
+    public void testResetReader() throws Exception {
+        final TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
+                false, 1L, 0L, 0L, TimeUnit.SECONDS);
+
+        Action action = new Action() {
+            @Override
+            public void run(EmbeddedChannel channel) throws Exception {
+                idleStateHandler.resetReadTimeout();
+            }
+        };
+
+        anyNotIdle(idleStateHandler, action, IdleStateEvent.FIRST_READER_IDLE_STATE_EVENT);
+    }
+
+    @Test
+    public void testResetWriter() throws Exception {
+        final TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
+                false, 0L, 1L, 0L, TimeUnit.SECONDS);
+
+        Action action = new Action() {
+            @Override
+            public void run(EmbeddedChannel channel) throws Exception {
+                idleStateHandler.resetWriteTimeout();
+            }
+        };
+
+        anyNotIdle(idleStateHandler, action, IdleStateEvent.FIRST_WRITER_IDLE_STATE_EVENT);
+    }
+
+    @Test
     public void testReaderNotIdle() throws Exception {
         TestableIdleStateHandler idleStateHandler = new TestableIdleStateHandler(
                 false, 1L, 0L, 0L, TimeUnit.SECONDS);
@@ -171,16 +201,16 @@ public class IdleStateHandlerTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(idleStateHandler, handler);
         try {
-            idleStateHandler.tick(1L, TimeUnit.NANOSECONDS);
-            action.run(channel);
-
-            // Advance the ticker by some fraction and run() the task.
-            // There shouldn't be an IdleStateEvent getting fired because
-            // we've just performed an action on the channel that is meant
-            // to reset the idle task.
             long delayInNanos = idleStateHandler.delay(TimeUnit.NANOSECONDS);
             assertNotEquals(0L, delayInNanos);
 
+            idleStateHandler.tick(delayInNanos / 2L + 1L, TimeUnit.NANOSECONDS);
+            action.run(channel);
+
+            // Advance the ticker by some fraction.
+            // There shouldn't be an IdleStateEvent getting fired because
+            // we've just performed an action on the channel that is meant
+            // to reset the idle task.
             idleStateHandler.tickRun(delayInNanos / 2L, TimeUnit.NANOSECONDS);
             assertEquals(0, events.size());
 

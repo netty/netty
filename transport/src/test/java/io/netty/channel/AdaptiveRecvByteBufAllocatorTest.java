@@ -20,9 +20,11 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -96,6 +98,54 @@ public class AdaptiveRecvByteBufAllocatorTest {
 
         handle.reset(config);
         allocReadExpected(handle, alloc, 131072);
+    }
+
+    @Test
+    public void doesNotExceedMaximum() {
+        AdaptiveRecvByteBufAllocator recvByteBufAllocator = new AdaptiveRecvByteBufAllocator(64, 9000, 9000);
+        RecvByteBufAllocator.ExtendedHandle handle =
+                (RecvByteBufAllocator.ExtendedHandle) recvByteBufAllocator.newHandle();
+        handle.reset(config);
+        allocReadExpected(handle, alloc, 8192);
+    }
+
+    @Test
+    public void doesSetCorrectMinBounds() {
+        AdaptiveRecvByteBufAllocator recvByteBufAllocator = new AdaptiveRecvByteBufAllocator(81, 95, 95);
+        RecvByteBufAllocator.ExtendedHandle handle =
+                (RecvByteBufAllocator.ExtendedHandle) recvByteBufAllocator.newHandle();
+        handle.reset(config);
+        allocReadExpected(handle, alloc, 81);
+    }
+
+    @Test
+    public void throwsIfInitialIsBiggerThenMaximum() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new AdaptiveRecvByteBufAllocator(64, 4096 , 1024);
+            }
+        });
+    }
+
+    @Test
+    public void throwsIfInitialIsSmallerThenMinimum() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new AdaptiveRecvByteBufAllocator(512, 64 , 1024);
+            }
+        });
+    }
+
+    @Test
+    public void throwsIfMinimumIsBiggerThenMaximum() {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                new AdaptiveRecvByteBufAllocator(2048, 64 , 1024);
+            }
+        });
     }
 
     private static void allocReadExpected(RecvByteBufAllocator.ExtendedHandle handle,

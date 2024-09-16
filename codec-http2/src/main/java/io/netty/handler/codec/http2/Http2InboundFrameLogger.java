@@ -19,13 +19,11 @@ import static io.netty.handler.codec.http2.Http2FrameLogger.Direction.INBOUND;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Decorator around a {@link Http2FrameReader} that logs all inbound frames before calling
  * back the listener.
  */
-@UnstableApi
 public class Http2InboundFrameLogger implements Http2FrameReader {
     private final Http2FrameReader reader;
     private final Http2FrameLogger logger;

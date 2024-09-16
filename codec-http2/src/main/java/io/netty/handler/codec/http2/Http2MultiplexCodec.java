@@ -27,7 +27,6 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -87,7 +86,6 @@ import static io.netty.handler.codec.http2.Http2Exception.connectionError;
  * @deprecated use {@link Http2FrameCodecBuilder} together with {@link Http2MultiplexHandler}.
  */
 @Deprecated
-@UnstableApi
 public class Http2MultiplexCodec extends Http2FrameCodec {
 
     private final ChannelHandler inboundStreamHandler;
@@ -141,10 +139,10 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     @Override
     final void onHttp2Frame(ChannelHandlerContext ctx, Http2Frame frame) {
         if (frame instanceof Http2StreamFrame) {
-            Http2StreamFrame streamFrame = (Http2StreamFrame) frame;
+            Http2StreamFrame msg = (Http2StreamFrame) frame;
             AbstractHttp2StreamChannel channel  = (AbstractHttp2StreamChannel)
-                    ((DefaultHttp2FrameStream) streamFrame.stream()).attachment;
-            channel.fireChildRead(streamFrame);
+                    ((DefaultHttp2FrameStream) msg.stream()).attachment;
+            channel.fireChildRead(msg);
             return;
         }
         if (frame instanceof Http2GoAwayFrame) {

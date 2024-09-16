@@ -491,6 +491,37 @@ public class ByteToMessageDecoderTest {
     }
 
     @Test
+    public void testDoesNotOverReadOnChannelReadComplete() {
+        ReadInterceptingHandler interceptor = new ReadInterceptingHandler();
+        EmbeddedChannel channel = new EmbeddedChannel(interceptor, new ByteToMessageDecoder() {
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+                // NOOP
+            }
+        });
+        channel.config().setAutoRead(false);
+        assertEquals(1, interceptor.readsTriggered);
+        channel.pipeline().fireChannelReadComplete();
+        assertEquals(1, interceptor.readsTriggered);
+        channel.pipeline().fireChannelRead(Unpooled.buffer().writeZero(8));
+        assertEquals(1, interceptor.readsTriggered);
+        // This should trigger a read() as we did not forward any message.
+        channel.pipeline().fireChannelReadComplete();
+        assertEquals(2, interceptor.readsTriggered);
+        // Explicit calling fireChannelReadComplete() again without calling fireChannelRead(...) before should
+        // not trigger another read()
+        channel.pipeline().fireChannelReadComplete();
+        assertEquals(2, interceptor.readsTriggered);
+        channel.pipeline().fireChannelRead(Unpooled.buffer().writeZero(8));
+        assertEquals(2, interceptor.readsTriggered);
+
+        // This should trigger a read() as we did not forward any message.
+        channel.pipeline().fireChannelReadComplete();
+        assertEquals(3, interceptor.readsTriggered);
+        channel.finishAndReleaseAll();
+    }
+
+    @Test
     public void testDisorder() {
         ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
             int count;

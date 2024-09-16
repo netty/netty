@@ -15,10 +15,14 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -29,6 +33,7 @@ import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static io.netty.handler.codec.http.HttpUtil.normalizeAndGetContentLength;
+import static io.netty.handler.codec.http.HttpUtil.validateToken;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -380,6 +385,12 @@ public class HttpUtilTest {
     }
 
     @Test
+    public void testIpv6UnresolvedExplicitAddress()  {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("[2001:4860:4860:0:0:0:0:8888]", 8080);
+        assertEquals("[2001:4860:4860:0:0:0:0:8888]", HttpUtil.formatHostnameForHttp(socketAddress));
+    }
+
+    @Test
     public void testIpv4() throws Exception  {
         InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("10.0.0.1"), 8080);
         assertEquals("10.0.0.1", HttpUtil.formatHostnameForHttp(socketAddress));
@@ -445,5 +456,62 @@ public class HttpUtilTest {
                 normalizeAndGetContentLength(singletonList(contentLengthField), false, false);
             }
         });
+    }
+
+    private static List<Character> validTokenChars() {
+        List<Character> list = new ArrayList<Character>();
+        for (char c = '0'; c <= '9'; c++) {
+            list.add(c);
+        }
+        for (char c = 'a'; c <= 'z'; c++) {
+            list.add(c);
+        }
+        for (char c = 'A'; c <= 'Z'; c++) {
+            list.add(c);
+        }
+
+        // Unreserved characters:
+        list.add('-');
+        list.add('.');
+        list.add('_');
+        list.add('~');
+
+        // Token special characters:
+        list.add('!');
+        list.add('#');
+        list.add('$');
+        list.add('%');
+        list.add('&');
+        list.add('\'');
+        list.add('*');
+        list.add('+');
+        list.add('^');
+        list.add('`');
+        list.add('|');
+
+        return list;
+    }
+
+    @ParameterizedTest
+    @MethodSource("validTokenChars")
+    public void testValidTokenChars(char validChar) {
+        AsciiString asciiStringToken =
+                new AsciiString(new byte[] { 'G', 'E', (byte) validChar, 'T' });
+        String token = "GE" + validChar + 'T';
+        assertEquals(-1, validateToken(asciiStringToken));
+        assertEquals(-1, validateToken(token));
+    }
+
+    @ParameterizedTest
+    @ValueSource(chars = {
+            '(', ')', ',', '/', ':', ';', '<', '=', '>', '?', '@',
+            '\"', '[', '\\', ']', '{', '}', '\u0000', ' ', '\u007f', 'ÿ'
+    })
+    public void testInvalidTokenChars(char invalidChar) {
+        AsciiString asciiStringToken =
+                new AsciiString(new byte[] { 'G', 'E', (byte) invalidChar, 'T' });
+        String token = "GE" + invalidChar + 'T';
+        assertEquals(2, validateToken(asciiStringToken));
+        assertEquals(2, validateToken(token));
     }
 }

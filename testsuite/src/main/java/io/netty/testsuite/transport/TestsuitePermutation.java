@@ -16,6 +16,7 @@
 package io.netty.testsuite.transport;
 
 import io.netty.bootstrap.AbstractBootstrap;
+import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -24,11 +25,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class TestsuitePermutation {
+    private static final AdaptiveByteBufAllocator DEFAULT_ADAPTIVE_ALLOCATOR = new AdaptiveByteBufAllocator();
 
     public static List<ByteBufAllocator> allocator() {
         List<ByteBufAllocator> allocators = new ArrayList<ByteBufAllocator>();
         allocators.add(UnpooledByteBufAllocator.DEFAULT);
         allocators.add(PooledByteBufAllocator.DEFAULT);
+        allocators.add(DEFAULT_ADAPTIVE_ALLOCATOR);
         return allocators;
     }
 

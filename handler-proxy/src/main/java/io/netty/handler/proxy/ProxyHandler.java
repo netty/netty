@@ -35,6 +35,9 @@ import java.net.SocketAddress;
 import java.nio.channels.ConnectionPendingException;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * A common abstraction for protocols that establish blind forwarding proxy tunnels.
+ */
 public abstract class ProxyHandler extends ChannelDuplexHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ProxyHandler.class);

@@ -16,7 +16,7 @@
 # ----------------------------------------------------------------------------
 set -e
 
-PARENT_TCNATIVE_VERSION=$(grep "<tcnative.version>" pom.xml | sed -n  's/.*<tcnative.version>\(.*\)<\/tcnative.version>/\1/p')
+PARENT_TCNATIVE_VERSION=$(grep "<tcnative.version>" pom.xml | tail -n1 | sed -n  's/.*<tcnative.version>\(.*\)<\/tcnative.version>/\1/p')
 BOM_TCNATIVE_VERSION=$(grep "<tcnative.version>" bom/pom.xml | sed -n  's/.*<tcnative.version>\(.*\)<\/tcnative.version>/\1/p')
 
 if [ "$PARENT_TCNATIVE_VERSION" != "$BOM_TCNATIVE_VERSION" ]; then

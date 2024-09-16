@@ -25,7 +25,6 @@ import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.internal.UnstableApi;
 
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
@@ -41,7 +40,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * Constants and utility method used for encoding/decoding HTTP2 frames.
  */
-@UnstableApi
 public final class Http2CodecUtil {
     public static final int CONNECTION_STREAM_ID = 0;
     public static final int HTTP_UPGRADE_STREAM_ID = 1;
@@ -78,7 +76,7 @@ public final class Http2CodecUtil {
             FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH + INT_FIELD_LENGTH;
     public static final int GO_AWAY_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH + 2 * INT_FIELD_LENGTH;
     public static final int WINDOW_UPDATE_FRAME_LENGTH = FRAME_HEADER_LENGTH + INT_FIELD_LENGTH;
-    public static final int CONTINUATION_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH;
+    public static final int CONTINUATION_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH;
 
     public static final char SETTINGS_HEADER_TABLE_SIZE = 1;
     public static final char SETTINGS_ENABLE_PUSH = 2;

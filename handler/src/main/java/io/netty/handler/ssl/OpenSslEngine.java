@@ -28,8 +28,8 @@ import javax.net.ssl.SSLEngine;
  */
 public final class OpenSslEngine extends ReferenceCountedOpenSslEngine {
     OpenSslEngine(OpenSslContext context, ByteBufAllocator alloc, String peerHost, int peerPort,
-                  boolean jdkCompatibilityMode) {
-        super(context, alloc, peerHost, peerPort, jdkCompatibilityMode, false);
+                  boolean jdkCompatibilityMode, String endpointIdentificationAlgorithm) {
+        super(context, alloc, peerHost, peerPort, jdkCompatibilityMode, false, endpointIdentificationAlgorithm);
     }
 
     @Override

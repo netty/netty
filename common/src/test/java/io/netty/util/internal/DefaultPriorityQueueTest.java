@@ -148,6 +148,35 @@ public class DefaultPriorityQueueTest {
         testRemoval(true);
     }
 
+    @Test
+    public void testRemovalFuzz() {
+        final int numElements = ThreadLocalRandom.current().nextInt(0, 30);
+        final TestElement[] values = new TestElement[numElements];
+        PriorityQueue<TestElement> queue =
+                new DefaultPriorityQueue<TestElement>(TestElementComparator.INSTANCE, values.length);
+        for (int i = 0; i < values.length; ++i) {
+            do {
+                values[i] = new TestElement(ThreadLocalRandom.current().nextInt(0, numElements * 2));
+            } while (!queue.add(values[i]));
+        }
+
+        for (int i = 0; i < values.length; ++i) {
+            try {
+                assertTrue(queue.removeTyped(values[i]));
+                assertEquals(queue.size(), values.length - (i + 1));
+            } catch (Throwable cause) {
+                StringBuilder sb = new StringBuilder(values.length * 2);
+                sb.append("error on removal of index: ").append(i).append(" [");
+                for (TestElement value : values) {
+                    sb.append(value).append(" ");
+                }
+                sb.append("]");
+                throw new AssertionError(sb.toString(), cause);
+            }
+        }
+        assertEmptyQueue(queue);
+    }
+
     private static void testRemoval(boolean typed) {
         PriorityQueue<TestElement> queue = new DefaultPriorityQueue<TestElement>(TestElementComparator.INSTANCE, 4);
         assertEmptyQueue(queue);
@@ -179,20 +208,20 @@ public class DefaultPriorityQueueTest {
         assertEquals(4, queue.size());
 
         // Repeat remove the last element in the array, when the array is non-empty.
-        assertTrue(typed ? queue.removeTyped(b) : queue.remove(b));
+        assertTrue(typed ? queue.removeTyped(d) : queue.remove(d));
         assertSame(c, queue.peek());
         assertEquals(3, queue.size());
+
+        assertTrue(typed ? queue.removeTyped(b) : queue.remove(b));
+        assertSame(c, queue.peek());
+        assertEquals(2, queue.size());
 
         // Remove the head of the queue.
         assertTrue(typed ? queue.removeTyped(c) : queue.remove(c));
         assertSame(a, queue.peek());
-        assertEquals(2, queue.size());
-
-        assertTrue(typed ? queue.removeTyped(a) : queue.remove(a));
-        assertSame(d, queue.peek());
         assertEquals(1, queue.size());
 
-        assertTrue(typed ? queue.removeTyped(d) : queue.remove(d));
+        assertTrue(typed ? queue.removeTyped(a) : queue.remove(a));
         assertEmptyQueue(queue);
     }
 

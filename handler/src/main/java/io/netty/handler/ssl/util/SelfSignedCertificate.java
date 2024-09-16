@@ -409,6 +409,7 @@ public final class SelfSignedCertificate {
 
     private static boolean isBouncyCastleAvailable() {
         try {
+            // this class is in bcpkix, both fips and non-fips
             Class.forName("org.bouncycastle.cert.X509v3CertificateBuilder");
             return true;
         } catch (ClassNotFoundException e) {

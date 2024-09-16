@@ -15,12 +15,9 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * A DNS response message.
  */
-@UnstableApi
 public interface DnsResponse extends DnsMessage {
 
     /**

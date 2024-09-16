@@ -23,7 +23,6 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.DatagramChannelConfig;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -42,13 +41,11 @@ import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.unix.UnixChannelOption.SO_REUSEPORT;
 
-@UnstableApi
 public final class KQueueDatagramChannelConfig extends KQueueChannelConfig implements DatagramChannelConfig {
     private boolean activeOnOpen;
 
     KQueueDatagramChannelConfig(KQueueDatagramChannel channel) {
-        super(channel);
-        setRecvByteBufAllocator(new FixedRecvByteBufAllocator(2048));
+        super(channel, new FixedRecvByteBufAllocator(2048));
     }
 
     @Override

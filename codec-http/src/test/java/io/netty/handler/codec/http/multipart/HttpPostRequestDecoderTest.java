@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -321,7 +322,8 @@ public class HttpPostRequestDecoderTest {
         DefaultHttpRequest defaultHttpRequest =
                 new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
 
-        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(defaultHttpRequest);
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(defaultHttpRequest,
+                140, HttpPostRequestDecoder.DEFAULT_MAX_BUFFERED_BYTES);
 
         int firstChunk = 10;
         int middleChunk = 1024;
@@ -755,10 +757,8 @@ public class HttpPostRequestDecoderTest {
         assertEquals(2, decoder.getBodyHttpDatas().size());
 
         Attribute attrMsg = (Attribute) decoder.getBodyHttpData("msg");
-        assertTrue(attrMsg.getByteBuf().isDirect());
         assertEquals("test message", attrMsg.getValue());
         Attribute attrMsgId = (Attribute) decoder.getBodyHttpData("msg_id");
-        assertTrue(attrMsgId.getByteBuf().isDirect());
         assertEquals("15200", attrMsgId.getValue());
 
         decoder.destroy();
@@ -874,23 +874,18 @@ public class HttpPostRequestDecoderTest {
         assertEquals(5, decoder.getBodyHttpDatas().size());
 
         Attribute attr = (Attribute) decoder.getBodyHttpData("foo");
-        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("bar", attr.getValue());
 
         attr = (Attribute) decoder.getBodyHttpData("a");
-        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("b", attr.getValue());
 
         attr = (Attribute) decoder.getBodyHttpData("empty");
-        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("", attr.getValue());
 
         attr = (Attribute) decoder.getBodyHttpData("city");
-        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("<\"new\" york city>", attr.getValue());
 
         attr = (Attribute) decoder.getBodyHttpData("other_city");
-        assertTrue(attr.getByteBuf().isDirect());
         assertEquals("los angeles", attr.getValue());
 
         decoder.destroy();
@@ -1040,4 +1035,111 @@ public class HttpPostRequestDecoderTest {
         }
     }
 
+    @Test
+    public void testTooManyFormFieldsPostStandardDecoder() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, 1024, -1);
+
+        int num = 0;
+        while (true) {
+            try {
+                decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer("foo=bar&".getBytes())));
+            } catch (DecoderException e) {
+                assertEquals(HttpPostRequestDecoder.TooManyFormFieldsException.class, e.getClass());
+                break;
+            }
+            assertTrue(num++ < 1024);
+        }
+        assertEquals(1024, num);
+        decoder.destroy();
+    }
+
+    @Test
+    public void testTooManyFormFieldsPostMultipartDecoder() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add("Content-Type", "multipart/form-data;boundary=be38b42a9ad2713f");
+
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, 1024, -1);
+        decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer("--be38b42a9ad2713f\n".getBytes())));
+
+        int num = 0;
+        while (true) {
+            try {
+                byte[] bodyBytes = ("content-disposition: form-data; name=\"title\"\n" +
+                        "content-length: 10\n" +
+                        "content-type: text/plain; charset=UTF-8\n" +
+                        "\n" +
+                        "bar-stream\n" +
+                        "--be38b42a9ad2713f\n").getBytes();
+                ByteBuf content = Unpooled.wrappedBuffer(bodyBytes);
+                decoder.offer(new DefaultHttpContent(content));
+            } catch (DecoderException e) {
+                assertEquals(HttpPostRequestDecoder.TooManyFormFieldsException.class, e.getClass());
+                break;
+            }
+            assertTrue(num++ < 1024);
+        }
+        assertEquals(1024, num);
+        decoder.destroy();
+    }
+
+    @Test
+    public void testTooLongFormFieldStandardDecoder() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, -1, 16 * 1024);
+
+        try {
+            decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(new byte[16 * 1024 + 1])));
+            fail();
+        } catch (DecoderException e) {
+            assertEquals(HttpPostRequestDecoder.TooLongFormFieldException.class, e.getClass());
+        }
+        decoder.destroy();
+    }
+
+    @Test
+    public void testFieldGreaterThanMaxBufferedBytesStandardDecoder() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, -1, 6);
+
+        decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer("foo=bar".getBytes())));
+        decoder.destroy();
+    }
+
+    @Test
+    public void testTooLongFormFieldMultipartDecoder() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add("Content-Type", "multipart/form-data;boundary=be38b42a9ad2713f");
+
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, -1, 16 * 1024);
+
+        try {
+            decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(new byte[16 * 1024 + 1])));
+            fail();
+        } catch (DecoderException e) {
+            assertEquals(HttpPostRequestDecoder.TooLongFormFieldException.class, e.getClass());
+        }
+        decoder.destroy();
+    }
+
+    @Test
+    public void testFieldGreaterThanMaxBufferedBytesMultipartDecoder() {
+        HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
+        req.headers().add("Content-Type", "multipart/form-data;boundary=be38b42a9ad2713f");
+
+        byte[] bodyBytes = ("content-disposition: form-data; name=\"title\"\n" +
+                "content-length: 10\n" +
+                "content-type: text/plain; charset=UTF-8\n" +
+                "\n" +
+                "bar-stream\n" +
+                "--be38b42a9ad2713f\n").getBytes();
+
+        HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(req, -1, bodyBytes.length - 1);
+
+        decoder.offer(new DefaultHttpContent(Unpooled.wrappedBuffer(bodyBytes)));
+        decoder.destroy();
+    }
 }

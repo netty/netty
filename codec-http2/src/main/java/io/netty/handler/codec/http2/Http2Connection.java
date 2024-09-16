@@ -18,12 +18,10 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Manager for the state of an HTTP/2 connection with the remote end-point.
  */
-@UnstableApi
 public interface Http2Connection {
     /**
      * Listener for life-cycle events for streams in this connection.

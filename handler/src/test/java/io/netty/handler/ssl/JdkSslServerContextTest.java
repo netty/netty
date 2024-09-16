@@ -15,6 +15,10 @@
  */
 package io.netty.handler.ssl;
 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
 import javax.net.ssl.SSLException;
 import java.io.File;
 
@@ -23,5 +27,15 @@ public class JdkSslServerContextTest extends SslContextTest {
     @Override
     protected SslContext newSslContext(File crtFile, File keyFile, String pass) throws SSLException {
         return new JdkSslServerContext(crtFile, keyFile, pass);
+    }
+
+    @Test
+    void testWrappingOfTrustManager() {
+        Assertions.assertDoesNotThrow(new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                JdkSslServerContext.checkIfWrappingTrustManagerIsSupported();
+            }
+        });
     }
 }

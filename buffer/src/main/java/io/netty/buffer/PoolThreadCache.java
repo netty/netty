@@ -74,12 +74,8 @@ final class PoolThreadCache {
         this.heapArena = heapArena;
         this.directArena = directArena;
         if (directArena != null) {
-            smallSubPageDirectCaches = createSubPageCaches(
-                    smallCacheSize, directArena.numSmallSubpagePools);
-
-            normalDirectCaches = createNormalCaches(
-                    normalCacheSize, maxCachedBufferCapacity, directArena);
-
+            smallSubPageDirectCaches = createSubPageCaches(smallCacheSize, directArena.sizeClass.nSubpages);
+            normalDirectCaches = createNormalCaches(normalCacheSize, maxCachedBufferCapacity, directArena);
             directArena.numThreadCaches.getAndIncrement();
         } else {
             // No directArea is configured so just null out all caches
@@ -88,12 +84,8 @@ final class PoolThreadCache {
         }
         if (heapArena != null) {
             // Create the caches for the heap allocations
-            smallSubPageHeapCaches = createSubPageCaches(
-                    smallCacheSize, heapArena.numSmallSubpagePools);
-
-            normalHeapCaches = createNormalCaches(
-                    normalCacheSize, maxCachedBufferCapacity, heapArena);
-
+            smallSubPageHeapCaches = createSubPageCaches(smallCacheSize, heapArena.sizeClass.nSubpages);
+            normalHeapCaches = createNormalCaches(normalCacheSize, maxCachedBufferCapacity, heapArena);
             heapArena.numThreadCaches.getAndIncrement();
         } else {
             // No heapArea is configured so just null out all caches
@@ -130,11 +122,12 @@ final class PoolThreadCache {
     private static <T> MemoryRegionCache<T>[] createNormalCaches(
             int cacheSize, int maxCachedBufferCapacity, PoolArena<T> area) {
         if (cacheSize > 0 && maxCachedBufferCapacity > 0) {
-            int max = Math.min(area.chunkSize, maxCachedBufferCapacity);
+            int max = Math.min(area.sizeClass.chunkSize, maxCachedBufferCapacity);
             // Create as many normal caches as we support based on how many sizeIdx we have and what the upper
             // bound is that we want to cache in general.
             List<MemoryRegionCache<T>> cache = new ArrayList<MemoryRegionCache<T>>() ;
-            for (int idx = area.numSmallSubpagePools; idx < area.nSizes && area.sizeIdx2size(idx) <= max ; idx++) {
+            for (int idx = area.sizeClass.nSubpages; idx < area.sizeClass.nSizes &&
+                    area.sizeClass.sizeIdx2size(idx) <= max; idx++) {
                 cache.add(new NormalMemoryRegionCache<T>(cacheSize));
             }
             return cache.toArray(new MemoryRegionCache[0]);
@@ -183,7 +176,7 @@ final class PoolThreadCache {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     boolean add(PoolArena<?> area, PoolChunk chunk, ByteBuffer nioBuffer,
                 long handle, int normCapacity, SizeClass sizeClass) {
-        int sizeIdx = area.size2SizeIdx(normCapacity);
+        int sizeIdx = area.sizeClass.size2SizeIdx(normCapacity);
         MemoryRegionCache<?> cache = cache(area, sizeIdx, sizeClass);
         if (cache == null) {
             return false;
@@ -206,20 +199,24 @@ final class PoolThreadCache {
     }
 
     /**
-     *  Should be called if the Thread that uses this cache is about to exist to release resources out of the cache
+     *  Should be called if the Thread that uses this cache is about to exit to release resources out of the cache
      */
     void free(boolean finalizer) {
         // As free() may be called either by the finalizer or by FastThreadLocal.onRemoval(...) we need to ensure
         // we only call this one time.
         if (freed.compareAndSet(false, true)) {
+            if (freeOnFinalize != null) {
+                // Help GC: this can race with a finalizer thread, but will be null out regardless
+                freeOnFinalize.cache = null;
+            }
             int numFreed = free(smallSubPageDirectCaches, finalizer) +
-                    free(normalDirectCaches, finalizer) +
-                    free(smallSubPageHeapCaches, finalizer) +
-                    free(normalHeapCaches, finalizer);
+                           free(normalDirectCaches, finalizer) +
+                           free(smallSubPageHeapCaches, finalizer) +
+                           free(normalHeapCaches, finalizer);
 
             if (numFreed > 0 && logger.isDebugEnabled()) {
                 logger.debug("Freed {} thread-local buffer(s) from thread: {}", numFreed,
-                        Thread.currentThread().getName());
+                             Thread.currentThread().getName());
             }
 
             if (directArena != null) {
@@ -228,21 +225,6 @@ final class PoolThreadCache {
 
             if (heapArena != null) {
                 heapArena.numThreadCaches.getAndDecrement();
-            }
-        } else {
-            // See https://github.com/netty/netty/issues/12749
-            checkCacheMayLeak(smallSubPageDirectCaches, "SmallSubPageDirectCaches");
-            checkCacheMayLeak(normalDirectCaches, "NormalDirectCaches");
-            checkCacheMayLeak(smallSubPageHeapCaches, "SmallSubPageHeapCaches");
-            checkCacheMayLeak(normalHeapCaches, "NormalHeapCaches");
-        }
-    }
-
-    private static void checkCacheMayLeak(MemoryRegionCache<?>[] caches, String type) {
-        for (MemoryRegionCache<?> cache : caches) {
-            if (!cache.queue.isEmpty()) {
-                logger.debug("{} memory may leak.", type);
-                return;
             }
         }
     }
@@ -297,8 +279,8 @@ final class PoolThreadCache {
     }
 
     private MemoryRegionCache<?> cacheForNormal(PoolArena<?> area, int sizeIdx) {
-        // We need to substract area.numSmallSubpagePools as sizeIdx is the overall index for all sizes.
-        int idx = sizeIdx - area.numSmallSubpagePools;
+        // We need to subtract area.sizeClass.nSubpages as sizeIdx is the overall index for all sizes.
+        int idx = sizeIdx - area.sizeClass.nSubpages;
         if (area.isDirect()) {
             return cache(normalDirectCaches, idx);
         }
@@ -491,7 +473,8 @@ final class PoolThreadCache {
     }
 
     private static final class FreeOnFinalize {
-        private final PoolThreadCache cache;
+
+        private volatile PoolThreadCache cache;
 
         private FreeOnFinalize(PoolThreadCache cache) {
             this.cache = cache;
@@ -504,7 +487,13 @@ final class PoolThreadCache {
             try {
                 super.finalize();
             } finally {
-                cache.free(true);
+                PoolThreadCache cache = this.cache;
+                // this can race with a non-finalizer thread calling free: regardless who wins, the cache will be
+                // null out
+                this.cache = null;
+                if (cache != null) {
+                    cache.free(true);
+                }
             }
         }
     }

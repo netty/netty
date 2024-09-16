@@ -225,6 +225,22 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             protected void decrementPendingOutboundBytes(long size) {
                 AbstractHttp2StreamChannel.this.decrementPendingOutboundBytes(size, true);
             }
+
+            @Override
+            protected void onUnhandledInboundException(Throwable cause) {
+                // Ensure we use the correct Http2Error to close the channel.
+                if (cause instanceof Http2FrameStreamException) {
+                    closeWithError(((Http2FrameStreamException) cause).error());
+                    return;
+                } else {
+                    Http2Exception exception = Http2CodecUtil.getEmbeddedHttp2Exception(cause);
+                    if (exception != null) {
+                        closeWithError(exception.error());
+                        return;
+                    }
+                }
+                super.onUnhandledInboundException(cause);
+            }
         };
 
         closePromise = pipeline.newPromise();
@@ -581,6 +597,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // otherwise we would have drained it from the queue and processed it during the read cycle.
             assert inboundBuffer == null || inboundBuffer.isEmpty();
             final RecvByteBufAllocator.Handle allocHandle = unsafe.recvBufAllocHandle();
+
             unsafe.doRead0(frame, allocHandle);
             // We currently don't need to check for readEOS because the parent channel and child channel are limited
             // to the same EventLoop thread. There are a limited number of frame types that may come after EOS is
@@ -589,7 +606,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             if (allocHandle.continueReading()) {
                 maybeAddChannelToReadCompletePendingQueue();
             } else {
-                unsafe.notifyReadComplete(allocHandle, true);
+                unsafe.notifyReadComplete(allocHandle, true, false);
             }
         } else {
             if (inboundBuffer == null) {
@@ -602,7 +619,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     void fireChildReadComplete() {
         assert eventLoop().inEventLoop();
         assert readStatus != ReadStatus.IDLE || !readCompletePending;
-        unsafe.notifyReadComplete(unsafe.recvBufAllocHandle(), false);
+        unsafe.notifyReadComplete(unsafe.recvBufAllocHandle(), false, false);
     }
 
     final void closeWithError(Http2Error error) {
@@ -618,6 +635,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         private boolean writeDoneAndNoFlush;
         private boolean closeInitiated;
         private boolean readEOS;
+
+        private boolean receivedEndOfStream;
+        private boolean sentEndOfStream;
 
         @Override
         public void connect(final SocketAddress remoteAddress,
@@ -715,7 +735,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
             // Only ever send a reset frame if the connection is still alive and if the stream was created before
             // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
-            if (parent().isActive() && !readEOS && isStreamIdValid(stream.id())) {
+            if (parent().isActive() && isStreamIdValid(stream.id()) &&
+                    // Also ensure the stream was never "closed" before.
+                    !readEOS && !(receivedEndOfStream && sentEndOfStream)) {
                 Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
                 write(resetFrame, unsafe().voidPromise());
                 flush();
@@ -835,35 +857,47 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         void doBeginRead() {
-            // Process messages until there are none left (or the user stopped requesting) and also handle EOS.
-            while (readStatus != ReadStatus.IDLE) {
-                Object message = pollQueuedMessage();
-                if (message == null) {
-                    if (readEOS) {
-                        unsafe.closeForcibly();
-                    }
-                    // We need to double check that there is nothing left to flush such as a
-                    // window update frame.
+            if (readStatus == ReadStatus.IDLE) {
+                // Don't wait for the user to request a read to notify of channel closure.
+                if (readEOS && (inboundBuffer == null || inboundBuffer.isEmpty())) {
+                    // Double check there is nothing left to flush such as a window update frame.
                     flush();
-                    break;
+                    unsafe.closeForcibly();
                 }
-                final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
-                allocHandle.reset(config());
-                boolean continueReading = false;
-                do {
-                    doRead0((Http2Frame) message, allocHandle);
-                } while ((readEOS || (continueReading = allocHandle.continueReading()))
-                        && (message = pollQueuedMessage()) != null);
+            } else {
+                do { // Process messages until there are none left (or the user stopped requesting) and also handle EOS.
+                    Object message = pollQueuedMessage();
+                    if (message == null) {
+                        // Double check there is nothing left to flush such as a window update frame.
+                        flush();
+                        if (readEOS) {
+                            unsafe.closeForcibly();
+                        }
+                        break;
+                    }
+                    final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+                    allocHandle.reset(config());
+                    boolean continueReading = false;
+                    do {
+                        doRead0((Http2Frame) message, allocHandle);
+                    } while ((readEOS || (continueReading = allocHandle.continueReading()))
+                            && (message = pollQueuedMessage()) != null);
 
-                if (continueReading && isParentReadInProgress() && !readEOS) {
-                    // Currently the parent and child channel are on the same EventLoop thread. If the parent is
-                    // currently reading it is possible that more frames will be delivered to this child channel. In
-                    // the case that this child channel still wants to read we delay the channelReadComplete on this
-                    // child channel until the parent is done reading.
-                    maybeAddChannelToReadCompletePendingQueue();
-                } else {
-                    notifyReadComplete(allocHandle, true);
-                }
+                    if (continueReading && isParentReadInProgress() && !readEOS) {
+                        // Currently the parent and child channel are on the same EventLoop thread. If the parent is
+                        // currently reading it is possible that more frames will be delivered to this child channel. In
+                        // the case that this child channel still wants to read we delay the channelReadComplete on this
+                        // child channel until the parent is done reading.
+                        maybeAddChannelToReadCompletePendingQueue();
+                    } else {
+                        notifyReadComplete(allocHandle, true, true);
+
+                        // While in the read loop reset the readState AFTER calling readComplete (or other pipeline
+                        // callbacks) to prevents re-entry into this method (if autoRead is disabled and the user calls
+                        // read on each readComplete) and StackOverflowException.
+                        resetReadStatus();
+                    }
+                } while (readStatus != ReadStatus.IDLE);
             }
         }
 
@@ -872,7 +906,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         private void updateLocalWindowIfNeeded() {
-            if (flowControlledBytes != 0) {
+            if (flowControlledBytes != 0 && !parentContext().isRemoved()) {
                 int bytes = flowControlledBytes;
                 flowControlledBytes = 0;
                 ChannelFuture future = write0(parentContext(), new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
@@ -892,17 +926,21 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
         }
 
-        void notifyReadComplete(RecvByteBufAllocator.Handle allocHandle, boolean forceReadComplete) {
+        private void resetReadStatus() {
+            readStatus = readStatus == ReadStatus.REQUESTED ? ReadStatus.IN_PROGRESS : ReadStatus.IDLE;
+        }
+
+        void notifyReadComplete(RecvByteBufAllocator.Handle allocHandle, boolean forceReadComplete,
+                                boolean inReadLoop) {
             if (!readCompletePending && !forceReadComplete) {
                 return;
             }
             // Set to false just in case we added the channel multiple times before.
             readCompletePending = false;
 
-            if (readStatus == ReadStatus.REQUESTED) {
-                readStatus = ReadStatus.IN_PROGRESS;
-            } else {
-                readStatus = ReadStatus.IDLE;
+            if (!inReadLoop) {
+                // While in the read loop we reset the state after calling pipeline methods to prevent StackOverflow.
+                resetReadStatus();
             }
 
             allocHandle.readComplete();
@@ -921,7 +959,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             final int bytes;
             if (frame instanceof Http2DataFrame) {
                 bytes = ((Http2DataFrame) frame).initialFlowControlledBytes();
-
                 // It is important that we increment the flowControlledBytes before we call fireChannelRead(...)
                 // as it may cause a read() that will call updateLocalWindowIfNeeded() and we need to ensure
                 // in this case that we accounted for it.
@@ -931,6 +968,11 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             } else {
                 bytes = MIN_HTTP2_FRAME_SIZE;
             }
+
+            // Let's keep track of what we received as the stream state itself will only be updated once the frame
+            // was dispatched for reading which might cause problems if we try to close the channel in a write future.
+            receivedEndOfStream |= isEndOfStream(frame);
+
             // Update before firing event through the pipeline to be consistent with other Channel implementation.
             allocHandle.attemptedBytesRead(bytes);
             allocHandle.lastBytesRead(bytes);
@@ -971,6 +1013,16 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
         }
 
+        private boolean isEndOfStream(Http2Frame frame) {
+            if (frame instanceof Http2HeadersFrame) {
+                return ((Http2HeadersFrame) frame).isEndStream();
+            }
+            if (frame instanceof Http2DataFrame) {
+                return ((Http2DataFrame) frame).isEndStream();
+            }
+            return false;
+        }
+
         private void writeHttp2StreamFrame(Http2StreamFrame frame, final ChannelPromise promise) {
             if (!firstFrameWritten && !isStreamIdValid(stream().id()) && !(frame instanceof Http2HeadersFrame)) {
                 ReferenceCountUtil.release(frame);
@@ -987,6 +1039,9 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 firstWrite = firstFrameWritten = true;
             }
 
+            // Let's keep track of what we send as the stream state itself will only be updated once the frame
+            // was written which might cause problems if we try to close the channel in a write future.
+            sentEndOfStream |= isEndOfStream(frame);
             ChannelFuture f = write0(parentContext(), frame);
             if (f.isDone()) {
                 if (firstWrite) {
