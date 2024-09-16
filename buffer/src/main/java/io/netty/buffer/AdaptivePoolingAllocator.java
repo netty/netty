@@ -559,7 +559,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                         curr.release();
                         current = newChunk;
                     } else {
-                        transChunk(newChunk);
+                        transferChunk(newChunk);
                     }
                     newChunk = null;
                 } finally {
