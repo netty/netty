@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
@@ -121,6 +120,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     private volatile Magazine[] magazines;
     private final FastThreadLocal<Object> threadLocalMagazine;
     private final Set<Magazine> liveCachedMagazines;
+    private volatile boolean freed;
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, MagazineCaching magazineCaching) {
         ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
@@ -295,11 +295,18 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 if (mags.length >= MAX_STRIPES || mags.length > currentLength) {
                     return true;
                 }
-                Magazine[] expanded = Arrays.copyOf(mags, mags.length * 2);
-                for (int i = mags.length, m = expanded.length; i < m; i++) {
-                    expanded[i] = new Magazine(this);
+                int preferredChunkSize = mags[0].sharedPrefChunkSize;
+                Magazine[] expanded = new Magazine[mags.length * 2];
+                for (int i = 0, l = expanded.length; i < l; i++) {
+                    Magazine m = new Magazine(this);
+                    m.localPrefChunkSize = preferredChunkSize;
+                    m.sharedPrefChunkSize = preferredChunkSize;
+                    expanded[i] = m;
                 }
                 magazines = expanded;
+                for (Magazine magazine : mags) {
+                    magazine.free();
+                }
             } finally {
                 magazineExpandLock.unlockWrite(writeLock);
             }
@@ -308,6 +315,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     }
 
     private boolean offerToQueue(Chunk buffer) {
+        if (freed) {
+            return false;
+        }
         return centralQueue.offer(buffer);
     }
 
@@ -324,16 +334,16 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     }
 
     private void free() {
+        freed = true;
+        for (Magazine magazine : magazines) {
+            magazine.free();
+        }
         for (;;) {
             Chunk chunk = centralQueue.poll();
             if (chunk == null) {
                 break;
             }
             chunk.release();
-        }
-
-        for (Magazine magazine : magazines) {
-            magazine.free();
         }
     }
 
@@ -364,7 +374,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private int histoIndex;
         private int datumCount;
         private int datumTarget = INIT_DATUM_TARGET;
-        private volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
+        protected volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
         protected volatile int localPrefChunkSize = MIN_CHUNK_SIZE;
 
         private AllocationStatistics(AdaptivePoolingAllocator parent, boolean shareable) {
@@ -450,6 +460,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         static {
             NEXT_IN_LINE = AtomicReferenceFieldUpdater.newUpdater(Magazine.class, Chunk.class, "nextInLine");
         }
+        private static final Chunk MAGAZINE_FREED = new Chunk();
+
         private Chunk current;
         @SuppressWarnings("unused") // updated via NEXT_IN_LINE
         private volatile Chunk nextInLine;
@@ -475,16 +487,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         public boolean tryAllocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
             if (allocationLock == null) {
                 // This magazine is not shared across threads, just allocate directly.
-                allocate(size, sizeBucket, maxCapacity, buf);
-                return true;
+                return allocate(size, sizeBucket, maxCapacity, buf);
             }
 
             // Try to retrieve the lock and if successful allocate.
             long writeLock = allocationLock.tryWriteLock();
             if (writeLock != 0) {
                 try {
-                    allocate(size, sizeBucket, maxCapacity, buf);
-                    return true;
+                    return allocate(size, sizeBucket, maxCapacity, buf);
                 } finally {
                     allocationLock.unlockWrite(writeLock);
                 }
@@ -492,14 +502,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             return false;
         }
 
-        private void allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+        private boolean allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
             recordAllocationSize(sizeBucket);
             Chunk curr = current;
             if (curr != null) {
                 if (curr.remainingCapacity() > size) {
                     curr.readInitInto(buf, size, maxCapacity);
                     // We still have some bytes left that we can use for the next allocation, just early return.
-                    return;
+                    return true;
                 }
 
                 // At this point we know that this will be the last time current will be used, so directly set it to
@@ -508,7 +518,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 try {
                     if (curr.remainingCapacity() == size) {
                         curr.readInitInto(buf, size, maxCapacity);
-                        return;
+                        return true;
                     }
                 } finally {
                     curr.release();
@@ -526,6 +536,11 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             // so be "reserved" by this Magazine for exclusive usage.
             if (nextInLine != null) {
                 curr = NEXT_IN_LINE.getAndSet(this, null);
+                if (curr == MAGAZINE_FREED) {
+                    // Allocation raced with a stripe-resize that freed this magazine.
+                    restoreMagazineFreed();
+                    return false;
+                }
             } else {
                 curr = parent.centralQueue.poll();
                 if (curr == null) {
@@ -570,6 +585,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     }
                 }
             }
+            return true;
+        }
+
+        private void restoreMagazineFreed() {
+            Chunk next = NEXT_IN_LINE.getAndSet(this, MAGAZINE_FREED);
+            if (next != null && next != MAGAZINE_FREED) {
+                next.release(); // A chunk snuck in through a race. Release it after restoring MAGAZINE_FREED state.
+            }
         }
 
         private Chunk newChunkAllocation(int promptingSize) {
@@ -584,13 +607,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         void free() {
             // Release the current Chunk and the next that was stored for later usage.
-            if (current != null) {
-                current.release();
-                current = null;
-            }
-            Chunk next = NEXT_IN_LINE.getAndSet(this, null);
-            if (next != null) {
-                next.release();
+            restoreMagazineFreed();
+            long stamp = allocationLock.writeLock();
+            try {
+                if (current != null) {
+                    current.release();
+                    current = null;
+                }
+            } finally {
+                allocationLock.unlockWrite(stamp);
             }
         }
     }
@@ -623,11 +648,19 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @SuppressWarnings({"unused", "FieldMayBeFinal"})
         private volatile int refCnt;
 
+        Chunk() {
+            // Constructor only used by the MAGAZINE_FREED sentinel.
+            delegate = null;
+            magazine = null;
+            capacity = 0;
+            pooled = false;
+        }
+
         Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             this.delegate = delegate;
             this.magazine = magazine;
             this.pooled = pooled;
-            this.capacity = delegate.capacity();
+            capacity = delegate.capacity();
             magazine.usedMemory.getAndAdd(capacity);
             updater.setInitialValue(this);
         }
