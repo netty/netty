@@ -537,7 +537,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 if (last.remainingCapacity() < RETIRE_CAPACITY) {
                     last.release();
                 } else {
-                    transChunk(last);
+                    transferChunk(last);
                 }
             }
             if (curr.remainingCapacity() > size) {
