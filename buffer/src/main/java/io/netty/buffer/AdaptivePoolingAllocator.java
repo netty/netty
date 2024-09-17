@@ -578,7 +578,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 return;
             }
             Chunk nextChunk = NEXT_IN_LINE.get(this);
-            if (current.remainingCapacity() > nextChunk.remainingCapacity()) {
+            if (nextChunk != null && current.remainingCapacity() > nextChunk.remainingCapacity()) {
                 if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
                     nextChunk.release();
                 } else {
