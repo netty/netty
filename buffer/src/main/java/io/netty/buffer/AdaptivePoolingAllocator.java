@@ -288,7 +288,7 @@ final class AdaptivePoolingAllocator {
         if (writeLock != 0) {
             try {
                 Magazine[] mags = magazines;
-                if (mags.length >= MAX_STRIPES || mags.length > currentLength) {
+                if (mags.length >= MAX_STRIPES || mags.length > currentLength || freed) {
                     return true;
                 }
                 int preferredChunkSize = mags[0].sharedPrefChunkSize;
@@ -331,8 +331,14 @@ final class AdaptivePoolingAllocator {
 
     private void free() {
         freed = true;
-        for (Magazine magazine : magazines) {
-            magazine.free();
+        long stamp = magazineExpandLock.writeLock();
+        try {
+            Magazine[] mags = magazines;
+            for (Magazine magazine : mags) {
+                magazine.free();
+            }
+        } finally {
+            magazineExpandLock.unlockWrite(stamp);
         }
         for (;;) {
             Chunk chunk = centralQueue.poll();
