@@ -18,6 +18,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.AsciiString;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
@@ -160,6 +161,8 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
         }
 
         if (upgradeRequested) {
+            // Release message before failing the promise.
+            ReferenceCountUtil.release(msg);
             promise.setFailure(new IllegalStateException(
                     "Attempting to write HTTP request with upgrade in progress"));
             return;
