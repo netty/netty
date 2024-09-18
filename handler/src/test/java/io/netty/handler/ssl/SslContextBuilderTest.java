@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
@@ -256,7 +257,7 @@ public class SslContextBuilderTest {
     }
 
     private static void testKeyStoreType(SslProvider provider) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         SslContextBuilder builder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
                 .sslProvider(provider)
                 .keyStoreType("PKCS12");
@@ -267,7 +268,7 @@ public class SslContextBuilderTest {
     }
 
     private static void testInvalidCipher(SslProvider provider) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         SslContextBuilder builder = SslContextBuilder.forClient()
                 .sslProvider(provider)
                 .ciphers(Collections.singleton("SOME_INVALID_CIPHER"))
@@ -279,7 +280,7 @@ public class SslContextBuilderTest {
     }
 
     private static void testClientContextFromFile(SslProvider provider) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         SslContextBuilder builder = SslContextBuilder.forClient()
                                                      .sslProvider(provider)
                                                      .keyManager(cert.certificate(),
@@ -295,7 +296,7 @@ public class SslContextBuilderTest {
     }
 
     private static void testClientContext(SslProvider provider) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         SslContextBuilder builder = SslContextBuilder.forClient()
                                                      .sslProvider(provider)
                                                      .keyManager(cert.key(), cert.cert())
@@ -310,7 +311,7 @@ public class SslContextBuilderTest {
     }
 
     private static void testServerContextFromFile(SslProvider provider) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         SslContextBuilder builder = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
                                                      .sslProvider(provider)
                                                      .trustManager(cert.certificate())
@@ -324,7 +325,7 @@ public class SslContextBuilderTest {
     }
 
     private static void testServerContext(SslProvider provider) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         SslContextBuilder builder = SslContextBuilder.forServer(cert.key(), cert.cert())
                                                      .sslProvider(provider)
                                                      .trustManager(cert.cert())
@@ -339,7 +340,7 @@ public class SslContextBuilderTest {
 
     private static void testServerContextWithSecureRandom(SslProvider provider,
                                                           SpySecureRandom secureRandom) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         SslContextBuilder builder = SslContextBuilder.forServer(cert.key(), cert.cert())
                 .sslProvider(provider)
                 .secureRandom(secureRandom)
@@ -356,7 +357,7 @@ public class SslContextBuilderTest {
 
     private static void testClientContextWithSecureRandom(SslProvider provider,
                                                           SpySecureRandom secureRandom) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         SslContextBuilder builder = SslContextBuilder.forClient()
                 .sslProvider(provider)
                 .secureRandom(secureRandom)
@@ -373,7 +374,7 @@ public class SslContextBuilderTest {
     }
 
     private static void testContextFromManagers(SslProvider provider) throws Exception {
-        final SelfSignedCertificate cert = new SelfSignedCertificate();
+        final SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         KeyManager customKeyManager = new X509ExtendedKeyManager() {
             @Override
             public String[] getClientAliases(String s,
