@@ -15,6 +15,7 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.channel.internal.DelegatingChannelHandlerContext;
+import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.AsciiString;
@@ -127,6 +128,7 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
         }
 
         if (upgradeRequested) {
+            Resource.dispose(msg);
             return ctx.newFailedFuture(new IllegalStateException(
                     "Attempting to write HTTP request with upgrade in progress"));
         }

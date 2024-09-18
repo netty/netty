@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HttpClientUpgradeHandlerTest {
@@ -204,6 +205,28 @@ public class HttpClientUpgradeHandlerTest {
 
         assertThat(readRequest.headers().values("connection")).contains("extra");
         readRequest.close();
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testMultipleUpgradeRequestsFail() {
+        HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
+        HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
+        HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
+        final EmbeddedChannel channel = new EmbeddedChannel();
+        channel.pipeline().addFirst("upgrade", handler);
+
+        assertTrue(
+                channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io",
+                        channel.bufferAllocator().allocate(0))));
+        FullHttpRequest request = channel.readOutbound();
+        request.close();
+
+        final FullHttpRequest secondReq = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io",
+                channel.bufferAllocator().allocate(0));
+        assertThrows(IllegalStateException.class, () -> channel.writeOutbound(secondReq));
+
+        assertFalse(secondReq.isAccessible());
         assertFalse(channel.finish());
     }
 }
