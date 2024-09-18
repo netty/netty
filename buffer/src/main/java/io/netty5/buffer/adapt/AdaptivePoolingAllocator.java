@@ -19,6 +19,7 @@ import io.netty5.buffer.AllocationType;
 import io.netty5.buffer.AllocatorControl;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.BufferStub;
 import io.netty5.buffer.Drop;
 import io.netty5.buffer.MemoryManager;
 import io.netty5.buffer.StandardAllocationTypes;
@@ -241,6 +242,10 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
             } while (expansions <= EXPANSION_ATTEMPTS && tryExpandMagazines(mags.length));
         }
         // The magazines failed us, or the buffer is too big to be pooled. Allocate unpooled buffer.
+        return allocateUnpooled(size);
+    }
+
+    Buffer allocateUnpooled(int size) {
         return manager.allocateShared(allocatorControl, size, standardDrop(manager), allocationType);
     }
 
@@ -255,11 +260,23 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 if (mags.length >= MAX_STRIPES || mags.length > currentLength) {
                     return true;
                 }
-                Magazine[] expanded = Arrays.copyOf(mags, mags.length * 2);
-                for (int i = mags.length, m = expanded.length; i < m; i++) {
+                int preferredChunkSize = mags[0].sharedPrefChunkSize;
+                Magazine[] expanded = new Magazine[mags.length * 2];
+                for (int i = 0, l = expanded.length; i < l; i++) {
+                    Magazine m = new Magazine(this);
+                    m.localPrefChunkSize = preferredChunkSize;
+                    m.sharedPrefChunkSize = preferredChunkSize;
                     expanded[i] = new Magazine(this);
                 }
                 magazines = expanded;
+                for (Magazine mag : mags) {
+                    long stamp = mag.writeLock();
+                    try {
+                        mag.close();
+                    } finally {
+                        mag.unlockWrite(stamp);
+                    }
+                }
             } finally {
                 magazineExpandLock.unlockWrite(writeLock);
             }
@@ -320,13 +337,11 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
     }
 
     private boolean offerToQueue(Buffer buffer) {
-        if (!centralQueue.offer(buffer)) {
-            return false;
-        }
+        boolean offered = centralQueue.offer(buffer);
         if (closed) {
             drainCloseCentralQueue();
         }
-        return true;
+        return offered;
     }
 
     @VisibleForTesting
@@ -358,7 +373,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
         private int histoIndex;
         private int datumCount;
         private int datumTarget = INIT_DATUM_TARGET;
-        private volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
+        protected volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
         protected volatile int localPrefChunkSize = MIN_CHUNK_SIZE;
 
         private AllocationStatistics(AdaptivePoolingAllocator parent, EventExecutor ownerEventExecutor) {
@@ -441,7 +456,6 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
     private static final class Magazine extends AllocationStatistics {
         private static final long serialVersionUID = -4068223712022528165L;
         private static final VarHandle NEXT_IN_LINE;
-
         static {
             try {
                 NEXT_IN_LINE = MethodHandles.lookup().findVarHandle(Magazine.class, "nextInLine", Buffer.class);
@@ -449,6 +463,8 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 throw new RuntimeException(e);
             }
         }
+        private static final Buffer MAGAZINE_FREED = new BufferStub(null);
+
         private Buffer current;
         @SuppressWarnings("unused") // updated via VarHandle
         private volatile Buffer nextInLine;
@@ -476,6 +492,13 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
             }
             if (nextInLine != null) {
                 curr = (Buffer) NEXT_IN_LINE.getAndSet(this, (Buffer) null);
+                if (curr == MAGAZINE_FREED) {
+                    // Allocation raced with a stripe-resize that freed this magazine.
+                    restoreMagazineFreed();
+                    // This allocation raced with the closing of the allocator.
+                    // Reward their gusto & gumption with an unpooled buffer.
+                    return parent.allocateUnpooled(size);
+                }
             } else {
                 curr = parent.centralQueue.poll();
                 if (curr == null) {
@@ -506,6 +529,13 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
             return result;
         }
 
+        private void restoreMagazineFreed() {
+            Buffer next = (Buffer) NEXT_IN_LINE.getAndSet(this, MAGAZINE_FREED);
+            if (next != null && next != MAGAZINE_FREED) {
+                next.close(); // A chunk snuck in through a race. Release it after restoring MAGAZINE_FREED state.
+            }
+        }
+
         private Buffer newChunkAllocation(int promptingSize) {
             int size = Math.max(promptingSize * BUFS_PER_CHUNK, preferredChunkSize());
             return parent.manager.allocateShared(parent.allocatorControl, size, this::decorate, parent.allocationType);
@@ -529,13 +559,13 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
         }
 
         void close() {
-            Buffer curr = current;
+            Buffer curr = (Buffer) NEXT_IN_LINE.getAndSet(this, MAGAZINE_FREED);
             if (curr != null) {
-                current = null;
                 curr.close();
             }
-            curr = (Buffer) NEXT_IN_LINE.getAndSet(this, null);
+            curr = current;
             if (curr != null) {
+                current = null;
                 curr.close();
             }
         }
