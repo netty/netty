@@ -541,7 +541,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
                      if (nextChunk != MAGAZINE_FREED) {
                         nextChunk.close();
-                    }  
+                    }
                     return;
                 }
             }
