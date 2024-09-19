@@ -91,7 +91,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
      * This number is 10 MiB, and is derived from the limitations of internal histograms.
      */
     protected static final int MAX_CHUNK_SIZE =
-            BUFS_PER_CHUNK * (1 << AllocationStatistics.HISTO_MAX_BUCKET_SHIFT); // 10 MiB.
+        BUFS_PER_CHUNK * (1 << AllocationStatistics.HISTO_MAX_BUCKET_SHIFT); // 10 MiB.
 
     /**
      * The capacity if the central queue that allow chunks to be shared across magazines.
@@ -102,7 +102,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
      * 5 * {@link NettyRuntime#availableProcessors()} * {@link #MAX_CHUNK_SIZE} bytes.
      */
     protected static final int CENTRAL_QUEUE_CAPACITY = SystemPropertyUtil.getInt(
-            "io.netty5.allocator.centralQueueCapacity", NettyRuntime.availableProcessors());
+        "io.netty5.allocator.centralQueueCapacity", NettyRuntime.availableProcessors());
 
     private static final Object NO_MAGAZINE = Boolean.TRUE;
 
@@ -290,8 +290,8 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
             throw allocatorClosedException();
         }
         Buffer constantBuffer = manager.allocateShared(
-                allocatorControl, bytes.length, drop -> CleanerDrop.wrapWithoutLeakDetection(drop, manager),
-                allocationType);
+            allocatorControl, bytes.length, drop -> CleanerDrop.wrapWithoutLeakDetection(drop, manager),
+            allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
     }
@@ -364,8 +364,8 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
         protected final AdaptivePoolingAllocator parent;
         protected final EventExecutor ownerEventExecutor;
         private final short[][] histos = {
-                new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
-                new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
+            new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
+            new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
         };
         private short[] histo = histos[0];
         private final int[] sums = new int[HISTO_BUCKET_COUNT];
@@ -487,9 +487,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 }
                 return curr.split(size);
             }
-            if (curr != null) {
-                curr.close();
-            }
+            Buffer last = curr;
             if (nextInLine != null) {
                 curr = (Buffer) NEXT_IN_LINE.getAndSet(this, (Buffer) null);
                 if (curr == MAGAZINE_FREED) {
@@ -506,6 +504,13 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 }
             }
             current = curr;
+            if (last != null) {
+                if (last.capacity() < RETIRE_CAPACITY) {
+                    last.close();
+                } else {
+                    transferChunk(last);
+                }
+            }
             final Buffer result;
             if (curr.capacity() > size) {
                 result = curr.split(size);
@@ -518,16 +523,31 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 if (curr.capacity() < RETIRE_CAPACITY) {
                     curr.close();
                     current = buffer;
-                } else if (!(boolean) NEXT_IN_LINE.compareAndSet(this, null, buffer)) {
-                    if (!parent.offerToQueue(buffer)) {
-                        // Next-in-line is occupied AND the central queue is full.
-                        // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
-                        buffer.close();
-                    }
+                } else {
+                    transferChunk(buffer);
                 }
             }
             return result;
         }
+
+        private void transferChunk(Buffer current) {
+            if (NEXT_IN_LINE.compareAndSet(this, null, current)
+                    || parent.offerToQueue(current)) {
+                return;
+            }
+
+            Buffer nextChunk = NEXT_IN_LINE.get(this);
+            if (nextChunk != MAGAZINE_FREED && current.capacity() > nextChunk.capacity()) {
+                if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
+                    nextChunk.close();
+                    return;
+                }
+            }
+            // Next-in-line is occupied AND the central queue is full.
+            // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+            current.close();
+        }
+
 
         private void restoreMagazineFreed() {
             Buffer next = (Buffer) NEXT_IN_LINE.getAndSet(this, MAGAZINE_FREED);
