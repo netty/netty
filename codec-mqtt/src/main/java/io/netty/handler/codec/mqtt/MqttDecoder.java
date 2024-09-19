@@ -95,13 +95,13 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             }
 
             case READ_VARIABLE_HEADER:  try {
-                final Result<?> decodedVariableHeader = decodeVariableHeader(ctx, buffer, mqttFixedHeader);
-                variableHeader = decodedVariableHeader.value;
-                if (bytesRemainingInVariablePart > maxBytesInMessage) {
+                int bytesRemainingBeforeVariableHeader = bytesRemainingInVariablePart;
+                variableHeader = decodeVariableHeader(ctx, buffer, mqttFixedHeader);
+                if (bytesRemainingBeforeVariableHeader > maxBytesInMessage) {
                     buffer.skipBytes(actualReadableBytes());
-                    throw new TooLongFrameException("too large message: " + bytesRemainingInVariablePart + " bytes");
+                    throw new TooLongFrameException(
+                            "too large message: " + bytesRemainingBeforeVariableHeader + " bytes");
                 }
-                bytesRemainingInVariablePart -= decodedVariableHeader.numberOfBytesConsumed;
                 checkpoint(DecoderState.READ_PAYLOAD);
                 // fall through
             } catch (Exception cause) {
@@ -242,7 +242,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
      * @param mqttFixedHeader MqttFixedHeader of the same message
      * @return the variable header
      */
-    private Result<?> decodeVariableHeader(ChannelHandlerContext ctx, ByteBuf buffer, MqttFixedHeader mqttFixedHeader) {
+    private Object decodeVariableHeader(ChannelHandlerContext ctx, ByteBuf buffer, MqttFixedHeader mqttFixedHeader) {
         switch (mqttFixedHeader.messageType()) {
             case CONNECT:
                 return decodeConnectionVariableHeader(ctx, buffer);
@@ -272,14 +272,14 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             case PINGREQ:
             case PINGRESP:
                 // Empty variable header
-                return new Result<Object>(null, 0);
+                return null;
             default:
                 //shouldn't reach here
                 throw new DecoderException("Unknown message type: " + mqttFixedHeader.messageType());
         }
     }
 
-    private static Result<MqttConnectVariableHeader> decodeConnectionVariableHeader(
+    private MqttConnectVariableHeader decodeConnectionVariableHeader(
             ChannelHandlerContext ctx,
             ByteBuf buffer) {
         final Result<String> protoString = decodeString(buffer);
@@ -322,7 +322,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             properties = MqttProperties.NO_PROPERTIES;
         }
 
-        final MqttConnectVariableHeader mqttConnectVariableHeader = new MqttConnectVariableHeader(
+        bytesRemainingInVariablePart -= numberOfBytesConsumed;
+        return new MqttConnectVariableHeader(
                 version.protocolName(),
                 version.protocolLevel(),
                 hasUserName,
@@ -333,111 +334,92 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 cleanSession,
                 keepAlive,
                 properties);
-        return new Result<MqttConnectVariableHeader>(mqttConnectVariableHeader, numberOfBytesConsumed);
     }
 
-    private static Result<MqttConnAckVariableHeader> decodeConnAckVariableHeader(
+    private MqttConnAckVariableHeader decodeConnAckVariableHeader(
             ChannelHandlerContext ctx,
             ByteBuf buffer) {
         final MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(ctx);
         final boolean sessionPresent = (buffer.readUnsignedByte() & 0x01) == 0x01;
         byte returnCode = buffer.readByte();
-        int numberOfBytesConsumed = 2;
 
         final MqttProperties properties;
         if (mqttVersion == MqttVersion.MQTT_5) {
             final Result<MqttProperties> propertiesResult = decodeProperties(buffer);
             properties = propertiesResult.value;
-            numberOfBytesConsumed += propertiesResult.numberOfBytesConsumed;
+            bytesRemainingInVariablePart -= 2 + propertiesResult.numberOfBytesConsumed;
         } else {
             properties = MqttProperties.NO_PROPERTIES;
+            bytesRemainingInVariablePart -= 2;
         }
 
-        final MqttConnAckVariableHeader mqttConnAckVariableHeader =
-                new MqttConnAckVariableHeader(MqttConnectReturnCode.valueOf(returnCode), sessionPresent, properties);
-        return new Result<MqttConnAckVariableHeader>(mqttConnAckVariableHeader, numberOfBytesConsumed);
+        return new MqttConnAckVariableHeader(MqttConnectReturnCode.valueOf(returnCode), sessionPresent, properties);
     }
 
-    private static Result<MqttMessageIdAndPropertiesVariableHeader> decodeMessageIdAndPropertiesVariableHeader(
+    private MqttMessageIdAndPropertiesVariableHeader decodeMessageIdAndPropertiesVariableHeader(
             ChannelHandlerContext ctx,
             ByteBuf buffer) {
         final MqttVersion mqttVersion = MqttCodecUtil.getMqttVersion(ctx);
         final int packetId = decodeMessageId(buffer);
 
-        final MqttMessageIdAndPropertiesVariableHeader mqttVariableHeader;
-        final int mqtt5Consumed;
-
         if (mqttVersion == MqttVersion.MQTT_5) {
             final Result<MqttProperties> properties = decodeProperties(buffer);
-            mqttVariableHeader = new MqttMessageIdAndPropertiesVariableHeader(packetId, properties.value);
-            mqtt5Consumed = properties.numberOfBytesConsumed;
+            bytesRemainingInVariablePart -= 2 + properties.numberOfBytesConsumed;
+            return new MqttMessageIdAndPropertiesVariableHeader(packetId, properties.value);
         } else {
-            mqttVariableHeader = new MqttMessageIdAndPropertiesVariableHeader(packetId,
-                    MqttProperties.NO_PROPERTIES);
-            mqtt5Consumed = 0;
+            bytesRemainingInVariablePart -= 2;
+            return new MqttMessageIdAndPropertiesVariableHeader(packetId,
+                                                                MqttProperties.NO_PROPERTIES);
         }
-
-        return new Result<MqttMessageIdAndPropertiesVariableHeader>(mqttVariableHeader,
-                2 + mqtt5Consumed);
     }
 
-    private Result<MqttPubReplyMessageVariableHeader> decodePubReplyMessage(ByteBuf buffer) {
+    private MqttPubReplyMessageVariableHeader decodePubReplyMessage(ByteBuf buffer) {
         final int packetId = decodeMessageId(buffer);
 
-        final MqttPubReplyMessageVariableHeader mqttPubAckVariableHeader;
-        final int consumed;
         final int packetIdNumberOfBytesConsumed = 2;
         if (bytesRemainingInVariablePart > 3) {
             final byte reasonCode = buffer.readByte();
             final Result<MqttProperties> properties = decodeProperties(buffer);
-            mqttPubAckVariableHeader = new MqttPubReplyMessageVariableHeader(packetId,
+            bytesRemainingInVariablePart -= packetIdNumberOfBytesConsumed + 1 + properties.numberOfBytesConsumed;
+            return new MqttPubReplyMessageVariableHeader(packetId,
                     reasonCode,
                     properties.value);
-            consumed = packetIdNumberOfBytesConsumed + 1 + properties.numberOfBytesConsumed;
         } else if (bytesRemainingInVariablePart > 2) {
             final byte reasonCode = buffer.readByte();
-            mqttPubAckVariableHeader = new MqttPubReplyMessageVariableHeader(packetId,
+            bytesRemainingInVariablePart -= packetIdNumberOfBytesConsumed + 1;
+            return new MqttPubReplyMessageVariableHeader(packetId,
                     reasonCode,
                     MqttProperties.NO_PROPERTIES);
-            consumed = packetIdNumberOfBytesConsumed + 1;
         } else {
-            mqttPubAckVariableHeader = new MqttPubReplyMessageVariableHeader(packetId,
+            bytesRemainingInVariablePart -= packetIdNumberOfBytesConsumed;
+            return new MqttPubReplyMessageVariableHeader(packetId,
                     (byte) 0,
                     MqttProperties.NO_PROPERTIES);
-            consumed = packetIdNumberOfBytesConsumed;
         }
-
-        return new Result<MqttPubReplyMessageVariableHeader>(mqttPubAckVariableHeader, consumed);
     }
 
-    private Result<MqttReasonCodeAndPropertiesVariableHeader> decodeReasonCodeAndPropertiesVariableHeader(
+    private MqttReasonCodeAndPropertiesVariableHeader decodeReasonCodeAndPropertiesVariableHeader(
             ByteBuf buffer) {
         final byte reasonCode;
         final MqttProperties properties;
-        final int consumed;
         if (bytesRemainingInVariablePart > 1) {
             reasonCode = buffer.readByte();
             final Result<MqttProperties> propertiesResult = decodeProperties(buffer);
             properties = propertiesResult.value;
-            consumed = 1 + propertiesResult.numberOfBytesConsumed;
+            bytesRemainingInVariablePart -= 1 + propertiesResult.numberOfBytesConsumed;
         } else if (bytesRemainingInVariablePart > 0) {
             reasonCode = buffer.readByte();
             properties = MqttProperties.NO_PROPERTIES;
-            consumed = 1;
+            --bytesRemainingInVariablePart;
         } else {
             reasonCode = 0;
             properties = MqttProperties.NO_PROPERTIES;
-            consumed = 0;
         }
-        final MqttReasonCodeAndPropertiesVariableHeader mqttReasonAndPropsVariableHeader =
-                new MqttReasonCodeAndPropertiesVariableHeader(reasonCode, properties);
 
-        return new Result<MqttReasonCodeAndPropertiesVariableHeader>(
-                mqttReasonAndPropsVariableHeader,
-                consumed);
+        return new MqttReasonCodeAndPropertiesVariableHeader(reasonCode, properties);
     }
 
-    private Result<MqttPublishVariableHeader> decodePublishVariableHeader(
+    private MqttPublishVariableHeader decodePublishVariableHeader(
             ChannelHandlerContext ctx,
             ByteBuf buffer,
             MqttFixedHeader mqttFixedHeader) {
@@ -463,9 +445,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             properties = MqttProperties.NO_PROPERTIES;
         }
 
-        final MqttPublishVariableHeader mqttPublishVariableHeader =
-                new MqttPublishVariableHeader(decodedTopic.value, messageId, properties);
-        return new Result<MqttPublishVariableHeader>(mqttPublishVariableHeader, numberOfBytesConsumed);
+        bytesRemainingInVariablePart -= numberOfBytesConsumed;
+        return new MqttPublishVariableHeader(decodedTopic.value, messageId, properties);
     }
 
     /**
