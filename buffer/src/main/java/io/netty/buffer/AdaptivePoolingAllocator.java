@@ -604,13 +604,15 @@ final class AdaptivePoolingAllocator {
             Chunk nextChunk = NEXT_IN_LINE.get(this);
             if (nextChunk != null && current.remainingCapacity() > nextChunk.remainingCapacity()) {
                 if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
-                    nextChunk.release();
-                } else {
-                    // Next-in-line is occupied AND the central queue is full.
-                    // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
-                    current.release();
+                    if (nextChunk != MAGAZINE_FREED) {
+                        nextChunk.release();
+                    }
+                    return;
                 }
             }
+            // Next-in-line is occupied AND the central queue is full.
+            // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+            current.release();
         }
 
         private Chunk newChunkAllocation(int promptingSize) {
