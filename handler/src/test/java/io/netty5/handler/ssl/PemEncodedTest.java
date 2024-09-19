@@ -17,6 +17,7 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.util.Resource;
+import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -47,15 +48,9 @@ public class PemEncodedTest {
     private static void testPemEncoded(SslProvider provider) throws Exception {
         OpenSsl.ensureAvailability();
         assumeFalse(OpenSsl.supportsKeyManagerFactory());
-        PemPrivateKey pemKey;
-        PemX509Certificate pemCert;
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        try {
-            pemKey = PemPrivateKey.valueOf(toByteArray(ssc.privateKey()));
-            pemCert = PemX509Certificate.valueOf(toByteArray(ssc.certificate()));
-        } finally {
-            ssc.delete();
-        }
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
+        PemPrivateKey pemKey = PemPrivateKey.valueOf(toByteArray(ssc.privateKey()));
+        PemX509Certificate pemCert = PemX509Certificate.valueOf(toByteArray(ssc.certificate()));
 
         assertTrue(pemKey.content().readOnly());
         assertTrue(pemCert.content().readOnly());

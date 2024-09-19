@@ -36,6 +36,7 @@ import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.TooLongFrameException;
+import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.DomainNameMapping;
@@ -490,7 +491,7 @@ public class SniHandlerTest {
                 Channel cc = null;
                 SslContext sslContext = null;
 
-                SelfSignedCertificate cert = new SelfSignedCertificate();
+                SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
                 try {
                     final SslContext sslServerContext = SslContextBuilder
@@ -588,8 +589,6 @@ public class SniHandlerTest {
                         Resource.dispose(sslContext);
                     }
                     group.shutdownGracefully();
-
-                    cert.delete();
                 }
             case JDK:
                 return;
@@ -639,7 +638,7 @@ public class SniHandlerTest {
 
     private static void testWithFragmentSize(SslProvider provider, final int maxFragmentSize) throws Exception {
         final String sni = "netty.io";
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
                 .sslProvider(provider)
                 .build();
@@ -660,7 +659,6 @@ public class SniHandlerTest {
             assertTrue(server.finishAndReleaseAll());
         } finally {
             releaseAll(context);
-            cert.delete();
         }
     }
 
