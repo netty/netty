@@ -91,7 +91,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
      * This number is 10 MiB, and is derived from the limitations of internal histograms.
      */
     protected static final int MAX_CHUNK_SIZE =
-        BUFS_PER_CHUNK * (1 << AllocationStatistics.HISTO_MAX_BUCKET_SHIFT); // 10 MiB.
+            BUFS_PER_CHUNK * (1 << AllocationStatistics.HISTO_MAX_BUCKET_SHIFT); // 10 MiB.
 
     /**
      * The capacity if the central queue that allow chunks to be shared across magazines.
@@ -102,7 +102,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
      * 5 * {@link NettyRuntime#availableProcessors()} * {@link #MAX_CHUNK_SIZE} bytes.
      */
     protected static final int CENTRAL_QUEUE_CAPACITY = SystemPropertyUtil.getInt(
-        "io.netty5.allocator.centralQueueCapacity", NettyRuntime.availableProcessors());
+            "io.netty5.allocator.centralQueueCapacity", NettyRuntime.availableProcessors());
 
     private static final Object NO_MAGAZINE = Boolean.TRUE;
 
@@ -290,8 +290,8 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
             throw allocatorClosedException();
         }
         Buffer constantBuffer = manager.allocateShared(
-            allocatorControl, bytes.length, drop -> CleanerDrop.wrapWithoutLeakDetection(drop, manager),
-            allocationType);
+                allocatorControl, bytes.length, drop -> CleanerDrop.wrapWithoutLeakDetection(drop, manager),
+                allocationType);
         constantBuffer.writeBytes(bytes).makeReadOnly();
         return () -> manager.allocateConstChild(constantBuffer);
     }
@@ -364,8 +364,8 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
         protected final AdaptivePoolingAllocator parent;
         protected final EventExecutor ownerEventExecutor;
         private final short[][] histos = {
-            new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
-            new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
+                new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
+                new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
         };
         private short[] histo = histos[0];
         private final int[] sums = new int[HISTO_BUCKET_COUNT];
