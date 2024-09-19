@@ -487,9 +487,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 }
                 return curr.split(size);
             }
-            if (curr != null) {
-                curr.close();
-            }
+            Buffer last = curr;
             if (nextInLine != null) {
                 curr = (Buffer) NEXT_IN_LINE.getAndSet(this, (Buffer) null);
                 if (curr == MAGAZINE_FREED) {
@@ -506,6 +504,13 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 }
             }
             current = curr;
+            if (last != null) {
+                if (last.capacity() < RETIRE_CAPACITY) {
+                    last.close();
+                } else {
+                    transferChunk(last);
+                }
+            }
             final Buffer result;
             if (curr.capacity() > size) {
                 result = curr.split(size);
@@ -518,15 +523,31 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                 if (curr.capacity() < RETIRE_CAPACITY) {
                     curr.close();
                     current = buffer;
-                } else if (!(boolean) NEXT_IN_LINE.compareAndSet(this, null, buffer)) {
-                    if (!parent.offerToQueue(buffer)) {
-                        // Next-in-line is occupied AND the central queue is full.
-                        // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
-                        buffer.close();
-                    }
+                } else {
+                    transferChunk(buffer);
                 }
             }
             return result;
+        }
+
+        private void transferChunk(Buffer current) {
+            if (NEXT_IN_LINE.compareAndSet(this, null, current)
+                    || parent.offerToQueue(current)) {
+                return;
+            }
+
+            Buffer nextChunk = (Buffer) NEXT_IN_LINE.get(this);
+            if (nextChunk != null && current.capacity() > nextChunk.capacity()) {
+                if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
+                     if (nextChunk != MAGAZINE_FREED) {
+                        nextChunk.close();
+                    }
+                    return;
+                }
+            }
+            // Next-in-line is occupied AND the central queue is full.
+            // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+            current.close();
         }
 
         private void restoreMagazineFreed() {
