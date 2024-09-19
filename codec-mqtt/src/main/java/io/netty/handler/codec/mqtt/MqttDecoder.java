@@ -484,7 +484,6 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
      *
      * @param buffer the buffer to decode from
      * @param messageType  type of the message being decoded
-     * @param bytesRemainingInVariablePart bytes remaining
      * @param variableHeader variable header of the same message
      * @return the payload
      */
@@ -515,7 +514,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
             default:
                 // unknown payload , no byte consumed
-                return new Result<Object>(null, 0);
+                return null;
         }
     }
 
