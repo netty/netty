@@ -29,6 +29,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.util.concurrent.Future;
 
 import io.netty.bootstrap.Bootstrap;
@@ -496,7 +497,7 @@ public class SniHandlerTest {
                 Channel cc = null;
                 SslContext sslContext = null;
 
-                SelfSignedCertificate cert = new SelfSignedCertificate();
+                SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
                 try {
                     final SslContext sslServerContext = SslContextBuilder
@@ -599,8 +600,6 @@ public class SniHandlerTest {
                         ReferenceCountUtil.release(sslContext);
                     }
                     group.shutdownGracefully();
-
-                    cert.delete();
                 }
             case JDK:
                 return;
@@ -650,7 +649,7 @@ public class SniHandlerTest {
 
     private void testWithFragmentSize(SslProvider provider, final int maxFragmentSize) throws Exception {
         final String sni = "netty.io";
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
                 .sslProvider(provider)
                 .build();
@@ -671,7 +670,6 @@ public class SniHandlerTest {
             assertTrue(server.finishAndReleaseAll());
         } finally {
             releaseAll(context);
-            cert.delete();
         }
     }
 
