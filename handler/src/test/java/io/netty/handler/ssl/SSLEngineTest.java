@@ -35,6 +35,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
+import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
@@ -554,7 +555,7 @@ public abstract class SSLEngineTest {
         if (param.protocolCipherCombo != ProtocolCipherCombo.tlsv12()) {
             return;
         }
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(cert.key(), cert.cert())
             .protocols(param.protocols())
             .ciphers(param.ciphers())
@@ -580,7 +581,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            cert.delete();
         }
     }
 
@@ -590,7 +590,7 @@ public abstract class SSLEngineTest {
         assumeTrue(SslProvider.isTlsv13Supported(sslClientProvider()));
         assumeTrue(SslProvider.isTlsv13Supported(sslServerProvider()));
 
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
         // due to no shared/supported cipher.
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
@@ -630,7 +630,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
@@ -1349,7 +1348,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
@@ -1370,7 +1369,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
@@ -1384,7 +1382,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .sslContextProvider(clientSslContextProvider())
                 .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 // This test only works for non TLSv1.3 for now
@@ -1454,7 +1452,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
@@ -1464,7 +1461,7 @@ public abstract class SSLEngineTest {
     public void clientInitiatedRenegotiationWithFatalAlertDoesNotInfiniteLoopServer(final SSLEngineTestParam param)
             throws Exception {
         assumeTrue(PlatformDependent.javaVersion() >= 11);
-        final SelfSignedCertificate ssc = new SelfSignedCertificate();
+        final SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                                         .sslProvider(sslServerProvider())
                                         .sslContextProvider(serverSslContextProvider())
@@ -1585,7 +1582,6 @@ public abstract class SSLEngineTest {
         clientChannel = ccf.channel();
 
         serverLatch.await();
-        ssc.delete();
     }
 
     protected void testEnablingAnAlreadyDisabledSslProtocol(SSLEngineTestParam param,
@@ -1833,42 +1829,38 @@ public abstract class SSLEngineTest {
     protected void setupHandlers(SSLEngineTestParam param,
                                  ApplicationProtocolConfig serverApn, ApplicationProtocolConfig clientApn)
             throws InterruptedException, SSLException, CertificateException {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
 
-        try {
-            SslContextBuilder serverCtxBuilder = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
-                                                         .sslProvider(sslServerProvider())
-                                                         .sslContextProvider(serverSslContextProvider())
-                                                         .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                                                         .applicationProtocolConfig(serverApn)
-                                                         .sessionCacheSize(0)
-                                                         .sessionTimeout(0);
-            if (serverApn.protocol() == Protocol.NPN || serverApn.protocol() == Protocol.NPN_AND_ALPN) {
-                // NPN is not really well supported with TLSv1.3 so force to use TLSv1.2
-                // See https://github.com/openssl/openssl/issues/3665
-                serverCtxBuilder.protocols(SslProtocols.TLS_v1_2);
-            }
-
-            SslContextBuilder clientCtxBuilder = SslContextBuilder.forClient()
-                             .sslProvider(sslClientProvider())
-                             .sslContextProvider(clientSslContextProvider())
-                             .applicationProtocolConfig(clientApn)
-                             .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                             .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                             .sessionCacheSize(0)
-                             .sessionTimeout(0);
-
-            if (clientApn.protocol() == Protocol.NPN || clientApn.protocol() == Protocol.NPN_AND_ALPN) {
-                // NPN is not really well supported with TLSv1.3 so force to use TLSv1.2
-                // See https://github.com/openssl/openssl/issues/3665
-                clientCtxBuilder.protocols(SslProtocols.TLS_v1_2);
-            }
-
-            setupHandlers(param.type(), param.delegate(),
-                    wrapContext(param, serverCtxBuilder.build()), wrapContext(param, clientCtxBuilder.build()));
-        } finally {
-          ssc.delete();
+        SslContextBuilder serverCtxBuilder = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .applicationProtocolConfig(serverApn)
+                .sessionCacheSize(0)
+                .sessionTimeout(0);
+        if (serverApn.protocol() == Protocol.NPN || serverApn.protocol() == Protocol.NPN_AND_ALPN) {
+            // NPN is not really well supported with TLSv1.3 so force to use TLSv1.2
+            // See https://github.com/openssl/openssl/issues/3665
+            serverCtxBuilder.protocols(SslProtocols.TLS_v1_2);
         }
+
+        SslContextBuilder clientCtxBuilder = SslContextBuilder.forClient()
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .applicationProtocolConfig(clientApn)
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                .sessionCacheSize(0)
+                .sessionTimeout(0);
+
+        if (clientApn.protocol() == Protocol.NPN || clientApn.protocol() == Protocol.NPN_AND_ALPN) {
+            // NPN is not really well supported with TLSv1.3 so force to use TLSv1.2
+            // See https://github.com/openssl/openssl/issues/3665
+            clientCtxBuilder.protocols(SslProtocols.TLS_v1_2);
+        }
+
+        setupHandlers(param.type(), param.delegate(),
+                wrapContext(param, serverCtxBuilder.build()), wrapContext(param, clientCtxBuilder.build()));
     }
 
     protected void setupHandlers(final BufferType type, final boolean delegate,
@@ -2073,7 +2065,7 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testUnwrapBehavior(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -2154,7 +2146,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
-            cert.delete();
         }
     }
 
@@ -2173,7 +2164,7 @@ public abstract class SSLEngineTest {
     private void testProtocol(final SSLEngineTestParam param, boolean handshakeFails,
                               String[] clientProtocols, String[] serverProtocols)
             throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -2207,7 +2198,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
-            cert.delete();
         }
     }
 
@@ -2224,7 +2214,7 @@ public abstract class SSLEngineTest {
     @ParameterizedTest
     public void testHandshakeCompletesWithNonContiguousProtocolsTLSv1_2CipherOnly(SSLEngineTestParam param)
             throws Exception {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
         // due to no shared/supported cipher.
         final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
@@ -2251,14 +2241,13 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testHandshakeCompletesWithoutFilteringSupportedCipher(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
         // due to no shared/supported cipher.
         final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
@@ -2285,14 +2274,13 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testPacketBufferSizeLimit(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -2337,7 +2325,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
-            cert.delete();
         }
     }
 
@@ -2408,7 +2395,7 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testBeginHandshakeCloseOutbound(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -2434,7 +2421,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
-            cert.delete();
         }
     }
 
@@ -2462,7 +2448,7 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testCloseInboundAfterBeginHandshake(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -2488,7 +2474,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
-            cert.delete();
         }
     }
 
@@ -2509,7 +2494,7 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testCloseNotifySequence(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -2652,7 +2637,6 @@ public abstract class SSLEngineTest {
             result = client.unwrap(encryptedServerToClient, plainClientOut);
             assertEngineRemainsClosed(result);
         } finally {
-            cert.delete();
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
         }
@@ -2668,7 +2652,7 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testWrapAfterCloseOutbound(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -2706,7 +2690,6 @@ public abstract class SSLEngineTest {
             assertTrue(client.isOutboundDone());
             assertFalse(client.isInboundDone());
         } finally {
-            cert.delete();
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
         }
@@ -2715,7 +2698,7 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testMultipleRecordsInOneBufferWithNonZeroPosition(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -2789,7 +2772,6 @@ public abstract class SSLEngineTest {
             assertEquals(encClientToServerLen, result.bytesConsumed());
             assertTrue(result.bytesProduced() > 0);
         } finally {
-            cert.delete();
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
         }
@@ -2798,7 +2780,7 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testMultipleRecordsInOneBufferBiggerThenPacketBufferSize(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -2861,7 +2843,6 @@ public abstract class SSLEngineTest {
             assertTrue(result.bytesProduced() > 0);
             assertTrue(encClientToServer.hasRemaining());
         } finally {
-            cert.delete();
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
         }
@@ -2870,7 +2851,7 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testBufferUnderFlow(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -2934,7 +2915,6 @@ public abstract class SSLEngineTest {
             assertEquals(result.bytesConsumed(), remaining);
             assertTrue(result.bytesProduced() > 0);
         } finally {
-            cert.delete();
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
         }
@@ -2949,7 +2929,7 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testWrapDoesNotZeroOutSrc(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
@@ -2996,7 +2976,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
-            cert.delete();
         }
     }
 
@@ -3015,7 +2994,7 @@ public abstract class SSLEngineTest {
 
     private void testDisableProtocols(SSLEngineTestParam param,
                                       String protocol, String... disabledProtocols) throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
 
         SslContext ctx = wrapContext(param, SslContextBuilder
                 .forServer(cert.certificate(), cert.privateKey())
@@ -3046,7 +3025,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupServerSslEngine(server);
             cleanupClientSslContext(ctx);
-            cert.delete();
         }
     }
 
@@ -3138,13 +3116,12 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
-            cert.delete();
         }
     }
 
     @Test
     public void testInvalidCipher() throws Exception {
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         List<String> cipherList = new ArrayList<String>();
         Collections.addAll(cipherList, ((SSLSocketFactory) SSLSocketFactory.getDefault()).getDefaultCipherSuites());
         cipherList.add("InvalidCipher");
@@ -3161,7 +3138,6 @@ public abstract class SSLEngineTest {
         } catch (SSLException expected) {
             // expected when invalid cipher is used.
         } finally {
-            cert.delete();
             cleanupServerSslEngine(server);
         }
     }
@@ -3176,7 +3152,7 @@ public abstract class SSLEngineTest {
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
                                         .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                                         .sslProvider(sslServerProvider())
                                         .sslContextProvider(serverSslContextProvider())
@@ -3198,7 +3174,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
@@ -3212,7 +3187,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
@@ -3220,15 +3195,11 @@ public abstract class SSLEngineTest {
                 .ciphers(param.ciphers())
                 .build());
 
-        try {
-            doHandshakeVerifyReusedAndClose(param, "a.netty.io", 9999, false);
-            doHandshakeVerifyReusedAndClose(param, "a.netty.io", 9999, true);
-            doHandshakeVerifyReusedAndClose(param, "b.netty.io", 9999, false);
-            invalidateSessionsAndAssert(serverSslCtx.sessionContext());
-            invalidateSessionsAndAssert(clientSslCtx.sessionContext());
-        } finally {
-            ssc.delete();
-        }
+        doHandshakeVerifyReusedAndClose(param, "a.netty.io", 9999, false);
+        doHandshakeVerifyReusedAndClose(param, "a.netty.io", 9999, true);
+        doHandshakeVerifyReusedAndClose(param, "b.netty.io", 9999, false);
+        invalidateSessionsAndAssert(serverSslCtx.sessionContext());
+        invalidateSessionsAndAssert(clientSslCtx.sessionContext());
     }
 
     protected void invalidateSessionsAndAssert(SSLSessionContext context) {
@@ -3462,7 +3433,7 @@ public abstract class SSLEngineTest {
                 .ciphers(param.ciphers())
                 .sessionTimeout(1)
                 .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
@@ -3471,17 +3442,13 @@ public abstract class SSLEngineTest {
                 .sessionTimeout(1)
                 .build());
 
-        try {
-            doHandshakeVerifyReusedAndClose(param, "a.netty.io", 9999, false);
+        doHandshakeVerifyReusedAndClose(param, "a.netty.io", 9999, false);
 
-            // Let's sleep for a bit more then 1 second so the cache should timeout the sessions.
-            Thread.sleep(1500);
+        // Let's sleep for a bit more then 1 second so the cache should timeout the sessions.
+        Thread.sleep(1500);
 
-            assertSessionCache(serverSslCtx.sessionContext(), 0);
-            assertSessionCache(clientSslCtx.sessionContext(), 0);
-        } finally {
-            ssc.delete();
-        }
+        assertSessionCache(serverSslCtx.sessionContext(), 0);
+        assertSessionCache(clientSslCtx.sessionContext(), 0);
     }
 
     @MethodSource("newTestParams")
@@ -3495,7 +3462,7 @@ public abstract class SSLEngineTest {
                 .ciphers(param.ciphers())
                 .sessionCacheSize(1)
                 .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
@@ -3503,16 +3470,12 @@ public abstract class SSLEngineTest {
                 .ciphers(param.ciphers())
                 .build());
 
-        try {
-            doHandshakeVerifyReusedAndClose(param, "a.netty.io", 9999, false);
-            // As we have a cache size of 1 we should never have more then one session in the cache
-            doHandshakeVerifyReusedAndClose(param, "b.netty.io", 9999, false);
+        doHandshakeVerifyReusedAndClose(param, "a.netty.io", 9999, false);
+        // As we have a cache size of 1 we should never have more then one session in the cache
+        doHandshakeVerifyReusedAndClose(param, "b.netty.io", 9999, false);
 
-            // We should at least reuse b.netty.io
-            doHandshakeVerifyReusedAndClose(param, "b.netty.io", 9999, true);
-        } finally {
-            ssc.delete();
-        }
+        // We should at least reuse b.netty.io
+        doHandshakeVerifyReusedAndClose(param, "b.netty.io", 9999, true);
     }
 
     @MethodSource("newTestParams")
@@ -3525,7 +3488,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
@@ -3585,7 +3548,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
@@ -3622,7 +3584,7 @@ public abstract class SSLEngineTest {
 
     private void testSessionAfterHandshake0(
             SSLEngineTestParam param, boolean useKeyManagerFactory, boolean mutualAuth) throws Exception {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         KeyManagerFactory kmf = useKeyManagerFactory ?
                 SslContext.buildKeyManagerFactory(
                         new java.security.cert.X509Certificate[] { ssc.cert()}, null,
@@ -3859,14 +3821,13 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testSupportedSignatureAlgorithms(SSLEngineTestParam param) throws Exception {
-        final SelfSignedCertificate ssc = new SelfSignedCertificate();
+        final SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
 
         final class TestKeyManagerFactory extends KeyManagerFactory {
             TestKeyManagerFactory(final KeyManagerFactory factory) {
@@ -3982,14 +3943,13 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testHandshakeSession(SSLEngineTestParam param) throws Exception {
-        final SelfSignedCertificate ssc = new SelfSignedCertificate();
+        final SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
 
         final TestTrustManagerFactory clientTmf = new TestTrustManagerFactory(ssc.cert());
         final TestTrustManagerFactory serverTmf = new TestTrustManagerFactory(ssc.cert());
@@ -4052,7 +4012,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
@@ -4069,7 +4028,7 @@ public abstract class SSLEngineTest {
     }
 
     private void testSessionLocalWhenNonMutual(SSLEngineTestParam param, boolean useKeyManager) throws Exception {
-        final SelfSignedCertificate ssc = new SelfSignedCertificate();
+        final SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
 
         SslContextBuilder clientSslCtxBuilder = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
@@ -4116,7 +4075,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
@@ -4130,7 +4088,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
@@ -4148,7 +4106,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
     }
 
@@ -4189,7 +4146,7 @@ public abstract class SSLEngineTest {
         String originalSystemPropertyValue = SystemPropertyUtil.get(SslMasterKeyHandler.SYSTEM_PROP_KEY);
         System.setProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY, Boolean.TRUE.toString());
 
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
@@ -4244,7 +4201,6 @@ public abstract class SSLEngineTest {
             } else {
                 System.clearProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY);
             }
-            ssc.delete();
         }
     }
 
@@ -4342,7 +4298,7 @@ public abstract class SSLEngineTest {
                 .sslContextProvider(clientSslContextProvider())
                 .ciphers(param.ciphers())
                 .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
@@ -4360,7 +4316,6 @@ public abstract class SSLEngineTest {
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
-            ssc.delete();
         }
 
         assertEquals(SslProvider.isTlsv13EnabledByDefault(sslClientProvider(), clientSslContextProvider()),
@@ -4410,7 +4365,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
@@ -4434,7 +4389,7 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testBufferUnderflowPacketSizeDependency(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .keyManager(ssc.certificate(), ssc.privateKey())
                 .trustManager((TrustManagerFactory) null)
@@ -4470,7 +4425,7 @@ public abstract class SSLEngineTest {
     public void testTLSv13DisabledIfNoValidCipherSuiteConfigured() throws Exception {
         // Use a TLSv12 cipher
         List<String> ciphers = Collections.singletonList("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256");
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         clientSslCtx = wrapContext(null, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
@@ -4507,7 +4462,7 @@ public abstract class SSLEngineTest {
             // TLSv1.3 is not supported by either client or server.
             return;
         }
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         clientSslCtx = wrapContext(null, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
@@ -4539,7 +4494,7 @@ public abstract class SSLEngineTest {
     @Test
     public void testExtraDataInLastSrcBufferForClientUnwrap() throws Exception {
         SSLEngineTestParam param = new SSLEngineTestParam(BufferType.Direct, ProtocolCipherCombo.tlsv12(), false);
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
