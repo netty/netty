@@ -548,7 +548,6 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
             current.close();
         }
 
-
         private void restoreMagazineFreed() {
             Buffer next = (Buffer) NEXT_IN_LINE.getAndSet(this, MAGAZINE_FREED);
             if (next != null && next != MAGAZINE_FREED) {
