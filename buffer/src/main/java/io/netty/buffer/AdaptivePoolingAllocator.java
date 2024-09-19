@@ -610,12 +610,12 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             if (nextChunk != null && current.remainingCapacity() > nextChunk.remainingCapacity()) {
                 if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
                     nextChunk.release();
-                } else {
-                    // Next-in-line is occupied AND the central queue is full.
-                    // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
-                    current.release();
+                    return;
                 }
             }
+            // Next-in-line is occupied AND the central queue is full.
+            // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+            current.release();
         }
 
         private Chunk newChunkAllocation(int promptingSize) {
