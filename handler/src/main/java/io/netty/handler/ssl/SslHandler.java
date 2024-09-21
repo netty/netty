@@ -57,6 +57,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -69,7 +72,9 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLEngineResult.Status;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
+import javax.security.auth.x500.X500Principal;
 
 import static io.netty.handler.ssl.SslUtils.NOT_ENOUGH_DATA;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
@@ -412,6 +417,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private final ByteBuffer[] singleBuffer = new ByteBuffer[1];
 
     private final boolean startTls;
+    private final ResumptionController resumptionController;
 
     private final SslTasksRunner sslTaskRunnerForUnwrap = new SslTasksRunner(true);
     private final SslTasksRunner sslTaskRunner = new SslTasksRunner(false);
@@ -469,12 +475,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *                              {@link SSLEngine#getDelegatedTask()}.
      */
     public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
+        this(engine, startTls, delegatedTaskExecutor, null);
+    }
+
+    SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor,
+               ResumptionController resumptionController) {
         this.engine = ObjectUtil.checkNotNull(engine, "engine");
         this.delegatedTaskExecutor = ObjectUtil.checkNotNull(delegatedTaskExecutor, "delegatedTaskExecutor");
         engineType = SslEngineType.forEngine(engine);
         this.startTls = startTls;
         this.jdkCompatibilityMode = engineType.jdkCompatibilityMode(engine);
         setCumulator(engineType.cumulator);
+        this.resumptionController = resumptionController;
     }
 
     public long getHandshakeTimeoutMillis() {
@@ -1577,7 +1589,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         return originalLength - length;
     }
 
-    private boolean setHandshakeSuccessUnwrapMarkReentry() {
+    private boolean setHandshakeSuccessUnwrapMarkReentry() throws SSLException {
         // setHandshakeSuccess calls out to external methods which may trigger re-entry. We need to preserve ordering of
         // fireChannelRead for decodeOut relative to re-entry data.
         final boolean setReentryState = !isStateSet(STATE_UNWRAP_REENTRY);
@@ -1943,14 +1955,21 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * @return {@code true} if {@link #handshakePromise} was set successfully and a {@link SslHandshakeCompletionEvent}
      * was fired. {@code false} otherwise.
      */
-    private boolean setHandshakeSuccess() {
+    private boolean setHandshakeSuccess() throws SSLException {
         // Our control flow may invoke this method multiple times for a single FINISHED event. For example
         // wrapNonAppData may drain pendingUnencryptedWrites in wrap which transitions to handshake from FINISHED to
         // NOT_HANDSHAKING which invokes setHandshakeSuccess, and then wrapNonAppData also directly invokes this method.
+        SSLSession session = engine.getSession();
+        if (resumptionController != null) {
+            try {
+                resumptionController.validateResumeIfNeeded(engine);
+            } catch (CertificateException e) {
+                throw new SSLException(e);
+            }
+        }
         final boolean notified;
         if (notified = !handshakePromise.isDone() && handshakePromise.trySuccess(ctx.channel())) {
             if (logger.isDebugEnabled()) {
-                SSLSession session = engine.getSession();
                 logger.debug(
                         "{} HANDSHAKEN: protocol:{} cipher suite:{}",
                         ctx.channel(),

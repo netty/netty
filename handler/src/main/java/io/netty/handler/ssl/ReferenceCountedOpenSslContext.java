@@ -32,6 +32,7 @@ import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -211,9 +212,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                                    OpenSslApplicationProtocolNegotiator apn, int mode, Certificate[] keyCertChain,
                                    ClientAuth clientAuth, String[] protocols, boolean startTls,
                                    String endpointIdentificationAlgorithm, boolean enableOcsp,
-                                   boolean leakDetection, Map.Entry<SslContextOption<?>, Object>... ctxOptions)
+                                   boolean leakDetection, ResumptionController resumptionController,
+                                   Map.Entry<SslContextOption<?>, Object>... ctxOptions)
             throws SSLException {
-        super(startTls);
+        super(startTls, resumptionController);
 
         OpenSsl.ensureAvailability();
 
@@ -474,23 +476,25 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     @Override
     protected final SslHandler newHandler(ByteBufAllocator alloc, boolean startTls) {
-        return new SslHandler(newEngine0(alloc, null, -1, false), startTls);
+        return new SslHandler(newEngine0(alloc, null, -1, false), startTls, ImmediateExecutor.INSTANCE,
+                resumptionController);
     }
 
     @Override
     protected final SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort, boolean startTls) {
-        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls);
+        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls, ImmediateExecutor.INSTANCE,
+                resumptionController);
     }
 
     @Override
     protected SslHandler newHandler(ByteBufAllocator alloc, boolean startTls, Executor executor) {
-        return new SslHandler(newEngine0(alloc, null, -1, false), startTls, executor);
+        return new SslHandler(newEngine0(alloc, null, -1, false), startTls, executor, resumptionController);
     }
 
     @Override
     protected SslHandler newHandler(ByteBufAllocator alloc, String peerHost, int peerPort,
                                     boolean startTls, Executor executor) {
-        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), executor);
+        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), false, executor, resumptionController);
     }
 
     SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
@@ -667,12 +671,24 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         return peerCerts;
     }
 
+    /**
+     * @deprecated This method is kept for API backwards compatibility.
+     */
+    @Deprecated
     protected static X509TrustManager chooseTrustManager(TrustManager[] managers) {
+        return chooseTrustManager(managers, null);
+    }
+
+    protected static X509TrustManager chooseTrustManager(TrustManager[] managers,
+                                                         ResumptionController resumptionController) {
         for (TrustManager m : managers) {
             if (m instanceof X509TrustManager) {
                 X509TrustManager tm = (X509TrustManager) m;
                 if (PlatformDependent.javaVersion() >= 7) {
-                    tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
+                    if (resumptionController != null) {
+                        tm = (X509TrustManager) resumptionController.wrapIfNeeded(tm);
+                    }
+                    tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded(tm);
                     if (useExtendedTrustManager(tm)) {
                         // Wrap the TrustManager to provide a better exception message for users to debug hostname
                         // validation failures.
