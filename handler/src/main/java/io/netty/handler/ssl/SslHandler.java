@@ -1962,7 +1962,9 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         SSLSession session = engine.getSession();
         if (resumptionController != null) {
             try {
-                resumptionController.validateResumeIfNeeded(engine);
+                if (resumptionController.validateResumeIfNeeded(engine) && logger.isDebugEnabled()) {
+                    logger.debug("{} Resumed and reauthenticated session", ctx.channel());
+                }
             } catch (CertificateException e) {
                 throw new SSLException(e);
             }

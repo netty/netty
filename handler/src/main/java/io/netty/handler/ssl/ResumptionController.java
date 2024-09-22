@@ -19,6 +19,8 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.Socket;
 import java.security.cert.Certificate;
@@ -35,6 +37,7 @@ import javax.net.ssl.X509ExtendedTrustManager;
 
 @UnstableApi
 public final class ResumptionController {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResumptionController.class);
     private static final Object ENTRY = new Object();
     private final Map<SSLEngine, Object> confirmedValidations;
     private final AtomicReference<ResumableX509ExtendedTrustManager> resumableTm;
@@ -61,10 +64,11 @@ public final class ResumptionController {
         return tm;
     }
 
-    public void validateResumeIfNeeded(SSLEngine engine)
+    public boolean validateResumeIfNeeded(SSLEngine engine)
             throws CertificateException, SSLPeerUnverifiedException {
         ResumableX509ExtendedTrustManager tm;
-        if ((tm = resumableTm.get()) != null && engine.getSession().isValid()) {
+        boolean valid = engine.getSession().isValid();
+        if ((tm = resumableTm.get()) != null && valid) {
             Certificate[] peerCertificates = engine.getSession().getPeerCertificates();
             engine = unwrapEngine(engine);
             if (confirmedValidations.remove(engine) == null) {
@@ -74,8 +78,12 @@ public final class ResumptionController {
                 } else {
                     tm.resumeServerTrusted(chainOf(peerCertificates), engine);
                 }
+                return true;
             }
+        } else {
+            logger.debug("Not resuming session, tm={}, valid={}", tm, valid); // TODO remove this logging
         }
+        return false;
     }
 
     private static SSLEngine unwrapEngine(SSLEngine engine) {

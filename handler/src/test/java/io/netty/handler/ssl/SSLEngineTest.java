@@ -51,6 +51,8 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.conscrypt.OpenSSLProvider;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
@@ -73,7 +75,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.file.Files;
@@ -144,10 +145,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.mockito.Mockito.verify;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class SSLEngineTest {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(SSLEngineTest.class);
 
     private static final String PRINCIPAL_NAME = "CN=e8ac02fa0d65a84219016045db8b05c485b4ecdf.netty.test";
     private final boolean tlsv13Supported;
@@ -3833,6 +3834,7 @@ public abstract class SSLEngineTest {
         }
     }
 
+    @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testSessionResumableTrustManager(SSLEngineTestParam param) throws Exception {
@@ -3861,7 +3863,11 @@ public abstract class SSLEngineTest {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
                 SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
-                Object value = sslHandler.engine().getSession().getValue("key");
+                SSLEngine engine = sslHandler.engine();
+                logger.debug("Client message received: {} ({}) {} {}",
+                        engine.getSession(), engine.getHandshakeStatus(), isSessionReused(engine),
+                        Arrays.toString(engine.getSession().getValueNames()));
+                Object value = engine.getSession().getValue("key");
                 clientSessionValues.put((String) value);
                 msg.release();
             }
@@ -3870,7 +3876,11 @@ public abstract class SSLEngineTest {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
                 SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
-                Object value = sslHandler.engine().getSession().getValue("key");
+                SSLEngine engine = sslHandler.engine();
+                logger.debug("Server message received: {} ({}) {} {}",
+                        engine.getSession(), engine.getHandshakeStatus(), isSessionReused(engine),
+                        Arrays.toString(engine.getSession().getValueNames()));
+                Object value = engine.getSession().getValue("key");
                 serverSessionValues.put((String) value);
                 ctx.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE);
             }
@@ -3911,24 +3921,32 @@ public abstract class SSLEngineTest {
         @Override
         public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType, SSLEngine engine)
                 throws CertificateException {
+            logger.debug("Authenticating client session: {} ({})",
+                    engine.getHandshakeSession(), engine.getHandshakeStatus());
             engine.getHandshakeSession().putValue(key, value);
         }
 
         @Override
         public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType, SSLEngine engine)
                 throws CertificateException {
+            logger.debug("Authenticating server session: {} ({})",
+                    engine.getHandshakeSession(), engine.getHandshakeStatus());
             engine.getHandshakeSession().putValue(key, value);
         }
 
         @Override
         public void resumeClientTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
                 throws CertificateException {
+            logger.debug("Resuming client session: {} ({})",
+                    engine.getSession(), engine.getHandshakeStatus());
             engine.getSession().putValue(key, value);
         }
 
         @Override
         public void resumeServerTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
                 throws CertificateException {
+            logger.debug("Resuming server session: {} ({})",
+                    engine.getSession(), engine.getHandshakeStatus());
             engine.getSession().putValue(key, value);
         }
     }
