@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import java.util.Collection;
@@ -80,6 +81,19 @@ public class HttpClientUpgradeHandlerTest {
         HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
         UserEventCatcher catcher = new UserEventCatcher();
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
+        final HttpRequest afterUpgradeMessage =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io");
+        final ChannelPromise promise = channel.newPromise();
+        channel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                if (evt == HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL) {
+                    ctx.writeAndFlush(afterUpgradeMessage, promise);
+                }
+                super.userEventTriggered(ctx, evt);
+            }
+        });
+
         channel.pipeline().addFirst("upgrade", handler);
 
         assertTrue(
@@ -106,6 +120,10 @@ public class HttpClientUpgradeHandlerTest {
         FullHttpResponse response = channel.readInbound();
         assertEquals(HttpResponseStatus.OK, response.status());
         assertTrue(response.release());
+
+        assertTrue(promise.isSuccess());
+        assertEquals(afterUpgradeMessage, channel.readOutbound());
+
         assertFalse(channel.finish());
     }
 
