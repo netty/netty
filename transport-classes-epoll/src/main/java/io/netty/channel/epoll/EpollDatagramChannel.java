@@ -687,12 +687,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
             int bytesReceived = socket.recvmsg(msg);
             if (!msg.hasSender()) {
+                allocHandle.lastBytesRead(0);
                 if (bytesReceived == 0) {
                     // There was nothing left to handle. We will be woken up again when there is more packets to read.
-                    allocHandle.lastBytesRead(-1);
                     return false;
                 } else {
-                    allocHandle.lastBytesRead(0);
                     // just try again.
                     return true;
                 }
@@ -739,7 +738,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             int received = socket.recvmmsg(packets, 0, array.count());
             if (received == 0) {
                 // There was nothing left to handle. We will be woken up again when there is more packets to read.
-                allocHandle.lastBytesRead(-1);
+                allocHandle.lastBytesRead(0);
                 return false;
             }
 
