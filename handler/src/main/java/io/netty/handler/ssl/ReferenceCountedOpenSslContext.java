@@ -679,7 +679,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         return chooseTrustManager(managers, null);
     }
 
-    protected static X509TrustManager chooseTrustManager(TrustManager[] managers,
+    static X509TrustManager chooseTrustManager(TrustManager[] managers,
                                                          ResumptionController resumptionController) {
         for (TrustManager m : managers) {
             if (m instanceof X509TrustManager) {

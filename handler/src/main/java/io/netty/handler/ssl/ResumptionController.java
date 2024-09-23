@@ -35,8 +35,7 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 
-@UnstableApi
-public final class ResumptionController {
+final class ResumptionController {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResumptionController.class);
     private static final Object ENTRY = new Object();
     private final Map<SSLEngine, Object> confirmedValidations;
@@ -62,6 +61,10 @@ public final class ResumptionController {
             return new X509ExtendedWrapTrustManager((X509ExtendedTrustManager) tm);
         }
         return tm;
+    }
+
+    public void remove(SSLEngine engine) {
+        confirmedValidations.remove(engine);
     }
 
     public boolean validateResumeIfNeeded(SSLEngine engine)

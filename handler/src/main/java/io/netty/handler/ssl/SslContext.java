@@ -106,7 +106,7 @@ public abstract class SslContext {
 
     private final boolean startTls;
     private final AttributeMap attributes = new DefaultAttributeMap();
-    protected final ResumptionController resumptionController;
+    final ResumptionController resumptionController;
     private static final String OID_PKCS5_PBES2 = "1.2.840.113549.1.5.13";
     private static final String PBES2 = "PBES2";
 
@@ -886,7 +886,7 @@ public abstract class SslContext {
         this(startTls, null);
     }
 
-    protected SslContext(boolean startTls, ResumptionController resumptionController) {
+    SslContext(boolean startTls, ResumptionController resumptionController) {
         this.startTls = startTls;
         this.resumptionController = resumptionController;
     }
