@@ -3908,7 +3908,7 @@ public abstract class SSLEngineTest {
         assertTrue(serverSessionValues.isEmpty());
     }
 
-    private static final class SessionValueSettingTrustManager extends EmptyExtendedX509TrustManager
+    private final class SessionValueSettingTrustManager extends EmptyExtendedX509TrustManager
             implements ResumableX509ExtendedTrustManager {
         private final String key;
         private final String value;
@@ -3921,32 +3921,32 @@ public abstract class SSLEngineTest {
         @Override
         public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType, SSLEngine engine)
                 throws CertificateException {
-            logger.debug("Authenticating client session: {} ({})",
-                    engine.getHandshakeSession(), engine.getHandshakeStatus());
+            logger.debug("Authenticating client session: {} ({}, {})",
+                    engine.getHandshakeSession(), engine.getHandshakeStatus(), clientChannel);
             engine.getHandshakeSession().putValue(key, value);
         }
 
         @Override
         public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType, SSLEngine engine)
                 throws CertificateException {
-            logger.debug("Authenticating server session: {} ({})",
-                    engine.getHandshakeSession(), engine.getHandshakeStatus());
+            logger.debug("Authenticating server session: {} ({}, {})",
+                    engine.getHandshakeSession(), engine.getHandshakeStatus(), serverChannel);
             engine.getHandshakeSession().putValue(key, value);
         }
 
         @Override
         public void resumeClientTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
                 throws CertificateException {
-            logger.debug("Resuming client session: {} ({})",
-                    engine.getSession(), engine.getHandshakeStatus());
+            logger.debug("Resuming client session: {} ({}, {})",
+                    engine.getSession(), engine.getHandshakeStatus(), clientChannel);
             engine.getSession().putValue(key, value);
         }
 
         @Override
         public void resumeServerTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
                 throws CertificateException {
-            logger.debug("Resuming server session: {} ({})",
-                    engine.getSession(), engine.getHandshakeStatus());
+            logger.debug("Resuming server session: {} ({}, {})",
+                    engine.getSession(), engine.getHandshakeStatus(), serverChannel);
             engine.getSession().putValue(key, value);
         }
     }
