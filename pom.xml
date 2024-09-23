@@ -572,6 +572,7 @@
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
         <tcnative.classifier />
+        <corretto.classifier />
       </properties>
     </profile>
     <profile>
@@ -715,6 +716,8 @@
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
     <conscrypt.version>2.5.2</conscrypt.version>
     <conscrypt.classifier />
+    <corretto.version>2.4.1</corretto.version>
+    <corretto.classifier>${os.detected.classifier}</corretto.classifier>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
@@ -867,6 +870,15 @@
         <version>${conscrypt.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
+      </dependency>
+
+      <!-- ACCP - needed for running tests, used for accelerating SSL with OpenSSL. -->
+      <dependency>
+        <groupId>software.amazon.cryptools</groupId>
+        <artifactId>AmazonCorrettoCryptoProvider</artifactId>
+        <version>${corretto.version}</version>
+        <classifier>${corretto.classifier}</classifier>
+        <scope>test</scope>
       </dependency>
 
       <!--
