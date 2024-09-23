@@ -69,7 +69,7 @@ final class ResumptionController {
 
     public void remove(SSLEngine engine) {
         if (resumableTm.get() != null) {
-            confirmedValidations.remove(engine);
+            confirmedValidations.remove(unwrapEngine(engine));
         }
     }
 
