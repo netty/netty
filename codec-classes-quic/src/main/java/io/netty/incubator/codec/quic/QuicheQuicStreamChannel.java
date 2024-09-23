@@ -681,7 +681,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         queue.remove().setFailure(e);
                     }
                 }
-                updateWritabilityIfNeeded(true);
+                if (written) {
+                    updateWritabilityIfNeeded(true);
+                }
                 return written;
             } finally {
                 closeIfNeeded(wasFinSent);
