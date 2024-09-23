@@ -468,7 +468,13 @@ public abstract class SslContext {
             provider = defaultServerProvider();
         }
 
-        ResumptionController resumptionController = new ResumptionController(false);
+        boolean logResumption = false;
+        for (Map.Entry<SslContextOption<?>, Object> option : ctxOptions) {
+            if (option.getKey().name().equals("logResumption")) {
+                logResumption = true;
+            }
+        }
+        ResumptionController resumptionController = new ResumptionController(false, logResumption);
 
         switch (provider) {
         case JDK:
@@ -829,7 +835,13 @@ public abstract class SslContext {
             provider = defaultClientProvider();
         }
 
-        ResumptionController resumptionController = new ResumptionController(true);
+        boolean logResumption = false;
+        for (Map.Entry<SslContextOption<?>, Object> option : options) {
+            if (option.getKey().name().equals("logResumption")) {
+                logResumption = true;
+            }
+        }
+        ResumptionController resumptionController = new ResumptionController(true, logResumption);
 
         switch (provider) {
             case JDK:

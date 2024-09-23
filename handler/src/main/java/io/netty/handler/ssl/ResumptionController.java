@@ -41,9 +41,11 @@ final class ResumptionController {
     private final Map<SSLEngine, Object> confirmedValidations;
     private final AtomicReference<ResumableX509ExtendedTrustManager> resumableTm;
     private final boolean isClient;
+    private final boolean logResumptionFailure;
 
-    ResumptionController(boolean isClient) {
+    ResumptionController(boolean isClient, boolean logResumptionFailure) {
         this.isClient = isClient;
+        this.logResumptionFailure = logResumptionFailure;
         confirmedValidations = Collections.synchronizedMap(new WeakHashMap<SSLEngine, Object>());
         resumableTm = new AtomicReference<ResumableX509ExtendedTrustManager>();
     }
@@ -59,12 +61,16 @@ final class ResumptionController {
                 throw new IllegalStateException("Only one TrustManager can be configured for resumed sessions");
             }
             return new X509ExtendedWrapTrustManager((X509ExtendedTrustManager) tm);
+        } else if (logResumptionFailure) {
+            logger.debug("Not wrapping trust manager {} of type {}", tm, tm != null ? tm.getClass() : null);
         }
         return tm;
     }
 
     public void remove(SSLEngine engine) {
-        confirmedValidations.remove(engine);
+        if (resumableTm.get() != null) {
+            confirmedValidations.remove(engine);
+        }
     }
 
     public boolean validateResumeIfNeeded(SSLEngine engine)
@@ -83,7 +89,7 @@ final class ResumptionController {
                 }
                 return true;
             }
-        } else {
+        } else if (logResumptionFailure) {
             logger.debug("Not resuming session, tm={}, valid={}", tm, valid); // TODO remove this logging
         }
         return false;

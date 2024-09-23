@@ -3848,6 +3848,7 @@ public abstract class SSLEngineTest {
                 .sslContextProvider(clientSslContextProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
+                .option(SslContextOption.valueOf("logResumption"), true)
                 .build());
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .trustManager(serverTm)
@@ -3856,6 +3857,7 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .clientAuth(ClientAuth.REQUIRE)
+                .option(SslContextOption.valueOf("logResumption"), true)
                 .build());
         final BlockingQueue<String> clientSessionValues = new LinkedBlockingQueue<String>();
         final BlockingQueue<String> serverSessionValues = new LinkedBlockingQueue<String>();
