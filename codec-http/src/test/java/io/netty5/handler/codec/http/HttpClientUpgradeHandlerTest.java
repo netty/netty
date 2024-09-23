@@ -19,6 +19,7 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.Send;
+import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
@@ -81,6 +82,19 @@ public class HttpClientUpgradeHandlerTest {
                 upgradeCodec, 1024);
         UserEventCatcher catcher = new UserEventCatcher();
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
+        final HttpRequest afterUpgradeMessage =
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io");
+        final Promise<Void> promise = channel.newPromise();
+        channel.pipeline().addFirst(new ChannelHandler() {
+            @Override
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
+                if (evt == HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_SUCCESSFUL) {
+                    ctx.writeAndFlush(afterUpgradeMessage).cascadeTo(promise);
+                }
+                ChannelHandler.super.channelInboundEvent(ctx, evt);
+            }
+        });
+
         channel.pipeline().addFirst("upgrade", handler);
 
         assertTrue(
@@ -109,6 +123,10 @@ public class HttpClientUpgradeHandlerTest {
         FullHttpResponse response = channel.readInbound();
         assertEquals(HttpResponseStatus.OK, response.status());
         response.close();
+
+        assertTrue(promise.isSuccess());
+        assertEquals(afterUpgradeMessage, channel.readOutbound());
+
         assertFalse(channel.finish());
     }
 

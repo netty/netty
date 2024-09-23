@@ -103,7 +103,7 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
 
     private final SourceCodec sourceCodec;
     private final UpgradeCodec upgradeCodec;
-    private boolean upgradeRequested;
+    private UpgradeEvent currentUpgradeEvent;
 
     /**
      * Constructs the client upgrade handler.
@@ -123,17 +123,17 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
 
     @Override
     public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
-        if (!(msg instanceof HttpRequest)) {
+        if (!(msg instanceof HttpRequest) || currentUpgradeEvent == UpgradeEvent.UPGRADE_SUCCESSFUL) {
             return ctx.write(msg);
         }
 
-        if (upgradeRequested) {
+        if (currentUpgradeEvent == UpgradeEvent.UPGRADE_ISSUED) {
             Resource.dispose(msg);
             return ctx.newFailedFuture(new IllegalStateException(
                     "Attempting to write HTTP request with upgrade in progress"));
         }
 
-        upgradeRequested = true;
+        currentUpgradeEvent = UpgradeEvent.UPGRADE_ISSUED;
         setUpgradeRequestHeaders(ctx, (HttpRequest) msg);
 
         // Continue writing the request.
@@ -150,7 +150,7 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
             throws Exception {
         FullHttpResponse response = null;
         try {
-            if (!upgradeRequested) {
+            if (currentUpgradeEvent != UpgradeEvent.UPGRADE_ISSUED) {
                 throw new IllegalStateException("Read HTTP response without requesting protocol switch");
             }
 
@@ -161,6 +161,7 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
                     // and continue processing HTTP.
                     // NOTE: not releasing the response since we're letting it propagate to the
                     // next handler.
+                    currentUpgradeEvent = null;
                     ctx.fireChannelInboundEvent(UpgradeEvent.UPGRADE_REJECTED);
                     ctx.fireChannelRead(msg);
                     removeThisHandler(ctx);
@@ -204,6 +205,10 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
             // Upgrade to the new protocol.
             sourceCodec.prepareUpgradeFrom(ctx);
             upgradeCodec.upgradeTo(ctx, response.send());
+
+            // Let's set currentUpgradeEvent to UPGRADE_SUCCESSFUL as we will notify the pipeline about the successful
+            // upgrade now, which might results in a write that needs to be passed through.
+            currentUpgradeEvent = UpgradeEvent.UPGRADE_SUCCESSFUL;
 
             // Notify that the upgrade to the new protocol completed successfully.
             ctx.fireChannelInboundEvent(UpgradeEvent.UPGRADE_SUCCESSFUL);
