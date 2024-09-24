@@ -2049,7 +2049,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void releaseAndFailAll(ChannelHandlerContext ctx, Throwable cause) {
-        if (resumptionController != null) {
+        if (resumptionController != null && (!engine.getSession().isValid() || cause instanceof SSLHandshakeException)) {
             resumptionController.remove(engine());
         }
         if (pendingUnencryptedWrites != null) {

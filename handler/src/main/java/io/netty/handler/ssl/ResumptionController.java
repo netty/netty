@@ -18,9 +18,6 @@ package io.netty.handler.ssl;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
-import io.netty.util.internal.UnstableApi;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.Socket;
 import java.security.cert.Certificate;
@@ -36,16 +33,11 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 
 final class ResumptionController {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResumptionController.class);
     private static final Object ENTRY = new Object();
     private final Map<SSLEngine, Object> confirmedValidations;
     private final AtomicReference<ResumableX509ExtendedTrustManager> resumableTm;
-    private final boolean isClient;
-    private final boolean logResumptionFailure;
 
-    ResumptionController(boolean isClient, boolean logResumptionFailure) {
-        this.isClient = isClient;
-        this.logResumptionFailure = logResumptionFailure;
+    ResumptionController() {
         confirmedValidations = Collections.synchronizedMap(new WeakHashMap<SSLEngine, Object>());
         resumableTm = new AtomicReference<ResumableX509ExtendedTrustManager>();
     }
@@ -60,9 +52,7 @@ final class ResumptionController {
             if (!resumableTm.compareAndSet(null, (ResumableX509ExtendedTrustManager) tm)) {
                 throw new IllegalStateException("Only one TrustManager can be configured for resumed sessions");
             }
-            return new X509ExtendedWrapTrustManager((X509ExtendedTrustManager) tm);
-        } else if (logResumptionFailure) {
-            logger.debug("Not wrapping trust manager {} of type {}", tm, tm != null ? tm.getClass() : null);
+            return new X509ExtendedWrapTrustManager((X509ExtendedTrustManager) tm, confirmedValidations);
         }
         return tm;
     }
@@ -77,20 +67,18 @@ final class ResumptionController {
             throws CertificateException, SSLPeerUnverifiedException {
         ResumableX509ExtendedTrustManager tm;
         boolean valid = engine.getSession().isValid();
-        if ((tm = resumableTm.get()) != null && valid) {
+        if (valid && (tm = resumableTm.get()) != null) {
             Certificate[] peerCertificates = engine.getSession().getPeerCertificates();
             engine = unwrapEngine(engine);
             if (confirmedValidations.remove(engine) == null) {
                 // This is a resumed session.
-                if (isClient) {
+                if (engine.getUseClientMode()) {
                     tm.resumeClientTrusted(chainOf(peerCertificates), engine);
                 } else {
                     tm.resumeServerTrusted(chainOf(peerCertificates), engine);
                 }
                 return true;
             }
-        } else if (logResumptionFailure) {
-            logger.debug("Not resuming session, tm={}, valid={}", tm, valid); // TODO remove this logging
         }
         return false;
     }
@@ -109,20 +97,28 @@ final class ResumptionController {
         }
         X509Certificate[] chain = new X509Certificate[peerCertificates.length];
         for (int i = 0; i < peerCertificates.length; i++) {
-            chain[i] = (X509Certificate) peerCertificates[i];
+            Certificate cert = peerCertificates[i];
+            if (cert instanceof X509Certificate) {
+                chain[i] = (X509Certificate) cert;
+            } else {
+                throw new IllegalArgumentException("Only X509Certificates are supported");
+            }
         }
         return chain;
     }
 
     @SuppressJava6Requirement(reason = "Guarded by version check")
-    private class X509ExtendedWrapTrustManager extends X509ExtendedTrustManager {
+    private static final class X509ExtendedWrapTrustManager extends X509ExtendedTrustManager {
         private final X509ExtendedTrustManager trustManager;
+        private final Map<SSLEngine, Object> confirmedValidations;
 
-        X509ExtendedWrapTrustManager(X509ExtendedTrustManager trustManager) {
+        X509ExtendedWrapTrustManager(X509ExtendedTrustManager trustManager,
+                                     Map<SSLEngine, Object> confirmedValidations) {
             this.trustManager = ObjectUtil.checkNotNull(trustManager, "trustManager");
+            this.confirmedValidations = confirmedValidations;
         }
 
-        private void unsupported() throws CertificateException {
+        private static void unsupported() throws CertificateException {
             throw new CertificateException("Resumable trust managers require the SSLEngine parameter");
         }
 

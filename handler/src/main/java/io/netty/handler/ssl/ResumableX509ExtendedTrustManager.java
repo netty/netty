@@ -16,21 +16,23 @@
 package io.netty.handler.ssl;
 
 import java.security.cert.CertificateException;
+import java.security.cert.PKIXBuilderParameters;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 /**
  * An interface that {@code TrustManager} instances can implement, to be notified of resumed SSL sessions.
  * <p>
- * A {@link javax.net.ssl.TrustManager} is called during the TLS handshake, and make decisions about whether
+ * A {@link TrustManager} is called during the TLS handshake, and make decisions about whether
  * the connected peer can be trusted or not. TLS include a feature where previously established sessions can
  * be resumed without going through the trust verification steps.
  * <p>
  * When an {@link SSLSession} is resumed, any values added to it in the prior session may be lost.
- * This interface gives {@link javax.net.ssl.TrustManager} implementations an opportunity to restore any
+ * This interface gives {@link TrustManager} implementations an opportunity to restore any
  * values they would normally add during the TLS handshake, before the handshake completion is signalled
  * to the application.
  * <p>
@@ -50,7 +52,7 @@ public interface ResumableX509ExtendedTrustManager extends X509TrustManager {
      * and the {@link SSLEngine} being used, restore the application state of the associated
      * SSL session.
      * <p>
-     * This method should obtain the {@link javax.net.ssl.SSLSession} from the {@link SSLEngine#getSession()}
+     * This method should obtain the {@link SSLSession} from the {@link SSLEngine#getSession()}
      * method.
      * <p>
      * <strong>Note:</strong> If this method throws {@link CertificateException}, the TLS handshake will not
@@ -63,7 +65,7 @@ public interface ResumableX509ExtendedTrustManager extends X509TrustManager {
      * <p>
      * The given certificate chain is not guaranteed to be the authenticated chain. Implementations that need the
      * authenticated certificate chain will have to re-authenticate the certificates. It is recommended to do so
-     * with a {@link java.security.cert.PKIXBuilderParameters#setDate(Date)} set to the session creation date from
+     * with a {@link PKIXBuilderParameters#setDate(Date)} set to the session creation date from
      * {@link SSLSession#getCreationTime()}. Otherwise, the authentication may fail due to the certificate expiring
      * before the session ticket.
      *
@@ -78,7 +80,7 @@ public interface ResumableX509ExtendedTrustManager extends X509TrustManager {
      * Given the partial or complete certificate chain recovered of the peer, and the {@link SSLEngine}
      * being used, restore the application state of the associated SSL session.
      * <p>
-     * This method should obtain the {@link javax.net.ssl.SSLSession} from the {@link SSLEngine#getSession()}
+     * This method should obtain the {@link SSLSession} from the {@link SSLEngine#getSession()}
      * method.
      * <p>
      * <strong>Note:</strong> If this method throws {@link CertificateException}, the TLS handshake will not
@@ -91,7 +93,7 @@ public interface ResumableX509ExtendedTrustManager extends X509TrustManager {
      * <p>
      * The given certificate chain is not guaranteed to be the authenticated chain. Implementations that need the
      * authenticated certificate chain will have to re-authenticate the certificates. It is recommended to do so
-     * with a {@link java.security.cert.PKIXBuilderParameters#setDate(Date)} set to the session creation date from
+     * with a {@link PKIXBuilderParameters#setDate(Date)} set to the session creation date from
      * {@link SSLSession#getCreationTime()}. Otherwise, the authentication may fail due to the certificate expiring
      * before the session ticket.
      *
