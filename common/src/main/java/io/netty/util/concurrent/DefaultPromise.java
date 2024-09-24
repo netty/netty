@@ -106,58 +106,6 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return setSuccess0(result);
     }
 
-    /**
-     * Atomically complete this promise (if it isn't already) and run the given action,
-     * before notifying promise listeners.
-     * <p>
-     * If this promise has already been completed, then the given action is <em>not</em> executed.
-     * <p>
-     * If the given action is {@code null}, then this method behaves just like {@link #trySuccess(Object)}.
-     *
-     * @param result The proposed successful result.
-     * @param action The action that, if the promise was successfully completed,
-     * needs to run before the promise listeners.
-     * @return {@code true} if and only if successfully marked this future as a success.
-     * Otherwise {@code false} because this future is already marked as either a success or a failure.
-     */
-    public boolean trySuccessAndNotify(V result, Runnable action) { // TODO remove this or trySuccessWithLease
-        if (action == null) {
-            return trySuccess(result);
-        }
-        if (isDone()) {
-            return false;
-        }
-
-        Object value = result == null ? SUCCESS : result;
-        synchronized (this) {
-            if (RESULT_UPDATER.compareAndSet(this, null, value) ||
-                    RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, value)) {
-                try {
-                    action.run();
-                } finally {
-                    if (checkNotifyWaiters()) {
-                        notifyListeners();
-                    }
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public Runnable trySuccessWithLease(V result) { // TODO remove this or trySuccessAndNotify
-        if (isDone() || this.result instanceof Lease) {
-            return null;
-        }
-        Object value = result == null ? SUCCESS : result;
-        Lease lease = new Lease(this, value);
-        if (RESULT_UPDATER.compareAndSet(this, null, value) ||
-                RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, value)) {
-            return lease;
-        }
-        return null;
-    }
-
     @Override
     public Promise<V> setFailure(Throwable cause) {
         if (setFailure0(cause)) {

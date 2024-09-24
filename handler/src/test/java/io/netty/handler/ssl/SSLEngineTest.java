@@ -156,8 +156,8 @@ public abstract class SSLEngineTest {
     protected MessageReceiver serverReceiver;
     protected MessageReceiver clientReceiver;
 
-    protected Throwable serverException;
-    protected Throwable clientException;
+    protected volatile Throwable serverException;
+    protected volatile Throwable clientException;
     protected SslContext serverSslCtx;
     protected SslContext clientSslCtx;
     protected ServerBootstrap sb;
@@ -167,6 +167,8 @@ public abstract class SSLEngineTest {
     protected Channel clientChannel;
     protected CountDownLatch serverLatch;
     protected CountDownLatch clientLatch;
+    protected volatile Future<Channel> serverSslHandshakeFuture;
+    protected volatile Future<Channel> clientSslHandshakeFuture;
 
     static final class MessageReceiver {
         final BlockingQueue<ByteBuf> messages = new LinkedBlockingQueue<ByteBuf>();
@@ -1904,6 +1906,7 @@ public abstract class SSLEngineTest {
                 SslHandler sslHandler = !delegate ?
                         serverSslCtx.newHandler(ch.alloc()) :
                         serverSslCtx.newHandler(ch.alloc(), delegatingExecutor);
+                serverSslHandshakeFuture = sslHandler.handshakeFuture();
                 p.addLast(sslHandler);
                 p.addLast(new MessageDelegatorChannelHandler(serverReceiver, serverLatch));
                 p.addLast(new ChannelInboundHandlerAdapter() {
@@ -1944,6 +1947,7 @@ public abstract class SSLEngineTest {
                     sslHandler = host != null ? clientSslCtx.newHandler(alloc, host, port, delegatingExecutor) :
                             clientSslCtx.newHandler(alloc, delegatingExecutor);
                 }
+                clientSslHandshakeFuture = sslHandler.handshakeFuture();
 
                 p.addLast(sslHandler);
                 p.addLast(new MessageDelegatorChannelHandler(clientReceiver, clientLatch));
@@ -3837,26 +3841,12 @@ public abstract class SSLEngineTest {
     @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     @MethodSource("newTestParams")
     @ParameterizedTest
-    public void testSessionResumableTrustManager(SSLEngineTestParam param) throws Exception {
+    public void mustCallResumeTrustedOnSessionResumption(SSLEngineTestParam param) throws Exception {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         SessionValueSettingTrustManager clientTm = new SessionValueSettingTrustManager("key", "client");
         SessionValueSettingTrustManager serverTm = new SessionValueSettingTrustManager("key", "server");
-        clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
-                .keyManager(ssc.key(), ssc.cert())
-                .trustManager(clientTm)
-                .sslProvider(sslClientProvider())
-                .sslContextProvider(clientSslContextProvider())
-                .protocols(param.protocols())
-                .ciphers(param.ciphers())
-                .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .trustManager(serverTm)
-                .sslProvider(sslServerProvider())
-                .sslContextProvider(serverSslContextProvider())
-                .protocols(param.protocols())
-                .ciphers(param.ciphers())
-                .clientAuth(ClientAuth.REQUIRE)
-                .build());
+        buildClientSslContextForMTLS(param, ssc, clientTm);
+        buildServerSslContextForMTLS(param, ssc, serverTm);
         final BlockingQueue<String> clientSessionValues = new LinkedBlockingQueue<String>();
         final BlockingQueue<String> serverSessionValues = new LinkedBlockingQueue<String>();
         OnNextMessage checkClient = new OnNextMessage() {
@@ -3908,12 +3898,126 @@ public abstract class SSLEngineTest {
         assertTrue(serverSessionValues.isEmpty());
     }
 
-    private final class SessionValueSettingTrustManager extends EmptyExtendedX509TrustManager
+    @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    void mustFailHandshakePromiseIfResumeClientTrustedThrows(SSLEngineTestParam param) throws Exception {
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
+        SessionValueSettingTrustManager clientTm = new SessionValueSettingTrustManager("key", "client") {
+            @Override
+            public void resumeClientTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
+                    throws CertificateException {
+                throw new CertificateException("Test exception");
+            }
+        };
+        SessionValueSettingTrustManager serverTm = new SessionValueSettingTrustManager("key", "server");
+        buildClientSslContextForMTLS(param, ssc, clientTm);
+        buildServerSslContextForMTLS(param, ssc, serverTm);
+        OnNextMessage checkServer = new OnNextMessage() {
+            @Override
+            public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+                ctx.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE);
+            }
+        };
+
+        setupServer(param.type(), param.delegate());
+        InetSocketAddress addr = (InetSocketAddress) serverChannel.localAddress();
+        setupClient(param.type(), param.delegate(), "a.netty.io", addr.getPort());
+        Future<Channel> handshakeFuture = null;
+
+        while (clientException == null) {
+            serverReceiver.onNextMessages.offer(checkServer);
+            ChannelFuture ccf = cb.connect(addr);
+            assertTrue(ccf.syncUninterruptibly().isSuccess());
+            clientChannel = ccf.channel();
+
+            clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeInt(42)).sync();
+            clientChannel.closeFuture().sync();
+            handshakeFuture = clientSslHandshakeFuture;
+        }
+
+        assertEquals("Test exception", clientException.getMessage());
+        assertNotNull(handshakeFuture);
+        assertTrue(handshakeFuture.isDone());
+        assertFalse(handshakeFuture.isSuccess());
+        assertEquals("Test exception", handshakeFuture.cause().getMessage());
+    }
+
+    @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    void mustFailHandshakePromiseIfResumeServerTrustedThrows(SSLEngineTestParam param) throws Exception {
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
+        SessionValueSettingTrustManager clientTm = new SessionValueSettingTrustManager("key", "client");
+        SessionValueSettingTrustManager serverTm = new SessionValueSettingTrustManager("key", "server") {
+            @Override
+            public void resumeServerTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
+                    throws CertificateException {
+                throw new CertificateException("Test exception");
+            }
+        };
+        buildClientSslContextForMTLS(param, ssc, clientTm);
+        buildServerSslContextForMTLS(param, ssc, serverTm);
+        OnNextMessage checkServer = new OnNextMessage() {
+            @Override
+            public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+                ctx.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE);
+            }
+        };
+
+        setupServer(param.type(), param.delegate());
+        InetSocketAddress addr = (InetSocketAddress) serverChannel.localAddress();
+        setupClient(param.type(), param.delegate(), "a.netty.io", addr.getPort());
+        Future<Channel> handshakeFuture = null;
+
+        while (serverException == null) {
+            serverReceiver.onNextMessages.offer(checkServer);
+            ChannelFuture ccf = cb.connect(addr);
+            assertTrue(ccf.syncUninterruptibly().isSuccess());
+            clientChannel = ccf.channel();
+
+            clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeInt(42)).sync();
+            clientChannel.closeFuture().sync();
+            handshakeFuture = serverSslHandshakeFuture;
+        }
+
+        assertEquals("Test exception", serverException.getMessage());
+        assertNotNull(handshakeFuture);
+        assertTrue(handshakeFuture.isDone());
+        assertFalse(handshakeFuture.isSuccess());
+        assertEquals("Test exception", handshakeFuture.cause().getMessage());
+    }
+
+    private void buildClientSslContextForMTLS(
+            SSLEngineTestParam param, SelfSignedCertificate ssc, TrustManager clientTm) throws SSLException {
+        clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
+                .keyManager(ssc.key(), ssc.cert())
+                .trustManager(clientTm)
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .build());
+    }
+
+    private void buildServerSslContextForMTLS(
+            SSLEngineTestParam param, SelfSignedCertificate ssc, TrustManager serverTm) throws SSLException {
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .trustManager(serverTm)
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .clientAuth(ClientAuth.REQUIRE)
+                .build());
+    }
+
+    private class SessionValueSettingTrustManager extends EmptyExtendedX509TrustManager
             implements ResumableX509ExtendedTrustManager {
         private final String key;
         private final String value;
 
-        private SessionValueSettingTrustManager(String key, String value) {
+        SessionValueSettingTrustManager(String key, String value) {
             this.key = key;
             this.value = value;
         }

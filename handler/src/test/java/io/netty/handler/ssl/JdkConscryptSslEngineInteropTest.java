@@ -113,7 +113,7 @@ public class JdkConscryptSslEngineInteropTest extends SSLEngineTest {
 
     @Disabled("Disabled due a conscrypt bug")
     @Override
-    public void testSessionResumableTrustManager(SSLEngineTestParam param) throws Exception {
-        super.testSessionResumableTrustManager(param);
+    public void mustCallResumeTrustedOnSessionResumption(SSLEngineTestParam param) throws Exception {
+        super.mustCallResumeTrustedOnSessionResumption(param);
     }
 }

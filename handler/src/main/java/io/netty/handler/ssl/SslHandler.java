@@ -1960,24 +1960,20 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // wrapNonAppData may drain pendingUnencryptedWrites in wrap which transitions to handshake from FINISHED to
         // NOT_HANDSHAKING which invokes setHandshakeSuccess, and then wrapNonAppData also directly invokes this method.
         final SSLSession session = engine.getSession();
-        Runnable lease = null;
-        final boolean notified;
-        if (notified = !handshakePromise.isDone() &&
-                (lease = ((DefaultPromise<Channel>) handshakePromise).trySuccessWithLease(ctx.channel())) != null) {
+        if (resumptionController != null && !handshakePromise.isDone()) {
             try {
-                if (resumptionController != null) {
-                    try {
-                        if (resumptionController.validateResumeIfNeeded(engine) && logger.isDebugEnabled()) {
-                            logger.debug("{} Resumed and reauthenticated session (handshake_done={})", ctx.channel(),
-                                    handshakePromise.isDone());
-                        }
-                    } catch (CertificateException e) {
-                        throw new SSLException(e);
-                    }
+                if (resumptionController.validateResumeIfNeeded(engine) && logger.isDebugEnabled()) {
+                    logger.debug("{} Resumed and reauthenticated session (handshake_done={})", ctx.channel(),
+                            handshakePromise.isDone());
                 }
-            } finally {
-                lease.run();
+            } catch (CertificateException e) {
+                SSLHandshakeException exception = new SSLHandshakeException(e.getMessage());
+                exception.initCause(e);
+                throw exception;
             }
+        }
+        final boolean notified;
+        if (notified = !handshakePromise.isDone() && handshakePromise.trySuccess(ctx.channel())) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
                         "{} HANDSHAKEN: protocol:{} cipher suite:{}",
