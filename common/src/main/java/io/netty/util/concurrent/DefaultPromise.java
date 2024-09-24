@@ -16,6 +16,7 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -103,6 +104,58 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     @Override
     public boolean trySuccess(V result) {
         return setSuccess0(result);
+    }
+
+    /**
+     * Atomically complete this promise (if it isn't already) and run the given action,
+     * before notifying promise listeners.
+     * <p>
+     * If this promise has already been completed, then the given action is <em>not</em> executed.
+     * <p>
+     * If the given action is {@code null}, then this method behaves just like {@link #trySuccess(Object)}.
+     *
+     * @param result The proposed successful result.
+     * @param action The action that, if the promise was successfully completed,
+     * needs to run before the promise listeners.
+     * @return {@code true} if and only if successfully marked this future as a success.
+     * Otherwise {@code false} because this future is already marked as either a success or a failure.
+     */
+    public boolean trySuccessAndNotify(V result, Runnable action) { // TODO remove this or trySuccessWithLease
+        if (action == null) {
+            return trySuccess(result);
+        }
+        if (isDone()) {
+            return false;
+        }
+
+        Object value = result == null ? SUCCESS : result;
+        synchronized (this) {
+            if (RESULT_UPDATER.compareAndSet(this, null, value) ||
+                    RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, value)) {
+                try {
+                    action.run();
+                } finally {
+                    if (checkNotifyWaiters()) {
+                        notifyListeners();
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public Runnable trySuccessWithLease(V result) { // TODO remove this or trySuccessAndNotify
+        if (isDone() || this.result instanceof Lease) {
+            return null;
+        }
+        Object value = result == null ? SUCCESS : result;
+        Lease lease = new Lease(this, value);
+        if (RESULT_UPDATER.compareAndSet(this, null, value) ||
+                RESULT_UPDATER.compareAndSet(this, UNCANCELLABLE, value)) {
+            return lease;
+        }
+        return null;
     }
 
     @Override
@@ -324,7 +377,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     @Override
     public V getNow() {
         Object result = this.result;
-        if (result instanceof CauseHolder || result == SUCCESS || result == UNCANCELLABLE) {
+        if (result instanceof CauseHolder || result == SUCCESS || result == UNCANCELLABLE || result instanceof Lease) {
             return null;
         }
         return (V) result;
@@ -338,7 +391,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             await();
             result = this.result;
         }
-        if (result == SUCCESS || result == UNCANCELLABLE) {
+        if (result == SUCCESS || result == UNCANCELLABLE || result instanceof Lease) {
             return null;
         }
         Throwable cause = cause0(result);
@@ -847,13 +900,31 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private static boolean isDone0(Object result) {
-        return result != null && result != UNCANCELLABLE;
+        return result != null && result != UNCANCELLABLE && !(result instanceof Lease);
     }
 
     private static final class CauseHolder {
         final Throwable cause;
         CauseHolder(Throwable cause) {
             this.cause = cause;
+        }
+    }
+
+    private static final class Lease implements Runnable {
+        private final DefaultPromise<?> promise;
+        private final Object value;
+
+        private Lease(DefaultPromise<?> promise, Object value) {
+            this.promise = promise;
+            this.value = value;
+        }
+
+        @Override
+        public void run() {
+            RESULT_UPDATER.set(promise, value);
+            if (promise.checkNotifyWaiters()) {
+                promise.notifyListeners();
+            }
         }
     }
 
