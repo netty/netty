@@ -152,6 +152,7 @@ jobs:
           name: ${{ matrix.setup }}-local-staging
           path: ~/local-staging
           if-no-files-found: error
+          include-hidden-files: true
 
       - name: Rollback release on failure
         working-directory: ./prepare-release-workspace/
