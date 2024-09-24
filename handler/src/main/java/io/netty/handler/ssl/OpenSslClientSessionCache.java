@@ -99,7 +99,7 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
                     if (toBeRemoved == null) {
                         toBeRemoved = new ArrayList<NativeSslSession>(2);
                     }
-                    toBeRemoved.add(nativeSslSession);
+                    toBeRemoved.add(sslSession);
                 }
             }
 
