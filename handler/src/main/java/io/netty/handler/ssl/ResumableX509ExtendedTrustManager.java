@@ -17,7 +17,9 @@ package io.netty.handler.ssl;
 
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509TrustManager;
 
 /**
@@ -27,20 +29,20 @@ import javax.net.ssl.X509TrustManager;
  * the connected peer can be trusted or not. TLS include a feature where previously established sessions can
  * be resumed without going through the trust verification steps.
  * <p>
- * However, some trust manager implementations also extract identity information and store it in the
- * {@link javax.net.ssl.SSLSession} for use by the application. When a session is resumed,
- * the {@code TrustManager} is not called, and the session map is empty, leading to confusion and errors in
- * applications that don't expected this behavior.
+ * When an {@link SSLSession} is resumed, any values added to it in the prior session may be lost.
+ * This interface gives {@link javax.net.ssl.TrustManager} implementations an opportunity to restore any
+ * values they would normally add during the TLS handshake, before the handshake completion is signalled
+ * to the application.
  * <p>
- * The trust manager implementation can fix this by implementing this interface. When a session is resumed,
- * the {@link SslHandler} will call the relevant {@code resume*} method, before completing the handshake
- * promise and sending the {@link SslHandshakeCompletionEvent#SUCCESS} event down the pipeline.
+ * When a session is resumed, the {@link SslHandler} will call the relevant {@code resume*} method,
+ * before completing the handshake promise and sending the {@link SslHandshakeCompletionEvent#SUCCESS}
+ * event down the pipeline.
  * <p>
  * A trust manager that does not add values to the handshake session in its {@code check*} methods,
  * will typically not have any need to implement this interface.
  * <p>
- * The implementing trust manager class must extend {@code X509ExtendedTrustManager}, otherwise this interface
- * will be ignored by the {@link SslHandler}.
+ * <strong>Note:</strong> The implementing trust manager class must extend {@code X509ExtendedTrustManager},
+ * otherwise this interface will be ignored by the {@link SslHandler}.
  */
 public interface ResumableX509ExtendedTrustManager extends X509TrustManager {
     /**
@@ -50,10 +52,25 @@ public interface ResumableX509ExtendedTrustManager extends X509TrustManager {
      * <p>
      * This method should obtain the {@link javax.net.ssl.SSLSession} from the {@link SSLEngine#getSession()}
      * method.
+     * <p>
+     * <strong>Note:</strong> If this method throws {@link CertificateException}, the TLS handshake will not
+     * necessarily be rejected. The TLS handshake "Finished" message may have already been sent to the peer
+     * by the time this method is called.
+     * <p>
+     * Implementors should be aware, that peers may make multiple connection attempts using the same session
+     * key. So this method may be called more than once for the same client, even if prior calls have thrown
+     * exceptions or invalidated their sessions.
+     * <p>
+     * The given certificate chain is not guaranteed to be the authenticated chain. Implementations that need the
+     * authenticated certificate chain will have to re-authenticate the certificates. It is recommended to do so
+     * with a {@link java.security.cert.PKIXBuilderParameters#setDate(Date)} set to the session creation date from
+     * {@link SSLSession#getCreationTime()}. Otherwise, the authentication may fail due to the certificate expiring
+     * before the session ticket.
      *
      * @param chain The peer certificate chain.
      * @param engine The begine used for this connection.
-     * @throws CertificateException If the certificate chain is no longer trusted.
+     * @throws CertificateException If the session cannot be restored. Locally, the handshake will appear to have
+     * failed, but the peer may have observed a finished handshake.
      */
     void resumeClientTrusted(X509Certificate[] chain, SSLEngine engine) throws CertificateException;
 
@@ -63,10 +80,25 @@ public interface ResumableX509ExtendedTrustManager extends X509TrustManager {
      * <p>
      * This method should obtain the {@link javax.net.ssl.SSLSession} from the {@link SSLEngine#getSession()}
      * method.
+     * <p>
+     * <strong>Note:</strong> If this method throws {@link CertificateException}, the TLS handshake will not
+     * necessarily be rejected. The TLS handshake "Finished" message may have already been sent to the peer
+     * by the time this method is called.
+     * <p>
+     * Implementors should be aware, that peers may make multiple connection attempts using the same session
+     * key. So this method may be called more than once for the same client, even if prior calls have thrown
+     * exceptions or invalidated their sessions.
+     * <p>
+     * The given certificate chain is not guaranteed to be the authenticated chain. Implementations that need the
+     * authenticated certificate chain will have to re-authenticate the certificates. It is recommended to do so
+     * with a {@link java.security.cert.PKIXBuilderParameters#setDate(Date)} set to the session creation date from
+     * {@link SSLSession#getCreationTime()}. Otherwise, the authentication may fail due to the certificate expiring
+     * before the session ticket.
      *
      * @param chain The peer certificate chain.
      * @param engine The begine used for this connection.
-     * @throws CertificateException If the certificate chain is no longer trusted.
+     * @throws CertificateException If the session cannot be restored. Locally, the handshake will appear to have
+     * failed, but the peer may have observed a finished handshake.
      */
     void resumeServerTrusted(X509Certificate[] chain, SSLEngine engine) throws CertificateException;
 }
