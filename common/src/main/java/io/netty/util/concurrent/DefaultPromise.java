@@ -16,7 +16,6 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -325,7 +324,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     @Override
     public V getNow() {
         Object result = this.result;
-        if (result instanceof CauseHolder || result == SUCCESS || result == UNCANCELLABLE || result instanceof Lease) {
+        if (result instanceof CauseHolder || result == SUCCESS || result == UNCANCELLABLE) {
             return null;
         }
         return (V) result;
@@ -339,7 +338,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             await();
             result = this.result;
         }
-        if (result == SUCCESS || result == UNCANCELLABLE || result instanceof Lease) {
+        if (result == SUCCESS || result == UNCANCELLABLE) {
             return null;
         }
         Throwable cause = cause0(result);
@@ -848,31 +847,13 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     private static boolean isDone0(Object result) {
-        return result != null && result != UNCANCELLABLE && !(result instanceof Lease);
+        return result != null && result != UNCANCELLABLE;
     }
 
     private static final class CauseHolder {
         final Throwable cause;
         CauseHolder(Throwable cause) {
             this.cause = cause;
-        }
-    }
-
-    private static final class Lease implements Runnable {
-        private final DefaultPromise<?> promise;
-        private final Object value;
-
-        private Lease(DefaultPromise<?> promise, Object value) {
-            this.promise = promise;
-            this.value = value;
-        }
-
-        @Override
-        public void run() {
-            RESULT_UPDATER.set(promise, value);
-            if (promise.checkNotifyWaiters()) {
-                promise.notifyListeners();
-            }
         }
     }
 
