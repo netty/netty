@@ -101,7 +101,8 @@ final class ResumptionController {
             if (cert instanceof X509Certificate) {
                 chain[i] = (X509Certificate) cert;
             } else {
-                throw new IllegalArgumentException("Only X509Certificates are supported");
+                throw new IllegalArgumentException("Only X509Certificates are supported, found: " +
+                        (cert == null ? null : cert.getClass()));
             }
         }
         return chain;
