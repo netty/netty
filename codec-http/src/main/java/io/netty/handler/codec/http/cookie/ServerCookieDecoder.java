@@ -45,7 +45,7 @@ public final class ServerCookieDecoder extends CookieDecoder {
     private static final String RFC2965_PORT = "$Port";
 
     /**
-     * Strict encoder that validates that name and value chars are in the valid scope
+     * Strict decoder that validates that name and value chars are in the valid scope
      * defined in RFC6265
      */
     public static final ServerCookieDecoder STRICT = new ServerCookieDecoder(true);
