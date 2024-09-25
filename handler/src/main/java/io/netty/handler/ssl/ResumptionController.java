@@ -73,9 +73,11 @@ final class ResumptionController {
             if (confirmedValidations.remove(engine) == null) {
                 // This is a resumed session.
                 if (engine.getUseClientMode()) {
-                    tm.resumeClientTrusted(chainOf(peerCertificates), engine);
-                } else {
+                    // We are the client, resuming a session trusting the server
                     tm.resumeServerTrusted(chainOf(peerCertificates), engine);
+                } else {
+                    // We are the server, resuming a session trusting the client
+                    tm.resumeClientTrusted(chainOf(peerCertificates), engine);
                 }
                 return true;
             }

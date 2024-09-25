@@ -276,7 +276,7 @@ public final class JdkSslClientContext extends JdkSslContext {
                             keyCertChain, key, keyPassword, keyManagerFactory, sessionCacheSize,
                             sessionTimeout, secureRandom, keyStoreType, resumptionController),
                 true, ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE, protocols, false,
-                endpointIdentificationAlgorithm);
+                endpointIdentificationAlgorithm, resumptionController);
     }
 
     private static SSLContext newSSLContext(Provider sslContextProvider,

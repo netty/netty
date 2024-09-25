@@ -305,7 +305,8 @@ public final class JdkSslServerContext extends JdkSslContext {
         super(newSSLContext(provider, trustCertCollection, trustManagerFactory, keyCertChain, key,
                         keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, secureRandom, keyStore,
                         resumptionController),
-                false, ciphers, cipherFilter, toNegotiator(apn, true), clientAuth, protocols, startTls);
+                false, ciphers, cipherFilter, toNegotiator(apn, true), clientAuth, protocols, startTls, null,
+                resumptionController);
     }
 
     private static SSLContext newSSLContext(Provider sslContextProvider, X509Certificate[] trustCertCollection,

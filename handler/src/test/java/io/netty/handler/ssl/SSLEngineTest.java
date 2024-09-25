@@ -3905,7 +3905,7 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         SessionValueSettingTrustManager clientTm = new SessionValueSettingTrustManager("key", "client") {
             @Override
-            public void resumeClientTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
+            public void resumeServerTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
                     throws CertificateException {
                 throw new CertificateException("Test exception");
             }
@@ -3951,7 +3951,7 @@ public abstract class SSLEngineTest {
         SessionValueSettingTrustManager clientTm = new SessionValueSettingTrustManager("key", "client");
         SessionValueSettingTrustManager serverTm = new SessionValueSettingTrustManager("key", "server") {
             @Override
-            public void resumeServerTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
+            public void resumeClientTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
                     throws CertificateException {
                 throw new CertificateException("Test exception");
             }
