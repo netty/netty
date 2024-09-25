@@ -98,6 +98,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.crypto.SecretKey;
 import javax.net.ssl.ExtendedSSLSession;
@@ -151,6 +152,12 @@ public abstract class SSLEngineTest {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SSLEngineTest.class);
 
     private static final String PRINCIPAL_NAME = "CN=e8ac02fa0d65a84219016045db8b05c485b4ecdf.netty.test";
+
+    private static final Runnable NOOP = new Runnable() {
+        @Override
+        public void run() { }
+    };
+
     private final boolean tlsv13Supported;
 
     protected MessageReceiver serverReceiver;
@@ -3901,9 +3908,18 @@ public abstract class SSLEngineTest {
     @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     @MethodSource("newTestParams")
     @ParameterizedTest
-    void mustFailHandshakePromiseIfResumeClientTrustedThrows(SSLEngineTestParam param) throws Exception {
+    void mustFailHandshakePromiseIfResumeServerTrustedThrows(SSLEngineTestParam param) throws Exception {
+        final AtomicInteger checkServerTrustedCount = new AtomicInteger();
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         SessionValueSettingTrustManager clientTm = new SessionValueSettingTrustManager("key", "client") {
+            @Override
+            public void checkServerTrusted(
+                    java.security.cert.X509Certificate[] chain, String authType, SSLEngine engine)
+                    throws CertificateException {
+                checkServerTrustedCount.incrementAndGet();
+                super.checkServerTrusted(chain, authType, engine);
+            }
+
             @Override
             public void resumeServerTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
                     throws CertificateException {
@@ -3925,7 +3941,7 @@ public abstract class SSLEngineTest {
         setupClient(param.type(), param.delegate(), "a.netty.io", addr.getPort());
         Future<Channel> handshakeFuture = null;
 
-        while (clientException == null) {
+        for (int i = 0; i < 2; i++) {
             serverReceiver.onNextMessages.offer(checkServer);
             ChannelFuture ccf = cb.connect(addr);
             assertTrue(ccf.syncUninterruptibly().isSuccess());
@@ -3936,20 +3952,35 @@ public abstract class SSLEngineTest {
             handshakeFuture = clientSslHandshakeFuture;
         }
 
-        assertEquals("Test exception", clientException.getMessage());
-        assertNotNull(handshakeFuture);
-        assertTrue(handshakeFuture.isDone());
-        assertFalse(handshakeFuture.isSuccess());
-        assertEquals("Test exception", handshakeFuture.cause().getMessage());
+        int checkServerTrustedCalls = checkServerTrustedCount.get();
+        if (checkServerTrustedCalls == 1) {
+            clientChannel.eventLoop().submit(NOOP).await(); // Wait for exception to propagate.
+            assertEquals("Test exception", clientException.getMessage());
+            assertNotNull(handshakeFuture);
+            assertTrue(handshakeFuture.isDone());
+            assertFalse(handshakeFuture.isSuccess());
+            assertEquals("Test exception", handshakeFuture.cause().getMessage());
+        } else {
+            assertEquals(2, checkServerTrustedCalls);
+        }
     }
 
     @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     @MethodSource("newTestParams")
     @ParameterizedTest
-    void mustFailHandshakePromiseIfResumeServerTrustedThrows(SSLEngineTestParam param) throws Exception {
+    void mustFailHandshakePromiseIfResumeClientTrustedThrows(SSLEngineTestParam param) throws Exception {
+        final AtomicInteger checkClientTrustedCount = new AtomicInteger();
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         SessionValueSettingTrustManager clientTm = new SessionValueSettingTrustManager("key", "client");
         SessionValueSettingTrustManager serverTm = new SessionValueSettingTrustManager("key", "server") {
+            @Override
+            public void checkClientTrusted(
+                    java.security.cert.X509Certificate[] chain, String authType, SSLEngine engine)
+                    throws CertificateException {
+                checkClientTrustedCount.incrementAndGet();
+                super.checkClientTrusted(chain, authType, engine);
+            }
+
             @Override
             public void resumeClientTrusted(java.security.cert.X509Certificate[] chain, SSLEngine engine)
                     throws CertificateException {
@@ -3970,7 +4001,7 @@ public abstract class SSLEngineTest {
         setupClient(param.type(), param.delegate(), "a.netty.io", addr.getPort());
         Future<Channel> handshakeFuture = null;
 
-        while (serverException == null) {
+        for (int i = 0; i < 2; i++) {
             serverReceiver.onNextMessages.offer(checkServer);
             ChannelFuture ccf = cb.connect(addr);
             assertTrue(ccf.syncUninterruptibly().isSuccess());
@@ -3981,11 +4012,17 @@ public abstract class SSLEngineTest {
             handshakeFuture = serverSslHandshakeFuture;
         }
 
-        assertEquals("Test exception", serverException.getMessage());
-        assertNotNull(handshakeFuture);
-        assertTrue(handshakeFuture.isDone());
-        assertFalse(handshakeFuture.isSuccess());
-        assertEquals("Test exception", handshakeFuture.cause().getMessage());
+        int checkClientTrustedCalls = checkClientTrustedCount.get();
+        if (checkClientTrustedCalls == 1) {
+            serverChannel.eventLoop().submit(NOOP).await(); // Wait for exception to propagate.
+            assertEquals("Test exception", serverException.getMessage());
+            assertNotNull(handshakeFuture);
+            assertTrue(handshakeFuture.isDone());
+            assertFalse(handshakeFuture.isSuccess());
+            assertEquals("Test exception", handshakeFuture.cause().getMessage());
+        } else {
+            assertEquals(2, checkClientTrustedCalls);
+        }
     }
 
     private void buildClientSslContextForMTLS(
