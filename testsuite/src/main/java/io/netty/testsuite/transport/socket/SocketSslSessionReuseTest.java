@@ -98,8 +98,8 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
     @ParameterizedTest(name = "{index}: serverEngine = {0}, clientEngine = {1}")
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testSslSessionReuse(final SslContextBuilder serverCtx, final SslContextBuilder clientCtx, TestInfo testInfo)
-            throws Throwable {
+    public void testSslSessionReuse(
+            final SslContextBuilder serverCtx, final SslContextBuilder clientCtx, TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
             public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
@@ -318,7 +318,8 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         }
 
         @Override
-        public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine) throws CertificateException {
+        public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+                throws CertificateException {
             engine.getHandshakeSession().putValue("key", "value");
         }
 
@@ -328,17 +329,20 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         }
 
         @Override
-        public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine) throws CertificateException {
+        public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+                throws CertificateException {
             throw new CertificateException("Unsupported operation");
         }
 
         @Override
-        public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket) throws CertificateException {
+        public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket)
+                throws CertificateException {
             throw new CertificateException("Unsupported operation");
         }
 
         @Override
-        public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket) throws CertificateException {
+        public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket)
+                throws CertificateException {
             throw new CertificateException("Unsupported operation");
         }
 
