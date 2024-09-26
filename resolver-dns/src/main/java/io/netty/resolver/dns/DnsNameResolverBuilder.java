@@ -29,6 +29,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,6 +44,7 @@ import static io.netty.util.internal.ObjectUtil.intValue;
 public final class DnsNameResolverBuilder {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsNameResolverBuilder.class);
+    static final SocketAddress DEFAULT_LOCAL_ADDRESS = new InetSocketAddress(0);
 
     volatile EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
@@ -52,7 +54,7 @@ public final class DnsNameResolverBuilder {
     private DnsCache resolveCache;
     private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
-    private SocketAddress localAddress;
+    private SocketAddress localAddress = DEFAULT_LOCAL_ADDRESS;
     private Integer minTtl;
     private Integer maxTtl;
     private Integer negativeTtl;
