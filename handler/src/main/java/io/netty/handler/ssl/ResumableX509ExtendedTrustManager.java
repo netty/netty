@@ -60,7 +60,7 @@ public interface ResumableX509ExtendedTrustManager extends X509TrustManager {
      * by the time this method is called.
      * <p>
      * Implementors should be aware, that peers may make multiple connection attempts using the same session
-     * key. So this method may be called more than once for the same client, even if prior calls have thrown
+     * ticket. So this method may be called more than once for the same client, even if prior calls have thrown
      * exceptions or invalidated their sessions.
      * <p>
      * The given certificate chain is not guaranteed to be the authenticated chain. Implementations that need the
@@ -68,6 +68,8 @@ public interface ResumableX509ExtendedTrustManager extends X509TrustManager {
      * with a {@link PKIXBuilderParameters#setDate(Date)} set to the session creation date from
      * {@link SSLSession#getCreationTime()}. Otherwise, the authentication may fail due to the certificate expiring
      * before the session ticket.
+     * <p>
+     * This method is called on the server-side, restoring sessions for clients.
      *
      * @param chain The peer certificate chain.
      * @param engine The begine used for this connection.
@@ -88,7 +90,7 @@ public interface ResumableX509ExtendedTrustManager extends X509TrustManager {
      * by the time this method is called.
      * <p>
      * Implementors should be aware, that peers may make multiple connection attempts using the same session
-     * key. So this method may be called more than once for the same client, even if prior calls have thrown
+     * ticket. So this method may be called more than once for the same client, even if prior calls have thrown
      * exceptions or invalidated their sessions.
      * <p>
      * The given certificate chain is not guaranteed to be the authenticated chain. Implementations that need the
@@ -96,6 +98,8 @@ public interface ResumableX509ExtendedTrustManager extends X509TrustManager {
      * with a {@link PKIXBuilderParameters#setDate(Date)} set to the session creation date from
      * {@link SSLSession#getCreationTime()}. Otherwise, the authentication may fail due to the certificate expiring
      * before the session ticket.
+     * <p>
+     * This method is called on the client-side, restoring sessions for servers.
      *
      * @param chain The peer certificate chain.
      * @param engine The begine used for this connection.
