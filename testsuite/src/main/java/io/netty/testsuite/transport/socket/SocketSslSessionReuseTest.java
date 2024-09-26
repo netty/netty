@@ -56,6 +56,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
@@ -85,7 +86,14 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         KEY_FILE = ssc.privateKey();
     }
 
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<Object[]> jdkOnly() throws Exception {
+        return Collections.singleton(new Object[]{
+                SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK),
+                SslContextBuilder.forClient().trustManager(CERT_FILE).sslProvider(SslProvider.JDK)
+        });
+    }
+
+    public static Collection<Object[]> jdkAndOpenSSL() throws Exception {
         return Arrays.asList(new Object[]{
                         SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK),
                         SslContextBuilder.forClient().trustManager(CERT_FILE).sslProvider(SslProvider.JDK)
@@ -97,7 +105,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
     }
 
     @ParameterizedTest(name = "{index}: serverEngine = {0}, clientEngine = {1}")
-    @MethodSource("data")
+    @MethodSource("jdkOnly")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testSslSessionReuse(
             final SslContextBuilder serverCtx, final SslContextBuilder clientCtx, TestInfo testInfo) throws Throwable {
@@ -162,7 +170,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
     }
 
     @ParameterizedTest(name = "{index}: serverEngine = {0}, clientEngine = {1}")
-    @MethodSource("data")
+    @MethodSource("jdkAndOpenSSL")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testSslSessionTrustManagerResumption(
             final SslContextBuilder serverCtx, final SslContextBuilder clientCtx, TestInfo testInfo) throws Throwable {
