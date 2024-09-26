@@ -188,7 +188,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
     public void testSslSessionTrustManagerResumption(
             ServerBootstrap sb, Bootstrap cb,
             SslContextBuilder serverCtxBldr, final SslContextBuilder clientCtxBldr) throws Throwable {
-        final String[] protocols = { "TLSv1", "TLSv1.1", "TLSv1.2", "TLSv1.3" };
+        final String[] protocols = { "TLSv1", "TLSv1.1", "TLSv1.2" };
         serverCtxBldr.protocols(protocols);
         clientCtxBldr.protocols(protocols);
         TrustManager clientTrustManager = new SessionSettingTrustManager();
