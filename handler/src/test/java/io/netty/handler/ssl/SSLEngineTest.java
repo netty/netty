@@ -3965,6 +3965,10 @@ public abstract class SSLEngineTest {
         } else {
             assertEquals(2, checkServerTrustedCalls);
         }
+        ByteBuf byteBuf;
+        while ((byteBuf = clientReceiver.messages.poll()) != null) {
+            byteBuf.release();
+        }
     }
 
     @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
@@ -4026,6 +4030,10 @@ public abstract class SSLEngineTest {
             assertEquals("Test exception", handshakeFuture.cause().getMessage());
         } else {
             assertEquals(2, checkClientTrustedCalls);
+        }
+        ByteBuf byteBuf;
+        while ((byteBuf = clientReceiver.messages.poll()) != null) {
+            byteBuf.release();
         }
     }
 
