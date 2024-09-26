@@ -125,7 +125,8 @@ final class ResumptionController {
         }
 
         private static void unsupported() throws CertificateException {
-            throw new CertificateException("Resumable trust managers require the SSLEngine parameter");
+            throw new CertificateException(
+                    new UnsupportedOperationException("Resumable trust managers require the SSLEngine parameter"));
         }
 
         @Override
