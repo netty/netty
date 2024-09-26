@@ -359,6 +359,7 @@ public class DnsNameResolver extends InetNameResolver {
                 searchDomains, ndots, decodeIdn, false, 0);
     }
 
+    @SuppressWarnings("deprecation")
     DnsNameResolver(
             EventLoop eventLoop,
             ChannelFactory<? extends DatagramChannel> channelFactory,
@@ -480,13 +481,15 @@ public class DnsNameResolver extends InetNameResolver {
             }
         });
         b.option(ChannelOption.READ_HANDLE_FACTORY, new FixedReadHandleFactory(maxPayloadSize));
-        if (localAddress == null) {
-            localAddress = new InetSocketAddress(0);
-        }
         try {
             ch = b.createUnregistered();
-            SocketAddress local = localAddress;
-            Future<Void> future = ch.register().flatMap(__ -> ch.bind(local));
+            Future<?> future;
+            if (localAddress == null) {
+                ch.setOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true);
+                future = ch.register();
+            } else {
+                future = ch.register().flatMap(__ -> ch.bind(localAddress));
+            }
             if (future.isFailed()) {
                 throw future.cause();
             } else if (!future.isSuccess()) {

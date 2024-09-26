@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.net.InetSocketAddress;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.util.ArrayList;
@@ -47,6 +48,7 @@ import static java.util.Objects.requireNonNull;
 public final class DnsNameResolverBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(DnsNameResolverBuilder.class);
+    static final SocketAddress DEFAULT_LOCAL_ADDRESS = new InetSocketAddress(0);
 
     volatile EventLoop eventLoop;
     private ChannelFactory<? extends DatagramChannel> channelFactory;
@@ -56,7 +58,7 @@ public final class DnsNameResolverBuilder {
     private DnsCache resolveCache;
     private DnsCnameCache cnameCache;
     private AuthoritativeDnsServerCache authoritativeDnsServerCache;
-    private SocketAddress localAddress;
+    private SocketAddress localAddress = DEFAULT_LOCAL_ADDRESS;
     private Integer minTtl;
     private Integer maxTtl;
     private Integer negativeTtl;
