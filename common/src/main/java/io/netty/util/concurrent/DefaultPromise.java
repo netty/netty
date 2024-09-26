@@ -667,7 +667,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         if (cause == null) {
             return;
         }
-
+        ThrowableUtil.addSuppressed(cause, new RuntimeException("tracer"));
         PlatformDependent.throwException(cause);
     }
 
