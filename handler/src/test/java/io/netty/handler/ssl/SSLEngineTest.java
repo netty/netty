@@ -3944,17 +3944,19 @@ public abstract class SSLEngineTest {
         for (int i = 0; i < 2; i++) {
             serverReceiver.onNextMessages.offer(checkServer);
             ChannelFuture ccf = cb.connect(addr);
-            assertTrue(ccf.syncUninterruptibly().isSuccess());
+            assertTrue(ccf.sync().isSuccess());
             clientChannel = ccf.channel();
 
-            clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeInt(42)).sync();
+            clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeInt(42)).await();
             clientChannel.closeFuture().sync();
             handshakeFuture = clientSslHandshakeFuture;
         }
 
         int checkServerTrustedCalls = checkServerTrustedCount.get();
         if (checkServerTrustedCalls == 1) {
-            clientChannel.eventLoop().submit(NOOP).await(); // Wait for exception to propagate.
+            do {
+                clientChannel.eventLoop().submit(NOOP).await(); // Wait for exception to propagate.
+            } while (clientException == null);
             assertEquals("Test exception", clientException.getMessage());
             assertNotNull(handshakeFuture);
             assertTrue(handshakeFuture.isDone());
@@ -4007,14 +4009,16 @@ public abstract class SSLEngineTest {
             assertTrue(ccf.syncUninterruptibly().isSuccess());
             clientChannel = ccf.channel();
 
-            clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeInt(42)).sync();
+            clientChannel.writeAndFlush(clientChannel.alloc().buffer().writeInt(42)).await();
             clientChannel.closeFuture().sync();
             handshakeFuture = serverSslHandshakeFuture;
         }
 
         int checkClientTrustedCalls = checkClientTrustedCount.get();
         if (checkClientTrustedCalls == 1) {
-            serverChannel.eventLoop().submit(NOOP).await(); // Wait for exception to propagate.
+            do {
+                serverChannel.eventLoop().submit(NOOP).await(); // Wait for exception to propagate.
+            } while (serverException == null);
             assertEquals("Test exception", serverException.getMessage());
             assertNotNull(handshakeFuture);
             assertTrue(handshakeFuture.isDone());
