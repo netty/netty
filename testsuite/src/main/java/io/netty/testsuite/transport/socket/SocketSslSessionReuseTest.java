@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInitializer;
@@ -52,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.channels.ClosedChannelException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
@@ -61,6 +63,7 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -153,14 +156,14 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
             SSLSessionContext clientSessionCtx = clientCtx.sessionContext();
             ByteBuf msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
             Channel cc = cb.connect(sc.localAddress()).sync().channel();
-            cc.writeAndFlush(msg).sync();
+            cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
             cc.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
             Set<String> sessions = sessionIdSet(clientSessionCtx.getIds());
 
             msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
             cc = cb.connect(sc.localAddress()).sync().channel();
-            cc.writeAndFlush(msg).sync();
+            cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
             cc.closeFuture().sync();
             assertEquals(sessions, sessionIdSet(clientSessionCtx.getIds()), "Expected no new sessions");
             rethrowHandlerExceptions(sh, ch);
@@ -235,14 +238,14 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         try {
             ByteBuf msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
             Channel cc = cb.connect(sc.localAddress()).sync().channel();
-            cc.writeAndFlush(msg).sync();
+            cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
             cc.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
             assertEquals("value", sessionValue.poll(10, TimeUnit.SECONDS));
 
             msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
             cc = cb.connect(sc.localAddress()).sync().channel();
-            cc.writeAndFlush(msg).sync();
+            cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
             cc.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
             assertEquals("value", sessionValue.poll(10, TimeUnit.SECONDS));
@@ -253,16 +256,16 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
     private static void rethrowHandlerExceptions(ReadAndDiscardHandler sh, ReadAndDiscardHandler ch) throws Throwable {
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
-            throw sh.exception.get();
+            throw new ExecutionException(sh.exception.get());
         }
         if (ch.exception.get() != null && !(ch.exception.get() instanceof IOException)) {
-            throw ch.exception.get();
+            throw new ExecutionException(ch.exception.get());
         }
         if (sh.exception.get() != null) {
-            throw sh.exception.get();
+            throw new ExecutionException(sh.exception.get());
         }
         if (ch.exception.get() != null) {
-            throw ch.exception.get();
+            throw new ExecutionException(ch.exception.get());
         }
     }
 
@@ -289,9 +292,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
         @Override
         public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-            byte[] actual = new byte[in.readableBytes()];
-            in.readBytes(actual);
-            ctx.close();
+            in.skipBytes(in.readableBytes());
         }
 
         @Override
@@ -306,8 +307,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx,
-                Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (logger.isWarnEnabled()) {
                 logger.warn(
                         "Unexpected exception from the " +
