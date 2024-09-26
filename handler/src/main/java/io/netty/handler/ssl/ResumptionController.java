@@ -24,7 +24,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
-import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLEngine;
@@ -33,12 +33,12 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 
 final class ResumptionController {
-    private static final Object ENTRY = new Object();
-    private final Map<SSLEngine, Object> confirmedValidations;
+    private final Set<SSLEngine> confirmedValidations;
     private final AtomicReference<ResumableX509ExtendedTrustManager> resumableTm;
 
     ResumptionController() {
-        confirmedValidations = Collections.synchronizedMap(new WeakHashMap<SSLEngine, Object>());
+        confirmedValidations = Collections.synchronizedSet(
+                Collections.newSetFromMap(new WeakHashMap<SSLEngine, Boolean>()));
         resumableTm = new AtomicReference<ResumableX509ExtendedTrustManager>();
     }
 
@@ -46,11 +46,12 @@ final class ResumptionController {
     public TrustManager wrapIfNeeded(TrustManager tm) {
         if (tm instanceof ResumableX509ExtendedTrustManager) {
             if (PlatformDependent.javaVersion() < 7 || !(tm instanceof X509ExtendedTrustManager)) {
-                throw new IllegalStateException(
-                        "Resumable trust manager must be a subclass of X509ExtendedTrustManager");
+                throw new IllegalStateException("ResumableX509ExtendedTrustManager implementation must be a " +
+                        "subclass of X509ExtendedTrustManager, found: " + (tm == null ? null : tm.getClass()));
             }
             if (!resumableTm.compareAndSet(null, (ResumableX509ExtendedTrustManager) tm)) {
-                throw new IllegalStateException("Only one TrustManager can be configured for resumed sessions");
+                throw new IllegalStateException(
+                        "Only one ResumableX509ExtendedTrustManager can be configured for resumed sessions");
             }
             return new X509ExtendedWrapTrustManager((X509ExtendedTrustManager) tm, confirmedValidations);
         }
@@ -69,8 +70,11 @@ final class ResumptionController {
         boolean valid = engine.getSession().isValid();
         if (valid && (tm = resumableTm.get()) != null) {
             Certificate[] peerCertificates = engine.getSession().getPeerCertificates();
+
+            // Unwrap JdkSslEngines because they add their inner JDK SSLEngine objects to the set.
             engine = unwrapEngine(engine);
-            if (confirmedValidations.remove(engine) == null) {
+
+            if (!confirmedValidations.remove(engine)) {
                 // This is a resumed session.
                 if (engine.getUseClientMode()) {
                     // We are the client, resuming a session trusting the server
@@ -113,10 +117,9 @@ final class ResumptionController {
     @SuppressJava6Requirement(reason = "Guarded by version check")
     private static final class X509ExtendedWrapTrustManager extends X509ExtendedTrustManager {
         private final X509ExtendedTrustManager trustManager;
-        private final Map<SSLEngine, Object> confirmedValidations;
+        private final Set<SSLEngine> confirmedValidations;
 
-        X509ExtendedWrapTrustManager(X509ExtendedTrustManager trustManager,
-                                     Map<SSLEngine, Object> confirmedValidations) {
+        X509ExtendedWrapTrustManager(X509ExtendedTrustManager trustManager, Set<SSLEngine> confirmedValidations) {
             this.trustManager = ObjectUtil.checkNotNull(trustManager, "trustManager");
             this.confirmedValidations = confirmedValidations;
         }
@@ -151,14 +154,14 @@ final class ResumptionController {
         public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
                 throws CertificateException {
             trustManager.checkClientTrusted(chain, authType, engine);
-            confirmedValidations.put(engine, ENTRY);
+            confirmedValidations.add(engine);
         }
 
         @Override
         public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
                 throws CertificateException {
             trustManager.checkServerTrusted(chain, authType, engine);
-            confirmedValidations.put(engine, ENTRY);
+            confirmedValidations.add(engine);
         }
 
         @Override

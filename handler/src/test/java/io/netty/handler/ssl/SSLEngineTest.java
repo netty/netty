@@ -3859,6 +3859,7 @@ public abstract class SSLEngineTest {
         OnNextMessage checkClient = new OnNextMessage() {
             @Override
             public void messageReceived(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+                msg.release();
                 SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
                 SSLEngine engine = sslHandler.engine();
                 logger.debug("Client message received: {} ({}) {} {}",
@@ -3866,7 +3867,6 @@ public abstract class SSLEngineTest {
                         Arrays.toString(engine.getSession().getValueNames()));
                 Object value = engine.getSession().getValue("key");
                 clientSessionValues.put((String) value);
-                msg.release();
             }
         };
         OnNextMessage checkServer = new OnNextMessage() {

@@ -320,7 +320,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
     }
 
     @SuppressJava6Requirement(reason = "Test only")
-    private static class SessionSettingTrustManager extends X509ExtendedTrustManager
+    private static final class SessionSettingTrustManager extends X509ExtendedTrustManager
             implements ResumableX509ExtendedTrustManager {
         @Override
         public void resumeServerTrusted(X509Certificate[] chain, SSLEngine engine) throws CertificateException {

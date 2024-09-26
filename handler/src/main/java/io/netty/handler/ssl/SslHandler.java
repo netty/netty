@@ -1959,8 +1959,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (resumptionController != null && !handshakePromise.isDone()) {
             try {
                 if (resumptionController.validateResumeIfNeeded(engine) && logger.isDebugEnabled()) {
-                    logger.debug("{} Resumed and reauthenticated session (handshake_done={})", ctx.channel(),
-                            handshakePromise.isDone());
+                    logger.debug("{} Resumed and reauthenticated session", ctx.channel());
                 }
             } catch (CertificateException e) {
                 SSLHandshakeException exception = new SSLHandshakeException(e.getMessage());
