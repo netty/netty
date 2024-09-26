@@ -104,7 +104,7 @@ final class ResumptionController {
         X509Certificate[] chain = new X509Certificate[peerCertificates.length];
         for (int i = 0; i < peerCertificates.length; i++) {
             Certificate cert = peerCertificates[i];
-            if (cert instanceof X509Certificate) {
+            if (cert instanceof X509Certificate || cert == null) {
                 chain[i] = (X509Certificate) cert;
             } else {
                 throw new IllegalArgumentException("Only X509Certificates are supported, found: " + cert.getClass());
