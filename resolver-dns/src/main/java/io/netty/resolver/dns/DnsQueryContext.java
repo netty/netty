@@ -35,7 +35,6 @@ import io.netty.handler.codec.dns.TcpDnsResponseDecoder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
@@ -62,7 +61,6 @@ abstract class DnsQueryContext {
 
     private static final TcpDnsQueryEncoder TCP_ENCODER = new TcpDnsQueryEncoder();
 
-    private final Future<? extends Channel> channelReadyFuture;
     private final Channel channel;
     private final InetSocketAddress nameServerAddr;
     private final DnsQueryContextManager queryContextManager;
@@ -84,7 +82,6 @@ abstract class DnsQueryContext {
     private int id = Integer.MIN_VALUE;
 
     DnsQueryContext(Channel channel,
-                    Future<? extends Channel> channelReadyFuture,
                     InetSocketAddress nameServerAddr,
                     DnsQueryContextManager queryContextManager,
                     int maxPayLoadSize,
@@ -97,7 +94,6 @@ abstract class DnsQueryContext {
                     boolean retryWithTcpOnTimeout) {
         this.channel = checkNotNull(channel, "channel");
         this.queryContextManager = checkNotNull(queryContextManager, "queryContextManager");
-        this.channelReadyFuture = checkNotNull(channelReadyFuture, "channelReadyFuture");
         this.nameServerAddr = checkNotNull(nameServerAddr, "nameServerAddr");
         this.question = checkNotNull(question, "question");
         this.additionals = checkNotNull(additionals, "additionals");
@@ -242,41 +238,8 @@ abstract class DnsQueryContext {
 
     private ChannelFuture sendQuery(final DnsQuery query, final boolean flush) {
         final ChannelPromise writePromise = channel.newPromise();
-        if (channelReadyFuture.isSuccess()) {
-            writeQuery(query, flush, writePromise);
-        } else {
-            Throwable cause = channelReadyFuture.cause();
-            if (cause != null) {
-                // the promise failed before so we should also fail this query.
-                failQuery(query, cause, writePromise);
-            } else {
-                // The promise is not complete yet, let's delay the query.
-                channelReadyFuture.addListener(new GenericFutureListener<Future<? super Channel>>() {
-                    @Override
-                    public void operationComplete(Future<? super Channel> future) {
-                        if (future.isSuccess()) {
-                            // If the query is done in a late fashion (as the channel was not ready yet) we always flush
-                            // to ensure we did not race with a previous flush() that was done when the Channel was not
-                            // ready yet.
-                            writeQuery(query, true, writePromise);
-                        } else {
-                            Throwable cause = future.cause();
-                            failQuery(query, cause, writePromise);
-                        }
-                    }
-                });
-            }
-        }
+        writeQuery(query, flush, writePromise);
         return writePromise;
-    }
-
-    private void failQuery(DnsQuery query, Throwable cause, ChannelPromise writePromise) {
-        try {
-            promise.tryFailure(cause);
-            writePromise.tryFailure(cause);
-        } finally {
-            ReferenceCountUtil.release(query);
-        }
     }
 
     private void writeQuery(final DnsQuery query,
@@ -406,7 +369,7 @@ abstract class DnsQueryContext {
                 final Channel tcpCh = future.channel();
                 Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
                         tcpCh.eventLoop().newPromise();
-                final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(tcpCh, channelReadyFuture,
+                final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(tcpCh,
                         (InetSocketAddress) tcpCh.remoteAddress(), queryContextManager, 0,
                         recursionDesired, queryTimeoutMillis, question(), additionals, promise);
                 tcpCh.pipeline().addLast(TCP_ENCODER);

@@ -77,6 +77,7 @@ public final class DnsNameResolverBuilder {
     private boolean decodeIdn = true;
 
     private int maxNumConsolidation;
+    private DnsNameResolverChannelStrategy datagramChannelStrategy = DnsNameResolverChannelStrategy.ChannelPerResolver;
 
     /**
      * Creates a new builder.
@@ -613,6 +614,19 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
+     * Set the strategy that is used to determine how a {@link DatagramChannel} is used by the resolver for sending
+     * queries over UDP protocol.
+     *
+     * @param datagramChannelStrategy  the {@link DnsNameResolverChannelStrategy} to use when doing queries over
+     *                                 UDP protocol.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder datagramChannelStrategy(DnsNameResolverChannelStrategy datagramChannelStrategy) {
+        this.datagramChannelStrategy = ObjectUtil.checkNotNull(datagramChannelStrategy, "datagramChannelStrategy");
+        return this;
+    }
+
+    /**
      * Returns a new {@link DnsNameResolver} instance.
      *
      * @return a {@link DnsNameResolver}
@@ -665,7 +679,8 @@ public final class DnsNameResolverBuilder {
                 ndots,
                 decodeIdn,
                 completeOncePreferredResolved,
-                maxNumConsolidation);
+                maxNumConsolidation,
+                datagramChannelStrategy);
     }
 
     /**
@@ -735,6 +750,7 @@ public final class DnsNameResolverBuilder {
         copiedBuilder.completeOncePreferredResolved(completeOncePreferredResolved);
         copiedBuilder.localAddress(localAddress);
         copiedBuilder.consolidateCacheSize(maxNumConsolidation);
+        copiedBuilder.datagramChannelStrategy(datagramChannelStrategy);
         return copiedBuilder;
     }
 }
