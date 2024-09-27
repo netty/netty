@@ -178,7 +178,7 @@ public final class OpenSslClientContext extends OpenSslContext {
         this(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, null, sessionCacheSize,
-                sessionTimeout, false, KeyStore.getDefaultType(), null);
+                sessionTimeout, false, KeyStore.getDefaultType(), null, null);
     }
 
     OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -186,16 +186,17 @@ public final class OpenSslClientContext extends OpenSslContext {
                          KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
                          long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
-                         String endpointIdentificationAlgorithm, Map.Entry<SslContextOption<?>, Object>... options)
+                         String endpointIdentificationAlgorithm, ResumptionController resumptionController,
+                         Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
-        super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain,
-                ClientAuth.NONE, protocols, false, endpointIdentificationAlgorithm, enableOcsp, options);
+        super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain, ClientAuth.NONE, protocols, false,
+                endpointIdentificationAlgorithm, enableOcsp, resumptionController, options);
         boolean success = false;
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                                               sessionCacheSize, sessionTimeout);
+                                               sessionCacheSize, sessionTimeout, resumptionController);
             success = true;
         } finally {
             if (!success) {

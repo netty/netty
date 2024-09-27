@@ -260,14 +260,14 @@ public class JdkSslContext extends SslContext {
     @SuppressWarnings("deprecation")
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                   JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls) {
-        this(sslContext, isClient, ciphers, cipherFilter, apn, clientAuth, protocols, startTls, null);
+        this(sslContext, isClient, ciphers, cipherFilter, apn, clientAuth, protocols, startTls, null, null);
     }
 
     @SuppressWarnings("deprecation")
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                   JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls,
-                  String endpointIdentificationAlgorithm) {
-        super(startTls);
+                  String endpointIdentificationAlgorithm, ResumptionController resumptionController) {
+        super(startTls, resumptionController);
         this.apn = checkNotNull(apn, "apn");
         this.clientAuth = checkNotNull(clientAuth, "clientAuth");
         this.sslContext = checkNotNull(sslContext, "sslContext");
