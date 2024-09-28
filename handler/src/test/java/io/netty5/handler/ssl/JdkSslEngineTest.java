@@ -19,6 +19,7 @@ import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
+import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.internal.EmptyArrays;
@@ -180,7 +181,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
         try {
             param.providerType.activate(this);
             // ALPN
-            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
             JdkApplicationProtocolNegotiator clientApn = new JdkAlpnApplicationProtocolNegotiator(true, true,
                 PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(

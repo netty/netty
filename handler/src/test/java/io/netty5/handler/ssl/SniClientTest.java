@@ -27,6 +27,7 @@ import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
 import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
+import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
@@ -125,7 +126,7 @@ public class SniClientTest {
     private static void testSniClient(SslProvider sslClientProvider, SslProvider sslServerProvider, final boolean match)
             throws Throwable {
         final String sniHost = "sni.netty.io";
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         LocalAddress address = new LocalAddress(SniClientTest.class);
         EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         SslContext sslServerContext = null;
@@ -208,8 +209,6 @@ public class SniClientTest {
 
             Resource.dispose(sslServerContext);
             Resource.dispose(sslClientContext);
-
-            cert.delete();
 
             group.shutdownGracefully();
         }

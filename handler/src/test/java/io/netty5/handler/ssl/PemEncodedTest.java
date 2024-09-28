@@ -17,6 +17,7 @@
 package io.netty5.handler.ssl;
 
 import io.netty5.util.Resource;
+import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -28,6 +29,7 @@ import java.security.PrivateKey;
 
 import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -47,15 +49,9 @@ public class PemEncodedTest {
     private static void testPemEncoded(SslProvider provider) throws Exception {
         OpenSsl.ensureAvailability();
         assumeFalse(OpenSsl.supportsKeyManagerFactory());
-        PemPrivateKey pemKey;
-        PemX509Certificate pemCert;
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        try {
-            pemKey = PemPrivateKey.valueOf(toByteArray(ssc.privateKey()));
-            pemCert = PemX509Certificate.valueOf(toByteArray(ssc.certificate()));
-        } finally {
-            ssc.delete();
-        }
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
+        PemPrivateKey pemKey = PemPrivateKey.valueOf(toByteArray(ssc.privateKey()));
+        PemX509Certificate pemCert = PemX509Certificate.valueOf(toByteArray(ssc.certificate()));
 
         assertTrue(pemKey.content().readOnly());
         assertTrue(pemCert.content().readOnly());
@@ -66,7 +62,7 @@ public class PemEncodedTest {
         assertFalse(pemKey.isDestroyed());
         assertTrue(pemCert.isAccessible());
         try (AutoCloseable ignore = autoClosing(context)) {
-            assertTrue(context instanceof ReferenceCountedOpenSslContext);
+            assertInstanceOf(ReferenceCountedOpenSslContext.class, context);
         }
         assertRelease(pemKey);
         assertRelease(pemCert);
@@ -103,22 +99,14 @@ public class PemEncodedTest {
     }
 
     private static byte[] toByteArray(File file) throws Exception {
-        FileInputStream in = new FileInputStream(file);
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try {
-                byte[] buf = new byte[1024];
-                int len;
-                while ((len = in.read(buf)) != -1) {
-                    baos.write(buf, 0, len);
-                }
-            } finally {
-                baos.close();
+        try (FileInputStream in = new FileInputStream(file);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            byte[] buf = new byte[1024];
+            int len;
+            while ((len = in.read(buf)) != -1) {
+                baos.write(buf, 0, len);
             }
-
             return baos.toByteArray();
-        } finally {
-            in.close();
         }
     }
 }

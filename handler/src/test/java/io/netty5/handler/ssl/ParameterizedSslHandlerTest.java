@@ -35,6 +35,7 @@ import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
+import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
@@ -126,7 +127,7 @@ public class ParameterizedSslHandlerTest {
             final boolean serverDisableWrapSize,
             final boolean letHandlerCreateServerEngine, final boolean letHandlerCreateClientEngine)
             throws CertificateException, SSLException, ExecutionException, InterruptedException {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
 
         final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(serverProvider)
@@ -270,7 +271,6 @@ public class ParameterizedSslHandlerTest {
 
             Resource.dispose(sslServerCtx);
             Resource.dispose(sslClientCtx);
-            ssc.delete();
         }
     }
 
@@ -278,7 +278,7 @@ public class ParameterizedSslHandlerTest {
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testAlertProducedAndSend(SslProvider clientProvider, SslProvider serverProvider) throws Exception {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
 
         final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(serverProvider)
@@ -399,7 +399,7 @@ public class ParameterizedSslHandlerTest {
 
     private static void testCloseNotify(SslProvider clientProvider, SslProvider serverProvider,
                                         final long closeNotifyReadTimeout, final boolean timeout) throws Exception {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
 
         final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                                                          .sslProvider(serverProvider)
@@ -560,7 +560,7 @@ public class ParameterizedSslHandlerTest {
                                                    Class<? extends ServerChannel> serverClass,
                                                    Class<? extends Channel> clientClass, boolean serverAutoRead,
                                                    boolean clientAutoRead) throws Exception {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(serverProvider)
                 .build();

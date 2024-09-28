@@ -42,11 +42,11 @@ import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
 
 import javax.net.ssl.SSLHandshakeException;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -66,41 +66,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class OcspTest {
+    private static SelfSignedCertificate ssc;
 
     @BeforeAll
-    public static void checkOcspSupported() {
+    public static void checkOcspSupported() throws CertificateException {
         assumeTrue(OpenSsl.isOcspSupported());
+        ssc = new SelfSignedCertificate();
     }
 
     @Test
     public void testJdkClientEnableOcsp() throws Exception {
-        assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                SslContextBuilder.forClient()
-                        .sslProvider(SslProvider.JDK)
-                        .enableOcsp(true)
-                        .build();
-            }
+        assertThrows(IllegalArgumentException.class, () -> {
+            SslContextBuilder.forClient()
+                    .sslProvider(SslProvider.JDK)
+                    .enableOcsp(true)
+                    .build();
         });
     }
 
     @Test
     public void testJdkServerEnableOcsp() throws Exception {
-        final SelfSignedCertificate ssc = new SelfSignedCertificate();
-        try {
-            assertThrows(IllegalArgumentException.class, new Executable() {
-                @Override
-                public void execute() throws Throwable {
-                    SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                            .sslProvider(SslProvider.JDK)
-                            .enableOcsp(true)
-                            .build();
-                }
-            });
-        } finally {
-            ssc.delete();
-        }
+        assertThrows(IllegalArgumentException.class, () -> {
+                SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                        .sslProvider(SslProvider.JDK)
+                        .enableOcsp(true)
+                        .build();
+        });
     }
 
     @Test
@@ -121,12 +112,7 @@ public class OcspTest {
             SslHandler sslHandler = context.newHandler(offHeapAllocator());
             final ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
             try (AutoCloseable ignore2 = autoClosing(engine)) {
-                assertThrows(IllegalStateException.class, new Executable() {
-                    @Override
-                    public void execute() {
-                        engine.getOcspResponse();
-                    }
-                });
+                assertThrows(IllegalStateException.class, () -> engine.getOcspResponse());
             }
         }
     }
@@ -142,25 +128,15 @@ public class OcspTest {
     }
 
     private static void testServerOcspNotEnabled(SslProvider sslProvider) throws Exception {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        try {
-            SslContext context = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                    .sslProvider(sslProvider)
-                    .build();
-            try (AutoCloseable ignore1 = autoClosing(context)) {
-                SslHandler sslHandler = context.newHandler(offHeapAllocator());
-                final ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
-                try (AutoCloseable ignore2 = autoClosing(engine)) {
-                    assertThrows(IllegalStateException.class, new Executable() {
-                        @Override
-                        public void execute() {
-                            engine.setOcspResponse(new byte[] { 1, 2, 3 });
-                        }
-                    });
-                }
+        SslContext context = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslProvider)
+                .build();
+        try (AutoCloseable ignore1 = autoClosing(context)) {
+            SslHandler sslHandler = context.newHandler(offHeapAllocator());
+            final ReferenceCountedOpenSslEngine engine = (ReferenceCountedOpenSslEngine) sslHandler.engine();
+            try (AutoCloseable ignore2 = autoClosing(engine)) {
+                assertThrows(IllegalStateException.class, () -> engine.setOcspResponse(new byte[] { 1, 2, 3 }));
             }
-        } finally {
-            ssc.delete();
         }
     }
 
@@ -350,39 +326,34 @@ public class OcspTest {
     private static void handshake(SslProvider sslProvider, CountDownLatch latch, ChannelHandler serverHandler,
             byte[] response, ChannelHandler clientHandler, OcspClientCallback callback) throws Exception {
 
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        try {
-            SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                .sslProvider(sslProvider)
+                .enableOcsp(true)
+                .build();
+
+        try (AutoCloseable ignore1 = autoClosing(serverSslContext)) {
+            SslContext clientSslContext = SslContextBuilder.forClient()
                     .sslProvider(sslProvider)
                     .enableOcsp(true)
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .build();
 
-            try (AutoCloseable ignore1 = autoClosing(serverSslContext)) {
-                SslContext clientSslContext = SslContextBuilder.forClient()
-                        .sslProvider(sslProvider)
-                        .enableOcsp(true)
-                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                        .build();
-
-                try (AutoCloseable ignore2 = autoClosing(clientSslContext)) {
-                    EventLoopGroup group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
+            try (AutoCloseable ignore2 = autoClosing(clientSslContext)) {
+                EventLoopGroup group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
+                try {
+                    LocalAddress address = new LocalAddress(OcspTest.class);
+                    Channel server = newServer(group, address, serverSslContext, response, serverHandler);
+                    Channel client = newClient(group, address, clientSslContext, callback, clientHandler);
                     try {
-                        LocalAddress address = new LocalAddress(OcspTest.class);
-                        Channel server = newServer(group, address, serverSslContext, response, serverHandler);
-                        Channel client = newClient(group, address, clientSslContext, callback, clientHandler);
-                        try {
-                            assertTrue(latch.await(10L, TimeUnit.SECONDS));
-                        } finally {
-                            client.close().asStage().sync();
-                            server.close().asStage().sync();
-                        }
+                        assertTrue(latch.await(10L, TimeUnit.SECONDS));
                     } finally {
-                        group.shutdownGracefully(1L, 1L, TimeUnit.SECONDS);
+                        client.close().asStage().sync();
+                        server.close().asStage().sync();
                     }
+                } finally {
+                    group.shutdownGracefully(1L, 1L, TimeUnit.SECONDS);
                 }
             }
-        } finally {
-            ssc.delete();
         }
     }
 

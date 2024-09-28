@@ -27,6 +27,7 @@ import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
 import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
+import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.Resource;
@@ -44,7 +45,7 @@ public abstract class RenegotiateTest {
     public void testRenegotiateServer() throws Throwable {
         final AtomicReference<Throwable> error = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(2);
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         EventLoopGroup group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
         try {
             final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
