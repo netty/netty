@@ -96,6 +96,7 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -576,11 +577,11 @@ public class SslHandlerTest {
         assertTrue(channel.finishAndReleaseAll());
 
         SslCompletionEvent evt = events.take();
-        assertTrue(evt instanceof SslHandshakeCompletionEvent);
+        assertInstanceOf(SslHandshakeCompletionEvent.class, evt);
         assertThat(evt.cause(), instanceOf(ClosedChannelException.class));
 
         evt = events.take();
-        assertTrue(evt instanceof SslCloseCompletionEvent);
+        assertInstanceOf(SslCloseCompletionEvent.class, evt);
         assertThat(evt.cause(), instanceOf(ClosedChannelException.class));
         assertTrue(events.isEmpty());
     }
@@ -666,11 +667,11 @@ public class SslHandlerTest {
             }
 
             SslCompletionEvent evt = (SslCompletionEvent) events.take();
-            assertTrue(evt instanceof SslHandshakeCompletionEvent);
+            assertInstanceOf(SslHandshakeCompletionEvent.class, evt);
             assertThat(evt.cause(), is(instanceOf(SSLException.class)));
 
             evt = (SslCompletionEvent) events.take();
-            assertTrue(evt instanceof SslCloseCompletionEvent);
+            assertInstanceOf(SslCloseCompletionEvent.class, evt);
             assertThat(evt.cause(), is(instanceOf(ClosedChannelException.class)));
 
             Future<Void> future = (Future<Void>) events.take();

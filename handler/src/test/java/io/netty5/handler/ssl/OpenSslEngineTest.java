@@ -83,7 +83,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
 
     public OpenSslEngineTest() {
-        super(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
+        super(SslProvider.isTlsv13Supported(OPENSSL));
     }
 
     @Override

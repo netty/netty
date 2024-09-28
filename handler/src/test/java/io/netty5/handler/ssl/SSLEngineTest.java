@@ -113,6 +113,7 @@ import java.security.Provider;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -147,7 +148,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.verify;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -2927,18 +2927,18 @@ public abstract class SSLEngineTest {
                                 new X509TrustManager() {
                                     @Override
                                     public void checkClientTrusted(
-                                            java.security.cert.X509Certificate[] x509Certificates, String s) {
+                                            X509Certificate[] x509Certificates, String s) {
                                         // NOOP
                                     }
 
                                     @Override
                                     public void checkServerTrusted(
-                                            java.security.cert.X509Certificate[] x509Certificates, String s) {
+                                            X509Certificate[] x509Certificates, String s) {
                                         // NOOP
                                     }
 
                                     @Override
-                                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                                    public X509Certificate[] getAcceptedIssuers() {
                                         return EmptyArrays.EMPTY_X509_CERTIFICATES;
                                     }
                                 }
@@ -3204,7 +3204,7 @@ public abstract class SSLEngineTest {
         /**
          * The session was reused.
          */
-        REUSED;
+        REUSED
     }
 
     protected SessionReusedState isSessionReused(SSLEngine engine) {
@@ -3451,7 +3451,7 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         KeyManagerFactory kmf = useKeyManagerFactory ?
                 SslContext.buildKeyManagerFactory(
-                        new java.security.cert.X509Certificate[] { ssc.cert()}, null,
+                        new X509Certificate[] { ssc.cert()}, null,
                         ssc.key(), null, null, null) : null;
 
         SslContextBuilder clientContextBuilder = SslContextBuilder.forClient();
@@ -3466,7 +3466,7 @@ public abstract class SSLEngineTest {
         final String handshakeKey = "handshake";
         TrustManagerFactory tmf = new ConstantTrustManagerFactory(new EmptyExtendedX509TrustManager() {
             @Override
-            public void checkClientTrusted(java.security.cert.X509Certificate[] chain,
+            public void checkClientTrusted(X509Certificate[] chain,
                                            String authType, SSLEngine engine) {
                 // This is broken in conscrypt.
                 // TODO: Open an issue in the conscrypt project.
@@ -3477,7 +3477,7 @@ public abstract class SSLEngineTest {
             }
 
             @Override
-            public void checkServerTrusted(java.security.cert.X509Certificate[] chain,
+            public void checkServerTrusted(X509Certificate[] chain,
                                            String authType, SSLEngine engine) {
                 // This is broken in conscrypt.
                 // TODO: Open an issue in the conscrypt project.
@@ -3736,7 +3736,7 @@ public abstract class SSLEngineTest {
                                 }
 
                                 @Override
-                                public java.security.cert.X509Certificate[] getCertificateChain(String s) {
+                                public X509Certificate[] getCertificateChain(String s) {
                                     return x509ExtendedKeyManager.getCertificateChain(s);
                                 }
 
@@ -4055,7 +4055,7 @@ public abstract class SSLEngineTest {
             throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException,
             CertificateException, IOException {
         return SslContext.buildKeyManagerFactory(
-                new java.security.cert.X509Certificate[] { ssc.cert() }, null, ssc.key(), null, null, null);
+                new X509Certificate[] { ssc.cert() }, null, ssc.key(), null, null, null);
     }
 
     private static final class TestTrustManagerFactory extends X509ExtendedTrustManager {
@@ -4072,19 +4072,19 @@ public abstract class SSLEngineTest {
 
         @Override
         public void checkClientTrusted(
-                java.security.cert.X509Certificate[] x509Certificates, String s, Socket socket) {
+                X509Certificate[] x509Certificates, String s, Socket socket) {
             fail();
         }
 
         @Override
         public void checkServerTrusted(
-                java.security.cert.X509Certificate[] x509Certificates, String s, Socket socket) {
+                X509Certificate[] x509Certificates, String s, Socket socket) {
             fail();
         }
 
         @Override
         public void checkClientTrusted(
-                java.security.cert.X509Certificate[] x509Certificates, String s, SSLEngine sslEngine) {
+                X509Certificate[] x509Certificates, String s, SSLEngine sslEngine) {
             verified = true;
             assertFalse(sslEngine.getUseClientMode());
             SSLSession session = sslEngine.getHandshakeSession();
@@ -4098,7 +4098,7 @@ public abstract class SSLEngineTest {
 
         @Override
         public void checkServerTrusted(
-                java.security.cert.X509Certificate[] x509Certificates, String s, SSLEngine sslEngine) {
+                X509Certificate[] x509Certificates, String s, SSLEngine sslEngine) {
             verified = true;
             assertTrue(sslEngine.getUseClientMode());
             SSLSession session = sslEngine.getHandshakeSession();
@@ -4109,18 +4109,18 @@ public abstract class SSLEngineTest {
 
         @Override
         public void checkClientTrusted(
-                java.security.cert.X509Certificate[] x509Certificates, String s) {
+                X509Certificate[] x509Certificates, String s) {
             fail();
         }
 
         @Override
         public void checkServerTrusted(
-                java.security.cert.X509Certificate[] x509Certificates, String s) {
+                X509Certificate[] x509Certificates, String s) {
             fail();
         }
 
         @Override
-        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+        public X509Certificate[] getAcceptedIssuers() {
             return EmptyArrays.EMPTY_X509_CERTIFICATES;
         }
     }

@@ -29,6 +29,7 @@ import java.security.PrivateKey;
 
 import static io.netty5.util.internal.SilentDispose.autoClosing;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -61,7 +62,7 @@ public class PemEncodedTest {
         assertFalse(pemKey.isDestroyed());
         assertTrue(pemCert.isAccessible());
         try (AutoCloseable ignore = autoClosing(context)) {
-            assertTrue(context instanceof ReferenceCountedOpenSslContext);
+            assertInstanceOf(ReferenceCountedOpenSslContext.class, context);
         }
         assertRelease(pemKey);
         assertRelease(pemCert);
@@ -98,22 +99,14 @@ public class PemEncodedTest {
     }
 
     private static byte[] toByteArray(File file) throws Exception {
-        FileInputStream in = new FileInputStream(file);
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try {
-                byte[] buf = new byte[1024];
-                int len;
-                while ((len = in.read(buf)) != -1) {
-                    baos.write(buf, 0, len);
-                }
-            } finally {
-                baos.close();
+        try (FileInputStream in = new FileInputStream(file);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            byte[] buf = new byte[1024];
+            int len;
+            while ((len = in.read(buf)) != -1) {
+                baos.write(buf, 0, len);
             }
-
             return baos.toByteArray();
-        } finally {
-            in.close();
         }
     }
 }
