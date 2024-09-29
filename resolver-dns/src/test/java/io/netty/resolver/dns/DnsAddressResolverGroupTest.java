@@ -44,7 +44,7 @@ public class DnsAddressResolverGroupTest {
         final EventLoop loop = group.next();
         DefaultEventLoopGroup defaultEventLoopGroup = new DefaultEventLoopGroup(1);
         DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
-                .eventLoop(loop).channelType(NioDatagramChannel.class);
+                .eventLoop(loop).datagramChannelType(NioDatagramChannel.class);
         DnsAddressResolverGroup resolverGroup = new DnsAddressResolverGroup(builder);
         try {
             final Promise<?> promise = loop.newPromise();
@@ -77,7 +77,7 @@ public class DnsAddressResolverGroupTest {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         final EventLoop loop = group.next();
         DnsNameResolverBuilder builder = new DnsNameResolverBuilder()
-                .eventLoop(loop).channelType(NioDatagramChannel.class);
+                .eventLoop(loop).datagramChannelType(NioDatagramChannel.class);
         DnsAddressResolverGroup resolverGroup = new DnsAddressResolverGroup(builder);
         DefaultEventLoopGroup defaultEventLoopGroup = new DefaultEventLoopGroup(2);
         EventLoop eventLoop1 = defaultEventLoopGroup.next();
