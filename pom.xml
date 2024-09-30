@@ -1405,6 +1405,12 @@
                   <new>method io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder::encoderIgnoreMaxHeaderListSize(boolean)</new>
                   <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method io.netty.channel.ChannelFactory&lt;&amp; extends io.netty.channel.socket.DatagramChannel&gt; io.netty.resolver.dns.DnsNameResolverBuilder::channelFactory()</old>
+                  <justification>Protected methods of a final class.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
