@@ -413,7 +413,7 @@ public class NettyBlockHoundIntegrationTest {
         NioEventLoopGroup group = new NioEventLoopGroup();
         try {
             DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
-                    .channelFactory(NioDatagramChannel::new);
+                    .datagramChannelFactory(NioDatagramChannel::new);
             doTestParseResolverFilesAllowsBlockingCalls(builder::build);
         } finally {
             group.shutdownGracefully();
