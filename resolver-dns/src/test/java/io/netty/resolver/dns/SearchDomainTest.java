@@ -46,7 +46,7 @@ public class SearchDomainTest {
 
     private DnsNameResolverBuilder newResolver() {
         return new DnsNameResolverBuilder(group.next())
-            .channelType(NioDatagramChannel.class)
+            .datagramChannelType(NioDatagramChannel.class)
             .nameServerProvider(new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()))
             .maxQueriesPerResolve(1)
             .optResourceEnabled(false)

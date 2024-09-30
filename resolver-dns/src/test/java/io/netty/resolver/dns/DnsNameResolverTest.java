@@ -396,7 +396,7 @@ public class DnsNameResolverTest {
                                                       TestDnsServer dnsServer) {
         DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
                 .dnsQueryLifecycleObserverFactory(new TestRecursiveCacheDnsQueryLifecycleObserverFactory())
-                .channelType(NioDatagramChannel.class)
+                .datagramChannelType(NioDatagramChannel.class)
                 .maxQueriesPerResolve(1)
                 .decodeIdn(decodeToUnicode)
                 .optResourceEnabled(false)
@@ -1157,7 +1157,7 @@ public class DnsNameResolverTest {
     @Test
     public void testResolveAllHostsFile() {
         final DnsNameResolver resolver = new DnsNameResolverBuilder(group.next())
-                .channelType(NioDatagramChannel.class)
+                .datagramChannelType(NioDatagramChannel.class)
                 .hostsFileEntriesResolver(new HostsFileEntriesResolver() {
                     @Override
                     public InetAddress address(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
@@ -1245,7 +1245,7 @@ public class DnsNameResolverTest {
             DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
                     .dnsQueryLifecycleObserverFactory(lifecycleObserverFactory)
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
-                    .channelType(NioDatagramChannel.class)
+                    .datagramChannelType(NioDatagramChannel.class)
                     .queryTimeoutMillis(1000) // We expect timeouts if startDnsServer1 is false
                     .optResourceEnabled(false)
                     .ndots(1);
@@ -1294,7 +1294,7 @@ public class DnsNameResolverTest {
             DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                     .dnsQueryLifecycleObserverFactory(lifecycleObserverFactory)
-                    .channelType(NioDatagramChannel.class)
+                    .datagramChannelType(NioDatagramChannel.class)
                     .optResourceEnabled(false)
                     .ndots(1);
 
@@ -2408,15 +2408,15 @@ public class DnsNameResolverTest {
         ChannelFactory<DatagramChannel> channelFactory =
                 new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class);
         DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
-                .channelFactory(channelFactory);
+                .datagramChannelFactory(channelFactory);
         DnsNameResolverBuilder copiedBuilder = builder.copy();
 
         // change channel factory does not propagate to previously made copy
         ChannelFactory<DatagramChannel> newChannelFactory =
                 new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class);
-        builder.channelFactory(newChannelFactory);
-        assertEquals(channelFactory, copiedBuilder.channelFactory());
-        assertEquals(newChannelFactory, builder.channelFactory());
+        builder.datagramChannelFactory(newChannelFactory);
+        assertEquals(channelFactory, copiedBuilder.datagramChannelFactory());
+        assertEquals(newChannelFactory, builder.datagramChannelFactory());
     }
 
     @Test
@@ -2770,7 +2770,7 @@ public class DnsNameResolverTest {
     public void testChannelFactoryException() {
         final IllegalStateException exception = new IllegalStateException();
         try {
-            newResolver().channelFactory(new ChannelFactory<DatagramChannel>() {
+            newResolver().datagramChannelFactory(new ChannelFactory<DatagramChannel>() {
                 @Override
                 public DatagramChannel newChannel() {
                     throw exception;
@@ -3259,7 +3259,7 @@ public class DnsNameResolverTest {
                     return datagramChannel;
                 }
             };
-            builder.channelFactory(channelFactory);
+            builder.datagramChannelFactory(channelFactory);
             if (tcpFallback) {
                 // If we are configured to use TCP as a fallback also bind a TCP socket
                 serverSocket = startDnsServerAndCreateServerSocket(dnsServer2);
@@ -3422,7 +3422,7 @@ public class DnsNameResolverTest {
                     return datagramChannel;
                 }
             };
-            builder.channelFactory(channelFactory);
+            builder.datagramChannelFactory(channelFactory);
             serverSocket = startDnsServerAndCreateServerSocket(dnsServer2);
             // If we are configured to use TCP as a fallback also bind a TCP socket
             builder.socketChannelType(NioSocketChannel.class, true);
@@ -3506,7 +3506,7 @@ public class DnsNameResolverTest {
                                                              dnsServer2.localAddress());
         final DnsNameResolver resolver = new DnsNameResolverBuilder(group.next())
                 .dnsQueryLifecycleObserverFactory(new TestRecursiveCacheDnsQueryLifecycleObserverFactory())
-                .channelType(NioDatagramChannel.class)
+                .datagramChannelType(NioDatagramChannel.class)
                 .optResourceEnabled(false)
                 .nameServerProvider(nameServerProvider)
                 .build();
