@@ -51,7 +51,7 @@ public final class DnsNameResolverBuilder {
     static final SocketAddress DEFAULT_LOCAL_ADDRESS = new InetSocketAddress(0);
 
     volatile EventLoop eventLoop;
-    private ChannelFactory<? extends DatagramChannel> channelFactory;
+    private ChannelFactory<? extends DatagramChannel> datagramChannelFactory;
     private ChannelFactory<? extends SocketChannel> socketChannelFactory;
     private boolean retryOnTimeout;
 
@@ -108,40 +108,75 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
-    protected ChannelFactory<? extends DatagramChannel> channelFactory() {
-        return this.channelFactory;
+    ChannelFactory<? extends DatagramChannel> datagramChannelFactory() {
+        return this.datagramChannelFactory;
     }
 
     /**
      * Sets the {@link ChannelFactory} that will create a {@link DatagramChannel}.
+     * <p>
      * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
      * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
      *
-     * @param channelFactory the {@link ChannelFactory}
+     * @param datagramChannelFactory the {@link ChannelFactory}
+     * @return {@code this}
+     * @deprecated use {@link #datagramChannelFactory(ChannelFactory)}
+     */
+    @Deprecated
+    public DnsNameResolverBuilder channelFactory(ChannelFactory<? extends DatagramChannel> datagramChannelFactory) {
+        datagramChannelFactory(datagramChannelFactory);
+        return this;
+    }
+
+    /**
+     * Sets the {@link ChannelFactory} that will create a {@link DatagramChannel}.
+     * <p>
+     * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
+     * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
+     *
+     * @param datagramChannelFactory the {@link ChannelFactory}
      * @return {@code this}
      */
-    public DnsNameResolverBuilder channelFactory(ChannelFactory<? extends DatagramChannel> channelFactory) {
-        this.channelFactory = channelFactory;
+    public DnsNameResolverBuilder datagramChannelFactory(
+            ChannelFactory<? extends DatagramChannel> datagramChannelFactory) {
+        this.datagramChannelFactory = datagramChannelFactory;
         return this;
     }
 
     /**
      * Sets the {@link ChannelFactory} as a {@link ReflectiveChannelFactory} of this type.
      * Use as an alternative to {@link #channelFactory(ChannelFactory)}.
+     * <p>
+     * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
+     * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
+     *
+     * @param channelType the type
+     * @return {@code this}
+     * @deprecated use {@link #datagramChannelType(Class)}
+     */
+    @Deprecated
+    public DnsNameResolverBuilder channelType(Class<? extends DatagramChannel> channelType) {
+        return datagramChannelFactory(new ReflectiveChannelFactory<DatagramChannel>(channelType));
+    }
+
+    /**
+     * Sets the {@link ChannelFactory} as a {@link ReflectiveChannelFactory} of this type.
+     * Use as an alternative to {@link #datagramChannelFactory(ChannelFactory)}.
+     * <p>
      * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
      * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
      *
      * @param channelType the type
      * @return {@code this}
      */
-    public DnsNameResolverBuilder channelType(Class<? extends DatagramChannel> channelType) {
-        return channelFactory(new ReflectiveChannelFactory<DatagramChannel>(channelType));
+    public DnsNameResolverBuilder datagramChannelType(Class<? extends DatagramChannel> channelType) {
+        return datagramChannelFactory(new ReflectiveChannelFactory<DatagramChannel>(channelType));
     }
 
     /**
      * Sets the {@link ChannelFactory} that will create a {@link SocketChannel} for
      * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
-     *
+     * <p>
      * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
      * {@link ChannelFactory} for this method.
      *
@@ -158,7 +193,7 @@ public final class DnsNameResolverBuilder {
      * Sets the {@link ChannelFactory} as a {@link ReflectiveChannelFactory} of this type for
      * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
      * Use as an alternative to {@link #socketChannelFactory(ChannelFactory)}.
-     *
+     * <p>
      * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
      * {@code channelType} for this method.
      *
@@ -173,7 +208,7 @@ public final class DnsNameResolverBuilder {
     /**
      * Sets the {@link ChannelFactory} that will create a {@link SocketChannel} for
      * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
-     *
+     * <p>
      * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
      * {@link ChannelFactory} for this method.
      *
@@ -196,7 +231,7 @@ public final class DnsNameResolverBuilder {
      * Sets the {@link ChannelFactory} as a {@link ReflectiveChannelFactory} of this type for
      * <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> if needed.
      * Use as an alternative to {@link #socketChannelFactory(ChannelFactory)}.
-     *
+     * <p>
      * TCP fallback is <strong>not</strong> enabled by default and must be enabled by providing a non-null
      * {@code channelType} for this method.
      *
@@ -606,7 +641,7 @@ public final class DnsNameResolverBuilder {
 
         return new DnsNameResolver(
                 eventLoop,
-                channelFactory,
+                datagramChannelFactory,
                 socketChannelFactory,
                 retryOnTimeout,
                 resolveCache,
@@ -642,8 +677,8 @@ public final class DnsNameResolverBuilder {
             copiedBuilder.eventLoop(eventLoop);
         }
 
-        if (channelFactory != null) {
-            copiedBuilder.channelFactory(channelFactory);
+        if (datagramChannelFactory != null) {
+            copiedBuilder.datagramChannelFactory(datagramChannelFactory);
         }
 
         copiedBuilder.socketChannelFactory(socketChannelFactory, retryOnTimeout);

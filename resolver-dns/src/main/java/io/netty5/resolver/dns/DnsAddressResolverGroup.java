@@ -51,14 +51,14 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
             Class<? extends DatagramChannel> channelType,
             DnsServerAddressStreamProvider nameServerProvider) {
         this.dnsResolverBuilder = withSharedCaches(new DnsNameResolverBuilder());
-        dnsResolverBuilder.channelType(channelType).nameServerProvider(nameServerProvider);
+        dnsResolverBuilder.datagramChannelType(channelType).nameServerProvider(nameServerProvider);
     }
 
     public DnsAddressResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory,
             DnsServerAddressStreamProvider nameServerProvider) {
         this.dnsResolverBuilder = withSharedCaches(new DnsNameResolverBuilder());
-        dnsResolverBuilder.channelFactory(channelFactory).nameServerProvider(nameServerProvider);
+        dnsResolverBuilder.datagramChannelFactory(channelFactory).nameServerProvider(nameServerProvider);
     }
 
     private static DnsNameResolverBuilder withSharedCaches(DnsNameResolverBuilder dnsResolverBuilder) {
@@ -82,7 +82,7 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
         // but still keep this to ensure backward compatibility with (potentially) override methods
         EventLoop loop = dnsResolverBuilder.eventLoop;
         return newResolver(loop == null ? (EventLoop) executor : loop,
-                dnsResolverBuilder.channelFactory(),
+                dnsResolverBuilder.datagramChannelFactory(),
                 dnsResolverBuilder.nameServerProvider());
     }
 
@@ -116,7 +116,7 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
         // once again, channelFactory and nameServerProvider are most probably set in builder already,
         // but I do reassign them again to avoid corner cases with override methods
         return builder.eventLoop(eventLoop)
-                .channelFactory(channelFactory)
+                .datagramChannelFactory(channelFactory)
                 .nameServerProvider(nameServerProvider)
                 .build();
     }
