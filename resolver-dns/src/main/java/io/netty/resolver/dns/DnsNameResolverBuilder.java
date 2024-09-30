@@ -106,6 +106,11 @@ public final class DnsNameResolverBuilder {
         return this;
     }
 
+    @Deprecated
+    protected ChannelFactory<? extends DatagramChannel> channelFactory() {
+        return this.datagramChannelFactory;
+    }
+
     ChannelFactory<? extends DatagramChannel> datagramChannelFactory() {
         return this.datagramChannelFactory;
     }
