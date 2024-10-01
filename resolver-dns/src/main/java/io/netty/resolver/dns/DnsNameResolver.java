@@ -1507,7 +1507,7 @@ public class DnsNameResolver extends InetNameResolver {
          * Return the next {@link ChannelFuture} that contains the {@link Channel} that should be used for resolving
          * a chain of queries.
          *
-         * @param resolutionFuture the {@link Future} that will be notified once th resolution completes.
+         * @param resolutionFuture  the {@link Future} that will be notified once th resolution completes.
          * @return                  the {@link ChannelFuture}
          */
         <T> ChannelFuture nextResolveChannel(Future<T> resolutionFuture);
@@ -1557,13 +1557,12 @@ public class DnsNameResolver extends InetNameResolver {
             resolutionFuture.addListener(new FutureListener<T>() {
                 @Override
                 public void operationComplete(Future<T> future) {
-                    // Always just close the Channel.
+                    // Always just close the Channel once the resolution is considered complete.
                     f.channel().close();
                 }
             });
             return f;
         }
-
 
         @Override
         public void close() {

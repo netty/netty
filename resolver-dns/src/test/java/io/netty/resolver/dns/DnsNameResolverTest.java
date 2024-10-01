@@ -124,6 +124,7 @@ import static io.netty.resolver.dns.DnsResolveContext.TRY_FINAL_CNAME_ON_ADDRESS
 import static io.netty.resolver.dns.DnsServerAddresses.sequential;
 import static io.netty.resolver.dns.TestDnsServer.newARecord;
 import static java.util.Arrays.asList;
+import static java.util.Arrays.stream;
 import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -1018,19 +1019,22 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test
-    public void testCNAMERecursiveResolveMultipleNameServersIPv4()
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testCNAMERecursiveResolveMultipleNameServersIPv4(DnsNameResolverChannelStrategy strategy)
             throws IOException {
-        testCNAMERecursiveResolveMultipleNameServers(true);
+        testCNAMERecursiveResolveMultipleNameServers(strategy, true);
     }
 
-    @Test
-    public void testCNAMERecursiveResolveMultipleNameServersIPv6()
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testCNAMERecursiveResolveMultipleNameServersIPv6(DnsNameResolverChannelStrategy strategy)
             throws IOException {
-        testCNAMERecursiveResolveMultipleNameServers(false);
+        testCNAMERecursiveResolveMultipleNameServers(strategy, false);
     }
 
-    private static void testCNAMERecursiveResolveMultipleNameServers(boolean ipv4Preferred) throws IOException {
+    private static void testCNAMERecursiveResolveMultipleNameServers(DnsNameResolverChannelStrategy strategy,
+                                                                     boolean ipv4Preferred) throws IOException {
         final String firstName = "firstname.nettyfoo.com";
         final String lastName = "lastname.nettybar.com";
         final String ipv4Addr = "1.2.3.4";
@@ -1094,13 +1098,16 @@ public class DnsNameResolverTest {
             // so no port), so we only specify the name server in the cache, and then specify both name servers in the
             // fallback name server provider.
             nsCache.cache("nettyfoo.com.", dnsServer2.localAddress(), 10000, group.next());
+            SequentialDnsServerAddressStreamProvider provider =
+                    new SequentialDnsServerAddressStreamProvider(dnsServer2.localAddress(), dnsServer3.localAddress());
             resolver = new DnsNameResolver(
-                    group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
-                    NoopDnsCache.INSTANCE, nsCache, NoopDnsQueryLifecycleObserverFactory.INSTANCE, 3000,
+                    group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class), null,
+                    false, NoopDnsCache.INSTANCE, NoopDnsCnameCache.INSTANCE, nsCache, null,
+                    NoopDnsQueryLifecycleObserverFactory.INSTANCE, 3000,
                     ipv4Preferred ? ResolvedAddressTypes.IPV4_ONLY : ResolvedAddressTypes.IPV6_ONLY, true,
                     10, true, 4096, false, HostsFileEntriesResolver.DEFAULT,
-                    new SequentialDnsServerAddressStreamProvider(dnsServer2.localAddress(), dnsServer3.localAddress()),
-                    DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
+                    provider, new ThreadLocalNameServerAddressStream(provider),
+                    DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true, false, 0, strategy) {
                 @Override
                 InetSocketAddress newRedirectServerAddress(InetAddress server) {
                     int port = hitServer2.get() ? dnsServer3.localAddress().getPort() :
@@ -1197,8 +1204,9 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test
-    public void testResolveAllHostsFile() {
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testResolveAllHostsFile(DnsNameResolverChannelStrategy strategy) {
         final DnsNameResolver resolver = new DnsNameResolverBuilder(group.next())
                 .datagramChannelType(NioDatagramChannel.class)
                 .hostsFileEntriesResolver(new HostsFileEntriesResolver() {
@@ -1213,7 +1221,9 @@ public class DnsNameResolverTest {
                         }
                         return null;
                     }
-                }).build();
+                })
+                .datagramChannelStrategy(strategy)
+                .build();
 
         final List<DnsRecord> records = resolver.resolveAll(new DefaultDnsQuestion("foo.com.", A))
                 .syncUninterruptibly().getNow();
@@ -1379,14 +1389,16 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test
-    public void testRecursiveResolveNoCache() throws Exception {
-        testRecursiveResolveCache(false);
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testRecursiveResolveNoCache(DnsNameResolverChannelStrategy strategy) throws Exception {
+        testRecursiveResolveCache(strategy, false);
     }
 
-    @Test
-    public void testRecursiveResolveCache() throws Exception {
-        testRecursiveResolveCache(true);
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testRecursiveResolveCache(DnsNameResolverChannelStrategy strategy) throws Exception {
+        testRecursiveResolveCache(strategy, true);
     }
 
     @ParameterizedTest
@@ -1452,7 +1464,7 @@ public class DnsNameResolverTest {
         }
     }
 
-    private static void testRecursiveResolveCache(boolean cache)
+    private static void testRecursiveResolveCache(DnsNameResolverChannelStrategy strategy, boolean cache)
             throws Exception {
         final String hostname = "some.record.netty.io";
         final String hostname2 = "some2.record.netty.io";
@@ -1470,12 +1482,15 @@ public class DnsNameResolverTest {
         TestRecursiveCacheDnsQueryLifecycleObserverFactory lifecycleObserverFactory =
                 new TestRecursiveCacheDnsQueryLifecycleObserverFactory();
         EventLoopGroup group = new NioEventLoopGroup(1);
+        SingletonDnsServerAddressStreamProvider provider =
+                new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress());
         final DnsNameResolver resolver = new DnsNameResolver(
-                group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
-                NoopDnsCache.INSTANCE, nsCache, lifecycleObserverFactory, 3000, ResolvedAddressTypes.IPV4_ONLY, true,
+                group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class), null,
+                false, NoopDnsCache.INSTANCE, NoopDnsCnameCache.INSTANCE, nsCache, null,
+                lifecycleObserverFactory, 3000, ResolvedAddressTypes.IPV4_ONLY, true,
                 10, true, 4096, false, HostsFileEntriesResolver.DEFAULT,
-                new SingletonDnsServerAddressStreamProvider(dnsServer.localAddress()),
-                DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
+                provider, new ThreadLocalNameServerAddressStream(provider), DnsNameResolver.DEFAULT_SEARCH_DOMAINS,
+                0, true, false, 0, strategy) {
             @Override
             InetSocketAddress newRedirectServerAddress(InetAddress server) {
                 if (server.equals(dnsServerAuthority.localAddress().getAddress())) {
@@ -1556,38 +1571,47 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test
-    public void testFollowNsRedirectsNoopCaches() throws Exception {
-        testFollowNsRedirects(NoopDnsCache.INSTANCE, NoopAuthoritativeDnsServerCache.INSTANCE, false);
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testFollowNsRedirectsNoopCaches(DnsNameResolverChannelStrategy strategy) throws Exception {
+        testFollowNsRedirects(strategy, NoopDnsCache.INSTANCE, NoopAuthoritativeDnsServerCache.INSTANCE, false);
     }
 
-    @Test
-    public void testFollowNsRedirectsNoopDnsCache() throws Exception {
-        testFollowNsRedirects(NoopDnsCache.INSTANCE, new DefaultAuthoritativeDnsServerCache(), false);
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testFollowNsRedirectsNoopDnsCache(DnsNameResolverChannelStrategy strategy) throws Exception {
+        testFollowNsRedirects(strategy, NoopDnsCache.INSTANCE, new DefaultAuthoritativeDnsServerCache(), false);
     }
 
-    @Test
-    public void testFollowNsRedirectsNoopAuthoritativeDnsServerCache() throws Exception {
-        testFollowNsRedirects(new DefaultDnsCache(), NoopAuthoritativeDnsServerCache.INSTANCE, false);
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testFollowNsRedirectsNoopAuthoritativeDnsServerCache(DnsNameResolverChannelStrategy strategy)
+            throws Exception {
+        testFollowNsRedirects(strategy, new DefaultDnsCache(), NoopAuthoritativeDnsServerCache.INSTANCE, false);
     }
 
-    @Test
-    public void testFollowNsRedirectsDefaultCaches() throws Exception {
-        testFollowNsRedirects(new DefaultDnsCache(), new DefaultAuthoritativeDnsServerCache(), false);
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testFollowNsRedirectsDefaultCaches(DnsNameResolverChannelStrategy strategy) throws Exception {
+        testFollowNsRedirects(strategy, new DefaultDnsCache(), new DefaultAuthoritativeDnsServerCache(), false);
     }
 
-    @Test
-    public void testFollowNsRedirectAndTrySecondNsOnTimeout() throws Exception {
-        testFollowNsRedirects(NoopDnsCache.INSTANCE, NoopAuthoritativeDnsServerCache.INSTANCE, true);
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testFollowNsRedirectAndTrySecondNsOnTimeout(DnsNameResolverChannelStrategy strategy) throws Exception {
+        testFollowNsRedirects(strategy, NoopDnsCache.INSTANCE, NoopAuthoritativeDnsServerCache.INSTANCE, true);
     }
 
-    @Test
-    public void testFollowNsRedirectAndTrySecondNsOnTimeoutDefaultCaches() throws Exception {
-        testFollowNsRedirects(new DefaultDnsCache(), new DefaultAuthoritativeDnsServerCache(), true);
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testFollowNsRedirectAndTrySecondNsOnTimeoutDefaultCaches(DnsNameResolverChannelStrategy strategy)
+            throws Exception {
+        testFollowNsRedirects(strategy, new DefaultDnsCache(), new DefaultAuthoritativeDnsServerCache(), true);
     }
 
-    private void testFollowNsRedirects(DnsCache cache, AuthoritativeDnsServerCache authoritativeDnsServerCache,
-            final boolean invalidNsFirst) throws Exception {
+    private void testFollowNsRedirects(DnsNameResolverChannelStrategy strategy, DnsCache cache,
+                                       AuthoritativeDnsServerCache authoritativeDnsServerCache,
+                                       final boolean invalidNsFirst) throws Exception {
         final String domain = "netty.io";
         final String ns1Name = "ns1." + domain;
         final String ns2Name = "ns2." + domain;
@@ -1631,13 +1655,15 @@ public class DnsNameResolverTest {
         };
         redirectServer.start();
         EventLoopGroup group = new NioEventLoopGroup(1);
+        SingletonDnsServerAddressStreamProvider provider =
+                new SingletonDnsServerAddressStreamProvider(redirectServer.localAddress());
         final DnsNameResolver resolver = new DnsNameResolver(
-                group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
-                cache, authoritativeDnsServerCache, NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000,
-                ResolvedAddressTypes.IPV4_ONLY, true, 10, true, 4096,
-                false, HostsFileEntriesResolver.DEFAULT,
-                new SingletonDnsServerAddressStreamProvider(redirectServer.localAddress()),
-                DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
+                group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class), null, false,
+                cache, NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache, null,
+                NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000, ResolvedAddressTypes.IPV4_ONLY, true,
+                10, true, 4096, false, HostsFileEntriesResolver.DEFAULT,
+                provider, new ThreadLocalNameServerAddressStream(provider), DnsNameResolver.DEFAULT_SEARCH_DOMAINS,
+                0, true, false, 0, strategy) {
 
             @Override
             InetSocketAddress newRedirectServerAddress(InetAddress server) {
@@ -1716,17 +1742,21 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test
-    public void testMultipleAdditionalRecordsForSameNSRecord() throws Exception {
-        testMultipleAdditionalRecordsForSameNSRecord(false);
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testMultipleAdditionalRecordsForSameNSRecord(DnsNameResolverChannelStrategy strategy) throws Exception {
+        testMultipleAdditionalRecordsForSameNSRecord(strategy, false);
     }
 
-    @Test
-    public void testMultipleAdditionalRecordsForSameNSRecordReordered() throws Exception {
-        testMultipleAdditionalRecordsForSameNSRecord(true);
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testMultipleAdditionalRecordsForSameNSRecordReordered(DnsNameResolverChannelStrategy strategy)
+            throws Exception {
+        testMultipleAdditionalRecordsForSameNSRecord(strategy, true);
     }
 
-    private static void testMultipleAdditionalRecordsForSameNSRecord(final boolean reversed) throws Exception {
+    private static void testMultipleAdditionalRecordsForSameNSRecord(
+            DnsNameResolverChannelStrategy strategy, final boolean reversed) throws Exception {
         final String domain = "netty.io";
         final String hostname = "test.netty.io";
         final String ns1Name = "ns1." + domain;
@@ -1792,14 +1822,16 @@ public class DnsNameResolverTest {
         };
 
         final AtomicReference<DnsServerAddressStream> redirectedRef = new AtomicReference<DnsServerAddressStream>();
+        SingletonDnsServerAddressStreamProvider provider =
+                new SingletonDnsServerAddressStreamProvider(redirectServer.localAddress());
         final DnsNameResolver resolver = new DnsNameResolver(
-                group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
-                NoopDnsCache.INSTANCE, authoritativeDnsServerCache,
+                group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class), null, false,
+                NoopDnsCache.INSTANCE, NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache, null,
                 NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000, ResolvedAddressTypes.IPV4_ONLY,
                 true, 10, true, 4096,
                 false, HostsFileEntriesResolver.DEFAULT,
-                new SingletonDnsServerAddressStreamProvider(redirectServer.localAddress()),
-                DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
+                provider, new ThreadLocalNameServerAddressStream(provider), DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0,
+                true, false, 0, strategy) {
 
             @Override
             protected DnsServerAddressStream newRedirectDnsServerStream(
@@ -1845,8 +1877,9 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test
-    public void testNSRecordsFromCache() throws Exception {
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testNSRecordsFromCache(DnsNameResolverChannelStrategy strategy) throws Exception {
         final String domain = "netty.io";
         final String hostname = "test.netty.io";
         final String ns0Name = "ns0." + domain + '.';
@@ -1929,14 +1962,16 @@ public class DnsNameResolverTest {
         cache.cache(ns1Name, null, ns4Address.getAddress(), 10000, loop);
 
         final AtomicReference<DnsServerAddressStream> redirectedRef = new AtomicReference<DnsServerAddressStream>();
+        SingletonDnsServerAddressStreamProvider provider =
+                new SingletonDnsServerAddressStreamProvider(redirectServer.localAddress());
         final DnsNameResolver resolver = new DnsNameResolver(
-                loop, new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
-                cache, authoritativeDnsServerCache,
+                loop, new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class), null, false,
+                cache, NoopDnsCnameCache.INSTANCE, authoritativeDnsServerCache, null,
                 NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000, ResolvedAddressTypes.IPV4_ONLY,
                 true, 10, true, 4096,
                 false, HostsFileEntriesResolver.DEFAULT,
-                new SingletonDnsServerAddressStreamProvider(redirectServer.localAddress()),
-                DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true) {
+                provider, new ThreadLocalNameServerAddressStream(provider),
+                DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true, false, 0, strategy) {
 
             @Override
             protected DnsServerAddressStream newRedirectDnsServerStream(
@@ -3572,8 +3607,9 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test
-    public void testCancelPromise() throws Exception {
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testCancelPromise(DnsNameResolverChannelStrategy strategy) throws Exception {
         final EventLoop eventLoop = group.next();
         final Promise<InetAddress> promise = eventLoop.newPromise();
         final TestDnsServer dnsServer1 = new TestDnsServer(Collections.<String>emptySet()) {
@@ -3601,6 +3637,7 @@ public class DnsNameResolverTest {
                 .datagramChannelType(NioDatagramChannel.class)
                 .optResourceEnabled(false)
                 .nameServerProvider(nameServerProvider)
+                .datagramChannelStrategy(strategy)
                 .build();
 
         try {
@@ -4298,8 +4335,9 @@ public class DnsNameResolverTest {
         }
     }
 
-    @Test
-    public void testCnameWithAAndAdditionalsAndAuthorities() throws Exception {
+    @ParameterizedTest
+    @EnumSource(DnsNameResolverChannelStrategy.class)
+    public void testCnameWithAAndAdditionalsAndAuthorities(DnsNameResolverChannelStrategy strategy) throws Exception {
         final String hostname = "test.netty.io";
         final String cname = "cname.netty.io";
 
@@ -4348,14 +4386,17 @@ public class DnsNameResolverTest {
         server.start();
         EventLoopGroup group = new NioEventLoopGroup(1);
 
+        SingletonDnsServerAddressStreamProvider provider =
+                new SingletonDnsServerAddressStreamProvider(server.localAddress());
         final DnsNameResolver resolver = new DnsNameResolver(
-                group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class),
-                NoopDnsCache.INSTANCE, NoopAuthoritativeDnsServerCache.INSTANCE,
+                group.next(), new ReflectiveChannelFactory<DatagramChannel>(NioDatagramChannel.class), null, false,
+                NoopDnsCache.INSTANCE, NoopDnsCnameCache.INSTANCE, NoopAuthoritativeDnsServerCache.INSTANCE, null,
                 NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000, ResolvedAddressTypes.IPV4_ONLY,
                 true, 8, true, 4096,
                 false, HostsFileEntriesResolver.DEFAULT,
-                new SingletonDnsServerAddressStreamProvider(server.localAddress()),
-                new String [] { "k8se-apps.svc.cluster.local, svc.cluster.local, cluster.local" }, 1, true);
+                provider, new ThreadLocalNameServerAddressStream(provider),
+                new String [] { "k8se-apps.svc.cluster.local, svc.cluster.local, cluster.local" }, 1,
+                true, false, 0, strategy);
         try {
             InetAddress address = resolver.resolve(hostname).sync().getNow();
             assertArrayEquals(new byte[] { 10, 0, 0, 2 }, address.getAddress());
@@ -4365,5 +4406,4 @@ public class DnsNameResolverTest {
             server.stop();
         }
     }
-
 }
