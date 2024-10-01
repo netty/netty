@@ -419,7 +419,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         @Override
         public void handle(IoRegistration registration, IoEvent event) {
             try {
-                NioIoRegistration nioRegistration = (NioIoRegistration) registration;
                 NioIoEvent nioEvent = (NioIoEvent) event;
                 NioIoOps nioReadyOps = nioEvent.ops();
                 // We first need to call finishConnect() before try to trigger a read(...) or write(...) as otherwise
@@ -481,7 +480,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     protected void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
-        NioIoRegistration registration = registration();
+        NioIoRegistration registration = this.registration;
         if (registration == null || !registration.isValid()) {
             return;
         }
