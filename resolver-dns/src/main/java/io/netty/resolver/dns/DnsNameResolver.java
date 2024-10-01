@@ -921,15 +921,24 @@ public class DnsNameResolver extends InetNameResolver {
             new DnsRecordResolveContext(DnsNameResolver.this, f.channel(), promise, question, additionals,
                     nameServerAddrs, maxQueriesPerResolve).resolve(promise);
         } else {
-            UnknownHostException e = new UnknownHostException();
-            e.initCause(f.cause());
-
-            ReferenceCountUtil.release(question);
-            for (DnsRecord record : additionals) {
-                ReferenceCountUtil.release(record);
-            }
+            UnknownHostException e = toException(f, hostname, question, additionals);
             promise.setFailure(e);
         }
+    }
+
+    private static UnknownHostException toException(
+            ChannelFuture f, String hostname, DnsQuestion question, DnsRecord[] additionals) {
+        UnknownHostException e = new UnknownHostException(
+                "Failed to resolve '" + hostname + "', couldn't setup transport: " + f.channel());
+        e.initCause(f.cause());
+
+        if (question != null) {
+            ReferenceCountUtil.release(question);
+        }
+        for (DnsRecord record : additionals) {
+            ReferenceCountUtil.release(record);
+        }
+        return e;
     }
 
     private static DnsRecord[] toArray(Iterable<DnsRecord> additionals, boolean validateType) {
@@ -1017,8 +1026,7 @@ public class DnsNameResolver extends InetNameResolver {
             doResolveUncached(f.channel(), hostname, additionals, promise,
                     resolveCache, completeOncePreferredResolved);
         } else {
-            UnknownHostException e = new UnknownHostException();
-            e.initCause(f.cause());
+            UnknownHostException e = toException(f, hostname, null, additionals);
             promise.setFailure(e);
         }
     }
@@ -1148,8 +1156,7 @@ public class DnsNameResolver extends InetNameResolver {
             doResolveAllUncached(f.channel(), hostname, additionals, promise, promise,
                     resolveCache, completeOncePreferredResolved);
         } else {
-            UnknownHostException e = new UnknownHostException();
-            e.initCause(f.cause());
+            UnknownHostException e = toException(f, hostname, null, additionals);
             promise.setFailure(e);
         }
     }
@@ -1366,19 +1373,14 @@ public class DnsNameResolver extends InetNameResolver {
             final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
 
         ChannelFuture f = resolveChannelProvider.nextResolveChannel(promise);
+        final DnsRecord[] additionalsArray = toArray(additionals, false);
         if (f.isDone()) {
             if (f.isSuccess()) {
                 return doQuery(f.channel(), nameServerAddr, question,
-                        NoopDnsQueryLifecycleObserver.INSTANCE, toArray(additionals, false),
+                        NoopDnsQueryLifecycleObserver.INSTANCE, additionalsArray,
                         true, promise);
             } else {
-                UnknownHostException e = new UnknownHostException();
-                e.initCause(f.cause());
-
-                ReferenceCountUtil.release(question);
-                for (DnsRecord record : additionals) {
-                    ReferenceCountUtil.release(record);
-                }
+                UnknownHostException e = toException(f, question.name(), question, additionalsArray);
                 promise.setFailure(e);
                 return executor().newFailedFuture(e);
             }
@@ -1390,16 +1392,10 @@ public class DnsNameResolver extends InetNameResolver {
                     if (f.isSuccess()) {
                         Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> qf = doQuery(
                                 f.channel(), nameServerAddr, question, NoopDnsQueryLifecycleObserver.INSTANCE,
-                                toArray(additionals, false), true, promise);
+                                additionalsArray, true, promise);
                         PromiseNotifier.cascade(qf, p);
                     } else {
-                        UnknownHostException e = new UnknownHostException();
-                        e.initCause(f.cause());
-
-                        ReferenceCountUtil.release(question);
-                        for (DnsRecord record : additionals) {
-                            ReferenceCountUtil.release(record);
-                        }
+                        UnknownHostException e = toException(f, question.name(), question, additionalsArray);
                         promise.setFailure(e);
                         p.setFailure(e);
                     }
