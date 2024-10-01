@@ -144,7 +144,46 @@
               </execution>
             </executions>
           </plugin>
-
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>ensure-required-libraries-are-installed</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>/bin/bash</executable>
+                  <arguments>
+                    <argument>-c</argument>
+                    <argument>
+                      <![CDATA[
+                        if [ -f /etc/fedora-release ]; then
+                          for pkg in autoconf automake libtool make tar glibc-devel libgcc.i686 glibc-devel.i686; do
+                            if ! rpm -q $pkg &>/dev/null; then
+                                echo "Error: Required package '$pkg' is not installed."
+                                exit 1
+                            fi
+                          done
+                        elif [ -f /etc/lsb-release ]; then
+                          for pkg in autoconf automake libtool make tar glibc-devel libgcc.i686 glibc-devel.i686; do
+                            if ! dpkg -s "$pkg" &> /dev/null; then
+                                echo "Error: Required package '$pkg' is not installed."
+                                exit 1
+                            fi
+                          done
+                        else
+                            echo "Double check: https://netty.io/wiki/native-transports.html"
+                        fi
+                      ]]>
+                    </argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
           <plugin>
             <groupId>org.fusesource.hawtjni</groupId>
             <artifactId>hawtjni-maven-plugin</artifactId>
