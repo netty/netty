@@ -7159,6 +7159,13 @@
                   <old>class io.netty.handler.ssl.ocsp.OcspClientHandler</old>
                   <justification>OcspClientHandler moved to netty-codec-ssl-ocsp</justification>
                 </item>
+
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.removed</code>
+                  <old>method io.netty.channel.ChannelFactory&lt;&amp; extends io.netty.channel.socket.DatagramChannel&gt; io.netty.resolver.dns.DnsNameResolverBuilder::channelFactory()</old>
+                  <justification>Protected methods of a final class.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
