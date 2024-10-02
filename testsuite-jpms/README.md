@@ -160,7 +160,7 @@ Boot layer:
 - io.netty.buffer 
 - io.netty.codec.http 
 - java.logging 
-- io.netty.codec.base
+- io.netty.codec
 - io.netty.transport 
 - io.netty.handler 
 - io.netty.common 
