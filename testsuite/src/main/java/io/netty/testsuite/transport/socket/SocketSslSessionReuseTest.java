@@ -93,6 +93,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         return Collections.singleton(new Object[]{
                 SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK),
                 SslContextBuilder.forClient().trustManager(CERT_FILE).sslProvider(SslProvider.JDK)
+                        .endpointIdentificationAlgorithm(null)
         });
     }
 
@@ -100,10 +101,12 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         return Arrays.asList(new Object[]{
                         SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK),
                         SslContextBuilder.forClient().trustManager(CERT_FILE).sslProvider(SslProvider.JDK)
+                                .endpointIdentificationAlgorithm(null)
                 },
                 new Object[]{
                         SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.OPENSSL),
                         SslContextBuilder.forClient().trustManager(CERT_FILE).sslProvider(SslProvider.OPENSSL)
+                                .endpointIdentificationAlgorithm(null)
                 });
     }
 
