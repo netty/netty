@@ -143,7 +143,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
                             @Override
                             public String toString() {
-                                return InternetProtocolFamily.class.getSimpleName() + ".class";
+                                return IoUringDatagramChannel.class.getSimpleName() + ".class";
                             }
                         });
                     }
