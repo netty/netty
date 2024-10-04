@@ -685,6 +685,18 @@ final class AdaptivePoolingAllocator {
             updater.setInitialValue(this);
         }
 
+        /**
+         * Create a new Chunk which shares the state of the given {@link Chunk}, except the reference count.
+         * @param chunk
+         */
+        Chunk(Chunk chunk) {
+            delegate = chunk.delegate;
+            magazine = chunk.magazine;
+            pooled = chunk.pooled;
+            capacity = chunk.capacity;
+            updater.setInitialValue(this);
+        }
+
         @Override
         public Chunk touch(Object hint) {
             return this;
@@ -739,13 +751,15 @@ final class AdaptivePoolingAllocator {
                 mag.usedMemory.getAndAdd(-capacity());
                 delegate.release();
             } else {
-                updater.resetRefCnt(this);
                 delegate.setIndex(0, 0);
                 allocatedBytes = 0;
-                if (!mag.trySetNextInLine(this)) {
-                    if (!parent.offerToQueue(this)) {
-                        // The central queue is full. Drop the memory with the original Drop instance.
-                        delegate.release();
+
+                // Create a new chunk which holds the delegate that can be reused.
+                Chunk chunk = new Chunk(this);
+                if (!mag.trySetNextInLine(chunk)) {
+                    if (!parent.offerToQueue(chunk)) {
+                        // The central queue is full. Drop the chunk which will also release the delegate.
+                        chunk.release();
                     }
                 }
             }
