@@ -680,6 +680,10 @@
     <module>dev-tools</module>
     <module>common</module>
     <module>buffer</module>
+    <module>codec-base</module>
+    <module>codec-compression</module>
+    <module>codec-protobuf</module>
+    <module>codec-marshalling</module>
     <module>codec</module>
     <module>codec-dns</module>
     <module>codec-haproxy</module>
@@ -692,9 +696,6 @@
     <module>codec-socks</module>
     <module>codec-stomp</module>
     <module>codec-xml</module>
-    <module>codec-compression</module>
-    <module>codec-protobuf</module>
-    <module>codec-marshalling</module>
     <module>resolver</module>
     <module>resolver-dns</module>
     <module>resolver-dns-classes-macos</module>
@@ -7165,6 +7166,362 @@
                   <code>java.method.removed</code>
                   <old>method io.netty.channel.ChannelFactory&lt;&amp; extends io.netty.channel.socket.DatagramChannel&gt; io.netty.resolver.dns.DnsNameResolverBuilder::channelFactory()</old>
                   <justification>Protected methods of a final class.</justification>
+                </item>
+
+                <!-- Move netty-codec classes to netty-codec-base -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.AsciiHeadersEncoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.ByteToMessageCodec&lt;I&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.ByteToMessageDecoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.CharSequenceValueConverter</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.CodecException</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.CorruptedFrameException</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.DatagramPacketDecoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.DatagramPacketEncoder&lt;M&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.DateFormatter</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.DecoderException</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.DecoderResult</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>interface io.netty.handler.codec.DecoderResultProvider</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class </old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.DefaultHeaders&lt;K, V, T extends io.netty.handler.codec.Headers&lt;K, V, T&gt;&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class </old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.DefaultHeadersImpl&lt;K, V&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.DelimiterBasedFrameDecoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class </old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.Delimiters</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.EmptyHeaders&lt;K, V, T extends io.netty.handler.codec.Headers&lt;K, V, T&gt;&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.EncoderException</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.FixedLengthFrameDecoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>interface io.netty.handler.codec.Headers&lt;K, V, T extends io.netty.handler.codec.Headers&lt;K, V, T&gt;&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.HeadersUtils</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.LengthFieldBasedFrameDecoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.LengthFieldPrepender</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.LineBasedFrameDecoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.MessageAggregationException</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.MessageToByteEncoder&lt;I&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.MessageToMessageCodec&lt;INBOUND_IN, OUTBOUND_IN&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.MessageToMessageDecoder&lt;I&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.MessageToMessageEncoder&lt;I&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.PrematureChannelClosureException</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.ProtocolDetectionResult&lt;T&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>enum io.netty.handler.codec.ProtocolDetectionState</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.ReplayingDecoder&lt;S&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.TooLongFrameException</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.UnsupportedMessageTypeException</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.UnsupportedValueConverter&lt;V&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>interface io.netty.handler.codec.ValueConverter&lt;T&gt;</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.base64.Base64</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.base64.Base64Decoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>enum io.netty.handler.codec.base64.Base64Dialect</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.base64.Base64Encoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.bytes.ByteArrayDecoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.bytes.ByteArrayEncoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.json.JsonObjectDecoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>interface io.netty.handler.codec.serialization.ClassResolver</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.serialization.ClassResolvers</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.serialization.CompatibleObjectEncoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.serialization.ObjectDecoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.serialization.ObjectDecoderInputStream</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.serialization.ObjectEncoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.serialization.ObjectEncoderOutputStream</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.string.LineEncoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.string.LineSeparator</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.string.StringDecoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.string.StringEncoder</old>
+                  <justification>Move netty-codec classes to netty-codec-base</justification>
                 </item>
               </differences>
             </revapi.differences>

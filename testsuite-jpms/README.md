@@ -74,6 +74,40 @@ are optional, here is a recap:
 | `io.netty.handler`           | `org.bouncycastle.provider`  | explicit  | yes      |
 | `io.netty.handler`           | `org.conscrypt`              | automatic | yes      |
 
+### The case of io.netty.codec
+
+The `io-netty-codec` Maven module is split into 4 modules in Netty 4.2:
+
+- `io-netty-codec-base`
+  - declares the `io.netty.codec` Java module
+  - contains the `io.netty.handler.codec` Java package
+  - and a few built-in codecs that do not require dependencies `io.netty.handler.codec.(base64|bytes|json|serialization|string)` 
+- `io-netty-codec-compression`
+  - declares the `io.netty.codec.compression` Java module
+  - contains the `io.netty.handler.codec.compression` Java package
+  - depends on optional compression libraries, e.g. Brotli4j.
+- `io-netty-codec-protobuf`
+  - declares the `io.netty.codec.protobuf` Java module
+  - contains the `io.netty.handler.codec.protobuf` Java package
+  - depends on the Google Protobuf library
+- `io-netty-codec-marshalling`
+  - declare the `io.netty.codec.marshalling` Java module
+  - contains the `io.netty.handler.codec.marshalling` Java package
+  - depends on the JBoss Marshalling  library
+
+In order to preserve backward compatibility the `io-netty-codec` Maven module depends on 
+
+- `io-netty-codec-base`
+- `io-netty-codec-compression`
+- `io-netty-codec-protobuf`
+- `io-netty-codec-marshalling`
+
+This module also declares the `io.netty.codec.unused` JPMS module that is empty in order to comply to tools expecting
+modular jars such as jlink.
+
+Depending on `io-netty-codec` therefore brings `io-netty-compression`/`io-netty-protobuf`/`io-netty-marshalling`, you
+can still exclude one of these dependencies if you don't need it. Alternatively you can depend on `io-netty-codec-base`.
+
 ### Native transports
 
 Native transports are supported.
@@ -126,7 +160,7 @@ Boot layer:
 - io.netty.buffer 
 - io.netty.codec.http 
 - java.logging 
-- io.netty.codec 
+- io.netty.codec
 - io.netty.transport 
 - io.netty.handler 
 - io.netty.common 
