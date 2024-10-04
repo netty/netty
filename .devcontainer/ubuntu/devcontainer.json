@@ -4,6 +4,7 @@
     CPATH: "/usr/lib/jvm/java-21-openjdk-arm64/include/:/usr/lib/jvm/java-21-openjdk-arm64/include/linux/"
   },
   build: {
-    dockerfile: "Dockerfile"
-  }
+    dockerfile: "Dockerfile",
+  },
+  "securityOpt": [ "seccomp=unconfined" ]
 }

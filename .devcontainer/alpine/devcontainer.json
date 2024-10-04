@@ -6,5 +6,6 @@
   },
   build: {
     dockerfile: "Dockerfile",
-  }
+  },
+  "securityOpt": [ "seccomp=unconfined" ]
 }
