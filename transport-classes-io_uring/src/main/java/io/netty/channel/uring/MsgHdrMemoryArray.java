@@ -23,7 +23,7 @@ final class MsgHdrMemoryArray {
     private final MsgHdrMemory[] hdrs;
     private final int capacity;
     private final long[] ids;
-
+    private boolean released;
     private int idx;
 
     MsgHdrMemoryArray(short capacity) {
@@ -66,6 +66,8 @@ final class MsgHdrMemoryArray {
     }
 
     void release() {
+        assert !released;
+        released = true;
         for (MsgHdrMemory hdr: hdrs) {
             hdr.release();
         }
