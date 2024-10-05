@@ -744,8 +744,11 @@ final class AdaptivePoolingAllocator {
                 allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
                     if (!parent.offerToQueue(this)) {
-                        // The central queue is full. Drop the memory with the original Drop instance.
+                        // The central queue is full. Ensure we release again as we previously did use resetRefCnt()
+                        // which did increase the reference count by 1.
+                        boolean released = updater.release(this);
                         delegate.release();
+                        assert released;
                     }
                 }
             }
