@@ -115,8 +115,8 @@ public class JdkSslContext extends SslContext {
 
             Set<String> suppertedCiphersNonTLSv13 = new LinkedHashSet<>(supportedCiphers);
             for (String defaultTlsv13CipherSuite : SslUtils.DEFAULT_TLSV13_CIPHER_SUITES) {
-            suppertedCiphersNonTLSv13.remove(defaultTlsv13CipherSuite);
-        }
+                suppertedCiphersNonTLSv13.remove(defaultTlsv13CipherSuite);
+            }
             supportedCiphersNonTLSv13 = Collections.unmodifiableSet(suppertedCiphersNonTLSv13);
         }
     }
@@ -205,7 +205,7 @@ public class JdkSslContext extends SslContext {
     public JdkSslContext(SSLContext sslContext, boolean isClient,
                          ClientAuth clientAuth) throws Exception {
         this(sslContext, isClient, null, IdentityCipherSuiteFilter.INSTANCE,
-                JdkDefaultApplicationProtocolNegotiator.INSTANCE, clientAuth, null, false, null);
+                JdkDefaultApplicationProtocolNegotiator.INSTANCE, clientAuth, null, false, null, null);
     }
 
     /**
@@ -254,15 +254,15 @@ public class JdkSslContext extends SslContext {
                 toNegotiator(apn, !isClient),
                 clientAuth,
                 protocols == null ? null : protocols.clone(),
-                startTls, null);
+                startTls, null, null);
     }
 
     @SuppressWarnings("deprecation")
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                   JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls,
-                  String endpointIdentificationAlgorithm)
+                  String endpointIdentificationAlgorithm, ResumptionController resumptionController)
             throws Exception {
-        super(startTls);
+        super(startTls, resumptionController);
         this.apn = requireNonNull(apn, "apn");
         this.clientAuth = requireNonNull(clientAuth, "clientAuth");
         this.sslContext = requireNonNull(sslContext, "sslContext");
