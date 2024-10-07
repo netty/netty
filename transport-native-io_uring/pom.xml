@@ -346,6 +346,12 @@
       <artifactId>bcpkix-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>${tcnative.artifactId}</artifactId>
+      <classifier>${tcnative.classifier}</classifier>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

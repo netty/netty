@@ -382,6 +382,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         protected abstract int scheduleWriteSingle(Object msg);
 
         private boolean closed;
+        private boolean freed;
 
         @Override
         public final void handle(IoRegistration registration, IoEvent ioEvent) {
@@ -440,7 +441,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     break;
             }
 
-            if (ioState == 0 && closed) {
+            if (ioState == 0 && closed && !freed) {
+                freed = true;
                 freeResourcesNow(reg);
             }
         }
