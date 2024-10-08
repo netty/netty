@@ -136,7 +136,7 @@ jobs:
       - name: Generate netty-all and deploy to local staging.
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Plinux-native-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
+          ./mvnw -B --file pom.xml -Plinux-native-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Merge staging repositories
         run: |
