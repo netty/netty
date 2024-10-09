@@ -86,7 +86,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         q100 = new PoolChunkList<T>(this, null, 100, Integer.MAX_VALUE, sizeClass.chunkSize);
         q075 = new PoolChunkList<T>(this, q100, 75, 100, sizeClass.chunkSize);
-        q050 = new PoolChunkList<T>(this, q075, 50, 100, sizeClass.chunkSize);
+        q050 = new PoolChunkList<T>(this, q100, 50, 100, sizeClass.chunkSize);
         q025 = new PoolChunkList<T>(this, q050, 25, 75, sizeClass.chunkSize);
         q000 = new PoolChunkList<T>(this, q025, 1, 50, sizeClass.chunkSize);
         qInit = new PoolChunkList<T>(this, q000, Integer.MIN_VALUE, 25, sizeClass.chunkSize);
