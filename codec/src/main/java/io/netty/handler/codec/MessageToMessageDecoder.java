@@ -51,13 +51,16 @@ import java.util.List;
  */
 public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAdapter {
 
+    private final boolean allowSharable;
     private final TypeParameterMatcher matcher;
+    private boolean decodeCalled;
+    private boolean messageProduced;
 
     /**
      * Create a new instance which will try to detect the types to match out of the type parameter of the class.
      */
     protected MessageToMessageDecoder() {
-        matcher = TypeParameterMatcher.find(this, MessageToMessageDecoder.class, "I");
+        this(true);
     }
 
     /**
@@ -66,7 +69,47 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
      * @param inboundMessageType    The type of messages to match and so decode
      */
     protected MessageToMessageDecoder(Class<? extends I> inboundMessageType) {
+        this(true, inboundMessageType);
+    }
+
+    /**
+     * Create a new instance which will try to detect the types to match out of the type parameter of the class.
+     *
+     * @param allowSharable         if this decoder is not sharable it will take care of calling
+     *                              {@link ChannelHandlerContext#read()} if no message was produced and
+     *                              {@link io.netty.channel.ChannelOption#AUTO_READ} is set to {@code false}.
+     */
+    protected MessageToMessageDecoder(boolean allowSharable) {
+        this.allowSharable = allowSharable;
+        if (!allowSharable) {
+            ensureNotSharable();
+        }
+        matcher = TypeParameterMatcher.find(this, MessageToMessageDecoder.class, "I");
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param allowSharable         if this decoder is not sharable it will take care of calling
+     *                              {@link ChannelHandlerContext#read()} if no message was produced and
+     *                              {@link io.netty.channel.ChannelOption#AUTO_READ} is set to {@code false}.
+
+     * @param inboundMessageType    The type of messages to match and so decode
+     */
+    protected MessageToMessageDecoder(boolean allowSharable, Class<? extends I> inboundMessageType) {
+        this.allowSharable = allowSharable;
+        if (!allowSharable) {
+            ensureNotSharable();
+        }
         matcher = TypeParameterMatcher.get(inboundMessageType);
+    }
+
+    @Override
+    public boolean isSharable() {
+        if (allowSharable) {
+            return super.isSharable();
+        }
+        return false;
     }
 
     /**
@@ -79,6 +122,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        decodeCalled = true;
         CodecOutputList out = CodecOutputList.newInstance();
         try {
             if (acceptInboundMessage(msg)) {
@@ -99,6 +143,7 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
         } finally {
             try {
                 int size = out.size();
+                messageProduced |= size > 0;
                 for (int i = 0; i < size; i++) {
                     ctx.fireChannelRead(out.getUnsafe(i));
                 }
@@ -106,6 +151,19 @@ public abstract class MessageToMessageDecoder<I> extends ChannelInboundHandlerAd
                 out.recycle();
             }
         }
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        if (!isSharable()) {
+            // Only use local vars if this decoder is not sharable as otherwise this is not safe to do.
+            if (decodeCalled && !messageProduced && !ctx.channel().config().isAutoRead()) {
+                ctx.read();
+            }
+            decodeCalled = false;
+            messageProduced = false;
+        }
+        ctx.fireChannelReadComplete();
     }
 
     /**

@@ -68,20 +68,8 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
         }
     };
 
-    private final MessageToMessageDecoder<Object> decoder = new MessageToMessageDecoder<Object>() {
-
-        @Override
-        public boolean acceptInboundMessage(Object msg) throws Exception {
-            return MessageToMessageCodec.this.acceptInboundMessage(msg);
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        protected void decode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
-            MessageToMessageCodec.this.decode(ctx, (INBOUND_IN) msg, out);
-        }
-    };
-
+    private final MessageToMessageDecoder<Object> decoder;
+    private final boolean allowSharable;
     private final TypeParameterMatcher inboundMsgMatcher;
     private final TypeParameterMatcher outboundMsgMatcher;
 
@@ -90,8 +78,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
      * of the class.
      */
     protected MessageToMessageCodec() {
-        inboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, "INBOUND_IN");
-        outboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, "OUTBOUND_IN");
+        this(true);
     }
 
     /**
@@ -102,8 +89,69 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
      */
     protected MessageToMessageCodec(
             Class<? extends INBOUND_IN> inboundMessageType, Class<? extends OUTBOUND_IN> outboundMessageType) {
+        this(true, inboundMessageType, outboundMessageType);
+    }
+
+    /**
+     * Create a new instance which will try to detect the types to decode and encode out of the type parameter
+     * of the class.
+     *
+     * @param allowSharable         if this decoder is not sharable it will take care of calling
+     *                              {@link ChannelHandlerContext#read()} if no message was produced and
+     *                              {@link io.netty.channel.ChannelOption#AUTO_READ} is set to {@code false}.
+     */
+    protected MessageToMessageCodec(boolean allowSharable) {
+        inboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, "INBOUND_IN");
+        outboundMsgMatcher = TypeParameterMatcher.find(this, MessageToMessageCodec.class, "OUTBOUND_IN");
+        this.allowSharable = allowSharable;
+        if (!allowSharable) {
+            ensureNotSharable();
+        }
+        decoder = newDecoder(allowSharable);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param allowSharable         if this decoder is not sharable it will take care of calling
+     *                              {@link ChannelHandlerContext#read()} if no message was produced and
+     *                              {@link io.netty.channel.ChannelOption#AUTO_READ} is set to {@code false}.
+     * @param inboundMessageType    The type of messages to decode
+     * @param outboundMessageType   The type of messages to encode
+     */
+    protected MessageToMessageCodec(boolean allowSharable,
+            Class<? extends INBOUND_IN> inboundMessageType, Class<? extends OUTBOUND_IN> outboundMessageType) {
         inboundMsgMatcher = TypeParameterMatcher.get(inboundMessageType);
         outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
+        this.allowSharable = allowSharable;
+        if (!allowSharable) {
+            ensureNotSharable();
+        }
+        decoder = newDecoder(allowSharable);
+    }
+
+    private MessageToMessageDecoder<Object> newDecoder(boolean allowSharable) {
+        return new MessageToMessageDecoder<Object>(allowSharable) {
+
+            @Override
+            public boolean acceptInboundMessage(Object msg) throws Exception {
+                return MessageToMessageCodec.this.acceptInboundMessage(msg);
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            protected void decode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
+                MessageToMessageCodec.this.decode(ctx, (INBOUND_IN) msg, out);
+            }
+        };
+    }
+
+    @Override
+    public boolean isSharable() {
+        if (allowSharable) {
+            return super.isSharable();
+        }
+        return false;
     }
 
     @Override
