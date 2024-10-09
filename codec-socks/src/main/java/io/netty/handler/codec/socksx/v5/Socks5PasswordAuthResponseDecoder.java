@@ -51,11 +51,11 @@ public class Socks5PasswordAuthResponseDecoder extends ReplayingDecoder<State> {
             switch (state()) {
             case INIT: {
                 final byte version = in.readByte();
-                if (version != 1) {
-                    throw new DecoderException("unsupported subnegotiation version: " + version + " (expected: 1)");
-                }
+                Socks5AuthMethod authMethod = Socks5AuthMethod.valueOf(version);
 
-                out.add(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.valueOf(in.readByte())));
+                out.add(new DefaultSocks5PasswordAuthResponse(
+                        authMethod,
+                        Socks5PasswordAuthStatus.valueOf(in.readByte())));
                 checkpoint(State.SUCCESS);
             }
             case SUCCESS: {
