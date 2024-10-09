@@ -110,8 +110,8 @@
     <dependency>
       <groupId>software.amazon.cryptools</groupId>
       <artifactId>AmazonCorrettoCryptoProvider</artifactId>
-      <version>1.1.0</version>
-      <classifier>linux-x86_64</classifier>
+      <version>${corretto.version}</version>
+      <classifier>${corretto.classifier}</classifier>
       <scope>test</scope>
     </dependency>
 
