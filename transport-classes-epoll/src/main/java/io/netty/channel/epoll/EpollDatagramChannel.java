@@ -687,9 +687,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
             int bytesReceived = socket.recvmsg(msg);
             if (!msg.hasSender()) {
-                allocHandle.lastBytesRead(-1);
-                return false;
+                assert bytesReceived <= 0;
+                allocHandle.lastBytesRead(0);
+                // There was nothing left to handle if bytesReceived == 0.
+                // We will be woken up again when there is more packets to read.
+                // Otherwise just try again.
+                return bytesReceived != 0;
             }
+
             byteBuf.writerIndex(bytesReceived);
             InetSocketAddress local = localAddress();
             DatagramPacket packet = msg.newDatagramPacket(byteBuf, local);
@@ -730,7 +735,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
             int received = socket.recvmmsg(packets, 0, array.count());
             if (received == 0) {
-                allocHandle.lastBytesRead(-1);
+                // There was nothing left to handle. We will be woken up again when there is more packets to read.
+                allocHandle.lastBytesRead(0);
                 return false;
             }
 
