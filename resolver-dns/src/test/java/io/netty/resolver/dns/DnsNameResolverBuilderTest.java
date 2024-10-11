@@ -40,7 +40,7 @@ class DnsNameResolverBuilderTest {
 
     @BeforeEach
     void setUp() {
-        builder = new DnsNameResolverBuilder(GROUP.next()).channelType(NioDatagramChannel.class);
+        builder = new DnsNameResolverBuilder(GROUP.next()).datagramChannelType(NioDatagramChannel.class);
     }
 
     @AfterEach

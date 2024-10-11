@@ -122,7 +122,7 @@ public class OcspServerCertificateValidator extends ChannelInboundHandlerAdapter
     protected static DnsNameResolver createDefaultResolver(final IoTransport ioTransport) {
         return new DnsNameResolverBuilder()
                 .eventLoop(ioTransport.eventLoop())
-                .channelFactory(ioTransport.datagramChannel())
+                .datagramChannelFactory(ioTransport.datagramChannel())
                 .socketChannelFactory(ioTransport.socketChannel())
                 .build();
     }

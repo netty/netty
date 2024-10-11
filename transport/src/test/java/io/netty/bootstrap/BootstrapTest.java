@@ -362,6 +362,7 @@ public class BootstrapTest {
         // Should fail with the UnknownHostException.
         assertThat(connectFuture.await(10000), is(true));
         assertThat(connectFuture.cause(), is(instanceOf(UnknownHostException.class)));
+        connectFuture.channel().closeFuture().await(10000);
         assertThat(connectFuture.channel().isOpen(), is(false));
     }
 
@@ -394,6 +395,7 @@ public class BootstrapTest {
         assertThat(connectFuture.await(10000), is(true));
         assertThat(connectFuture.cause(), instanceOf(IllegalStateException.class));
         assertThat(connectFuture.cause().getCause(), instanceOf(TestException.class));
+        connectFuture.channel().closeFuture().await(10000);
         assertThat(connectFuture.channel().isOpen(), is(false));
     }
 
