@@ -15,7 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
 
@@ -29,6 +28,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 
@@ -67,14 +67,24 @@ final class ResumptionController {
     public boolean validateResumeIfNeeded(SSLEngine engine)
             throws CertificateException, SSLPeerUnverifiedException {
         ResumableX509ExtendedTrustManager tm;
-        boolean valid = engine.getSession().isValid();
-        if (valid && (tm = resumableTm.get()) != null) {
-            Certificate[] peerCertificates = engine.getSession().getPeerCertificates();
-
+        SSLSession session = engine.getSession();
+        boolean valid = session.isValid();
+        if (valid && (engine.getUseClientMode() || engine.getNeedClientAuth() || engine.getWantClientAuth()) &&
+                (tm = resumableTm.get()) != null) {
             // Unwrap JdkSslEngines because they add their inner JDK SSLEngine objects to the set.
             engine = unwrapEngine(engine);
 
             if (!confirmedValidations.remove(engine)) {
+                Certificate[] peerCertificates;
+                try {
+                    peerCertificates = session.getPeerCertificates();
+                } catch (SSLPeerUnverifiedException e) {
+                    if (engine.getUseClientMode() || engine.getNeedClientAuth()) {
+                        throw e;
+                    }
+                    return false;
+                }
+
                 // This is a resumed session.
                 if (engine.getUseClientMode()) {
                     // We are the client, resuming a session trusting the server
