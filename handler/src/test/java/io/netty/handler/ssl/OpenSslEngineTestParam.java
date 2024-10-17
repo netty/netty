@@ -21,7 +21,8 @@ final class OpenSslEngineTestParam extends SSLEngineTest.SSLEngineTestParam {
     final boolean useTasks;
     final boolean useTickets;
 
-    static void expandCombinations(SSLEngineTest.SSLEngineTestParam param, List<? super OpenSslEngineTestParam> output) {
+    static void expandCombinations(SSLEngineTest.SSLEngineTestParam param,
+                                   List<? super OpenSslEngineTestParam> output) {
         output.add(new OpenSslEngineTestParam(true, true, param));
         output.add(new OpenSslEngineTestParam(false, true, param));
         output.add(new OpenSslEngineTestParam(true, false, param));
