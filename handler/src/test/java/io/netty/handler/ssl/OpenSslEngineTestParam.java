@@ -15,11 +15,40 @@
  */
 package io.netty.handler.ssl;
 
+import java.util.List;
+
 final class OpenSslEngineTestParam extends SSLEngineTest.SSLEngineTestParam {
     final boolean useTasks;
-    OpenSslEngineTestParam(boolean useTasks, SSLEngineTest.SSLEngineTestParam param) {
+    final boolean useTickets;
+
+    static void expandCombinations(SSLEngineTest.SSLEngineTestParam param, List<? super OpenSslEngineTestParam> output) {
+        output.add(new OpenSslEngineTestParam(true, true, param));
+        output.add(new OpenSslEngineTestParam(false, true, param));
+        output.add(new OpenSslEngineTestParam(true, false, param));
+        output.add(new OpenSslEngineTestParam(false, false, param));
+    }
+
+    @SuppressWarnings("deprecation")
+    static SslContext wrapContext(SSLEngineTest.SSLEngineTestParam param, SslContext context) {
+        if (context instanceof OpenSslContext) {
+            OpenSslContext ctx = (OpenSslContext) context;
+            if (param instanceof OpenSslEngineTestParam) {
+                OpenSslEngineTestParam openSslParam = (OpenSslEngineTestParam) param;
+                ctx.setUseTasks(openSslParam.useTasks);
+                if (openSslParam.useTickets) {
+                    ctx.sessionContext().setTicketKeys();
+                }
+            }
+            // Explicit enable the session cache as its disabled by default on the client side.
+            ctx.sessionContext().setSessionCacheEnabled(true);
+        }
+        return context;
+    }
+
+    OpenSslEngineTestParam(boolean useTasks, boolean useTickets, SSLEngineTest.SSLEngineTestParam param) {
         super(param.type(), param.combo(), param.delegate());
         this.useTasks = useTasks;
+        this.useTickets = useTickets;
     }
 
     @Override
@@ -29,6 +58,7 @@ final class OpenSslEngineTestParam extends SSLEngineTest.SSLEngineTestParam {
                 ", protocolCipherCombo=" + combo() +
                 ", delegate=" + delegate() +
                 ", useTasks=" + useTasks +
+                ", useTickets=" + useTickets +
                 '}';
     }
 }

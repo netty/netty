@@ -1462,11 +1462,14 @@ public abstract class SSLEngineTest {
 
                 // With TLS1.3 we should see pseudo IDs and so these should never match.
                 assertFalse(Arrays.equals(clientEngine.getSession().getId(), serverEngine.getSession().getId()));
+            } else if (((OpenSslEngineTestParam) param).useTickets) {
+                // After the handshake the client should have ticket ids
+                assertNotEquals(0, clientEngine.getSession().getId().length);
+                assertEquals(0, serverEngine.getSession().getId().length);
             } else {
                 // After the handshake the id should have length > 0
                 assertNotEquals(0, clientEngine.getSession().getId().length);
                 assertNotEquals(0, serverEngine.getSession().getId().length);
-
                 assertArrayEquals(clientEngine.getSession().getId(), serverEngine.getSession().getId());
             }
         } finally {

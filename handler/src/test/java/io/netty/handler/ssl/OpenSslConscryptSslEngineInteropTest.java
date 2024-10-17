@@ -38,8 +38,7 @@ public class OpenSslConscryptSslEngineInteropTest extends ConscryptSslEngineTest
         List<SSLEngineTestParam> params = super.newTestParams();
         List<SSLEngineTestParam> testParams = new ArrayList<SSLEngineTestParam>();
         for (SSLEngineTestParam param: params) {
-            testParams.add(new OpenSslEngineTestParam(true, param));
-            testParams.add(new OpenSslEngineTestParam(false, param));
+            OpenSslEngineTestParam.expandCombinations(param, testParams);
         }
         return testParams;
     }
@@ -184,16 +183,8 @@ public class OpenSslConscryptSslEngineInteropTest extends ConscryptSslEngineTest
         return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     protected SslContext wrapContext(SSLEngineTestParam param, SslContext context) {
-        if (context instanceof OpenSslContext) {
-            if (param instanceof OpenSslEngineTestParam) {
-                ((OpenSslContext) context).setUseTasks(((OpenSslEngineTestParam) param).useTasks);
-            }
-            // Explicit enable the session cache as its disabled by default on the client side.
-            ((OpenSslContext) context).sessionContext().setSessionCacheEnabled(true);
-        }
-        return context;
+        return OpenSslEngineTestParam.wrapContext(param, context);
     }
 }
