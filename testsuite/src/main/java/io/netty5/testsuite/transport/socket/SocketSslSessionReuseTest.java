@@ -33,7 +33,6 @@ import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.SelfSignedCertificate;
-import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -208,7 +207,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         final ReadAndDiscardHandler sh = new ReadAndDiscardHandler(true, true);
         final ReadAndDiscardHandler ch = new ReadAndDiscardHandler(false, true) {
             @Override
-            public Future<Void> sendOutboundEvent(ChannelHandlerContext ctx, Object evt) {
+            public void channelInboundEvent(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslHandshakeCompletionEvent) {
                     SslHandshakeCompletionEvent handshakeCompletionEvent = (SslHandshakeCompletionEvent) evt;
                     if (handshakeCompletionEvent.isSuccess()) {
@@ -218,7 +217,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
                         logger.error("SSL handshake failed", handshakeCompletionEvent.cause());
                     }
                 }
-                return super.sendOutboundEvent(ctx, evt);
+                super.channelInboundEvent(ctx, evt);
             }
         };
 
