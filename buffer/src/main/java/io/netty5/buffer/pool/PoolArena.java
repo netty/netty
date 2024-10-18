@@ -86,7 +86,7 @@ class PoolArena extends SizeClasses implements PoolArenaMetric {
 
         q100 = new PoolChunkList(this, null, 100, Integer.MAX_VALUE, chunkSize);
         q075 = new PoolChunkList(this, q100, 75, 100, chunkSize);
-        q050 = new PoolChunkList(this, q075, 50, 100, chunkSize);
+        q050 = new PoolChunkList(this, q100, 50, 100, chunkSize);
         q025 = new PoolChunkList(this, q050, 25, 75, chunkSize);
         q000 = new PoolChunkList(this, q025, 1, 50, chunkSize);
         qInit = new PoolChunkList(this, q000, Integer.MIN_VALUE, 25, chunkSize);
