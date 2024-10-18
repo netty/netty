@@ -46,6 +46,13 @@ final class OpenSslEngineTestParam extends SSLEngineTest.SSLEngineTestParam {
         return context;
     }
 
+    static boolean isUsingTickets(SSLEngineTest.SSLEngineTestParam param) {
+        if (param instanceof OpenSslEngineTestParam) {
+            return ((OpenSslEngineTestParam) param).useTickets;
+        }
+        return false;
+    }
+
     OpenSslEngineTestParam(boolean useTasks, boolean useTickets, SSLEngineTest.SSLEngineTestParam param) {
         super(param.type(), param.combo(), param.delegate());
         this.useTasks = useTasks;
