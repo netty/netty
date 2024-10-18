@@ -220,11 +220,13 @@ public final class SelfSignedCertificate {
     }
 
     private SelfSignedCertificate(Builder builder) throws CertificateException {
-        if (!builder.generateBc()) {
-            if (!builder.generateKeytool()) {
-                if (!builder.generateSunMiscSecurity()) {
-                    // last exception is always from generateSunMiscSecurity, so we can cast here
-                    throw (CertificateException) builder.failure;
+        if (!builder.generateCertificateBuilder()) {
+            if (!builder.generateBc()) {
+                if (!builder.generateKeytool()) {
+                    if (!builder.generateSunMiscSecurity()) {
+                        // last exception is always from generateSunMiscSecurity, so we can cast here
+                        throw (CertificateException) builder.failure;
+                    }
                 }
             }
         }
@@ -536,6 +538,26 @@ public final class SelfSignedCertificate {
                 addFailure(t);
                 return false;
             }
+        }
+
+        boolean generateCertificateBuilder() {
+            if (!CertificateBuilderCertGenerator.isAvailable()) {
+                logger.debug("Not attempting to generate a certificate with CertificateBuilder " +
+                        "because it's not available on the classpath");
+                return false;
+            }
+            try {
+                CertificateBuilderCertGenerator.generate(this);
+                return true;
+            } catch (CertificateException ce) {
+                logger.debug(ce);
+                addFailure(ce);
+            } catch (Exception e) {
+                String msg = "Failed to generate a self-signed X.509 certificate using CertificateBuilder:";
+                logger.debug(msg, e);
+                addFailure(new CertificateException(msg, e));
+            }
+            return false;
         }
 
         boolean generateSunMiscSecurity() {

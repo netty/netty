@@ -717,6 +717,7 @@
     <module>handler-ssl-ocsp</module>
     <module>example</module>
     <module>testsuite</module>
+    <module>pkitesting</module>
     <module>testsuite-autobahn</module>
     <module>testsuite-http2</module>
     <module>testsuite-osgi</module>
