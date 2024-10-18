@@ -23,10 +23,12 @@ final class OpenSslEngineTestParam extends SSLEngineTest.SSLEngineTestParam {
 
     static void expandCombinations(SSLEngineTest.SSLEngineTestParam param,
                                    List<? super OpenSslEngineTestParam> output) {
-        output.add(new OpenSslEngineTestParam(true, true, param));
-        output.add(new OpenSslEngineTestParam(false, true, param));
         output.add(new OpenSslEngineTestParam(true, false, param));
         output.add(new OpenSslEngineTestParam(false, false, param));
+        if (OpenSsl.isBoringSSL()) {
+            output.add(new OpenSslEngineTestParam(true, true, param));
+            output.add(new OpenSslEngineTestParam(false, true, param));
+        }
     }
 
     @SuppressWarnings("deprecation")
