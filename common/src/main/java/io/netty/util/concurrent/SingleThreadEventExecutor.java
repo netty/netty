@@ -19,6 +19,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.Async.Schedule;
@@ -41,6 +42,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
@@ -84,6 +86,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     private final CountDownLatch threadLock = new CountDownLatch(1);
     private final Set<Runnable> shutdownHooks = new LinkedHashSet<Runnable>();
+    private final AtomicReference<Throwable> shutdownAt = new AtomicReference<Throwable>();
     private final boolean addTaskWakesUp;
     private final int maxPendingTasks;
     private final RejectedExecutionHandler rejectedExecutionHandler;
@@ -629,6 +632,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         if (isShuttingDown()) {
             return terminationFuture();
         }
+        shutdownAt.compareAndSet(null, new Exception("Shut down trace"));
 
         boolean inEventLoop = inEventLoop();
         boolean wakeup;
@@ -685,6 +689,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         if (isShutdown()) {
             return;
         }
+        shutdownAt.compareAndSet(null, new Exception("Shut down trace"));
 
         boolean inEventLoop = inEventLoop();
         boolean wakeup;
@@ -930,8 +935,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return true;
     }
 
-    protected static void reject() {
-        throw new RejectedExecutionException("event executor terminated");
+    protected void reject() {
+        RejectedExecutionException terminated = new RejectedExecutionException("event executor terminated");
+        Throwable trace = shutdownAt.get();
+        if (trace != null) {
+            ThrowableUtil.addSuppressed(terminated, trace);
+        }
+        throw terminated;
     }
 
     /**
