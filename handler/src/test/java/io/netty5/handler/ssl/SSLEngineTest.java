@@ -27,6 +27,7 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
+import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.nio.NioIoHandler;
@@ -43,6 +44,7 @@ import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.ResourcesUtil;
@@ -3741,7 +3743,24 @@ public abstract class SSLEngineTest {
             assertTrue(ccf.asStage().sync().isSuccess());
             clientChannel = ccf.getNow();
 
-            clientChannel.writeAndFlush(clientChannel.bufferAllocator().allocate(4).writeInt(42)).asStage().sync();
+            Future<Void> future = clientChannel.writeAndFlush(clientChannel.bufferAllocator().allocate(4).writeInt(42));
+            if (!future.asStage().await(10, TimeUnit.SECONDS)) {
+                EventLoopGroup group = cb.config().group();
+                group.forEach(ee -> {
+                    SingleThreadEventExecutor se = (SingleThreadEventExecutor) ee;
+                    if (!se.inEventLoop(null)) {
+                        try {
+                            StackTraceElement[] stackTraceElements = se.threadProperties().stackTrace();
+                            Exception trace = new Exception();
+                            trace.setStackTrace(stackTraceElements);
+                            logger.debug("Client thread trade", trace);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                });
+            }
+            future.asStage().sync();
             assertEquals("client", clientSessionValues.take());
             assertEquals("server", serverSessionValues.take());
             clientChannel.closeFuture().asStage().sync();
