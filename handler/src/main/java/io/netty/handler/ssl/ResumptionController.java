@@ -69,6 +69,14 @@ final class ResumptionController {
         ResumableX509ExtendedTrustManager tm;
         SSLSession session = engine.getSession();
         boolean valid = session.isValid();
+
+        // Look for resumption if the session is valid, and we expect to authenticate our peer:
+        //   1.   Clients always authenticate the server.
+        //   2.a. Servers only authenticate the client if they need auth,
+        //   2.b. or if they requested auth and the client provided.
+        //
+        // If a server only "want" but don't "need" auth (ClientAuth.OPTIONAL) and the client didn't provide
+        // any certificates, then `session.getPeerCertificates()` will throw `SSLPeerUnverifiedException`.
         if (valid && (engine.getUseClientMode() || engine.getNeedClientAuth() || engine.getWantClientAuth()) &&
                 (tm = resumableTm.get()) != null) {
             // Unwrap JdkSslEngines because they add their inner JDK SSLEngine objects to the set.
@@ -80,8 +88,10 @@ final class ResumptionController {
                     peerCertificates = session.getPeerCertificates();
                 } catch (SSLPeerUnverifiedException e) {
                     if (engine.getUseClientMode() || engine.getNeedClientAuth()) {
+                        // Auth is required, and we got none.
                         throw e;
                     }
+                    // Auth is optional, and none were provided. Skip out; session resumed but nothing to authenticate.
                     return false;
                 }
 
