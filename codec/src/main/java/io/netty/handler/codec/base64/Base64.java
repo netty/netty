@@ -140,7 +140,10 @@ public final class Base64 {
         if (e > 1 && dest.getByte(e - 1) == NEW_LINE) {
             e--;
         }
-        return destBuf.slice(0, e);
+        if (dest != destBuf) {
+            dest.release();
+        }
+        return destBuf.setIndex(0, e);
     }
 
     private static void encode3to4(
