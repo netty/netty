@@ -17,7 +17,6 @@ package io.netty5.handler.ssl;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.condition.DisabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -98,7 +97,7 @@ public class ConscryptJdkSslEngineInteropTest extends SSLEngineTest {
 
     @Disabled("Disabled due a conscrypt bug")
     @Override
-    public void mustCallResumeTrustedOnSessionResumption(SSLEngineTestParam param, TestInfo info) throws Exception {
-        super.mustCallResumeTrustedOnSessionResumption(param, info);
+    public void mustCallResumeTrustedOnSessionResumption(SSLEngineTestParam param) throws Exception {
+        super.mustCallResumeTrustedOnSessionResumption(param);
     }
 }

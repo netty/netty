@@ -27,7 +27,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelInitializer;
 import io.netty5.channel.ChannelOption;
 import io.netty5.channel.ChannelPipeline;
-import io.netty5.channel.EventLoopGroup;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.nio.NioIoHandler;
@@ -44,7 +43,6 @@ import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.concurrent.SingleThreadEventExecutor;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.ResourcesUtil;
@@ -55,7 +53,6 @@ import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
@@ -1781,17 +1778,16 @@ public abstract class SSLEngineTest {
         serverSslCtx = serverCtx;
         clientSslCtx = clientCtx;
 
-        setupServer(type, delegate, null);
+        setupServer(type, delegate);
 
-        setupClient(type, delegate, null, 0, null);
+        setupClient(type, delegate, null, 0);
 
         Future<Channel> ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.asStage().sync().isSuccess());
         clientChannel = ccf.asStage().get();
     }
 
-    private void setupServer(final BufferType type, final boolean delegate,
-                             final TestInfo info) throws Exception {
+    private void setupServer(final BufferType type, final boolean delegate) throws Exception {
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
         sb.group(new MultithreadEventLoopGroup(NioIoHandler.newFactory()),
@@ -1817,12 +1813,6 @@ public abstract class SSLEngineTest {
                             serverException = cause.getCause();
                             serverLatch.countDown();
                         } else {
-                            if (info != null) {
-                                logger.debug("Passing through server exception for {} [{}]",
-                                        info.getTestMethod().map(Method::toString).orElse("???"),
-                                        info.getDisplayName(),
-                                        cause);
-                            }
                             ctx.fireChannelExceptionCaught(cause);
                         }
                     }
@@ -1834,8 +1824,7 @@ public abstract class SSLEngineTest {
         serverChannel = sb.bind(new InetSocketAddress(0)).asStage().get();
     }
 
-    private void setupClient(final BufferType type, final boolean delegate, final String host, final int port,
-                             final TestInfo info) {
+    private void setupClient(final BufferType type, final boolean delegate, final String host, final int port) {
         cb = new Bootstrap();
         cb.group(new MultithreadEventLoopGroup(NioIoHandler.newFactory()));
         cb.channel(NioSocketChannel.class);
@@ -1866,12 +1855,6 @@ public abstract class SSLEngineTest {
                             clientException = cause.getCause();
                             clientLatch.countDown();
                         } else {
-                            if (info != null) {
-                                logger.debug("Passing through client exception for {} [{}]",
-                                        info.getTestMethod().map(Method::toString).orElse("???"),
-                                        info.getDisplayName(),
-                                        cause);
-                            }
                             ctx.fireChannelExceptionCaught(cause);
                         }
                     }
@@ -3713,7 +3696,7 @@ public abstract class SSLEngineTest {
     @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     @MethodSource("newTestParams")
     @ParameterizedTest
-    public void mustCallResumeTrustedOnSessionResumption(SSLEngineTestParam param, TestInfo info) throws Exception {
+    public void mustCallResumeTrustedOnSessionResumption(SSLEngineTestParam param) throws Exception {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         SessionValueSettingTrustManager clientTm = new SessionValueSettingTrustManager("key", "client");
         SessionValueSettingTrustManager serverTm = new SessionValueSettingTrustManager("key", "server");
@@ -3727,9 +3710,6 @@ public abstract class SSLEngineTest {
                 msg.close();
                 SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
                 SSLEngine engine = sslHandler.engine();
-                logger.debug("Client message received: {} ({}) {} {}",
-                        engine.getSession(), engine.getHandshakeStatus(), isSessionReused(engine),
-                        Arrays.toString(engine.getSession().getValueNames()));
                 Object value = engine.getSession().getValue("key");
                 clientSessionValues.put((String) value);
             }
@@ -3739,18 +3719,15 @@ public abstract class SSLEngineTest {
             public void messageReceived(ChannelHandlerContext ctx, Buffer msg) throws Exception {
                 SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
                 SSLEngine engine = sslHandler.engine();
-                logger.debug("Server message received: {} ({}) {} {}",
-                        engine.getSession(), engine.getHandshakeStatus(), isSessionReused(engine),
-                        Arrays.toString(engine.getSession().getValueNames()));
                 Object value = engine.getSession().getValue("key");
                 serverSessionValues.put((String) value);
                 ctx.writeAndFlush(msg).addListener(ctx, ChannelFutureListeners.CLOSE);
             }
         };
 
-        setupServer(param.type(), param.delegate(), info);
+        setupServer(param.type(), param.delegate());
         InetSocketAddress addr = (InetSocketAddress) serverChannel.localAddress();
-        setupClient(param.type(), param.delegate(), "a.netty.io", addr.getPort(), info);
+        setupClient(param.type(), param.delegate(), "a.netty.io", addr.getPort());
         for (int i = 0; i < 10; i++) {
             clientReceiver.onNextMessages.offer(checkClient);
             serverReceiver.onNextMessages.offer(checkServer);
@@ -3760,22 +3737,6 @@ public abstract class SSLEngineTest {
             clientChannel = ccf.getNow();
 
             Future<Void> future = clientChannel.writeAndFlush(clientChannel.bufferAllocator().allocate(4).writeInt(42));
-            if (!future.asStage().await(10, TimeUnit.SECONDS)) {
-                EventLoopGroup group = cb.config().group();
-                group.forEach(ee -> {
-                    SingleThreadEventExecutor se = (SingleThreadEventExecutor) ee;
-                    if (!se.inEventLoop(null)) {
-                        try {
-                            StackTraceElement[] stackTraceElements = se.threadProperties().stackTrace();
-                            Exception trace = new Exception();
-                            trace.setStackTrace(stackTraceElements);
-                            logger.debug("Client thread trace for {}", clientChannel.id(), trace);
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                });
-            }
             future.asStage().sync();
             assertEquals("client", clientSessionValues.take());
             assertEquals("server", serverSessionValues.take());
@@ -3790,7 +3751,7 @@ public abstract class SSLEngineTest {
     @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     @MethodSource("newTestParams")
     @ParameterizedTest
-    void mustFailHandshakePromiseIfResumeServerTrustedThrows(SSLEngineTestParam param, TestInfo info) throws Exception {
+    void mustFailHandshakePromiseIfResumeServerTrustedThrows(SSLEngineTestParam param) throws Exception {
         final AtomicInteger checkServerTrustedCount = new AtomicInteger();
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         SessionValueSettingTrustManager clientTm = new SessionValueSettingTrustManager("key", "client") {
@@ -3818,9 +3779,9 @@ public abstract class SSLEngineTest {
             }
         };
 
-        setupServer(param.type(), param.delegate(), info);
+        setupServer(param.type(), param.delegate());
         InetSocketAddress addr = (InetSocketAddress) serverChannel.localAddress();
-        setupClient(param.type(), param.delegate(), "a.netty.io", addr.getPort(), info);
+        setupClient(param.type(), param.delegate(), "a.netty.io", addr.getPort());
         Future<Channel> handshakeFuture = null;
 
         for (int i = 0; i < 2; i++) {
@@ -3856,7 +3817,7 @@ public abstract class SSLEngineTest {
     @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     @MethodSource("newTestParams")
     @ParameterizedTest
-    void mustFailHandshakePromiseIfResumeClientTrustedThrows(SSLEngineTestParam param, TestInfo info) throws Exception {
+    void mustFailHandshakePromiseIfResumeClientTrustedThrows(SSLEngineTestParam param) throws Exception {
         final AtomicInteger checkClientTrustedCount = new AtomicInteger();
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         SessionValueSettingTrustManager clientTm = new SessionValueSettingTrustManager("key", "client");
@@ -3884,9 +3845,9 @@ public abstract class SSLEngineTest {
             }
         };
 
-        setupServer(param.type(), param.delegate(), info);
+        setupServer(param.type(), param.delegate());
         InetSocketAddress addr = (InetSocketAddress) serverChannel.localAddress();
-        setupClient(param.type(), param.delegate(), "a.netty.io", addr.getPort(), info);
+        setupClient(param.type(), param.delegate(), "a.netty.io", addr.getPort());
         Future<Channel> handshakeFuture = null;
 
         for (int i = 0; i < 2; i++) {
