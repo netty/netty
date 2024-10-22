@@ -30,11 +30,11 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.socket.DuplexChannelConfig;
-import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.SuppressJava6Requirement;
@@ -73,7 +73,7 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
     private volatile boolean isInputShutdown;
     private volatile boolean isOutputShutdown;
 
-    private static SocketChannel newChannel(SelectorProvider provider) {
+    static SocketChannel newChannel(SelectorProvider provider) {
         if (PlatformDependent.javaVersion() < 16) {
             throw new UnsupportedOperationException("Only supported on java 16+");
         }
@@ -125,8 +125,8 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
     }
 
     @Override
-    public ServerSocketChannel parent() {
-        return (ServerSocketChannel) super.parent();
+    public ServerChannel parent() {
+        return (ServerChannel) super.parent();
     }
 
     @Override
