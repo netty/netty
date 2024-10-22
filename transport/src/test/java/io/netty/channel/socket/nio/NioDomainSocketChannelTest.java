@@ -21,6 +21,7 @@ import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
 
 import java.io.IOException;
+import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 
 @EnabledForJreRange(min = JRE.JAVA_16)
@@ -28,12 +29,9 @@ class NioDomainSocketChannelTest {
     @Test
     void accessParent() throws IOException {
         NioServerDomainSocketChannel parent = new NioServerDomainSocketChannel();
-        NioDomainSocketChannel child = new NioDomainSocketChannel(
-                parent,
-                NioDomainSocketChannel.newChannel(SelectorProvider.provider()));
-
+        SocketChannel ch = NioDomainSocketChannel.newChannel(SelectorProvider.provider());
+        NioDomainSocketChannel child = new NioDomainSocketChannel(parent, ch);
         Assertions.assertSame(parent, child.parent());
-
-        child.close();
+        ch.close();
     }
 }
