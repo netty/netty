@@ -1411,6 +1411,13 @@
                   <old>method io.netty.channel.ChannelFactory&lt;&amp; extends io.netty.channel.socket.DatagramChannel&gt; io.netty.resolver.dns.DnsNameResolverBuilder::channelFactory()</old>
                   <justification>Protected methods of a final class.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeChanged</code>
+                  <old>method io.netty.channel.socket.ServerSocketChannel io.netty.channel.socket.nio.NioDomainSocketChannel::parent()</old>
+                  <new>method io.netty.channel.ServerChannel io.netty.channel.socket.nio.NioDomainSocketChannel::parent()</new>
+                  <justification>Old return type made no sense, the parent channel is a NioServerDomainSocketChannel which does not implement ServerSocketChannel. The method always threw a ClassCastException (except for null).</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
@@ -1443,6 +1450,7 @@
               <exclude>@io.netty.util.internal.UnstableApi</exclude>
               <exclude>io.netty.util.internal.shaded</exclude>
               <exclude>io.netty.buffer.AdaptivePoolingAllocator$ChunkAllocator</exclude>
+              <exclude>io.netty.channel.socket.nio.NioDomainSocketChannel#parent()</exclude>
             </excludes>
             <overrideCompatibilityChangeParameters>
               <overrideCompatibilityChangeParameter>
