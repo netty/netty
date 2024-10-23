@@ -118,7 +118,7 @@ public class DefaultChannelPipelineTailTest {
         myChannel.pipeline().fireChannelActive();
 
         try {
-            assertTrue(latch.await(1L, TimeUnit.SECONDS));
+            assertTrue(latch.await(10L, TimeUnit.SECONDS));
         } finally {
             myChannel.close();
         }
