@@ -39,11 +39,12 @@ final class OpenSslServerContext extends OpenSslContext {
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
-            boolean enableOcsp, String keyStore, Map.Entry<SslContextOption<?>, Object>... options)
+            boolean enableOcsp, String keyStore, ResumptionController resumptionController,
+            Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
                 cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStore, options);
+                enableOcsp, keyStore, resumptionController, options);
     }
 
     @SuppressWarnings("deprecation")
@@ -52,17 +53,18 @@ final class OpenSslServerContext extends OpenSslContext {
             X509Certificate[] keyCertChain, PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
-            boolean enableOcsp, String keyStore, Map.Entry<SslContextOption<?>, Object>... options)
+            boolean enableOcsp, String keyStore, ResumptionController resumptionController,
+            Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, null, options);
+                clientAuth, protocols, startTls, enableOcsp, null, resumptionController, options);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                                               sessionCacheSize, sessionTimeout);
+                                               sessionCacheSize, sessionTimeout, resumptionController);
             success = true;
         } finally {
             if (!success) {

@@ -76,7 +76,7 @@ final class JdkSslServerContext extends JdkSslContext {
         tm.init((KeyStore) null);
         TrustManager[] managers = tm.getTrustManagers();
 
-        ctx.init(kmf.getKeyManagers(), wrapTrustManagerIfNeeded(managers), null);
+        ctx.init(kmf.getKeyManagers(), wrapTrustManagerIfNeeded(managers, null), null);
     }
 
     // FIXME test only
@@ -92,8 +92,8 @@ final class JdkSslServerContext extends JdkSslContext {
       throws Exception {
         super(newSSLContext(provider, null, null,
           toX509CertificatesInternal(certChainFile), toPrivateKeyInternal(keyFile, keyPassword),
-          keyPassword, null, sessionCacheSize, sessionTimeout, null, KeyStore.getDefaultType()),
-          false, ciphers, cipherFilter, apn, ClientAuth.NONE, null, false, null);
+          keyPassword, null, sessionCacheSize, sessionTimeout, null, KeyStore.getDefaultType(), null),
+          false, ciphers, cipherFilter, apn, ClientAuth.NONE, null, false, null, null);
     }
 
     JdkSslServerContext(Provider provider,
@@ -112,18 +112,20 @@ final class JdkSslServerContext extends JdkSslContext {
                         String[] protocols,
                         boolean startTls,
                         SecureRandom secureRandom,
-                        String keyStore)
+                        String keyStore,
+                        ResumptionController resumptionController)
       throws Exception {
         super(newSSLContext(provider, trustCertCollection, trustManagerFactory, keyCertChain, key,
-          keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, secureRandom, keyStore), false,
-          ciphers, cipherFilter, toNegotiator(apn, true), clientAuth, protocols, startTls, null);
+          keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, secureRandom, keyStore,
+                        resumptionController), false,
+          ciphers, cipherFilter, toNegotiator(apn, true), clientAuth, protocols, startTls, null, resumptionController);
     }
 
     private static SSLContext newSSLContext(Provider sslContextProvider, X509Certificate[] trustCertCollection,
                                      TrustManagerFactory trustManagerFactory, X509Certificate[] keyCertChain,
                                      PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
                                      long sessionCacheSize, long sessionTimeout, SecureRandom secureRandom,
-                                     String keyStore)
+                                     String keyStore, ResumptionController resumptionController)
             throws SSLException {
         if (key == null && keyManagerFactory == null) {
             throw new NullPointerException("key, keyManagerFactory");
@@ -138,6 +140,7 @@ final class JdkSslServerContext extends JdkSslContext {
                         TrustManagerFactory.getDefaultAlgorithm());
                 trustManagerFactory.init((KeyStore) null);
             }
+
             if (key != null) {
                 keyManagerFactory = buildKeyManagerFactory(keyCertChain, null,
                         key, keyPassword, keyManagerFactory, null);
@@ -147,7 +150,8 @@ final class JdkSslServerContext extends JdkSslContext {
             SSLContext ctx = sslContextProvider == null ? SSLContext.getInstance(PROTOCOL)
                 : SSLContext.getInstance(PROTOCOL, sslContextProvider);
             ctx.init(keyManagerFactory.getKeyManagers(),
-                    wrapTrustManagerIfNeeded(trustManagerFactory.getTrustManagers()), secureRandom);
+                    wrapTrustManagerIfNeeded(trustManagerFactory.getTrustManagers(), resumptionController),
+                     secureRandom);
 
             SSLSessionContext sessCtx = ctx.getServerSessionContext();
             if (sessionCacheSize > 0) {
@@ -165,10 +169,14 @@ final class JdkSslServerContext extends JdkSslContext {
         }
     }
 
-    private static TrustManager[] wrapTrustManagerIfNeeded(TrustManager[] trustManagers) {
+    private static TrustManager[] wrapTrustManagerIfNeeded(
+            TrustManager[] trustManagers, ResumptionController resumptionController) {
         if (WRAP_TRUST_MANAGER) {
             for (int i = 0; i < trustManagers.length; i++) {
                 TrustManager tm = trustManagers[i];
+                if (resumptionController != null) {
+                    tm = resumptionController.wrapIfNeeded(tm);
+                }
                 if (tm instanceof X509ExtendedTrustManager) {
                     // Wrap the TrustManager to provide a better exception message for users to debug hostname
                     // validation failures.

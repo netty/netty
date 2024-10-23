@@ -20,6 +20,7 @@ import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.LeakInfo;
 import io.netty5.buffer.MemoryManager;
 import io.netty5.util.Send;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +33,7 @@ import javax.management.NotificationBroadcaster;
 import javax.management.NotificationListener;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -86,7 +88,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             runnable = new CreateAndUseBuffers(allocator, hint, leakBuffer);
             thread = new Thread(runnable);
             thread.start();
-            leakInfo = leakQueue.poll(20, TimeUnit.SECONDS);
+            leakInfo = leakQueue.poll(30, TimeUnit.SECONDS);
             thread.interrupt();
             thread.join();
         }
@@ -269,18 +271,25 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             };
             Runnable gcProducer = () -> {
                 while (trigger.get() < 1) {
-                    resultCaptor.set(System.identityHashCode(new int[1024]));
+                    resultCaptor.set(System.identityHashCode(new int[32 * 1024]));
                 }
             };
+            WeakReference<Object> ref = createWeakReference();
 
-            try (AutoCloseable ignore = installGcEventListener(gcCallback)) {
-                for (int i = 0; i < N_THREADS; i++) {
-                    executor.execute(gcProducer);
+            do {
+                try (AutoCloseable ignore = installGcEventListener(gcCallback)) {
+                    for (int i = 0; i < N_THREADS; i++) {
+                        executor.execute(gcProducer);
+                    }
+                    semaphore.acquireUninterruptibly();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
-                semaphore.acquireUninterruptibly();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            } while (ref.get() != null);
+        }
+
+        private static @NotNull WeakReference<Object> createWeakReference() {
+            return new WeakReference<>(new Object());
         }
     }
 

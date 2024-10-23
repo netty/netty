@@ -39,17 +39,17 @@ final class OpenSslClientContext extends OpenSslContext {
                                 KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                                 CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
                                 long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
-                         String endpointIdentificationAlgorithm,
+                         String endpointIdentificationAlgorithm, ResumptionController resumptionController,
                          Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
-        super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain,
-                ClientAuth.NONE, protocols, false, enableOcsp, endpointIdentificationAlgorithm, options);
+        super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain, ClientAuth.NONE, protocols, false,
+                enableOcsp, endpointIdentificationAlgorithm, resumptionController, options);
         boolean success = false;
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                                               sessionCacheSize, sessionTimeout);
+                                               sessionCacheSize, sessionTimeout, resumptionController);
             success = true;
         } finally {
             if (!success) {

@@ -33,6 +33,7 @@ import io.netty5.util.ResourceLeakDetectorFactory;
 import io.netty5.util.ResourceLeakTracker;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
+import io.netty5.util.concurrent.ImmediateExecutor;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
@@ -210,9 +211,10 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                                    OpenSslApplicationProtocolNegotiator apn, int mode, Certificate[] keyCertChain,
                                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
                                    boolean leakDetection, String endpointIdentificationAlgorithm,
+                                   ResumptionController resumptionController,
                                    Map.Entry<SslContextOption<?>, Object>... ctxOptions)
             throws SSLException {
-        super(startTls);
+        super(startTls, resumptionController);
 
         OpenSsl.ensureAvailability();
 
@@ -473,23 +475,25 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     @Override
     protected final SslHandler newHandler(BufferAllocator alloc, boolean startTls) {
-        return new SslHandler(newEngine0(alloc, null, -1, false), startTls);
+        return new SslHandler(newEngine0(alloc, null, -1, false), startTls, ImmediateExecutor.INSTANCE,
+                resumptionController);
     }
 
     @Override
     protected final SslHandler newHandler(BufferAllocator alloc, String peerHost, int peerPort, boolean startTls) {
-        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls);
+        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), startTls, ImmediateExecutor.INSTANCE,
+                resumptionController);
     }
 
     @Override
     protected SslHandler newHandler(BufferAllocator alloc, boolean startTls, Executor executor) {
-        return new SslHandler(newEngine0(alloc, null, -1, false), startTls, executor);
+        return new SslHandler(newEngine0(alloc, null, -1, false), startTls, executor, resumptionController);
     }
 
     @Override
     protected SslHandler newHandler(BufferAllocator alloc, String peerHost, int peerPort,
                                     boolean startTls, Executor executor) {
-        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), executor);
+        return new SslHandler(newEngine0(alloc, peerHost, peerPort, false), false, executor, resumptionController);
     }
 
     SSLEngine newEngine0(BufferAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
@@ -658,7 +662,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
-    protected static X509Certificate[] certificates(byte[][] chain) {
+    static X509Certificate[] certificates(byte[][] chain) {
         X509Certificate[] peerCerts = new X509Certificate[chain.length];
         for (int i = 0; i < peerCerts.length; i++) {
             peerCerts[i] = new LazyX509Certificate(chain[i]);
@@ -666,10 +670,15 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         return peerCerts;
     }
 
-    protected static X509TrustManager chooseTrustManager(TrustManager[] managers) {
+    static X509TrustManager chooseTrustManager(
+            TrustManager[] managers, ResumptionController resumptionController) {
         for (TrustManager m : managers) {
             if (m instanceof X509TrustManager) {
-                X509TrustManager tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
+                X509TrustManager tm = (X509TrustManager) m;
+                if (resumptionController != null) {
+                    tm = (X509TrustManager) resumptionController.wrapIfNeeded(tm);
+                }
+                tm = OpenSslX509TrustManagerWrapper.wrapIfNeeded((X509TrustManager) m);
                 if (useExtendedTrustManager(tm)) {
                     // Wrap the TrustManager to provide a better exception message for users to debug hostname
                     // validation failures.
@@ -681,7 +690,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         throw new IllegalStateException("no X509TrustManager found");
     }
 
-    protected static X509KeyManager chooseX509KeyManager(KeyManager[] kms) {
+    static X509KeyManager chooseX509KeyManager(KeyManager[] kms) {
         for (KeyManager km : kms) {
             if (km instanceof X509KeyManager) {
                 return (X509KeyManager) km;
