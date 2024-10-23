@@ -1324,7 +1324,7 @@ public class SslHandler extends ByteToMessageDecoder {
                 if (handshakeStatus == HandshakeStatus.FINISHED || handshakeStatus == HandshakeStatus.NOT_HANDSHAKING) {
                     wrapLater |= (decodeOut.readableBytes() > 0 ?
                             setHandshakeSuccessUnwrapMarkReentry() : setHandshakeSuccess()) ||
-                            handshakeStatus == HandshakeStatus.FINISHED;
+                            handshakeStatus == HandshakeStatus.FINISHED || !pendingUnencryptedWrites.isEmpty();
                 }
 
                 // Dispatch decoded data after we have notified of handshake success. If this method has been invoked
