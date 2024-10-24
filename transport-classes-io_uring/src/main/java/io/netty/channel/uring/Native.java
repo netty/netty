@@ -29,6 +29,7 @@ import io.netty.util.internal.ThrowableUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -331,6 +332,11 @@ final class Native {
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
     }
 
+    static boolean isIOUringSupportSplice(int ringFd) {
+        // IORING_OP_SPLICE Available since 5.7
+        return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
+    }
+
     static void checkKernelVersion(String kernelVersion) {
         boolean enforceKernelVersion = SystemPropertyUtil.getBoolean(
                 "io.netty5.transport.iouring.enforceKernelVersion", true);
@@ -382,6 +388,8 @@ final class Native {
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
     static native void eventFdWrite(int fd, long value);
+
+    static native int getFd(FileChannel fileChannel);
 
     static FileDescriptor newBlockingEventFd() {
         return new FileDescriptor(blockingEventFd());
