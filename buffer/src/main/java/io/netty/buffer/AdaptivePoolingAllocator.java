@@ -201,77 +201,93 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
     @Override
     public ByteBuf allocate(int size, int maxCapacity) {
-        if (size <= MAX_CHUNK_SIZE) {
-            Thread currentThread = Thread.currentThread();
-            AdaptiveByteBuf buf = allocate(size, maxCapacity, currentThread, null);
-            if (buf != null) {
-                return buf;
-            }
-        }
-        // The magazines failed us, or the buffer is too big to be pooled.
-        return chunkAllocator.allocate(size, maxCapacity);
+        return allocate(size, maxCapacity, Thread.currentThread(), null);
     }
 
     private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
-        int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
-        FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
-        if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
-            Object mag = threadLocalMagazine.get();
-            if (mag != NO_MAGAZINE) {
-                Magazine magazine = (Magazine) mag;
-                if (buf == null) {
-                    buf = magazine.newBuffer();
-                }
-                boolean allocated = magazine.tryAllocate(size, sizeBucket, maxCapacity, buf);
-                assert allocated : "Allocation of threadLocalMagazine must always succeed";
-                return buf;
-            }
-        }
-        boolean grabbedBuffer = false;
-        long threadId = currentThread.getId();
-        Magazine[] mags;
-        int expansions = 0;
-        do {
-            mags = magazines;
-            int mask = mags.length - 1;
-            int index = (int) (threadId & mask);
-            for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
-                Magazine mag = mags[index + i & mask];
-                if (buf == null) {
-                    grabbedBuffer = true;
-                    buf = mag.newBuffer();
-                }
-                if (mag.tryAllocate(size, sizeBucket, maxCapacity, buf)) {
-                    // Was able to allocate.
+        if (size <= MAX_CHUNK_SIZE) {
+            int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
+            FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
+            if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
+                Object mag = threadLocalMagazine.get();
+                if (mag != NO_MAGAZINE) {
+                    Magazine magazine = (Magazine) mag;
+                    if (buf == null) {
+                        buf = magazine.newBuffer();
+                    }
+                    boolean allocated = magazine.tryAllocate(size, sizeBucket, maxCapacity, buf);
+                    assert allocated : "Allocation of threadLocalMagazine must always succeed";
                     return buf;
                 }
             }
-            expansions++;
-        } while (expansions <= EXPANSION_ATTEMPTS && tryExpandMagazines(mags.length));
-        if (grabbedBuffer) {
-            buf.release();
+            long threadId = currentThread.getId();
+            Magazine[] mags;
+            int expansions = 0;
+            do {
+                mags = magazines;
+                int mask = mags.length - 1;
+                int index = (int) (threadId & mask);
+                for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
+                    Magazine mag = mags[index + i & mask];
+                    if (buf == null) {
+                        buf = mag.newBuffer();
+                    }
+                    if (mag.tryAllocate(size, sizeBucket, maxCapacity, buf)) {
+                        // Was able to allocate.
+                        return buf;
+                    }
+                }
+                expansions++;
+            } while (expansions <= EXPANSION_ATTEMPTS && tryExpandMagazines(mags.length));
         }
-        return null;
+
+        // The magazines failed us, or the buffer is too big to be pooled.
+        return allocateFallback(size, maxCapacity, currentThread, buf);
+    }
+
+    private AdaptiveByteBuf allocateFallback(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
+        // If we don't already have a buffer, obtain one from the most conveniently available magazine.
+        Magazine magazine;
+        if (buf != null) {
+            Chunk chunk = buf.chunk;
+            magazine = chunk != null && chunk != Magazine.MAGAZINE_FREED?
+                    chunk.magazine : getFallbackMagazine(currentThread);
+        } else {
+            magazine = getFallbackMagazine(currentThread);
+            buf = magazine.newBuffer();
+        }
+        // Create a one-off chunk for this allocation.
+        AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
+        Chunk chunk = new Chunk(innerChunk, magazine, false);
+        try {
+            chunk.readInitInto(buf, size, maxCapacity);
+        } finally {
+            // As the chunk is an one-off we need to always call release explicitly as readInitInto(...)
+            // will take care of retain once when successful. Once The AdaptiveByteBuf is released it will
+            // completely release the Chunk and so the contained innerChunk.
+            chunk.release();
+        }
+        return buf;
+    }
+
+    private Magazine getFallbackMagazine(Thread currentThread) {
+        Object tlMag;
+        FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
+        if (threadLocalMagazine != null &&
+                currentThread instanceof FastThreadLocalThread &&
+                (tlMag = threadLocalMagazine.get()) != NO_MAGAZINE) {
+            return (Magazine) tlMag;
+        }
+        Magazine[] mags = magazines;
+        return mags[(int) currentThread.getId() & mags.length - 1];
     }
 
     /**
      * Allocate into the given buffer. Used by {@link AdaptiveByteBuf#capacity(int)}.
      */
     void allocate(int size, int maxCapacity, AdaptiveByteBuf into) {
-        Magazine magazine = into.chunk.magazine;
-        if (allocate(size, maxCapacity, Thread.currentThread(), into) == null) {
-            // Create a one-off chunk for this allocation as the previous allocate call did not work out.
-            AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
-            Chunk chunk = new Chunk(innerChunk, magazine, false);
-            try {
-                chunk.readInitInto(into, size, maxCapacity);
-            } finally {
-                // As the chunk is an one-off we need to always call release explicitly as readInitInto(...)
-                // will take care of retain once when successful. Once The AdaptiveByteBuf is released it will
-                // completely release the Chunk and so the contained innerChunk.
-                chunk.release();
-            }
-        }
+        AdaptiveByteBuf result = allocate(size, maxCapacity, Thread.currentThread(), into);
+        assert result == into: "Re-allocation created separate buffer instance";
     }
 
     @Override
@@ -675,7 +691,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     private static final class Chunk implements ReferenceCounted {
 
         private final AbstractByteBuf delegate;
-        private final Magazine magazine;
+        final Magazine magazine;
         private final int capacity;
         private final boolean pooled;
         private int allocatedBytes;
@@ -818,7 +834,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         private int adjustment;
         private AbstractByteBuf rootParent;
-        private Chunk chunk;
+        Chunk chunk;
         private int length;
         private ByteBuffer tmpNioBuf;
         private boolean hasArray;
