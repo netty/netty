@@ -116,7 +116,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
      * the actual memory and so helps to reduce GC pressure.
      */
     private static final int MAGAZINE_BUFFER_QUEUE_CAPACITY = SystemPropertyUtil.getInt(
-            "io.netty.allocator.magazineBufferQueueCapacity", 256);
+            "io.netty.allocator.magazineBufferQueueCapacity", 1024);
 
     private static final Object NO_MAGAZINE = Boolean.TRUE;
 
