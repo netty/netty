@@ -32,6 +32,7 @@ public final class IoUringIoOps implements IoOps {
     private final int length;
     private final long offset;
     private final short data;
+    private final int spliceFdIn;
 
     /**
      * Create a new instance
@@ -57,6 +58,35 @@ public final class IoUringIoOps implements IoOps {
         this.length = length;
         this.offset = offset;
         this.data = data;
+        this.spliceFdIn = 0;
+    }
+
+    /**
+     * Create a new instance
+     *
+     * @param opcode        the operation.
+     * @param flags         the flags
+     * @param ioPrio        the priority.
+     * @param fd            the filedescriptor.
+     * @param rwFlags       the flags specific for the op.
+     * @param bufferAddress the bufferaddress
+     * @param length        the length
+     * @param offset        the offset.
+     * @param data          the user data that will be passed back on completion.
+     * @param spliceFdIn      the splice_fd_in
+     */
+    public IoUringIoOps(byte opcode, int flags, short ioPrio, int fd, int rwFlags, long bufferAddress,
+                        int length, long offset, short data, int spliceFdIn) {
+        this.opcode = opcode;
+        this.flags = flags;
+        this.ioPrio = ioPrio;
+        this.fd = fd;
+        this.rwFlags = rwFlags;
+        this.bufferAddress = bufferAddress;
+        this.length = length;
+        this.offset = offset;
+        this.data = data;
+        this.spliceFdIn = spliceFdIn;
     }
 
     /**
@@ -138,6 +168,15 @@ public final class IoUringIoOps implements IoOps {
      */
     public short data() {
         return data;
+    }
+
+    /**
+     * Returns the splice_fd_in that will be used. This is specific to the opcode.
+     *
+     * @return data
+     */
+    public int spliceFdIn() {
+        return spliceFdIn;
     }
 
     @Override
@@ -348,5 +387,44 @@ public final class IoUringIoOps implements IoOps {
      */
     public static IoUringIoOps newShutdown(int fd, int flags, int how, short data) {
         return new IoUringIoOps(Native.IORING_OP_SHUTDOWN, flags, (short) 0, fd, 0, 0, how, 0, data);
+    }
+
+    /**
+     *
+     * Returns a new {@code OP_SPLICE} {@link IoUringIoOps}.
+     *
+     *  io_uring_prep_splice() - Either @fd_in or @fd_out must be a pipe.
+     *  - If @fd_in refers to a pipe, @off_in is ignored and must be set to -1.
+     *  - If @fd_in does not refer to a pipe and @off_in is -1, then @nbytes are read
+     *  from @fd_in starting from the file offset, which is incremented by the
+     *  number of bytes read.
+     *  - If @fd_in does not refer to a pipe and @off_in is not -1, then the starting
+     *  offset of @fd_in will be @off_in.
+     *  <p>
+     *  This splice operation can be used to implement sendfile by splicing to an
+     *  intermediate pipe first, then splice to the final destination.
+     *  In fact, the implementation of sendfile in kernel uses splice internally.
+     *  NOTE that even if fd_in or fd_out refers to a pipe, the splice operation
+     *  can still fail with EINVAL if one of the fd doesn't explicitly support splice
+     *  operation, e.g. reading from terminal is unsupported from kernel 5.7 to 5.11.
+     *
+     * @param fd_in                                     the filedescriptor
+     * @param off_in                                    the filedescriptor offset
+     * @param fd_out                                    the filedescriptor
+     * @param off_out                                   the filedescriptor offset
+     * @param nbytes                                    splice bytes
+     * @param splice_flags                              the flag
+     * @return                                          ops.
+     */
+    public static IoUringIoOps newSplice(int fd_in, long off_in,
+                                         int fd_out, long off_out,
+                                         int nbytes,
+                                         int splice_flags) {
+        //addr and off_in are in same union
+        return new IoUringIoOps(
+                Native.IORING_OP_SPLICE, 0, (short) 0,
+                fd_out, splice_flags, off_in, nbytes, off_out,
+                (short) 1, fd_in
+        );
     }
 }

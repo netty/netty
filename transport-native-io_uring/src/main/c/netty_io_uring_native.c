@@ -70,6 +70,9 @@ static jclass longArrayClass = NULL;
 static char* staticPackagePrefix = NULL;
 static int register_unix_called = 0;
 
+static jfieldID fdFieldId = NULL;
+static jfieldID fileDescriptorFieldId = NULL;
+
 static void netty_io_uring_native_JNI_OnUnLoad(JNIEnv* env, const char* packagePrefix) {
     netty_unix_limits_JNI_OnUnLoad(env, packagePrefix);
     netty_unix_errors_JNI_OnUnLoad(env, packagePrefix);
@@ -190,6 +193,22 @@ static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlon
         }
     } while ((err = errno) == EINTR);
     netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write(...) failed: ", err);
+}
+
+static int netty_io_uring_getFd(JNIEnv* env, jclass clazz, jobject fileChannel) {
+
+   jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
+   if (fileDescriptor == NULL) {
+       netty_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
+       return -1;
+   }
+   jint srcFd = (*env)->GetIntField(env, fileDescriptor, fdFieldId);
+   if (srcFd == -1) {
+       netty_unix_errors_throwRuntimeException(env, "failed to get FileDescriptor.fd");
+       return -1;
+   }
+
+   return srcFd;
 }
 
 static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass clazz,
@@ -602,6 +621,7 @@ static const JNINativeMethod method_table[] = {
     {"registerUnix", "()I", (void *) netty_io_uring_registerUnix },
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
+    {"getFd", "(Ljava/nio/channels/FileChannel;)I", (void *) netty_io_uring_getFd }
 };
 static const jint method_table_size =
     sizeof(method_table) / sizeof(method_table[0]);
@@ -641,6 +661,15 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
         staticPackagePrefix = strdup(packagePrefix);
     }
     ret = NETTY_JNI_UTIL_JNI_VERSION;
+
+    jclass fileChannelCls = NULL;
+    NETTY_JNI_UTIL_FIND_CLASS(env, fileChannelCls, "sun/nio/ch/FileChannelImpl", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, fileChannelCls, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
+
+    jclass fileDescriptorCls = NULL;
+    NETTY_JNI_UTIL_FIND_CLASS(env, fileDescriptorCls, "java/io/FileDescriptor", done);
+    NETTY_JNI_UTIL_TRY_GET_FIELD(env, fileDescriptorCls, fdFieldId, "fd", "I");
+
 done:
     if (ret == JNI_ERR) {
         if (nativeRegistered == 1) {

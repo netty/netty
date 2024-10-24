@@ -29,6 +29,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoEventLoop;
@@ -319,7 +320,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
         Object msg = in.current();
 
-        if (msgCount > 1) {
+        if (msgCount > 1 && in.current() instanceof ByteBuf) {
             numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteMultiple(in);
         } else if (msg instanceof ByteBuf && ((ByteBuf) msg).nioBufferCount() > 1 ||
                     (msg instanceof ByteBufHolder && ((ByteBufHolder) msg).content().nioBufferCount() > 1)) {
@@ -800,7 +801,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param flags the flags.
          * @param data  the data that was passed when submitting the op.
          */
-        private void writeComplete(byte op, int res, int flags, short data) {
+        protected void writeComplete(byte op, int res, int flags, short data) {
             if ((ioState & CONNECT_SCHEDULED) != 0) {
                 // The writeComplete(...) callback was called because of a sendmsg(...) result that was used for
                 // TCP_FASTOPEN_CONNECT.
@@ -1030,6 +1031,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
+        }
+
+        // Since we cannot use synchronous sendfile,
+        // the channel can only support DefaultFileRegion instead of FileRegion.
+        if (msg instanceof DefaultFileRegion) {
+            return msg;
         }
 
         throw new UnsupportedOperationException("unsupported message type");
