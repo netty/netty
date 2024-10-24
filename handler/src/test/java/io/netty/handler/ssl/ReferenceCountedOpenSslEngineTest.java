@@ -77,17 +77,9 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
         });
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     protected SslContext wrapContext(SSLEngineTestParam param, SslContext context) {
-        if (context instanceof ReferenceCountedOpenSslContext) {
-            if (param instanceof OpenSslEngineTestParam) {
-                ((ReferenceCountedOpenSslContext) context).setUseTasks(((OpenSslEngineTestParam) param).useTasks);
-            }
-            // Explicit enable the session cache as its disabled by default on the client side.
-            ((ReferenceCountedOpenSslContext) context).sessionContext().setSessionCacheEnabled(true);
-        }
-        return context;
+        return OpenSslEngineTestParam.wrapContext(param, context);
     }
 
     @MethodSource("newTestParams")
