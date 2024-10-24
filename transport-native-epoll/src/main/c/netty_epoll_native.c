@@ -249,23 +249,133 @@ static jint netty_epoll_native_epollCreate(JNIEnv* env, jclass clazz) {
     return efd;
 }
 
-static jint netty_epoll_native_epollWait(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timeout) {
-    struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
-    int result, err;
+static inline jint netty_epoll_wait(JNIEnv* env, jint efd, struct epoll_event *ev, jint len, jint timeout)
+{
+    int rc;
 
-    do {
-        result = epoll_wait(efd, ev, len, timeout);
-        if (result >= 0) {
-            return result;
+    if (timeout <= 0) {
+        // avoid making unnecessary syscalls when doing non-blocking
+        // check (timeout = 0), or waiting indefinitely (timeout = -1)
+        while ((rc = epoll_wait(efd, ev, len, timeout)) < 0) {
+            if (errno != EINTR) {
+                return -errno;
+            }
         }
-    } while((err = errno) == EINTR);
-    return -err;
+    } else {
+        struct timespec ts;
+        long deadline, now;
+
+        if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+            netty_unix_errors_throwRuntimeExceptionErrorNo(env, "clock_gettime() failed: ", errno);
+            return -1;
+        }
+        deadline = ts.tv_sec * 1000 + ts.tv_nsec / 1000 + timeout;
+
+        while ((rc = epoll_wait(efd, ev, len, timeout)) < 0) {
+            if (errno != EINTR) {
+                return -errno;
+            }
+
+            if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+                netty_unix_errors_throwRuntimeExceptionErrorNo(env, "clock_gettime() failed: ", errno);
+                return -1;
+            }
+
+            now = ts.tv_sec * 1000 + ts.tv_nsec / 1000;
+            if (now >= deadline) {
+                return 0;
+            }
+            timeout = deadline - now;
+        }
+    }
+
+    return rc;
+}
+
+static jint netty_epoll_native_epollWait(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timeout)
+{
+    return netty_epoll_wait(env, efd, (struct epoll_event *)(intptr_t) address, len, timeout);
+}
+
+static inline void timespec_add(struct timespec *t1, const struct timespec *t2)
+{
+    t1->tv_sec += t2->tv_sec;
+    t1->tv_nsec += t2->tv_nsec;
+    if (t1->tv_nsec > 1000000000) {
+        t1->tv_sec++;
+        t1->tv_nsec -= 1000000000;
+    }
+}
+
+static inline void timespec_sub(struct timespec *t1, const struct timespec *t2)
+{
+    t1->tv_sec -= t2->tv_sec;
+    t1->tv_nsec -= t2->tv_nsec;
+    if (t1->tv_nsec < 0) {
+        t1->tv_sec--;
+        t1->tv_nsec += 1000000000;
+    }
+}
+
+static inline int timespec_after(const struct timespec *t1, const struct timespec *t2)
+{
+    return (t1->tv_sec > t2->tv_sec) ||
+           (t1->tv_sec == t2->tv_sec && t1->tv_nsec > t2->tv_nsec);
+}
+
+static inline jint netty_epoll_pwait2(JNIEnv *env, jint efd, struct epoll_event *ev, jint len, const struct timespec *timeout)
+{
+    int rc;
+
+    if (timeout == NULL || (timeout->tv_sec == 0 && timeout->tv_nsec == 0)) {
+        // avoid making unnecessary syscalls when doing non-blocking
+        // check (timeout = { 0, 0 }), or waiting indefinitely
+        // (timeout = NULL)
+        while ((rc = epoll_pwait2(efd, ev, len, timeout, NULL)) < 0) {
+            if (errno != EINTR) {
+                return -errno;
+            }
+        }
+    } else {
+        struct timespec deadline, now, decaying_timeout;
+
+        if (clock_gettime(CLOCK_MONOTONIC, &deadline) != 0) {
+            netty_unix_errors_throwRuntimeExceptionErrorNo(env, "clock_gettime() failed: ", errno);
+            return -1;
+        }
+
+        timespec_add(&deadline, timeout);
+        decaying_timeout = *timeout;
+
+        while ((rc = epoll_pwait2(efd, ev, len, &decaying_timeout, NULL)) < 0) {
+            if (errno != EINTR) {
+                return -errno;
+            }
+
+            if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+                netty_unix_errors_throwRuntimeExceptionErrorNo(env, "clock_gettime() failed: ", errno);
+                return -1;
+            }
+
+            if (timespec_after(&now, &deadline)) {
+                return 0;
+            }
+
+            decaying_timeout = deadline;
+            timespec_sub(&decaying_timeout, &now);
+        }
+    }
+
+    return rc;
 }
 
 // This needs to be consistent with Native.java
 #define EPOLL_WAIT_RESULT(V, ARM_TIMER)  ((jlong) ((uint64_t) ((uint32_t) V) << 32 | ARM_TIMER))
 
-static jlong netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec, jlong millisThreshold) {
+static jlong netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, jlong address, jint len, jint timerFd, jint tvSec, jint tvNsec, jlong millisThreshold)
+{
+    struct epoll_event *ev = (struct epoll_event *)(intptr_t) address;
+    int result;
     // only reschedule the timer if there is a newer event.
     // -1 is a special value used by EpollEventLoop.
     uint32_t armTimer = millisThreshold <= 0 ? 1 : 0;
@@ -278,15 +388,8 @@ static jlong netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, 
                 // We have epoll_pwait2(...) and it is supported, this means we can just pass in the itimerspec directly and not need an
                 // extra syscall even for very small timeouts.
                 struct timespec ts = { tvSec, tvNsec };
-                struct epoll_event *ev = (struct epoll_event*) (intptr_t) address;
-                int result, err;
-                do {
-                    result = epoll_pwait2(efd, ev, len, &ts, NULL);
-                    if (result >= 0) {
-                        return EPOLL_WAIT_RESULT(result, armTimer);
-                    }
-                } while((err = errno) == EINTR);
-                return EPOLL_WAIT_RESULT(-err, armTimer);
+                result = netty_epoll_pwait2(env, efd, ev, len, &ts);
+                return EPOLL_WAIT_RESULT(result, armTimer);
             }
 
             int millis = tvNsec / 1000000;
@@ -298,7 +401,7 @@ static jlong netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, 
                     millis >= millisThreshold ||
                     tvSec > 0) {
                 millis += tvSec * 1000;
-                int result = netty_epoll_native_epollWait(env, clazz, efd, address, len, millis);
+                result = netty_epoll_wait(env, efd, ev, len, millis);
                 return EPOLL_WAIT_RESULT(result, armTimer);
             }
         }
@@ -312,7 +415,7 @@ static jlong netty_epoll_native_epollWait0(JNIEnv* env, jclass clazz, jint efd, 
         }
         armTimer = 1;
     }
-    int result = netty_epoll_native_epollWait(env, clazz, efd, address, len, -1);
+    result = netty_epoll_wait(env, efd, ev, len, -1);
     return EPOLL_WAIT_RESULT(result, armTimer);
 }
 
