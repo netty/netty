@@ -58,10 +58,19 @@ public class PooledByteBufAllocatorAlignBenchmark extends
      */
     private static final int BLOCK = 4;
 
-    @Param({ "0", "64" })
+    @Param({
+            "0",
+            "64",
+    })
     private int cacheAlign;
 
-    @Param({ "01024", "04096", "16384", "65536", "1048576" })
+    @Param({
+            "01024",
+            "04096",
+            "16384",
+            "65536",
+            "1048576",
+    })
     private int size;
 
     private ByteBuf pooledDirectBuffer;
