@@ -58,7 +58,6 @@ public class SimpleByteBufPooledAllocatorBenchmark extends AbstractMicrobenchmar
     })
     public long tokens;
 
-
     @Param({
             "true",
             "false",

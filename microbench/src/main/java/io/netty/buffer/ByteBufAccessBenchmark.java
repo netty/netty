@@ -110,13 +110,11 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
     @Param
     public ByteBufType bufferType;
 
-
     @Param({
             "true",
             "false",
     })
     public String checkAccessible;
-
 
     @Param({
             "true",
