@@ -44,7 +44,7 @@ final class SubmissionQueue {
     private static final int SQE_RW_FLAGS_FIELD = 28;
     private static final int SQE_USER_DATA_FIELD = 32;
     private static final int SQE_FIXED_BUFFER = 40;
-    private static final int SQE_PERSONALITY= 42;
+    private static final int SQE_PERSONALITY = 42;
     private static final int SQE_SPLICE_FD_IN = 44;
 
     private static final int KERNEL_TIMESPEC_TV_SEC_FIELD = 0;
@@ -111,6 +111,11 @@ final class SubmissionQueue {
     }
 
     long enqueueSqe(byte op, int flags, short ioPrio, int rwFlags, int fd,
+                    long bufferAddress, int length, long offset, int id, short data) {
+        return enqueueSqe(op, flags, ioPrio, rwFlags, fd, bufferAddress, length, offset, id, data, 0);
+    }
+
+    long enqueueSqe(byte op, int flags, short ioPrio, int rwFlags, int fd,
                                long bufferAddress, int length, long offset, int id, short data, int spliceIn) {
         int pending = tail - head;
         if (pending == ringEntries) {
@@ -138,7 +143,12 @@ final class SubmissionQueue {
             }
         }
         long sqe = submissionQueueArrayAddress + (tail++ & ringMask) * SQE_SIZE;
-        setData(sqe, op, flags, ioPrio, rwFlags, fd, bufferAddress, length, offset, udata);
+        setData(sqe, op, flags, ioPrio, rwFlags, fd, bufferAddress, length, offset, udata, spliceIn);
+    }
+
+    private void setData(long sqe, byte op, int flags, short ioPrio, int rwFlags, int fd, long bufferAddress,
+                         int length, long offset, long udata) {
+        setData(sqe, op, flags, ioPrio, rwFlags, fd, bufferAddress, length, offset, udata, 0);
     }
 
     private void setData(long sqe, byte op, int flags, short ioPrio, int rwFlags, int fd, long bufferAddress,

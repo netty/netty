@@ -1,3 +1,18 @@
+/*
+ * Copyright 2024 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.channel.uring;
 
 import io.netty.channel.EventLoop;
@@ -15,7 +30,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-public class IoUringSendFile implements IoUringIoHandle {
+public final class IoUringSendFile implements IoUringIoHandle {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringSendFile.class);
 
     private final Supplier<PipeFd> pipeSupplier;
@@ -78,13 +93,12 @@ public class IoUringSendFile implements IoUringIoHandle {
         return registerPromise;
     }
 
-
     @Override
     public void handle(IoRegistration registration, IoEvent ioEvent) {
         IoUringIoEvent uringIoEvent = (IoUringIoEvent) ioEvent;
         int res = uringIoEvent.res();
         if (res < 0) {
-            spliceResult.setFailure(new Errors.NativeIoException("IoUringSplicer", -res));
+            spliceResult.setFailure(new Errors.NativeIoException("IoUringSplicer", res));
             clear();
             return;
         }
@@ -102,7 +116,9 @@ public class IoUringSendFile implements IoUringIoHandle {
         }
     }
 
-    public Future<Integer> sendFile(FileDescriptor outFd, long outOffset, FileDescriptor inFd, long inOffset, int len, int spliceFlags) {
+    public Future<Integer> sendFile(FileDescriptor inFd, long inOffset,
+                                    FileDescriptor outFd, long outOffset,
+                                    int len, int spliceFlags) {
 
         if (closed.get()) {
             return eventLoop.newFailedFuture(new IllegalStateException("closed"));
@@ -110,19 +126,30 @@ public class IoUringSendFile implements IoUringIoHandle {
 
         Promise<Integer> promise = eventLoop.newPromise();
         if (eventLoop.inEventLoop()) {
-            sendFile0(outFd, outOffset, inFd, inOffset, len, spliceFlags, promise);
+            sendFile0(
+                    inFd, inOffset,
+                    outFd, outOffset,
+                    len, spliceFlags, promise
+            );
         } else {
             eventLoop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    sendFile0(outFd, outOffset, inFd, inOffset, len, spliceFlags, promise);
+                    sendFile0(
+                            inFd, inOffset,
+                            outFd, outOffset,
+                            len, spliceFlags, promise
+                    );
                 }
             });
         }
         return promise;
     }
 
-    private void sendFile0(FileDescriptor outFd, long outOffset, FileDescriptor inFd, long inOffset, int len, int spliceFlags, Promise<Integer> promise) {
+    private void sendFile0(FileDescriptor inFd, long inOffset,
+                           FileDescriptor outFd, long outOffset,
+                           int len, int spliceFlags, Promise<Integer> promise
+    ) {
         assert eventLoop.inEventLoop();
 
         if (!ioRegistration.isValid()) {
@@ -152,7 +179,6 @@ public class IoUringSendFile implements IoUringIoHandle {
         this.outFd = outFd;
         this.spliceFlags = spliceFlags;
     }
-
 
     private void spliceToPipe(FileDescriptor inFd, long offset, int len, int spliceFlags) {
         assert eventLoop.inEventLoop();
@@ -189,13 +215,7 @@ public class IoUringSendFile implements IoUringIoHandle {
         len = 0;
         outFd = null;
         spliceFlags = 0;
-        try {
-            currentPipe.close();
-        } catch (Exception e) {
-            logger.error("Error while closing a pipe", e);
-        }
         currentPipe = null;
-
     }
 
     @Override

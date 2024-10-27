@@ -421,6 +421,10 @@ public final class IoUringIoOps implements IoOps {
                                          int nbytes,
                                          int splice_flags) {
         //addr and off_in are in same union
-        return new IoUringIoOps(Native.IORING_OP_SPLICE, 0, (short) 0, fd_out, splice_flags, off_in, nbytes, off_out, (short) 1, fd_in);
+        return new IoUringIoOps(
+                Native.IORING_OP_SPLICE, 0, (short) 0,
+                fd_out, splice_flags, off_in, nbytes, off_out,
+                (short) 1, fd_in
+        );
     }
 }
