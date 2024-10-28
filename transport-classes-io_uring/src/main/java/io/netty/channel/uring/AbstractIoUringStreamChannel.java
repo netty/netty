@@ -23,15 +23,20 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DuplexChannel;
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.net.SocketAddress;
 import java.io.IOException;
+import java.net.SocketAddress;
+import java.nio.channels.FileChannel;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -46,6 +51,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     private long writeId;
     private long readId;
 
+    private IoUringSendFile sendFileHandle;
+
     AbstractIoUringStreamChannel(Channel parent, LinuxSocket socket, boolean active) {
         // Use a blocking fd, we can make use of fastpoll.
         super(parent, LinuxSocket.makeBlocking(socket), active);
@@ -54,6 +61,24 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     AbstractIoUringStreamChannel(Channel parent, LinuxSocket socket, SocketAddress remote) {
         // Use a blocking fd, we can make use of fastpoll.
         super(parent, LinuxSocket.makeBlocking(socket), remote);
+    }
+
+    private static void shutdownDone(ChannelFuture shutdownOutputFuture,
+                                     ChannelFuture shutdownInputFuture,
+                                     ChannelPromise promise) {
+        Throwable shutdownOutputCause = shutdownOutputFuture.cause();
+        Throwable shutdownInputCause = shutdownInputFuture.cause();
+        if (shutdownOutputCause != null) {
+            if (shutdownInputCause != null) {
+                logger.info("Exception suppressed because a previous exception occurred.",
+                        shutdownInputCause);
+            }
+            promise.setFailure(shutdownOutputCause);
+        } else if (shutdownInputCause != null) {
+            promise.setFailure(shutdownInputCause);
+        } else {
+            promise.setSuccess();
+        }
     }
 
     @Override
@@ -173,24 +198,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
     }
 
-    private static void shutdownDone(ChannelFuture shutdownOutputFuture,
-                                     ChannelFuture shutdownInputFuture,
-                                     ChannelPromise promise) {
-        Throwable shutdownOutputCause = shutdownOutputFuture.cause();
-        Throwable shutdownInputCause = shutdownInputFuture.cause();
-        if (shutdownOutputCause != null) {
-            if (shutdownInputCause != null) {
-                logger.info("Exception suppressed because a previous exception occurred.",
-                             shutdownInputCause);
-            }
-            promise.setFailure(shutdownOutputCause);
-        } else if (shutdownInputCause != null) {
-            promise.setFailure(shutdownInputCause);
-        } else {
-            promise.setSuccess();
-        }
-    }
-
     @Override
     protected final void doRegister(ChannelPromise promise) {
         super.doRegister(promise);
@@ -202,6 +209,33 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 }
             }
         });
+    }
+
+    @Override
+    protected final void cancelOutstandingReads(IoUringIoRegistration registration, int numOutstandingReads) {
+        if (readId != 0) {
+            // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
+            assert numOutstandingReads == 1;
+            int fd = fd().intValue();
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(fd, 0, readId, Native.IORING_OP_RECV);
+            registration.submit(ops);
+        } else {
+            assert numOutstandingReads == 0;
+        }
+    }
+
+    @Override
+    protected final void cancelOutstandingWrites(IoUringIoRegistration registration, int numOutstandingWrites) {
+        if (writeId != 0) {
+            // Let's try to cancel outstanding writes as these might be submitted and waiting to finish writing
+            // (via fastpoll).
+            assert numOutstandingWrites == 1;
+            assert writeOpCode != 0;
+            int fd = fd().intValue();
+            registration.submit(IoUringIoOps.newAsyncCancel(fd, 0, writeId, writeOpCode));
+        } else {
+            assert numOutstandingWrites == 0;
+        }
     }
 
     private final class IoUringStreamUnsafe extends AbstractUringUnsafe {
@@ -241,6 +275,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         protected int scheduleWriteSingle(Object msg) {
             assert iovArray == null;
             assert writeId == 0;
+
+            if (msg instanceof DefaultFileRegion) {
+                return scheduleWriteFileRegion((DefaultFileRegion) msg);
+            }
+
             ByteBuf buf = (ByteBuf) msg;
 
             int fd = fd().intValue();
@@ -250,6 +289,39 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             byte opCode = ops.opcode();
             writeId = registration.submit(ops);
             writeOpCode = opCode;
+            return 1;
+        }
+
+        private int scheduleWriteFileRegion(DefaultFileRegion defaultFileRegion) {
+            assert eventLoop().inEventLoop();
+            if (sendFileHandle == null) {
+                try {
+                    sendFileHandle = IoUringSendFile.newInstance(eventLoop()).getNow();
+                } catch (IOException e) {
+                    this.handleWriteError(e);
+                    return 0;
+                }
+            }
+            try {
+                defaultFileRegion.open();
+            } catch (IOException e) {
+                this.handleWriteError(e);
+                return 0;
+            }
+            FileChannel fileChannel = getFileChannel(defaultFileRegion);
+            int len = (int) (defaultFileRegion.count() - defaultFileRegion.transferred());
+            int fileRegionFd = Native.getFd(fileChannel);
+            sendFileHandle.sendFile(
+                    new FileDescriptor(fileRegionFd), defaultFileRegion.position() + defaultFileRegion.transferred(),
+                    fd(), -1,
+                    len, 0
+            ).addListener(new GenericFutureListener<Future<? super Integer>>() {
+                @Override
+                public void operationComplete(Future<? super Integer> future) throws Exception {
+                    Integer res = (Integer) future.getNow();
+                    writeComplete(res, 0, (short) 0);
+                }
+            });
             return 1;
         }
 
@@ -324,12 +396,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
                 if (allocHandle.continueReading() &&
-                        // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
-                        // trying to schedule a read. If it's supported and not part of the flags we know for sure
-                        // that the next read (which would be using Native.MSG_DONTWAIT) will complete without
-                        // be able to read any data. This is useless work and we can skip it.
-                        (!IoUring.isIOUringCqeFSockNonEmptySupported() ||
-                        (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
+                    // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
+                    // trying to schedule a read. If it's supported and not part of the flags we know for sure
+                    // that the next read (which would be using Native.MSG_DONTWAIT) will complete without
+                    // be able to read any data. This is useless work and we can skip it.
+                    (!IoUring.isIOUringCqeFSockNonEmptySupported() ||
+                     (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
                     // Let's schedule another read.
                     scheduleRead(false);
                 } else {
@@ -363,6 +435,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         @Override
         boolean writeComplete0(int res, int flags, int data, int outstanding) {
             assert writeId != 0;
+            ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+
+            if (channelOutboundBuffer.current() instanceof DefaultFileRegion) {
+                return writeFileRegionComplete0(res, flags, data, outstanding);
+            }
+
             writeId = 0;
             writeOpCode = 0;
             IovArray iovArray = this.iovArray;
@@ -371,7 +449,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 iovArray.release();
             }
             if (res >= 0) {
-                unsafe().outboundBuffer().removeBytes(res);
+                channelOutboundBuffer.removeBytes(res);
             } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return true;
             } else {
@@ -385,32 +463,44 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
             return true;
         }
-    }
 
-    @Override
-    protected final void cancelOutstandingReads(IoUringIoRegistration registration, int numOutstandingReads) {
-        if (readId != 0) {
-            // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
-            assert numOutstandingReads == 1;
-            int fd = fd().intValue();
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(fd, 0, readId, Native.IORING_OP_RECV);
-            registration.submit(ops);
-        } else {
-            assert numOutstandingReads == 0;
-        }
-    }
+        public boolean writeFileRegionComplete0(int res, int flags, int data, int outstanding) {
+            ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+            DefaultFileRegion defaultFileRegion = (DefaultFileRegion) channelOutboundBuffer.current();
+            if (res == 0) {
+                try {
+                    validateFileRegion(defaultFileRegion, defaultFileRegion.transferred());
+                } catch (IOException ioException) {
+                    channelOutboundBuffer.remove();
+                    handleWriteError(ioException);
+                    return false;
+                }
+                return false;
+            }
 
-    @Override
-    protected final void cancelOutstandingWrites(IoUringIoRegistration registration, int numOutstandingWrites) {
-        if (writeId != 0) {
-            // Let's try to cancel outstanding writes as these might be submitted and waiting to finish writing
-            // (via fastpoll).
-            assert numOutstandingWrites == 1;
-            assert writeOpCode != 0;
-            int fd = fd().intValue();
-            registration.submit(IoUringIoOps.newAsyncCancel(fd, 0, writeId, writeOpCode));
-        } else {
-            assert numOutstandingWrites == 0;
+            if (res < 0) {
+                try {
+                    if (ioResult("io_uring write", res) == 0) {
+                        return false;
+                    }
+                } catch (Throwable cause) {
+                    handleWriteError(cause);
+                }
+                //something error,we should remove fileRegion
+                channelOutboundBuffer.remove();
+                return true;
+            }
+
+            int flushAmount = res;
+            long writtenBytes = defaultFileRegion.transfered() + flushAmount;
+            setTransferred(defaultFileRegion, writtenBytes);
+            channelOutboundBuffer.progress(flushAmount);
+            if (defaultFileRegion.transferred() >= defaultFileRegion.count()) {
+                //current we have written all data
+                channelOutboundBuffer.remove();
+            }
+
+            return true;
         }
     }
 }

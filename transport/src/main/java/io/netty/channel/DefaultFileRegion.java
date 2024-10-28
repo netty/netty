@@ -189,4 +189,12 @@ public class DefaultFileRegion extends AbstractReferenceCounted implements FileR
             throw new IOException("Underlying file size " + size + " smaller then requested count " + region.count);
         }
     }
+
+    static void setTransferred(DefaultFileRegion region, long transferred) {
+        region.transferred = transferred;
+    }
+
+    static FileChannel getFileChannel(DefaultFileRegion region) {
+        return region.file;
+    }
 }

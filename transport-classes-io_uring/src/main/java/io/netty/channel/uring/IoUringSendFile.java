@@ -27,13 +27,14 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 public final class IoUringSendFile implements IoUringIoHandle {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringSendFile.class);
 
-    private final Supplier<PipeFd> pipeSupplier;
+    private final PipeFd pipeFd;
 
     private final IoEventLoop eventLoop;
 
@@ -57,13 +58,13 @@ public final class IoUringSendFile implements IoUringIoHandle {
 
     private AtomicBoolean closed = new AtomicBoolean(false);
 
-    private IoUringSendFile(Supplier<PipeFd> pipeSupplier, IoEventLoop eventLoop) {
-        this.pipeSupplier = pipeSupplier;
+    private IoUringSendFile(PipeFd pipeFd, IoEventLoop eventLoop) {
+        this.pipeFd = pipeFd;
         this.eventLoop = eventLoop;
         this.stage = Stage.IDLE;
     }
 
-    public static Future<IoUringSendFile> newInstance(Supplier<PipeFd> pipeSupplier, EventLoop eventLoop) {
+    public static Future<IoUringSendFile> newInstance(EventLoop eventLoop) throws IOException {
         //we may need `Flexible Constructor Bodies` to check something
         //but in jdk8, we only use factory method to create a new instance
         if (!IoUring.isIOUringSpliceSupported()) {
@@ -75,7 +76,7 @@ public final class IoUringSendFile implements IoUringIoHandle {
             throw new IllegalArgumentException("incompatible event loop type: " + eventLoop.getClass().getName());
         }
 
-        IoUringSendFile unRegisteredInstance = new IoUringSendFile(pipeSupplier, (IoEventLoop) eventLoop);
+        IoUringSendFile unRegisteredInstance = new IoUringSendFile(new PipeFd(), (IoEventLoop) eventLoop);
         Promise<IoUringSendFile> registerPromise = eventLoop.newPromise();
         // Use anonymous classes to avoid the warm-up issue of the initial access of lambdas.
         ((IoEventLoop) eventLoop).register(unRegisteredInstance)
@@ -97,9 +98,10 @@ public final class IoUringSendFile implements IoUringIoHandle {
     public void handle(IoRegistration registration, IoEvent ioEvent) {
         IoUringIoEvent uringIoEvent = (IoUringIoEvent) ioEvent;
         int res = uringIoEvent.res();
+        Promise<Integer> asyncPromise = spliceResult;
         if (res < 0) {
-            spliceResult.setFailure(new Errors.NativeIoException("IoUringSplicer", res));
             clear();
+            asyncPromise.setSuccess(res);
             return;
         }
 
@@ -109,7 +111,7 @@ public final class IoUringSendFile implements IoUringIoHandle {
                 return;
             }
             case SPLICE_FROM_PIPE: {
-                spliceResult.setSuccess(res);
+                asyncPromise.setSuccess(res);
                 clear();
                 return;
             }
@@ -167,12 +169,8 @@ public final class IoUringSendFile implements IoUringIoHandle {
             return;
         }
 
-        try {
-            currentPipe = pipeSupplier.get();
-            spliceToPipe(inFd, inOffset, len, spliceFlags);
-        } catch (Exception e) {
-            promise.setFailure(e);
-        }
+        spliceToPipe(inFd, inOffset, len, spliceFlags);
+
         this.spliceResult = promise;
         this.outOffset = outOffset;
         this.len = len;
@@ -182,13 +180,13 @@ public final class IoUringSendFile implements IoUringIoHandle {
 
     private void spliceToPipe(FileDescriptor inFd, long offset, int len, int spliceFlags) {
         assert eventLoop.inEventLoop();
-        assert currentPipe != null;
+        assert pipeFd != null;
         assert stage == Stage.IDLE;
 
         stage = Stage.SPLICE_TO_PIPE;
         IoUringIoOps ioUringIoOps = IoUringIoOps.newSplice(
                 inFd.intValue(), offset,
-                currentPipe.writeFd().intValue(), -1L,
+                pipeFd.writeFd().intValue(), -1L,
                 len, spliceFlags
         );
         spliceOperationId = ioRegistration.submit(ioUringIoOps);
@@ -196,12 +194,12 @@ public final class IoUringSendFile implements IoUringIoHandle {
 
     private void spliceFromPipe(FileDescriptor outFd, long offset, int len, int spliceFlags) {
         assert eventLoop.inEventLoop();
-        assert currentPipe != null;
+        assert pipeFd != null;
         assert stage == Stage.SPLICE_TO_PIPE;
 
         stage = Stage.SPLICE_FROM_PIPE;
         IoUringIoOps ioUringIoOps = IoUringIoOps.newSplice(
-                currentPipe.readFd().intValue(), -1L,
+                pipeFd.readFd().intValue(), -1L,
                 outFd.intValue(), offset,
                 len, spliceFlags
         );
@@ -220,9 +218,9 @@ public final class IoUringSendFile implements IoUringIoHandle {
 
     @Override
     public void close() throws Exception {
-
         ioRegistration.cancel();
         clear();
+        pipeFd.close();
     }
 
     enum Stage {

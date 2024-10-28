@@ -61,11 +61,10 @@ public class IoUringFileTest {
         Files.write(inFile.toPath(), sampleString.getBytes());
 
         try (
-                PipeFd pipeFd = new PipeFd();
                 FileChannel inFileChannel = FileChannel.open(inFile.toPath(), StandardOpenOption.READ);
                 FileChannel outFileChannel = FileChannel.open(outFile.toPath(), StandardOpenOption.WRITE)
         ) {
-            IoUringSendFile sendFileHandle = IoUringSendFile.newInstance(() -> pipeFd, group.next())
+            IoUringSendFile sendFileHandle = IoUringSendFile.newInstance(group.next())
                     .sync().getNow();
             Integer now = sendFileHandle.sendFile(
                     new FileDescriptor(Native.getFd(inFileChannel)), 0,

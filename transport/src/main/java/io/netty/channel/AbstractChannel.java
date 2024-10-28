@@ -31,6 +31,7 @@ import java.net.NoRouteToHostException;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.NotYetConnectedException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -1013,6 +1014,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     protected void validateFileRegion(DefaultFileRegion region, long position) throws IOException {
         DefaultFileRegion.validate(region, position);
+    }
+
+    protected void setTransferred(DefaultFileRegion region, long transferred) {
+        DefaultFileRegion.setTransferred(region, transferred);
+    }
+
+    protected FileChannel getFileChannel(DefaultFileRegion fileRegion) {
+        return DefaultFileRegion.getFileChannel(fileRegion);
     }
 
     static final class CloseFuture extends DefaultChannelPromise {
