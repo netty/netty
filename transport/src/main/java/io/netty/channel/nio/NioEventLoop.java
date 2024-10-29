@@ -23,7 +23,9 @@ import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.IntSupplier;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.RejectedExecutionHandler;
+import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReflectionUtil;
@@ -48,6 +50,7 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -132,6 +135,8 @@ public final class NioEventLoop extends SingleThreadEventLoop {
 
     private final SelectStrategy selectStrategy;
 
+    private final EventLoopLoadTracker loadTracker;
+
     private volatile int ioRatio = 50;
     private int cancelledKeys;
     private boolean needsToSelectAgain;
@@ -146,6 +151,26 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         final SelectorTuple selectorTuple = openSelector();
         this.selector = selectorTuple.selector;
         this.unwrappedSelector = selectorTuple.unwrappedSelector;
+    }
+
+    {
+        this.loadTracker = new EventLoopLoadTracker(new IntSupplier() {
+            @Override
+            public int get() throws Exception {
+                long timeoutMillis = deadlineToDelayNanos(nextWakeupNanos.get() + 995000L) / 1000000L;
+                return pendingTasks() + (timeoutMillis <= 0 ? 1 : 0);
+            }
+        });
+        if (LOOP_LOAD) {
+            final ScheduledFuture<?> scheduledFuture = GlobalEventExecutor.INSTANCE
+                    .scheduleAtFixedRate(loadTracker, 0, 5000, TimeUnit.MILLISECONDS);
+            this.addShutdownHook(new Runnable() {
+                @Override
+                public void run() {
+                    scheduledFuture.cancel(false);
+                }
+            });
+        }
     }
 
     private static Queue<Runnable> newTaskQueue(
@@ -864,6 +889,30 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     protected boolean afterScheduledTaskSubmitted(long deadlineNanos) {
         // Note this is also correct for the nextWakeupNanos == -1 (AWAKE) case
         return deadlineNanos < nextWakeupNanos.get();
+    }
+
+    @Override
+    public double loadAvg1() {
+        if (LOOP_LOAD) {
+            return loadTracker.getLoadAvg1();
+        }
+        return super.loadAvg1();
+    }
+
+    @Override
+    public double loadAvg5() {
+        if (LOOP_LOAD) {
+            return loadTracker.getLoadAvg5();
+        }
+        return super.loadAvg5();
+    }
+
+    @Override
+    public double loadAvg15() {
+        if (LOOP_LOAD) {
+            return loadTracker.getLoadAvg15();
+        }
+        return super.loadAvg15();
     }
 
     Selector unwrappedSelector() {

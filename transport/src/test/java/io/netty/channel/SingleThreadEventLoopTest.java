@@ -19,6 +19,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
+import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.EventExecutor;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
@@ -520,6 +521,24 @@ public class SingleThreadEventLoopTest {
                                  onIteration2.getInvocationCount(), is(1));
         MatcherAssert.assertThat("Unexpected invocation count for on every eventloop iteration task.",
                                  onIteration1.getInvocationCount(), is(0));
+    }
+
+    @Test
+    public void testEventLoopLoadCalculator() {
+        SingleThreadEventLoop.EventLoopLoadTracker loadTracker =
+                new SingleThreadEventLoop.EventLoopLoadTracker(new IntSupplier() {
+                    @Override
+                    public int get() throws Exception {
+                        return 1;
+                    }
+                });
+        for (int i = 0; i < 1000; i++) {
+            loadTracker.run();
+        }
+        // approaches a load of 1 over time.
+        assertThat(1 - loadTracker.getLoadAvg1(), lessThan(0.01));
+        assertThat(1 - loadTracker.getLoadAvg5(), lessThan(0.01));
+        assertThat(1 - loadTracker.getLoadAvg15(), lessThan(0.01));
     }
 
     private static final class SingleThreadEventLoopA extends SingleThreadEventLoop {

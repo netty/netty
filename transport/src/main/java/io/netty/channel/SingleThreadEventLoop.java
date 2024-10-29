@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.RejectedExecutionHandlers;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -27,6 +28,7 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
+import java.util.function.Supplier;
 
 /**
  * Abstract base class for {@link EventLoop}s that execute all its submitted tasks in a single thread.
@@ -37,6 +39,8 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     protected static final int DEFAULT_MAX_PENDING_TASKS = Math.max(16,
             SystemPropertyUtil.getInt("io.netty.eventLoop.maxPendingTasks", Integer.MAX_VALUE));
 
+    protected static final boolean LOOP_LOAD =
+            SystemPropertyUtil.getBoolean("io.netty.eventLoop.load", false);
     private final Queue<Runnable> tailTasks;
 
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {
@@ -146,6 +150,30 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
     }
 
     /**
+     * Returns the current load value of the {@link EventLoop} over a one-minute period,
+     * or returns {@code -1} if operation is not supported.
+     */
+    public double loadAvg1() {
+        return -1;
+    }
+
+    /**
+     * Returns the current load value of the {@link EventLoop} over a five-minute period,
+     * or returns {@code -1} if operation is not supported.
+     */
+    public double loadAvg5() {
+        return -1;
+    }
+
+    /**
+     * Returns the current load value of the {@link EventLoop} over a fifteen-minute period,
+     * or returns {@code -1} if operation is not supported.
+     */
+    public double loadAvg15() {
+        return -1;
+    }
+
+    /**
      * Returns the number of {@link Channel}s registered with this {@link EventLoop} or {@code -1}
      * if operation is not supported. The returned value is not guaranteed to be exact accurate and
      * should be viewed as a best effort.
@@ -211,5 +239,63 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
                 throw new UnsupportedOperationException("remove");
             }
         };
+    }
+
+    protected static class EventLoopLoadTracker implements Runnable {
+
+        /**
+         * 1/exp(5sec/1min)
+         */
+        private static final double EXP_1 = Math.exp(-((double) 5) / 60);
+
+        /**
+         * 1/exp(5sec/5min)
+         */
+        private static final double EXP_5 = Math.exp(-((double) 5) / (5 * 60));
+
+        /**
+         * 1/exp(5sec/15min)
+         */
+        private static final double EXP_15 = Math.exp(-((double) 5) / (15 * 60));
+
+        private final IntSupplier currentTasksFunction;
+
+        private double loadAvg1;
+
+        private double loadAvg5;
+
+        private double loadAvg15;
+
+        public EventLoopLoadTracker(IntSupplier currentTasksFunction) {
+            this.currentTasksFunction = currentTasksFunction;
+        }
+
+        private void updateLoad() {
+            try {
+                int tasks = currentTasksFunction.get();
+                loadAvg1 = loadAvg1 * EXP_1 + (double) tasks * (1 - EXP_1);
+                loadAvg5 = loadAvg5 * EXP_5 + (double) tasks * (1 - EXP_5);
+                loadAvg15 = loadAvg15 * EXP_15 + (double) tasks * (1 - EXP_15);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public void run() {
+            updateLoad();
+        }
+
+        public double getLoadAvg1() {
+            return loadAvg1;
+        }
+
+        public double getLoadAvg5() {
+            return loadAvg5;
+        }
+
+        public double getLoadAvg15() {
+            return loadAvg15;
+        }
     }
 }
