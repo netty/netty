@@ -41,6 +41,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
     protected static final boolean LOOP_LOAD =
             SystemPropertyUtil.getBoolean("io.netty.eventLoop.load", false);
+
     private final Queue<Runnable> tailTasks;
 
     protected SingleThreadEventLoop(EventLoopGroup parent, ThreadFactory threadFactory, boolean addTaskWakesUp) {

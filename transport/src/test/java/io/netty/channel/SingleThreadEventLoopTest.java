@@ -524,7 +524,7 @@ public class SingleThreadEventLoopTest {
     }
 
     @Test
-    public void testEventLoopLoadCalculator() {
+    public void testEventLoopLoadTracker() {
         SingleThreadEventLoop.EventLoopLoadTracker loadTracker =
                 new SingleThreadEventLoop.EventLoopLoadTracker(new IntSupplier() {
                     @Override
