@@ -90,10 +90,9 @@
         <cargoTarget>--target=${quicheTarget}</cargoTarget>
         <quicheBuildDir>${quicheSourceDir}/target/${quicheTarget}/release</quicheBuildDir>
         <cmakeAsmFlags />
-        <!-- On Windows, build with /MT for static linking -->
-        <cmakeCFlags>/MT</cmakeCFlags>
+        <cmakeCFlags />
         <!-- Disable one warning to be able to build on windows -->
-        <cmakeCxxFlags>/MT /wd4091</cmakeCxxFlags>
+        <cmakeCxxFlags>/wd4091</cmakeCxxFlags>
         <libssl>ssl.lib</libssl>
         <libcrypto>crypto.lib</libcrypto>
         <libquiche>quiche.lib</libquiche>
@@ -705,6 +704,7 @@
                           <env key="MACOSX_DEPLOYMENT_TARGET" value="${macosxDeploymentTarget}" />
                           <arg value="-DCMAKE_POSITION_INDEPENDENT_CODE=TRUE" />
                           <arg value="-DCMAKE_BUILD_TYPE=Release" />
+                          <arg value="-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded" />
                           <arg value="-DCMAKE_ASM_FLAGS=${cmakeAsmFlags}" />
                           <arg value="-DCMAKE_C_FLAGS_RELEASE=${cmakeCFlags}" />
                           <arg value="-DCMAKE_CXX_FLAGS_RELEASE=${cmakeCxxFlags}" />
