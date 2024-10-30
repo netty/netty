@@ -44,7 +44,7 @@ public final class IoUring {
                         ringBuffer = Native.createRingBuffer();
                         Native.checkAllIOSupported(ringBuffer.fd());
                         socketNonEmptySupported = Native.isIOUringCqeFSockNonEmptySupported(ringBuffer.fd());
-                        spliceSupported = Native.isIOUringCqeFSockNonEmptySupported(ringBuffer.fd());
+                        spliceSupported = Native.isIOUringSupportSplice(ringBuffer.fd());
                     } finally {
                         if (ringBuffer != null) {
                             try {

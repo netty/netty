@@ -63,24 +63,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         super(parent, LinuxSocket.makeBlocking(socket), remote);
     }
 
-    private static void shutdownDone(ChannelFuture shutdownOutputFuture,
-                                     ChannelFuture shutdownInputFuture,
-                                     ChannelPromise promise) {
-        Throwable shutdownOutputCause = shutdownOutputFuture.cause();
-        Throwable shutdownInputCause = shutdownInputFuture.cause();
-        if (shutdownOutputCause != null) {
-            if (shutdownInputCause != null) {
-                logger.info("Exception suppressed because a previous exception occurred.",
-                        shutdownInputCause);
-            }
-            promise.setFailure(shutdownOutputCause);
-        } else if (shutdownInputCause != null) {
-            promise.setFailure(shutdownInputCause);
-        } else {
-            promise.setSuccess();
-        }
-    }
-
     @Override
     public ChannelMetadata metadata() {
         return METADATA;
@@ -198,6 +180,24 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
     }
 
+    private static void shutdownDone(ChannelFuture shutdownOutputFuture,
+                                     ChannelFuture shutdownInputFuture,
+                                     ChannelPromise promise) {
+        Throwable shutdownOutputCause = shutdownOutputFuture.cause();
+        Throwable shutdownInputCause = shutdownInputFuture.cause();
+        if (shutdownOutputCause != null) {
+            if (shutdownInputCause != null) {
+                logger.info("Exception suppressed because a previous exception occurred.",
+                             shutdownInputCause);
+            }
+            promise.setFailure(shutdownOutputCause);
+        } else if (shutdownInputCause != null) {
+            promise.setFailure(shutdownInputCause);
+        } else {
+            promise.setSuccess();
+        }
+    }
+
     @Override
     protected final void doRegister(ChannelPromise promise) {
         super.doRegister(promise);
@@ -209,33 +209,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 }
             }
         });
-    }
-
-    @Override
-    protected final void cancelOutstandingReads(IoUringIoRegistration registration, int numOutstandingReads) {
-        if (readId != 0) {
-            // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
-            assert numOutstandingReads == 1;
-            int fd = fd().intValue();
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(fd, 0, readId, Native.IORING_OP_RECV);
-            registration.submit(ops);
-        } else {
-            assert numOutstandingReads == 0;
-        }
-    }
-
-    @Override
-    protected final void cancelOutstandingWrites(IoUringIoRegistration registration, int numOutstandingWrites) {
-        if (writeId != 0) {
-            // Let's try to cancel outstanding writes as these might be submitted and waiting to finish writing
-            // (via fastpoll).
-            assert numOutstandingWrites == 1;
-            assert writeOpCode != 0;
-            int fd = fd().intValue();
-            registration.submit(IoUringIoOps.newAsyncCancel(fd, 0, writeId, writeOpCode));
-        } else {
-            assert numOutstandingWrites == 0;
-        }
     }
 
     private final class IoUringStreamUnsafe extends AbstractUringUnsafe {
@@ -396,12 +369,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
                 if (allocHandle.continueReading() &&
-                    // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
-                    // trying to schedule a read. If it's supported and not part of the flags we know for sure
-                    // that the next read (which would be using Native.MSG_DONTWAIT) will complete without
-                    // be able to read any data. This is useless work and we can skip it.
-                    (!IoUring.isIOUringCqeFSockNonEmptySupported() ||
-                     (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
+                        // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
+                        // trying to schedule a read. If it's supported and not part of the flags we know for sure
+                        // that the next read (which would be using Native.MSG_DONTWAIT) will complete without
+                        // be able to read any data. This is useless work and we can skip it.
+                        (!IoUring.isIOUringCqeFSockNonEmptySupported() ||
+                        (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
                     // Let's schedule another read.
                     scheduleRead(false);
                 } else {
@@ -501,6 +474,33 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
 
             return true;
+        }
+    }
+
+    @Override
+    protected final void cancelOutstandingReads(IoUringIoRegistration registration, int numOutstandingReads) {
+        if (readId != 0) {
+            // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
+            assert numOutstandingReads == 1;
+            int fd = fd().intValue();
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(fd, 0, readId, Native.IORING_OP_RECV);
+            registration.submit(ops);
+        } else {
+            assert numOutstandingReads == 0;
+        }
+    }
+
+    @Override
+    protected final void cancelOutstandingWrites(IoUringIoRegistration registration, int numOutstandingWrites) {
+        if (writeId != 0) {
+            // Let's try to cancel outstanding writes as these might be submitted and waiting to finish writing
+            // (via fastpoll).
+            assert numOutstandingWrites == 1;
+            assert writeOpCode != 0;
+            int fd = fd().intValue();
+            registration.submit(IoUringIoOps.newAsyncCancel(fd, 0, writeId, writeOpCode));
+        } else {
+            assert numOutstandingWrites == 0;
         }
     }
 
