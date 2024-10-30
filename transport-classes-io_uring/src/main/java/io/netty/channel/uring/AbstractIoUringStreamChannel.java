@@ -314,7 +314,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             sendFileHandle.sendFile(
                     new FileDescriptor(fileRegionFd), defaultFileRegion.position() + defaultFileRegion.transferred(),
                     fd(), -1,
-                    len, 0
+                    len, Native.SPLICE_F_MOVE
             ).addListener(new GenericFutureListener<Future<? super Integer>>() {
                 @Override
                 public void operationComplete(Future<? super Integer> future) throws Exception {

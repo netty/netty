@@ -193,6 +193,8 @@ final class Native {
     static final byte IORING_OP_FTRUNCATE = 55;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
 
+    static final int SPLICE_F_MOVE = 1;
+
     static String opToStr(byte op) {
         switch (op) {
             case IORING_OP_NOP: return "NOP";
