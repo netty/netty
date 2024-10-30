@@ -791,7 +791,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param flags the flags.
          * @param data  the data that was passed when submitting the op.
          */
-        protected void writeComplete(int res, int flags, short data) {
+        protected final void writeComplete(int res, int flags, short data) {
             if ((ioState & CONNECT_SCHEDULED) != 0) {
                 // The writeComplete(...) callback was called because of a sendmsg(...) result that was used for
                 // TCP_FASTOPEN_CONNECT.

@@ -434,7 +434,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         boolean writeComplete0(int res, int flags, int data, int outstanding) {
-            assert writeId != 0;
+            assert writeId != 0 || sendFileHandle != null;
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
 
             if (channelOutboundBuffer.current() instanceof DefaultFileRegion) {
@@ -480,7 +480,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
             if (res < 0) {
                 try {
-                    if (ioResult("io_uring write", res) == 0) {
+                    if (ioResult("io_uring splice", res) == 0) {
                         return false;
                     }
                 } catch (Throwable cause) {
@@ -501,6 +501,17 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
 
             return true;
+        }
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        try {
+            super.doClose();
+        } finally {
+            if (sendFileHandle != null) {
+                sendFileHandle.close();
+            }
         }
     }
 }
