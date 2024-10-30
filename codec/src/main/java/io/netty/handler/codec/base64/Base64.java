@@ -21,6 +21,7 @@ package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -105,7 +106,14 @@ public final class Base64 {
         ObjectUtil.checkNotNull(src, "src");
         ObjectUtil.checkNotNull(dialect, "dialect");
 
-        ByteBuf dest = allocator.buffer(encodedBufferSize(len, breakLines)).order(src.order());
+        int capacity = encodedBufferSize(len, breakLines);
+        ByteBuf destBuf = allocator.buffer(capacity).order(src.order());
+        // Ensure the destination buffer is flat, if possible, and avoid leak detection checks on every write:
+        ByteBuf dest = destBuf.unwrap() == null || !destBuf.isContiguous() ? destBuf :
+                destBuf.hasArray() ?
+                        Unpooled.wrappedBuffer(destBuf.array(), destBuf.arrayOffset(), capacity).order(src.order()) :
+                        Unpooled.wrappedBuffer(destBuf.internalNioBuffer(0, capacity)).order(src.order());
+
         byte[] alphabet = alphabet(dialect);
         int d = 0;
         int e = 0;
@@ -132,8 +140,10 @@ public final class Base64 {
         if (e > 1 && dest.getByte(e - 1) == NEW_LINE) {
             e--;
         }
-
-        return dest.slice(0, e);
+        if (dest != destBuf) {
+            dest.release();
+        }
+        return destBuf.setIndex(0, e);
     }
 
     private static void encode3to4(

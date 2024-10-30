@@ -27,6 +27,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
@@ -81,7 +82,7 @@ final class SniClientJava8TestUtil {
     static void testSniClient(SslProvider sslClientProvider, SslProvider sslServerProvider, final boolean match)
             throws Exception {
         final String sniHost = "sni.netty.io";
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         LocalAddress address = new LocalAddress("test");
         EventLoopGroup group = new DefaultEventLoopGroup(1);
         SslContext sslServerContext = null;
@@ -163,8 +164,6 @@ final class SniClientJava8TestUtil {
 
             ReferenceCountUtil.release(sslServerContext);
             ReferenceCountUtil.release(sslClientContext);
-
-            cert.delete();
 
             group.shutdownGracefully();
         }

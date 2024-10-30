@@ -31,10 +31,13 @@ import java.security.NoSuchAlgorithmException;
 import static io.netty.handler.ssl.SslUtils.DTLS_1_0;
 import static io.netty.handler.ssl.SslUtils.DTLS_1_2;
 import static io.netty.handler.ssl.SslUtils.DTLS_1_3;
+import static io.netty.handler.ssl.SslUtils.NOT_ENCRYPTED;
 import static io.netty.handler.ssl.SslUtils.NOT_ENOUGH_DATA;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SslUtilsTest {
@@ -59,7 +62,8 @@ public class SslUtilsTest {
         ByteBuf bufferBE = Unpooled.buffer().writeBytes(cTOsBE);
 
         // Test that the packet-length for BE and LE is the same
-        assertEquals(getEncryptedPacketLength(bufferBE, 0), getEncryptedPacketLength(bufferLE, 0));
+        assertEquals(getEncryptedPacketLength(bufferBE, 0, true),
+                getEncryptedPacketLength(bufferLE, 0, true));
         assertEquals(getEncryptedPacketLength(new ByteBuffer[] { bufferBE.nioBuffer() }, 0),
                 getEncryptedPacketLength(new ByteBuffer[] { bufferLE.nioBuffer().order(ByteOrder.LITTLE_ENDIAN) }, 0));
     }
@@ -89,7 +93,7 @@ public class SslUtilsTest {
                               .writeShort(SslUtils.GMSSL_PROTOCOL_VERSION)
                               .writeShort(bodyLength);
 
-        int packetLength = getEncryptedPacketLength(buf, 0);
+        int packetLength = getEncryptedPacketLength(buf, 0, true);
         assertEquals(bodyLength + SslUtils.SSL_RECORD_HEADER_LENGTH, packetLength);
         buf.release();
     }
@@ -118,7 +122,7 @@ public class SslUtilsTest {
                 .writeBytes(new byte[6]) // sequence number
                 .writeShort(bodyLength);
 
-        int packetLength = getEncryptedPacketLength(buf, 0);
+        int packetLength = getEncryptedPacketLength(buf, 0, true);
         // bodyLength + DTLS_RECORD_HEADER_LENGTH = 65 + 13 = 78
         assertEquals(78, packetLength);
         buf.release();
@@ -142,7 +146,7 @@ public class SslUtilsTest {
                 .writeShort(bodyLength)
                 .writeBytes(new byte[65]);
 
-        int packetLength = getEncryptedPacketLength(buf, 0);
+        int packetLength = getEncryptedPacketLength(buf, 0, true);
         assertEquals(78, packetLength);
         buf.release();
     }
@@ -158,8 +162,21 @@ public class SslUtilsTest {
                 .writeByte(0);
                 // Left off the last byte of the length on purpose
 
-        int packetLength = getEncryptedPacketLength(buf, 0);
+        int packetLength = getEncryptedPacketLength(buf, 0, true);
         assertEquals(NOT_ENOUGH_DATA, packetLength);
+        buf.release();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    public void probeForSSLv2(boolean probeSSLv2) {
+        ByteBuf buf = Unpooled.wrappedBuffer(new byte[] { 0x30, (byte) 0x82, 0x0c, 0x48, 0x02, 0x01, 0x01, 0x01 });
+        int packetLength = getEncryptedPacketLength(buf, 0, probeSSLv2);
+        if (probeSSLv2) {
+            assertNotEquals(NOT_ENCRYPTED, packetLength);
+        } else {
+            assertEquals(NOT_ENCRYPTED, packetLength);
+        }
         buf.release();
     }
 

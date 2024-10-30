@@ -17,6 +17,7 @@ package io.netty.resolver.dns;
 
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.dns.DefaultDnsQuery;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
@@ -29,14 +30,14 @@ import java.net.InetSocketAddress;
 
 final class TcpDnsQueryContext extends DnsQueryContext {
 
-    TcpDnsQueryContext(Channel channel, Future<? extends Channel> channelReadyFuture,
+    TcpDnsQueryContext(Channel channel,
                        InetSocketAddress nameServerAddr,
                        DnsQueryContextManager queryContextManager,
                        int maxPayLoadSize, boolean recursionDesired,
                        long queryTimeoutMillis,
                        DnsQuestion question, DnsRecord[] additionals,
                        Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
-        super(channel, channelReadyFuture, nameServerAddr, queryContextManager, maxPayLoadSize, recursionDesired,
+        super(channel, nameServerAddr, queryContextManager, maxPayLoadSize, recursionDesired,
                 // No retry via TCP.
                 queryTimeoutMillis, question, additionals, promise, null, false);
     }

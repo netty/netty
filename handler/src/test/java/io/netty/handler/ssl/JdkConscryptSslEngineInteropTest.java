@@ -110,4 +110,10 @@ public class JdkConscryptSslEngineInteropTest extends SSLEngineTest {
     public void testTLSv13DisabledIfNoValidCipherSuiteConfigured() throws Exception {
         super.testTLSv13DisabledIfNoValidCipherSuiteConfigured();
     }
+
+    @Disabled("Disabled due a conscrypt bug")
+    @Override
+    public void mustCallResumeTrustedOnSessionResumption(SSLEngineTestParam param) throws Exception {
+        super.mustCallResumeTrustedOnSessionResumption(param);
+    }
 }

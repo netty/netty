@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static io.netty.buffer.PoolChunk.isSubpage;
@@ -85,7 +86,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         q100 = new PoolChunkList<T>(this, null, 100, Integer.MAX_VALUE, sizeClass.chunkSize);
         q075 = new PoolChunkList<T>(this, q100, 75, 100, sizeClass.chunkSize);
-        q050 = new PoolChunkList<T>(this, q075, 50, 100, sizeClass.chunkSize);
+        q050 = new PoolChunkList<T>(this, q100, 50, 100, sizeClass.chunkSize);
         q025 = new PoolChunkList<T>(this, q050, 25, 75, sizeClass.chunkSize);
         q000 = new PoolChunkList<T>(this, q025, 1, 50, sizeClass.chunkSize);
         qInit = new PoolChunkList<T>(this, q000, Integer.MIN_VALUE, 25, sizeClass.chunkSize);
@@ -616,9 +617,11 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     static final class HeapArena extends PoolArena<byte[]> {
+        private final AtomicReference<PoolChunk<byte[]>> lastDestroyedChunk;
 
         HeapArena(PooledByteBufAllocator parent, SizeClasses sizeClass) {
             super(parent, sizeClass);
+            lastDestroyedChunk = new AtomicReference<PoolChunk<byte[]>>();
         }
 
         private static byte[] newByteArray(int size) {
@@ -632,6 +635,14 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected PoolChunk<byte[]> newChunk(int pageSize, int maxPageIdx, int pageShifts, int chunkSize) {
+            PoolChunk<byte[]> chunk = lastDestroyedChunk.getAndSet(null);
+            if (chunk != null) {
+                assert chunk.chunkSize == chunkSize &&
+                        chunk.pageSize == pageSize &&
+                        chunk.maxPageIdx == maxPageIdx &&
+                        chunk.pageShifts == pageShifts;
+                return chunk; // The parameters are always the same, so it's fine to reuse a previously allocated chunk.
+            }
             return new PoolChunk<byte[]>(
                     this, null, newByteArray(chunkSize), pageSize, pageShifts, chunkSize, maxPageIdx);
         }
@@ -643,7 +654,10 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected void destroyChunk(PoolChunk<byte[]> chunk) {
-            // Rely on GC.
+            // Rely on GC. But keep one chunk for reuse.
+            if (!chunk.unpooled && lastDestroyedChunk.get() == null) {
+                lastDestroyedChunk.set(chunk); // The check-and-set does not need to be atomic.
+            }
         }
 
         @Override
@@ -674,8 +688,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         @Override
-        protected PoolChunk<ByteBuffer> newChunk(int pageSize, int maxPageIdx,
-            int pageShifts, int chunkSize) {
+        protected PoolChunk<ByteBuffer> newChunk(int pageSize, int maxPageIdx, int pageShifts, int chunkSize) {
             if (sizeClass.directMemoryCacheAlignment == 0) {
                 ByteBuffer memory = allocateDirect(chunkSize);
                 return new PoolChunk<ByteBuffer>(this, memory, memory, pageSize, pageShifts,

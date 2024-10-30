@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCounted;
@@ -24,6 +25,7 @@ import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ReferenceCountUpdater;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
@@ -118,6 +120,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     private volatile Magazine[] magazines;
     private final FastThreadLocal<Object> threadLocalMagazine;
     private final Set<Magazine> liveCachedMagazines;
+    private volatile boolean freed;
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, MagazineCaching magazineCaching) {
         ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
@@ -136,7 +139,12 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 protected Object initialValue() {
                     if (cachedMagazinesNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
                         Magazine mag = new Magazine(AdaptivePoolingAllocator.this, false);
-                        liveMagazines.add(mag);
+
+                        if (FastThreadLocalThread.willCleanupFastThreadLocals(Thread.currentThread())) {
+                            // Only add it to the liveMagazines if we can guarantee that onRemoval(...) is called,
+                            // as otherwise we might end up holding the reference forever.
+                            liveMagazines.add(mag);
+                        }
                         return mag;
                     }
                     return NO_MAGAZINE;
@@ -191,24 +199,33 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             Thread currentThread = Thread.currentThread();
             boolean willCleanupFastThreadLocals = FastThreadLocalThread.willCleanupFastThreadLocals(currentThread);
             AdaptiveByteBuf buf = AdaptiveByteBuf.newInstance(willCleanupFastThreadLocals);
-            AdaptiveByteBuf result = allocate(size, maxCapacity, currentThread, buf);
-            if (result != null) {
-                return result;
+            try {
+                if (allocate(size, maxCapacity, currentThread, buf)) {
+                    // Allocation did work, the ownership will is transferred to the caller.
+                    AdaptiveByteBuf result = buf;
+                    buf = null;
+                    return result;
+                }
+            } finally {
+                if (buf != null) {
+                    // We didn't handover ownership of the buf, release it now so we don't leak.
+                    buf.release();
+                }
             }
-            // Return the buffer we pulled from the recycler but didn't use.
-            buf.release();
         }
         // The magazines failed us, or the buffer is too big to be pooled.
         return chunkAllocator.allocate(size, maxCapacity);
     }
 
-    private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
+    private boolean allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
         int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
         FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
         if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
             Object mag = threadLocalMagazine.get();
             if (mag != NO_MAGAZINE) {
-                return ((Magazine) mag).allocate(size, sizeBucket, maxCapacity, buf);
+                boolean allocated = ((Magazine) mag).tryAllocate(size, sizeBucket, maxCapacity, buf);
+                assert allocated : "Allocation of threadLocalMagazine must always succeed";
+                return true;
             }
         }
         long threadId = currentThread.getId();
@@ -220,18 +237,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             int index = (int) (threadId & mask);
             for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
                 Magazine mag = mags[index + i & mask];
-                long writeLock = mag.tryWriteLock();
-                if (writeLock != 0) {
-                    try {
-                        return mag.allocate(size, sizeBucket, maxCapacity, buf);
-                    } finally {
-                        mag.unlockWrite(writeLock);
-                    }
+                if (mag.tryAllocate(size, sizeBucket, maxCapacity, buf)) {
+                    // Was able to allocate.
+                    return true;
                 }
             }
             expansions++;
         } while (expansions <= EXPANSION_ATTEMPTS && tryExpandMagazines(mags.length));
-        return null;
+        return false;
     }
 
     /**
@@ -239,12 +252,18 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
      */
     void allocate(int size, int maxCapacity, AdaptiveByteBuf into) {
         Magazine magazine = into.chunk.magazine;
-        AdaptiveByteBuf result = allocate(size, maxCapacity, Thread.currentThread(), into);
-        if (result == null) {
-            // Create a one-off chunk for this allocation.
-            AbstractByteBuf innerChunk = (AbstractByteBuf) chunkAllocator.allocate(size, maxCapacity);
+        if (!allocate(size, maxCapacity, Thread.currentThread(), into)) {
+            // Create a one-off chunk for this allocation as the previous allocate call did not work out.
+            AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
             Chunk chunk = new Chunk(innerChunk, magazine, false);
-            chunk.readInitInto(into, size, maxCapacity);
+            try {
+                chunk.readInitInto(into, size, maxCapacity);
+            } finally {
+                // As the chunk is an one-off we need to always call release explicitly as readInitInto(...)
+                // will take care of retain once when successful. Once The AdaptiveByteBuf is released it will
+                // completely release the Chunk and so the contained innerChunk.
+                chunk.release();
+            }
         }
     }
 
@@ -273,14 +292,21 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         if (writeLock != 0) {
             try {
                 Magazine[] mags = magazines;
-                if (mags.length >= MAX_STRIPES || mags.length > currentLength) {
+                if (mags.length >= MAX_STRIPES || mags.length > currentLength || freed) {
                     return true;
                 }
-                Magazine[] expanded = Arrays.copyOf(mags, mags.length * 2);
-                for (int i = mags.length, m = expanded.length; i < m; i++) {
-                    expanded[i] = new Magazine(this);
+                int preferredChunkSize = mags[0].sharedPrefChunkSize;
+                Magazine[] expanded = new Magazine[mags.length * 2];
+                for (int i = 0, l = expanded.length; i < l; i++) {
+                    Magazine m = new Magazine(this);
+                    m.localPrefChunkSize = preferredChunkSize;
+                    m.sharedPrefChunkSize = preferredChunkSize;
+                    expanded[i] = m;
                 }
                 magazines = expanded;
+                for (Magazine magazine : mags) {
+                    magazine.free();
+                }
             } finally {
                 magazineExpandLock.unlockWrite(writeLock);
             }
@@ -289,20 +315,58 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     }
 
     private boolean offerToQueue(Chunk buffer) {
+        if (freed) {
+            return false;
+        }
         return centralQueue.offer(buffer);
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by version check")
+    // Ensure that we release all previous pooled resources when this object is finalized. This is needed as otherwise
+    // we might end up with leaks. While these leaks are usually harmless in reality it would still at least be
+    // very confusing for users.
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            super.finalize();
+        } finally {
+            free();
+        }
+    }
+
+    private void free() {
+        freed = true;
+        long stamp = magazineExpandLock.writeLock();
+        try {
+            Magazine[] mags = magazines;
+            for (Magazine magazine : mags) {
+                magazine.free();
+            }
+        } finally {
+            magazineExpandLock.unlockWrite(stamp);
+        }
+        for (;;) {
+            Chunk chunk = centralQueue.poll();
+            if (chunk == null) {
+                break;
+            }
+            chunk.release();
+        }
+    }
+
+    static int sizeBucket(int size) {
+        return AllocationStatistics.sizeBucket(size);
+    }
+
     @SuppressWarnings("checkstyle:finalclass") // Checkstyle mistakenly believes this class should be final.
-    private static class AllocationStatistics extends StampedLock {
-        private static final long serialVersionUID = -8319929980932269688L;
+    private static class AllocationStatistics {
         private static final int MIN_DATUM_TARGET = 1024;
         private static final int MAX_DATUM_TARGET = 65534;
-        private static final int INIT_DATUM_TARGET = 8192;
+        private static final int INIT_DATUM_TARGET = 9;
         private static final int HISTO_MIN_BUCKET_SHIFT = 13; // Smallest bucket is 1 << 13 = 8192 bytes in size.
         private static final int HISTO_MAX_BUCKET_SHIFT = 20; // Biggest bucket is 1 << 20 = 1 MiB bytes in size.
         private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 8 buckets.
         private static final int HISTO_MAX_BUCKET_MASK = HISTO_BUCKET_COUNT - 1;
+        private static final int SIZE_MAX_MASK = MAX_CHUNK_SIZE - 1;
 
         protected final AdaptivePoolingAllocator parent;
         private final boolean shareable;
@@ -316,7 +380,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private int histoIndex;
         private int datumCount;
         private int datumTarget = INIT_DATUM_TARGET;
-        private volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
+        protected volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
         protected volatile int localPrefChunkSize = MIN_CHUNK_SIZE;
 
         private AllocationStatistics(AdaptivePoolingAllocator parent, boolean shareable) {
@@ -332,12 +396,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         static int sizeBucket(int size) {
+            if (size == 0) {
+                return 0;
+            }
             // Minimum chunk size is 128 KiB. We'll only make bigger chunks if the 99-percentile is 16 KiB or greater,
             // so we truncate and roll up the bottom part of the histogram to 8 KiB.
             // The upper size band is 1 MiB, and that gives us exactly 8 size buckets,
             // which is a magical number for JIT optimisations.
-            int normalizedSize = size - 1 >> HISTO_MIN_BUCKET_SHIFT & HISTO_MAX_BUCKET_MASK;
-            return Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize);
+            int normalizedSize = size - 1 >> HISTO_MIN_BUCKET_SHIFT & SIZE_MAX_MASK;
+            return Math.min(Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize), HISTO_MAX_BUCKET_MASK);
         }
 
         private void rotateHistograms() {
@@ -393,17 +460,19 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
     }
 
+    @SuppressJava6Requirement(reason = "Guarded by version check")
     private static final class Magazine extends AllocationStatistics {
-        private static final long serialVersionUID = -4068223712022528165L;
         private static final AtomicReferenceFieldUpdater<Magazine, Chunk> NEXT_IN_LINE;
-
         static {
             NEXT_IN_LINE = AtomicReferenceFieldUpdater.newUpdater(Magazine.class, Chunk.class, "nextInLine");
         }
+        private static final Chunk MAGAZINE_FREED = new Chunk();
+
         private Chunk current;
         @SuppressWarnings("unused") // updated via NEXT_IN_LINE
         private volatile Chunk nextInLine;
         private final AtomicLong usedMemory;
+        private final StampedLock allocationLock;
 
         Magazine(AdaptivePoolingAllocator parent) {
             this(parent, true);
@@ -411,28 +480,72 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         Magazine(AdaptivePoolingAllocator parent, boolean shareable) {
             super(parent, shareable);
+
+            // We only need the StampedLock if this Magazine will be shared across threads.
+            if (shareable) {
+                allocationLock = new StampedLock();
+            } else {
+                allocationLock = null;
+            }
             usedMemory = new AtomicLong();
         }
 
-        public AdaptiveByteBuf allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+        public boolean tryAllocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+            if (allocationLock == null) {
+                // This magazine is not shared across threads, just allocate directly.
+                return allocate(size, sizeBucket, maxCapacity, buf);
+            }
+
+            // Try to retrieve the lock and if successful allocate.
+            long writeLock = allocationLock.tryWriteLock();
+            if (writeLock != 0) {
+                try {
+                    return allocate(size, sizeBucket, maxCapacity, buf);
+                } finally {
+                    allocationLock.unlockWrite(writeLock);
+                }
+            }
+            return false;
+        }
+
+        private boolean allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
             recordAllocationSize(sizeBucket);
             Chunk curr = current;
-            if (curr != null && curr.remainingCapacity() >= size) {
+            if (curr != null) {
+                if (curr.remainingCapacity() > size) {
+                    curr.readInitInto(buf, size, maxCapacity);
+                    // We still have some bytes left that we can use for the next allocation, just early return.
+                    return true;
+                }
+
+                // At this point we know that this will be the last time current will be used, so directly set it to
+                // null and release it once we are done.
+                current = null;
                 if (curr.remainingCapacity() == size) {
-                    current = null;
                     try {
-                        return curr.readInitInto(buf, size, maxCapacity);
+                        curr.readInitInto(buf, size, maxCapacity);
+                        return true;
                     } finally {
                         curr.release();
                     }
                 }
-                return curr.readInitInto(buf, size, maxCapacity);
             }
-            if (curr != null) {
-                curr.release();
-            }
+            Chunk last = curr;
+            assert current == null;
+            // The fast-path for allocations did not work.
+            //
+            // Try to fetch the next "Magazine local" Chunk first, if this this fails as we don't have
+            // one setup we will poll our centralQueue. If this fails as well we will just allocate a new Chunk.
+            //
+            // In any case we will store the Chunk as the current so it will be used again for the next allocation and
+            // so be "reserved" by this Magazine for exclusive usage.
             if (nextInLine != null) {
                 curr = NEXT_IN_LINE.getAndSet(this, null);
+                if (curr == MAGAZINE_FREED) {
+                    // Allocation raced with a stripe-resize that freed this magazine.
+                    restoreMagazineFreed();
+                    return false;
+                }
             } else {
                 curr = parent.centralQueue.poll();
                 if (curr == null) {
@@ -440,71 +553,187 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
             }
             current = curr;
-            final AdaptiveByteBuf result;
+            assert current != null;
+            if (last != null) {
+                if (last.remainingCapacity() < RETIRE_CAPACITY) {
+                    last.release();
+                } else {
+                    transferChunk(last);
+                }
+            }
             if (curr.remainingCapacity() > size) {
-                result = curr.readInitInto(buf, size, maxCapacity);
+                curr.readInitInto(buf, size, maxCapacity);
             } else if (curr.remainingCapacity() == size) {
-                result = curr.readInitInto(buf, size, maxCapacity);
-                curr.release();
-                current = null;
+                try {
+                    curr.readInitInto(buf, size, maxCapacity);
+                } finally {
+                    // Release in a finally block so even if readInitInto(...) would throw we would still correctly
+                    // release the current chunk before null it out.
+                    curr.release();
+                    current = null;
+                }
             } else {
                 Chunk newChunk = newChunkAllocation(size);
-                result = newChunk.readInitInto(buf, size, maxCapacity);
-                if (curr.remainingCapacity() < RETIRE_CAPACITY) {
-                    curr.release();
-                    current = newChunk;
-                } else if (!(boolean) NEXT_IN_LINE.compareAndSet(this, null, newChunk)) {
-                    if (!parent.offerToQueue(newChunk)) {
-                        // Next-in-line is occupied AND the central queue is full.
-                        // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+                try {
+                    newChunk.readInitInto(buf, size, maxCapacity);
+                    if (curr.remainingCapacity() < RETIRE_CAPACITY) {
+                        curr.release();
+                        current = newChunk;
+                    } else {
+                        transferChunk(newChunk);
+                    }
+                    newChunk = null;
+                } finally {
+                    if (newChunk != null) {
+                        assert current == null;
+                        // Something went wrong, let's ensure we not leak the newChunk.
                         newChunk.release();
                     }
                 }
             }
-            return result;
+            return true;
+        }
+
+        private void restoreMagazineFreed() {
+            Chunk next = NEXT_IN_LINE.getAndSet(this, MAGAZINE_FREED);
+            if (next != null && next != MAGAZINE_FREED) {
+                next.release(); // A chunk snuck in through a race. Release it after restoring MAGAZINE_FREED state.
+            }
+        }
+
+        private void transferChunk(Chunk current) {
+            if (NEXT_IN_LINE.compareAndSet(this, null, current)
+                    || parent.offerToQueue(current)) {
+                return;
+            }
+            Chunk nextChunk = NEXT_IN_LINE.get(this);
+            if (nextChunk != null && current.remainingCapacity() > nextChunk.remainingCapacity()) {
+                if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
+                    if (nextChunk != MAGAZINE_FREED) {
+                        nextChunk.release();
+                    }
+                    return;
+                }
+            }
+            // Next-in-line is occupied AND the central queue is full.
+            // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
+            current.release();
         }
 
         private Chunk newChunkAllocation(int promptingSize) {
             int size = Math.max(promptingSize * BUFS_PER_CHUNK, preferredChunkSize());
             ChunkAllocator chunkAllocator = parent.chunkAllocator;
-            Chunk chunk = new Chunk((AbstractByteBuf) chunkAllocator.allocate(size, size), this, true);
-            return chunk;
+            return new Chunk(chunkAllocator.allocate(size, size), this, true);
         }
 
-        boolean trySetNextInLine(Chunk buffer) {
-            return NEXT_IN_LINE.compareAndSet(this, null, buffer);
+        boolean trySetNextInLine(Chunk chunk) {
+            return NEXT_IN_LINE.compareAndSet(this, null, chunk);
+        }
+
+        void free() {
+            // Release the current Chunk and the next that was stored for later usage.
+            restoreMagazineFreed();
+            long stamp = allocationLock.writeLock();
+            try {
+                if (current != null) {
+                    current.release();
+                    current = null;
+                }
+            } finally {
+                allocationLock.unlockWrite(stamp);
+            }
         }
     }
 
-    private static final class Chunk {
-
-        /**
-         * We're using 2 separate counters for reference counting, one for the up-count and one for the down-count,
-         * in order to speed up the borrowing, which shouldn't need atomic operations, being single-threaded.
-         */
-        private static final AtomicIntegerFieldUpdater<Chunk> REF_CNT_UP_UPDATER =
-                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCntUp");
-        private static final AtomicIntegerFieldUpdater<Chunk> REF_CNT_DOWN_UPDATER =
-                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCntDown");
+    private static final class Chunk implements ReferenceCounted {
 
         private final AbstractByteBuf delegate;
         private final Magazine magazine;
         private final int capacity;
         private final boolean pooled;
         private int allocatedBytes;
-        private volatile int refCntUp;
-        private volatile int refCntDown;
+        private static final long REFCNT_FIELD_OFFSET =
+                ReferenceCountUpdater.getUnsafeOffset(Chunk.class, "refCnt");
+        private static final AtomicIntegerFieldUpdater<Chunk> AIF_UPDATER =
+                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCnt");
+
+        private static final ReferenceCountUpdater<Chunk> updater =
+                new ReferenceCountUpdater<Chunk>() {
+                    @Override
+                    protected AtomicIntegerFieldUpdater<Chunk> updater() {
+                        return AIF_UPDATER;
+                    }
+                    @Override
+                    protected long unsafeOffset() {
+                        return REFCNT_FIELD_OFFSET;
+                    }
+                };
+
+        // Value might not equal "real" reference count, all access should be via the updater
+        @SuppressWarnings({"unused", "FieldMayBeFinal"})
+        private volatile int refCnt;
+
+        Chunk() {
+            // Constructor only used by the MAGAZINE_FREED sentinel.
+            delegate = null;
+            magazine = null;
+            capacity = 0;
+            pooled = false;
+        }
 
         Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             this.delegate = delegate;
             this.magazine = magazine;
             this.pooled = pooled;
-            this.capacity = delegate.capacity();
+            capacity = delegate.capacity();
             magazine.usedMemory.getAndAdd(capacity);
-            REF_CNT_UP_UPDATER.lazySet(this, 1);
+            updater.setInitialValue(this);
         }
 
-        protected void deallocate() {
+        @Override
+        public Chunk touch(Object hint) {
+            return this;
+        }
+
+        @Override
+        public int refCnt() {
+            return updater.refCnt(this);
+        }
+
+        @Override
+        public Chunk retain() {
+            return updater.retain(this);
+        }
+
+        @Override
+        public Chunk retain(int increment) {
+            return updater.retain(this, increment);
+        }
+
+        @Override
+        public Chunk touch() {
+            return this;
+        }
+
+        @Override
+        public boolean release() {
+            if (updater.release(this)) {
+                deallocate();
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean release(int decrement) {
+            if (updater.release(this, decrement)) {
+                deallocate();
+                return true;
+            }
+            return false;
+        }
+
+        private void deallocate() {
             Magazine mag = magazine;
             AdaptivePoolingAllocator parent = mag.parent;
             int chunkSize = mag.preferredChunkSize();
@@ -515,25 +744,36 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 mag.usedMemory.getAndAdd(-capacity());
                 delegate.release();
             } else {
-                REF_CNT_UP_UPDATER.lazySet(this, 1);
-                REF_CNT_DOWN_UPDATER.lazySet(this, 0);
+                updater.resetRefCnt(this);
                 delegate.setIndex(0, 0);
                 allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
                     if (!parent.offerToQueue(this)) {
-                        // The central queue is full. Drop the memory with the original Drop instance.
+                        // The central queue is full. Ensure we release again as we previously did use resetRefCnt()
+                        // which did increase the reference count by 1.
+                        boolean released = updater.release(this);
                         delegate.release();
+                        assert released;
                     }
                 }
             }
         }
 
-        public AdaptiveByteBuf readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
+        public void readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
             int startIndex = allocatedBytes;
             allocatedBytes = startIndex + size;
-            unguardedRetain();
-            buf.init(delegate, this, 0, 0, startIndex, size, maxCapacity);
-            return buf;
+            Chunk chunk = this;
+            chunk.retain();
+            try {
+                buf.init(delegate, chunk, 0, 0, startIndex, size, maxCapacity);
+                chunk = null;
+            } finally {
+                if (chunk != null) {
+                    // If chunk is not null we know that buf.init(...) failed and so we need to manually release
+                    // the chunk again as we retained it before calling buf.init(...).
+                    chunk.release();
+                }
+            }
         }
 
         public int remainingCapacity() {
@@ -542,27 +782,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         public int capacity() {
             return capacity;
-        }
-
-        private void unguardedRetain() {
-            REF_CNT_UP_UPDATER.lazySet(this, refCntUp + 1);
-        }
-
-        public void release() {
-            int refCntDown;
-            boolean deallocate;
-            do {
-                int refCntUp = this.refCntUp;
-                refCntDown = this.refCntDown;
-                int remaining = refCntUp - refCntDown;
-                if (remaining <= 0) {
-                    throw new IllegalStateException("RefCnt is already 0");
-                }
-                deallocate = remaining == 1;
-            } while (!REF_CNT_DOWN_UPDATER.compareAndSet(this, refCntDown, refCntDown + 1));
-            if (deallocate) {
-                deallocate();
-            }
         }
     }
 
@@ -587,11 +806,13 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         private final ObjectPool.Handle<AdaptiveByteBuf> handle;
 
-        int adjustment;
+        private int adjustment;
         private AbstractByteBuf rootParent;
         private Chunk chunk;
         private int length;
         private ByteBuffer tmpNioBuf;
+        private boolean hasArray;
+        private boolean hasMemoryAddress;
 
         AdaptiveByteBuf(ObjectPool.Handle<AdaptiveByteBuf> recyclerHandle) {
             super(0);
@@ -605,8 +826,48 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             length = capacity;
             maxCapacity(maxCapacity);
             setIndex0(readerIndex, writerIndex);
+            hasArray = unwrapped.hasArray();
+            hasMemoryAddress = unwrapped.hasMemoryAddress();
             rootParent = unwrapped;
-            tmpNioBuf = rootParent.internalNioBuffer(adjustment, capacity).slice();
+            tmpNioBuf = unwrapped.internalNioBuffer(adjustment, capacity).slice();
+        }
+
+        private AbstractByteBuf rootParent() {
+            final AbstractByteBuf rootParent = this.rootParent;
+            if (rootParent != null) {
+                return rootParent;
+            }
+            throw new IllegalReferenceCountException();
+        }
+
+        @Override
+        public ByteBuf retainedSlice() {
+            if (handle == null) {
+                return super.retainedSlice();
+            }
+            // If the handle is not null we can use the Pooled variants that use a Recycler.
+            ensureAccessible();
+            return PooledSlicedByteBuf.newInstance(this, this, readerIndex(), readableBytes());
+        }
+
+        @Override
+        public ByteBuf retainedSlice(int index, int length) {
+            if (handle == null) {
+                return super.retainedSlice(index, length);
+            }
+            // If the handle is not null we can use the Pooled variants that use a Recycler.
+            ensureAccessible();
+            return PooledSlicedByteBuf.newInstance(this, this, index, length);
+        }
+
+        @Override
+        public ByteBuf retainedDuplicate() {
+            if (handle == null) {
+                return super.retainedDuplicate();
+            }
+            // If the handle is not null we can use the Pooled variants that use a Recycler.
+            ensureAccessible();
+            return PooledDuplicatedByteBuf.newInstance(this, this, readerIndex(), writerIndex());
         }
 
         @Override
@@ -647,12 +908,12 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         public ByteBufAllocator alloc() {
-            return rootParent.alloc();
+            return rootParent().alloc();
         }
 
         @Override
         public ByteOrder order() {
-            return rootParent.order();
+            return rootParent().order();
         }
 
         @Override
@@ -662,29 +923,29 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         public boolean isDirect() {
-            return rootParent.isDirect();
+            return rootParent().isDirect();
         }
 
         @Override
         public int arrayOffset() {
-            return idx(rootParent.arrayOffset());
+            return idx(rootParent().arrayOffset());
         }
 
         @Override
         public boolean hasMemoryAddress() {
-            return rootParent.hasMemoryAddress();
+            return hasMemoryAddress;
         }
 
         @Override
         public long memoryAddress() {
             ensureAccessible();
-            return rootParent.memoryAddress() + adjustment;
+            return rootParent().memoryAddress() + adjustment;
         }
 
         @Override
         public ByteBuffer nioBuffer(int index, int length) {
             checkIndex(index, length);
-            return rootParent.nioBuffer(idx(index), length);
+            return rootParent().nioBuffer(idx(index), length);
         }
 
         @Override
@@ -700,299 +961,160 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @Override
         public ByteBuffer[] nioBuffers(int index, int length) {
             checkIndex(index, length);
-            return rootParent.nioBuffers(idx(index), length);
+            return rootParent().nioBuffers(idx(index), length);
         }
 
         @Override
         public boolean hasArray() {
-            return rootParent.hasArray();
+            return hasArray;
         }
 
         @Override
         public byte[] array() {
             ensureAccessible();
-            return rootParent.array();
+            return rootParent().array();
         }
 
         @Override
         public ByteBuf copy(int index, int length) {
             checkIndex(index, length);
-            return rootParent.copy(idx(index), length);
-        }
-
-        @Override
-        public ByteBuf slice(int index, int length) {
-            checkIndex(index, length);
-            return new PooledNonRetainedSlicedByteBuf(this, rootParent, idx(index), length);
-        }
-
-        @Override
-        public ByteBuf retainedSlice(int index, int length) {
-            return slice(index, length).retain();
-        }
-
-        @Override
-        public ByteBuf duplicate() {
-            ensureAccessible();
-            return new PooledNonRetainedDuplicateByteBuf(this, this).setIndex(readerIndex(), writerIndex());
-        }
-
-        @Override
-        public ByteBuf retainedDuplicate() {
-            return duplicate().retain();
+            return rootParent().copy(idx(index), length);
         }
 
         @Override
         public int nioBufferCount() {
-            return rootParent.nioBufferCount();
-        }
-
-        @Override
-        public byte getByte(int index) {
-            checkIndex(index, 1);
-            return rootParent.getByte(idx(index));
+            return rootParent().nioBufferCount();
         }
 
         @Override
         protected byte _getByte(int index) {
-            return rootParent._getByte(idx(index));
-        }
-
-        @Override
-        public short getShort(int index) {
-            checkIndex(index, 2);
-            return rootParent.getShort(idx(index));
+            return rootParent()._getByte(idx(index));
         }
 
         @Override
         protected short _getShort(int index) {
-            return rootParent._getShort(idx(index));
-        }
-
-        @Override
-        public short getShortLE(int index) {
-            checkIndex(index, 2);
-            return rootParent.getShortLE(idx(index));
+            return rootParent()._getShort(idx(index));
         }
 
         @Override
         protected short _getShortLE(int index) {
-            return rootParent._getShortLE(idx(index));
-        }
-
-        @Override
-        public int getUnsignedMedium(int index) {
-            checkIndex(index, 3);
-            return rootParent.getUnsignedMedium(idx(index));
+            return rootParent()._getShortLE(idx(index));
         }
 
         @Override
         protected int _getUnsignedMedium(int index) {
-            return rootParent._getUnsignedMedium(idx(index));
-        }
-
-        @Override
-        public int getUnsignedMediumLE(int index) {
-            checkIndex(index, 3);
-            return rootParent.getUnsignedMediumLE(idx(index));
+            return rootParent()._getUnsignedMedium(idx(index));
         }
 
         @Override
         protected int _getUnsignedMediumLE(int index) {
-            return rootParent._getUnsignedMediumLE(idx(index));
-        }
-
-        @Override
-        public int getInt(int index) {
-            checkIndex(index, 4);
-            return rootParent.getInt(idx(index));
+            return rootParent()._getUnsignedMediumLE(idx(index));
         }
 
         @Override
         protected int _getInt(int index) {
-            return rootParent._getInt(idx(index));
-        }
-
-        @Override
-        public int getIntLE(int index) {
-            checkIndex(index, 4);
-            return rootParent.getIntLE(idx(index));
+            return rootParent()._getInt(idx(index));
         }
 
         @Override
         protected int _getIntLE(int index) {
-            return rootParent._getIntLE(idx(index));
-        }
-
-        @Override
-        public long getLong(int index) {
-            checkIndex(index, 8);
-            return rootParent.getLong(idx(index));
+            return rootParent()._getIntLE(idx(index));
         }
 
         @Override
         protected long _getLong(int index) {
-            return rootParent._getLong(idx(index));
-        }
-
-        @Override
-        public long getLongLE(int index) {
-            checkIndex(index, 8);
-            return rootParent.getLongLE(idx(index));
+            return rootParent()._getLong(idx(index));
         }
 
         @Override
         protected long _getLongLE(int index) {
-            return rootParent._getLongLE(idx(index));
+            return rootParent()._getLongLE(idx(index));
         }
 
         @Override
         public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
             checkIndex(index, length);
-            rootParent.getBytes(idx(index), dst, dstIndex, length);
+            rootParent().getBytes(idx(index), dst, dstIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
             checkIndex(index, length);
-            rootParent.getBytes(idx(index), dst, dstIndex, length);
+            rootParent().getBytes(idx(index), dst, dstIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf getBytes(int index, ByteBuffer dst) {
             checkIndex(index, dst.remaining());
-            rootParent.getBytes(idx(index), dst);
-            return this;
-        }
-
-        @Override
-        public ByteBuf setByte(int index, int value) {
-            checkIndex(index, 1);
-            rootParent.setByte(idx(index), value);
+            rootParent().getBytes(idx(index), dst);
             return this;
         }
 
         @Override
         protected void _setByte(int index, int value) {
-            rootParent._setByte(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setShort(int index, int value) {
-            checkIndex(index, 2);
-            rootParent.setShort(idx(index), value);
-            return this;
+            rootParent()._setByte(idx(index), value);
         }
 
         @Override
         protected void _setShort(int index, int value) {
-            rootParent._setShort(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setShortLE(int index, int value) {
-            checkIndex(index, 2);
-            rootParent.setShortLE(idx(index), value);
-            return this;
+            rootParent()._setShort(idx(index), value);
         }
 
         @Override
         protected void _setShortLE(int index, int value) {
-            rootParent._setShortLE(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setMedium(int index, int value) {
-            checkIndex(index, 3);
-            rootParent.setMedium(idx(index), value);
-            return this;
+            rootParent()._setShortLE(idx(index), value);
         }
 
         @Override
         protected void _setMedium(int index, int value) {
-            rootParent._setMedium(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setMediumLE(int index, int value) {
-            checkIndex(index, 3);
-            rootParent.setMediumLE(idx(index), value);
-            return this;
+            rootParent()._setMedium(idx(index), value);
         }
 
         @Override
         protected void _setMediumLE(int index, int value) {
-            rootParent._setMediumLE(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setInt(int index, int value) {
-            checkIndex(index, 4);
-            rootParent.setInt(idx(index), value);
-            return this;
+            rootParent()._setMediumLE(idx(index), value);
         }
 
         @Override
         protected void _setInt(int index, int value) {
-            rootParent._setInt(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setIntLE(int index, int value) {
-            checkIndex(index, 4);
-            rootParent.setIntLE(idx(index), value);
-            return this;
+            rootParent()._setInt(idx(index), value);
         }
 
         @Override
         protected void _setIntLE(int index, int value) {
-            rootParent._setIntLE(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setLong(int index, long value) {
-            checkIndex(index, 8);
-            rootParent.setLong(idx(index), value);
-            return this;
+            rootParent()._setIntLE(idx(index), value);
         }
 
         @Override
         protected void _setLong(int index, long value) {
-            rootParent._setLong(idx(index), value);
-        }
-
-        @Override
-        public ByteBuf setLongLE(int index, long value) {
-            checkIndex(index, 8);
-            rootParent.setLongLE(idx(index), value);
-            return this;
+            rootParent()._setLong(idx(index), value);
         }
 
         @Override
         protected void _setLongLE(int index, long value) {
-            rootParent.setLongLE(idx(index), value);
+            rootParent().setLongLE(idx(index), value);
         }
 
         @Override
         public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
             checkIndex(index, length);
-            rootParent.setBytes(idx(index), src, srcIndex, length);
+            rootParent().setBytes(idx(index), src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
             checkIndex(index, length);
-            rootParent.setBytes(idx(index), src, srcIndex, length);
+            rootParent().setBytes(idx(index), src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuffer src) {
             checkIndex(index, src.remaining());
-            rootParent.setBytes(idx(index), src);
+            rootParent().setBytes(idx(index), src);
             return this;
         }
 
@@ -1022,6 +1144,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         public int setBytes(int index, InputStream in, int length)
                 throws IOException {
             checkIndex(index, length);
+            final AbstractByteBuf rootParent = rootParent();
             if (rootParent.hasArray()) {
                 return rootParent.setBytes(idx(index), in, length);
             }
@@ -1057,17 +1180,18 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @Override
         public int forEachByte(int index, int length, ByteProcessor processor) {
             checkIndex(index, length);
-            int ret = rootParent.forEachByte(idx(index), length, processor);
-            if (ret < adjustment) {
-                return -1;
-            }
-            return ret - adjustment;
+            int ret = rootParent().forEachByte(idx(index), length, processor);
+            return forEachResult(ret);
         }
 
         @Override
         public int forEachByteDesc(int index, int length, ByteProcessor processor) {
             checkIndex(index, length);
-            int ret = rootParent.forEachByteDesc(idx(index), length, processor);
+            int ret = rootParent().forEachByteDesc(idx(index), length, processor);
+            return forEachResult(ret);
+        }
+
+        private int forEachResult(int ret) {
             if (ret < adjustment) {
                 return -1;
             }
@@ -1076,7 +1200,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         public boolean isContiguous() {
-            return rootParent.isContiguous();
+            return rootParent().isContiguous();
         }
 
         private int idx(int index) {
@@ -1085,10 +1209,12 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         protected void deallocate() {
-            tmpNioBuf = null;
             if (chunk != null) {
                 chunk.release();
             }
+            tmpNioBuf = null;
+            chunk = null;
+            rootParent = null;
             if (handle instanceof Recycler.EnhancedHandle) {
                 ((Recycler.EnhancedHandle<?>) handle).unguardedRecycle(this);
             } else if (handle != null) {
@@ -1097,180 +1223,16 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
     }
 
-    private static final class PooledNonRetainedDuplicateByteBuf extends UnpooledDuplicatedByteBuf {
-        private final ReferenceCounted referenceCountDelegate;
-
-        PooledNonRetainedDuplicateByteBuf(ReferenceCounted referenceCountDelegate, AbstractByteBuf buffer) {
-            super(buffer);
-            this.referenceCountDelegate = referenceCountDelegate;
-        }
-
-        @Override
-        boolean isAccessible0() {
-            return referenceCountDelegate.refCnt() != 0;
-        }
-
-        @Override
-        int refCnt0() {
-            return referenceCountDelegate.refCnt();
-        }
-
-        @Override
-        ByteBuf retain0() {
-            referenceCountDelegate.retain();
-            return this;
-        }
-
-        @Override
-        ByteBuf retain0(int increment) {
-            referenceCountDelegate.retain(increment);
-            return this;
-        }
-
-        @Override
-        ByteBuf touch0() {
-            referenceCountDelegate.touch();
-            return this;
-        }
-
-        @Override
-        ByteBuf touch0(Object hint) {
-            referenceCountDelegate.touch(hint);
-            return this;
-        }
-
-        @Override
-        boolean release0() {
-            return referenceCountDelegate.release();
-        }
-
-        @Override
-        boolean release0(int decrement) {
-            return referenceCountDelegate.release(decrement);
-        }
-
-        @Override
-        public ByteBuf duplicate() {
-            ensureAccessible();
-            return new PooledNonRetainedDuplicateByteBuf(referenceCountDelegate, unwrap());
-        }
-
-        @Override
-        public ByteBuf retainedDuplicate() {
-            return duplicate().retain();
-        }
-
-        @Override
-        public ByteBuf slice(int index, int length) {
-            checkIndex(index, length);
-            return new PooledNonRetainedSlicedByteBuf(referenceCountDelegate, unwrap(), index, length);
-        }
-
-        @Override
-        public ByteBuf retainedSlice() {
-            // Capacity is not allowed to change for a sliced ByteBuf, so length == capacity()
-            return retainedSlice(readerIndex(), capacity());
-        }
-
-        @Override
-        public ByteBuf retainedSlice(int index, int length) {
-            return slice(index, length).retain();
-        }
-    }
-
-    private static final class PooledNonRetainedSlicedByteBuf extends UnpooledSlicedByteBuf {
-        private final ReferenceCounted referenceCountDelegate;
-
-        PooledNonRetainedSlicedByteBuf(ReferenceCounted referenceCountDelegate,
-                                       AbstractByteBuf buffer, int index, int length) {
-            super(buffer, index, length);
-            this.referenceCountDelegate = referenceCountDelegate;
-        }
-
-        @Override
-        boolean isAccessible0() {
-            return referenceCountDelegate.refCnt() != 0;
-        }
-
-        @Override
-        int refCnt0() {
-            return referenceCountDelegate.refCnt();
-        }
-
-        @Override
-        ByteBuf retain0() {
-            referenceCountDelegate.retain();
-            return this;
-        }
-
-        @Override
-        ByteBuf retain0(int increment) {
-            referenceCountDelegate.retain(increment);
-            return this;
-        }
-
-        @Override
-        ByteBuf touch0() {
-            referenceCountDelegate.touch();
-            return this;
-        }
-
-        @Override
-        ByteBuf touch0(Object hint) {
-            referenceCountDelegate.touch(hint);
-            return this;
-        }
-
-        @Override
-        boolean release0() {
-            return referenceCountDelegate.release();
-        }
-
-        @Override
-        boolean release0(int decrement) {
-            return referenceCountDelegate.release(decrement);
-        }
-
-        @Override
-        public ByteBuf duplicate() {
-            ensureAccessible();
-            return new PooledNonRetainedSlicedByteBuf(referenceCountDelegate, unwrap(), idx(0), capacity())
-                    .setIndex(readerIndex(), writerIndex());
-        }
-
-        @Override
-        public ByteBuf retainedDuplicate() {
-            return duplicate().retain();
-        }
-
-        @Override
-        public ByteBuf slice(int index, int length) {
-            checkIndex(index, length);
-            return new PooledNonRetainedSlicedByteBuf(referenceCountDelegate, unwrap(), idx(index), length);
-        }
-
-        @Override
-        public ByteBuf retainedSlice() {
-            // Capacity is not allowed to change for a sliced ByteBuf, so length == capacity()
-            return retainedSlice(0, capacity());
-        }
-
-        @Override
-        public ByteBuf retainedSlice(int index, int length) {
-            return slice(index, length).retain();
-        }
-    }
-
     /**
      * The strategy for how {@link AdaptivePoolingAllocator} should allocate chunk buffers.
      */
-    public interface ChunkAllocator {
+    interface ChunkAllocator {
         /**
-         * Allocate a buffer for a chunk. This can be any kind of {@link ByteBuf} implementation.
-         * @param initialCapacity The initial capacity of the returned {@link ByteBuf}.
-         * @param maxCapacity The maximum capacity of the returned {@link ByteBuf}.
+         * Allocate a buffer for a chunk. This can be any kind of {@link AbstractByteBuf} implementation.
+         * @param initialCapacity The initial capacity of the returned {@link AbstractByteBuf}.
+         * @param maxCapacity The maximum capacity of the returned {@link AbstractByteBuf}.
          * @return The buffer that represents the chunk memory.
          */
-        ByteBuf allocate(int initialCapacity, int maxCapacity);
+        AbstractByteBuf allocate(int initialCapacity, int maxCapacity);
     }
 }

@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -1144,6 +1145,7 @@ public class HttpResponseDecoderTest {
         HttpResponse response = channel.readInbound();
         assertThat(response.decoderResult().cause(), instanceOf(IllegalArgumentException.class));
         assertTrue(response.decoderResult().isFailure());
+        ReferenceCountUtil.release(response);
         assertFalse(channel.finish());
     }
 }

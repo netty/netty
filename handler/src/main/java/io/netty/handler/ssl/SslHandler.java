@@ -57,6 +57,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SocketChannel;
+import java.security.cert.CertificateException;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -412,6 +413,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     private final ByteBuffer[] singleBuffer = new ByteBuffer[1];
 
     private final boolean startTls;
+    private final ResumptionController resumptionController;
 
     private final SslTasksRunner sslTaskRunnerForUnwrap = new SslTasksRunner(true);
     private final SslTasksRunner sslTaskRunner = new SslTasksRunner(false);
@@ -469,12 +471,18 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *                              {@link SSLEngine#getDelegatedTask()}.
      */
     public SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor) {
+        this(engine, startTls, delegatedTaskExecutor, null);
+    }
+
+    SslHandler(SSLEngine engine, boolean startTls, Executor delegatedTaskExecutor,
+               ResumptionController resumptionController) {
         this.engine = ObjectUtil.checkNotNull(engine, "engine");
         this.delegatedTaskExecutor = ObjectUtil.checkNotNull(delegatedTaskExecutor, "delegatedTaskExecutor");
         engineType = SslEngineType.forEngine(engine);
         this.startTls = startTls;
         this.jdkCompatibilityMode = engineType.jdkCompatibilityMode(engine);
         setCumulator(engineType.cumulator);
+        this.resumptionController = resumptionController;
     }
 
     public long getHandshakeTimeoutMillis() {
@@ -1283,13 +1291,35 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      *                  {@code true} if the {@link ByteBuf} is encrypted, {@code false} otherwise.
      * @throws IllegalArgumentException
      *                  Is thrown if the given {@link ByteBuf} has not at least 5 bytes to read.
+     * @deprecated use {@link #isEncrypted(ByteBuf, boolean)}.
      */
+    @Deprecated
     public static boolean isEncrypted(ByteBuf buffer) {
+        return isEncrypted(buffer, false);
+    }
+
+    /**
+     * Returns {@code true} if the given {@link ByteBuf} is encrypted. Be aware that this method
+     * will not increase the readerIndex of the given {@link ByteBuf}.
+     *
+     * @param   buffer
+     *                  The {@link ByteBuf} to read from. Be aware that it must have at least 5 bytes to read,
+     *                  otherwise it will throw an {@link IllegalArgumentException}.
+     * @return encrypted
+     *                  {@code true} if the {@link ByteBuf} is encrypted, {@code false} otherwise.
+     * @param probeSSLv2
+     *                  {@code true} if the input {@code buffer} might be SSLv2. If {@code true} is used this
+     *                  methods might produce false-positives in some cases so it's strongly suggested to
+     *                  use {@code false}.
+     * @throws IllegalArgumentException
+     *                  Is thrown if the given {@link ByteBuf} has not at least 5 bytes to read.
+     */
+    public static boolean isEncrypted(ByteBuf buffer, boolean probeSSLv2) {
         if (buffer.readableBytes() < SslUtils.SSL_RECORD_HEADER_LENGTH) {
             throw new IllegalArgumentException(
                     "buffer must have at least " + SslUtils.SSL_RECORD_HEADER_LENGTH + " readable bytes");
         }
-        return getEncryptedPacketLength(buffer, buffer.readerIndex()) != SslUtils.NOT_ENCRYPTED;
+        return getEncryptedPacketLength(buffer, buffer.readerIndex(), probeSSLv2) != SslUtils.NOT_ENCRYPTED;
     }
 
     private void decodeJdkCompatible(ChannelHandlerContext ctx, ByteBuf in) throws NotSslRecordException {
@@ -1305,7 +1335,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (readableBytes < SslUtils.SSL_RECORD_HEADER_LENGTH) {
                 return;
             }
-            packetLength = getEncryptedPacketLength(in, in.readerIndex());
+            packetLength = getEncryptedPacketLength(in, in.readerIndex(), true);
             if (packetLength == SslUtils.NOT_ENCRYPTED) {
                 // Not an SSL/TLS packet
                 NotSslRecordException e = new NotSslRecordException(
@@ -1458,7 +1488,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (handshakeStatus == HandshakeStatus.FINISHED || handshakeStatus == HandshakeStatus.NOT_HANDSHAKING) {
                     wrapLater |= (decodeOut.isReadable() ?
                             setHandshakeSuccessUnwrapMarkReentry() : setHandshakeSuccess()) ||
-                            handshakeStatus == HandshakeStatus.FINISHED;
+                            handshakeStatus == HandshakeStatus.FINISHED || !pendingUnencryptedWrites.isEmpty();
                 }
 
                 // Dispatch decoded data after we have notified of handshake success. If this method has been invoked
@@ -1555,7 +1585,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         return originalLength - length;
     }
 
-    private boolean setHandshakeSuccessUnwrapMarkReentry() {
+    private boolean setHandshakeSuccessUnwrapMarkReentry() throws SSLException {
         // setHandshakeSuccess calls out to external methods which may trigger re-entry. We need to preserve ordering of
         // fireChannelRead for decodeOut relative to re-entry data.
         final boolean setReentryState = !isStateSet(STATE_UNWRAP_REENTRY);
@@ -1921,14 +1951,25 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * @return {@code true} if {@link #handshakePromise} was set successfully and a {@link SslHandshakeCompletionEvent}
      * was fired. {@code false} otherwise.
      */
-    private boolean setHandshakeSuccess() {
+    private boolean setHandshakeSuccess() throws SSLException {
         // Our control flow may invoke this method multiple times for a single FINISHED event. For example
         // wrapNonAppData may drain pendingUnencryptedWrites in wrap which transitions to handshake from FINISHED to
         // NOT_HANDSHAKING which invokes setHandshakeSuccess, and then wrapNonAppData also directly invokes this method.
+        final SSLSession session = engine.getSession();
+        if (resumptionController != null && !handshakePromise.isDone()) {
+            try {
+                if (resumptionController.validateResumeIfNeeded(engine) && logger.isDebugEnabled()) {
+                    logger.debug("{} Resumed and reauthenticated session", ctx.channel());
+                }
+            } catch (CertificateException e) {
+                SSLHandshakeException exception = new SSLHandshakeException(e.getMessage());
+                exception.initCause(e);
+                throw exception;
+            }
+        }
         final boolean notified;
         if (notified = !handshakePromise.isDone() && handshakePromise.trySuccess(ctx.channel())) {
             if (logger.isDebugEnabled()) {
-                SSLSession session = engine.getSession();
                 logger.debug(
                         "{} HANDSHAKEN: protocol:{} cipher suite:{}",
                         ctx.channel(),
@@ -2005,6 +2046,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private void releaseAndFailAll(ChannelHandlerContext ctx, Throwable cause) {
+        if (resumptionController != null &&
+                (!engine.getSession().isValid() || cause instanceof SSLHandshakeException)) {
+            resumptionController.remove(engine());
+        }
         if (pendingUnencryptedWrites != null) {
             pendingUnencryptedWrites.releaseAndFailAll(ctx, cause);
         }

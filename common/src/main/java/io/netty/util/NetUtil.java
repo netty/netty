@@ -173,8 +173,16 @@ public final class NetUtil {
             // Determine the default somaxconn (server socket backlog) value of the platform.
             // The known defaults:
             // - Windows NT Server 4.0+: 200
-            // - Linux and Mac OS X: 128
-            int somaxconn = PlatformDependent.isWindows() ? 200 : 128;
+            // - Mac OS X: 128
+            // - Linux kernel > 5.4 : 4096
+            int somaxconn;
+            if (PlatformDependent.isWindows()) {
+                somaxconn = 200;
+            } else if (PlatformDependent.isOsx()) {
+                somaxconn = 128;
+            } else {
+                somaxconn = 4096;
+            }
             File file = new File("/proc/sys/net/core/somaxconn");
             BufferedReader in = null;
             try {

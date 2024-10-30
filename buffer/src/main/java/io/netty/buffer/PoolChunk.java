@@ -171,9 +171,10 @@ final class PoolChunk<T> implements PoolChunkMetric {
      */
     private final LongCounter pinnedBytes = PlatformDependent.newLongCounter();
 
-    private final int pageSize;
-    private final int pageShifts;
-    private final int chunkSize;
+    final int pageSize;
+    final int pageShifts;
+    final int chunkSize;
+    final int maxPageIdx;
 
     // Use as cache for ByteBuffer created from the memory. These are just duplicates and so are only a container
     // around the memory itself. These are often needed for operations within the Pooled*ByteBuf and so
@@ -200,6 +201,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         this.pageSize = pageSize;
         this.pageShifts = pageShifts;
         this.chunkSize = chunkSize;
+        this.maxPageIdx = maxPageIdx;
         freeBytes = chunkSize;
 
         runsAvail = newRunsAvailqueueArray(maxPageIdx);
@@ -223,6 +225,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         this.memory = memory;
         pageSize = 0;
         pageShifts = 0;
+        maxPageIdx = 0;
         runsAvailMap = null;
         runsAvail = null;
         runsAvailLock = null;

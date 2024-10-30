@@ -20,6 +20,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.Timeout;
@@ -146,7 +147,7 @@ public class CloseNotifyTest {
     private static EmbeddedChannel initChannel(SslProvider provider, String protocol, final boolean useClientMode,
             final BlockingQueue<Object> eventQueue) throws Exception {
 
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         final SslContext sslContext = (useClientMode
                 ? SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
                 : SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()))
