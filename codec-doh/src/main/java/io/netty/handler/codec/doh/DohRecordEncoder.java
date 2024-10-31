@@ -115,8 +115,7 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
     private static DefaultFullHttpRequest createGetRequest(ByteBuf content, String uri) {
         QueryStringEncoder queryString = new QueryStringEncoder(uri);
         String dns = new String(toByteArray(Base64.encode(content.copy(), Base64Dialect.URL_SAFE)));
-        dns = removeBase64Padding(content, dns);
-        queryString.addParam("dns", dns);
+        queryString.addParam("dns", removeBase64Padding(dns));
         return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, queryString.toString());
     }
 
@@ -126,13 +125,9 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
         return contentBytes;
     }
 
-    private static String removeBase64Padding(ByteBuf content, String value) {
-        for (int i = 0; i < content.readableBytes() % 3; i++) {
-            if (value.endsWith("=")) {
-                value = value.substring(0, value.length() - 1);
-            }
-        }
-        return value;
+    private static String removeBase64Padding(String value) {
+        int paddingCount = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
+        return value.substring(0, value.length() - paddingCount);
     }
 
 }
