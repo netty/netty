@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.base64.Base64;
+import io.netty.handler.codec.base64.Base64Dialect;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -28,13 +30,11 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.Base64;
 
 /**
  * Encodes DNS records into DNS-over-HTTPS (DoH) request format.
  */
 public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
-    private static final java.util.Base64.Encoder DEFAULT_URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final String DEFAULT_DOH_PATH = "/dns-query";
     private final DohQueryEncoder dohQueryEncoder = new DohQueryEncoder();
 
@@ -114,7 +114,9 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
 
     private static DefaultFullHttpRequest createGetRequest(ByteBuf content, String uri) {
         QueryStringEncoder queryString = new QueryStringEncoder(uri);
-        queryString.addParam("dns", DEFAULT_URL_ENCODER.encodeToString(toByteArray(content)));
+        String dns = new String(toByteArray(Base64.encode(content.copy(), Base64Dialect.URL_SAFE)));
+        dns = removeBase64Padding(content, dns);
+        queryString.addParam("dns", dns);
         return new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, queryString.toString());
     }
 
@@ -123,4 +125,14 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
         content.readBytes(contentBytes);
         return contentBytes;
     }
+
+    private static String removeBase64Padding(ByteBuf content, String value) {
+        for (int i = 0; i < content.readableBytes() % 3; i++) {
+            if (value.endsWith("=")) {
+                value = value.substring(0, value.length() - 1);
+            }
+        }
+        return value;
+    }
+
 }
