@@ -91,7 +91,7 @@ public class DoHClient {
     }
 
     public void start() throws InterruptedException, SSLException {
-        SslContext sslCtx = SslContextBuilder.forClient().build();
+        final SslContext sslCtx = SslContextBuilder.forClient().build();
         EventLoopGroup group = new NioEventLoopGroup();
 
         try {
