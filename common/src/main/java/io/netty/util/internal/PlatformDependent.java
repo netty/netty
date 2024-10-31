@@ -1100,9 +1100,8 @@ public final class PlatformDependent {
      * This should be preferred to {@link #newFixedMpscQueue(int)} when the queue is not to be heavily contended.
      */
     public static <T> Queue<T> newFixedMpscUnpaddedQueue(int capacity) {
-        return hasUnsafe()? new MpscUnpaddedArrayQueue<T>(capacity) : new MpscAtomicUnpaddedArrayQueue<T>(capacity);
+        return hasUnsafe() ? new MpscUnpaddedArrayQueue<T>(capacity) : new MpscAtomicUnpaddedArrayQueue<T>(capacity);
     }
-
 
     /**
      * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and multiple
