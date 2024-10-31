@@ -1104,10 +1104,10 @@ public final class PlatformDependent {
     }
 
 
-        /**
-         * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and multiple
-         * consumers with the given fixes {@code capacity}.
-         */
+    /**
+     * Create a new {@link Queue} which is safe to use for multiple producers (different threads) and multiple
+     * consumers with the given fixes {@code capacity}.
+     */
     public static <T> Queue<T> newFixedMpmcQueue(int capacity) {
         return hasUnsafe() ? new MpmcArrayQueue<T>(capacity) : new MpmcAtomicArrayQueue<T>(capacity);
     }
