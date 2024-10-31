@@ -31,13 +31,13 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class DohRecordEncoderTest {
+public class DohRequestEncoderTest {
 
     private EmbeddedChannel channel;
 
     @BeforeEach
     public void setUp() {
-        channel = new EmbeddedChannel(new DohRecordEncoder("127.0.0.1"));
+        channel = new EmbeddedChannel(new DohRequestEncoder("127.0.0.1"));
     }
 
     @AfterEach

@@ -17,24 +17,18 @@ package io.netty.handler.codec.doh;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.base64.Base64Dialect;
 import io.netty.handler.codec.dns.DnsQuery;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpVersion;
-import io.netty.handler.codec.http.QueryStringEncoder;
+import io.netty.handler.codec.http.*;
 import io.netty.util.internal.ObjectUtil;
 
 
 /**
  * Encodes DNS records into DNS-over-HTTPS (DoH) request format.
  */
-public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
+public final class DohRequestEncoder extends HttpRequestEncoder {
     private static final String DEFAULT_DOH_PATH = "/dns-query";
     private final DohQueryEncoder dohQueryEncoder = new DohQueryEncoder();
 
@@ -47,7 +41,7 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
      *
      * @param host the host address
      */
-    public DohRecordEncoder(String host) {
+    public DohRequestEncoder(String host) {
         this(host, true, DEFAULT_DOH_PATH);
     }
 
@@ -57,7 +51,7 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
      * @param host        the host address
      * @param useHttpPost the http request method that can be used to connect to dohServer
      */
-    public DohRecordEncoder(String host, boolean useHttpPost) {
+    public DohRequestEncoder(String host, boolean useHttpPost) {
         this(host, useHttpPost, DEFAULT_DOH_PATH);
     }
 
@@ -67,7 +61,7 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
      * @param host the host address
      * @param uri  the http request uri that can be used as address path
      */
-    public DohRecordEncoder(String host, String uri) {
+    public DohRequestEncoder(String host, String uri) {
         this(host, true, uri);
     }
 
@@ -78,7 +72,7 @@ public final class DohRecordEncoder extends ChannelOutboundHandlerAdapter {
      * @param useHttpPost the http request method that can be used to connect to dohServer
      * @param uri         the http request uri that can be used as address path
      */
-    public DohRecordEncoder(String host, boolean useHttpPost, String uri) {
+    public DohRequestEncoder(String host, boolean useHttpPost, String uri) {
         this.host = ObjectUtil.checkNotNull(host, "host");
         this.useHttpPost = useHttpPost;
         this.uri = ObjectUtil.checkNotNull(uri, "uri");

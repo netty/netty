@@ -37,10 +37,9 @@ import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
-import io.netty.handler.codec.doh.DohRecordEncoder;
+import io.netty.handler.codec.doh.DohRequestEncoder;
 import io.netty.handler.codec.doh.DohResponseDecoder;
 import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.NetUtil;
@@ -106,8 +105,7 @@ public class DoHClient {
                                     PORT));
 //                            ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO));
                             ch.pipeline().addLast(new HttpClientCodec());
-                            ch.pipeline().addLast(new HttpObjectAggregator(65536));
-                            ch.pipeline().addLast(new DohRecordEncoder(host));
+                            ch.pipeline().addLast(new DohRequestEncoder(host));
                             ch.pipeline().addLast(new DohResponseDecoder());
 
                             ch.pipeline().addLast(new SimpleChannelInboundHandler<DefaultDnsResponse>() {
