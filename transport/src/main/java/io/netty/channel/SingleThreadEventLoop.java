@@ -28,7 +28,6 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
-import java.util.function.Supplier;
 
 /**
  * Abstract base class for {@link EventLoop}s that execute all its submitted tasks in a single thread.
