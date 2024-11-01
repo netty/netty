@@ -27,6 +27,8 @@ import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscChunkedAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
+import org.jctools.queues.atomic.unpadded.MpscAtomicUnpaddedArrayQueue;
+import org.jctools.queues.unpadded.MpscUnpaddedArrayQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 
@@ -1043,6 +1045,15 @@ public final class PlatformDependent {
      */
     public static <T> Queue<T> newFixedMpscQueue(int capacity) {
         return hasUnsafe() ? new MpscArrayQueue<T>(capacity) : new MpscAtomicArrayQueue<T>(capacity);
+    }
+
+    /**
+     * Create a new un-padded {@link Queue} which is safe to use for multiple producers (different threads) and a single
+     * consumer (one thread!) with the given fixes {@code capacity}.<br>
+     * This should be preferred to {@link #newFixedMpscQueue(int)} when the queue is not to be heavily contended.
+     */
+    public static <T> Queue<T> newFixedMpscUnpaddedQueue(int capacity) {
+        return hasUnsafe() ? new MpscUnpaddedArrayQueue<T>(capacity) : new MpscAtomicUnpaddedArrayQueue<T>(capacity);
     }
 
     /**
