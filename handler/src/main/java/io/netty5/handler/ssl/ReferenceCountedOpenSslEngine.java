@@ -972,7 +972,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                             return newResult(NEED_TASK, bytesConsumed, bytesProduced);
                         } else {
                             // Everything else is considered as error
-                            throw shutdownWithError("SSL_write", sslError);
+                            throw shutdownWithError("SSL_write", sslError, SSL.getLastErrorNumber());
                         }
                     }
                 }
@@ -1035,10 +1035,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
     /**
      * Log the error, shutdown the engine and throw an exception.
      */
-    private SSLException shutdownWithError(String operations, int sslError) {
-        return shutdownWithError(operations, sslError, SSL.getLastErrorNumber());
-    }
-
     private SSLException shutdownWithError(String operation, int sslError, int error) {
         if (logger.isDebugEnabled()) {
             String errorString = SSL.getErrorString(error);
@@ -1953,7 +1949,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                 return NEED_TASK;
             }
 
-            if (needWrapAgain(SSL.getLastErrorNumber())) {
+            int errorNumber = SSL.getLastErrorNumber();
+            if (needWrapAgain(errorNumber)) {
                 // There is something that needs to be send to the remote peer before we can teardown.
                 // This is most likely some alert.
                 return NEED_WRAP;
@@ -1965,7 +1962,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             }
 
             // Everything else is considered as error
-            throw shutdownWithError("SSL_do_handshake", sslError);
+            throw shutdownWithError("SSL_do_handshake", sslError, errorNumber);
         }
         // We have produced more data as part of the handshake if this is the case the user should call wrap(...)
         if (SSL.bioLengthNonApplication(networkBIO) > 0) {
