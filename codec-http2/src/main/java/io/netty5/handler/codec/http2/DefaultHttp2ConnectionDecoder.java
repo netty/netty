@@ -106,7 +106,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                                          Http2PromisedRequestVerifier requestVerifier,
                                          boolean autoAckSettings,
                                          boolean autoAckPing) {
-        this(connection, encoder, frameReader, requestVerifier, autoAckSettings, true, true);
+        this(connection, encoder, frameReader, requestVerifier, autoAckSettings, autoAckPing, true);
     }
 
     /**

@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty5.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty5.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty5.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty5.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty5.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
@@ -64,6 +65,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.isNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -203,17 +205,23 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(ctx.write(any())).thenReturn(future);
 
         decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
+        setupCodec(ctx, encoder, decoder, listener);
+    }
+
+    private void setupCodec(
+            ChannelHandlerContext ctx, Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder,
+            Http2FrameListener listener) throws Exception {
         decoder.lifecycleManager(lifecycleManager);
         decoder.frameListener(listener);
 
         // Simulate receiving the initial settings from the remote endpoint.
-        decode().onSettingsRead(ctx, new Http2Settings());
+        decode(decoder).onSettingsRead(ctx, new Http2Settings());
         verify(listener).onSettingsRead(eq(ctx), eq(new Http2Settings()));
         assertTrue(decoder.prefaceReceived());
         verify(encoder).writeSettingsAck(eq(ctx));
 
         // Simulate receiving the SETTINGS ACK for the initial settings.
-        decode().onSettingsAckRead(ctx);
+        decode(decoder).onSettingsAckRead(ctx);
 
         // Disallow any further flushes now that settings ACK has been sent
         when(ctx.flush()).then(new Answer<ChannelHandlerContext>() {
@@ -746,6 +754,18 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
+    public void pingReadShouldRespectNoAutoAck() throws Exception {
+        ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
+        Http2ConnectionEncoder encoder = mock(Http2ConnectionEncoder.class);
+        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
+                ALWAYS_VERIFY, true, false);
+        Http2FrameListener listener = mock(Http2FrameListener.class);
+        setupCodec(ctx, encoder, decoder, listener);
+        decode(decoder).onPingRead(ctx, 0L);
+        verify(encoder, never()).writePing(eq(ctx), eq(true), eq(0L));
+    }
+
+    @Test
     public void settingsReadWithAckShouldNotifyListener() throws Exception {
         decode().onSettingsAckRead(ctx);
         // Take into account the time this was called during setup().
@@ -906,6 +926,10 @@ public class DefaultHttp2ConnectionDecoderTest {
      * Calls the decode method on the handler and gets back the captured internal listener
      */
     private Http2FrameListener decode() throws Exception {
+        return decode(decoder);
+    }
+
+    private Http2FrameListener decode(Http2ConnectionDecoder decoder) throws Exception {
         ArgumentCaptor<Http2FrameListener> internalListener = ArgumentCaptor.forClass(Http2FrameListener.class);
         doNothing().when(reader).readFrame(eq(ctx), any(Buffer.class), internalListener.capture());
         try (Buffer empty = empty()) {
