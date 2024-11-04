@@ -70,7 +70,7 @@ jobs:
           name:  maven-repository
           path: /home/runner/jars
 
-      - uses: uraimo/run-on-arch-action@v2.5.1
+      - uses: uraimo/run-on-arch-action@v2
         name: Check native loading
         id: runcmd
         with:
