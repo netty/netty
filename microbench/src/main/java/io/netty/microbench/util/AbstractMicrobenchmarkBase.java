@@ -22,6 +22,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.annotations.Measurement;
@@ -38,8 +39,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 /**
  * Base class for all JMH benchmarks.
  */
-@Warmup(iterations = AbstractMicrobenchmarkBase.DEFAULT_WARMUP_ITERATIONS)
-@Measurement(iterations = AbstractMicrobenchmarkBase.DEFAULT_MEASURE_ITERATIONS)
+@Warmup(iterations = AbstractMicrobenchmarkBase.DEFAULT_WARMUP_ITERATIONS, time = 1, timeUnit = TimeUnit.SECONDS)
+@Measurement(iterations = AbstractMicrobenchmarkBase.DEFAULT_MEASURE_ITERATIONS, time = 1, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Thread)
 public abstract class AbstractMicrobenchmarkBase {
     protected static final int DEFAULT_WARMUP_ITERATIONS = 10;

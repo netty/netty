@@ -74,7 +74,10 @@ public class AbstractByteBufGetCharSequenceBenchmark extends AbstractMicrobenchm
     @Param({ "8", "64", "1024", "10240", "1073741824" })
     public int size;
 
-    @Param({ "US-ASCII", "ISO_8859_1" })
+    @Param({
+            "US-ASCII",
+            "ISO_8859_1",
+    })
     public String charsetName;
 
     @Param
