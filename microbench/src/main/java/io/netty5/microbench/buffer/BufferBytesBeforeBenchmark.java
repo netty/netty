@@ -61,7 +61,9 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
     })
     private int logPermutations;
 
-    @Param({ "1" })
+    @Param({
+            "1"
+    })
     private int seed;
 
     private int permutations;
@@ -69,7 +71,9 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
     private Buffer[] data;
     private int i;
 
-    @Param({ "-91" })
+    @Param({
+            "-91"
+    })
     private byte needleByte;
     private Buffer needleBuffer;
     private int needleBufferLength = 5;
@@ -79,6 +83,7 @@ public class BufferBytesBeforeBenchmark extends AbstractMicrobenchmark {
             "false",
     })
     private boolean direct;
+
     @Param({
             "false",
             "true",

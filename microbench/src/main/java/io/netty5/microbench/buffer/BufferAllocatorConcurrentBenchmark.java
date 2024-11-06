@@ -36,7 +36,12 @@ public class BufferAllocatorConcurrentBenchmark extends AbstractMicrobenchmark {
     private static final BufferAllocator pooledAllocator = BufferAllocator.offHeapPooled();
     private static final BufferAllocator adaptiveAllocator = new AdaptivePoolingAllocator(true);
 
-    @Param({ "00064"/*, "00256", "01024", "04096"*/ })
+    @Param({
+            "00064",
+            "00256",
+            "01024",
+            "04096"
+    })
     public int size;
 
     @Benchmark

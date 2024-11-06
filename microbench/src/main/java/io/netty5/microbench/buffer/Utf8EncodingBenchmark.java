@@ -76,10 +76,18 @@ public class Utf8EncodingBenchmark extends AbstractMicrobenchmark {
     private StringBuilder[] stringBuilders;
     private AnotherCharSequence[] anotherCharSequences;
     private AsciiString[] asciiStrings;
-    @Param({ "false", "true" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean direct;
     private Buffer buffer;
-    @Param({ "false", "true" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean noUnsafe;
     private int dataSetLength;
 

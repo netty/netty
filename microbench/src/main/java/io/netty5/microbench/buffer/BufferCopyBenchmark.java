@@ -28,21 +28,54 @@ import java.nio.ByteOrder;
 
 public class BufferCopyBenchmark extends AbstractMicrobenchmark {
 
-    @Param({"7", "36", "128", "512" })
+    @Param({
+            "7",
+            "36",
+            "128",
+            "512",
+    })
     private int size;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean directByteBuff;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean directByteBuffer;
-    @Param({"false", "true" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean readonlyByteBuffer;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean pooledbuffer;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean alignedCopyByteBuffer;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean alignedCopyBuffer;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean nativeOrderByteBuffer;
 
     private ByteBuffer byteBuffer;
@@ -96,5 +129,4 @@ public class BufferCopyBenchmark extends AbstractMicrobenchmark {
     public void tearDown() {
         buffer.close();
     }
-
 }

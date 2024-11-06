@@ -51,7 +51,14 @@ public class BufferAllocatorBenchmark extends AbstractMicrobenchmark {
     private static final Buffer[] pooledAdaptiveBuffers = new Buffer[MAX_LIVE_BUFFERS];
     private static final Buffer[] defaultPooledBuffers = new Buffer[MAX_LIVE_BUFFERS];
 
-    @Param({ "00000", "00256", "01024", "04096", "16384", "65536" })
+    @Param({
+            "00000",
+            "00256",
+            "01024",
+            "04096",
+            "16384",
+            "65536"
+    })
     public int size;
 
     @Benchmark

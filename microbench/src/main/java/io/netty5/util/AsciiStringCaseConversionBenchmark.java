@@ -37,13 +37,23 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 8, time = 1)
 @State(Scope.Benchmark)
 public class AsciiStringCaseConversionBenchmark {
-    @Param({ "7", "16", "23", "32" })
+    @Param({
+            "7",
+            "16",
+            "23",
+            "32",
+    })
     int size;
 
-    @Param({ "4", "11" })
+    @Param({
+            "4",
+            "11",
+    })
     int logPermutations;
 
-    @Param({ "0" })
+    @Param({
+            "0",
+    })
     int seed;
 
     int permutations;
@@ -56,7 +66,10 @@ public class AsciiStringCaseConversionBenchmark {
 
     private int i;
 
-    @Param({ "true", "false" })
+    @Param({
+            "true",
+            "false",
+    })
     private boolean noUnsafe;
 
     @Setup(Level.Trial)
