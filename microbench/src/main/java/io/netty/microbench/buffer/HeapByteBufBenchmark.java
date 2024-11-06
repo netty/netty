@@ -27,7 +27,10 @@ import java.lang.reflect.Constructor;
 
 public class HeapByteBufBenchmark extends AbstractMicrobenchmark {
 
-    @Param({ "true", "false" })
+    @Param({
+            "true",
+            "false",
+    })
     public String checkBounds;
 
     private ByteBuf unsafeBuffer;

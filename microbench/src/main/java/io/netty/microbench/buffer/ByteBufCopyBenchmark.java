@@ -32,21 +32,50 @@ public class ByteBufCopyBenchmark extends AbstractMicrobenchmark {
         System.setProperty("io.netty.buffer.bytebuf.checkAccessible", "false");
     }
 
-    @Param({"7", "36", "128", "512" })
+    @Param({
+            "7",
+            "36",
+            "128",
+            "512",
+    })
     private int size;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean directByteBuff;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean directByteBuffer;
     @Param({"false", "true" })
     private boolean readonlyByteBuffer;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean pooledByteBuf;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean alignedCopyByteBuffer;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean alignedCopyByteBuf;
-    @Param({"true", "false" })
+
+    @Param({
+            "true",
+            "false",
+    })
     private boolean nativeOrderByteBuffer;
 
     private ByteBuffer byteBuffer;

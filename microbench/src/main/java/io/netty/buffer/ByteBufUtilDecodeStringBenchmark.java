@@ -72,10 +72,19 @@ public class ByteBufUtilDecodeStringBenchmark extends AbstractMicrobenchmark {
         abstract ByteBuf newBuffer(byte[] bytes, int length);
     }
 
-    @Param({ "8", "64", "1024", "10240", "1073741824" })
+    @Param({
+            "8",
+            "64",
+            "1024",
+            "10240",
+            "1073741824",
+    })
     public int size;
 
-    @Param({ "US-ASCII", "UTF-8" })
+    @Param({
+            "US-ASCII",
+            "UTF-8",
+    })
     public String charsetName;
 
     @Param
