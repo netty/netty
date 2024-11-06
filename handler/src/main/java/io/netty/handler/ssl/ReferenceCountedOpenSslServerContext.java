@@ -165,7 +165,12 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                     try {
                         bio = toBIO(ByteBufAllocator.DEFAULT, issuers);
                         if (!SSLContext.setCACertificateBio(ctx, bio)) {
-                            throw new SSLException("unable to setup accepted issuers for trustmanager " + manager);
+                            String msg = "unable to setup accepted issuers for trustmanager " + manager;
+                            int error = SSL.getLastErrorNumber();
+                            if (error != 0) {
+                                msg += ". " + SSL.getErrorString(error);
+                            }
+                            throw new SSLException(msg);
                         }
                     } finally {
                         freeBio(bio);
