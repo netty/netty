@@ -473,16 +473,6 @@
     </profile>
 
     <profile>
-      <id>testsuite-jpms</id>
-      <activation>
-        <jdk>[11,)</jdk>
-      </activation>
-      <modules>
-        <module>testsuite-jpms</module>
-      </modules>
-    </profile>
-
-    <profile>
       <id>boringssl-mac-aarch64</id>
       <activation>
         <os>
@@ -719,6 +709,7 @@
     <module>testsuite</module>
     <module>testsuite-autobahn</module>
     <module>testsuite-http2</module>
+    <module>testsuite-jpms</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
     <module>testsuite-native</module>
