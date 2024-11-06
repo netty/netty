@@ -110,13 +110,21 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
     @Param
     public ByteBufType bufferType;
 
-    @Param({ "true", "false" })
+    @Param({
+            "true",
+            "false",
+    })
     public String checkAccessible;
 
-    @Param({ "true", "false" })
+    @Param({
+            "true",
+            "false",
+    })
     public String checkBounds;
 
-    @Param({ "8" })
+    @Param({
+            "8",
+    })
     public int batchSize; // applies only to readBatch benchmark
 
     @Setup

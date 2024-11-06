@@ -38,7 +38,12 @@ public class ByteBufAllocatorConcurrentBenchmark  extends AbstractMicrobenchmark
     private static final ByteBufAllocator pooledAllocator = PooledByteBufAllocator.DEFAULT;
     private static final ByteBufAllocator adaptiveAllocator = new AdaptiveByteBufAllocator();
 
-    @Param({ "00064", "00256", "01024", "04096" })
+    @Param({
+            "00064",
+            "00256",
+            "01024",
+            "04096",
+    })
     public int size;
 
     @Benchmark

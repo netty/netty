@@ -56,7 +56,13 @@ public class CompositeByteBufWriteOutBenchmark extends AbstractMicrobenchmark {
         return new String[] { "-XX:MaxDirectMemorySize=2g", "-Xmx4g", "-Xms4g", "-Xmn3g" };
     }
 
-    @Param({ "64", "1024", "10240", "102400", "1024000" })
+    @Param({
+            "64",
+            "1024",
+            "10240",
+            "102400",
+            "1024000"
+    })
     public int size;
 
     @Param

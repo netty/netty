@@ -37,18 +37,42 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
 public class ByteBufZeroingBenchmark extends AbstractMicrobenchmark {
 
-    @Param({ "1", "2", "3", "4", "7", "8", "15", "64", "65", "1024" })
+    @Param({
+            "1",
+            "2",
+            "3",
+            "4",
+            "7",
+            "8",
+            "15",
+            "64",
+            "65",
+            "1024",
+    })
     private int bytes = 1024;
-    @Param({ "true", "false" })
+    @Param({
+            "true",
+            "false",
+    })
     private boolean direct;
-    @Param({ "true", "false" })
+    @Param({
+            "true",
+            "false",
+    })
     private boolean pooled;
-    @Param({ "false" })
+    @Param({
+            "false",
+    })
     public String checkAccessible;
 
-    @Param({ "false" })
+    @Param({
+            "false",
+    })
     public String checkBounds;
-    @Param({ "0", "1" })
+    @Param({
+            "0",
+            "1",
+    })
     public int startOffset;
     private ByteBuf buffer;
     private int offset;

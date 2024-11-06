@@ -41,13 +41,27 @@ public class SimpleByteBufPooledAllocatorBenchmark extends AbstractMicrobenchmar
         super(true, false);
     }
 
-    @Param({"123", "1234", "12345", "123456", "1234567"})
+    @Param({
+            "123",
+            "1234",
+            "12345",
+            "123456",
+            "1234567",
+    })
     public int size;
 
-    @Param({"0", "5", "10", "100"})
+    @Param({
+            "0",
+            "5",
+            "10",
+            "100",
+    })
     public long tokens;
 
-    @Param({"false", "true"})
+    @Param({
+            "true",
+            "false",
+    })
     public boolean useThreadCache;
 
     public ByteBufAllocator allocator;

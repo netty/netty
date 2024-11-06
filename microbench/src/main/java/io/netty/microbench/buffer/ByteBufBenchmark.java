@@ -32,7 +32,10 @@ public class ByteBufBenchmark extends AbstractMicrobenchmark {
     }
     private static final byte BYTE = '0';
 
-    @Param({ "true", "false" })
+    @Param({
+            "true",
+            "false",
+    })
     public String checkBounds;
 
     private ByteBuffer byteBuffer;

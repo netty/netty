@@ -52,7 +52,11 @@ public class CompositeByteBufRandomAccessBenchmark extends AbstractMicrobenchmar
         abstract ByteBuf newBuffer(int length);
     }
 
-    @Param({ "64", "10240", "1024000" }) // ({ "64", "1024", "10240", "102400", "1024000" })
+    @Param({
+            "64",
+            "10240",
+            "1024000",
+    }) // ({ "64", "1024", "10240", "102400", "1024000" })
     public int size;
 
     @Param
