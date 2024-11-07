@@ -24,7 +24,7 @@
   </parent>
 
   <artifactId>netty-testsuite-jpms</artifactId>
-  <packaging>jlink</packaging>
+  <packaging>${packaging.type}</packaging>
 
   <name>Netty/Testsuite/JPMS</name>
 
@@ -37,6 +37,7 @@
     <maven.compiler.target>11</maven.compiler.target>
     <maven.compiler.release>11</maven.compiler.release>
     <useTestModulePath>true</useTestModulePath>
+    <packaging.type>pom</packaging.type>
   </properties>
 
   <dependencies>
@@ -292,89 +293,99 @@
       </dependencies>
     </profile>
 
-  </profiles>
+    <profile>
+      <id>testsuite-jpms</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
 
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <artifactId>maven-jlink-plugin</artifactId>
-          <version>3.2.0</version>
-          <extensions>true</extensions>
-          <configuration>
-            <addModules>
-              <addModule>jdk.jdwp.agent</addModule>
-              <addModule>io.netty.internal.tcnative.openssl.${os.detected.name}.${os.detected.arch}</addModule>
-            </addModules>
-            <launcher>http=io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer</launcher>
-          </configuration>
-        </plugin>
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <configuration>
-            <skipMain>${skipJpmsTestsuite}</skipMain>
-            <skip>${skipJpmsTestsuite}</skip>
-          </configuration>
-        </plugin>
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.4.0</version>
-          <configuration>
-            <!-- Exclude all dependencies which are automatic modules -->
-            <classpathDependencyExcludes>org.hamcrest:*,net.sf.saxon:Saxon-HE,org.checkerframework:checker-qual,commons-logging:commons-logging,com.google.errorprone:error_prone_annotations,io.netty:netty-build-common,antlr:antlr,org.antlr:antlr4-runtime,com.google.guava:*,com.puppycrawl.tools:checkstyle,commons-beanutils:commons-beanutils,commons-collections:commons-collections,com.google.code.findbugs:jsr305,com.google.j2objc:j2objc-annotations</classpathDependencyExcludes>
-            <useModulePath>${useTestModulePath}</useModulePath>
-          </configuration>
-          <executions>
-            <execution>
-              <id>default-test</id>
+      <properties>
+        <packaging.type>jlink</packaging.type>
+      </properties>
+
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <artifactId>maven-jlink-plugin</artifactId>
+              <version>3.2.0</version>
+              <extensions>true</extensions>
               <configuration>
-                <includes>
-                  <include>io/netty/testsuite_jpms/test/**.java</include>
-                </includes>
+                <addModules>
+                  <addModule>jdk.jdwp.agent</addModule>
+                  <addModule>io.netty.internal.tcnative.openssl.${os.detected.name}.${os.detected.arch}</addModule>
+                </addModules>
+                <launcher>http=io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer</launcher>
               </configuration>
-            </execution>
-            <execution>
-              <id>slf4j-test</id>
-              <goals>
-                <goal>test</goal>
-              </goals>
+            </plugin>
+            <plugin>
+              <artifactId>maven-compiler-plugin</artifactId>
               <configuration>
-                <includes>
-                  <include>io/netty/testsuite_jpms/it/Slf4jTest.java</include>
-                </includes>
+                <skipMain>${skipJpmsTestsuite}</skipMain>
+                <skip>${skipJpmsTestsuite}</skip>
               </configuration>
-            </execution>
-            <execution>
-              <id>log4j-test</id>
-              <goals>
-                <goal>test</goal>
-              </goals>
+            </plugin>
+            <plugin>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <version>3.4.0</version>
               <configuration>
-                <classpathDependencyExcludes>ch.qos.logback:*,org.slf4j:*</classpathDependencyExcludes>
-                <includes>
-                  <include>io/netty/testsuite_jpms/it/Log4jTest.java</include>
-                </includes>
+                <!-- Exclude all dependencies which are automatic modules -->
+                <classpathDependencyExcludes>org.hamcrest:*,net.sf.saxon:Saxon-HE,org.checkerframework:checker-qual,commons-logging:commons-logging,com.google.errorprone:error_prone_annotations,io.netty:netty-build-common,antlr:antlr,org.antlr:antlr4-runtime,com.google.guava:*,com.puppycrawl.tools:checkstyle,commons-beanutils:commons-beanutils,commons-collections:commons-collections,com.google.code.findbugs:jsr305,com.google.j2objc:j2objc-annotations</classpathDependencyExcludes>
+                <useModulePath>${useTestModulePath}</useModulePath>
               </configuration>
-            </execution>
-            <execution>
-              <id>commons-logging-test</id>
-              <goals>
-                <goal>test</goal>
-              </goals>
-              <configuration>
-                <includes>
-                  <include>io/netty/testsuite_jpms/it/CommonsLoggingTest.java</include>
-                </includes>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-    <plugins>
-      <plugin>
-        <artifactId>maven-jlink-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
+              <executions>
+                <execution>
+                  <id>default-test</id>
+                  <configuration>
+                    <includes>
+                      <include>io/netty/testsuite_jpms/test/**.java</include>
+                    </includes>
+                  </configuration>
+                </execution>
+                <execution>
+                  <id>slf4j-test</id>
+                  <goals>
+                    <goal>test</goal>
+                  </goals>
+                  <configuration>
+                    <includes>
+                      <include>io/netty/testsuite_jpms/it/Slf4jTest.java</include>
+                    </includes>
+                  </configuration>
+                </execution>
+                <execution>
+                  <id>log4j-test</id>
+                  <goals>
+                    <goal>test</goal>
+                  </goals>
+                  <configuration>
+                    <classpathDependencyExcludes>ch.qos.logback:*,org.slf4j:*</classpathDependencyExcludes>
+                    <includes>
+                      <include>io/netty/testsuite_jpms/it/Log4jTest.java</include>
+                    </includes>
+                  </configuration>
+                </execution>
+                <execution>
+                  <id>commons-logging-test</id>
+                  <goals>
+                    <goal>test</goal>
+                  </goals>
+                  <configuration>
+                    <includes>
+                      <include>io/netty/testsuite_jpms/it/CommonsLoggingTest.java</include>
+                    </includes>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+        <plugins>
+          <plugin>
+            <artifactId>maven-jlink-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
