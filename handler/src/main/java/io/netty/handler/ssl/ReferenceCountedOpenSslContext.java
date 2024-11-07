@@ -53,9 +53,11 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -234,7 +236,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         OpenSslAsyncPrivateKeyMethod asyncPrivateKeyMethod = null;
         OpenSslCertificateCompressionConfig certCompressionConfig = null;
         Integer maxCertificateList = null;
-
+        String[] groups = OpenSsl.NAMED_GROUPS;
         if (ctxOptions != null) {
             for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
                 SslContextOption<?> option = ctxOpt.getKey();
@@ -251,6 +253,13 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     certCompressionConfig = (OpenSslCertificateCompressionConfig) ctxOpt.getValue();
                 } else if (option == OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES) {
                     maxCertificateList = (Integer) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.GROUPS) {
+                    String[] groupsArray = (String[]) ctxOpt.getValue();
+                    Set<String> groupsSet = new LinkedHashSet<String>(groupsArray.length);
+                    for (String group : groupsArray) {
+                        groupsSet.add(GroupsConverter.toOpenSsl(group));
+                    }
+                    groups = groupsSet.toArray(EmptyArrays.EMPTY_STRINGS);
                 } else {
                     logger.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
                             + ": " + ctxOpt.getKey());
@@ -436,8 +445,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             }
 
             // Set the curves / groups if anything is configured.
-            if (OpenSsl.NAMED_GROUPS.length > 0 && !SSLContext.setCurvesList(ctx, OpenSsl.NAMED_GROUPS)) {
-                String msg = "failed to set curves / groups suite: " + Arrays.toString(OpenSsl.NAMED_GROUPS);
+            if (groups.length > 0 && !SSLContext.setCurvesList(ctx, groups)) {
+                String msg = "failed to set curves / groups suite: " + Arrays.toString(groups);
                 int err = SSL.getLastErrorNumber();
                 if (err != 0) {
                     // We have some more details about why the operations failed, include these into the message.
