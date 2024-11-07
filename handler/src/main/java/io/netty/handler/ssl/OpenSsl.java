@@ -283,8 +283,8 @@ public final class OpenSsl {
                             } catch (Throwable ignore) {
                                 logger.debug("Failed to get useKeyManagerFactory system property.");
                             }
-                        } catch (Error ignore) {
-                            logger.debug("KeyManagerFactory not supported.");
+                        } catch (Exception e) {
+                            logger.debug("KeyManagerFactory not supported", e);
                         } finally {
                             privateKey.release();
                         }
