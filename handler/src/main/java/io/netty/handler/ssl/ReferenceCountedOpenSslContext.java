@@ -50,6 +50,7 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateRevokedException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -431,8 +432,17 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             if (maxCertificateList != null) {
                 SSLContext.setMaxCertList(ctx, maxCertificateList);
             }
-            // Set the curves.
-            SSLContext.setCurvesList(ctx, OpenSsl.NAMED_GROUPS);
+
+            // Set the curves / groups if anything is configured.
+            if (OpenSsl.NAMED_GROUPS.length > 0 && !SSLContext.setCurvesList(ctx, OpenSsl.NAMED_GROUPS)) {
+                String msg = "failed to set curves / groups suite: " + Arrays.toString(OpenSsl.NAMED_GROUPS);
+                int err = SSL.getLastErrorNumber();
+                if (err != 0) {
+                    // We have some more details about why the operations failed, include these into the message.
+                    msg += ". " + SSL.getErrorString(err);
+                }
+                throw new SSLException(msg);
+            }
             success = true;
         } finally {
             if (!success) {

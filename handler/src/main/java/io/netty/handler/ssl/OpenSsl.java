@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -153,9 +154,9 @@ public final class OpenSsl {
             boolean useKeyManagerFactory = false;
             boolean tlsv13Supported = false;
             String[] namedGroups = DEFAULT_NAMED_GROUPS;
-            String[] defaultConvertedNamedGroups = new String[namedGroups.length];
+            Set<String> defaultConvertedNamedGroups = new HashSet<String>(namedGroups.length);
             for (int i = 0; i < namedGroups.length; i++) {
-                defaultConvertedNamedGroups[i] = GroupsConverter.toOpenSsl(namedGroups[i]);
+                defaultConvertedNamedGroups.add(GroupsConverter.toOpenSsl(namedGroups[i]));
             }
 
             IS_BORINGSSL = "BoringSSL".equals(versionString());
@@ -177,6 +178,19 @@ public final class OpenSsl {
 
             try {
                 final long sslCtx = SSLContext.make(SSL.SSL_PROTOCOL_ALL, SSL.SSL_MODE_SERVER);
+
+                // Let's filter out any group that is not supported from the default.
+                Iterator<String> defaultGroupsIter = defaultConvertedNamedGroups.iterator();
+                while (defaultGroupsIter.hasNext()) {
+                    if (!SSLContext.setCurvesList(sslCtx, defaultGroupsIter.next())) {
+                        // Not supported, let's remove it. This could for example be the case if we use
+                        // fips and the configure group is not supported when using FIPS.
+                        // See https://github.com/netty/netty-tcnative/issues/883
+                        defaultGroupsIter.remove();
+                    }
+                }
+                namedGroups = defaultConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
+
                 long certBio = 0;
                 long keyBio = 0;
                 long cert = 0;
@@ -308,7 +322,7 @@ public final class OpenSsl {
                         }
 
                         if (supportedNamedGroups.isEmpty()) {
-                            namedGroups = defaultConvertedNamedGroups;
+                            namedGroups = defaultConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
                             logger.info("All configured namedGroups are not supported: {}. Use default: {}.",
                                     Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)),
                                     Arrays.toString(DEFAULT_NAMED_GROUPS));
@@ -325,7 +339,7 @@ public final class OpenSsl {
                             namedGroups =  supportedConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
                         }
                     } else {
-                        namedGroups = defaultConvertedNamedGroups;
+                        namedGroups = defaultConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
                     }
                 } finally {
                     SSLContext.free(sslCtx);
