@@ -255,7 +255,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     maxCertificateList = (Integer) ctxOpt.getValue();
                 } else if (option == OpenSslContextOption.GROUPS) {
                     String[] groupsArray = (String[]) ctxOpt.getValue();
-                    Set<String> groupsSet = new HashSet<String>(groupsArray.length);
+                    Set<String> groupsSet = new LinkedHashSet<String>(groupsArray.length);
                     for (String group : groupsArray) {
                         groupsSet.add(GroupsConverter.toOpenSsl(group));
                     }
