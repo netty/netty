@@ -72,4 +72,12 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
      */
     public static final OpenSslContextOption<Integer> MAX_CERTIFICATE_LIST_BYTES =
             new OpenSslContextOption<>("MAX_CERTIFICATE_LIST_BYTES");
+
+    /**
+     * Set the groups that should be used. This will override curves set with {@code -Djdk.tls.namedGroups}.
+     * <p>
+     * See <a href="https://docs.openssl.org/master/man3/SSL_CTX_set1_groups_list/#description">
+     *     SSL_CTX_set1_groups_list</a>.
+     */
+    public static final OpenSslContextOption<String[]> GROUPS = new OpenSslContextOption<>("GROUPS");
 }
