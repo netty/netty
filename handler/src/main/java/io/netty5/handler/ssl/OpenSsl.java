@@ -256,8 +256,8 @@ public final class OpenSsl {
 
                             SSL.setKeyMaterial(ssl, cert, key);
                             supportsKeyManagerFactory = true;
-                        } catch (Error ignore) {
-                            logger.debug("KeyManagerFactory not supported.");
+                        } catch (Exception e) {
+                            logger.debug("KeyManagerFactory not supported", e);
                         }
                     } finally {
                         SSL.freeSSL(ssl);
