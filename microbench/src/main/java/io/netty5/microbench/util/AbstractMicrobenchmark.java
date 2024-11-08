@@ -15,13 +15,19 @@
  */
 package io.netty5.microbench.util;
 
+import io.netty5.util.concurrent.AbstractEventExecutor;
 import io.netty5.util.concurrent.DefaultThreadFactory;
+import io.netty5.util.concurrent.EventExecutor;
+import io.netty5.util.concurrent.FastThreadLocalThread;
+import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.SystemPropertyUtil;
+import io.netty5.util.internal.ThreadExecutorMap;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -35,11 +41,78 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
     protected static final int DEFAULT_FORKS = 2;
 
     public static final class HarnessExecutor extends ThreadPoolExecutor {
-        private final Logger logger = LoggerFactory.getLogger(AbstractMicrobenchmark.class);
+
+        private static final Logger logger = LoggerFactory.getLogger(AbstractMicrobenchmark.class);
 
         public HarnessExecutor(int maxThreads, String prefix) {
             super(maxThreads, maxThreads, 0, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<>(), new DefaultThreadFactory(prefix));
+                    new LinkedBlockingQueue<Runnable>(),
+                    new DefaultThreadFactory(prefix));
+            EventExecutor eventExecutor = new AbstractEventExecutor() {
+
+                @Override
+                public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public Future<Void> scheduleWithFixedDelay(
+                        Runnable task, long initialDelay, long delay, TimeUnit unit) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean inEventLoop(Thread thread) {
+                    return thread instanceof FastThreadLocalThread;
+                }
+
+                @Override
+                public boolean isShuttingDown() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public Future<Void> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public Future<Void> terminationFuture() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean isShutdown() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean isTerminated() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public void execute(Runnable command) {
+                    throw new UnsupportedOperationException();
+                }
+            };
+            setThreadFactory(ThreadExecutorMap.apply(getThreadFactory(), eventExecutor));
+
             logger.debug("Using harness executor");
         }
     }
