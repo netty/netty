@@ -15,18 +15,28 @@
  */
 package io.netty.pkitesting.x509;
 
-import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.internal.UnstableApi;
+import org.bouncycastle.asn1.ASN1Integer;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.Extensions;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.asn1.x509.Time;
+import org.bouncycastle.asn1.x509.V3TBSCertificateGenerator;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.math.BigInteger;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import javax.security.auth.x500.X500Principal;
 
 @UnstableApi
-public final class TBSCertBuilder implements DerWriter.WritableSequence {
+public final class TBSCertBuilder {
     private final X500Principal issuer;
     private final X500Principal subject;
     private final BigInteger serial;
@@ -57,27 +67,32 @@ public final class TBSCertBuilder implements DerWriter.WritableSequence {
     }
 
     public byte[] getEncoded() {
-        try (DerWriter der = new DerWriter()) {
-            return der.writeSequence(this).getBytes();
-        }
-    }
-
-    @Override
-    public void writeSequence(DerWriter writer) {
-        writer.writeExplicit(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED, w -> w.writeInteger(2));
-        writer.writeInteger(serial);
-        AlgorithmIdentifier.writeAlgorithmId(signatureAlgorithmIdentifier, writer);
-        writer.writeRawDER(issuer.getEncoded());
-        // Validity
-        writer.writeSequence(w -> w.writeGeneralizedTime(notBefore).writeGeneralizedTime(notAfter));
-        writer.writeRawDER(subject.getEncoded());
-        // SubjectPublicKeyInfo - we assume this is the public keys "primary encoding"
-        // BouncyCastle likewise makes this assumption, so it's not unheard of.
-        writer.writeRawDER(pubKey.getEncoded());
+        V3TBSCertificateGenerator generator = new V3TBSCertificateGenerator();
+        generator.setIssuer(X500Name.getInstance(issuer.getEncoded()));
+        generator.setSubject(X500Name.getInstance(subject.getEncoded()));
+        generator.setSerialNumber(new ASN1Integer(serial));
+        generator.setSignature(new org.bouncycastle.asn1.x509.AlgorithmIdentifier(new ASN1ObjectIdentifier(
+                AlgorithmIdentifier.algorithmNameToOid(signatureAlgorithmIdentifier))));
+        generator.setStartDate(new Time(new Date(notBefore.toEpochMilli())));
+        generator.setEndDate(new Time(new Date(notAfter.toEpochMilli())));
+        generator.setSubjectPublicKeyInfo(SubjectPublicKeyInfo.getInstance(pubKey.getEncoded()));
         if (!extensions.isEmpty()) {
-            writer.writeExplicit(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED | 3, extensionWriter -> {
-                extensionWriter.writeSequence(w -> extensions.forEach(extension -> extension.encode(w)));
-            });
+            org.bouncycastle.asn1.x509.Extension[] bcExtensions =
+                    new org.bouncycastle.asn1.x509.Extension[extensions.size()];
+            for (int i = 0; i < extensions.size(); i++) {
+                Extension ex = extensions.get(i);
+                bcExtensions[i] = new org.bouncycastle.asn1.x509.Extension(
+                        new ASN1ObjectIdentifier(ex.getExtnId()),
+                        ex.isCritical(),
+                        new DEROctetString(ex.getExtnValue())
+                );
+            }
+            generator.setExtensions(new Extensions(bcExtensions));
+        }
+        try {
+            return generator.generateTBSCertificate().getEncoded("DER");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 }

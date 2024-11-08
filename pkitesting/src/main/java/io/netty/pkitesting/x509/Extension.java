@@ -40,4 +40,16 @@ public final class Extension implements DerWriter.WritableSequence {
         writer.writeBoolean(critical);
         writer.writeOctetString(extnValue);
     }
+
+    public String getExtnId() {
+        return extnId;
+    }
+
+    public boolean isCritical() {
+        return critical;
+    }
+
+    public byte[] getExtnValue() {
+        return extnValue;
+    }
 }

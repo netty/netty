@@ -24,25 +24,24 @@ public final class AlgorithmIdentifier {
     }
 
     public static void writeAlgorithmId(String algorithmIdentifier, DerWriter writer) {
+        String oid = algorithmNameToOid(algorithmIdentifier);
+        writer.writeSequence(w -> w.writeObjectIdentifier(oid));
+    }
+
+    public static String algorithmNameToOid(String algorithmIdentifier) {
         switch (algorithmIdentifier) {
             case "SHA256withECDSA":
-                writer.writeSequence(w -> w.writeObjectIdentifier("1.2.840.10045.4.3.2"));
-                break;
+                return "1.2.840.10045.4.3.2";
             case "SHA384withECDSA":
-                writer.writeSequence(w -> w.writeObjectIdentifier("1.2.840.10045.4.3.3"));
-                break;
+                return "1.2.840.10045.4.3.3";
             case "SHA256withRSA":
-                writer.writeSequence(w -> w.writeObjectIdentifier("1.2.840.113549.1.1.11"));
-                break;
+                return "1.2.840.113549.1.1.11";
             case "SHA384withRSA":
-                writer.writeSequence(w -> w.writeObjectIdentifier("1.2.840.113549.1.1.12"));
-                break;
+                return "1.2.840.113549.1.1.12";
             case "Ed25519":
-                writer.writeSequence(w -> w.writeObjectIdentifier("1.3.101.112"));
-                break;
+                return "1.3.101.112";
             case "Ed448":
-                writer.writeSequence(w -> w.writeObjectIdentifier("1.3.101.113"));
-                break;
+                return "1.3.101.113";
             default:
                 throw new UnsupportedOperationException("Algorithm not supported: " + algorithmIdentifier);
         }
