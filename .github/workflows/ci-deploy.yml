@@ -148,7 +148,7 @@ jobs:
           cat ~/linux-x86_64-java8-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
           cp -r ~/linux-x86_64-java8-local-staging/deferred/* ~/local-staging/deferred/
           cat ~/all-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/all-local-staging/deferred/* ~/local-staging/deferred/
+          cp -r ~/all-local-staging/deferred/io/netty/netty-all/* ~/local-staging/deferred/io/netty/netty-all/
 
       - uses: s4u/maven-settings-action@v3.0.0
         with:
