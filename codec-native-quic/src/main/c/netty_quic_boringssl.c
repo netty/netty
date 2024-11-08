@@ -993,6 +993,11 @@ int new_session_callback(SSL *ssl, SSL_SESSION *session) {
     return 0;
 }
 
+static jlong netty_boringssl_SSLContext_new(JNIEnv* env, jclass clazz) {
+    SSL_CTX *ctx = SSL_CTX_new(TLS_with_buffers_method());
+    return (jlong) ctx;
+}
+
 static jlong netty_boringssl_SSLContext_new0(JNIEnv* env, jclass clazz, jboolean server, jbyteArray alpn_protos, jobject handshakeCompleteCallback, jobject certificateCallback, jobject verifyCallback, jobject servernameCallback, jobject keylogCallback, jobject sessionCallback, jobject privateKeyMethod, jobject sessionTicketCallback, jint verifyMode, jobjectArray subjectNames) {
     jobject handshakeCompleteCallbackRef = NULL;
     jobject certificateCallbackRef = NULL;
@@ -1415,6 +1420,13 @@ void netty_boringssl_SSLContext_setSessionTicketKeys(JNIEnv* env, jclass clazz, 
     }
 }
 
+jint netty_boringssl_SSLContext_set1_groups_list(JNIEnv* env, jclass clazz, jlong ctx, jstring groups) {
+    const char *nativeString = (*env)->GetStringUTFChars(env, groups, 0);
+    int ret = SSL_CTX_set1_groups_list((SSL_CTX *) ctx, nativeString);
+    (*env)->ReleaseStringUTFChars(env, groups, nativeString);
+    return (jint) ret;
+}
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -1444,12 +1456,14 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
 
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
+  { "SSLContext_new", "()J", (void *) netty_boringssl_SSLContext_new },
   { "SSLContext_new0", "(Z[BLjava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;I[[B)J", (void *) netty_boringssl_SSLContext_new0 },
   { "SSLContext_free", "(J)V", (void *) netty_boringssl_SSLContext_free },
   { "SSLContext_setSessionCacheTimeout", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheTimeout },
   { "SSLContext_setSessionCacheSize", "(JJ)J", (void *) netty_boringssl_SSLContext_setSessionCacheSize },
   { "SSLContext_set_early_data_enabled", "(JZ)V", (void *) netty_boringssl_SSLContext_set_early_data_enabled },
   { "SSLContext_setSessionTicketKeys", "(JZ)V", (void *) netty_boringssl_SSLContext_setSessionTicketKeys },
+  { "SSLContext_set1_groups_list", "(JLjava/lang/String;)I", (void *) netty_boringssl_SSLContext_set1_groups_list },
   { "SSL_new0", "(JZLjava/lang/String;)J", (void *) netty_boringssl_SSL_new0 },
   { "SSL_free", "(J)V", (void *) netty_boringssl_SSL_free },
   { "SSL_getTask", "(J)Ljava/lang/Runnable;", (void *) netty_boringssl_SSL_getTask },

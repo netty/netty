@@ -24,7 +24,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 
 final class BoringSSL {
-    private BoringSSL() { }
 
     static final int SSL_VERIFY_NONE = BoringSSLNativeStaticallyReferencedJniMethods.ssl_verify_none();
     static final int SSL_VERIFY_FAIL_IF_NO_PEER_CERT = BoringSSLNativeStaticallyReferencedJniMethods
@@ -70,6 +69,8 @@ final class BoringSSL {
         }
     }
 
+    static native long SSLContext_new();
+
     private static native long SSLContext_new0(boolean server,
                                                byte @Nullable [] applicationProtocols, Object handshakeCompleteCallback,
                                                Object certificateCallback, Object verifyCallback,
@@ -84,6 +85,24 @@ final class BoringSSL {
 
     static native void SSLContext_setSessionTicketKeys(long context, boolean enableCallback);
 
+    static int SSLContext_set1_groups_list(long ctx, String... groups) {
+        if (groups == null) {
+            throw new NullPointerException("curves");
+        }
+        if (groups.length == 0) {
+            throw new IllegalArgumentException();
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String group: groups) {
+            sb.append(group);
+            // Groups are separated by : as explained in the manpage.
+            sb.append(':');
+        }
+        sb.setLength(sb.length() - 1);
+        return SSLContext_set1_groups_list(ctx, sb.toString());
+    }
+
+    private static native int SSLContext_set1_groups_list(long context, String groups);
     static native void SSLContext_free(long context);
     static long SSL_new(long context, boolean server, String hostname) {
         return SSL_new0(context, server, tlsExtHostName(hostname));
@@ -129,4 +148,6 @@ final class BoringSSL {
         }
         return subjectNames;
     }
+
+    private BoringSSL() { }
 }
