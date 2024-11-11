@@ -18,6 +18,7 @@ package io.netty.buffer;
 import io.netty.util.ByteProcessor;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
+import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
@@ -486,6 +487,14 @@ final class AdaptivePoolingAllocator {
         }
         private static final Chunk MAGAZINE_FREED = new Chunk();
 
+        private static final ObjectPool<AdaptiveByteBuf> EVENT_LOOP_LOCAL_BUFFER_POOL = ObjectPool.newPool(
+                new ObjectPool.ObjectCreator<AdaptiveByteBuf>() {
+                    @Override
+                    public AdaptiveByteBuf newObject(ObjectPool.Handle<AdaptiveByteBuf> handle) {
+                        return new AdaptiveByteBuf(handle);
+                    }
+                });
+
         private Chunk current;
         @SuppressWarnings("unused") // updated via NEXT_IN_LINE
         private volatile Chunk nextInLine;
@@ -501,20 +510,22 @@ final class AdaptivePoolingAllocator {
         Magazine(AdaptivePoolingAllocator parent, boolean shareable) {
             super(parent, shareable);
 
-            // We only need the StampedLock if this Magazine will be shared across threads.
             if (shareable) {
+                // We only need the StampedLock if this Magazine will be shared across threads.
                 allocationLock = new StampedLock();
+                bufferQueue = PlatformDependent.newFixedMpmcQueue(MAGAZINE_BUFFER_QUEUE_CAPACITY);
+                handle = new ObjectPool.Handle<AdaptiveByteBuf>() {
+                    @Override
+                    public void recycle(AdaptiveByteBuf self) {
+                        bufferQueue.offer(self);
+                    }
+                };
             } else {
                 allocationLock = null;
+                bufferQueue = null;
+                handle = null;
             }
             usedMemory = new AtomicLong();
-            bufferQueue = PlatformDependent.newFixedMpmcQueue(MAGAZINE_BUFFER_QUEUE_CAPACITY);
-            handle = new ObjectPool.Handle<AdaptiveByteBuf>() {
-                @Override
-                public void recycle(AdaptiveByteBuf self) {
-                    bufferQueue.offer(self);
-                }
-            };
         }
 
         public boolean tryAllocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
@@ -672,13 +683,17 @@ final class AdaptivePoolingAllocator {
         }
 
         public AdaptiveByteBuf newBuffer() {
-            AdaptiveByteBuf buf = bufferQueue.poll();
-            if (buf == null) {
-                buf = new AdaptiveByteBuf(handle);
+            AdaptiveByteBuf buf;
+            if (handle == null) {
+                buf = EVENT_LOOP_LOCAL_BUFFER_POOL.get();
             } else {
-                buf.resetRefCnt();
-                buf.discardMarks();
+                buf = bufferQueue.poll();
+                if (buf == null) {
+                    buf = new AdaptiveByteBuf(handle);
+                }
             }
+            buf.resetRefCnt();
+            buf.discardMarks();
             return buf;
         }
     }
@@ -1206,7 +1221,12 @@ final class AdaptivePoolingAllocator {
             tmpNioBuf = null;
             chunk = null;
             rootParent = null;
-            handle.recycle(this);
+            if (handle instanceof EnhancedHandle) {
+                EnhancedHandle<AdaptiveByteBuf>  enhancedHandle = (EnhancedHandle<AdaptiveByteBuf>) handle;
+                enhancedHandle.unguardedRecycle(this);
+            } else {
+                handle.recycle(this);
+            }
         }
     }
 
