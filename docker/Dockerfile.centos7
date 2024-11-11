@@ -1,4 +1,4 @@
-FROM centos:7
+FROM --platform=linux/amd64 centos:7
 
 ENV SOURCE_DIR /root/source
 ENV LIBS_DIR /root/libs

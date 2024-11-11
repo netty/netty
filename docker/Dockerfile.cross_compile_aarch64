@@ -1,4 +1,4 @@
-FROM centos:7.6.1810
+FROM --platform=linux/amd64 centos:7.6.1810
 
 ARG GCC_VERSION=10.2-2020.11
 ENV MAVEN_VERSION 3.9.1
