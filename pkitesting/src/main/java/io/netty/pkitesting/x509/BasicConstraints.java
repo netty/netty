@@ -15,8 +15,10 @@
  */
 package io.netty.pkitesting.x509;
 
-import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.internal.UnstableApi;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
 
 @UnstableApi
 public final class BasicConstraints {
@@ -27,14 +29,18 @@ public final class BasicConstraints {
         if (length < 0) {
             throw new IllegalArgumentException("Length cannot be negative: " + length);
         }
-        try (DerWriter der = new DerWriter()) {
-            return der.writeSequence(w -> w.writeBoolean(true).writeInteger(length)).getBytes();
+        try {
+            return new org.bouncycastle.asn1.x509.BasicConstraints(length).getEncoded("DER");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
     public static byte[] isCa(boolean isCa) {
-        try (DerWriter der = new DerWriter()) {
-            return der.writeSequence(w -> w.writeBoolean(isCa)).getBytes();
+        try {
+            return new org.bouncycastle.asn1.x509.BasicConstraints(isCa).getEncoded("DER");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 }

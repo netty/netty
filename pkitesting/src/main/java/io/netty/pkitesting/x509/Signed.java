@@ -16,11 +16,18 @@
 package io.netty.pkitesting.x509;
 
 import io.netty.pkitesting.X509Bundle;
-import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.internal.UnstableApi;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.DERBitString;
+import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -50,13 +57,15 @@ public final class Signed {
         signature.initSign(privateKey);
         signature.update(toBeSigned);
         byte[] signatureBytes = signature.sign();
-        try (DerWriter der = new DerWriter()) {
-            der.writeSequence(writer -> {
-                writer.writeRawDER(toBeSigned);
-                AlgorithmIdentifier.writeAlgorithmId(algorithmIdentifier, writer);
-                writer.writeBitString(signatureBytes, 0);
-            });
-            return der.getBytes();
+        try {
+            return new DERSequence(new ASN1Encodable[]{
+                    ASN1Primitive.fromByteArray(toBeSigned),
+                    new AlgorithmIdentifier(new ASN1ObjectIdentifier(
+                            AlgorithmToOID.oidForAlgorithmName(algorithmIdentifier))),
+                    new DERBitString(signatureBytes)
+            }).getEncoded("DER");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 

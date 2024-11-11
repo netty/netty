@@ -15,20 +15,14 @@
  */
 package io.netty.pkitesting.x509;
 
-import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
-public final class AlgorithmIdentifier {
-    private AlgorithmIdentifier() {
+public final class AlgorithmToOID {
+    private AlgorithmToOID() {
     }
 
-    public static void writeAlgorithmId(String algorithmIdentifier, DerWriter writer) {
-        String oid = algorithmNameToOid(algorithmIdentifier);
-        writer.writeSequence(w -> w.writeObjectIdentifier(oid));
-    }
-
-    public static String algorithmNameToOid(String algorithmIdentifier) {
+    public static String oidForAlgorithmName(String algorithmIdentifier) {
         switch (algorithmIdentifier) {
             case "SHA256withECDSA":
                 return "1.2.840.10045.4.3.2";

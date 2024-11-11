@@ -16,16 +16,27 @@
 package io.netty.pkitesting.x509;
 
 import io.netty.pkitesting.X509Bundle;
-import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.internal.UnstableApi;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1Integer;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.TBSCertList;
+import org.bouncycastle.asn1.x509.Time;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
+import java.util.Date;
 import java.util.Map;
 
 @UnstableApi
-public final class CertificateList implements DerWriter.WritableSequence {
+public final class CertificateList {
     private final X509Bundle issuer;
     private final Instant thisUpdate;
     private final Instant nextUpdate;
@@ -40,29 +51,28 @@ public final class CertificateList implements DerWriter.WritableSequence {
     }
 
     public byte[] getEncoded() {
-        try (DerWriter der = new DerWriter()) {
-            der.writeSequence(this);
-            return der.getBytes();
-        }
-    }
-
-    @Override
-    public void writeSequence(DerWriter writer) {
+        ASN1EncodableVector vec = new ASN1EncodableVector();
         X509Certificate cert = issuer.getCertificate();
-        writer.writeInteger(1); // Version v2
-        AlgorithmIdentifier.writeAlgorithmId(cert.getSigAlgName(), writer); // signature
-        writer.writeRawDER(cert.getSubjectX500Principal().getEncoded()); // issuer
-        writer.writeGeneralizedTime(thisUpdate);
+        vec.add(new ASN1Integer(1)); // Version 2
+        vec.add(new AlgorithmIdentifier(new ASN1ObjectIdentifier(cert.getSigAlgOID())));
+        vec.add(X500Name.getInstance(cert.getSubjectX500Principal().getEncoded()));
+        vec.add(new Time(new Date(thisUpdate.toEpochMilli())));
         if (nextUpdate != null) {
-            writer.writeGeneralizedTime(nextUpdate);
+            vec.add(new Time(new Date(nextUpdate.toEpochMilli())));
         }
-        writer.writeSequence(outer -> {
-            for (Map.Entry<BigInteger, Instant> revokedCert : revokedCerts) {
-                outer.writeSequence(inner -> {
-                    inner.writeInteger(revokedCert.getKey());
-                    inner.writeGeneralizedTime(revokedCert.getValue());
-                });
-            }
-        });
+        ASN1EncodableVector revokedVec = new ASN1EncodableVector();
+        for (Map.Entry<BigInteger, Instant> revokedCert : revokedCerts) {
+            revokedVec.add(TBSCertList.CRLEntry.getInstance(new DERSequence(new ASN1Encodable[]{
+                    new ASN1Integer(revokedCert.getKey()),
+                    new Time(new Date(revokedCert.getValue().toEpochMilli()))
+            })));
+        }
+        vec.add(new DERSequence(revokedVec));
+        TBSCertList list = new TBSCertList(new DERSequence(vec));
+        try {
+            return list.getEncoded("DER");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 }

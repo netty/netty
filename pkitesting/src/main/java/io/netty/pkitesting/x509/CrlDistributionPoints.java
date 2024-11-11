@@ -15,9 +15,14 @@
  */
 package io.netty.pkitesting.x509;
 
-import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.internal.UnstableApi;
+import org.bouncycastle.asn1.x509.CRLDistPoint;
+import org.bouncycastle.asn1.x509.DistributionPointName;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Collection;
 
 @UnstableApi
@@ -29,10 +34,22 @@ public final class CrlDistributionPoints {
         if (points.isEmpty()) {
             throw new IllegalArgumentException("Points cannot be empty");
         }
-        try (DerWriter der = new DerWriter()) {
-            return der.writeSequence(w -> {
-                points.forEach(p -> p.writeTo(w));
-            }).getBytes();
+        org.bouncycastle.asn1.x509.DistributionPoint[] bcPoints =
+                new org.bouncycastle.asn1.x509.DistributionPoint[points.size()];
+        int i = 0;
+        for (DistributionPoint point : points) {
+            bcPoints[i] = new org.bouncycastle.asn1.x509.DistributionPoint(
+                    point.fullName == null ? null : new DistributionPointName(
+                            new GeneralNames(GeneralName.getInstance(point.fullName.getEncoded()))),
+                    null,
+                    point.issuer == null ? null : new GeneralNames(GeneralName.getInstance(point.issuer.getEncoded()))
+            );
+            i++;
+        }
+        try {
+            return new CRLDistPoint(bcPoints).getEncoded("DER");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 }

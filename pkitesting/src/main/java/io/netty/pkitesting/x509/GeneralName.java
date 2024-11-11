@@ -15,10 +15,16 @@
  */
 package io.netty.pkitesting.x509;
 
-import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.UnstableApi;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.DERTaggedObject;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import javax.security.auth.x500.X500Principal;
@@ -29,49 +35,50 @@ import javax.security.auth.x500.X500Principal;
  */
 @UnstableApi
 public final class GeneralName {
-    private static final int RFC822_NAME = 1;
-    private static final int DNS_NAME = 2;
-    private static final int URI_NAME = 6;
-    private static final int IP_ADDRESS = 7;
-    private static final int REGISTERED_ID = 8;
-
     private final byte[] der;
 
     private GeneralName(byte[] der) {
         this.der = der;
     }
 
-    public void writeTo(DerWriter writer) {
-        writer.writeRawDER(der);
+    public byte[] getEncoded() {
+        return der.clone();
     }
 
     public static GeneralName otherName(String oid, byte[] value) {
-        try (DerWriter der = new DerWriter()) {
-            der.writeSequence(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED, w -> {
-                w.writeObjectIdentifier(oid);
-                w.writeExplicit(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED,
-                        valueWriter -> valueWriter.writeRawDER(value));
-            });
-            return new GeneralName(der.getBytes());
+        try {
+            return new GeneralName(new org.bouncycastle.asn1.x509.GeneralName(
+                    org.bouncycastle.asn1.x509.GeneralName.otherName,
+                    new DERSequence(new ASN1Encodable[]{
+                            new ASN1ObjectIdentifier(oid),
+                            new DERTaggedObject(true, 0, ASN1Primitive.fromByteArray(value))
+                    })).getEncoded("DER"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
     public static GeneralName rfc822Name(String emailAddress) {
-        if (emailAddress.indexOf('@') == -1 || emailAddress.endsWith("@") || emailAddress.endsWith("@.")) {
-            throw new IllegalArgumentException("Invalid email address: " + emailAddress);
-        }
-        try (DerWriter der = new DerWriter()) {
-            der.writeIA5String(RFC822_NAME | DerWriter.TAG_CONTEXT, emailAddress);
-            return new GeneralName(der.getBytes());
+        try {
+            return new GeneralName(new org.bouncycastle.asn1.x509.GeneralName(
+                    org.bouncycastle.asn1.x509.GeneralName.rfc822Name,
+                    emailAddress)
+                    .getEncoded("DER"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
     public static GeneralName dnsName(String dnsName) {
         URI uri = URI.create("ip://" + dnsName);
         String host = uri.getHost();
-        try (DerWriter der = new DerWriter()) {
-            der.writeIA5String(DNS_NAME | DerWriter.TAG_CONTEXT, host);
-            return new GeneralName(der.getBytes());
+        try {
+            return new GeneralName(new org.bouncycastle.asn1.x509.GeneralName(
+                    org.bouncycastle.asn1.x509.GeneralName.dNSName,
+                    host)
+                    .getEncoded("DER"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -80,10 +87,11 @@ public final class GeneralName {
     }
 
     public static GeneralName directoryName(X500Principal name) {
-        try (DerWriter der = new DerWriter()) {
-            der.writeExplicit(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED | 4,
-                    w -> w.writeRawDER(name.getEncoded()));
-            return new GeneralName(der.getBytes());
+        try {
+            return new GeneralName(new DERTaggedObject(true, 4,
+                    ASN1Primitive.fromByteArray(name.getEncoded())).getEncoded("DER"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -92,9 +100,12 @@ public final class GeneralName {
     }
 
     public static GeneralName uriName(URI uri) {
-        try (DerWriter der = new DerWriter()) {
-            der.writeIA5String(URI_NAME | DerWriter.TAG_CONTEXT, uri.toASCIIString());
-            return new GeneralName(der.getBytes());
+        try {
+            return new GeneralName(new org.bouncycastle.asn1.x509.GeneralName(
+                    org.bouncycastle.asn1.x509.GeneralName.uniformResourceIdentifier,
+                    uri.toASCIIString()).getEncoded("DER"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -102,17 +113,22 @@ public final class GeneralName {
         if (!NetUtil.isValidIpV4Address(ipAddress) && !NetUtil.isValidIpV6Address(ipAddress)) {
             throw new IllegalArgumentException("Not a valid IP address: " + ipAddress);
         }
-        try (DerWriter der = new DerWriter()) {
-            der.writeOctetString(IP_ADDRESS | DerWriter.TAG_CONTEXT,
-                    NetUtil.createByteArrayFromIpAddressString(ipAddress));
-            return new GeneralName(der.getBytes());
+        try {
+            return new GeneralName(new org.bouncycastle.asn1.x509.GeneralName(
+                    org.bouncycastle.asn1.x509.GeneralName.iPAddress,
+                    ipAddress).getEncoded("DER"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
     public static GeneralName registeredId(String oid) {
-        try (DerWriter der = new DerWriter()) {
-            der.writeObjectIdentifier(REGISTERED_ID | DerWriter.TAG_CONTEXT, oid);
-            return new GeneralName(der.getBytes());
+        try {
+            return new GeneralName(new org.bouncycastle.asn1.x509.GeneralName(
+                    org.bouncycastle.asn1.x509.GeneralName.registeredID,
+                    oid).getEncoded("DER"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 }

@@ -15,7 +15,6 @@
  */
 package io.netty.pkitesting;
 
-import io.netty.pkitesting.der.DerWriter;
 import io.netty.pkitesting.x509.BasicConstraints;
 import io.netty.pkitesting.x509.CrlDistributionPoints;
 import io.netty.pkitesting.x509.DistributionPoint;
@@ -24,7 +23,14 @@ import io.netty.pkitesting.x509.GeneralName;
 import io.netty.pkitesting.x509.GeneralNames;
 import io.netty.pkitesting.x509.Signed;
 import io.netty.pkitesting.x509.TBSCertBuilder;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.DERBitString;
+import org.bouncycastle.asn1.DERIA5String;
+import org.bouncycastle.asn1.DERUTF8String;
+import org.bouncycastle.asn1.x509.KeyPurposeId;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.URI;
@@ -441,8 +447,10 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addExtensionUtf8String(String identifierOID, boolean critical, String value) {
-        try (DerWriter der = new DerWriter()) {
-            return addExtension(identifierOID, critical, der.writeUTF8String(value).getBytes());
+        try {
+            return addExtension(identifierOID, critical, new DERUTF8String(value).getEncoded("DER"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -457,8 +465,10 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addExtensionAsciiString(String identifierOID, boolean critical, String value) {
-        try (DerWriter der = new DerWriter()) {
-            return addExtension(identifierOID, critical, der.writeIA5String(value).getBytes());
+        try {
+            return addExtension(identifierOID, critical, new DERIA5String(value).getEncoded("DER"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -486,9 +496,25 @@ public final class CertificateBuilder {
         for (KeyUsage usage : keyUsages) {
             bits[usage.bitId] = true;
         }
-        try (DerWriter der = new DerWriter()) {
-            der.writeBitString(bits);
-            keyUsage = new Extension(OID_X509_KEY_USAGE, critical, der.getBytes());
+        int padding = 8 - bits.length % 8;
+        int lenBytes = bits.length / 8 + 1;
+        if (padding == 8) {
+            padding = 0;
+            lenBytes--;
+        }
+        byte[] bytes = new byte[lenBytes];
+        for (int i = 0; i < bits.length; i++) {
+            if (bits[i]) {
+                int byteIndex = i / 8;
+                int bitIndex = i % 8;
+                bytes[byteIndex] |= (byte) (0x80 >>> bitIndex);
+            }
+        }
+
+        try {
+            keyUsage = new Extension(OID_X509_KEY_USAGE, critical, new DERBitString(bytes, padding).getEncoded("DER"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
         return this;
     }
@@ -714,7 +740,12 @@ public final class CertificateBuilder {
         }
 
         if (!extendedKeyUsage.isEmpty()) {
-            byte[] der = io.netty.pkitesting.x509.ExtendedKeyUsage.extendedKeyUsage(extendedKeyUsage);
+            KeyPurposeId[] usages = new KeyPurposeId[extendedKeyUsage.size()];
+            String[] usagesStrings = extendedKeyUsage.toArray(String[]::new);
+            for (int i = 0; i < usagesStrings.length; i++) {
+                usages[i] = KeyPurposeId.getInstance(new ASN1ObjectIdentifier(usagesStrings[i]));
+            }
+            byte[] der = new org.bouncycastle.asn1.x509.ExtendedKeyUsage(usages).getEncoded("DER");
             builder.addExtension(new Extension(OID_X509_EXTENDED_KEY_USAGE, false, der));
         }
 

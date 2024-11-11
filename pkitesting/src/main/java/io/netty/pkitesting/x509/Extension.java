@@ -15,11 +15,10 @@
  */
 package io.netty.pkitesting.x509;
 
-import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
-public final class Extension implements DerWriter.WritableSequence {
+public final class Extension {
     private final String extnId; // An OBJECT IDENTIFIER
     private final boolean critical;
     private final byte[] extnValue; // Contents of the value OCTET STRING
@@ -27,18 +26,7 @@ public final class Extension implements DerWriter.WritableSequence {
     public Extension(String extnId, boolean critical, byte[] extnValue) {
         this.extnId = extnId;
         this.critical = critical;
-        this.extnValue = extnValue;
-    }
-
-    public void encode(DerWriter writer) {
-        writer.writeSequence(this);
-    }
-
-    @Override
-    public void writeSequence(DerWriter writer) {
-        writer.writeObjectIdentifier(extnId);
-        writer.writeBoolean(critical);
-        writer.writeOctetString(extnValue);
+        this.extnValue = extnValue.clone();
     }
 
     public String getExtnId() {
@@ -50,6 +38,6 @@ public final class Extension implements DerWriter.WritableSequence {
     }
 
     public byte[] getExtnValue() {
-        return extnValue;
+        return extnValue.clone();
     }
 }

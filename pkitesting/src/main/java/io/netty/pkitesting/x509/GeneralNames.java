@@ -15,45 +15,30 @@
  */
 package io.netty.pkitesting.x509;
 
-import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.internal.UnstableApi;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Objects;
 
 @UnstableApi
-public final class GeneralNames implements DerWriter.WritableSequence {
-    private final Collection<GeneralName> names;
-
-    private GeneralNames(Collection<GeneralName> names) {
-        if (names.isEmpty()) {
-            throw new IllegalArgumentException("Names cannot be empty");
-        }
-        this.names = names;
-    }
-
-    public GeneralNames(GeneralName name) {
-        names = Collections.singletonList(Objects.requireNonNull(name, "name"));
-    }
-
-    public void writeTo(DerWriter writer) {
-        writer.writeSequence(this);
-    }
-
-    public void writeTo(int tag, DerWriter writer) {
-        writer.writeSequence(tag, this);
+public final class GeneralNames {
+    private GeneralNames() {
     }
 
     public static byte[] generalNames(Collection<GeneralName> names) {
-        try (DerWriter der = new DerWriter()) {
-            new GeneralNames(names).writeTo(der);
-            return der.getBytes();
-        }
-    }
 
-    @Override
-    public void writeSequence(DerWriter writer) {
-        names.forEach(n -> n.writeTo(writer));
+        org.bouncycastle.asn1.x509.GeneralName[] namesArray = new org.bouncycastle.asn1.x509.GeneralName[names.size()];
+        int i = 0;
+        for (GeneralName name : names) {
+            namesArray[i] = org.bouncycastle.asn1.x509.GeneralName.getInstance(name.getEncoded());
+            i++;
+        }
+        org.bouncycastle.asn1.x509.GeneralNames generalNames = new org.bouncycastle.asn1.x509.GeneralNames(namesArray);
+        try {
+            return generalNames.getEncoded("DER");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 }

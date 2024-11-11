@@ -15,34 +15,17 @@
  */
 package io.netty.pkitesting.x509;
 
-import io.netty.pkitesting.der.DerWriter;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.Objects;
 
 @UnstableApi
-public final class DistributionPoint implements DerWriter.WritableSequence {
+public final class DistributionPoint {
     final GeneralName fullName;
     final GeneralName issuer;
 
     public DistributionPoint(GeneralName fullName, GeneralName issuer) {
         this.fullName = Objects.requireNonNull(fullName, "fullName");
         this.issuer = issuer;
-    }
-
-    public void writeTo(DerWriter writer) {
-        writer.writeSequence(this);
-    }
-
-    @Override
-    public void writeSequence(DerWriter writer) {
-        GeneralNames fullNames = new GeneralNames(fullName);
-        writer.writeExplicit(DerWriter.TAG_CONTEXT | DerWriter.TAG_CONSTRUCTED,
-                w -> fullNames.writeTo(DerWriter.TAG_CONSTRUCTED | DerWriter.TAG_CONTEXT, w));
-        if (issuer != null) {
-            GeneralNames issuerNames = new GeneralNames(issuer);
-            writer.writeExplicit(DerWriter.TAG_CONTEXT | 2,
-                    w -> issuerNames.writeTo(w));
-        }
     }
 }

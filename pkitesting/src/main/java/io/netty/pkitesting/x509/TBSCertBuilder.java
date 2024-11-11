@@ -20,6 +20,7 @@ import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.asn1.x509.Time;
@@ -71,8 +72,8 @@ public final class TBSCertBuilder {
         generator.setIssuer(X500Name.getInstance(issuer.getEncoded()));
         generator.setSubject(X500Name.getInstance(subject.getEncoded()));
         generator.setSerialNumber(new ASN1Integer(serial));
-        generator.setSignature(new org.bouncycastle.asn1.x509.AlgorithmIdentifier(new ASN1ObjectIdentifier(
-                AlgorithmIdentifier.algorithmNameToOid(signatureAlgorithmIdentifier))));
+        generator.setSignature(new AlgorithmIdentifier(new ASN1ObjectIdentifier(
+                AlgorithmToOID.oidForAlgorithmName(signatureAlgorithmIdentifier))));
         generator.setStartDate(new Time(new Date(notBefore.toEpochMilli())));
         generator.setEndDate(new Time(new Date(notAfter.toEpochMilli())));
         generator.setSubjectPublicKeyInfo(SubjectPublicKeyInfo.getInstance(pubKey.getEncoded()));
