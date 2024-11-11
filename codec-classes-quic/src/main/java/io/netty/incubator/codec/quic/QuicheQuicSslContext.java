@@ -18,6 +18,7 @@ package io.netty.incubator.codec.quic;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolNegotiator;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslContextOption;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.Mapping;
@@ -53,6 +54,7 @@ import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -153,7 +155,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
                          @Nullable KeyManagerFactory keyManagerFactory, String password,
                          @Nullable Mapping<? super String, ? extends QuicSslContext> mapping,
                          @Nullable Boolean earlyData, @Nullable BoringSSLKeylog keylog,
-                         String... applicationProtocols) {
+                         String[] applicationProtocols, Map.Entry<SslContextOption<?>, Object>... ctxOptions) {
         Quic.ensureAvailability();
         this.server = server;
         this.clientAuth = server ? checkNotNull(clientAuth, "clientAuth") : ClientAuth.NONE;
@@ -179,6 +181,24 @@ final class QuicheQuicSslContext extends QuicSslContext {
         } else {
             keyManager = chooseKeyManager(keyManagerFactory);
         }
+        String[] groups = NAMED_GROUPS;
+        if (ctxOptions != null) {
+            for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
+                SslContextOption<?> option = ctxOpt.getKey();
+
+                if (option == BoringSSLContextOption.GROUPS) {
+                    String[] groupsArray = (String[]) ctxOpt.getValue();
+                    Set<String> groupsSet = new LinkedHashSet<String>(groupsArray.length);
+                    for (String group : groupsArray) {
+                        groupsSet.add(GroupsConverter.toBoringSSL(group));
+                    }
+                    groups = groupsSet.toArray(EmptyArrays.EMPTY_STRINGS);
+                } else {
+                    LOGGER.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
+                            + ": " + ctxOpt.getKey());
+                }
+            }
+        }
         final BoringSSLPrivateKeyMethod privateKeyMethod;
         if (keyManagerFactory instanceof  BoringSSLKeylessManagerFactory) {
             privateKeyMethod = new BoringSSLAsyncPrivateKeyMethodAdapter(engineMap,
@@ -199,8 +219,8 @@ final class QuicheQuicSslContext extends QuicSslContext {
                 BoringSSL.subjectNames(trustManager.getAcceptedIssuers())));
         boolean success = false;
         try {
-            if (NAMED_GROUPS.length > 0 && BoringSSL.SSLContext_set1_groups_list(nativeSslContext.ctx, NAMED_GROUPS) == 0) {
-                String msg = "failed to set curves / groups list: " + Arrays.toString(NAMED_GROUPS);
+            if (groups.length > 0 && BoringSSL.SSLContext_set1_groups_list(nativeSslContext.ctx, groups) == 0) {
+                String msg = "failed to set curves / groups list: " + Arrays.toString(groups);
                 String lastError = BoringSSL.ERR_last_error();
                 if (lastError != null) {
                     // We have some more details about why the operations failed, include these into the message.

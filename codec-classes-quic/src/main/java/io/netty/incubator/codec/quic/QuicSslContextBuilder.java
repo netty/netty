@@ -17,6 +17,7 @@
 package io.netty.incubator.codec.quic;
 
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslContextOption;
 import io.netty.handler.ssl.util.KeyManagerFactoryWrapper;
 import io.netty.handler.ssl.util.TrustManagerFactoryWrapper;
 import io.netty.util.Mapping;
@@ -34,6 +35,10 @@ import java.security.KeyStore;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -155,7 +160,10 @@ public final class QuicSslContextBuilder {
         return forServer(SNI_KEYMANAGER, null).sni(mapping).build();
     }
 
+    private static final Map.Entry[] EMPTY_ENTRIES = new Map.Entry[0];
+
     private final boolean forServer;
+    private final Map<SslContextOption<?>, Object> options = new HashMap<>();
     private TrustManagerFactory trustManagerFactory;
     private String keyPassword;
     private KeyManagerFactory keyManagerFactory;
@@ -173,6 +181,18 @@ public final class QuicSslContextBuilder {
 
     private QuicSslContextBuilder sni(Mapping<? super String, ? extends QuicSslContext> mapping) {
         this.mapping = checkNotNull(mapping, "mapping");
+        return this;
+    }
+
+    /**
+     * Configure a {@link SslContextOption}.
+     */
+    public <T> QuicSslContextBuilder option(SslContextOption<T> option, T value) {
+        if (value == null) {
+            options.remove(option);
+        } else {
+            options.put(option, value);
+        }
         return this;
     }
 
@@ -373,13 +393,23 @@ public final class QuicSslContextBuilder {
     public QuicSslContext build() {
         if (forServer) {
             return new QuicheQuicSslContext(true, sessionTimeout, sessionCacheSize, clientAuth, trustManagerFactory,
-                    keyManagerFactory, keyPassword, mapping, earlyData, keylog, applicationProtocols);
+                    keyManagerFactory, keyPassword, mapping, earlyData, keylog,
+                    applicationProtocols, toArray(options.entrySet(), EMPTY_ENTRIES));
         } else {
             return new QuicheQuicSslContext(false, sessionTimeout, sessionCacheSize, clientAuth, trustManagerFactory,
                     keyManagerFactory, keyPassword, mapping, earlyData, keylog,
-                    applicationProtocols);
+                    applicationProtocols, toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }
 
-
+    private static <T> T[] toArray(Iterable<? extends T> iterable, T[] prototype) {
+        if (iterable == null) {
+            return null;
+        }
+        final List<T> list = new ArrayList<>();
+        for (T element : iterable) {
+            list.add(element);
+        }
+        return list.toArray(prototype);
+    }
 }
