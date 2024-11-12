@@ -35,7 +35,7 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <artifactId>netty-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
