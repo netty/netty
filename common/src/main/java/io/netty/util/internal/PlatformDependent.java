@@ -239,9 +239,8 @@ public final class PlatformDependent {
                         if (file.exists()) {
                             BufferedReader reader = null;
                             try {
-                                reader = new BufferedReader(
-                                        new InputStreamReader(
-                                                new FileInputStream(file), CharsetUtil.UTF_8));
+                                reader = new BufferedReader(new InputStreamReader(
+                                        new BoundedInputStream(new FileInputStream(file)), CharsetUtil.UTF_8));
 
                                 String line;
                                 while ((line = reader.readLine()) != null) {
