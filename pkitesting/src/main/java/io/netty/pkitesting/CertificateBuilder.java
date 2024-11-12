@@ -35,6 +35,7 @@ import org.bouncycastle.asn1.x509.KeyPurposeId;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.asn1.x509.Time;
 import org.bouncycastle.asn1.x509.V3TBSCertificateGenerator;
+import org.bouncycastle.jcajce.spec.EdDSAParameterSpec;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -42,10 +43,9 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.InvalidAlgorithmParameterException;
+import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
@@ -736,7 +736,14 @@ public final class CertificateBuilder {
         if (key instanceof DSAPublicKey) {
             throw new IllegalArgumentException("DSA keys are not supported because they are obsolete.");
         }
-        if ("EdDSA".equals(key.getAlgorithm())) {
+        String keyAlgorithm = key.getAlgorithm();
+        if ("Ed25519".equals(keyAlgorithm)) {
+            return "Ed25519";
+        }
+        if ("Ed448".equals(keyAlgorithm)) {
+            return "Ed448";
+        }
+        if ("EdDSA".equals(keyAlgorithm)) {
             byte[] encoded = key.getEncoded();
             if (encoded.length <= 44) {
                 return "Ed25519";
@@ -748,7 +755,7 @@ public final class CertificateBuilder {
         throw new IllegalArgumentException("Don't know what signature algorithm is best for " + key);
     }
 
-    private KeyPair generateKeyPair() throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+    private KeyPair generateKeyPair() throws GeneralSecurityException {
         return algorithm.generateKeyPair(getSecureRandom());
     }
 
@@ -762,7 +769,7 @@ public final class CertificateBuilder {
         generator.setSubject(X500Name.getInstance(subject.getEncoded()));
         generator.setSerialNumber(new ASN1Integer(serial));
         generator.setSignature(new AlgorithmIdentifier(new ASN1ObjectIdentifier(
-                AlgorithmToOID.oidForAlgorithmName(signAlg))));
+                Algorithms.oidForAlgorithmName(signAlg))));
         generator.setStartDate(new Time(new Date(notBefore.toEpochMilli())));
         generator.setEndDate(new Time(new Date(notAfter.toEpochMilli())));
         generator.setSubjectPublicKeyInfo(SubjectPublicKeyInfo.getInstance(pubKey.getEncoded()));
@@ -920,28 +927,25 @@ public final class CertificateBuilder {
                 Class<?> cls = Class.forName("java.security.spec.NamedParameterSpec");
                 return (AlgorithmParameterSpec) cls.getConstructor(String.class).newInstance(name);
             } catch (Exception e) {
+                if ("Ed25519".equals(name)) {
+                    return new EdDSAParameterSpec(EdDSAParameterSpec.Ed25519);
+                }
+                if ("Ed448".equals(name)) {
+                    return new EdDSAParameterSpec(EdDSAParameterSpec.Ed448);
+                }
                 return UNSUPPORTED;
             }
         }
 
         public KeyPair generateKeyPair(SecureRandom secureRandom)
-                throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+                throws GeneralSecurityException {
             requireNonNull(secureRandom, "secureRandom");
 
             if (parameterSpec == UNSUPPORTED) {
                 throw new UnsupportedOperationException("This algorithm is not supported: " + this);
             }
-            try {
-                KeyPairGenerator keyGen = KeyPairGenerator.getInstance(keyType);
-                keyGen.initialize(parameterSpec, secureRandom);
-                return keyGen.generateKeyPair();
-            } catch (NoSuchAlgorithmException e) {
-                if (this == ed25519 || this == ed448) {
-                    throw new NoSuchAlgorithmException(
-                            "The " + this + " algorithm is only supported on Java 15 or newer.", e);
-                }
-                throw e;
-            }
+            KeyPairGenerator keyGen = Algorithms.keyPairGenerator(keyType, parameterSpec, secureRandom);
+            return keyGen.generateKeyPair();
         }
     }
 

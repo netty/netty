@@ -19,8 +19,6 @@ import io.netty.pkitesting.CertificateBuilder.Algorithm;
 import io.netty.pkitesting.CertificateBuilder.KeyUsage;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -66,9 +64,6 @@ class CertificateBuilderTest {
     @ParameterizedTest
     @EnumSource
     void createCertOfEveryKeyType(Algorithm algorithm) throws Exception {
-        // Ed25519 and Ed448 are only supported on Java 15 and newer.
-        assumeTrue(algorithm != Algorithm.ed25519 && algorithm != Algorithm.ed448 ||
-                PlatformDependent.javaVersion() >= 15);
         // Assume that RSA 4096 and RSA 8192 work if the other RSA bit-widths work.
         // These big keys just take too long to test with.
         assumeTrue(algorithm != Algorithm.rsa4096 && algorithm != Algorithm.rsa8192);
@@ -148,7 +143,6 @@ class CertificateBuilderTest {
         assertTrue(signature.verify(leaf.getCertificate().getSignature()));
     }
 
-    @EnabledForJreRange(min = JRE.JAVA_15)
     @Test
     void createCertIssuedByDifferentAlgorithmEd25519vEcp256() throws Exception {
         X509Bundle root = BASE.copy()
@@ -165,13 +159,12 @@ class CertificateBuilderTest {
         assertThat(leaf.getCertificate().getIssuerX500Principal()).isEqualTo(
                 new X500Principal(SUBJECT));
 
-        Signature signature = Signature.getInstance(leaf.getCertificate().getSigAlgName());
+        Signature signature = Algorithms.signature(leaf.getCertificate().getSigAlgName());
         signature.initVerify(root.getCertificate());
         signature.update(leaf.getCertificate().getTBSCertificate());
         assertTrue(signature.verify(leaf.getCertificate().getSignature()));
     }
 
-    @EnabledForJreRange(min = JRE.JAVA_15)
     @Test
     void createCertIssuedByDifferentAlgorithmEd448vEcp256() throws Exception {
         X509Bundle root = BASE.copy()
@@ -188,7 +181,7 @@ class CertificateBuilderTest {
         assertThat(leaf.getCertificate().getIssuerX500Principal()).isEqualTo(
                 new X500Principal(SUBJECT));
 
-        Signature signature = Signature.getInstance(leaf.getCertificate().getSigAlgName());
+        Signature signature = Algorithms.signature(leaf.getCertificate().getSigAlgName());
         signature.initVerify(root.getCertificate());
         signature.update(leaf.getCertificate().getTBSCertificate());
         assertTrue(signature.verify(leaf.getCertificate().getSignature()));

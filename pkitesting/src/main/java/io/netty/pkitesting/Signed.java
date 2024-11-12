@@ -52,7 +52,7 @@ final class Signed {
     }
 
     byte[] getEncoded() throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        Signature signature = Signature.getInstance(algorithmIdentifier);
+        Signature signature = Algorithms.signature(algorithmIdentifier);
         signature.initSign(privateKey);
         signature.update(toBeSigned);
         byte[] signatureBytes = signature.sign();
@@ -60,7 +60,7 @@ final class Signed {
             return new DERSequence(new ASN1Encodable[]{
                     ASN1Primitive.fromByteArray(toBeSigned),
                     new AlgorithmIdentifier(new ASN1ObjectIdentifier(
-                            AlgorithmToOID.oidForAlgorithmName(algorithmIdentifier))),
+                            Algorithms.oidForAlgorithmName(algorithmIdentifier))),
                     new DERBitString(signatureBytes)
             }).getEncoded("DER");
         } catch (IOException e) {

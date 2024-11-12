@@ -15,6 +15,8 @@
  */
 package io.netty.pkitesting;
 
+import io.netty.util.internal.EmptyArrays;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -43,8 +45,6 @@ import javax.net.ssl.TrustManagerFactory;
  * The bundle offers ways of accessing these, and converting them into various representations.
  */
 public final class X509Bundle {
-    private static final char[] EMPTY_CHARS = new char[0];
-
     private final X509Certificate[] certPath;
     private final X509Certificate root;
     private final KeyPair keyPair;
@@ -246,7 +246,7 @@ public final class X509Bundle {
     public TrustManagerFactory toTrustManagerFactory() {
         try {
             TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmf.init(toKeyStore(EMPTY_CHARS));
+            tmf.init(toKeyStore(EmptyArrays.EMPTY_CHARS));
             return tmf;
         } catch (NoSuchAlgorithmException e) {
             throw new AssertionError("Default TrustManagerFactory algorithm was not available.", e);
@@ -343,7 +343,7 @@ public final class X509Bundle {
         } catch (NoSuchAlgorithmException e) {
             throw new AssertionError("Default KeyManagerFactory algorithm was not available.", e);
         }
-        kmf.init(toKeyStore(EMPTY_CHARS), EMPTY_CHARS);
+        kmf.init(toKeyStore(EmptyArrays.EMPTY_CHARS), EmptyArrays.EMPTY_CHARS);
         return kmf;
     }
 }
