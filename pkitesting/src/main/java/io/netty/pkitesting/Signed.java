@@ -13,9 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.pkitesting.x509;
+package io.netty.pkitesting;
 
-import io.netty.pkitesting.X509Bundle;
 import io.netty.util.internal.UnstableApi;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -37,22 +36,22 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 @UnstableApi
-public final class Signed {
+final class Signed {
     private final byte[] toBeSigned;
     private final String algorithmIdentifier;
     private final PrivateKey privateKey;
 
-    public Signed(Supplier<byte[]> toBeSigned, X509Bundle signer) {
+    Signed(Supplier<byte[]> toBeSigned, X509Bundle signer) {
         this(toBeSigned, signer.getCertificate().getSigAlgName(), signer.getKeyPair().getPrivate());
     }
 
-    public Signed(Supplier<byte[]> toBeSigned, String algorithmIdentifier, PrivateKey privateKey) {
+    Signed(Supplier<byte[]> toBeSigned, String algorithmIdentifier, PrivateKey privateKey) {
         this.toBeSigned = toBeSigned.get();
         this.algorithmIdentifier = Objects.requireNonNull(algorithmIdentifier, "algorithmIdentifier");
         this.privateKey = privateKey;
     }
 
-    public byte[] getEncoded() throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    byte[] getEncoded() throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         Signature signature = Signature.getInstance(algorithmIdentifier);
         signature.initSign(privateKey);
         signature.update(toBeSigned);
@@ -69,7 +68,7 @@ public final class Signed {
         }
     }
 
-    public InputStream toInputStream() throws NoSuchAlgorithmException, SignatureException, InvalidKeyException {
+    InputStream toInputStream() throws NoSuchAlgorithmException, SignatureException, InvalidKeyException {
         return new ByteArrayInputStream(getEncoded());
     }
 }

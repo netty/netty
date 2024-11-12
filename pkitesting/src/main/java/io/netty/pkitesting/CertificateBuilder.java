@@ -15,19 +15,25 @@
  */
 package io.netty.pkitesting;
 
-import io.netty.pkitesting.x509.BasicConstraints;
-import io.netty.pkitesting.x509.CrlDistributionPoints;
-import io.netty.pkitesting.x509.DistributionPoint;
-import io.netty.pkitesting.x509.Extension;
-import io.netty.pkitesting.x509.GeneralName;
-import io.netty.pkitesting.x509.GeneralNames;
-import io.netty.pkitesting.x509.Signed;
-import io.netty.pkitesting.x509.TBSCertBuilder;
+import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.DERBitString;
 import org.bouncycastle.asn1.DERIA5String;
 import org.bouncycastle.asn1.DERUTF8String;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.CRLDistPoint;
+import org.bouncycastle.asn1.x509.DistributionPoint;
+import org.bouncycastle.asn1.x509.DistributionPointName;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.ExtensionsGenerator;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.asn1.x509.KeyPurposeId;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.asn1.x509.Time;
+import org.bouncycastle.asn1.x509.V3TBSCertificateGenerator;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -53,6 +59,7 @@ import java.security.spec.RSAKeyGenParameterSpec;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -75,19 +82,7 @@ import static java.util.Objects.requireNonNull;
  */
 public final class CertificateBuilder {
 
-    static final String OID_X509_SUBJECT_KEY_IDENTIFIER = "2.5.29.14";
-    static final String OID_X509_KEY_USAGE = "2.5.29.15";
-    static final String OID_X509_PRIVATE_KEY_USAGE = "2.5.29.16";
-    static final String OID_X509_SUBJECT_ALTERNATIVE_NAME = "2.5.29.17";
-    static final String OID_X509_ISSUER_ALTERNATIVE_NAME = "2.5.29.18";
-    static final String OID_X509_BASIC_CONSTRAINTS = "2.5.29.19";
     static final String OID_X509_NAME_CONSTRAINTS = "2.5.29.30";
-    static final String OID_X509_POLICY_MAPPING = "2.5.29.33";
-    static final String OID_X509_AUTHORITY_KEY_IDENTIFIER = "2.5.29.35";
-    static final String OID_X509_POLICY_CONSTRAINTS = "2.5.29.36";
-    static final String OID_X509_EXTENDED_KEY_USAGE = "2.5.29.37";
-    static final String OID_X509_CRL_DISTRIBUTION_POINT = "2.5.6.19";
-    static final String OID_X509_CRL_DISTRIBUTION_POINTS = "2.5.29.31";
     static final String OID_PKIX_KP = "1.3.6.1.5.5.7.3";
     static final String OID_PKIX_KP_SERVER_AUTH = OID_PKIX_KP + ".1";
     static final String OID_PKIX_KP_CLIENT_AUTH = OID_PKIX_KP + ".2";
@@ -214,7 +209,7 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addSanOtherName(String typeOid, byte[] encodedValue) {
-        subjectAlternativeNames.add(GeneralName.otherName(typeOid, encodedValue));
+        subjectAlternativeNames.add(GeneralNameUtils.otherName(typeOid, encodedValue));
         return this;
     }
 
@@ -225,7 +220,7 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addSanRfc822Name(String name) {
-        subjectAlternativeNames.add(GeneralName.rfc822Name(name));
+        subjectAlternativeNames.add(GeneralNameUtils.rfc822Name(name));
         return this;
     }
 
@@ -238,7 +233,7 @@ public final class CertificateBuilder {
         if (dns.trim().isEmpty()) {
             throw new IllegalArgumentException("Blank DNS SANs are forbidden by RFC 5280, Section 4.2.1.6.");
         }
-        subjectAlternativeNames.add(GeneralName.dnsName(dns));
+        subjectAlternativeNames.add(GeneralNameUtils.dnsName(dns));
         return this;
     }
 
@@ -251,7 +246,7 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addSanDirectoryName(String dirName) {
-        subjectAlternativeNames.add(GeneralName.directoryName(dirName));
+        subjectAlternativeNames.add(GeneralNameUtils.directoryName(dirName));
         return this;
     }
 
@@ -263,7 +258,7 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addSanUriName(String uri) throws URISyntaxException {
-        subjectAlternativeNames.add(GeneralName.uriName(uri));
+        subjectAlternativeNames.add(GeneralNameUtils.uriName(uri));
         return this;
     }
 
@@ -273,7 +268,7 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addSanUriName(URI uri) {
-        subjectAlternativeNames.add(GeneralName.uriName(uri));
+        subjectAlternativeNames.add(GeneralNameUtils.uriName(uri));
         return this;
     }
 
@@ -284,7 +279,7 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addSanIpAddress(String ipAddress) {
-        subjectAlternativeNames.add(GeneralName.ipAddress(ipAddress));
+        subjectAlternativeNames.add(GeneralNameUtils.ipAddress(ipAddress));
         return this;
     }
 
@@ -295,7 +290,7 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addSanIpAddress(InetAddress ipAddress) {
-        subjectAlternativeNames.add(GeneralName.ipAddress(ipAddress.getHostAddress()));
+        subjectAlternativeNames.add(GeneralNameUtils.ipAddress(ipAddress.getHostAddress()));
         return this;
     }
 
@@ -306,7 +301,7 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addSanRegisteredId(String oid) {
-        subjectAlternativeNames.add(GeneralName.registeredId(oid));
+        subjectAlternativeNames.add(GeneralNameUtils.registeredId(oid));
         return this;
     }
 
@@ -316,8 +311,11 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addCrlDistributionPoint(URI uri) {
-        GeneralName fullName = GeneralName.uriName(uri);
-        crlDistributionPoints.add(new DistributionPoint(fullName, null));
+        GeneralName fullName = GeneralNameUtils.uriName(uri);
+        crlDistributionPoints.add(new DistributionPoint(
+                new DistributionPointName(new GeneralNames(fullName)),
+                null,
+                null));
         return this;
     }
 
@@ -331,9 +329,12 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder addCrlDistributionPoint(URI uri, X500Principal issuer) {
-        GeneralName fullName = GeneralName.uriName(uri);
-        GeneralName issuerName = GeneralName.directoryName(issuer);
-        crlDistributionPoints.add(new DistributionPoint(fullName, issuerName));
+        GeneralName fullName = GeneralNameUtils.uriName(uri);
+        GeneralName issuerName = GeneralNameUtils.directoryName(issuer);
+        crlDistributionPoints.add(new DistributionPoint(
+                new DistributionPointName(new GeneralNames(fullName)),
+                null,
+                new GeneralNames(issuerName)));
         return this;
     }
 
@@ -414,7 +415,10 @@ public final class CertificateBuilder {
         requireNonNull(identifierOid, "identifierOid");
         requireNonNull(value, "value");
         modifierCallbacks.add(builder -> {
-            builder.addExtension(new Extension(identifierOid, critical, value));
+            builder.addExtension(new Extension(
+                    new ASN1ObjectIdentifier(identifierOid),
+                    critical,
+                    value));
         });
         return this;
     }
@@ -431,7 +435,10 @@ public final class CertificateBuilder {
         requireNonNull(identifierOID, "identifierOID");
         requireNonNull(contents, "contents");
         modifierCallbacks.add(builder -> {
-            builder.addExtension(new Extension(identifierOID, critical, contents));
+            builder.addExtension(new Extension(
+                    new ASN1ObjectIdentifier(identifierOID),
+                    critical,
+                    contents));
         });
         return this;
     }
@@ -512,7 +519,10 @@ public final class CertificateBuilder {
         }
 
         try {
-            keyUsage = new Extension(OID_X509_KEY_USAGE, critical, new DERBitString(bytes, padding).getEncoded("DER"));
+            keyUsage = new Extension(
+                    Extension.keyUsage,
+                    critical,
+                    new DERBitString(bytes, padding).getEncoded("DER"));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -616,11 +626,11 @@ public final class CertificateBuilder {
         }
         KeyPair keyPair = generateKeyPair();
 
-        TBSCertBuilder builder = createCertBuilder(subject, subject, keyPair, algorithm.signatureType);
+        V3TBSCertificateGenerator generator = createCertBuilder(subject, subject, keyPair, algorithm.signatureType);
 
-        addExtensions(builder);
+        addExtensions(generator);
 
-        Signed signed = new Signed(() -> builder.getEncoded(), algorithm.signatureType, keyPair.getPrivate());
+        Signed signed = new Signed(() -> tbsCertToBytes(generator), algorithm.signatureType, keyPair.getPrivate());
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
         X509Certificate cert = (X509Certificate) factory.generateCertificate(signed.toInputStream());
         return X509Bundle.fromRootCertificateAuthority(cert, keyPair);
@@ -652,16 +662,16 @@ public final class CertificateBuilder {
         }
 
         X500Principal issuerPrincipal = issuerBundle.getCertificate().getSubjectX500Principal();
-        TBSCertBuilder builder = createCertBuilder(issuerPrincipal, subject, keyPair, signAlg);
+        V3TBSCertificateGenerator generator = createCertBuilder(issuerPrincipal, subject, keyPair, signAlg);
 
-        addExtensions(builder);
+        addExtensions(generator);
 
         PrivateKey issuerPrivateKey = issuerBundle.getKeyPair().getPrivate();
         if (issuerPrivateKey == null) {
             throw new IllegalArgumentException(
                     "Cannot sign certificate with issuer bundle that does not have a private key.");
         }
-        Signed signed = new Signed(() -> builder.getEncoded(), signAlg, issuerPrivateKey);
+        Signed signed = new Signed(() -> tbsCertToBytes(generator), signAlg, issuerPrivateKey);
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
         X509Certificate cert = (X509Certificate) factory.generateCertificate(signed.toInputStream());
         X509Certificate[] issuerPath = issuerBundle.getCertificatePath();
@@ -710,11 +720,30 @@ public final class CertificateBuilder {
         return algorithm.generateKeyPair(getSecureRandom());
     }
 
-    private TBSCertBuilder createCertBuilder(
+    private V3TBSCertificateGenerator createCertBuilder(
             X500Principal issuer, X500Principal subject, KeyPair keyPair, String signAlg) {
         BigInteger serial = this.serial != null ? this.serial : new BigInteger(159, getSecureRandom());
         PublicKey pubKey = keyPair.getPublic();
-        return new TBSCertBuilder(issuer, subject, serial, notBefore, notAfter, pubKey, signAlg);
+
+        V3TBSCertificateGenerator generator = new V3TBSCertificateGenerator();
+        generator.setIssuer(X500Name.getInstance(issuer.getEncoded()));
+        generator.setSubject(X500Name.getInstance(subject.getEncoded()));
+        generator.setSerialNumber(new ASN1Integer(serial));
+        generator.setSignature(new AlgorithmIdentifier(new ASN1ObjectIdentifier(
+                AlgorithmToOID.oidForAlgorithmName(signAlg))));
+        generator.setStartDate(new Time(new Date(notBefore.toEpochMilli())));
+        generator.setEndDate(new Time(new Date(notAfter.toEpochMilli())));
+        generator.setSubjectPublicKeyInfo(SubjectPublicKeyInfo.getInstance(pubKey.getEncoded()));
+        return generator;
+//        return new TBSCertBuilder(issuer, subject, serial, notBefore, notAfter, pubKey, signAlg);
+    }
+
+    private static byte[] tbsCertToBytes(V3TBSCertificateGenerator generator) {
+        try {
+            return generator.generateTBSCertificate().getEncoded("DER");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private SecureRandom getSecureRandom() {
@@ -725,18 +754,20 @@ public final class CertificateBuilder {
         return rng;
     }
 
-    private void addExtensions(TBSCertBuilder builder) throws Exception {
+    private void addExtensions(V3TBSCertificateGenerator tbsCert) throws Exception {
+        ExtensionsGenerator generator = new ExtensionsGenerator();
         if (isCertificateAuthority) {
-            final byte[] basicConstraints;
+            final BasicConstraints basicConstraints;
             if (pathLengthConstraint.isPresent()) {
-                basicConstraints = BasicConstraints.withPathLength(pathLengthConstraint.getAsInt());
+                basicConstraints = new BasicConstraints(pathLengthConstraint.getAsInt());
             } else {
-                basicConstraints = BasicConstraints.isCa(true);
+                basicConstraints = new BasicConstraints(true);
             }
-            builder.addExtension(new Extension(OID_X509_BASIC_CONSTRAINTS, true, basicConstraints));
+            final byte[] basicConstraintsBytes = basicConstraints.getEncoded("DER");
+            generator.addExtension(new Extension(Extension.basicConstraints, true, basicConstraintsBytes));
         }
         if (keyUsage != null) {
-            builder.addExtension(keyUsage);
+            generator.addExtension(keyUsage);
         }
 
         if (!extendedKeyUsage.isEmpty()) {
@@ -746,23 +777,35 @@ public final class CertificateBuilder {
                 usages[i] = KeyPurposeId.getInstance(new ASN1ObjectIdentifier(usagesStrings[i]));
             }
             byte[] der = new org.bouncycastle.asn1.x509.ExtendedKeyUsage(usages).getEncoded("DER");
-            builder.addExtension(new Extension(OID_X509_EXTENDED_KEY_USAGE, false, der));
+            generator.addExtension(new Extension(Extension.extendedKeyUsage, false, der));
         }
 
         if (!subjectAlternativeNames.isEmpty()) {
             // SAN is critical extension if subject is empty sequence:
             boolean critical = subject.getName().isEmpty();
-            builder.addExtension(new Extension(OID_X509_SUBJECT_ALTERNATIVE_NAME, critical,
-                    GeneralNames.generalNames(subjectAlternativeNames)));
+            byte[] result;
+            GeneralNames generalNames = new GeneralNames(subjectAlternativeNames.toArray(GeneralName[]::new));
+            try {
+                result = generalNames.getEncoded("DER");
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+            generator.addExtension(new Extension(Extension.subjectAlternativeName, critical, result));
         }
 
         if (!crlDistributionPoints.isEmpty()) {
-            builder.addExtension(new Extension(OID_X509_CRL_DISTRIBUTION_POINTS, false,
-                    CrlDistributionPoints.distributionPoints(crlDistributionPoints)));
+            generator.addExtension(Extension.create(
+                    Extension.cRLDistributionPoints,
+                    false,
+                    new CRLDistPoint(crlDistributionPoints.toArray(DistributionPoint[]::new))));
         }
 
         for (BuilderCallback callback : modifierCallbacks) {
-            callback.modify(builder);
+            callback.modify(generator);
+        }
+
+        if (!generator.isEmpty()) {
+            tbsCert.setExtensions(generator.generate());
         }
     }
 
@@ -1000,7 +1043,7 @@ public final class CertificateBuilder {
 
     @FunctionalInterface
     private interface BuilderCallback {
-        void modify(TBSCertBuilder builder) throws Exception;
+        void modify(ExtensionsGenerator builder) throws Exception;
     }
 
     private static final class SecureRandomHolder {

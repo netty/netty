@@ -13,16 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.pkitesting.x509;
+package io.netty.pkitesting;
 
 import io.netty.util.internal.UnstableApi;
 
 @UnstableApi
-public final class AlgorithmToOID {
+final class AlgorithmToOID {
     private AlgorithmToOID() {
     }
 
-    public static String oidForAlgorithmName(String algorithmIdentifier) {
+    static String oidForAlgorithmName(String algorithmIdentifier) {
         switch (algorithmIdentifier) {
             case "SHA256withECDSA":
                 return "1.2.840.10045.4.3.2";

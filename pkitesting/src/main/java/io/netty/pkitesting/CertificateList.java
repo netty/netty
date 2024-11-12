@@ -13,9 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.pkitesting.x509;
+package io.netty.pkitesting;
 
-import io.netty.pkitesting.X509Bundle;
 import io.netty.util.internal.UnstableApi;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
@@ -36,21 +35,21 @@ import java.util.Date;
 import java.util.Map;
 
 @UnstableApi
-public final class CertificateList {
+final class CertificateList {
     private final X509Bundle issuer;
     private final Instant thisUpdate;
     private final Instant nextUpdate;
     private final Iterable<Map.Entry<BigInteger, Instant>> revokedCerts;
 
-    public CertificateList(X509Bundle issuer, Instant thisUpdate, Instant nextUpdate,
-                           Iterable<Map.Entry<BigInteger, Instant>> revokedCerts) {
+    CertificateList(X509Bundle issuer, Instant thisUpdate, Instant nextUpdate,
+                    Iterable<Map.Entry<BigInteger, Instant>> revokedCerts) {
         this.issuer = issuer;
         this.thisUpdate = thisUpdate;
         this.nextUpdate = nextUpdate;
         this.revokedCerts = revokedCerts;
     }
 
-    public byte[] getEncoded() {
+    byte[] getEncoded() {
         ASN1EncodableVector vec = new ASN1EncodableVector();
         X509Certificate cert = issuer.getCertificate();
         vec.add(new ASN1Integer(1)); // Version 2
