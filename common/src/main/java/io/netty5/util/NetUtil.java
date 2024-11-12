@@ -15,6 +15,7 @@
  */
 package io.netty5.util;
 
+import io.netty5.util.internal.BoundedInputStream;
 import io.netty5.util.NetUtilInitializations.NetworkIfaceAndInetAddress;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.StringUtil;
@@ -25,7 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -194,7 +195,8 @@ public final class NetUtil {
                 // try / catch block.
                 // See https://github.com/netty/netty/issues/4936
                 if (file.exists()) {
-                    in = new BufferedReader(new FileReader(file));
+                    in = new BufferedReader(new InputStreamReader(
+                            new BoundedInputStream(new FileInputStream(file))));
                     somaxconn = Integer.parseInt(in.readLine());
                     if (logger.isDebugEnabled()) {
                         logger.debug("{}: {}", file, somaxconn);
@@ -247,7 +249,7 @@ public final class NetUtil {
         Process process = new ProcessBuilder("sysctl", sysctlKey).start();
         try {
             InputStream is = process.getInputStream();
-            InputStreamReader isr = new InputStreamReader(is);
+            InputStreamReader isr = new InputStreamReader(new BoundedInputStream(is));
             try (BufferedReader br = new BufferedReader(isr)) {
                 String line = br.readLine();
                 if (line != null && line.startsWith(sysctlKey)) {

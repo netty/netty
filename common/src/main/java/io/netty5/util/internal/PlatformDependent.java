@@ -208,8 +208,7 @@ public final class PlatformDependent {
                     if (file.exists()) {
                         try (BufferedReader reader = new BufferedReader(
                                 new InputStreamReader(
-                                        new FileInputStream(file), StandardCharsets.UTF_8))) {
-
+                                        new BoundedInputStream(new FileInputStream(file)), StandardCharsets.UTF_8))) {
                             String line;
                             while ((line = reader.readLine()) != null) {
                                 if (line.startsWith(LINUX_ID_PREFIX)) {
