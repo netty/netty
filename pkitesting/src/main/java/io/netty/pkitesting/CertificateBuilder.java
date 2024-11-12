@@ -310,6 +310,11 @@ public final class CertificateBuilder {
 
     /**
      * Add a URI distribution point for a certificate revocation list.
+     * <p>
+     * If you are testing certificate revocation using the {@link RevocationServer},
+     * you would obtain this URI from {@link RevocationServer#getCrlUri(X509Bundle)} with your intended issuer
+     * certificate bundle.
+     *
      * @param uri The URI for the CRL file.
      * @return This certificate builder.
      */
@@ -324,6 +329,11 @@ public final class CertificateBuilder {
 
     /**
      * Add a URI distribution point for a certificate revocation list.
+     * <p>
+     * If you are testing certificate revocation using the {@link RevocationServer},
+     * you would obtain this URI from {@link RevocationServer#getCrlUri(X509Bundle)} with your intended issuer
+     * certificate bundle.
+     *
      * @param uri The URI for the CRL file.
      * @param issuer The issuer that signs the CRL file.
      * This MUST be {@code null} if the CRL issuer is also the issuer of the certificate being built.
@@ -738,7 +748,6 @@ public final class CertificateBuilder {
         generator.setEndDate(new Time(new Date(notAfter.toEpochMilli())));
         generator.setSubjectPublicKeyInfo(SubjectPublicKeyInfo.getInstance(pubKey.getEncoded()));
         return generator;
-//        return new TBSCertBuilder(issuer, subject, serial, notBefore, notAfter, pubKey, signAlg);
     }
 
     private static byte[] tbsCertToBytes(V3TBSCertificateGenerator generator) {

@@ -66,7 +66,7 @@ public final class RevocationServer {
     }
 
     private RevocationServer() throws Exception {
-        // Use the built-in HttpServer to avoid any circular dependencies.
+        // Use the JDK built-in HttpServer to avoid any circular dependencies with Netty itself.
         crlServer = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         crlBaseAddress = "http://localhost:" + crlServer.getAddress().getPort();
         issuerCounter = new AtomicInteger();
