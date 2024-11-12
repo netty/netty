@@ -15,6 +15,7 @@
  */
 package io.netty.pkitesting;
 
+import io.netty.util.internal.EmptyArrays;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.DERBitString;
@@ -92,6 +93,8 @@ public final class CertificateBuilder {
     static final String OID_PKIX_KP_OCSP_SIGNING = OID_PKIX_KP + ".9";
     static final String OID_KERBEROS_KEY_PURPOSE_CLIENT_AUTH = "1.3.6.1.5.2.3.4";
     static final String OID_MICROSOFT_SMARTCARD_LOGIN = "1.3.6.1.4.1.311.20.2.2";
+    private static final GeneralName[] EMPTY_GENERAL_NAMES = new GeneralName[0];
+    private static final DistributionPoint[] EMPTY_DIST_POINTS = new DistributionPoint[0];
 
     SecureRandom random;
     Algorithm algorithm = Algorithm.ecp256;
@@ -772,7 +775,7 @@ public final class CertificateBuilder {
 
         if (!extendedKeyUsage.isEmpty()) {
             KeyPurposeId[] usages = new KeyPurposeId[extendedKeyUsage.size()];
-            String[] usagesStrings = extendedKeyUsage.toArray(String[]::new);
+            String[] usagesStrings = extendedKeyUsage.toArray(EmptyArrays.EMPTY_STRINGS);
             for (int i = 0; i < usagesStrings.length; i++) {
                 usages[i] = KeyPurposeId.getInstance(new ASN1ObjectIdentifier(usagesStrings[i]));
             }
@@ -784,7 +787,7 @@ public final class CertificateBuilder {
             // SAN is critical extension if subject is empty sequence:
             boolean critical = subject.getName().isEmpty();
             byte[] result;
-            GeneralNames generalNames = new GeneralNames(subjectAlternativeNames.toArray(GeneralName[]::new));
+            GeneralNames generalNames = new GeneralNames(subjectAlternativeNames.toArray(EMPTY_GENERAL_NAMES));
             try {
                 result = generalNames.getEncoded("DER");
             } catch (IOException e) {
@@ -797,7 +800,7 @@ public final class CertificateBuilder {
             generator.addExtension(Extension.create(
                     Extension.cRLDistributionPoints,
                     false,
-                    new CRLDistPoint(crlDistributionPoints.toArray(DistributionPoint[]::new))));
+                    new CRLDistPoint(crlDistributionPoints.toArray(EMPTY_DIST_POINTS))));
         }
 
         for (BuilderCallback callback : modifierCallbacks) {
