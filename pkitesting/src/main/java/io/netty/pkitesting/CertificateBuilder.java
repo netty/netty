@@ -737,10 +737,10 @@ public final class CertificateBuilder {
             throw new IllegalArgumentException("DSA keys are not supported because they are obsolete.");
         }
         String keyAlgorithm = key.getAlgorithm();
-        if ("Ed25519".equals(keyAlgorithm)) {
+        if ("Ed25519".equals(keyAlgorithm) || "1.3.101.112".equals(keyAlgorithm)) {
             return "Ed25519";
         }
-        if ("Ed448".equals(keyAlgorithm)) {
+        if ("Ed448".equals(keyAlgorithm) || "1.3.101.113".equals(keyAlgorithm)) {
             return "Ed448";
         }
         if ("EdDSA".equals(keyAlgorithm)) {
