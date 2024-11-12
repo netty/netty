@@ -80,6 +80,25 @@ import static java.util.Objects.requireNonNull;
  * The most typical application is to make a certificate that has already expired or is not yet valid.
  * <p>
  * See RFC 5280 for the details of X.509 certificate contents.
+ * <p>
+ * Here is an example where a leaf certificate is created and signed by a self-signed issuer certificate:
+ * <pre>{@code
+ * Instant now = Instant.now();
+ * CertificateBuilder template = new CertificateBuilder()
+ *             .notBefore(now.minus(1, DAYS))
+ *             .notAfter(now.plus(1, DAYS));
+ * X509Bundle issuer = template.copy()
+ *             .subject("CN=testca, OU=dept, O=your-org")
+ *             .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign)
+ *             .setIsCertificateAuthority(true)
+ *             .buildSelfSigned();
+ * X509Bundle leaf = template.copy()
+ *             .subject("CN=leaf, OU=dept, O=your-org")
+ *             .setKeyUsage(true, KeyUsage.digitalSignature)
+ *             .addExtendedKeyUsage(ExtendedKeyUsage.PKIX_KP_SERVER_AUTH)
+ *             .addSanDnsName("san-1.leaf.dept.your-org.com")
+ *             .buildIssuedBy(issuer);
+ * }</pre>
  */
 public final class CertificateBuilder {
 
