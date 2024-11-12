@@ -15,9 +15,12 @@
  */
 package io.netty.resolver.dns;
 
+import io.netty.util.internal.BoundedInputStream;
+
 import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,12 +48,13 @@ final class ResolvConf {
      * {@code /etc/resolv.conf} file, see {@code man resolv.conf}.
      */
     static ResolvConf fromFile(String file) throws IOException {
-        FileReader fileReader = new FileReader(file);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(
+                // Use 1 MB to be a bit conservative
+                new BoundedInputStream(new FileInputStream(file), 1024 * 1024)));
         try {
-            BufferedReader reader = new BufferedReader(new FileReader(file));
             return fromReader(reader);
         } finally {
-            fileReader.close();
+            reader.close();
         }
     }
 

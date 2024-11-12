@@ -32,8 +32,10 @@ import org.jctools.queues.unpadded.MpscUnpaddedArrayQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
@@ -63,7 +65,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static io.netty.util.internal.PlatformDependent0.HASH_CODE_ASCII_SEED;
 import static io.netty.util.internal.PlatformDependent0.HASH_CODE_C1;
@@ -217,8 +218,13 @@ public final class PlatformDependent {
                     Pattern lineSplitPattern = Pattern.compile("[ ]+");
                     try {
                         if (Files.exists(file)) {
-                            try (Stream<String> lines = Files.lines(file, StandardCharsets.UTF_8)) {
-                                lines.forEach(line -> {
+                            BufferedReader reader = null;
+                            try {
+                                reader = new BufferedReader(new InputStreamReader(
+                                        new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8));
+
+                                String line;
+                                while ((line = reader.readLine()) != null) {
                                     if (line.startsWith(LINUX_ID_PREFIX)) {
                                         String id = normalizeOsReleaseVariableValue(
                                                 line.substring(LINUX_ID_PREFIX.length()));
@@ -229,7 +235,7 @@ public final class PlatformDependent {
                                         addClassifier(allowedClassifiers, availableClassifiers,
                                                 lineSplitPattern.split(line));
                                     }
-                                });
+                                }
                             } catch (SecurityException e) {
                                 logger.debug("Unable to read {}", osReleaseFileName, e);
                             } catch (IOException e) {
