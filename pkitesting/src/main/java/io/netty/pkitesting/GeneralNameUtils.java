@@ -16,7 +16,6 @@
 package io.netty.pkitesting;
 
 import io.netty.util.NetUtil;
-import io.netty.util.internal.UnstableApi;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
@@ -34,7 +33,6 @@ import javax.security.auth.x500.X500Principal;
  * Encodes a limited set of GeneralName types, no decoding is supported.
  * See ITU-T X.509 (10/2019) Section 9.3.2.1, or RFC 5280 Section 4.2.1.6.
  */
-@UnstableApi
 final class GeneralNameUtils {
     private GeneralNameUtils() {
     }

@@ -1062,8 +1062,7 @@ public final class CertificateBuilder {
         /**
          * The certificate can be used for Microsoft smartcard logins.
          */
-        MICROSOFT_SMARTCARD_LOGIN(OID_MICROSOFT_SMARTCARD_LOGIN),
-        ;
+        MICROSOFT_SMARTCARD_LOGIN(OID_MICROSOFT_SMARTCARD_LOGIN);
 
         private final String oid;
 

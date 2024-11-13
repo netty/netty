@@ -15,7 +15,6 @@
  */
 package io.netty.pkitesting;
 
-import io.netty.util.internal.UnstableApi;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
@@ -35,7 +34,6 @@ import java.security.SignatureException;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-@UnstableApi
 final class Signed {
     private final byte[] toBeSigned;
     private final String algorithmIdentifier;

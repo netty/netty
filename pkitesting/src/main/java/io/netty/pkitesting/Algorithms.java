@@ -15,7 +15,6 @@
  */
 package io.netty.pkitesting;
 
-import io.netty.util.internal.UnstableApi;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.security.GeneralSecurityException;
@@ -26,7 +25,6 @@ import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.spec.AlgorithmParameterSpec;
 
-@UnstableApi
 final class Algorithms {
     private static Provider bouncyCastle;
 
@@ -34,6 +32,8 @@ final class Algorithms {
     }
 
     static String oidForAlgorithmName(String algorithmIdentifier) {
+        // See the Java Security Standard Algorithm Names documentation for names and links to RFCs.
+        // https://docs.oracle.com/en/java/javase/22/docs/specs/security/standard-names.html#signature-algorithms
         switch (algorithmIdentifier) {
             case "SHA256withECDSA":
                 return "1.2.840.10045.4.3.2";

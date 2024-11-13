@@ -27,6 +27,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -41,13 +42,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * This currently means the time in the "this update" and "next update" fields are set to the same value.
  */
 public final class RevocationServer {
-    private static RevocationServer instance;
+    private static volatile RevocationServer instance;
 
     private final HttpServer crlServer;
     private final String crlBaseAddress;
     private final AtomicInteger issuerCounter;
-    private final ConcurrentHashMap<X509Certificate, CrlInfo> issuers;
-    private final ConcurrentHashMap<String, CrlInfo> paths;
+    private final ConcurrentMap<X509Certificate, CrlInfo> issuers;
+    private final ConcurrentMap<String, CrlInfo> paths;
 
     /**
      * Get the shared revocation server instance.
@@ -55,14 +56,19 @@ public final class RevocationServer {
      * @return The revocation server instance.
      * @throws Exception If the server failed to start.
      */
-    public static synchronized RevocationServer getInstance() throws Exception {
+    public static RevocationServer getInstance() throws Exception {
         if (instance != null) {
             return instance;
         }
-        RevocationServer server = new RevocationServer();
-        server.start();
-        instance = server;
-        return server;
+        synchronized (RevocationServer.class) {
+            RevocationServer server = instance;
+            if (server == null) {
+                server = new RevocationServer();
+                server.start();
+                instance = server;
+            }
+            return server;
+        }
     }
 
     private RevocationServer() throws Exception {

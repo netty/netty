@@ -40,6 +40,8 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * A certificate bundle is a private key and a full certificate path, all the way to the root certificate.
  * The bundle offers ways of accessing these, and converting them into various representations.
@@ -57,6 +59,8 @@ public final class X509Bundle {
      * @param keyPair The key pair.
      */
     public X509Bundle(X509Certificate[] certPath, X509Certificate root, KeyPair keyPair) {
+        requireNonNull(root, "root");
+        requireNonNull(keyPair, "keyPair");
         if (certPath.length > 1 && certPath[certPath.length - 1].equals(root)) {
             this.certPath = Arrays.copyOf(certPath, certPath.length - 1);
         } else {
@@ -73,6 +77,8 @@ public final class X509Bundle {
      * @return The new bundle.
      */
     public static X509Bundle fromRootCertificateAuthority(X509Certificate root, KeyPair keyPair) {
+        requireNonNull(root, "root");
+        requireNonNull(keyPair, "keyPair");
         X509Bundle bundle = new X509Bundle(new X509Certificate[]{root}, root, keyPair);
         if (!bundle.isCertificateAuthority() || !bundle.isSelfSigned()) {
             throw new IllegalArgumentException("Given certificate is not a root CA certificate: " +
@@ -240,12 +246,25 @@ public final class X509Bundle {
     }
 
     /**
-     * Create  {@link TrustManagerFactory} instance that trusts the root certificate in this bundle.
+     * Create {@link TrustManagerFactory} instance that trusts the root certificate in this bundle.
+     * <p>
+     * The trust manager factory will use the {@linkplain TrustManagerFactory#getDefaultAlgorithm() default algorithm}.
+     *
      * @return The new {@link TrustManagerFactory}.
      */
     public TrustManagerFactory toTrustManagerFactory() {
+        return toTrustManagerFactory(TrustManagerFactory.getDefaultAlgorithm());
+    }
+
+    /**
+     * Create {@link TrustManagerFactory} instance that trusts the root certificate in this bundle,
+     * with the given algorithm.
+     *
+     * @return The new {@link TrustManagerFactory}.
+     */
+    public TrustManagerFactory toTrustManagerFactory(String algorithm) {
         try {
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance(algorithm);
             tmf.init(toKeyStore(EmptyArrays.EMPTY_CHARS));
             return tmf;
         } catch (NoSuchAlgorithmException e) {
@@ -260,17 +279,36 @@ public final class X509Bundle {
      * The root certificate will be a trusted root in the key store.
      * If this bundle is not a {@linkplain #isCertificateAuthority() certificate authority},
      * then the private key and certificate path will also be added to the key store.
+     * <p>
+     * The key store will use the PKCS#12 format.
+     *
      * @param keyEntryPassword The password used to encrypt the private key entry in the key store.
      * @return The key store.
      * @throws KeyStoreException If an error occurred when adding entries to the key store.
      */
     public KeyStore toKeyStore(char[] keyEntryPassword) throws KeyStoreException {
+        return toKeyStore("PKCS12", keyEntryPassword);
+    }
+
+    /**
+     * Create a {@link KeyStore} with the contents of this bundle.
+     * The root certificate will be a trusted root in the key store.
+     * If this bundle is not a {@linkplain #isCertificateAuthority() certificate authority},
+     * then the private key and certificate path will also be added to the key store.
+     * <p>
+     * The key store will use the format defined by the given algorithm.
+     *
+     * @param keyEntryPassword The password used to encrypt the private key entry in the key store.
+     * @return The key store.
+     * @throws KeyStoreException If an error occurred when adding entries to the key store.
+     */
+    public KeyStore toKeyStore(String algorithm, char[] keyEntryPassword) throws KeyStoreException {
         KeyStore keyStore;
         try {
-            keyStore = KeyStore.getInstance("PKCS12");
+            keyStore = KeyStore.getInstance(algorithm);
             keyStore.load(null, null);
-        } catch (KeyStoreException | IOException | NoSuchAlgorithmException | CertificateException e) {
-            throw new AssertionError("Failed to initialize PKCS#12 KeyStore.", e);
+        } catch (IOException | NoSuchAlgorithmException | CertificateException e) {
+            throw new KeyStoreException("Failed to initialize '" + algorithm + "' KeyStore.", e);
         }
         keyStore.setCertificateEntry("1", root);
         if (!isCertificateAuthority()) {
@@ -312,7 +350,7 @@ public final class X509Bundle {
 
     /**
      * Create a temporary PEM file with the {@linkplain #getRootCertificate() root certificate} of this bundle.
-     * The temporary file is automatically deleted whent he JVM terminates normally.
+     * The temporary file is automatically deleted when the JVM terminates normally.
      * @return The {@link File} object with the path to the trust root PEM file.
      * @throws IOException If an IO error occurred when creating the trust root file.
      */
@@ -328,6 +366,10 @@ public final class X509Bundle {
 
     /**
      * Create a {@link KeyManagerFactory} from this bundle.
+     * <p>
+     * The {@link KeyManagerFactory} will use the
+     * {@linkplain KeyManagerFactory#getDefaultAlgorithm() default algorithm}.
+     * 
      * @return The new {@link KeyManagerFactory}.
      * @throws KeyStoreException If there was a problem creating or initializing the key store.
      * @throws UnrecoverableKeyException If the private key could not be recovered,
@@ -337,9 +379,24 @@ public final class X509Bundle {
      */
     public KeyManagerFactory toKeyManagerFactory()
             throws KeyStoreException, UnrecoverableKeyException, NoSuchAlgorithmException {
+        return toKeyManagerFactory(KeyManagerFactory.getDefaultAlgorithm());
+    }
+
+    /**
+     * Create a {@link KeyManagerFactory} from this bundle, using the given algorithm.
+     * 
+     * @return The new {@link KeyManagerFactory}.
+     * @throws KeyStoreException If there was a problem creating or initializing the key store.
+     * @throws UnrecoverableKeyException If the private key could not be recovered,
+     * for instance if this bundle is a {@linkplain #isCertificateAuthority() certificate authority}.
+     * @throws NoSuchAlgorithmException If the key manager factory algorithm is not supported by the current
+     * security provider.
+     */
+    public KeyManagerFactory toKeyManagerFactory(String algorithm)
+            throws KeyStoreException, UnrecoverableKeyException, NoSuchAlgorithmException {
         KeyManagerFactory kmf;
         try {
-            kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            kmf = KeyManagerFactory.getInstance(algorithm);
         } catch (NoSuchAlgorithmException e) {
             throw new AssertionError("Default KeyManagerFactory algorithm was not available.", e);
         }

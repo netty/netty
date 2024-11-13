@@ -15,7 +15,6 @@
  */
 package io.netty.pkitesting;
 
-import io.netty.util.internal.UnstableApi;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Integer;
@@ -34,7 +33,6 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
 
-@UnstableApi
 final class CertificateList {
     private final X509Bundle issuer;
     private final Instant thisUpdate;
