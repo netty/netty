@@ -369,7 +369,7 @@ public final class X509Bundle {
      * <p>
      * The {@link KeyManagerFactory} will use the
      * {@linkplain KeyManagerFactory#getDefaultAlgorithm() default algorithm}.
-     * 
+     *
      * @return The new {@link KeyManagerFactory}.
      * @throws KeyStoreException If there was a problem creating or initializing the key store.
      * @throws UnrecoverableKeyException If the private key could not be recovered,
@@ -384,7 +384,7 @@ public final class X509Bundle {
 
     /**
      * Create a {@link KeyManagerFactory} from this bundle, using the given algorithm.
-     * 
+     *
      * @return The new {@link KeyManagerFactory}.
      * @throws KeyStoreException If there was a problem creating or initializing the key store.
      * @throws UnrecoverableKeyException If the private key could not be recovered,
