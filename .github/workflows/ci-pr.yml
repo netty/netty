@@ -49,6 +49,9 @@ jobs:
           - setup: linux-x86_64-java17-graalvm
             docker-compose-build: "-f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.graalvm117.yaml build"
             docker-compose-run: "-f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.graalvm117.yaml run build-leak"
+          - setup: linux-x86_64-java8-netty-4.2
+            docker-compose-build: "-f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml build"
+            docker-compose-run: "-f docker/docker-compose.centos-7.yaml -f docker/docker-compose.centos-7.18.yaml run build-4.2"
 
     runs-on: ubuntu-latest
     name: ${{ matrix.setup }} build
