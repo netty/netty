@@ -80,58 +80,62 @@ final class QuicheQuicSslContext extends QuicSslContext {
             defaultConvertedNamedGroups.add(GroupsConverter.toBoringSSL(namedGroups[i]));
         }
 
-        final long sslCtx = BoringSSL.SSLContext_new();
-        try {
-            // Let's filter out any group that is not supported from the default.
-            Iterator<String> defaultGroupsIter = defaultConvertedNamedGroups.iterator();
-            while (defaultGroupsIter.hasNext()) {
-                if (BoringSSL.SSLContext_set1_groups_list(sslCtx, defaultGroupsIter.next()) == 0) {
-                    // Not supported, let's remove it. This could for example be the case if we use
-                    // fips and the configure group is not supported when using FIPS.
-                    // See https://github.com/netty/netty-tcnative/issues/883
-                    defaultGroupsIter.remove();
-                }
-            }
-
-            String groups = SystemPropertyUtil.get("jdk.tls.namedGroups", null);
-            if (groups != null) {
-                String[] nGroups = groups.split(",");
-                Set<String> supportedNamedGroups = new LinkedHashSet<>(nGroups.length);
-                Set<String> supportedConvertedNamedGroups = new LinkedHashSet<>(nGroups.length);
-
-                Set<String> unsupportedNamedGroups = new LinkedHashSet<>();
-                for (String namedGroup : nGroups) {
-                    String converted = GroupsConverter.toBoringSSL(namedGroup);
-                    if (BoringSSL.SSLContext_set1_groups_list(sslCtx, converted) == 0) {
-                        supportedConvertedNamedGroups.add(converted);
-                        supportedNamedGroups.add(namedGroup);
-                    } else {
-                        unsupportedNamedGroups.add(namedGroup);
+        // Call Quic.isAvailable() first to ensure native lib is loaded.
+        // See https://github.com/netty/netty-incubator-codec-quic/issues/759
+        if (Quic.isAvailable()) {
+            final long sslCtx = BoringSSL.SSLContext_new();
+            try {
+                // Let's filter out any group that is not supported from the default.
+                Iterator<String> defaultGroupsIter = defaultConvertedNamedGroups.iterator();
+                while (defaultGroupsIter.hasNext()) {
+                    if (BoringSSL.SSLContext_set1_groups_list(sslCtx, defaultGroupsIter.next()) == 0) {
+                        // Not supported, let's remove it. This could for example be the case if we use
+                        // fips and the configure group is not supported when using FIPS.
+                        // See https://github.com/netty/netty-tcnative/issues/883
+                        defaultGroupsIter.remove();
                     }
                 }
 
-                if (supportedNamedGroups.isEmpty()) {
-                    namedGroups = defaultConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
-                    LOGGER.info("All configured namedGroups are not supported: {}. Use default: {}.",
-                            Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)),
-                            Arrays.toString(DEFAULT_NAMED_GROUPS));
+                String groups = SystemPropertyUtil.get("jdk.tls.namedGroups", null);
+                if (groups != null) {
+                    String[] nGroups = groups.split(",");
+                    Set<String> supportedNamedGroups = new LinkedHashSet<>(nGroups.length);
+                    Set<String> supportedConvertedNamedGroups = new LinkedHashSet<>(nGroups.length);
+
+                    Set<String> unsupportedNamedGroups = new LinkedHashSet<>();
+                    for (String namedGroup : nGroups) {
+                        String converted = GroupsConverter.toBoringSSL(namedGroup);
+                        if (BoringSSL.SSLContext_set1_groups_list(sslCtx, converted) == 0) {
+                            supportedConvertedNamedGroups.add(converted);
+                            supportedNamedGroups.add(namedGroup);
+                        } else {
+                            unsupportedNamedGroups.add(namedGroup);
+                        }
+                    }
+
+                    if (supportedNamedGroups.isEmpty()) {
+                        namedGroups = defaultConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
+                        LOGGER.info("All configured namedGroups are not supported: {}. Use default: {}.",
+                                Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)),
+                                Arrays.toString(DEFAULT_NAMED_GROUPS));
+                    } else {
+                        String[] groupArray = supportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
+                        if (unsupportedNamedGroups.isEmpty()) {
+                            LOGGER.info("Using configured namedGroups -D 'jdk.tls.namedGroup': {} ",
+                                    Arrays.toString(groupArray));
+                        } else {
+                            LOGGER.info("Using supported configured namedGroups: {}. Unsupported namedGroups: {}. ",
+                                    Arrays.toString(groupArray),
+                                    Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)));
+                        }
+                        namedGroups = supportedConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
+                    }
                 } else {
-                    String[] groupArray = supportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
-                    if (unsupportedNamedGroups.isEmpty()) {
-                        LOGGER.info("Using configured namedGroups -D 'jdk.tls.namedGroup': {} ",
-                                Arrays.toString(groupArray));
-                    } else {
-                        LOGGER.info("Using supported configured namedGroups: {}. Unsupported namedGroups: {}. ",
-                                Arrays.toString(groupArray),
-                                Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)));
-                    }
-                    namedGroups =  supportedConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
+                    namedGroups = defaultConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
                 }
-            } else {
-                namedGroups = defaultConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
+            } finally {
+                BoringSSL.SSLContext_free(sslCtx);
             }
-        } finally {
-            BoringSSL.SSLContext_free(sslCtx);
         }
         NAMED_GROUPS = namedGroups;
     }
