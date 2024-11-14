@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,35 +15,39 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.DefaultFileRegion;
-import org.junit.jupiter.api.Assertions;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.testsuite.transport.TestsuitePermutation;
+import io.netty.testsuite.transport.socket.SocketFileRegionTest;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.channels.FileChannel;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringFileTest {
+public class IoUringSocketFileRegionTest extends SocketFileRegionTest {
 
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
     }
 
+    @Override
+    protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
+        return IoUringSocketTestPermutation.INSTANCE.socket();
+    }
+
+    @Override
+    protected boolean supportsCustomFileRegion() {
+        return false;
+    }
+
+    //@Disabled("Fix me")
     @Test
-    public void testGetFd() throws IOException {
-        File file = File.createTempFile("temp", ".tmp");
-        file.deleteOnExit();
-        FileChannel channel = FileChannel.open(file.toPath());
-        DefaultFileRegion region = new DefaultFileRegion(channel, 0, channel.size());
-        try {
-            int fd = Native.getFd(region);
-            Assertions.assertTrue(fd >= 0);
-        } finally {
-            region.release();
-        }
+    public void testFileRegionCountLargerThenFile(TestInfo testInfo) throws Throwable {
+        super.testFileRegionCountLargerThenFile(testInfo);
     }
 }

@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.DefaultFileRegion;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -391,7 +392,11 @@ final class Native {
 
     static native void eventFdWrite(int fd, long value);
 
-    static native int getFd(FileChannel fileChannel);
+    static int getFd(DefaultFileRegion fileChannel) {
+        return getFd0(fileChannel);
+    }
+
+    private static native int getFd0(Object fileChannel);
 
     static FileDescriptor newBlockingEventFd() {
         return new FileDescriptor(blockingEventFd());

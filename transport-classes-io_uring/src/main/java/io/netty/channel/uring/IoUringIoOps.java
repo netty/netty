@@ -19,7 +19,7 @@ import io.netty.channel.IoOps;
 
 /**
  * {@link IoOps} for implementation for
- * <a href="https://github.com/axboe/liburing/blob/liburing-2.6/src/include/liburing/io_uring.h">IO_uring</a>.
+ * <a href="https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h">IO_uring</a>.
  */
 public final class IoUringIoOps implements IoOps {
 
@@ -31,8 +31,8 @@ public final class IoUringIoOps implements IoOps {
     private final long bufferAddress;
     private final int length;
     private final long offset;
-    private final short data;
     private final int spliceFdIn;
+    private final short data;
 
     /**
      * Create a new instance
@@ -45,38 +45,11 @@ public final class IoUringIoOps implements IoOps {
      * @param bufferAddress the bufferaddress
      * @param length        the length
      * @param offset        the offset.
+     * @param spliceFdIn    the splice_fd_in
      * @param data          the user data that will be passed back on completion.
      */
     public IoUringIoOps(byte opcode, int flags, short ioPrio, int fd, int rwFlags, long bufferAddress,
-                        int length, long offset, short data) {
-        this.opcode = opcode;
-        this.flags = flags;
-        this.ioPrio = ioPrio;
-        this.fd = fd;
-        this.rwFlags = rwFlags;
-        this.bufferAddress = bufferAddress;
-        this.length = length;
-        this.offset = offset;
-        this.data = data;
-        this.spliceFdIn = 0;
-    }
-
-    /**
-     * Create a new instance
-     *
-     * @param opcode        the operation.
-     * @param flags         the flags
-     * @param ioPrio        the priority.
-     * @param fd            the filedescriptor.
-     * @param rwFlags       the flags specific for the op.
-     * @param bufferAddress the bufferaddress
-     * @param length        the length
-     * @param offset        the offset.
-     * @param data          the user data that will be passed back on completion.
-     * @param spliceFdIn      the splice_fd_in
-     */
-    public IoUringIoOps(byte opcode, int flags, short ioPrio, int fd, int rwFlags, long bufferAddress,
-                        int length, long offset, short data, int spliceFdIn) {
+                        int length, long offset, int spliceFdIn, short data) {
         this.opcode = opcode;
         this.flags = flags;
         this.ioPrio = ioPrio;
@@ -173,7 +146,7 @@ public final class IoUringIoOps implements IoOps {
     /**
      * Returns the splice_fd_in that will be used. This is specific to the opcode.
      *
-     * @return data
+     * @return  spliceFdIn
      */
     public int spliceFdIn() {
         return spliceFdIn;
@@ -191,6 +164,7 @@ public final class IoUringIoOps implements IoOps {
                 ", length=" + length +
                 ", offset=" + offset +
                 ", data=" + data +
+                ", spliceFdIn=" + spliceFdIn +
                 '}';
     }
 
@@ -207,7 +181,7 @@ public final class IoUringIoOps implements IoOps {
     public static IoUringIoOps newAsyncCancel(int fd, int flags, long userData, short data) {
         // Best effort to cancel the
         return new IoUringIoOps(Native.IORING_OP_ASYNC_CANCEL, flags, (short) 0, fd, 0,
-                userData, 0, 0, data);
+                userData, 0, 0, 0, data);
     }
 
     /**
@@ -219,7 +193,7 @@ public final class IoUringIoOps implements IoOps {
      * @return          ops.
      */
     public static IoUringIoOps newClose(int fd, int flags, short data) {
-        return new IoUringIoOps(Native.IORING_OP_CLOSE, flags, (short) 0, fd, 0, 0, 0, 0, data);
+        return new IoUringIoOps(Native.IORING_OP_CLOSE, flags, (short) 0, fd, 0, 0, 0, 0, 0, data);
     }
 
     /**
@@ -232,7 +206,7 @@ public final class IoUringIoOps implements IoOps {
      * @return          ops.
      */
     public static IoUringIoOps newPollAdd(int fd, int flags, int mask, short data) {
-        return new IoUringIoOps(Native.IORING_OP_POLL_ADD, flags, (short) 0, fd, mask, 0, 0, 0, data);
+        return new IoUringIoOps(Native.IORING_OP_POLL_ADD, flags, (short) 0, fd, mask, 0, 0, 0, 0, data);
     }
 
     /**
@@ -245,7 +219,7 @@ public final class IoUringIoOps implements IoOps {
      * @return          ops.
      */
     public static IoUringIoOps newSendmsg(int fd, int flags, int msgFlags, long address, short data) {
-        return new IoUringIoOps(Native.IORING_OP_SENDMSG, flags, (short) 0, fd, msgFlags, address, 1, 0, data);
+        return new IoUringIoOps(Native.IORING_OP_SENDMSG, flags, (short) 0, fd, msgFlags, address, 1, 0, 0, data);
     }
 
     /**
@@ -259,7 +233,7 @@ public final class IoUringIoOps implements IoOps {
      */
     public static IoUringIoOps newConnect(int fd, int flags, long remoteMemoryAddress, short data) {
         return new IoUringIoOps(Native.IORING_OP_CONNECT, flags, (short) 0, fd, 0, remoteMemoryAddress,
-                0, Native.SIZEOF_SOCKADDR_STORAGE, data);
+                0, Native.SIZEOF_SOCKADDR_STORAGE, 0, data);
     }
 
     /**
@@ -273,7 +247,7 @@ public final class IoUringIoOps implements IoOps {
      * @return          ops.
      */
     public static IoUringIoOps newPollRemove(int fd, int flags, long userData, short data) {
-        return new IoUringIoOps(Native.IORING_OP_POLL_REMOVE, flags, (short) 0, fd, 0, userData, 0, 0, data);
+        return new IoUringIoOps(Native.IORING_OP_POLL_REMOVE, flags, (short) 0, fd, 0, userData, 0, 0, 0, data);
     }
 
     /**
@@ -290,7 +264,7 @@ public final class IoUringIoOps implements IoOps {
     public static IoUringIoOps newAccept(int fd, int flags, int acceptFlags, long acceptedAddressMemoryAddress,
                                          long acceptedAddressLengthMemoryAddress, short data) {
         return new IoUringIoOps(Native.IORING_OP_ACCEPT, flags, (short) 0, fd, acceptFlags,
-                acceptedAddressMemoryAddress, 0, acceptedAddressLengthMemoryAddress, data);
+                acceptedAddressMemoryAddress, 0, acceptedAddressLengthMemoryAddress, 0, data);
     }
 
     /**
@@ -307,7 +281,7 @@ public final class IoUringIoOps implements IoOps {
     public static IoUringIoOps newWritev(int fd, int flags, int writevFlags, long memoryAddress,
                                          int length, short data) {
         return new IoUringIoOps(Native.IORING_OP_WRITEV, flags, (short) 0, fd,
-                writevFlags, memoryAddress, length, 0, data);
+                writevFlags, memoryAddress, length, 0, 0, data);
     }
 
     /**
@@ -324,7 +298,7 @@ public final class IoUringIoOps implements IoOps {
     public static IoUringIoOps newWrite(
             int fd, int flags, int writeFlags, long memoryAddress, int length, short data) {
         return new IoUringIoOps(Native.IORING_OP_WRITE, flags, (short) 0, fd,
-                writeFlags, memoryAddress, length, 0, data);
+                writeFlags, memoryAddress, length, 0, 0, data);
     }
 
     /**
@@ -341,7 +315,7 @@ public final class IoUringIoOps implements IoOps {
     public static IoUringIoOps newRecv(
             int fd, int flags, int recvFlags, long memoryAddress, int length, short data) {
         return new IoUringIoOps(
-                Native.IORING_OP_RECV, flags, (short) 0, fd, recvFlags, memoryAddress, length, 0, data);
+                Native.IORING_OP_RECV, flags, (short) 0, fd, recvFlags, memoryAddress, length, 0, 0, data);
     }
 
     /**
@@ -356,7 +330,7 @@ public final class IoUringIoOps implements IoOps {
      */
     public static IoUringIoOps newRecvmsg(int fd, int flags, int msgFlags, long memoryAddress, short data) {
         return new IoUringIoOps(
-                Native.IORING_OP_RECVMSG, flags, (short) 0, fd, msgFlags, memoryAddress, 1, 0, data);
+                Native.IORING_OP_RECVMSG, flags, (short) 0, fd, msgFlags, memoryAddress, 1, 0, 0, data);
     }
 
     /**
@@ -373,7 +347,7 @@ public final class IoUringIoOps implements IoOps {
     public static IoUringIoOps newSend(
             int fd, int flags, int sendFlags, long memoryAddress, int length, short data) {
         return new IoUringIoOps(
-                Native.IORING_OP_SEND, flags, (short) 0, fd, sendFlags, memoryAddress, length, 0, data);
+                Native.IORING_OP_SEND, flags, (short) 0, fd, sendFlags, memoryAddress, length, 0, 0, data);
     }
 
     /**
@@ -386,27 +360,12 @@ public final class IoUringIoOps implements IoOps {
      * @return                                      ops.
      */
     public static IoUringIoOps newShutdown(int fd, int flags, int how, short data) {
-        return new IoUringIoOps(Native.IORING_OP_SHUTDOWN, flags, (short) 0, fd, 0, 0, how, 0, data);
+        return new IoUringIoOps(Native.IORING_OP_SHUTDOWN, flags, (short) 0, fd, 0, 0, how, 0, 0, data);
     }
 
     /**
      *
      * Returns a new {@code OP_SPLICE} {@link IoUringIoOps}.
-     *
-     *  io_uring_prep_splice() - Either @fd_in or @fd_out must be a pipe.
-     *  - If @fd_in refers to a pipe, @off_in is ignored and must be set to -1.
-     *  - If @fd_in does not refer to a pipe and @off_in is -1, then @nbytes are read
-     *  from @fd_in starting from the file offset, which is incremented by the
-     *  number of bytes read.
-     *  - If @fd_in does not refer to a pipe and @off_in is not -1, then the starting
-     *  offset of @fd_in will be @off_in.
-     *  <p>
-     *  This splice operation can be used to implement sendfile by splicing to an
-     *  intermediate pipe first, then splice to the final destination.
-     *  In fact, the implementation of sendfile in kernel uses splice internally.
-     *  NOTE that even if fd_in or fd_out refers to a pipe, the splice operation
-     *  can still fail with EINVAL if one of the fd doesn't explicitly support splice
-     *  operation, e.g. reading from terminal is unsupported from kernel 5.7 to 5.11.
      *
      * @param fd_in                                     the filedescriptor
      * @param off_in                                    the filedescriptor offset
@@ -414,17 +373,19 @@ public final class IoUringIoOps implements IoOps {
      * @param off_out                                   the filedescriptor offset
      * @param nbytes                                    splice bytes
      * @param splice_flags                              the flag
+     * @param data                                      the data
      * @return                                          ops.
      */
     public static IoUringIoOps newSplice(int fd_in, long off_in,
                                          int fd_out, long off_out,
                                          int nbytes,
-                                         int splice_flags) {
+                                         int splice_flags,
+                                         short data) {
         //addr and off_in are in same union
         return new IoUringIoOps(
                 Native.IORING_OP_SPLICE, 0, (short) 0,
                 fd_out, splice_flags, off_in, nbytes, off_out,
-                (short) 1, fd_in
+                fd_in, data
         );
     }
 }

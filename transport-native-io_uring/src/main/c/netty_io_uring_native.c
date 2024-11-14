@@ -70,6 +70,8 @@ static jclass longArrayClass = NULL;
 static char* staticPackagePrefix = NULL;
 static int register_unix_called = 0;
 
+static jfieldID fileChannelFieldId = NULL;
+static jfieldID transferredFieldId = NULL;
 static jfieldID fdFieldId = NULL;
 static jfieldID fileDescriptorFieldId = NULL;
 
@@ -195,20 +197,23 @@ static void netty_io_uring_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlon
     netty_unix_errors_throwChannelExceptionErrorNo(env, "eventfd_write(...) failed: ", err);
 }
 
-static int netty_io_uring_getFd(JNIEnv* env, jclass clazz, jobject fileChannel) {
-
-   jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
-   if (fileDescriptor == NULL) {
-       netty_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
-       return -1;
-   }
-   jint srcFd = (*env)->GetIntField(env, fileDescriptor, fdFieldId);
-   if (srcFd == -1) {
-       netty_unix_errors_throwRuntimeException(env, "failed to get FileDescriptor.fd");
-       return -1;
-   }
-
-   return srcFd;
+static jint netty_io_uring_getFd0(JNIEnv* env, jclass clazz, jobject fileRegion) {
+    jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
+    if (fileChannel == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get DefaultFileRegion.file");
+        return -1;
+    }
+    jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
+    if (fileDescriptor == NULL) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get FileChannelImpl.fd");
+        return -1;
+    }
+    jint srcFd = (*env)->GetIntField(env, fileDescriptor, fdFieldId);
+    if (srcFd == -1) {
+        netty_unix_errors_throwRuntimeException(env, "failed to get FileDescriptor.fd");
+        return -1;
+    }
+    return srcFd;
 }
 
 static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass clazz,
@@ -621,7 +626,7 @@ static const JNINativeMethod method_table[] = {
     {"registerUnix", "()I", (void *) netty_io_uring_registerUnix },
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
-    {"getFd", "(Ljava/nio/channels/FileChannel;)I", (void *) netty_io_uring_getFd }
+    {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 }
 };
 static const jint method_table_size =
     sizeof(method_table) / sizeof(method_table[0]);
@@ -632,7 +637,10 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
     int nativeRegistered = 0;
     int staticallyRegistered = 0;
     int linuxsocketOnLoadCalled = 0;
-
+    char* nettyClassName = NULL;
+    jclass fileRegionCls = NULL;
+    jclass fileChannelCls = NULL;
+    jclass fileDescriptorCls = NULL;
     // We must register the statically referenced methods first!
     if (netty_jni_util_register_natives(env,
             packagePrefix,
@@ -660,16 +668,24 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
     if (packagePrefix != NULL) {
         staticPackagePrefix = strdup(packagePrefix);
     }
-    ret = NETTY_JNI_UTIL_JNI_VERSION;
 
-    jclass fileChannelCls = NULL;
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/channel/DefaultFileRegion", nettyClassName, done);
+    NETTY_JNI_UTIL_FIND_CLASS(env, fileRegionCls, nettyClassName, done);
+    netty_jni_util_free_dynamic_name(&nettyClassName);
+
+    NETTY_JNI_UTIL_GET_FIELD(env, fileRegionCls, fileChannelFieldId, "file", "Ljava/nio/channels/FileChannel;", done);
+    NETTY_JNI_UTIL_GET_FIELD(env, fileRegionCls, transferredFieldId, "transferred", "J", done);
+
     NETTY_JNI_UTIL_FIND_CLASS(env, fileChannelCls, "sun/nio/ch/FileChannelImpl", done);
     NETTY_JNI_UTIL_GET_FIELD(env, fileChannelCls, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
 
-    jclass fileDescriptorCls = NULL;
     NETTY_JNI_UTIL_FIND_CLASS(env, fileDescriptorCls, "java/io/FileDescriptor", done);
     NETTY_JNI_UTIL_TRY_GET_FIELD(env, fileDescriptorCls, fdFieldId, "fd", "I");
-
+    if (fdFieldId == NULL) {
+         // Android uses a different field name, let's try it.
+         NETTY_JNI_UTIL_GET_FIELD(env, fileDescriptorCls, fdFieldId, "descriptor", "I", done);
+    }
+    ret = NETTY_JNI_UTIL_JNI_VERSION;
 done:
     if (ret == JNI_ERR) {
         if (nativeRegistered == 1) {

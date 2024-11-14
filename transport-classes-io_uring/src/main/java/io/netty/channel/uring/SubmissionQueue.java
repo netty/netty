@@ -110,12 +110,7 @@ final class SubmissionQueue {
         assert numHandledFds >= 0;
     }
 
-    long enqueueSqe(byte op, int flags, short ioPrio, int rwFlags, int fd,
-                    long bufferAddress, int length, long offset, int id, short data) {
-        return enqueueSqe(op, flags, ioPrio, rwFlags, fd, bufferAddress, length, offset, id, data, 0);
-    }
-
-    long enqueueSqe(byte op, int flags, short ioPrio, int rwFlags, int fd,
+    private long enqueueSqe(byte op, int flags, short ioPrio, int rwFlags, int fd,
                                long bufferAddress, int length, long offset, int id, short data, int spliceIn) {
         int pending = tail - head;
         if (pending == ringEntries) {
@@ -144,11 +139,6 @@ final class SubmissionQueue {
         }
         long sqe = submissionQueueArrayAddress + (tail++ & ringMask) * SQE_SIZE;
         setData(sqe, op, flags, ioPrio, rwFlags, fd, bufferAddress, length, offset, udata, spliceIn);
-    }
-
-    private void setData(long sqe, byte op, int flags, short ioPrio, int rwFlags, int fd, long bufferAddress,
-                         int length, long offset, long udata) {
-        setData(sqe, op, flags, ioPrio, rwFlags, fd, bufferAddress, length, offset, udata, 0);
     }
 
     private void setData(long sqe, byte op, int flags, short ioPrio, int rwFlags, int fd, long bufferAddress,
@@ -191,28 +181,28 @@ final class SubmissionQueue {
     }
 
     long addNop(int fd, int flags, int id, short data) {
-        return enqueueSqe(Native.IORING_OP_NOP, flags, (short) 0, 0, fd, 0, 0, 0, id, data);
+        return enqueueSqe(Native.IORING_OP_NOP, flags, (short) 0, 0, fd, 0, 0, 0, id, data, 0);
     }
 
     long addTimeout(int fd, long nanoSeconds, int id, short extraData) {
         setTimeout(nanoSeconds);
         return enqueueSqe(Native.IORING_OP_TIMEOUT, 0, (short) 0, 0, fd,
-                timeoutMemoryAddress, 1, 0, id, extraData);
+                timeoutMemoryAddress, 1, 0, id, extraData, 0);
     }
 
     long addLinkTimeout(int fd, long nanoSeconds, int id, short extraData) {
         setTimeout(nanoSeconds);
         return enqueueSqe(Native.IORING_OP_LINK_TIMEOUT, 0, (short) 0, 0, fd,
-                timeoutMemoryAddress, 1, 0, id, extraData);
+                timeoutMemoryAddress, 1, 0, id, extraData, 0);
     }
 
     long addEventFdRead(int fd, long bufferAddress, int pos, int limit, int id, short extraData) {
         return enqueueSqe(Native.IORING_OP_READ, 0, (short) 0, 0, fd,
-                bufferAddress + pos, limit - pos, 0, id, extraData);
+                bufferAddress + pos, limit - pos, 0, id, extraData, 0);
     }
 
     long addCancel(int fd, long sqeToCancel, int id) {
-        return enqueueSqe(Native.IORING_OP_ASYNC_CANCEL, 0, (short) 0, 0, fd, sqeToCancel, 0, 0, id, (short) 0);
+        return enqueueSqe(Native.IORING_OP_ASYNC_CANCEL, 0, (short) 0, 0, fd, sqeToCancel, 0, 0, id, (short) 0, 0);
     }
 
     int submit() {

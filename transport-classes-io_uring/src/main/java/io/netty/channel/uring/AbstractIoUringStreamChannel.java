@@ -26,17 +26,13 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DuplexChannel;
-import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.FileChannel;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -50,8 +46,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     // Keep track of the ids used for write and read so we can cancel these when needed.
     private long writeId;
     private long readId;
-
-    private IoUringSendFile sendFileHandle;
 
     AbstractIoUringStreamChannel(Channel parent, LinuxSocket socket, boolean active) {
         // Use a blocking fd, we can make use of fastpoll.
@@ -211,6 +205,17 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         });
     }
 
+    @Override
+    protected Object filterOutboundMessage(Object msg) {
+        // Since we cannot use synchronous sendfile,
+        // the channel can only support DefaultFileRegion instead of FileRegion.
+        if (msg instanceof DefaultFileRegion && IoUring.isIOUringSpliceSupported()) {
+            return new IoUringFileRegion((DefaultFileRegion) msg);
+        }
+
+        return super.filterOutboundMessage(msg);
+    }
+
     private final class IoUringStreamUnsafe extends AbstractUringUnsafe {
 
         private ByteBuf readBuffer;
@@ -249,52 +254,27 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert iovArray == null;
             assert writeId == 0;
 
-            if (msg instanceof DefaultFileRegion) {
-                return scheduleWriteFileRegion((DefaultFileRegion) msg);
-            }
-
-            ByteBuf buf = (ByteBuf) msg;
-
             int fd = fd().intValue();
             IoUringIoRegistration registration = registration();
-            IoUringIoOps ops = IoUringIoOps.newWrite(fd, 0, 0,
-                    buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
-            byte opCode = ops.opcode();
-            writeId = registration.submit(ops);
-            writeOpCode = opCode;
-            return 1;
-        }
-
-        private int scheduleWriteFileRegion(DefaultFileRegion defaultFileRegion) {
-            assert eventLoop().inEventLoop();
-            if (sendFileHandle == null) {
+            final IoUringIoOps ops;
+            if (msg instanceof IoUringFileRegion) {
+                IoUringFileRegion fileRegion = (IoUringFileRegion) msg;
                 try {
-                    sendFileHandle = IoUringSendFile.newInstance(eventLoop()).getNow();
+                    fileRegion.open();
                 } catch (IOException e) {
                     this.handleWriteError(e);
                     return 0;
                 }
+                ops = fileRegion.splice(fd);
+            } else {
+                ByteBuf buf = (ByteBuf) msg;
+                ops = IoUringIoOps.newWrite(fd, 0, 0,
+                        buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
             }
-            try {
-                defaultFileRegion.open();
-            } catch (IOException e) {
-                this.handleWriteError(e);
-                return 0;
-            }
-            FileChannel fileChannel = getFileChannel(defaultFileRegion);
-            int len = (int) (defaultFileRegion.count() - defaultFileRegion.transferred());
-            int fileRegionFd = Native.getFd(fileChannel);
-            sendFileHandle.sendFile(
-                    new FileDescriptor(fileRegionFd), defaultFileRegion.position() + defaultFileRegion.transferred(),
-                    fd(), -1,
-                    len, Native.SPLICE_F_MOVE
-            ).addListener(new GenericFutureListener<Future<? super Integer>>() {
-                @Override
-                public void operationComplete(Future<? super Integer> future) throws Exception {
-                    Integer res = (Integer) future.getNow();
-                    writeComplete((byte) 0, res, 0, (short) 0);
-                }
-            });
+
+            byte opCode = ops.opcode();
+            writeId = registration.submit(ops);
+            writeOpCode = opCode;
             return 1;
         }
 
@@ -407,15 +387,33 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
-            assert writeId != 0 || sendFileHandle != null;
-            ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-
-            if (channelOutboundBuffer.current() instanceof DefaultFileRegion) {
-                return writeFileRegionComplete0(res, flags, data, outstanding);
-            }
-
+            assert writeId != 0;
             writeId = 0;
             writeOpCode = 0;
+
+            ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+            Object current = channelOutboundBuffer.current();
+            if (current instanceof IoUringFileRegion) {
+                IoUringFileRegion fileRegion = (IoUringFileRegion) current;
+                try {
+                    int result = res >= 0 ? res : ioResult("io_uring splice", res);
+                    if (result == 0 && fileRegion.count() > 0) {
+                        validateFileRegion(fileRegion.fileRegion, fileRegion.transfered());
+                        return false;
+                    }
+                    int progress = fileRegion.handleResult(result, data);
+                    if (progress == -1) {
+                        // Done with writing
+                        channelOutboundBuffer.remove();
+                    } else if (progress > 0) {
+                        channelOutboundBuffer.progress(progress);
+                    }
+                } catch (Throwable cause) {
+                    handleWriteError(cause);
+                }
+                return true;
+            }
+
             IovArray iovArray = this.iovArray;
             if (iovArray != null) {
                 this.iovArray = null;
@@ -434,45 +432,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     handleWriteError(cause);
                 }
             }
-            return true;
-        }
-
-        public boolean writeFileRegionComplete0(int res, int flags, int data, int outstanding) {
-            ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
-            DefaultFileRegion defaultFileRegion = (DefaultFileRegion) channelOutboundBuffer.current();
-            if (res == 0) {
-                try {
-                    validateFileRegion(defaultFileRegion, defaultFileRegion.transferred());
-                } catch (IOException ioException) {
-                    channelOutboundBuffer.remove();
-                    handleWriteError(ioException);
-                    return false;
-                }
-                return false;
-            }
-
-            if (res < 0) {
-                try {
-                    if (ioResult("io_uring splice", res) == 0) {
-                        return false;
-                    }
-                } catch (Throwable cause) {
-                    handleWriteError(cause);
-                }
-                //something error,we should remove fileRegion
-                channelOutboundBuffer.remove();
-                return true;
-            }
-
-            int flushAmount = res;
-            long writtenBytes = defaultFileRegion.transfered() + flushAmount;
-            setTransferred(defaultFileRegion, writtenBytes);
-            channelOutboundBuffer.progress(flushAmount);
-            if (defaultFileRegion.transferred() >= defaultFileRegion.count()) {
-                //current we have written all data
-                channelOutboundBuffer.remove();
-            }
-
             return true;
         }
     }
@@ -501,17 +460,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             registration.submit(IoUringIoOps.newAsyncCancel(fd, 0, writeId, writeOpCode));
         } else {
             assert numOutstandingWrites == 0;
-        }
-    }
-
-    @Override
-    protected void doClose() throws Exception {
-        try {
-            super.doClose();
-        } finally {
-            if (sendFileHandle != null) {
-                sendFileHandle.close();
-            }
         }
     }
 }
