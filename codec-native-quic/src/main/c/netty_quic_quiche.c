@@ -366,15 +366,6 @@ static jboolean netty_quiche_conn_set_qlog_path(JNIEnv* env, jclass clazz, jlong
     return ret == true ? JNI_TRUE : JNI_FALSE;
 }
 
-static jint netty_quiche_header_info(JNIEnv* env, jclass clazz, jlong buf, jint buf_len, jint dcil, jlong version,
-                 jlong type, jlong scid, jlong scid_len, jlong dcid, jlong dcid_len, jlong token, jlong token_len) {
-    return (jint) quiche_header_info((const uint8_t *) buf, (size_t) buf_len, (size_t) dcil,
-                                         (uint32_t *) version, (uint8_t *) type,
-                                         (uint8_t *) scid, (size_t *) scid_len,
-                                         (uint8_t *) dcid, (size_t *) dcid_len,
-                                         (uint8_t *) token, (size_t *) token_len);
-}
-
 static jint netty_quiche_negotiate_version(JNIEnv* env, jclass clazz, jlong scid, jint scid_len, jlong dcid, jint dcid_len, jlong out, jint out_len) {
     return (jint) quiche_negotiate_version((const uint8_t *) scid, (size_t) scid_len,
                                                    (const uint8_t *) dcid, (size_t) dcid_len,
@@ -1172,7 +1163,6 @@ static const jint statically_referenced_fixed_method_table_size = sizeof(statica
 static const JNINativeMethod fixed_method_table[] = {
   { "quiche_version", "()Ljava/lang/String;", (void *) netty_quiche_version },
   { "quiche_version_is_supported", "(I)Z", (void *) netty_quiche_version_is_supported },
-  { "quiche_header_info", "(JIIJJJJJJJJ)I", (void *) netty_quiche_header_info },
   { "quiche_negotiate_version", "(JIJIJI)I", (void *) netty_quiche_negotiate_version },
   { "quiche_retry", "(JIJIJIJIIJI)I", (void *) netty_quiche_retry },
   { "quiche_conn_set_qlog_path", "(JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)Z", (void *) netty_quiche_conn_set_qlog_path },

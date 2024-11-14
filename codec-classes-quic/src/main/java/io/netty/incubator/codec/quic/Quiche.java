@@ -315,12 +315,6 @@ final class Quiche {
     static native boolean quiche_version_is_supported(int version);
 
     /**
-     * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L196">quiche_header_info</a>.
-     */
-    static native int quiche_header_info(long bufAddr, int bufLength, int dcil, long versionAddr, long typeAddr,
-                                         long scidAddr, long scidLenAddr, long dcidAddr, long dcidLenAddr,
-                                         long tokenAddr, long tokenLenAddr);
-    /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L215">quiche_negotiate_version</a>.
      */
     static native int quiche_negotiate_version(
