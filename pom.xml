@@ -528,9 +528,6 @@
       <id>riscv64</id>
       <activation>
         <os>
-          <!--
-           Automatically active on linux with riscv64.
-         -->
           <family>linux</family>
           <arch>riscv64</arch>
         </os>
@@ -539,7 +536,7 @@
         <!--
           We use a classifier that is not valid so we are at least be able to get access to the classes.
           The loading of the native lib will fail and so the tests will be skipped.
-         -->
+        -->
         <corretto.classifier>linux-x86_64</corretto.classifier>
       </properties>
     </profile>
@@ -549,9 +546,9 @@
       <activation>
         <os>
           <!--
-           Automatically active on mac with aarch64 as we only release static boringssl version of
-           netty-tcnative for it.
-         -->
+            Automatically active on mac with aarch64 as we only release static boringssl version of
+            netty-tcnative for it.
+          -->
           <family>mac</family>
           <arch>aarch64</arch>
         </os>
@@ -580,18 +577,29 @@
     </profile>
     <profile>
       <id>boringssl</id>
+      <properties>
+        <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
+        <tcnative.classifier />
+      </properties>
+    </profile>
+    <profile>
+      <id>windows</id>
       <activation>
-        <!--
-          Automatically active on windows as we only release static boringssl version of
-          netty-tcnative for windows.
-        -->
         <os>
           <family>windows</family>
         </os>
       </activation>
       <properties>
+        <!--
+          We only release static boringssl version of netty-tcnative for windows.
+        -->
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
         <tcnative.classifier />
+        <!--
+          We use a classifier that is not valid so we are at least be able to get access to the classes.
+          The loading of the native lib will fail and so the tests will be skipped.
+         -->
+        <corretto.classifier>linux-x86_64</corretto.classifier>
       </properties>
     </profile>
     <profile>
