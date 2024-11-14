@@ -346,7 +346,7 @@ public final class IoUringIoOps implements IoOps {
      * @param data                                  the data
      * @return                                      ops.
      */
-    public static IoUringIoOps newShutdown(int fd, int flags, int how, int id, short data) {
+    public static IoUringIoOps newShutdown(int fd, int flags, int how, short data) {
         return new IoUringIoOps(Native.IORING_OP_SHUTDOWN, flags, (short) 0, fd, 0, 0, how, 0, data);
     }
 }
