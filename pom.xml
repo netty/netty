@@ -525,6 +525,26 @@
     </profile>
 
     <profile>
+      <id>riscv64</id>
+      <activation>
+        <os>
+          <!--
+           Automatically active on linux with riscv64.
+         -->
+          <family>linux</family>
+          <arch>riscv64</arch>
+        </os>
+      </activation>
+      <properties>
+        <!--
+          We use a classifier that is not valid so we are at least be able to get access to the classes.
+          The loading of the native lib will fail and so the tests will be skipped.
+         -->
+        <corretto.classifier>linux-x86_64</corretto.classifier>
+      </properties>
+    </profile>
+
+    <profile>
       <id>boringssl-mac-aarch64</id>
       <activation>
         <os>
@@ -572,7 +592,6 @@
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
         <tcnative.classifier />
-        <corretto.classifier />
       </properties>
     </profile>
     <profile>
