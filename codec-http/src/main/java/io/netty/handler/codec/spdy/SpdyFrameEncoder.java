@@ -38,7 +38,7 @@ public class SpdyFrameEncoder {
         version = ObjectUtil.checkNotNull(spdyVersion, "spdyVersion").getVersion();
     }
 
-    private void writeControlFrameHeader(ByteBuf buffer, int type, byte flags, int length) {
+    protected void writeControlFrameHeader(ByteBuf buffer, int type, byte flags, int length) {
         buffer.writeShort(version | 0x8000);
         buffer.writeShort(type);
         buffer.writeByte(flags);
