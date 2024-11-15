@@ -388,13 +388,30 @@
     </profile>
 
     <profile>
+      <id>riscv64</id>
+      <activation>
+        <os>
+          <family>linux</family>
+          <arch>riscv64</arch>
+        </os>
+      </activation>
+      <properties>
+        <!--
+          We use a classifier that is not valid so we are at least be able to get access to the classes.
+          The loading of the native lib will fail and so the tests will be skipped.
+        -->
+        <corretto.classifier>linux-x86_64</corretto.classifier>
+      </properties>
+    </profile>
+
+    <profile>
       <id>boringssl-mac-aarch64</id>
       <activation>
         <os>
           <!--
-           Automatically active on mac with aarch64 as we only release static boringssl version of
-           netty-tcnative for it.
-         -->
+            Automatically active on mac with aarch64 as we only release static boringssl version of
+            netty-tcnative for it.
+          -->
           <family>mac</family>
           <arch>aarch64</arch>
         </os>
@@ -423,18 +440,29 @@
     </profile>
     <profile>
       <id>boringssl</id>
+      <properties>
+        <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
+        <tcnative.classifier />
+      </properties>
+    </profile>
+    <profile>
+      <id>windows</id>
       <activation>
-        <!--
-          Automatically active on windows as we only release static boringssl version of
-          netty-tcnative for windows.
-        -->
         <os>
           <family>windows</family>
         </os>
       </activation>
       <properties>
+        <!--
+          We only release static boringssl version of netty-tcnative for windows.
+        -->
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
         <tcnative.classifier />
+        <!--
+          We use a classifier that is not valid so we are at least be able to get access to the classes.
+          The loading of the native lib will fail and so the tests will be skipped.
+         -->
+        <corretto.classifier>linux-x86_64</corretto.classifier>
       </properties>
     </profile>
     <profile>
@@ -548,6 +576,8 @@
     <conscrypt.version>2.5.2</conscrypt.version>
     <conscrypt.classifier />
     <bouncycastle.version>1.78.1</bouncycastle.version>
+    <corretto.version>2.4.1</corretto.version>
+    <corretto.classifier>${os.detected.classifier}</corretto.classifier>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
@@ -648,6 +678,15 @@
         <version>${conscrypt.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
+      </dependency>
+
+      <!-- ACCP - needed for running tests, used for accelerating SSL with OpenSSL. -->
+      <dependency>
+        <groupId>software.amazon.cryptools</groupId>
+        <artifactId>AmazonCorrettoCryptoProvider</artifactId>
+        <version>${corretto.version}</version>
+        <classifier>${corretto.classifier}</classifier>
+        <scope>test</scope>
       </dependency>
 
       <!--
