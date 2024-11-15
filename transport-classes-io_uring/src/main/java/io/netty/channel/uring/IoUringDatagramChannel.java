@@ -381,7 +381,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        protected void readComplete0(int res, int flags, int data, int outstanding) {
+        protected void readComplete0(byte op, int res, int flags, int data, int outstanding) {
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             final ChannelPipeline pipeline = pipeline();
             ByteBuf byteBuf = this.readBuffer;
@@ -506,7 +506,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        boolean writeComplete0(int res, int flags, int data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, int data, int outstanding) {
             ChannelOutboundBuffer outboundBuffer = outboundBuffer();
 
             // Reset the id as this write was completed and so don't need to be cancelled later.
@@ -543,11 +543,11 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        void connectComplete(int res, int flags, short data) {
+        void connectComplete(byte op, int res, int flags, short data) {
             if (res >= 0) {
                 connected = true;
             }
-            super.connectComplete(res, flags, data);
+            super.connectComplete(op, res, flags, data);
         }
 
         @Override
