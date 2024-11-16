@@ -158,4 +158,14 @@ public class SpdyFrameEncoder {
         frame.writeInt(deltaWindowSize);
         return frame;
     }
+
+    public ByteBuf encodeUnknownFrame(ByteBufAllocator allocator, int frameType, byte flags, ByteBuf data) {
+        int length = data.readableBytes();
+        ByteBuf frame = allocator.ioBuffer(SPDY_HEADER_SIZE + length).order(ByteOrder.BIG_ENDIAN);
+        writeControlFrameHeader(frame, frameType, flags, length);
+        if (length > 0) {
+            frame.writeBytes(data, data.readerIndex(), length);
+        }
+        return frame;
+    }
 }
