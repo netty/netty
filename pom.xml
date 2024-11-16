@@ -5977,6 +5977,12 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.addedToInterface</code>
+                  <new>method void io.netty.handler.codec.spdy.SpdyFrameDecoderDelegate::readUnknownFrame(int, byte, io.netty.buffer.ByteBuf)</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.method.returnTypeChangedCovariantly</code>
                   <old>method java.lang.Object java.lang.Object::clone() throws java.lang.CloneNotSupportedException @ com.google.protobuf.UnknownFieldSet.Field.Builder</old>
                   <new>method com.google.protobuf.UnknownFieldSet.Field.Builder com.google.protobuf.UnknownFieldSet.Field.Builder::clone()</new>

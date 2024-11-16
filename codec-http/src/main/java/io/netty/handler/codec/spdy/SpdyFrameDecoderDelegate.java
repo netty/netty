@@ -96,4 +96,16 @@ public interface SpdyFrameDecoderDelegate {
      * Called when an unrecoverable session error has occurred.
      */
     void readFrameError(String message);
+
+    /**
+     * Called when an unknown frame is received.
+     *
+     * @param frameType the frame type from the spdy header.
+     * @param flags the flags in the frame header.
+     * @param payload the payload of the frame.
+     */
+    default void readUnknownFrame(int frameType, byte flags, ByteBuf payload) {
+        payload.release();
+    };
+
 }

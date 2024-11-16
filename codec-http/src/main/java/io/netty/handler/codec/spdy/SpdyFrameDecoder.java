@@ -15,44 +15,23 @@
  */
 package io.netty.handler.codec.spdy;
 
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_DATA_FLAG_FIN;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_DATA_FRAME;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_FLAG_FIN;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_FLAG_UNIDIRECTIONAL;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_GOAWAY_FRAME;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADERS_FRAME;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_FLAGS_OFFSET;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_LENGTH_OFFSET;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_SIZE;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_HEADER_TYPE_OFFSET;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_PING_FRAME;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_RST_STREAM_FRAME;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SETTINGS_CLEAR;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SETTINGS_FRAME;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SETTINGS_PERSISTED;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SETTINGS_PERSIST_VALUE;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SYN_REPLY_FRAME;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_SYN_STREAM_FRAME;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.SPDY_WINDOW_UPDATE_FRAME;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.getSignedInt;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedInt;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedMedium;
-import static io.netty.handler.codec.spdy.SpdyCodecUtil.getUnsignedShort;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.ObjectUtil;
+
+import static io.netty.handler.codec.spdy.SpdyCodecUtil.*;
 
 /**
  * Decodes {@link ByteBuf}s into SPDY Frames.
  */
 public class SpdyFrameDecoder {
 
-    private final int spdyVersion;
+    protected final int spdyVersion;
     private final int maxChunkSize;
 
-    private final SpdyFrameDecoderDelegate delegate;
+    protected final SpdyFrameDecoderDelegate delegate;
 
+    private int frameType;
     private State state;
 
     // SPDY common header fields
@@ -74,6 +53,7 @@ public class SpdyFrameDecoder {
         READ_GOAWAY_FRAME,
         READ_HEADERS_FRAME,
         READ_WINDOW_UPDATE_FRAME,
+        READ_UNKNOWN_FRAME,
         READ_HEADER_BLOCK,
         DISCARD_FRAME,
         FRAME_ERROR
@@ -116,16 +96,15 @@ public class SpdyFrameDecoder {
                     boolean control = (buffer.getByte(frameOffset) & 0x80) != 0;
 
                     int version;
-                    int type;
                     if (control) {
                         // Decode control frame common header
                         version = getUnsignedShort(buffer, frameOffset) & 0x7FFF;
-                        type = getUnsignedShort(buffer, frameOffset + SPDY_HEADER_TYPE_OFFSET);
+                        frameType = getUnsignedShort(buffer, frameOffset + SPDY_HEADER_TYPE_OFFSET);
                         streamId = 0; // Default to session Stream-ID
                     } else {
                         // Decode data frame common header
                         version = spdyVersion; // Default to expected version
-                        type = SPDY_DATA_FRAME;
+                        frameType = SPDY_DATA_FRAME;
                         streamId = getUnsignedInt(buffer, frameOffset);
                     }
 
@@ -136,11 +115,13 @@ public class SpdyFrameDecoder {
                     if (version != spdyVersion) {
                         state = State.FRAME_ERROR;
                         delegate.readFrameError("Invalid SPDY Version");
-                    } else if (!isValidFrameHeader(streamId, type, flags, length)) {
+                    } else if (!isValidFrameHeader(streamId, frameType, flags, length)) {
                         state = State.FRAME_ERROR;
                         delegate.readFrameError("Invalid Frame Error");
+                    } else if (isValidUnknownFrameHeader(streamId, frameType, flags, length)) {
+                        state = State.READ_UNKNOWN_FRAME;
                     } else {
-                        state = getNextState(type, length);
+                        state = getNextState(frameType, length);
                     }
                     break;
 
@@ -340,6 +321,13 @@ public class SpdyFrameDecoder {
                     }
                     break;
 
+                case READ_UNKNOWN_FRAME:
+                    if (decodeUnknownFrame(frameType, flags, length, buffer)) {
+                        state = State.READ_COMMON_HEADER;
+                        break;
+                    }
+                    return;
+
                 case READ_HEADER_BLOCK:
                     if (length == 0) {
                         state = State.READ_COMMON_HEADER;
@@ -413,12 +401,50 @@ public class SpdyFrameDecoder {
                 return State.READ_WINDOW_UPDATE_FRAME;
 
             default:
+
                 if (length != 0) {
                     return State.DISCARD_FRAME;
                 } else {
                     return State.READ_COMMON_HEADER;
                 }
         }
+    }
+
+    /**
+     * Decode the unknown frame, returns ture if parsed something, otherwise false.
+     * To discard the unknown frame, delegate to {@link #discardUnknownFrame(int, byte, int, ByteBuf)}.
+     */
+    protected boolean decodeUnknownFrame(int frameType, byte flags, int length, ByteBuf buffer) {
+        if (length == 0) {
+            this.delegate.readUnknownFrame(frameType, flags, Unpooled.buffer(0));
+            return true;
+        }
+        if (buffer.readableBytes() < length) {
+            return false;
+        }
+        ByteBuf data = buffer.alloc().buffer(length);
+        data.writeBytes(buffer, length);
+        this.delegate.readUnknownFrame(frameType, flags, data);
+        return true;
+    }
+
+    protected boolean discardUnknownFrame(int frameType, byte flags, int length, ByteBuf buffer) {
+        int numBytes = Math.min(buffer.readableBytes(), this.length);
+        buffer.skipBytes(numBytes);
+        this.length -= numBytes;
+        if (length == 0) {
+            state = State.READ_COMMON_HEADER;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check whether the unknown frame is valid, if not, the frame will be discarded,
+     * otherwise, the frame will be passed to {@link #decodeUnknownFrame(int, byte, int, ByteBuf)}.
+     * */
+    protected boolean isValidUnknownFrameHeader(int streamId, int type, byte flags, int length) {
+        return false;
     }
 
     private static boolean isValidFrameHeader(int streamId, int type, byte flags, int length) {
