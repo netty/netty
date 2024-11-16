@@ -39,6 +39,8 @@ import io.netty.handler.codec.compression.SnappyFrameEncoder;
 import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.util.internal.ObjectUtil;
 
+import static io.netty.util.internal.ObjectUtil.checkInRange;
+
 /**
  * Compresses an {@link HttpMessage} and an {@link HttpContent} in {@code gzip} or
  * {@code deflate} encoding while respecting the {@code "Accept-Encoding"} header.
@@ -48,26 +50,25 @@ import io.netty.util.internal.ObjectUtil;
  */
 public class HttpContentCompressor extends HttpContentEncoder {
 
-    private final boolean supportsCompressionOptions;
     private final BrotliOptions brotliOptions;
     private final GzipOptions gzipOptions;
     private final DeflateOptions deflateOptions;
     private final ZstdOptions zstdOptions;
     private final SnappyOptions snappyOptions;
 
-    private final int compressionLevel;
-    private final int windowBits;
-    private final int memLevel;
     private final int contentSizeThreshold;
     private ChannelHandlerContext ctx;
     private final Map<String, CompressionEncoderFactory> factories;
 
     /**
-     * Creates a new handler with the default compression level (<tt>6</tt>),
-     * default window size (<tt>15</tt>) and default memory level (<tt>8</tt>).
+     * Creates a new handler with {@link StandardCompressionOptions#brotli()},
+     * {@link StandardCompressionOptions#zstd()}, {@link StandardCompressionOptions#snappy()},
+     * {@link StandardCompressionOptions#gzip()} and {@link StandardCompressionOptions#deflate()}.
      */
     public HttpContentCompressor() {
-        this(6);
+        this(0, StandardCompressionOptions.brotli(), StandardCompressionOptions.zstd(),
+                StandardCompressionOptions.snappy(), StandardCompressionOptions.gzip(),
+                StandardCompressionOptions.deflate());
     }
 
     /**
@@ -86,7 +87,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
     /**
      * Creates a new handler with the specified compression level, window size,
-     * and memory level..
+     * and memory level.
      *
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
@@ -110,7 +111,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
 
     /**
      * Creates a new handler with the specified compression level, window size,
-     * and memory level..
+     * and memory level.
      *
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
@@ -133,17 +134,21 @@ public class HttpContentCompressor extends HttpContentEncoder {
      */
     @Deprecated
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel, int contentSizeThreshold) {
-        this.compressionLevel = ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
-        this.windowBits = ObjectUtil.checkInRange(windowBits, 9, 15, "windowBits");
-        this.memLevel = ObjectUtil.checkInRange(memLevel, 1, 9, "memLevel");
-        this.contentSizeThreshold = ObjectUtil.checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
-        this.brotliOptions = null;
-        this.gzipOptions = null;
-        this.deflateOptions = null;
-        this.zstdOptions = null;
-        this.snappyOptions = null;
-        this.factories = null;
-        this.supportsCompressionOptions = false;
+        this(contentSizeThreshold,
+                StandardCompressionOptions.brotli(),
+                StandardCompressionOptions.zstd(),
+                StandardCompressionOptions.snappy(),
+                StandardCompressionOptions.gzip(
+                        checkInRange(compressionLevel, 0, 9, "compressionLevel"),
+                        checkInRange(windowBits, 9, 15, "windowBits"),
+                        checkInRange(memLevel, 1, 9, "memLevel")
+                ),
+                StandardCompressionOptions.deflate(
+                        checkInRange(compressionLevel, 0, 9, "compressionLevel"),
+                        checkInRange(windowBits, 9, 15, "windowBits"),
+                        checkInRange(memLevel, 1, 9, "memLevel")
+                )
+        );
     }
 
     /**
@@ -230,11 +235,6 @@ public class HttpContentCompressor extends HttpContentEncoder {
         if (this.snappyOptions != null) {
             this.factories.put("snappy", new SnappyEncoderFactory());
         }
-
-        this.compressionLevel = -1;
-        this.windowBits = -1;
-        this.memLevel = -1;
-        supportsCompressionOptions = true;
     }
 
     @Override
@@ -258,45 +258,20 @@ public class HttpContentCompressor extends HttpContentEncoder {
             return null;
         }
 
-        if (supportsCompressionOptions) {
-            String targetContentEncoding = determineEncoding(acceptEncoding);
-            if (targetContentEncoding == null) {
-                return null;
-            }
-
-            CompressionEncoderFactory encoderFactory = factories.get(targetContentEncoding);
-
-            if (encoderFactory == null) {
-                throw new Error();
-            }
-
-            return new Result(targetContentEncoding,
-                    new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                            ctx.channel().config(), encoderFactory.createEncoder()));
-        } else {
-            ZlibWrapper wrapper = determineWrapper(acceptEncoding);
-            if (wrapper == null) {
-                return null;
-            }
-
-            String targetContentEncoding;
-            switch (wrapper) {
-                case GZIP:
-                    targetContentEncoding = "gzip";
-                    break;
-                case ZLIB:
-                    targetContentEncoding = "deflate";
-                    break;
-                default:
-                    throw new Error();
-            }
-
-            return new Result(
-                    targetContentEncoding,
-                    new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                            ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(
-                            wrapper, compressionLevel, windowBits, memLevel)));
+        String targetContentEncoding = determineEncoding(acceptEncoding);
+        if (targetContentEncoding == null) {
+            return null;
         }
+
+        CompressionEncoderFactory encoderFactory = factories.get(targetContentEncoding);
+
+        if (encoderFactory == null) {
+            throw new Error();
+        }
+
+        return new Result(targetContentEncoding,
+                new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
+                        ctx.channel().config(), encoderFactory.createEncoder()));
     }
 
     @SuppressWarnings("FloatingPointEquality")
