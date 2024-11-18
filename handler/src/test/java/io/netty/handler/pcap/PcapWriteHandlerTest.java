@@ -57,6 +57,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -295,6 +296,48 @@ public class PcapWriteHandlerTest {
 
         // Verify the capture data
         verifyTcpCapture(true, pcapBuffer, serverAddr, clientAddr);
+
+        assertFalse(embeddedChannel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void writePcapGreaterThan4Gb() {
+
+        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        final AtomicLong bytesWritten = new AtomicLong(0);
+        EmbeddedChannel embeddedChannel = new EmbeddedChannel(
+                new DiscardingWritesAndFlushesHandler(), //Discard writes/flushes
+                PcapWriteHandler.builder()
+                        .forceTcpChannel(serverAddr, clientAddr, true)
+                        .build(new OutputStream() {
+                            @Override
+                            public void write(int b) {
+                                bytesWritten.incrementAndGet();
+                            }
+
+                            @Override
+                            public void write(byte[] b, int off, int len) {
+                                bytesWritten.addAndGet(len);
+                            }
+                        }),
+                new DiscardingReadsHandler() //Discard reads
+        );
+        int chunkSize = 0xFFFF - 40; // 40 bytes for header data
+        String payloadString = new String(new char[chunkSize]).replace('\0', 'X');
+        final ByteBuf payload = Unpooled.wrappedBuffer(payloadString.getBytes());
+
+        long fourGB = 0xFFFFFFFFL;
+
+        // Let's send 4 GiB inbound, ...
+        for (int i = 0; i < ((fourGB / chunkSize) + 2); i++) {
+            embeddedChannel.writeInbound(payload);
+        }
+        // ... and 4 GiB outbound.
+        for (int i = 0; i < ((fourGB / chunkSize) + 2); i++) {
+            embeddedChannel.writeOutbound(payload);
+        }
+        assertTrue(bytesWritten.get() > 2 * (fourGB + 1000));
 
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }
@@ -677,4 +720,5 @@ public class PcapWriteHandlerTest {
             throw new UnsupportedOperationException();
         }
     }
+
 }

@@ -103,15 +103,15 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
     /**
      * TCP Sender Segment Number.
-     * It'll start with 1 and keep incrementing with number of bytes read/sent.
+     * It'll start with 1 and keep incrementing with number of bytes read/sent and wrap at the uint32 max.
      */
-    private int sendSegmentNumber = 1;
+    private long sendSegmentNumber = 1;
 
     /**
      * TCP Receiver Segment Number.
-     * It'll start with 1 and keep incrementing with number of bytes read/sent.
+     * It'll start with 1 and keep incrementing with number of bytes read/sent and wrap at the uint32 max
      */
-    private int receiveSegmentNumber = 1;
+    private long receiveSegmentNumber = 1;
 
     /**
      * Type of the channel this handler is registered on
@@ -354,7 +354,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                     completeTCPWrite(srcAddr, dstAddr, tcpBuf, byteBufAllocator, ctx);
                     logTCP(true, bytes, sendSegmentNumber, receiveSegmentNumber, srcAddr, dstAddr, false);
 
-                    sendSegmentNumber += bytes;
+                    sendSegmentNumber = incrementUintSegmentNumber(sendSegmentNumber, bytes);
 
                     TCPPacket.writePacket(tcpBuf, null, receiveSegmentNumber, sendSegmentNumber, dstAddr.getPort(),
                             srcAddr.getPort(), TCPPacket.TCPFlag.ACK);
@@ -376,7 +376,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                     completeTCPWrite(srcAddr, dstAddr, tcpBuf, byteBufAllocator, ctx);
                     logTCP(false, bytes, receiveSegmentNumber, sendSegmentNumber, srcAddr, dstAddr, false);
 
-                    receiveSegmentNumber += bytes;
+                    receiveSegmentNumber = incrementUintSegmentNumber(receiveSegmentNumber, bytes);
 
                     TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber, receiveSegmentNumber, dstAddr.getPort(),
                             srcAddr.getPort(), TCPPacket.TCPFlag.ACK);
@@ -436,6 +436,11 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             ethernetBuf.release();
             pcap.release();
         }
+    }
+
+    private long incrementUintSegmentNumber(long sequenceNumber, int value) {
+        //If the sequence number would go above the max for uint32, wrap around
+        return (sequenceNumber + value) % 0xFFFFFFFFL;
     }
 
     /**
@@ -587,7 +592,9 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 completeTCPWrite(handlerAddr, initiatorAddr, tcpBuf, byteBufAllocator, ctx);
 
                 // Write ACK with Normal Source and Destination Address
-                TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber + 1, receiveSegmentNumber + 1,
+                sendSegmentNumber = incrementUintSegmentNumber(sendSegmentNumber, 1);
+                sendSegmentNumber = incrementUintSegmentNumber(receiveSegmentNumber, 1);
+                TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber , receiveSegmentNumber ,
                         initiatorAddr.getPort(), handlerAddr.getPort(), TCPPacket.TCPFlag.ACK);
                 completeTCPWrite(initiatorAddr, handlerAddr, tcpBuf, byteBufAllocator, ctx);
             } finally {
@@ -626,7 +633,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     /**
      * Logger for TCP
      */
-    private void logTCP(boolean isWriteOperation, int bytes, int sendSegmentNumber, int receiveSegmentNumber,
+    private void logTCP(boolean isWriteOperation, int bytes, long sendSegmentNumber, long receiveSegmentNumber,
                         InetSocketAddress srcAddr, InetSocketAddress dstAddr, boolean ackOnly) {
         // If `ackOnly` is `true` when we don't need to write any data so we'll not
         // log number of bytes being written and mark the operation as "TCP ACK".
