@@ -35,7 +35,7 @@ public class SpdyFrameEncoder {
      * Creates a new instance with the specified {@code spdyVersion}.
      */
     public SpdyFrameEncoder(SpdyVersion spdyVersion) {
-        version = ObjectUtil.checkNotNull(spdyVersion, "spdyVersion").getVersion();
+        version = ObjectUtil.checkNotNull(spdyVersion, "spdyVersion").version();
     }
 
     protected void writeControlFrameHeader(ByteBuf buffer, int type, byte flags, int length) {

@@ -147,7 +147,7 @@ public class SpdyFrameDecoderTest {
     }
 
     private static void encodeControlFrameHeader(ByteBuf buffer, short type, byte flags, int length) {
-        buffer.writeShort(0x8000 | SpdyVersion.SPDY_3_1.getVersion());
+        buffer.writeShort(0x8000 | SpdyVersion.SPDY_3_1.version());
         buffer.writeShort(type);
         buffer.writeByte(flags);
         buffer.writeMedium(length);

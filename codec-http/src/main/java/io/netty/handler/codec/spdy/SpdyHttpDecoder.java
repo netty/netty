@@ -131,7 +131,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      */
     protected SpdyHttpDecoder(SpdyVersion version, int maxContentLength, Map<Integer,
             FullHttpMessage> messageMap, HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
-        spdyVersion = ObjectUtil.checkNotNull(version, "version").getVersion();
+        spdyVersion = ObjectUtil.checkNotNull(version, "version").version();
         this.maxContentLength = checkPositive(maxContentLength, "maxContentLength");
         this.messageMap = messageMap;
         this.headersFactory = headersFactory;
