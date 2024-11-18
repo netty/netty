@@ -88,7 +88,7 @@ import static io.netty.util.internal.logging.InternalLogLevel.DEBUG;
  * {@link Http2ChannelDuplexHandler#newStream()}, and then writing a {@link Http2HeadersFrame} object with the stream
  * attached.
  *
- * <pre>
+ * <pre> {@code
  *     final Http2Stream2 stream = handler.newStream();
  *     ctx.write(headersFrame.stream(stream)).addListener(new ChannelFutureListener() {
  *
@@ -108,6 +108,7 @@ import static io.netty.util.internal.logging.InternalLogLevel.DEBUG;
  *                 }
  *             }
  *         }
+ *     }
  *     }
  * </pre>
  *
