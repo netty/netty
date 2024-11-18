@@ -266,7 +266,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
         CompressionEncoderFactory encoderFactory = factories.get(targetContentEncoding);
 
         if (encoderFactory == null) {
-            throw new Error();
+            throw new IllegalStateException("Couldn't find CompressionEncoderFactory: " + targetContentEncoding);
         }
 
         return new Result(targetContentEncoding,
