@@ -1261,6 +1261,36 @@
               <differences>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <classQualifiedName>io.netty.handler.codec.spdy.SpdyFrameEncoder</classQualifiedName>
+                  <old>method void io.netty.handler.codec.spdy.SpdyFrameEncoder::writeControlFrameHeader(io.netty.buffer.ByteBuf, int, byte, int)</old>
+                  <new>method void io.netty.handler.codec.spdy.SpdyFrameEncoder::writeControlFrameHeader(io.netty.buffer.ByteBuf, int, byte, int)</new>
+                  <oldVisibility>private</oldVisibility>
+                  <newVisibility>protected</newVisibility>
+                  <justification>Was private before and is needed for sub-classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <classQualifiedName>io.netty.handler.codec.spdy.SpdyVersion</classQualifiedName>
+                  <old>method int io.netty.handler.codec.spdy.SpdyVersion::getMinorVersion()</old>
+                  <new>method int io.netty.handler.codec.spdy.SpdyVersion::getMinorVersion()</new>
+                  <oldVisibility>package</oldVisibility>
+                  <newVisibility>public</newVisibility>
+                  <justification>Was package-private before and is needed</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <classQualifiedName>io.netty.handler.codec.spdy.SpdyVersion</classQualifiedName>
+                  <old>method int io.netty.handler.codec.spdy.SpdyVersion::getVersion()</old>
+                  <new>method int io.netty.handler.codec.spdy.SpdyVersion::getVersion()</new>
+                  <oldVisibility>package</oldVisibility>
+                  <newVisibility>public</newVisibility>
+                  <justification>Was package-private before and is needed</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.field.constantValueChanged</code>
                   <classQualifiedName>io.netty.handler.codec.http2.Http2CodecUtil</classQualifiedName>
                   <field>CONTINUATION_FRAME_HEADER_LENGTH</field>
