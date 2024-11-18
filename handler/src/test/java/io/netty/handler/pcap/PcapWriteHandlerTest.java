@@ -46,6 +46,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Promise;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -67,16 +68,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class PcapWriteHandlerTest {
 
     @Test
-    public void udpV4SharedOutputStreamTest() throws InterruptedException {
-        udpV4(true);
+    public void udpV4SharedOutputStreamTest() throws InterruptedException, IOException {
+        udpV4(true, true);
     }
 
     @Test
-    public void udpV4NonOutputStream() throws InterruptedException {
-        udpV4(false);
+    public void udpV4NonOutputStream() throws InterruptedException, IOException {
+        udpV4(false, true);
     }
 
-    private static void udpV4(boolean sharedOutputStream) throws InterruptedException {
+    @Test
+    public void udpV4NoGlobalHeaderOutputStream() throws InterruptedException, IOException {
+        udpV4(false, false);
+    }
+
+    private static void udpV4(boolean sharedOutputStream, boolean writeGlobalHeaders)
+            throws InterruptedException, IOException {
         ByteBuf byteBuf = Unpooled.buffer();
 
         InetSocketAddress serverAddr = new InetSocketAddress("127.0.0.1", 0);
@@ -106,6 +113,7 @@ public class PcapWriteHandlerTest {
                 .channel(NioDatagramChannel.class)
                 .handler(PcapWriteHandler.builder()
                         .sharedOutputStream(sharedOutputStream)
+                        .writePcapGlobalHeader(writeGlobalHeaders)
                         .build(outputStream));
 
         ChannelFuture channelFutureClient =
@@ -116,7 +124,8 @@ public class PcapWriteHandlerTest {
         assertTrue(clientChannel.writeAndFlush(Unpooled.wrappedBuffer("Meow".getBytes())).sync().isSuccess());
         assertTrue(eventLoopGroup.shutdownGracefully().sync().isSuccess());
 
-        verifyUdpCapture(!sharedOutputStream, // if sharedOutputStream is true, we don't verify the global headers.
+        // if sharedOutputStream is true or writeGlobalHeaders is false, we don't verify the global headers.
+        verifyUdpCapture(!sharedOutputStream && writeGlobalHeaders,
                 byteBuf,
                 (InetSocketAddress) clientChannel.remoteAddress(),
                 (InetSocketAddress) clientChannel.localAddress()
@@ -176,15 +185,20 @@ public class PcapWriteHandlerTest {
 
     @Test
     public void tcpV4SharedOutputStreamTest() throws Exception {
-        tcpV4(true);
+        tcpV4(true, true);
+    }
+
+    @Test
+    public void tcpV4NoGlobalHeaderOutputStream() throws Exception {
+        tcpV4(false, false);
     }
 
     @Test
     public void tcpV4NonOutputStream() throws Exception {
-        tcpV4(false);
+        tcpV4(false, true);
     }
 
-    private static void tcpV4(final boolean sharedOutputStream) throws Exception {
+    private static void tcpV4(final boolean sharedOutputStream, final boolean writeGlobalHeaders) throws Exception {
         final ByteBuf byteBuf = Unpooled.buffer();
 
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
@@ -201,6 +215,7 @@ public class PcapWriteHandlerTest {
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline p = ch.pipeline();
                         p.addLast(PcapWriteHandler.builder().sharedOutputStream(sharedOutputStream)
+                                          .writePcapGlobalHeader(writeGlobalHeaders)
                                 .build(new ByteBufOutputStream(byteBuf)));
                         p.addLast(new ChannelInboundHandlerAdapter() {
                             @Override
@@ -265,8 +280,9 @@ public class PcapWriteHandlerTest {
         assertTrue(clientGroup.shutdownGracefully().sync().isSuccess());
         assertTrue(bossGroup.shutdownGracefully().sync().isSuccess());
 
+        // if sharedOutputStream is true or writeGlobalHeaders is false, we don't verify the global headers.
         verifyTcpCapture(
-                !sharedOutputStream, // if sharedOutputStream is true, we don't verify the global headers.
+                writeGlobalHeaders && !sharedOutputStream,
                 byteBuf,
                 (InetSocketAddress) serverChannelFuture.channel().localAddress(),
                 (InetSocketAddress) clientChannelFuture.channel().localAddress()
