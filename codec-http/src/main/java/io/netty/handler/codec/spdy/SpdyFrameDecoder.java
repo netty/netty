@@ -91,7 +91,7 @@ public class SpdyFrameDecoder {
      * Creates a new instance with the specified parameters.
      */
     public SpdyFrameDecoder(SpdyVersion spdyVersion, SpdyFrameDecoderDelegate delegate, int maxChunkSize) {
-        this.spdyVersion = ObjectUtil.checkNotNull(spdyVersion, "spdyVersion").getVersion();
+        this.spdyVersion = ObjectUtil.checkNotNull(spdyVersion, "spdyVersion").version();
         this.delegate = ObjectUtil.checkNotNull(delegate, "delegate");
         this.maxChunkSize = ObjectUtil.checkPositive(maxChunkSize, "maxChunkSize");
         state = State.READ_COMMON_HEADER;
