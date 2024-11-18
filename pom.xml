@@ -577,7 +577,12 @@
     <conscrypt.classifier />
     <bouncycastle.version>1.78.1</bouncycastle.version>
     <corretto.version>2.4.1</corretto.version>
-    <corretto.classifier>${os.detected.classifier}</corretto.classifier>
+    <!--
+      Don't use os.detected.classifier as it will also add the "likes" as configure above.
+      ${os.detected.name}-${os.detected.arch} is the same but without "likes".
+      See https://github.com/trustin/os-maven-plugin/blob/os-maven-plugin-1.7.1/README.md#property-osdetectedclassifier
+    -->
+    <corretto.classifier>${os.detected.name}-${os.detected.arch}</corretto.classifier>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
