@@ -89,7 +89,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
  * {@link Http2ChannelDuplexHandler#newStream()}, and then writing a {@link Http2HeadersFrame} object with the stream
  * attached.
  *
- * <pre>{@code
+ * <pre> {@code
  *     final Http2Stream2 stream = handler.newStream();
  *     ctx.write(headersFrame.stream(stream)).addListener(new FutureListener<Void>() {
  *
