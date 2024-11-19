@@ -37,47 +37,37 @@ public final class BoundedInputStream extends FilterInputStream {
 
     @Override
     public int read() throws IOException {
-        checkMaxBytesRead(1);
-        try {
-            int b = super.read();
-            if (b <= 0) {
-                // We couldn't read anything.
-                numRead--;
-            }
-            return b;
-        } catch (IOException e) {
-            numRead--;
-            throw e;
+        checkMaxBytesRead();
+
+        int b = super.read();
+        if (b > 0) {
+            numRead++;
         }
+
+        checkMaxBytesRead();
+        return b;
     }
 
     @Override
     public int read(byte[] buf, int off, int len) throws IOException {
+        checkMaxBytesRead();
+
         // Calculate the maximum number of bytes that we should try to read.
         int num = Math.min(len, maxBytesRead - numRead + 1);
-        checkMaxBytesRead(num);
-        try {
-            int b = super.read(buf, off, num);
-            if (b == -1) {
-                // We couldn't read anything.
-                numRead -= num;
-            } else if (b != num) {
-                // Correct numRead based on the actual amount we were able to read.
-                numRead -= num - b;
-            }
-            return b;
-        } catch (IOException e) {
-            numRead -= num;
-            throw e;
+
+        int b = super.read(buf, off, num);
+
+        if (b > 0) {
+            numRead += b;
         }
+
+        checkMaxBytesRead();
+        return b;
     }
 
-    private void checkMaxBytesRead(int n) throws IOException {
-        int sum = numRead + n;
-        if (sum < 0 || sum > maxBytesRead) {
-            numRead = maxBytesRead + 1;
-            throw new IOException("Maximum number of bytes read: " + maxBytesRead);
+    private void checkMaxBytesRead() throws IOException {
+        if (numRead > maxBytesRead) {
+            throw new IOException("Maximum number of bytes read: " + numRead);
         }
-        numRead = sum;
     }
 }
