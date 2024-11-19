@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
@@ -302,7 +303,6 @@ public class PcapWriteHandlerTest {
 
     @Test
     public void writePcapGreaterThan4Gb() {
-
         InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
         InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
         final AtomicLong bytesWritten = new AtomicLong(0);
@@ -337,7 +337,7 @@ public class PcapWriteHandlerTest {
         for (int i = 0; i < ((fourGB / chunkSize) + 2); i++) {
             embeddedChannel.writeOutbound(payload);
         }
-        assertTrue(bytesWritten.get() > 2 * (fourGB + 1000));
+        assertThat(bytesWritten.get()).isGreaterThan(2 * (fourGB + 1000));
 
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }
@@ -721,4 +721,22 @@ public class PcapWriteHandlerTest {
         }
     }
 
+    static final class DiscardingReadsHandler extends ChannelInboundHandlerAdapter {
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            //Discard
+        }
+    }
+
+    static class DiscardingWritesAndFlushesHandler extends ChannelOutboundHandlerAdapter {
+        @Override
+        public void flush(ChannelHandlerContext ctx) {
+            //Discard
+        }
+
+        @Override
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            //Discard
+        }
+    }
 }

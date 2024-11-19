@@ -438,8 +438,8 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         }
     }
 
-    private long incrementUintSegmentNumber(long sequenceNumber, int value) {
-        //If the sequence number would go above the max for uint32, wrap around
+    private static long incrementUintSegmentNumber(long sequenceNumber, int value) {
+        // If the sequence number would go above the max for uint32, wrap around
         return (sequenceNumber + value) % 0xFFFFFFFFL;
     }
 
