@@ -440,7 +440,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
     private static long incrementUintSegmentNumber(long sequenceNumber, int value) {
         // If the sequence number would go above the max for uint32, wrap around
-        return (sequenceNumber + value) % 0xFFFFFFFFL;
+        return (sequenceNumber + value) % (0xFFFFFFFFL + 1);
     }
 
     /**
@@ -593,7 +593,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
 
                 // Write ACK with Normal Source and Destination Address
                 sendSegmentNumber = incrementUintSegmentNumber(sendSegmentNumber, 1);
-                sendSegmentNumber = incrementUintSegmentNumber(receiveSegmentNumber, 1);
+                receiveSegmentNumber = incrementUintSegmentNumber(receiveSegmentNumber, 1);
                 TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber , receiveSegmentNumber ,
                         initiatorAddr.getPort(), handlerAddr.getPort(), TCPPacket.TCPFlag.ACK);
                 completeTCPWrite(initiatorAddr, handlerAddr, tcpBuf, byteBufAllocator, ctx);
