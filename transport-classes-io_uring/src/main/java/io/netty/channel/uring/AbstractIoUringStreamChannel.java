@@ -279,7 +279,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected void readComplete0(byte op, int res, int flags, int data, int outstanding) {
+        protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
             assert readId != 0;
             readId = 0;
             boolean allDataRead = false;
@@ -361,7 +361,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, int data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
             assert writeId != 0;
             writeId = 0;
             writeOpCode = 0;
