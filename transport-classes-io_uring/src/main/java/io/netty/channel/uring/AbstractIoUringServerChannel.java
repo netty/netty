@@ -109,7 +109,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        boolean writeComplete0(byte op, int res, int flags, int data, int outstanding) {
+        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
             throw new UnsupportedOperationException();
         }
 
@@ -128,7 +128,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected void readComplete0(byte op, int res, int flags, int data, int outstanding) {
+        protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
             assert acceptId != 0;
             acceptId = 0;
             final IoUringRecvByteAllocatorHandle allocHandle =

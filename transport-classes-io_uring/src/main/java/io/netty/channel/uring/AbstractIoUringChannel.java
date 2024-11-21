@@ -647,7 +647,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             ioState |= POLL_IN_SCHEDULED;
         }
 
-        private void readComplete(byte op, int res, int flags, int data) {
+        private void readComplete(byte op, int res, int flags, short data) {
             assert numOutstandingReads > 0;
             if (--numOutstandingReads == 0) {
                 readPending = false;
@@ -669,7 +669,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         /**
          * Called once a read was completed.
          */
-        protected abstract void readComplete0(byte op, int res, int flags, int data, int outstandingCompletes);
+        protected abstract void readComplete0(byte op, int res, int flags, short data, int outstandingCompletes);
 
         /**
          * Called once POLLRDHUP event is ready to be processed
@@ -728,8 +728,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
 
         /**
-         * Schedule a read and returns the number of {@link #readComplete(byte, int, int, int)} calls that are expected
-         * because of the scheduled read.
+         * Schedule a read and returns the number of {@link #readComplete(byte, int, int, short)}
+         * calls that are expected because of the scheduled read.
          *
          * @param first {@code true} if this is the first read of a read loop.
          */
@@ -846,7 +846,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param data          the data that was passed when submitting the op.
          * @param outstanding   the outstanding write completions.
          */
-        abstract boolean writeComplete0(byte op, int res, int flags, int data, int outstanding);
+        abstract boolean writeComplete0(byte op, int res, int flags, short data, int outstanding);
 
         /**
          * Called once a cancel was completed.
