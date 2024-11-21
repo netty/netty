@@ -223,7 +223,6 @@ public class PcapWriteHandlerTest {
         final DatagramPacket datagram =
                 new DatagramPacket(Unpooled.wrappedBuffer(payloadString.getBytes()), serverAddr);
 
-
         // We fake a client
         EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
         embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
