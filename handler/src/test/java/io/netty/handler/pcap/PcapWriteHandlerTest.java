@@ -180,6 +180,56 @@ public class PcapWriteHandlerTest {
     }
 
     @Test
+    public void udpLargeBytebufPayload() throws SocketException {
+        final ByteBuf pcapBuffer = Unpooled.buffer();
+        //Create payload 1 byte larger than maximum
+        String payloadString = new String(new char[65507 + 1]).replace('\0', 'X');
+        final ByteBuf payload = Unpooled.wrappedBuffer(payloadString.getBytes());
+
+        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+
+        // We fake a client
+        EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                                                           .build(new ByteBufOutputStream(pcapBuffer)));
+
+        assertTrue(embeddedChannel.writeOutbound(payload));
+        assertEquals(payload, embeddedChannel.readOutbound());
+
+        // Verify only the PCAP global header was written. Large UDP payload should be discarded
+        assertEquals(24, pcapBuffer.readableBytes());
+
+        assertFalse(embeddedChannel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void udpLargeDatagramPayload() throws SocketException {
+        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+
+        final ByteBuf pcapBuffer = Unpooled.buffer();
+        //Create payload 1 byte larger than maximum
+        String payloadString = new String(new char[65507 + 1]).replace('\0', 'X');
+        final DatagramPacket datagram =
+                new DatagramPacket(Unpooled.wrappedBuffer(payloadString.getBytes()), serverAddr);
+
+
+        // We fake a client
+        EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                                                           .build(new ByteBufOutputStream(pcapBuffer)));
+
+        assertTrue(embeddedChannel.writeOutbound(datagram));
+        assertEquals(datagram, embeddedChannel.readOutbound());
+
+        // Verify only the PCAP global header was written. Large UDP payload should be discarded
+        assertEquals(24, pcapBuffer.readableBytes());
+
+        assertFalse(embeddedChannel.finishAndReleaseAll());
+    }
+
+    @Test
     public void tcpV4SharedOutputStreamTest() throws Exception {
         tcpV4(true);
     }
@@ -375,6 +425,41 @@ public class PcapWriteHandlerTest {
 
         verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
                               5, 6); //Client has received 5 bytes and sent 4
+    }
+
+    @Test
+    public void tcpLargePayload() {
+        final ByteBuf pcapBuffer = Unpooled.buffer();
+        String payloadString = new String(new char[65495 + 1]).replace('\0', 'X');
+        final ByteBuf payload = Unpooled.wrappedBuffer(payloadString.getBytes());
+
+        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+
+        EmbeddedChannel embeddedChannel = new EmbeddedChannel(
+                PcapWriteHandler.builder()
+                                .forceTcpChannel(serverAddr, clientAddr, false)
+                                .build(new ByteBufOutputStream(pcapBuffer))
+        );
+
+        assertTrue(embeddedChannel.writeOutbound(payload));
+        assertEquals(payload, embeddedChannel.readOutbound());
+
+        assertFalse(embeddedChannel.finishAndReleaseAll());
+
+        // Verify the capture data
+        verifyTcpHandshakeCapture(true, pcapBuffer, serverAddr, clientAddr);
+        //Verify client write
+        verifyTcpCapture(pcapBuffer, payload.slice(0, 65495),
+                         serverAddr, clientAddr,
+                         1, 1);
+        //Verify client write
+        verifyTcpCapture(pcapBuffer, payload.slice(65495, 1),
+                         serverAddr, clientAddr,
+                         65496, 1);
+
+        verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
+                              65497, 1); //Client has received 4 bytes and sent 5 bytes
     }
 
     @Test
