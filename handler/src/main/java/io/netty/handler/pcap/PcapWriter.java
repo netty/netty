@@ -47,7 +47,7 @@ final class PcapWriter implements Closeable {
         outputStream = pcapWriteHandler.outputStream();
 
         // If OutputStream is not shared then we have to write Global Header.
-        if (!pcapWriteHandler.sharedOutputStream()) {
+        if (pcapWriteHandler.writePcapGlobalHeader() && !pcapWriteHandler.sharedOutputStream()) {
             PcapHeaders.writeGlobalHeader(pcapWriteHandler.outputStream());
         }
     }
