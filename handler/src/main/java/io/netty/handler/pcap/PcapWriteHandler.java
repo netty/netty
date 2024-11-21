@@ -581,20 +581,26 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
             ByteBuf tcpBuf = byteBufAllocator.buffer();
 
             try {
+                long initiatorSegmentNumber = isServerPipeline? receiveSegmentNumber : sendSegmentNumber;
+                long initiatorAckNumber = isServerPipeline? sendSegmentNumber : receiveSegmentNumber;
                 // Write FIN+ACK with Normal Source and Destination Address
-                TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber, receiveSegmentNumber, initiatorAddr.getPort(),
+                TCPPacket.writePacket(tcpBuf, null, initiatorSegmentNumber, initiatorAckNumber, initiatorAddr.getPort(),
                                       handlerAddr.getPort(), TCPPacket.TCPFlag.FIN, TCPPacket.TCPFlag.ACK);
                 completeTCPWrite(initiatorAddr, handlerAddr, tcpBuf, byteBufAllocator, ctx);
 
                 // Write FIN+ACK with Reversed Source and Destination Address
-                TCPPacket.writePacket(tcpBuf, null, receiveSegmentNumber, sendSegmentNumber, handlerAddr.getPort(),
+                TCPPacket.writePacket(tcpBuf, null, initiatorAckNumber, initiatorSegmentNumber, handlerAddr.getPort(),
                                       initiatorAddr.getPort(), TCPPacket.TCPFlag.FIN, TCPPacket.TCPFlag.ACK);
                 completeTCPWrite(handlerAddr, initiatorAddr, tcpBuf, byteBufAllocator, ctx);
 
-                // Write ACK with Normal Source and Destination Address
+                // Increment by 1 when responding to FIN
                 sendSegmentNumber = incrementUintSegmentNumber(sendSegmentNumber, 1);
                 receiveSegmentNumber = incrementUintSegmentNumber(receiveSegmentNumber, 1);
-                TCPPacket.writePacket(tcpBuf, null, sendSegmentNumber, receiveSegmentNumber,
+                initiatorSegmentNumber = isServerPipeline? receiveSegmentNumber : sendSegmentNumber;
+                initiatorAckNumber = isServerPipeline? sendSegmentNumber : receiveSegmentNumber;
+
+                // Write ACK with Normal Source and Destination Address
+                TCPPacket.writePacket(tcpBuf, null, initiatorSegmentNumber, initiatorAckNumber,
                                       initiatorAddr.getPort(), handlerAddr.getPort(), TCPPacket.TCPFlag.ACK);
                 completeTCPWrite(initiatorAddr, handlerAddr, tcpBuf, byteBufAllocator, ctx);
             } finally {
