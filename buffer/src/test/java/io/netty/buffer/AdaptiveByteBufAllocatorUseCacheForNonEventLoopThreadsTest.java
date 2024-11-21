@@ -57,6 +57,7 @@ public class AdaptiveByteBufAllocatorUseCacheForNonEventLoopThreadsTest extends 
 
     private static final class CustomizeFastThreadLocalThreadWithoutCleanupFastThreadLocals
             extends FastThreadLocalThread implements Runnable {
+
         private final Runnable runnable;
 
         private CustomizeFastThreadLocalThreadWithoutCleanupFastThreadLocals(Runnable runnable) {
