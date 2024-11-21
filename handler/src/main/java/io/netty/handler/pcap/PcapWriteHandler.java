@@ -682,6 +682,10 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         return sharedOutputStream;
     }
 
+    boolean writePcapGlobalHeader() {
+        return writePcapGlobalHeader;
+    }
+
     /**
      * Returns {@code true} if the {@link PcapWriteHandler} is currently
      * writing packets to the {@link OutputStream} else returns {@code false}.
