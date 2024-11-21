@@ -30,6 +30,8 @@ import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,6 +81,7 @@ import java.util.concurrent.locks.StampedLock;
 @SuppressJava6Requirement(reason = "Guarded by version check")
 @UnstableApi
 final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.AdaptiveAllocatorApi {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AdaptivePoolingAllocator.class);
 
     enum MagazineCaching {
         EventLoopThreads,
@@ -145,13 +148,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 @Override
                 protected Object initialValue() {
                     if (cachedMagazinesNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
-                        Magazine mag = new Magazine(AdaptivePoolingAllocator.this, false);
-
-                        if (FastThreadLocalThread.willCleanupFastThreadLocals(Thread.currentThread())) {
-                            // Only add it to the liveMagazines if we can guarantee that onRemoval(...) is called,
-                            // as otherwise we might end up holding the reference forever.
-                            liveMagazines.add(mag);
+                        if (!FastThreadLocalThread.willCleanupFastThreadLocals(Thread.currentThread())) {
+                            // To prevent potential leak, we will not use thread-local magazine.
+                            logger.warn("Thread-local magazine will NOT be used, since the current thread:{} " +
+                                            "will not clean up its FastThreadLocal instances once it completes",
+                                    Thread.currentThread());
+                            return NO_MAGAZINE;
                         }
+                        Magazine mag = new Magazine(AdaptivePoolingAllocator.this, false);
+                        liveMagazines.add(mag);
                         return mag;
                     }
                     return NO_MAGAZINE;
