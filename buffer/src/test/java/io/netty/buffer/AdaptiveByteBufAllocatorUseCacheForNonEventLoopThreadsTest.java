@@ -58,13 +58,16 @@ public class AdaptiveByteBufAllocatorUseCacheForNonEventLoopThreadsTest extends 
     private static final class CustomizeFastThreadLocalThreadWithoutCleanupFastThreadLocals
             extends FastThreadLocalThread implements Runnable {
         private final Runnable runnable;
+
         private CustomizeFastThreadLocalThreadWithoutCleanupFastThreadLocals(Runnable runnable) {
             this.runnable = ObjectUtil.checkNotNull(runnable, "runnable");
         }
+
         @Override
         public boolean willCleanupFastThreadLocals() {
             return false;
         }
+
         @Override
         public void run() {
             runnable.run(); // Without calling `FastThreadLocal.removeAll()`.
