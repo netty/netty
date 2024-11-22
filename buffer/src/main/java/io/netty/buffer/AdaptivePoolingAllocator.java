@@ -143,13 +143,12 @@ final class AdaptivePoolingAllocator {
                 @Override
                 protected Object initialValue() {
                     if (cachedMagazinesNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
-                        Magazine mag = new Magazine(AdaptivePoolingAllocator.this, false);
-
-                        if (FastThreadLocalThread.willCleanupFastThreadLocals(Thread.currentThread())) {
-                            // Only add it to the liveMagazines if we can guarantee that onRemoval(...) is called,
-                            // as otherwise we might end up holding the reference forever.
-                            liveMagazines.add(mag);
+                        if (!FastThreadLocalThread.willCleanupFastThreadLocals(Thread.currentThread())) {
+                            // To prevent potential leak, we will not use thread-local magazine.
+                            return NO_MAGAZINE;
                         }
+                        Magazine mag = new Magazine(AdaptivePoolingAllocator.this, false);
+                        liveMagazines.add(mag);
                         return mag;
                     }
                     return NO_MAGAZINE;
