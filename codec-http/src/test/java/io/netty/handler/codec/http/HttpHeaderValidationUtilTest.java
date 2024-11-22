@@ -570,8 +570,8 @@ public class HttpHeaderValidationUtilTest {
         charList.add('`');
         charList.add('|');
 
-        List<AsciiString> asciiStrings = new ArrayList<>();
-        List<Arguments> list = new ArrayList<>();
+        List<AsciiString> asciiStrings = new ArrayList<AsciiString>();
+        List<Arguments> list = new ArrayList<Arguments>();
 
         for (char tokenChar : charList) {
             for (byte[] cs : Arrays.asList(new byte[] {(byte) tokenChar, 'a'}, new byte[] {'a', (byte) tokenChar})) {
