@@ -137,6 +137,8 @@ public class PcapWriteHandlerTest {
                          (InetSocketAddress) clientChannel.localAddress()
         );
 
+        assertTrue(byteBuf.release());
+
         // If sharedOutputStream is true, we don't close the outputStream.
         // If sharedOutputStream is false, we close the outputStream.
         assertEquals(!sharedOutputStream, outputStream.closeCalled());
@@ -168,6 +170,8 @@ public class PcapWriteHandlerTest {
 
         verifyUdpCapture(false, pcapBuffer, payload, clientAddr, serverAddr);
 
+        assertTrue(pcapBuffer.release());
+
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }
 
@@ -190,6 +194,8 @@ public class PcapWriteHandlerTest {
 
         // Verify the capture data
         verifyUdpCapture(true, pcapBuffer, payload, serverAddr, new InetSocketAddress("0.0.0.0", 3456));
+
+        assertTrue(pcapBuffer.release());
 
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }
@@ -215,6 +221,8 @@ public class PcapWriteHandlerTest {
         // Verify only the PCAP global header was written. Large UDP payload should be discarded
         assertEquals(24, pcapBuffer.readableBytes());
 
+        assertTrue(pcapBuffer.release());
+
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }
 
@@ -239,6 +247,8 @@ public class PcapWriteHandlerTest {
 
         // Verify only the PCAP global header was written. Large UDP payload should be discarded
         assertEquals(24, pcapBuffer.readableBytes());
+
+        assertTrue(pcapBuffer.release());
 
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }
@@ -267,6 +277,8 @@ public class PcapWriteHandlerTest {
 
         verifyUdpCapture(false, pcapBuffer, payload, clientAddr, serverAddr);
 
+        assertTrue(pcapBuffer.release());
+
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }
 
@@ -291,6 +303,8 @@ public class PcapWriteHandlerTest {
 
         // Verify only the PCAP global header was written. Large UDP payload should be discarded
         assertEquals(24, pcapBuffer.readableBytes());
+
+        assertTrue(pcapBuffer.release());
 
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }
@@ -349,6 +363,8 @@ public class PcapWriteHandlerTest {
 
         // Verify only the PCAP global header was written. Large UDP payload should be discarded
         assertEquals(24, pcapBuffer.readableBytes());
+
+        assertTrue(pcapBuffer.release());
 
         assertFalse(embeddedChannel.finishAndReleaseAll());
     }
@@ -1155,6 +1171,16 @@ public class PcapWriteHandlerTest {
         // Verify Payload
         ByteBuf payload = udpPacket.readBytes(expectedPayloadLength);
         assertArrayEquals(ByteBufUtil.getBytes(expectedPayload), ByteBufUtil.getBytes(payload)); // Payload
+
+        // Release all ByteBuf
+        assertTrue(dstMac.release());
+        assertTrue(srcMac.release());
+        if (expectedPayloadLength > 0) {
+            assertTrue(payload.release());
+        }
+        assertTrue(ethernetPacket.release());
+        assertTrue(ipv4Packet.release());
+        assertTrue(udpPacket.release());
     }
 
     private static class EmbeddedDatagramChannel extends EmbeddedChannel implements DatagramChannel {
