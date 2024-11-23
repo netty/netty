@@ -129,6 +129,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     private final Set<Magazine> liveCachedMagazines;
     private volatile boolean freed;
 
+    static {
+        if (CENTRAL_QUEUE_CAPACITY < 2) {
+            throw new IllegalArgumentException("CENTRAL_QUEUE_CAPACITY: " + CENTRAL_QUEUE_CAPACITY
+                    + " (expected: >= " + 2 + ')');
+        }
+        if (MAGAZINE_BUFFER_QUEUE_CAPACITY < 2) {
+            throw new IllegalArgumentException("MAGAZINE_BUFFER_QUEUE_CAPACITY: " + MAGAZINE_BUFFER_QUEUE_CAPACITY
+                    + " (expected: >= " + 2 + ')');
+        }
+    }
+
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, MagazineCaching magazineCaching) {
         ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
         ObjectUtil.checkNotNull(magazineCaching, "magazineCaching");
