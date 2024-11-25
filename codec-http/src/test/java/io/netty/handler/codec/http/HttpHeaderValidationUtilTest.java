@@ -225,7 +225,7 @@ public class HttpHeaderValidationUtilTest {
         return list;
     }
 
-    public static void asciiStrings(byte[] chars, List<AsciiString> out) {
+    private static void asciiStrings(byte[] chars, List<AsciiString> out) {
         out.add(new AsciiString(chars));
         out.add(new AsciiString(Arrays.copyOf(chars, chars.length + 1), 0, chars.length, false));
 
