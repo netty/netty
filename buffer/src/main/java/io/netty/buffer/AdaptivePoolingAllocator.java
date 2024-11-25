@@ -337,7 +337,12 @@ final class AdaptivePoolingAllocator {
         if (freed) {
             return false;
         }
-        return centralQueue.offer(buffer);
+        boolean isAdded = centralQueue.offer(buffer);
+        if (freed && isAdded) {
+            // Help to free the centralQueue.
+            freeCentralQueue();
+        }
+        return isAdded;
     }
 
     // Ensure that we release all previous pooled resources when this object is finalized. This is needed as otherwise
@@ -363,6 +368,10 @@ final class AdaptivePoolingAllocator {
         } finally {
             magazineExpandLock.unlockWrite(stamp);
         }
+        freeCentralQueue();
+    }
+
+    private void freeCentralQueue() {
         for (;;) {
             Chunk chunk = centralQueue.poll();
             if (chunk == null) {
