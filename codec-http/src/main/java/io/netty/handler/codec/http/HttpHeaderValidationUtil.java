@@ -128,8 +128,8 @@ public final class HttpHeaderValidationUtil {
         if (b < 0x21 || b == 0x7F) {
             return 0;
         }
-        int length = value.length();
-        for (int i = start + 1; i < length; i++) {
+        int end = start + value.length();
+        for (int i = start + 1; i < end; i++) {
             b = array[i] & 0xFF;
             if (b < 0x20 && b != 0x09 || b == 0x7F) {
                 return i - start;
