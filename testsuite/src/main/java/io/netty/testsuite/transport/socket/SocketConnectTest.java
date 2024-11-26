@@ -53,6 +53,48 @@ public class SocketConnectTest extends AbstractSocketTest {
 
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testCloseTwice(TestInfo testInfo) throws Throwable {
+        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            @Override
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testCloseTwice(serverBootstrap, bootstrap);
+            }
+        });
+    }
+
+    public void testCloseTwice(ServerBootstrap sb, Bootstrap cb) throws Throwable {
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        try {
+            serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter()).bind().syncUninterruptibly().channel();
+            final BlockingQueue<ChannelFuture> futures = new LinkedBlockingQueue<>();
+            clientChannel = cb.handler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt)  {
+                            futures.add(ctx.close());
+                        }
+                    })
+                    .connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel.pipeline().fireUserEventTriggered("test");
+            clientChannel.close().syncUninterruptibly();
+            futures.take().sync();
+            clientChannel = null;
+
+            serverChannel.close().syncUninterruptibly();
+            serverChannel.close().syncUninterruptibly();
+            serverChannel = null;
+        } finally {
+            if (clientChannel != null) {
+                clientChannel.close().syncUninterruptibly();
+            }
+            if (serverChannel != null) {
+                serverChannel.close().syncUninterruptibly();
+            }
+        }
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testLocalAddressAfterConnect(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
