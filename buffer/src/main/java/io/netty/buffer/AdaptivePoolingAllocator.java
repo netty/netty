@@ -318,10 +318,11 @@ final class AdaptivePoolingAllocator {
         if (currentLength >= MAX_STRIPES) {
             return true;
         }
+        final Magazine[] mags;
         long writeLock = magazineExpandLock.tryWriteLock();
         if (writeLock != 0) {
             try {
-                Magazine[] mags = magazines;
+                mags = magazines;
                 if (mags.length >= MAX_STRIPES || mags.length > currentLength || freed) {
                     return true;
                 }
@@ -334,11 +335,11 @@ final class AdaptivePoolingAllocator {
                     expanded[i] = m;
                 }
                 magazines = expanded;
-                for (Magazine magazine : mags) {
-                    magazine.free();
-                }
             } finally {
                 magazineExpandLock.unlockWrite(writeLock);
+            }
+            for (Magazine magazine : mags) {
+                magazine.free();
             }
         }
         return true;
