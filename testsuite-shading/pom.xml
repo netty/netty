@@ -49,8 +49,8 @@
   <build>
     <extensions>
       <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
+        <groupId>com.tisonkun.os</groupId>
+        <artifactId>os-detector-maven-plugin</artifactId>
         <version>${osmaven.version}</version>
       </extension>
     </extensions>

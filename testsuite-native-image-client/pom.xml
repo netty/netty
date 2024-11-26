@@ -88,7 +88,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
         <executions>
           <!-- This will do a whitesmoke test: if the substitutions are missing the binary will fail to run -->
           <!-- If the metadata is missing the build above will fail -->

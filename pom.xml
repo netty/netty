@@ -17,16 +17,16 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
+
   <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>9</version>
+    <groupId>io.netty</groupId>
+    <artifactId>minimal-parent</artifactId>
+    <version>4.1.116.Final-SNAPSHOT</version>
+    <relativePath>minimal-parent</relativePath>
   </parent>
 
-  <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.116.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -48,13 +48,6 @@
     </license>
   </licenses>
   <inceptionYear>2008</inceptionYear>
-
-  <scm>
-    <url>https://github.com/netty/netty</url>
-    <connection>scm:git:git://github.com/netty/netty.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
-    <tag>HEAD</tag>
-  </scm>
 
   <developers>
     <developer>
@@ -78,7 +71,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.2.0</version>
             <executions>
               <execution>
                 <id>aggregate</id>
@@ -498,8 +490,6 @@
         <!-- Not use alpn agent as Java10 supports alpn out of the box -->
         <argLine.alpnAgent />
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M3</enforcer.plugin.version>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
       </properties>
@@ -516,8 +506,6 @@
         <argLine.alpnAgent />
         <!-- Skip as maven plugin not works with Java9 yet -->
         <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- Needed because of https://issues.apache.org/jira/browse/MENFORCER-275 -->
-        <enforcer.plugin.version>3.0.0-M1</enforcer.plugin.version>
       </properties>
       <activation>
         <jdk>9</jdk>
@@ -661,7 +649,6 @@
           <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.7.7.201606060606</version>
             <executions>
               <execution>
                 <id>jacoco-prepare-agent</id>
@@ -732,7 +719,7 @@
     <argLine.javaProperties>-D_</argLine.javaProperties>
     <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
     <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
-    <osmaven.version>1.7.1</osmaven.version>
+    <osmaven.version>0.6.0</osmaven.version>
     <!-- keep in sync with PlatformDependent#ALLOWED_LINUX_OS_CLASSIFIERS -->
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
@@ -754,7 +741,6 @@
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.17.2</log4j2.version>
-    <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.9.0</junit.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
@@ -771,6 +757,7 @@
   </properties>
 
   <modules>
+    <module>minimal-parent</module>
     <module>all</module>
     <module>dev-tools</module>
     <module>common</module>
@@ -1294,8 +1281,8 @@
   <build>
     <extensions>
       <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
+        <groupId>com.tisonkun.os</groupId>
+        <artifactId>os-detector-maven-plugin</artifactId>
         <version>${osmaven.version}</version>
       </extension>
     </extensions>
@@ -1304,14 +1291,6 @@
       <plugin>
         <groupId>org.revapi</groupId>
         <artifactId>revapi-maven-plugin</artifactId>
-        <version>0.14.6</version>
-        <dependencies>
-          <dependency>
-            <groupId>org.revapi</groupId>
-            <artifactId>revapi-java</artifactId>
-            <version>0.26.1</version>
-          </dependency>
-        </dependencies>
         <configuration>
           <analysisConfiguration>
             <revapi.filter>
@@ -1478,7 +1457,6 @@
       <plugin>
         <groupId>com.github.siom79.japicmp</groupId>
         <artifactId>japicmp-maven-plugin</artifactId>
-        <version>0.21.0</version>
         <configuration>
           <parameter>
             <ignoreMissingOldVersion>true</ignoreMissingOldVersion>
@@ -1517,7 +1495,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>${enforcer.plugin.version}</version>
         <executions>
           <execution>
             <id>enforce-tools</id>
@@ -1526,14 +1503,6 @@
             </goals>
             <configuration>
               <rules>
-                <requireJavaVersion>
-                  <!-- Enforce JDK 1.8+ for compilation. -->
-                  <!-- This is needed because of java.util.zip.Deflater and NIO UDP multicast. -->
-                  <version>[1.8.0,)</version>
-                </requireJavaVersion>
-                <requireMavenVersion>
-                  <version>[3.1.1,)</version>
-                </requireMavenVersion>
                 <requireProperty>
                   <regexMessage>
 		     x86_64/AARCH64/RISCV64/PPCLE64/s390x_64/loongarch64 JDK must be used.
@@ -1548,14 +1517,11 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.0</version>
         <configuration>
-          <compilerVersion>1.8</compilerVersion>
           <fork>true</fork>
           <source>${maven.compiler.source}</source>
           <target>${maven.compiler.target}</target>
           <debug>true</debug>
-          <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
           <compilerArgument>-Xlint:-options</compilerArgument>
@@ -1575,11 +1541,36 @@
         </configuration>
       </plugin>
       <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <archive>
+                <manifest>
+                  <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                  <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                </manifest>
+                <manifestEntries>
+                  <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                </manifestEntries>
+                <index>true</index>
+                <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+              </archive>
+            </configuration>
+          </execution>
+          <execution>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <!-- ensure that only methods available in java 1.6 can
              be used even when compiling with java 1.7+ -->
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.16</version>
         <configuration>
           <signature>
             <groupId>org.codehaus.mojo.signature</groupId>
@@ -1604,7 +1595,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>3.1.0</version>
         <executions>
           <execution>
             <id>check-style</id>
@@ -1632,7 +1622,6 @@
               <configLocation>nohttp-checkstyle.xml</configLocation>
               <suppressionsLocation>nohttp-checkstyle-suppressions.xml</suppressionsLocation>
               <!-- propertyExpansion>main.basedir=${main.basedir}</propertyExpansion -->
-              <encoding>UTF-8</encoding>
               <sourceDirectories>${basedir}</sourceDirectories>
               <includes>**/*</includes>
               <excludes>nohttp-checkstyle-suppressions.xml,**/.git/**/*,**/.idea/**/*,**/target/**/,**/.flattened-pom.xml,**/*.class</excludes>
@@ -1664,7 +1653,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>xml-maven-plugin</artifactId>
-        <version>1.0.1</version>
         <executions>
           <execution>
             <id>check-style</id>
@@ -1743,7 +1731,6 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <version>5.1.8</version>
         <executions>
           <execution>
             <id>generate-manifest</id>
@@ -1771,7 +1758,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.10</version>
         <executions>
           <execution>
             <id>parse-version</id>
@@ -1784,7 +1770,6 @@
 
       <plugin>
         <artifactId>maven-source-plugin</artifactId>
-        <version>3.2.0</version>
         <!-- Eclipse-related OSGi manifests
              See https://github.com/netty/netty/issues/3886
              More information: https://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
@@ -1800,7 +1785,6 @@
             </manifestEntries>
           </archive>
         </configuration>
-
         <executions>
           <execution>
             <id>attach-sources</id>
@@ -1820,7 +1804,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.10.4</version>
         <configuration>
           <detectOfflineLinks>false</detectOfflineLinks>
           <breakiterator>true</breakiterator>
@@ -1831,35 +1814,10 @@
       </plugin>
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
-        <version>2.8.2</version>
         <configuration>
           <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
           <skip>${skipDeploy}</skip>
         </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-release-plugin</artifactId>
-        <!-- Downgrade to 2.4.1 if release fails -->
-        <version>2.5.3</version>
-        <configuration>
-          <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
-          <autoVersionSubmodules>true</autoVersionSubmodules>
-          <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
-          <tagNameFormat>netty-@{project.version}</tagNameFormat>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-api</artifactId>
-            <version>1.9.4</version>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-provider-gitexe</artifactId>
-            <version>1.9.4</version>
-          </dependency>
-        </dependencies>
       </plugin>
 
       <!-- Ensure to put maven-antrun-plugin at the end of the plugin list
@@ -1936,175 +1894,120 @@
             </configuration>
           </execution>
         </executions>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-            <version>1.10.11</version>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant-launcher</artifactId>
-            <version>1.9.7</version>
-          </dependency>
-          <dependency>
-            <groupId>ant-contrib</groupId>
-            <artifactId>ant-contrib</artifactId>
-            <version>1.0b3</version>
-            <exclusions>
-              <exclusion>
-                <groupId>ant</groupId>
-                <artifactId>ant</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-        </dependencies>
+      </plugin>
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-testResources</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>testResources</goal>
+            </goals>
+            <configuration>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/src/test/resources</directory>
+                </resource>
+                <resource>
+                  <directory>${project.build.outputDirectory}</directory>
+                  <excludes>
+                    <!--
+-                       Exclude native files as these are already in the classes directory. This is needed as
+-                       otherwise NativeLibraryLoader will fail to load the native lib as it detects duplicates on
+-                       the classpath.
+-                     -->
+                    <exclude>META-INF/native/*.*</exclude>
+                  </excludes>
+                  <includes>
+                    <!-- Include everything else -->
+                    <include>*.*</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-remote-resources-plugin</artifactId>
-        <version>1.5</version>
+        <configuration>
+          <resourceBundles>
+            <resourceBundle>io.netty:netty-dev-tools:${project.version}</resourceBundle>
+          </resourceBundles>
+          <outputDirectory>${netty.dev.tools.directory}</outputDirectory>
+          <!-- don't include netty-dev-tools in artifacts -->
+          <attachToMain>false</attachToMain>
+          <attachToTest>false</attachToTest>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>process</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>de.thetaphi</groupId>
         <artifactId>forbiddenapis</artifactId>
-        <version>2.2</version>
+        <executions>
+          <execution>
+            <id>check-forbidden-apis</id>
+            <configuration>
+              <targetVersion>${maven.compiler.target}</targetVersion>
+              <!-- allow undocumented classes like sun.misc.Unsafe: -->
+              <internalRuntimeForbidden>false</internalRuntimeForbidden>
+              <!-- if the used Java version is too new, don't fail, just do nothing: -->
+              <failOnUnsupportedJava>false</failOnUnsupportedJava>
+              <bundledSignatures>
+                <!-- This will automatically choose the right signatures based on 'targetVersion': -->
+                <!-- enabling these should be done in the future -->
+                <!-- bundledSignature>jdk-unsafe</bundledSignature -->
+                <!-- bundledSignature>jdk-deprecated</bundledSignature -->
+                <!-- bundledSignature>jdk-system-out</bundledSignature -->
+              </bundledSignatures>
+              <signaturesFiles>
+                <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
+              </signaturesFiles>
+              <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
+            </configuration>
+            <phase>compile</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>check-forbidden-test-apis</id>
+            <configuration>
+              <targetVersion>${maven.compiler.target}</targetVersion>
+              <!-- allow undocumented classes like sun.misc.Unsafe: -->
+              <internalRuntimeForbidden>true</internalRuntimeForbidden>
+              <!-- if the used Java version is too new, don't fail, just do nothing: -->
+              <failOnUnsupportedJava>false</failOnUnsupportedJava>
+              <bundledSignatures>
+                <!-- This will automatically choose the right signatures based on 'targetVersion': -->
+                <!-- enabling these should be done in the future -->
+                <!-- bundledSignature>jdk-unsafe</bundledSignature -->
+                <!-- bundledSignature>jdk-deprecated</bundledSignature -->
+              </bundledSignatures>
+              <signaturesFiles>
+                <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
+              </signaturesFiles>
+              <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
+            </configuration>
+            <phase>test-compile</phase>
+            <goals>
+              <goal>testCheck</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
 
     <pluginManagement>
       <plugins>
-        <!-- keep surefire and failsafe in sync -->
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.2</version>
-        </plugin>
-        <!-- keep surefire and failsafe in sync -->
-        <plugin>
-          <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.22.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-clean-plugin</artifactId>
-          <version>3.0.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-resources-plugin</artifactId>
-          <version>3.0.1</version>
-          <executions>
-            <execution>
-              <id>default-testResources</id>
-              <phase>process-test-resources</phase>
-              <goals>
-                <goal>testResources</goal>
-              </goals>
-              <configuration>
-                <resources>
-                  <resource>
-                    <directory>${project.basedir}/src/test/resources</directory>
-                  </resource>
-                  <resource>
-                    <directory>${project.build.outputDirectory}</directory>
-                    <excludes>
-                      <!--
--                       Exclude native files as these are already in the classes directory. This is needed as
--                       otherwise NativeLibraryLoader will fail to load the native lib as it detects duplicates on
--                       the classpath.
--                     -->
-                      <exclude>META-INF/native/*.*</exclude>
-                    </excludes>
-                    <includes>
-                      <!-- Include everything else -->
-                      <include>*.*</include>
-                    </includes>
-                  </resource>
-                </resources>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.ops4j.pax.exam</groupId>
-          <artifactId>maven-paxexam-plugin</artifactId>
-          <version>1.2.4</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>3.0.2</version>
-          <executions>
-            <execution>
-              <id>default-jar</id>
-              <configuration>
-                <archive>
-                  <manifest>
-                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                  </manifest>
-                  <manifestEntries>
-                    <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
-                  </manifestEntries>
-                  <index>true</index>
-                  <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-                </archive>
-              </configuration>
-            </execution>
-            <execution>
-              <goals>
-                <goal>test-jar</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.10</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.6</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-jxr-plugin</artifactId>
-          <version>3.1.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-antrun-plugin</artifactId>
-          <version>1.8</version>
-          <dependencies>
-            <dependency>
-              <groupId>ant-contrib</groupId>
-              <artifactId>ant-contrib</artifactId>
-              <version>1.0b3</version>
-              <exclusions>
-                <exclusion>
-                  <groupId>ant</groupId>
-                  <artifactId>ant</artifactId>
-                </exclusion>
-              </exclusions>
-            </dependency>
-          </dependencies>
-        </plugin>
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.10</version>
-        </plugin>
-        <plugin>
-          <groupId>org.fusesource.hawtjni</groupId>
-          <artifactId>hawtjni-maven-plugin</artifactId>
-          <version>1.18</version>
-        </plugin>
-        <plugin>
-          <groupId>kr.motd.maven</groupId>
-          <artifactId>exec-maven-plugin</artifactId>
-          <version>1.0.0.Final</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-shade-plugin</artifactId>
-          <version>3.2.1</version>
-        </plugin>
-
         <!-- Workaround for the 'M2E plugin execution not covered' problem.
              See: https://wiki.eclipse.org/M2E_plugin_execution_not_covered -->
         <plugin>
@@ -2211,83 +2114,6 @@
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-remote-resources-plugin</artifactId>
-          <version>1.5</version>
-          <configuration>
-            <resourceBundles>
-              <resourceBundle>io.netty:netty-dev-tools:${project.version}</resourceBundle>
-            </resourceBundles>
-            <outputDirectory>${netty.dev.tools.directory}</outputDirectory>
-            <!-- don't include netty-dev-tools in artifacts -->
-            <attachToMain>false</attachToMain>
-            <attachToTest>false</attachToTest>
-          </configuration>
-          <executions>
-            <execution>
-              <goals>
-                <goal>process</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>de.thetaphi</groupId>
-          <artifactId>forbiddenapis</artifactId>
-          <version>2.2</version>
-          <executions>
-            <execution>
-              <id>check-forbidden-apis</id>
-              <configuration>
-                <targetVersion>${maven.compiler.target}</targetVersion>
-                <!-- allow undocumented classes like sun.misc.Unsafe: -->
-                <internalRuntimeForbidden>false</internalRuntimeForbidden>
-                <!-- if the used Java version is too new, don't fail, just do nothing: -->
-                <failOnUnsupportedJava>false</failOnUnsupportedJava>
-                <bundledSignatures>
-                  <!-- This will automatically choose the right signatures based on 'targetVersion': -->
-                  <!-- enabling these should be done in the future -->
-                  <!-- bundledSignature>jdk-unsafe</bundledSignature -->
-                  <!-- bundledSignature>jdk-deprecated</bundledSignature -->
-                  <!-- bundledSignature>jdk-system-out</bundledSignature -->
-                </bundledSignatures>
-                <signaturesFiles>
-                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
-                </signaturesFiles>
-                <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
-              </configuration>
-              <phase>compile</phase>
-              <goals>
-                <goal>check</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>check-forbidden-test-apis</id>
-              <configuration>
-                <targetVersion>${maven.compiler.target}</targetVersion>
-                <!-- allow undocumented classes like sun.misc.Unsafe: -->
-                <internalRuntimeForbidden>true</internalRuntimeForbidden>
-                <!-- if the used Java version is too new, don't fail, just do nothing: -->
-                <failOnUnsupportedJava>false</failOnUnsupportedJava>
-                <bundledSignatures>
-                  <!-- This will automatically choose the right signatures based on 'targetVersion': -->
-                  <!-- enabling these should be done in the future -->
-                  <!-- bundledSignature>jdk-unsafe</bundledSignature -->
-                  <!-- bundledSignature>jdk-deprecated</bundledSignature -->
-                </bundledSignatures>
-                <signaturesFiles>
-                  <signaturesFile>${netty.dev.tools.directory}/forbidden/signatures.txt</signaturesFile>
-                </signaturesFiles>
-                <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
-              </configuration>
-              <phase>test-compile</phase>
-              <goals>
-                <goal>testCheck</goal>
-              </goals>
-            </execution>
-          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
