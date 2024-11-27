@@ -825,6 +825,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 delegate.setIndex(0, 0);
                 allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
+                    // As this Chunk does not belong to the mag anymore we need to decrease the used memory .
                     mag.usedMemory.getAndAdd(-capacity());
                     if (!parent.offerToQueue(this)) {
                         // The central queue is full. Ensure we release again as we previously did use resetRefCnt()
