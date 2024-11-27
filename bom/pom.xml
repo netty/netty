@@ -43,13 +43,6 @@
   </licenses>
   <inceptionYear>2008</inceptionYear>
 
-  <scm>
-    <url>https://github.com/netty/netty</url>
-    <connection>scm:git:git://github.com/netty/netty.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
-    <tag>HEAD</tag>
-  </scm>
-
   <developers>
     <developer>
       <id>netty.io</id>
