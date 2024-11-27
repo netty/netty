@@ -425,6 +425,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     break;
                 case Native.IORING_OP_ASYNC_CANCEL:
                     cancelComplete0(op, res, flags, data);
+
+                    // We delay the actual close if there is still a write or read scheduled, let's see if there
+                    // was a close that needs to be done now.
+                    handleDelayedClosed();
                     break;
                 case Native.IORING_OP_CONNECT:
                     connectComplete(op, res, flags, data);
@@ -483,6 +487,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         @Override
         public final void close(ChannelPromise promise) {
+            if (closeFuture().isDone()) {
+                // Closed already before.
+                safeSetSuccess(promise);
+                return;
+            }
             if (delayedClose == null) {
                 // We have a write operation pending that should be completed asap.
                 // We will do the actual close operation one this write result is returned as otherwise
@@ -1044,6 +1053,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         if (registration == null) {
             return;
         }
+
+        IoUringIoRegistration registration = this.registration;
+        this.registration = null;
+        // Cancel all previous submitted ops.
         int fd = fd().intValue();
         if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
             registration.submit(IoUringIoOps.newPollRemove(
@@ -1058,7 +1071,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     fd,  0, pollOutId, (short) Native.POLLOUT));
         }
 
-        registration = null;
+        if (AbstractIoUringChannel.this.connectPromise != null && connectId != 0) {
+            // Best effort to cancel the already submitted connect request.
+            registration.submit(IoUringIoOps.newAsyncCancel(
+                    fd, 0, connectId, Native.IORING_OP_CONNECT));
+        }
+        cancelOutstandingReads(registration, numOutstandingReads);
+        cancelOutstandingWrites(registration, numOutstandingWrites);
     }
 
     @Override
