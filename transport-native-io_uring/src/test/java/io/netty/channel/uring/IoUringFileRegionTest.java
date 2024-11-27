@@ -33,7 +33,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.UUID;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -47,7 +48,7 @@ public class IoUringFileRegionTest {
         File inFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp");
         inFile.deleteOnExit();
         Files.write(inFile.toPath(), sampleString.getBytes());
-        SynchronousQueue<ByteBuf> sendFileResult = new SynchronousQueue<>();
+        BlockingQueue<ByteBuf> sendFileResult = new LinkedBlockingQueue<>();
 
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.channel(IoUringServerSocketChannel.class);
