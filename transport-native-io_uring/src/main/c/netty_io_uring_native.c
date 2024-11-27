@@ -71,7 +71,6 @@ static char* staticPackagePrefix = NULL;
 static int register_unix_called = 0;
 
 static jfieldID fileChannelFieldId = NULL;
-static jfieldID transferredFieldId = NULL;
 static jfieldID fdFieldId = NULL;
 static jfieldID fileDescriptorFieldId = NULL;
 
@@ -674,7 +673,6 @@ static jint netty_iouring_native_JNI_OnLoad(JNIEnv* env, const char* packagePref
     netty_jni_util_free_dynamic_name(&nettyClassName);
 
     NETTY_JNI_UTIL_GET_FIELD(env, fileRegionCls, fileChannelFieldId, "file", "Ljava/nio/channels/FileChannel;", done);
-    NETTY_JNI_UTIL_GET_FIELD(env, fileRegionCls, transferredFieldId, "transferred", "J", done);
 
     NETTY_JNI_UTIL_FIND_CLASS(env, fileChannelCls, "sun/nio/ch/FileChannelImpl", done);
     NETTY_JNI_UTIL_GET_FIELD(env, fileChannelCls, fileDescriptorFieldId, "fd", "Ljava/io/FileDescriptor;", done);
