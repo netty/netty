@@ -258,8 +258,9 @@ final class AdaptivePoolingAllocator {
         Magazine magazine;
         if (buf != null) {
             Chunk chunk = buf.chunk;
-            magazine = chunk != null && chunk != Magazine.MAGAZINE_FREED?
-                    chunk.currentMagazine() : getFallbackMagazine(currentThread);
+            if (chunk == null || chunk == Magazine.MAGAZINE_FREED || (magazine = chunk.currentMagazine()) == null) {
+                magazine = getFallbackMagazine(currentThread);
+            }
         } else {
             magazine = getFallbackMagazine(currentThread);
             buf = magazine.newBuffer();
