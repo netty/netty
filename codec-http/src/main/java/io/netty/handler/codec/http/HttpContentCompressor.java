@@ -15,7 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import io.netty.buffer.ByteBuf;
@@ -61,14 +63,12 @@ public class HttpContentCompressor extends HttpContentEncoder {
     private final Map<String, CompressionEncoderFactory> factories;
 
     /**
-     * Creates a new handler with {@link StandardCompressionOptions#brotli()},
-     * {@link StandardCompressionOptions#zstd()}, {@link StandardCompressionOptions#snappy()},
+     * Creates a new handler with {@link StandardCompressionOptions#brotli()} (if supported) ,
+     * {@link StandardCompressionOptions#zstd()} (if supported), {@link StandardCompressionOptions#snappy()},
      * {@link StandardCompressionOptions#gzip()} and {@link StandardCompressionOptions#deflate()}.
      */
     public HttpContentCompressor() {
-        this(0, StandardCompressionOptions.brotli(), StandardCompressionOptions.zstd(),
-                StandardCompressionOptions.snappy(), StandardCompressionOptions.gzip(),
-                StandardCompressionOptions.deflate());
+        this(0, (CompressionOptions[]) null);
     }
 
     /**
@@ -135,18 +135,17 @@ public class HttpContentCompressor extends HttpContentEncoder {
     @Deprecated
     public HttpContentCompressor(int compressionLevel, int windowBits, int memLevel, int contentSizeThreshold) {
         this(contentSizeThreshold,
-                StandardCompressionOptions.brotli(),
-                StandardCompressionOptions.zstd(),
-                StandardCompressionOptions.snappy(),
-                StandardCompressionOptions.gzip(
-                        checkInRange(compressionLevel, 0, 9, "compressionLevel"),
-                        checkInRange(windowBits, 9, 15, "windowBits"),
-                        checkInRange(memLevel, 1, 9, "memLevel")
-                ),
-                StandardCompressionOptions.deflate(
-                        checkInRange(compressionLevel, 0, 9, "compressionLevel"),
-                        checkInRange(windowBits, 9, 15, "windowBits"),
-                        checkInRange(memLevel, 1, 9, "memLevel")
+                defaultCompressionOptions(
+                    StandardCompressionOptions.gzip(
+                            checkInRange(compressionLevel, 0, 9, "compressionLevel"),
+                            checkInRange(windowBits, 9, 15, "windowBits"),
+                            checkInRange(memLevel, 1, 9, "memLevel")
+                    ),
+                    StandardCompressionOptions.deflate(
+                            checkInRange(compressionLevel, 0, 9, "compressionLevel"),
+                            checkInRange(windowBits, 9, 15, "windowBits"),
+                            checkInRange(memLevel, 1, 9, "memLevel")
+                    )
                 )
         );
     }
@@ -181,34 +180,31 @@ public class HttpContentCompressor extends HttpContentEncoder {
         ZstdOptions zstdOptions = null;
         SnappyOptions snappyOptions = null;
         if (compressionOptions == null || compressionOptions.length == 0) {
-            brotliOptions = Brotli.isAvailable() ? StandardCompressionOptions.brotli() : null;
-            gzipOptions = StandardCompressionOptions.gzip();
-            deflateOptions = StandardCompressionOptions.deflate();
-            zstdOptions = Zstd.isAvailable() ? StandardCompressionOptions.zstd() : null;
-            snappyOptions = StandardCompressionOptions.snappy();
-        } else {
-            ObjectUtil.deepCheckNotNull("compressionOptions", compressionOptions);
-            for (CompressionOptions compressionOption : compressionOptions) {
-                // BrotliOptions' class initialization depends on Brotli classes being on the classpath.
-                // The Brotli.isAvailable check ensures that BrotliOptions will only get instantiated if Brotli is
-                // on the classpath.
-                // This results in the static analysis of native-image identifying the instanceof BrotliOptions check
-                // and thus BrotliOptions itself as unreachable, enabling native-image to link all classes
-                // at build time and not complain about the missing Brotli classes.
-                if (Brotli.isAvailable() && compressionOption instanceof BrotliOptions) {
-                    brotliOptions = (BrotliOptions) compressionOption;
-                } else if (compressionOption instanceof GzipOptions) {
-                    gzipOptions = (GzipOptions) compressionOption;
-                } else if (compressionOption instanceof DeflateOptions) {
-                    deflateOptions = (DeflateOptions) compressionOption;
-                } else if (compressionOption instanceof ZstdOptions) {
-                    zstdOptions = (ZstdOptions) compressionOption;
-                } else if (compressionOption instanceof SnappyOptions) {
-                    snappyOptions = (SnappyOptions) compressionOption;
-                } else {
-                    throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
-                            ": " + compressionOption);
-                }
+            compressionOptions = defaultCompressionOptions(
+                    StandardCompressionOptions.gzip(), StandardCompressionOptions.deflate());
+        }
+
+        ObjectUtil.deepCheckNotNull("compressionOptions", compressionOptions);
+        for (CompressionOptions compressionOption : compressionOptions) {
+            // BrotliOptions' class initialization depends on Brotli classes being on the classpath.
+            // The Brotli.isAvailable check ensures that BrotliOptions will only get instantiated if Brotli is
+            // on the classpath.
+            // This results in the static analysis of native-image identifying the instanceof BrotliOptions check
+            // and thus BrotliOptions itself as unreachable, enabling native-image to link all classes
+            // at build time and not complain about the missing Brotli classes.
+            if (Brotli.isAvailable() && compressionOption instanceof BrotliOptions) {
+                brotliOptions = (BrotliOptions) compressionOption;
+            } else if (compressionOption instanceof GzipOptions) {
+                gzipOptions = (GzipOptions) compressionOption;
+            } else if (compressionOption instanceof DeflateOptions) {
+                deflateOptions = (DeflateOptions) compressionOption;
+            } else if (Zstd.isAvailable() && compressionOption instanceof ZstdOptions) {
+                zstdOptions = (ZstdOptions) compressionOption;
+            } else if (compressionOption instanceof SnappyOptions) {
+                snappyOptions = (SnappyOptions) compressionOption;
+            } else {
+                throw new IllegalArgumentException("Unsupported " + CompressionOptions.class.getSimpleName() +
+                        ": " + compressionOption);
             }
         }
 
@@ -235,6 +231,22 @@ public class HttpContentCompressor extends HttpContentEncoder {
         if (this.snappyOptions != null) {
             this.factories.put("snappy", new SnappyEncoderFactory());
         }
+    }
+
+    private static CompressionOptions[] defaultCompressionOptions(
+            GzipOptions gzipOptions, DeflateOptions deflateOptions) {
+        List<CompressionOptions> options = new ArrayList<CompressionOptions>(5);
+        options.add(gzipOptions);
+        options.add(deflateOptions);
+        options.add(StandardCompressionOptions.snappy());
+
+        if (Brotli.isAvailable()) {
+            options.add(StandardCompressionOptions.brotli());
+        }
+        if (Zstd.isAvailable()) {
+            options.add(StandardCompressionOptions.zstd());
+        }
+        return options.toArray(new CompressionOptions[0]);
     }
 
     @Override
