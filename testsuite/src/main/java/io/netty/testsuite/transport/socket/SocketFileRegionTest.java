@@ -44,6 +44,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SocketFileRegionTest extends AbstractSocketTest {
 
@@ -63,8 +64,13 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         });
     }
 
+    protected boolean supportsCustomFileRegion() {
+        return true;
+    }
+
     @Test
     public void testCustomFileRegion(TestInfo testInfo) throws Throwable {
+        assumeTrue(supportsCustomFileRegion());
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
             public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {

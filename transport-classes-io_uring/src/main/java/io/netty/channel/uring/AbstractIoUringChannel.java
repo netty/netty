@@ -319,7 +319,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
         Object msg = in.current();
 
-        if (msgCount > 1) {
+        if (msgCount > 1 && in.current() instanceof ByteBuf) {
             numOutstandingWrites = (short) ioUringUnsafe().scheduleWriteMultiple(in);
         } else if (msg instanceof ByteBuf && ((ByteBuf) msg).nioBufferCount() > 1 ||
                     (msg instanceof ByteBufHolder && ((ByteBufHolder) msg).content().nioBufferCount() > 1)) {
@@ -407,6 +407,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_SEND:
                 case Native.IORING_OP_SENDMSG:
                 case Native.IORING_OP_WRITE:
+                case Native.IORING_OP_SPLICE:
                     writeComplete(op, res, flags, data);
 
                     // We delay the actual close if there is still a write or read scheduled, let's see if there
@@ -1031,7 +1032,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             ByteBuf buf = (ByteBuf) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
-
         throw new UnsupportedOperationException("unsupported message type");
     }
 
