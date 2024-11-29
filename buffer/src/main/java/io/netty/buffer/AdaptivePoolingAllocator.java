@@ -261,8 +261,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         Magazine magazine;
         if (buf != null) {
             Chunk chunk = buf.chunk;
-            magazine = chunk != null && chunk != Magazine.MAGAZINE_FREED?
-                    chunk.magazine : getFallbackMagazine(currentThread);
+            if (chunk == null || chunk == Magazine.MAGAZINE_FREED || (magazine = chunk.currentMagazine()) == null) {
+                magazine = getFallbackMagazine(currentThread);
+            }
         } else {
             magazine = getFallbackMagazine(currentThread);
             buf = magazine.newBuffer();
@@ -613,6 +614,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 curr = parent.centralQueue.poll();
                 if (curr == null) {
                     curr = newChunkAllocation(size);
+                } else {
+                    curr.attachToMagazine(this);
                 }
             }
             current = curr;
@@ -665,10 +668,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         private void transferChunk(Chunk current) {
-            if (NEXT_IN_LINE.compareAndSet(this, null, current)
-                    || parent.offerToQueue(current)) {
+            if (NEXT_IN_LINE.compareAndSet(this, null, current)) {
                 return;
             }
+
+            // Detach the chunk as we are about to offer it back for reuse.
+            current.detachFromMagazine();
+            if (parent.offerToQueue(current)) {
+                return;
+            }
+            // Attach it again
+            current.attachToMagazine(this);
             Chunk nextChunk = NEXT_IN_LINE.get(this);
             if (nextChunk != null && nextChunk != MAGAZINE_FREED
                     && current.remainingCapacity() > nextChunk.remainingCapacity()) {
@@ -725,7 +735,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     private static final class Chunk implements ReferenceCounted {
 
         private final AbstractByteBuf delegate;
-        final Magazine magazine;
+        private Magazine magazine;
+        private final AdaptivePoolingAllocator allocator;
         private final int capacity;
         private final boolean pooled;
         private int allocatedBytes;
@@ -754,17 +765,35 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             // Constructor only used by the MAGAZINE_FREED sentinel.
             delegate = null;
             magazine = null;
+            allocator = null;
             capacity = 0;
             pooled = false;
         }
 
         Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             this.delegate = delegate;
-            this.magazine = magazine;
             this.pooled = pooled;
             capacity = delegate.capacity();
-            magazine.usedMemory.getAndAdd(capacity);
             updater.setInitialValue(this);
+            allocator = magazine.parent;
+            attachToMagazine(magazine);
+        }
+
+        Magazine currentMagazine()  {
+            return magazine;
+        }
+
+        void detachFromMagazine() {
+            if (magazine != null) {
+                magazine.usedMemory.getAndAdd(-capacity);
+                magazine = null;
+            }
+        }
+
+        void attachToMagazine(Magazine magazine) {
+            assert this.magazine == null;
+            this.magazine = magazine;
+            magazine.usedMemory.getAndAdd(capacity);
         }
 
         @Override
@@ -818,7 +847,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             if (!pooled || memSize < chunkSize || memSize > chunkSize + (chunkSize >> 1)) {
                 // Drop the chunk if the parent allocator is closed, or if the chunk is smaller than the
                 // preferred chunk size, or over 50% larger than the preferred chunk size.
-                mag.usedMemory.getAndAdd(-capacity());
+                detachFromMagazine();
                 delegate.release();
             } else {
                 updater.resetRefCnt(this);
@@ -826,7 +855,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
                     // As this Chunk does not belong to the mag anymore we need to decrease the used memory .
-                    mag.usedMemory.getAndAdd(-capacity());
+                    detachFromMagazine();
                     if (!parent.offerToQueue(this)) {
                         // The central queue is full. Ensure we release again as we previously did use resetRefCnt()
                         // which did increase the reference count by 1.
@@ -925,8 +954,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             data.clear();
             tmpNioBuf = null;
             Chunk chunk = this.chunk;
-            Magazine magazine = chunk.magazine;
-            AdaptivePoolingAllocator allocator = magazine.parent;
+            AdaptivePoolingAllocator allocator = chunk.allocator;
             int readerIndex = this.readerIndex;
             int writerIndex = this.writerIndex;
             allocator.allocate(newCapacity, maxCapacity(), this);
