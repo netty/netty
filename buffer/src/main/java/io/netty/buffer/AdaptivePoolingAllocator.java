@@ -779,8 +779,10 @@ final class AdaptivePoolingAllocator {
         }
 
         void detachFromMagazine() {
-            magazine.usedMemory.getAndAdd(-capacity);
-            magazine = null;
+            if (magazine != null) {
+                magazine.usedMemory.getAndAdd(-capacity);
+                magazine = null;
+            }
         }
 
         void attachToMagazine(Magazine magazine) {
