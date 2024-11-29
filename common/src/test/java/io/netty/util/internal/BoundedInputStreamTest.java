@@ -20,7 +20,9 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Arrays;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -39,6 +41,17 @@ public class BoundedInputStreamTest {
                 reader.read(new byte[64], 0, 64);
             }
         });
+        reader.close();
+    }
+
+    @Test
+    void testBigReadsPermittedIfUnderlyingStreamIsSmall() throws IOException {
+        final byte[] bytes = new byte[64];
+        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        final BoundedInputStream reader = new BoundedInputStream(new ByteArrayInputStream(bytes), 8192);
+        final byte[] buffer = new byte[10000];
+        reader.read(buffer, 0, 10000);
+        assertArrayEquals(bytes, Arrays.copyOfRange(buffer, 0, 64));
         reader.close();
     }
 }
