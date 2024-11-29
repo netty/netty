@@ -305,7 +305,9 @@ public final class IoUringIoHandler implements IoHandler {
 
         private void submit0(IoUringIoOps ioOps, long udata) {
             ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
-                    ioOps.rwFlags(), ioOps.fd(), ioOps.bufferAddress(), ioOps.length(), ioOps.offset(), udata);
+                    ioOps.rwFlags(), ioOps.fd(), ioOps.bufferAddress(),
+                    ioOps.length(), ioOps.offset(), udata, ioOps.spliceFdIn()
+            );
             outstandingCompletions++;
         }
 

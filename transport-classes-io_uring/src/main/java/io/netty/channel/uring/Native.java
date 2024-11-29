@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.DefaultFileRegion;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -29,6 +30,7 @@ import io.netty.util.internal.ThrowableUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -192,6 +194,8 @@ final class Native {
     static final byte IORING_OP_FTRUNCATE = 55;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
 
+    static final int SPLICE_F_MOVE = 1;
+
     static String opToStr(byte op) {
         switch (op) {
             case IORING_OP_NOP: return "NOP";
@@ -331,6 +335,11 @@ final class Native {
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
     }
 
+    static boolean isIOUringSupportSplice(int ringFd) {
+        // IORING_OP_SPLICE Available since 5.7
+        return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
+    }
+
     static void checkKernelVersion(String kernelVersion) {
         boolean enforceKernelVersion = SystemPropertyUtil.getBoolean(
                 "io.netty5.transport.iouring.enforceKernelVersion", true);
@@ -382,6 +391,12 @@ final class Native {
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
     static native void eventFdWrite(int fd, long value);
+
+    static int getFd(DefaultFileRegion fileChannel) {
+        return getFd0(fileChannel);
+    }
+
+    private static native int getFd0(Object fileChannel);
 
     static FileDescriptor newBlockingEventFd() {
         return new FileDescriptor(blockingEventFd());

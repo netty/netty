@@ -23,6 +23,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
@@ -30,8 +31,8 @@ import io.netty.channel.unix.Limits;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.net.SocketAddress;
 import java.io.IOException;
+import java.net.SocketAddress;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -204,6 +205,17 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         });
     }
 
+    @Override
+    protected Object filterOutboundMessage(Object msg) {
+        // Since we cannot use synchronous sendfile,
+        // the channel can only support DefaultFileRegion instead of FileRegion.
+        if (IoUring.isIOUringSpliceSupported() && msg instanceof DefaultFileRegion) {
+            return new IoUringFileRegion((DefaultFileRegion) msg);
+        }
+
+        return super.filterOutboundMessage(msg);
+    }
+
     private final class IoUringStreamUnsafe extends AbstractUringUnsafe {
 
         private ByteBuf readBuffer;
@@ -241,12 +253,25 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         protected int scheduleWriteSingle(Object msg) {
             assert iovArray == null;
             assert writeId == 0;
-            ByteBuf buf = (ByteBuf) msg;
 
             int fd = fd().intValue();
             IoUringIoRegistration registration = registration();
-            IoUringIoOps ops = IoUringIoOps.newWrite(fd, 0, 0,
-                    buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
+            final IoUringIoOps ops;
+            if (msg instanceof IoUringFileRegion) {
+                IoUringFileRegion fileRegion = (IoUringFileRegion) msg;
+                try {
+                    fileRegion.open();
+                } catch (IOException e) {
+                    this.handleWriteError(e);
+                    return 0;
+                }
+                ops = fileRegion.splice(fd);
+            } else {
+                ByteBuf buf = (ByteBuf) msg;
+                ops = IoUringIoOps.newWrite(fd, 0, 0,
+                        buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
+            }
+
             byte opCode = ops.opcode();
             writeId = registration.submit(ops);
             writeOpCode = opCode;
@@ -365,13 +390,37 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert writeId != 0;
             writeId = 0;
             writeOpCode = 0;
+
+            ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+            Object current = channelOutboundBuffer.current();
+            if (current instanceof IoUringFileRegion) {
+                IoUringFileRegion fileRegion = (IoUringFileRegion) current;
+                try {
+                    int result = res >= 0 ? res : ioResult("io_uring splice", res);
+                    if (result == 0 && fileRegion.count() > 0) {
+                        validateFileRegion(fileRegion.fileRegion, fileRegion.transfered());
+                        return false;
+                    }
+                    int progress = fileRegion.handleResult(result, data);
+                    if (progress == -1) {
+                        // Done with writing
+                        channelOutboundBuffer.remove();
+                    } else if (progress > 0) {
+                        channelOutboundBuffer.progress(progress);
+                    }
+                } catch (Throwable cause) {
+                    handleWriteError(cause);
+                }
+                return true;
+            }
+
             IovArray iovArray = this.iovArray;
             if (iovArray != null) {
                 this.iovArray = null;
                 iovArray.release();
             }
             if (res >= 0) {
-                unsafe().outboundBuffer().removeBytes(res);
+                channelOutboundBuffer.removeBytes(res);
             } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return true;
             } else {
