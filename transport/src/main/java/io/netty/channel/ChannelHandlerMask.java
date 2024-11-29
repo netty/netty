@@ -66,7 +66,7 @@ final class ChannelHandlerMask {
             new FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>>() {
                 @Override
                 protected Map<Class<? extends ChannelHandler>, Integer> initialValue() {
-                    return new WeakHashMap<Class<? extends ChannelHandler>, Integer>(32);
+                    return new WeakHashMap<Class<? extends ChannelHandler>, Integer>(64);
                 }
             };
 

@@ -21,12 +21,12 @@ import io.netty.channel.LoggingHandler.Event;
 import io.netty.channel.local.LocalAddress;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
+
 
 import java.nio.channels.ClosedChannelException;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -276,9 +276,9 @@ public class ReentrantChannelTest extends BaseChannelTest {
         try {
             clientChannel.writeAndFlush(createTestBuf(2000)).sync();
             fail();
-        } catch (Throwable cce) {
+        } catch (Exception e) {
             // FIXME:  shouldn't this contain the "intentional failure" exception?
-            assertThat(cce, Matchers.instanceOf(ClosedChannelException.class));
+            assertThat(e).isInstanceOf(ClosedChannelException.class);
         }
 
         clientChannel.closeFuture().sync();

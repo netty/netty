@@ -117,11 +117,9 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
     public AbstractMicrobenchmark(boolean disableAssertions, boolean disableHarnessExecutor) {
         final String[] customArgs;
         if (disableHarnessExecutor) {
-            customArgs = new String[]{"-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m",
-                    "-XX:BiasedLockingStartupDelay=0"};
+            customArgs = new String[]{"-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m"};
         } else {
             customArgs = new String[]{"-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m",
-                    "-XX:BiasedLockingStartupDelay=0",
                     "-Djmh.executor=CUSTOM",
                     "-Djmh.executor.class=io.netty.microbench.util.AbstractMicrobenchmark$HarnessExecutor"};
         }

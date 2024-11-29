@@ -41,7 +41,7 @@ import java.util.SplittableRandom;
 
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
-@Fork(0)
+@Fork(5)
 @State(Scope.Thread)
 public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
     private static final Object MESSAGE = new Object();

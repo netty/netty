@@ -215,6 +215,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         newCtx.next = nextCtx;
         head.next = newCtx;
         nextCtx.prev = newCtx;
+        clearHandlerContextCache();
     }
 
     @Override
@@ -233,6 +234,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         newCtx.next = tail;
         prev.next = newCtx;
         tail.prev = newCtx;
+        clearHandlerContextCache();
     }
 
     @Override
@@ -246,11 +248,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return internalAdd(group, name, handler, baseName, AddStrategy.ADD_BEFORE);
     }
 
-    private static void addBefore0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
+    private void addBefore0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
         newCtx.prev = ctx.prev;
         newCtx.next = ctx;
         ctx.prev.next = newCtx;
         ctx.prev = newCtx;
+        clearHandlerContextCache();
     }
 
     private String filterName(String name, ChannelHandler handler) {
@@ -272,11 +275,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return internalAdd(group, name, handler, baseName, AddStrategy.ADD_AFTER);
     }
 
-    private static void addAfter0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
+    private void addAfter0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
         newCtx.prev = ctx;
         newCtx.next = ctx.next;
         ctx.next.prev = newCtx;
         ctx.next = newCtx;
+        clearHandlerContextCache();
     }
 
     public final ChannelPipeline addFirst(ChannelHandler handler) {
@@ -435,6 +439,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         AbstractChannelHandlerContext next = ctx.next;
         prev.next = next;
         next.prev = prev;
+        clearHandlerContextCache();
     }
 
     @Override
@@ -487,7 +492,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 }
             }
 
-            newCtx = newContext(ctx.executor, newName, newHandler);
+            newCtx = newContext(ctx.childExecutor, newName, newHandler);
 
             replace0(ctx, newCtx);
 
@@ -523,7 +528,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return ctx.handler();
     }
 
-    private static void replace0(AbstractChannelHandlerContext oldCtx, AbstractChannelHandlerContext newCtx) {
+    private void replace0(AbstractChannelHandlerContext oldCtx, AbstractChannelHandlerContext newCtx) {
         AbstractChannelHandlerContext prev = oldCtx.prev;
         AbstractChannelHandlerContext next = oldCtx.next;
         newCtx.prev = prev;
@@ -539,6 +544,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         // update the reference to the replacement so forward of buffered content will work correctly
         oldCtx.prev = newCtx;
         oldCtx.next = newCtx;
+        clearHandlerContextCache();
+    }
+
+    private void clearHandlerContextCache() {
+        AbstractChannelHandlerContext ctx = head;
+        do {
+            ctx.contextCache = null;
+            ctx = ctx.next;
+        } while (ctx != null);
     }
 
     private static void checkMultiplicity(ChannelHandler handler) {
@@ -761,13 +775,29 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelRegistered() {
-        AbstractChannelHandlerContext.invokeChannelRegistered(head);
+        if (head.executor().inEventLoop()) {
+            if (head.invokeHandler()) {
+                head.channelRegistered(head);
+            } else {
+                head.fireChannelRegistered();
+            }
+        } else {
+            head.executor().execute(this::fireChannelRegistered);
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelUnregistered() {
-        AbstractChannelHandlerContext.invokeChannelUnregistered(head);
+        if (head.executor().inEventLoop()) {
+            if (head.invokeHandler()) {
+                head.channelUnregistered(head);
+            } else {
+                head.fireChannelUnregistered();
+            }
+        } else {
+            head.executor().execute(this::fireChannelUnregistered);
+        }
         return this;
     }
 
@@ -841,43 +871,99 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelActive() {
-        AbstractChannelHandlerContext.invokeChannelActive(head);
+        if (head.executor().inEventLoop()) {
+            if (head.invokeHandler()) {
+                head.channelActive(head);
+            } else {
+                head.fireChannelActive();
+            }
+        } else {
+            head.executor().execute(this::fireChannelActive);
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelInactive() {
-        AbstractChannelHandlerContext.invokeChannelInactive(head);
+        if (head.executor().inEventLoop()) {
+            if (head.invokeHandler()) {
+                head.channelInactive(head);
+            } else {
+                head.fireChannelInactive();
+            }
+        } else {
+            head.executor().execute(this::fireChannelInactive);
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireExceptionCaught(Throwable cause) {
-        AbstractChannelHandlerContext.invokeExceptionCaught(head, cause);
+        if (head.executor().inEventLoop()) {
+            if (head.invokeHandler()) {
+                head.exceptionCaught(head, cause);
+            } else {
+                head.fireExceptionCaught(cause);
+            }
+        } else {
+            head.executor().execute(() -> fireExceptionCaught(cause));
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireUserEventTriggered(Object event) {
-        AbstractChannelHandlerContext.invokeUserEventTriggered(head, event);
+        if (head.executor().inEventLoop()) {
+            if (head.invokeHandler()) {
+                head.userEventTriggered(head, event);
+            } else {
+                head.fireUserEventTriggered(event);
+            }
+        } else {
+            head.executor().execute(() -> fireUserEventTriggered(event));
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelRead(Object msg) {
-        AbstractChannelHandlerContext.invokeChannelRead(head, msg);
+        if (head.executor().inEventLoop()) {
+            if (head.invokeHandler()) {
+                head.channelRead(head, msg);
+            } else {
+                head.fireChannelRead(msg);
+            }
+        } else {
+            head.executor().execute(() -> fireChannelRead(msg));
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelReadComplete() {
-        AbstractChannelHandlerContext.invokeChannelReadComplete(head);
+        if (head.executor().inEventLoop()) {
+            if (head.invokeHandler()) {
+                head.channelReadComplete(head);
+            } else {
+                head.fireChannelReadComplete();
+            }
+        } else {
+            head.executor().execute(this::fireChannelReadComplete);
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelWritabilityChanged() {
-        AbstractChannelHandlerContext.invokeChannelWritabilityChanged(head);
+        if (head.executor().inEventLoop()) {
+            if (head.invokeHandler()) {
+                head.channelWritabilityChanged(head);
+            } else {
+                head.fireChannelWritabilityChanged();
+            }
+        } else {
+            head.executor().execute(this::fireChannelWritabilityChanged);
+        }
         return this;
     }
 
@@ -908,7 +994,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelFuture deregister() {
-        return tail.deregister();
+        try {
+            return tail.deregister();
+        } finally {
+            AbstractChannelHandlerContext context = tail;
+            do {
+                context.contextExecutor = null; // Clear cached executors in case channel gets re-registered.
+                context = context.prev;
+            } while (context != null);
+        }
     }
 
     @Override

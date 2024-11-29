@@ -2283,7 +2283,7 @@ public class DefaultChannelPipelineTest {
 
         @Override
         public boolean inEventLoop(Thread thread) {
-            return false;
+            return true;
         }
 
         @Override
