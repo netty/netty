@@ -501,6 +501,9 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             // readComplete0(...)
             IoUringIoOps ops = IoUringIoOps.newRecvmsg(fd, 0, msgFlags, msgHdrMemory.address(), msgHdrMemory.idx());
             long id = registration.submit(ops);
+            if (id == 0) {
+                return false;
+            }
             recvmsgHdrs.setId(msgHdrMemory.idx(), id);
             return true;
         }
@@ -600,6 +603,9 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             IoUringIoRegistration registration = registration();
             IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, 0, msgFlags, hdr.address(), hdr.idx());
             long id = registration.submit(ops);
+            if (id == 0) {
+                return false;
+            }
             sendmsgHdrs.setId(hdr.idx(), id);
             return true;
         }
