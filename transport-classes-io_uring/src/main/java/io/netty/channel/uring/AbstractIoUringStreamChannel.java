@@ -26,6 +26,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DuplexChannel;
+import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
 import io.netty.util.internal.logging.InternalLogger;
@@ -46,6 +47,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     // Keep track of the ids used for write and read so we can cancel these when needed.
     private long writeId;
     private long readId;
+
+    private FileDescriptor[] cachedPipe;
 
     AbstractIoUringStreamChannel(Channel parent, LinuxSocket socket, boolean active) {
         // Use a blocking fd, we can make use of fastpoll.
@@ -192,6 +195,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
     }
 
+    private static void closeSilently(FileDescriptor fd) {
+        try {
+            fd.close();
+        } catch (IOException e) {
+            logger.debug("Error while closing a pipe", e);
+        }
+    }
+
     @Override
     protected final void doRegister(ChannelPromise promise) {
         super.doRegister(promise);
@@ -220,6 +231,15 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         private ByteBuf readBuffer;
         private IovArray iovArray;
+
+        @Override
+        protected void freeResourcesNow(IoUringIoRegistration reg) {
+            super.freeResourcesNow(reg);
+            if (cachedPipe != null) {
+                closeSilently(cachedPipe[0]);
+                closeSilently(cachedPipe[1]);
+            }
+        }
 
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
@@ -260,7 +280,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             if (msg instanceof IoUringFileRegion) {
                 IoUringFileRegion fileRegion = (IoUringFileRegion) msg;
                 try {
-                    fileRegion.open();
+                    if (cachedPipe == null) {
+                        cachedPipe = FileDescriptor.pipe();
+                    }
+                    fileRegion.open(cachedPipe);
                 } catch (IOException e) {
                     this.handleWriteError(e);
                     return 0;

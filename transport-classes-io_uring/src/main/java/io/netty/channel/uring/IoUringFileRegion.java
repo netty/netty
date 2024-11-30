@@ -39,10 +39,10 @@ final class IoUringFileRegion implements FileRegion {
         this.fileRegion = fileRegion;
     }
 
-    void open() throws IOException {
+    void open(FileDescriptor[] pipe) throws IOException {
         fileRegion.open();
-        if (pipe == null) {
-            pipe = FileDescriptor.pipe();
+        if (this.pipe == null) {
+            this.pipe = pipe;
         }
     }
 
@@ -158,7 +158,6 @@ final class IoUringFileRegion implements FileRegion {
     @Override
     public boolean release() {
         if (fileRegion.release()) {
-            closePipeIfNeeded();
             return true;
         }
         return false;
@@ -167,24 +166,9 @@ final class IoUringFileRegion implements FileRegion {
     @Override
     public boolean release(int decrement) {
         if (fileRegion.release(decrement)) {
-            closePipeIfNeeded();
             return true;
         }
         return false;
     }
 
-    private void closePipeIfNeeded() {
-        if (pipe != null) {
-            closeSilently(pipe[0]);
-            closeSilently(pipe[1]);
-        }
-    }
-
-    private static void closeSilently(FileDescriptor fd) {
-        try {
-            fd.close();
-        } catch (IOException e) {
-            logger.debug("Error while closing a pipe", e);
-        }
-    }
 }
