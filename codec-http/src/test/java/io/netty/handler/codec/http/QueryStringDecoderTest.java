@@ -21,10 +21,12 @@ import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -34,57 +36,80 @@ public class QueryStringDecoderTest {
 
     @Test
     public void testBasicUris() throws URISyntaxException {
-        QueryStringDecoder d = new QueryStringDecoder(new URI("http://localhost/path"));
+        QueryStringDecoder d = assertParameters(new QueryStringDecoder(new URI("http://localhost/path")));
         assertEquals(0, d.parameters().size());
+    }
+
+    private static QueryStringDecoder assertParameters(QueryStringDecoder decoder) {
+        final Map<String, List<String>> parameters = new LinkedHashMap<String, List<String>>();
+        decoder.decodeParameters(parameters);
+        assertFalse(decoder.hasDecodedParameters());
+        Map<String, List<String>> expectedParameters = decoder.parameters();
+        assertTrue(decoder.hasDecodedParameters());
+        assertEquals(expectedParameters, parameters);
+        // ensure the order for both is the same
+        Iterator<Entry<String, List<String>>> expectedIterator = expectedParameters.entrySet().iterator();
+        Iterator<Entry<String, List<String>>> iterator = parameters.entrySet().iterator();
+        for (int i = 0; i < expectedParameters.size(); i++) {
+            Entry<String, List<String>> expectedEntry = expectedIterator.next();
+            Entry<String, List<String>> entry = iterator.next();
+            assertEquals(expectedEntry.getKey(), entry.getKey(),
+                         "Expected parameter name in position " + (i + 1) + " is " + expectedEntry.getKey() +
+                         " while it is found " + entry.getKey());
+            // assertArray correctly detect ordering
+            assertArrayEquals(expectedEntry.getValue().toArray(new String[0]), entry.getValue().toArray(new String[0]),
+                              "Paramters values order isn't the same for " + entry.getKey());
+        }
+        return decoder;
     }
 
     @Test
     public void testBasic() {
         QueryStringDecoder d;
 
-        d = new QueryStringDecoder("/foo");
+        d = assertParameters(new QueryStringDecoder("/foo"));
         assertEquals("/foo", d.path());
         assertEquals(0, d.parameters().size());
 
-        d = new QueryStringDecoder("/foo%20bar");
+        d = assertParameters(new QueryStringDecoder("/foo%20bar"));
         assertEquals("/foo bar", d.path());
         assertEquals(0, d.parameters().size());
 
-        d = new QueryStringDecoder("/foo?a=b=c");
+        d = assertParameters(new QueryStringDecoder("/foo?a=b=c"));
         assertEquals("/foo", d.path());
         assertEquals(1, d.parameters().size());
         assertEquals(1, d.parameters().get("a").size());
         assertEquals("b=c", d.parameters().get("a").get(0));
 
-        d = new QueryStringDecoder("/foo?a=1&a=2");
+        d = assertParameters(new QueryStringDecoder("/foo?a=1&a=2"));
         assertEquals("/foo", d.path());
         assertEquals(1, d.parameters().size());
         assertEquals(2, d.parameters().get("a").size());
         assertEquals("1", d.parameters().get("a").get(0));
         assertEquals("2", d.parameters().get("a").get(1));
 
-        d = new QueryStringDecoder("/foo%20bar?a=1&a=2");
+        d = assertParameters(new QueryStringDecoder("/foo%20bar?a=1&a=2"));
         assertEquals("/foo bar", d.path());
         assertEquals(1, d.parameters().size());
         assertEquals(2, d.parameters().get("a").size());
         assertEquals("1", d.parameters().get("a").get(0));
         assertEquals("2", d.parameters().get("a").get(1));
 
-        d = new QueryStringDecoder("/foo?a=&a=2");
+        d = assertParameters(new QueryStringDecoder("/foo?a=&a=2"));
         assertEquals("/foo", d.path());
         assertEquals(1, d.parameters().size());
         assertEquals(2, d.parameters().get("a").size());
         assertEquals("", d.parameters().get("a").get(0));
         assertEquals("2", d.parameters().get("a").get(1));
 
-        d = new QueryStringDecoder("/foo?a=1&a=");
+        d = assertParameters(new QueryStringDecoder("/foo?a=1&a="));
         assertEquals("/foo", d.path());
         assertEquals(1, d.parameters().size());
         assertEquals(2, d.parameters().get("a").size());
         assertEquals("1", d.parameters().get("a").get(0));
         assertEquals("", d.parameters().get("a").get(1));
 
-        d = new QueryStringDecoder("/foo?a=1&a=&a=");
+        d = assertParameters(new QueryStringDecoder("/foo?a=1&a=&a="));
         assertEquals("/foo", d.path());
         assertEquals(1, d.parameters().size());
         assertEquals(3, d.parameters().get("a").size());
@@ -92,21 +117,21 @@ public class QueryStringDecoderTest {
         assertEquals("", d.parameters().get("a").get(1));
         assertEquals("", d.parameters().get("a").get(2));
 
-        d = new QueryStringDecoder("/foo?a=1=&a==2");
+        d = assertParameters(new QueryStringDecoder("/foo?a=1=&a==2"));
         assertEquals("/foo", d.path());
         assertEquals(1, d.parameters().size());
         assertEquals(2, d.parameters().get("a").size());
         assertEquals("1=", d.parameters().get("a").get(0));
         assertEquals("=2", d.parameters().get("a").get(1));
 
-        d = new QueryStringDecoder("/foo?abc=1%2023&abc=124%20");
+        d = assertParameters(new QueryStringDecoder("/foo?abc=1%2023&abc=124%20"));
         assertEquals("/foo", d.path());
         assertEquals(1, d.parameters().size());
         assertEquals(2, d.parameters().get("abc").size());
         assertEquals("1 23", d.parameters().get("abc").get(0));
         assertEquals("124 ", d.parameters().get("abc").get(1));
 
-        d = new QueryStringDecoder("/foo?abc=%7E");
+        d = assertParameters(new QueryStringDecoder("/foo?abc=%7E"));
         assertEquals("~", d.parameters().get("abc").get(0));
     }
 
@@ -166,12 +191,13 @@ public class QueryStringDecoderTest {
     @Test
     public void testExcludeFragment() {
         // a 'fragment' after '#' should be cuted (see RFC 3986)
-        assertEquals("a", new QueryStringDecoder("?a#anchor").parameters().keySet().iterator().next());
-        assertEquals("b", new QueryStringDecoder("?a=b#anchor").parameters().get("a").get(0));
-        assertTrue(new QueryStringDecoder("?#").parameters().isEmpty());
-        assertTrue(new QueryStringDecoder("?#anchor").parameters().isEmpty());
-        assertTrue(new QueryStringDecoder("#?a=b#anchor").parameters().isEmpty());
-        assertTrue(new QueryStringDecoder("?#a=b#anchor").parameters().isEmpty());
+        assertEquals("a", assertParameters(new QueryStringDecoder("?a#anchor"))
+                .parameters().keySet().iterator().next());
+        assertEquals("b", assertParameters(new QueryStringDecoder("?a=b#anchor")).parameters().get("a").get(0));
+        assertTrue(assertParameters(new QueryStringDecoder("?#")).parameters().isEmpty());
+        assertTrue(assertParameters(new QueryStringDecoder("?#anchor")).parameters().isEmpty());
+        assertTrue(assertParameters(new QueryStringDecoder("#?a=b#anchor")).parameters().isEmpty());
+        assertTrue(assertParameters(new QueryStringDecoder("?#a=b#anchor")).parameters().isEmpty());
     }
 
     @Test
@@ -185,12 +211,12 @@ public class QueryStringDecoderTest {
             buf.append(i);
             buf.append('&');
         }
-        assertEquals(1024, new QueryStringDecoder(buf.toString()).parameters().size());
+        assertEquals(1024, assertParameters(new QueryStringDecoder(buf.toString())).parameters().size());
     }
 
     @Test
     public void testHasPath() {
-        QueryStringDecoder decoder = new QueryStringDecoder("1=2", false);
+        QueryStringDecoder decoder = assertParameters(new QueryStringDecoder("1=2", false));
         assertEquals("", decoder.path());
         Map<String, List<String>> params = decoder.parameters();
         assertEquals(1, params.size());
@@ -247,6 +273,19 @@ public class QueryStringDecoderTest {
                 1024, semicolonIsNormalChar);
         QueryStringDecoder ad = new QueryStringDecoder(actual, CharsetUtil.UTF_8, true,
                 1024, semicolonIsNormalChar);
+        // ensure the new methods using PrameterConsumer to behave correctly
+        assertParameters(ed);
+        assertParameters(ad);
+        LegacyQueryStringDecoder edLegacy = new LegacyQueryStringDecoder(expected, CharsetUtil.UTF_8, true,
+                                                       1024, semicolonIsNormalChar);
+        LegacyQueryStringDecoder adLegacy = new LegacyQueryStringDecoder(actual, CharsetUtil.UTF_8, true,
+                                                       1024, semicolonIsNormalChar);
+        // ensure same behaviour to legacy
+        assertEquals(edLegacy.path(), ed.path(), "Path regression tests vs legacy failed");
+        assertEquals(adLegacy.path(), ad.path(), "Path regression tests vs legacy failed");
+        assertEquals(edLegacy.parameters(), ed.parameters(), "Parameters regression tests vs legacy failed");
+        assertEquals(adLegacy.parameters(), ad.parameters(), "Parameters regression tests vs legacy failed");
+        // ensure consistency between ed/ad: it should be trivially true in case legacy is well-behaving
         assertEquals(ed.path(), ad.path());
         assertEquals(ed.parameters(), ad.parameters());
     }
@@ -255,7 +294,7 @@ public class QueryStringDecoderTest {
     @Test
     public void testURI() {
         URI uri = URI.create("http://localhost:8080/foo?param1=value1&param2=value2&param3=value3");
-        QueryStringDecoder decoder = new QueryStringDecoder(uri);
+        QueryStringDecoder decoder = assertParameters(new QueryStringDecoder(uri));
         assertEquals("/foo", decoder.path());
         assertEquals("/foo", decoder.rawPath());
         assertEquals("param1=value1&param2=value2&param3=value3", decoder.rawQuery());
@@ -285,7 +324,7 @@ public class QueryStringDecoderTest {
     @Test
     public void testURISlashPath() {
         URI uri = URI.create("http://localhost:8080/?param1=value1&param2=value2&param3=value3");
-        QueryStringDecoder decoder = new QueryStringDecoder(uri);
+        QueryStringDecoder decoder = assertParameters(new QueryStringDecoder(uri));
         assertEquals("/", decoder.path());
         assertEquals("/", decoder.rawPath());
         assertEquals("param1=value1&param2=value2&param3=value3", decoder.rawQuery());
@@ -316,7 +355,7 @@ public class QueryStringDecoderTest {
     @Test
     public void testURINoPath() {
         URI uri = URI.create("http://localhost:8080?param1=value1&param2=value2&param3=value3");
-        QueryStringDecoder decoder = new QueryStringDecoder(uri);
+        QueryStringDecoder decoder = assertParameters(new QueryStringDecoder(uri));
         assertEquals("", decoder.path());
         assertEquals("", decoder.rawPath());
         assertEquals("param1=value1&param2=value2&param3=value3", decoder.rawQuery());
@@ -347,7 +386,7 @@ public class QueryStringDecoderTest {
     @Test
     public void testURI2() {
         URI uri = URI.create("http://foo.com/images;num=10?query=name;value=123");
-        QueryStringDecoder decoder = new QueryStringDecoder(uri);
+        QueryStringDecoder decoder = assertParameters(new QueryStringDecoder(uri));
         assertEquals("/images;num=10", decoder.path());
         assertEquals("/images;num=10", decoder.rawPath());
         assertEquals("query=name;value=123", decoder.rawQuery());

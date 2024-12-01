@@ -17,15 +17,16 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.UnstableApi;
 
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
@@ -156,17 +157,12 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(URI uri, Charset charset, int maxParams, boolean semicolonIsNormalChar) {
-        String rawPath = uri.getRawPath();
-        if (rawPath == null) {
-            rawPath = EMPTY_STRING;
-        }
-        String rawQuery = uri.getRawQuery();
         // Also take care of cut of things like "http://localhost"
-        this.uri = rawQuery == null? rawPath : rawPath + '?' + rawQuery;
+        this.uri = parsableUri(uri);
         this.charset = checkNotNull(charset, "charset");
         this.maxParams = checkPositive(maxParams, "maxParams");
         this.semicolonIsNormalChar = semicolonIsNormalChar;
-        pathEndIdx = rawPath.length();
+        pathEndIdx = pathEndIdx(uri);
     }
 
     @Override
@@ -191,14 +187,59 @@ public class QueryStringDecoder {
         return path;
     }
 
+    @UnstableApi
+    final boolean hasDecodedParameters() {
+        return params != null;
+    }
+
     /**
      * Returns the decoded key-value parameter pairs of the URI.
      */
     public Map<String, List<String>> parameters() {
         if (params == null) {
-            params = decodeParams(uri, pathEndIdx(), charset, maxParams, semicolonIsNormalChar);
+            params = new LinkedHashMap<String, List<String>>();
+            decodeParams(uri, pathEndIdx(), charset, MAP_PARAMETER_COLLECTOR, params, maxParams, semicolonIsNormalChar);
         }
         return params;
+    }
+
+    /**
+     * Decodes {@link #uri()} parameters, reporting them in the provided {@code collector}'s map.
+     */
+    public void decodeParameters(Map<String, List<String>> parameters) {
+        checkNotNull(parameters, "parameters");
+        final Map<String, List<String>> params = this.params;
+        if (params != null) {
+            if (params.isEmpty()) {
+                return;
+            }
+            parameters.putAll(params);
+        } else {
+            decodeParams(uri, pathEndIdx(), charset, MAP_PARAMETER_COLLECTOR, parameters, maxParams,
+                         semicolonIsNormalChar);
+        }
+    }
+
+    /**
+     * Decodes {@link #uri()} parameters, reporting them in the provided {@link ParameterCollector}.
+     */
+    public <C> void decodeParameters(ParameterCollector<? super C> collector, C accumulator) {
+        checkNotNull(collector, "collector");
+        checkNotNull(accumulator, "accumulator");
+        final Map<String, List<String>> params = this.params;
+        if (params != null) {
+            if (params.isEmpty()) {
+                return;
+            }
+            for (Entry<String, List<String>> param : params.entrySet()) {
+                final List<String> values = param.getValue();
+                for (int i = 0; i < values.size(); i++) {
+                    collector.collect(param.getKey(), values.get(i), accumulator);
+                }
+            }
+        } else {
+            decodeParams(uri, pathEndIdx(), charset, collector, accumulator, maxParams, semicolonIsNormalChar);
+        }
     }
 
     /**
@@ -223,70 +264,240 @@ public class QueryStringDecoder {
         return pathEndIdx;
     }
 
-    private static Map<String, List<String>> decodeParams(String s, int from, Charset charset, int paramsLimit,
-                                                          boolean semicolonIsNormalChar) {
+    private static String parsableUri(URI uri) {
+        String rawPath = uri.getRawPath();
+        if (rawPath == null) {
+            rawPath = EMPTY_STRING;
+        }
+        String rawQuery = uri.getRawQuery();
+        // Also take care of cut of things like "http://localhost"
+        return rawQuery == null? rawPath : rawPath + '?' + rawQuery;
+    }
+
+    private static int pathEndIdx(URI uri) {
+        return uri.getRawPath().length();
+    }
+
+    public static int getDefaultMaxParams() {
+        return DEFAULT_MAX_PARAMS;
+    }
+
+    /**
+     * Decodes the specified URI encoded in the specified charset.
+     */
+    public static <C> void decodeParams(URI uri, Charset charset, int maxParams, boolean semicolonIsNormalChar,
+                                        ParameterCollector<? super C> collector, C accumulator) {
+        checkNotNull(uri, "uri");
+        checkNotNull(charset, "charset");
+        checkPositive(maxParams, "maxParams");
+        checkNotNull(collector, "collector");
+        checkNotNull(accumulator, "accumulator");
+        String parsableUri = parsableUri(uri);
+        int pathEndIdx = pathEndIdx(uri);
+        decodeParams(parsableUri, pathEndIdx, charset, collector, accumulator, maxParams, semicolonIsNormalChar);
+    }
+
+    /**
+     * Decodes the specified URI encoded in the specified charset.
+     */
+    public static <C> void decodeParams(String uri, Charset charset, boolean hasPath, int maxParams,
+                                        boolean semicolonIsNormalChar,
+                                        ParameterCollector<? super C> collector, C accumulator) {
+        checkNotNull(uri, "uri");
+        checkNotNull(charset, "charset");
+        checkPositive(maxParams, "maxParams");
+        checkNotNull(collector, "collector");
+        checkNotNull(accumulator, "accumulator");
+        int pathEndIdx = hasPath? findPathEndIndex(uri) : 0;
+        decodeParams(uri, pathEndIdx, charset, collector, accumulator, maxParams, semicolonIsNormalChar);
+    }
+
+    /**
+     * Decodes the specified URI encoded in the specified charset.
+     */
+    public static Map<String, List<String>> decodeParams(URI uri, Charset charset, int maxParams,
+                                                         boolean semicolonIsNormalChar) {
+        checkNotNull(uri, "uri");
+        checkNotNull(charset, "charset");
+        checkPositive(maxParams, "maxParams");
+        String parsableUri = parsableUri(uri);
+        int pathEndIdx = pathEndIdx(uri);
+        final Map<String, List<String>> params = new LinkedHashMap<String, List<String>>();
+        decodeParams(parsableUri, pathEndIdx, charset, MAP_PARAMETER_COLLECTOR, params, maxParams,
+                     semicolonIsNormalChar);
+        return params;
+    }
+
+    /**
+     * Decodes the specified URI encoded in the specified charset.
+     */
+    public static Map<String, List<String>> decodeParams(String uri, Charset charset, boolean hasPath, int maxParams,
+                                                         boolean semicolonIsNormalChar) {
+        checkNotNull(uri, "uri");
+        checkNotNull(charset, "charset");
+        checkPositive(maxParams, "maxParams");
+        int pathEndIdx = hasPath? findPathEndIndex(uri) : 0;
+        final Map<String, List<String>> params = new LinkedHashMap<String, List<String>>();
+        decodeParams(uri, pathEndIdx, charset, MAP_PARAMETER_COLLECTOR, params, maxParams, semicolonIsNormalChar);
+        return params;
+    }
+
+    private static <C> void decodeParams(String s, int from, Charset charset,
+                                         ParameterCollector<? super C> collector, C accumulator,
+                                         int paramsLimit, boolean semicolonIsNormalChar) {
         int len = s.length();
         if (from >= len) {
-            return Collections.emptyMap();
+            return;
         }
         if (s.charAt(from) == '?') {
             from++;
         }
-        Map<String, List<String>> params = new LinkedHashMap<String, List<String>>();
         int nameStart = from;
-        int valueStart = -1;
-        int i;
-        loop:
-        for (i = from; i < len; i++) {
-            switch (s.charAt(i)) {
-            case '=':
-                if (nameStart == i) {
-                    nameStart = i + 1;
-                } else if (valueStart < nameStart) {
-                    valueStart = i + 1;
+        for (int p = 0; p < paramsLimit; p++) {
+            int valueEndExclusive = -1;
+            int indexOfEquals = -1;
+            // let's use a switch to let JIT arrange it the best it can
+            loop:
+            for (int i = nameStart; i < len; i++) {
+                switch (s.charAt(i)) {
+                case '=':
+                    indexOfEquals = i;
+                    break loop;
+                case ';':
+                    if (semicolonIsNormalChar) {
+                        continue;
+                    }
+                    // fall-through
+                case '&':
+                    valueEndExclusive = i;
+                    break loop;
+                case '#':
+                    len = i;
+                    break loop;
                 }
-                break;
-            case ';':
-                if (semicolonIsNormalChar) {
-                    continue;
-                }
-                // fall-through
-            case '&':
-                if (addParam(s, nameStart, valueStart, i, params, charset)) {
-                    paramsLimit--;
-                    if (paramsLimit == 0) {
-                        return params;
+            }
+            int nextValueStart = -1;
+            if (indexOfEquals != -1) {
+                // we have found `=` first (which is quite common); we can drop on check
+                nextValueStart = indexOfEquals + 1;
+                // no need for a switch; we bias our decisions based on the current state
+                for (int i = nextValueStart; i < len; i++) {
+                    char ch = s.charAt(i);
+                    if (ch == '&' || (!semicolonIsNormalChar && ch == ';')) {
+                        valueEndExclusive = i;
+                        break;
+                    }
+                    if (ch == '#') {
+                        len = i;
+                        break;
                     }
                 }
-                nameStart = i + 1;
-                break;
-            case '#':
-                break loop;
-            default:
-                // continue
             }
+            if (valueEndExclusive == -1) {
+                valueEndExclusive = len;
+            }
+            int valueStart;
+            if (nextValueStart != -1) {
+                valueStart = nextValueStart;
+                if (valueStart == nameStart + 1) {
+                    // uncommon slow path: it seems there is no name!
+                    // search nameStart while skipping useless subsequent =, if any
+                    nameStart = skipIf(s, valueStart, valueEndExclusive, '=');
+                    valueStart = indexOf(s, nameStart + 1, valueEndExclusive, '=');
+                }
+            } else {
+                valueStart = -1;
+            }
+            addParam(s, nameStart, valueStart, valueEndExclusive, collector, accumulator, charset);
+            if (valueEndExclusive == len) {
+                break;
+            }
+            nameStart = valueEndExclusive + 1;
         }
-        addParam(s, nameStart, valueStart, i, params, charset);
-        return params;
     }
 
-    private static boolean addParam(String s, int nameStart, int valueStart, int valueEnd,
-                                    Map<String, List<String>> params, Charset charset) {
+    private static int indexOf(CharSequence s, int from, int to, int ch) {
+        for (int i = from; i < to; i++) {
+            if (s.charAt(i) == ch) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static int skipIf(CharSequence s, int from, int to, int ch) {
+        for (int i = from; i < to; i++) {
+            if (s.charAt(i) != ch) {
+                return i;
+            }
+        }
+        return to;
+    }
+
+    private static final ParameterCollector<Map<String, List<String>>> MAP_PARAMETER_COLLECTOR =
+            new ParameterCollector<Map<String, List<String>>>() {
+                @Override
+                public void collect(String name, String value, Map<String, List<String>> accumulator) {
+                    List<String> values = accumulator.get(name);
+                    if (values == null) {
+                        values = new ArrayList<String>(1);
+                        accumulator.put(name, values);
+                    }
+                    values.add(value);
+                }
+            };
+
+    /**
+     * @return {@link ParameterCollector} which behave as its {@link ParameterCollector#collect} is defined as:
+     *
+     * <pre>
+     * {@code
+     * @Override
+     * public void accept(String name, String value, Map<String, List<String>> collector) {
+     *     List<String> values = collector.get(name);
+     *     if (values == null) {
+     *         values = new ArrayList<>(1);
+     *         collector.put(name, values);
+     *     }
+     *     values.add(value);
+     * }
+     * }
+     * </pre>
+     */
+    public static ParameterCollector<Map<String, List<String>>> mapCollector() {
+        return MAP_PARAMETER_COLLECTOR;
+    }
+
+    /**
+     * This interface is used to accumulate Query decoded parameters.<br>
+     * The {@link #collect} method receive the query parameters in the same order are
+     * decoded from the provided {@code uri}
+     * <p>
+     * eg "a=1&b=2&c=3"
+     * <p>
+     * would cause
+     * accept("a", "1", map), accept("b", "2", map), accept("c", "3", map)
+     * <p>
+     * to be called.
+     * <p>
+     * Order of calling {@link #collect} is an implementation details users shouldn't rely on, anyway,
+     * and just store/report/filter them assuming random ordering, instead.
+     */
+    public interface ParameterCollector<C> {
+        void collect(String name, String value, C accumulator);
+    }
+
+    private static <C> void addParam(String s, int nameStart, int valueStart, int valueEnd,
+                                     ParameterCollector<? super C> collector, C accumulator, Charset charset) {
         if (nameStart >= valueEnd) {
-            return false;
+            return;
         }
         if (valueStart <= nameStart) {
             valueStart = valueEnd + 1;
         }
         String name = decodeComponent(s, nameStart, valueStart - 1, charset, false);
         String value = decodeComponent(s, valueStart, valueEnd, charset, false);
-        List<String> values = params.get(name);
-        if (values == null) {
-            values = new ArrayList<String>(1);  // Often there's only 1 value.
-            params.put(name, values);
-        }
-        values.add(value);
-        return true;
+        collector.collect(name, value, accumulator);
     }
 
     /**
@@ -338,18 +549,29 @@ public class QueryStringDecoder {
         if (len <= 0) {
             return EMPTY_STRING;
         }
-        int firstEscaped = -1;
-        for (int i = from; i < toExcluded; i++) {
-            char c = s.charAt(i);
-            if (c == '%' || c == '+' && !isPath) {
-                firstEscaped = i;
-                break;
-            }
-        }
+        int firstEscaped = getFirstEscaped(s, from, toExcluded, isPath);
         if (firstEscaped == -1) {
             return s.substring(from, toExcluded);
         }
 
+        return decodeEscapedComponent(s, from, toExcluded, charset, isPath, firstEscaped, len);
+    }
+
+    private static int getFirstEscaped(CharSequence s, int from, int toExcluded, boolean isPath) {
+        int cutOff = isPath? '%' : '+';
+        for (int i = from; i < toExcluded; i++) {
+            int c = s.charAt(i);
+            if (c <= cutOff) {
+                if (c == '%' || !isPath && c == '+') {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static String decodeEscapedComponent(String s, int from, int toExcluded, Charset charset, boolean isPath,
+                                                 int firstEscaped, int len) {
         // Each encoded byte takes 3 characters (e.g. "%20")
         int decodedCapacity = (toExcluded - firstEscaped) / 3;
         byte[] buf = PlatformDependent.allocateUninitializedArray(decodedCapacity);
@@ -380,7 +602,7 @@ public class QueryStringDecoder {
         return strBuf.toString();
     }
 
-    private static int findPathEndIndex(String uri) {
+    private static int findPathEndIndex(CharSequence uri) {
         int len = uri.length();
         for (int i = 0; i < len; i++) {
             char c = uri.charAt(i);
