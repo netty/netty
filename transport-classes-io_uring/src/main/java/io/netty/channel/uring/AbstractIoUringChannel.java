@@ -443,10 +443,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     freeRemoteAddressMemory();
                     break;
                 case Native.IORING_OP_CLOSE:
-                    if (delayedClose != null) {
-                        delayedClose.setSuccess();
+                    if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
+                        if (delayedClose != null) {
+                            delayedClose.setSuccess();
+                        }
+                        closed = true;
                     }
-                    closed = true;
                     break;
             }
 
@@ -894,13 +896,17 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 // connect not complete yet need to wait for poll_out event
                 schedulePollOut();
             } else {
+                if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                    // Operation was cancelled, just return.
+                    return;
+                }
                 try {
                     if (res == 0) {
                         fulfillConnectPromise(connectPromise, active);
                         if (readPending) {
                             doBeginReadNow();
                         }
-                    } else if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
+                    } else {
                         try {
                             Errors.throwConnectException("io_uring connect", res);
                         } catch (Throwable cause) {
