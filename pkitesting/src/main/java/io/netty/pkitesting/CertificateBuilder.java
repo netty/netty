@@ -766,12 +766,14 @@ public final class CertificateBuilder {
 
         V3TBSCertificateGenerator generator = new V3TBSCertificateGenerator();
         generator.setIssuer(X500Name.getInstance(issuer.getEncoded()));
-        generator.setSubject(X500Name.getInstance(subject.getEncoded()));
+        if (subject != null) {
+            generator.setSubject(X500Name.getInstance(subject.getEncoded()));
+        }
         generator.setSerialNumber(new ASN1Integer(serial));
         generator.setSignature(new AlgorithmIdentifier(new ASN1ObjectIdentifier(
                 Algorithms.oidForAlgorithmName(signAlg))));
-        generator.setStartDate(new Time(new Date(notBefore.toEpochMilli())));
-        generator.setEndDate(new Time(new Date(notAfter.toEpochMilli())));
+        generator.setStartDate(new Time(Date.from(notBefore)));
+        generator.setEndDate(new Time(Date.from(notAfter)));
         generator.setSubjectPublicKeyInfo(SubjectPublicKeyInfo.getInstance(pubKey.getEncoded()));
         return generator;
     }
