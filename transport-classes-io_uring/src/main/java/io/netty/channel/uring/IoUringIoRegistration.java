@@ -34,5 +34,6 @@ public interface IoUringIoRegistration extends IoRegistration {
     @Override
     long submit(IoOps ops);
 
+    @Override
     void cancel();
 }
