@@ -355,9 +355,33 @@ public final class X509Bundle {
      * @throws IOException If an IO error occurred when creating the trust root file.
      */
     public File toTempRootCertPem() throws IOException {
-        Path tempFile = Files.createTempFile("ca", ".pem");
+        return createTempPemFile(getRootCertificatePEM(), "ca");
+    }
+
+    /**
+     * Create a temporary PEM file with the {@linkplain #getCertificatePath() certificate chain} of this bundle.
+     * The temporary file is automatically deleted when the JVM terminates normally.
+     * @return The {@link File} object with the path to the certificate chain PEM file.
+     * @throws IOException If an IO error occurred when creating the certificate chain file.
+     */
+    public File toTempCertChainPem() throws IOException {
+        return createTempPemFile(getCertificatePathPEM(), "chain");
+    }
+
+    /**
+     * Create a temporary PEM file with the {@linkplain #getPrivateKeyPEM() private key} of this bundle.
+     * The temporary file is automatically deleted when the JVM terminates normally.
+     * @return The {@link File} object with the path to the private key PEM file.
+     * @throws IOException If an IO error occurred when creating the private key file.
+     */
+    public File toTempPrivateKeyPem() throws IOException {
+        return createTempPemFile(getPrivateKeyPEM(), "key");
+    }
+
+    private static File createTempPemFile(String pem, String filePrefix) throws IOException {
+        Path tempFile = Files.createTempFile(filePrefix, ".pem");
         try (OutputStream out = Files.newOutputStream(tempFile, StandardOpenOption.WRITE)) {
-            out.write(getRootCertificatePEM().getBytes(StandardCharsets.ISO_8859_1));
+            out.write(pem.getBytes(StandardCharsets.ISO_8859_1));
         }
         File file = tempFile.toFile();
         file.deleteOnExit();
