@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -107,15 +108,9 @@ public final class RevocationServer {
         } else {
             // It's important the CRL server creates a daemon thread,
             // because it's a singleton and won't be stopped except by terminating the JVM.
-            Thread th = new Thread(() -> crlServer.start());
-            th.setDaemon(true);
-            th.start();
-            try {
-                th.join();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException(e);
-            }
+            // Threads in the ForkJoin common pool are always daemon, and JUnit 5 initializes
+            // it anyway, so we can let it call start() for us.
+            ForkJoinPool.commonPool().execute(crlServer::start);
         }
     }
 
