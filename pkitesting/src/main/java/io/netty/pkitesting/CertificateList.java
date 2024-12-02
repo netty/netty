@@ -53,15 +53,15 @@ final class CertificateList {
         vec.add(new ASN1Integer(1)); // Version 2
         vec.add(new AlgorithmIdentifier(new ASN1ObjectIdentifier(cert.getSigAlgOID())));
         vec.add(X500Name.getInstance(cert.getSubjectX500Principal().getEncoded()));
-        vec.add(new Time(new Date(thisUpdate.toEpochMilli())));
+        vec.add(new Time(Date.from(thisUpdate)));
         if (nextUpdate != null) {
-            vec.add(new Time(new Date(nextUpdate.toEpochMilli())));
+            vec.add(new Time(Date.from(nextUpdate)));
         }
         ASN1EncodableVector revokedVec = new ASN1EncodableVector();
         for (Map.Entry<BigInteger, Instant> revokedCert : revokedCerts) {
             revokedVec.add(TBSCertList.CRLEntry.getInstance(new DERSequence(new ASN1Encodable[]{
                     new ASN1Integer(revokedCert.getKey()),
-                    new Time(new Date(revokedCert.getValue().toEpochMilli()))
+                    new Time(Date.from(revokedCert.getValue()))
             })));
         }
         vec.add(new DERSequence(revokedVec));

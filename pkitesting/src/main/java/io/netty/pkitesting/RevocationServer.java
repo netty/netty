@@ -173,7 +173,7 @@ public final class RevocationServer {
         Instant now = Instant.now();
         CertificateList list = new CertificateList(issuer, now, now, certs.entrySet());
         try {
-            Signed signed = new Signed(list::getEncoded, issuer);
+            Signed signed = new Signed(list.getEncoded(), issuer);
             return signed.getEncoded();
         } catch (Exception e) {
             throw new IllegalStateException("Failed to sign CRL", e);

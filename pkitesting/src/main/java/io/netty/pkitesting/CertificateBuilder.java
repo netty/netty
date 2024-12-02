@@ -662,7 +662,7 @@ public final class CertificateBuilder {
 
         addExtensions(generator);
 
-        Signed signed = new Signed(() -> tbsCertToBytes(generator), algorithm.signatureType, keyPair.getPrivate());
+        Signed signed = new Signed(tbsCertToBytes(generator), algorithm.signatureType, keyPair.getPrivate());
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
         X509Certificate cert = (X509Certificate) factory.generateCertificate(signed.toInputStream());
         return X509Bundle.fromRootCertificateAuthority(cert, keyPair);
@@ -703,14 +703,14 @@ public final class CertificateBuilder {
             throw new IllegalArgumentException(
                     "Cannot sign certificate with issuer bundle that does not have a private key.");
         }
-        Signed signed = new Signed(() -> tbsCertToBytes(generator), signAlg, issuerPrivateKey);
+        Signed signed = new Signed(tbsCertToBytes(generator), signAlg, issuerPrivateKey);
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
         X509Certificate cert = (X509Certificate) factory.generateCertificate(signed.toInputStream());
         X509Certificate[] issuerPath = issuerBundle.getCertificatePath();
         X509Certificate[] path = new X509Certificate[issuerPath.length + 1];
         path[0] = cert;
         System.arraycopy(issuerPath, 0, path, 1, issuerPath.length);
-        return new X509Bundle(path, issuerBundle.getRootCertificate(), keyPair); // Avoid extra path.clone().
+        return X509Bundle.fromCertificatePath(path, issuerBundle.getRootCertificate(), keyPair);
     }
 
     private static String preferredSignatureAlgorithm(PublicKey key) {

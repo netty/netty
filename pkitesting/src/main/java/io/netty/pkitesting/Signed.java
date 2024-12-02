@@ -39,12 +39,12 @@ final class Signed {
     private final String algorithmIdentifier;
     private final PrivateKey privateKey;
 
-    Signed(Supplier<byte[]> toBeSigned, X509Bundle signer) {
+    Signed(byte[] toBeSigned, X509Bundle signer) {
         this(toBeSigned, signer.getCertificate().getSigAlgName(), signer.getKeyPair().getPrivate());
     }
 
-    Signed(Supplier<byte[]> toBeSigned, String algorithmIdentifier, PrivateKey privateKey) {
-        this.toBeSigned = toBeSigned.get();
+    Signed(byte[] toBeSigned, String algorithmIdentifier, PrivateKey privateKey) {
+        this.toBeSigned = Objects.requireNonNull(toBeSigned, "toBeSigned");
         this.algorithmIdentifier = Objects.requireNonNull(algorithmIdentifier, "algorithmIdentifier");
         this.privateKey = privateKey;
     }

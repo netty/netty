@@ -58,7 +58,7 @@ public final class X509Bundle {
      * @param root The self-signed root certificate.
      * @param keyPair The key pair.
      */
-    public X509Bundle(X509Certificate[] certPath, X509Certificate root, KeyPair keyPair) {
+    private X509Bundle(X509Certificate[] certPath, X509Certificate root, KeyPair keyPair) {
         requireNonNull(root, "root");
         requireNonNull(keyPair, "keyPair");
         if (certPath.length > 1 && certPath[certPath.length - 1].equals(root)) {
