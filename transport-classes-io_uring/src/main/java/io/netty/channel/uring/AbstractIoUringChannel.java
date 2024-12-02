@@ -348,7 +348,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
                 fd, 0, Native.POLLOUT, (short) Native.POLLOUT);
         pollOutId = registration.submit(ops);
-        ioState |= POLL_OUT_SCHEDULED;
+        if (pollOutId != 0) {
+            ioState |= POLL_OUT_SCHEDULED;
+        }
     }
 
     final void schedulePollRdHup() {
@@ -358,7 +360,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
                 fd, 0, Native.POLLRDHUP, (short) Native.POLLRDHUP);
         pollRdhupId = registration.submit(ops);
-        ioState |= POLL_RDHUP_SCHEDULED;
+        if (pollRdhupId != 0) {
+            ioState |= POLL_RDHUP_SCHEDULED;
+        }
     }
 
     final void resetCachedAddresses() {
@@ -654,7 +658,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             IoUringIoOps ops = IoUringIoOps.newPollAdd(
                     fd, 0, Native.POLLIN, (short) Native.POLLIN);
             pollInId = registration.submit(ops);
-            ioState |= POLL_IN_SCHEDULED;
+            if (pollInId != 0) {
+                ioState |= POLL_IN_SCHEDULED;
+            }
         }
 
         private void readComplete(byte op, int res, int flags, short data) {
@@ -973,8 +979,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 } else {
                     submitConnect(inetSocketAddress);
                 }
-
-                ioState |= CONNECT_SCHEDULED;
+                if (connectId != 0) {
+                    ioState |= CONNECT_SCHEDULED;
+                }
             } catch (Throwable t) {
                 closeIfClosed();
                 promise.tryFailure(annotateConnectException(t, remoteAddress));

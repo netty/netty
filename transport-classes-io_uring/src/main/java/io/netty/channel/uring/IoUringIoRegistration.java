@@ -28,7 +28,8 @@ public interface IoUringIoRegistration extends IoRegistration {
      *
      * @param   ops ops.
      * @return  the u_data of the {@link IoUringIoOps}. This can be used to cancel a previous submitted
-     * {@link IoUringIoOps}.
+     * {@link IoUringIoOps}. If submission failed as the registration is not valid anymore this method will return
+     * {@code 0}.
      */
     @Override
     long submit(IoOps ops);

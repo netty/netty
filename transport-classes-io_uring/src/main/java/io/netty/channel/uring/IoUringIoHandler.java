@@ -68,6 +68,7 @@ public final class IoUringIoHandler implements IoHandler {
     // these two ids are used internally any so can't be used by nextRegistrationId().
     private static final int EVENTFD_ID = Integer.MAX_VALUE;
     private static final int RINGFD_ID = EVENTFD_ID - 1;
+    private static final int INVALID_ID = 0;
 
     IoUringIoHandler(RingBuffer ringBuffer) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
@@ -264,7 +265,7 @@ public final class IoUringIoHandler implements IoHandler {
         int id;
         do {
             id = nextRegistrationId++;
-        } while (id == RINGFD_ID || id == EVENTFD_ID);
+        } while (id == RINGFD_ID || id == EVENTFD_ID || id == INVALID_ID);
         return id;
     }
 
@@ -291,10 +292,10 @@ public final class IoUringIoHandler implements IoHandler {
         @Override
         public long submit(IoOps ops) {
             IoUringIoOps ioOps = (IoUringIoOps) ops;
-            long udata = UserData.encode(id, ioOps.opcode(), ioOps.data());
             if (!isValid()) {
-                return udata;
+                return INVALID_ID;
             }
+            long udata = UserData.encode(id, ioOps.opcode(), ioOps.data());
             if (eventLoop.inEventLoop()) {
                 submit0(ioOps, udata);
             } else {

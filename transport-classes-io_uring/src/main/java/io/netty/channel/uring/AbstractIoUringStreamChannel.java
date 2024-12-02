@@ -239,6 +239,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 byte opCode = ops.opcode();
                 writeId = registration.submit(ops);
                 writeOpCode = opCode;
+                if (writeId == 0) {
+                    return 0;
+                }
             } catch (Exception e) {
                 iovArray.release();
                 iovArray = null;
@@ -275,6 +278,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             byte opCode = ops.opcode();
             writeId = registration.submit(ops);
             writeOpCode = opCode;
+            if (writeId == 0) {
+                return 0;
+            }
             return 1;
         }
 
@@ -285,22 +291,30 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             ByteBuf byteBuf = allocHandle.allocate(alloc());
-            allocHandle.attemptedBytesRead(byteBuf.writableBytes());
-
-            readBuffer = byteBuf;
-
-            int fd = fd().intValue();
-            IoUringIoRegistration registration = registration();
-            // Depending on if this is the first read or not we will use Native.MSG_DONTWAIT.
-            // The idea is that if the socket is blocking we can do the first read in a blocking fashion
-            // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
-            // be possible directly we schedule these with Native.MSG_DONTWAIT. This allows us to still be
-            // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
-            // transports.
-            IoUringIoOps ops = IoUringIoOps.newRecv(fd, 0, first ? 0 : Native.MSG_DONTWAIT,
-                    byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
-            readId = registration.submit(ops);
-            return 1;
+            try {
+                allocHandle.attemptedBytesRead(byteBuf.writableBytes());
+                int fd = fd().intValue();
+                IoUringIoRegistration registration = registration();
+                // Depending on if this is the first read or not we will use Native.MSG_DONTWAIT.
+                // The idea is that if the socket is blocking we can do the first read in a blocking fashion
+                // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
+                // be possible directly we schedule these with Native.MSG_DONTWAIT. This allows us to still be
+                // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
+                // transports.
+                IoUringIoOps ops = IoUringIoOps.newRecv(fd, 0, first ? 0 : Native.MSG_DONTWAIT,
+                        byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
+                readId = registration.submit(ops);
+                if (readId == 0) {
+                    return 0;
+                }
+                readBuffer = byteBuf;
+                byteBuf = null;
+                return 1;
+            } finally {
+                if (byteBuf != null) {
+                    byteBuf.release();
+                }
+            }
         }
 
         @Override
