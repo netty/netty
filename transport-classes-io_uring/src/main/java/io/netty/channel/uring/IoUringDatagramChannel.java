@@ -417,7 +417,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             }
 
             // Reset the id as this read was completed and so don't need to be cancelled later.
-            recvmsgHdrs.setId(idx, -1);
+            recvmsgHdrs.setId(idx, MsgHdrMemoryArray.NO_ID);
             if (outstanding == 0) {
                 // There are no outstanding completion events, release the readBuffer and see if we need to schedule
                 // another one or if the user will do it.
