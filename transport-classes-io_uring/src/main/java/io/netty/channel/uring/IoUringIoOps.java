@@ -19,137 +19,185 @@ import io.netty.channel.IoOps;
 
 /**
  * {@link IoOps} for implementation for
- * <a href="https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h">IO_uring</a>.
+ * <a href="https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h">Io_uring</a>.
  */
 public final class IoUringIoOps implements IoOps {
 
     private final byte opcode;
-    private final int flags;
+    private final byte flags;
     private final short ioPrio;
     private final int fd;
-    private final int rwFlags;
-    private final long bufferAddress;
-    private final int length;
-    private final long offset;
-    private final int spliceFdIn;
+    private final long union1;
+    private final long union2;
+    private final int len;
+    private final int union3;
     private final short data;
+    private final short personality;
+    private final short union4;
+    private final int union5;
+    private final long union6;
 
     /**
-     * Create a new instance
+     * Create a new instance which represents the {@code io_uring_sqe} struct.
      *
-     * @param opcode        the operation.
-     * @param flags         the flags
-     * @param ioPrio        the priority.
-     * @param fd            the filedescriptor.
-     * @param rwFlags       the flags specific for the op.
-     * @param bufferAddress the bufferaddress
-     * @param length        the length
-     * @param offset        the offset.
-     * @param spliceFdIn    the splice_fd_in
-     * @param data          the user data that will be passed back on completion.
+     * <pre>{@code
+     *  struct io_uring_sqe {
+     *      __u8    opcode;    // type of operation for this sqe
+     *      __u8    flags;     // IOSQE_ flags
+     *      __u16   ioprio;    // ioprio for the request
+     *      __s32   fd;        // file descriptor to do IO on
+     *
+     *      union {            // union1
+     *          __u64 off;     // offset into file
+     *          __u64 addr2;
+     *          struct {
+     *              __u32 cmd_op;
+     *              __u32 __pad1;
+     *          };
+     *      };
+     *
+     *      union {             // union2
+     *          __u64 addr;    // pointer to buffer or iovecs
+     *          __u64 splice_off_in;
+     *          struct {
+     *              __u32 level;
+     *              __u32 optname;
+     *          };
+     *      };
+     *      __u32 len;        // buffer size or number of iovecs
+     *
+     *      union {           // union3
+     *          __kernel_rwf_t rw_flags;
+     *          __u32 fsync_flags;
+     *          __u16 poll_events;    // compatibility
+     *          __u32 poll32_events; // word-reversed for BE
+     *          __u32 sync_range_flags;
+     *          __u32 msg_flags;
+     *          __u32 timeout_flags;
+     *          __u32 accept_flags;
+     *          __u32 cancel_flags;
+     *          __u32 open_flags;
+     *          __u32 statx_flags;
+     *          __u32 fadvise_advice;
+     *          __u32 splice_flags;
+     *          __u32 rename_flags;
+     *          __u32 unlink_flags;
+     *          __u32 hardlink_flags;
+     *          __u32 xeattr_flags;
+     *          __u32 msg_ring_flags;
+     *          __u32 uring_cmd_flags;
+     *          __u32 waitid_flags;
+     *          __u32 futex_flags;
+     *          __u32 install_fd_flags;
+     *          __u32 nop_flags;
+     *      };
+     *      __u64 user_data;    // data to be passed back at completion time
+     *                          // pack this to avoid bogus arm OABI complaints
+     *
+     *      union {             // union4
+     *
+     *          // index into fixed buffers, if used
+     *          __u16 buf_index;
+     *          // for grouped buffer selection
+     *          __u16 buf_group;
+     *      }__attribute__((packed));
+     *      // personality to use, if used
+     *      __u16 personality;
+     *
+     *      union {            // union5
+     *
+     *          __s32 splice_fd_in;
+     *          __u32 file_index;
+     *          __u32 optlen;
+     *          struct {
+     *              __u16 addr_len;
+     *              __u16 __pad3[ 1];
+     *          };
+     *      };
+     *
+     *      union {           // union6
+     *
+     *          struct {
+     *              __u64 addr3;
+     *              __u64 __pad2[ 1];
+     *          };
+     *          __u64 optval;
+     *          //
+     *          // If the ring is initialized with IORING_SETUP_SQE128, then
+     *          // this field is used for 80 bytes of arbitrary command data
+     *          __u8 cmd[ 0];
+     *      };
+     *  };
+     * }
+     * </pre>
      */
-    public IoUringIoOps(byte opcode, int flags, short ioPrio, int fd, int rwFlags, long bufferAddress,
-                        int length, long offset, int spliceFdIn, short data) {
+    public IoUringIoOps(byte opcode, byte flags, short ioPrio, int fd, long union1, long union2, int len, int union3,
+                        short data, short union4, short personality, int union5, long union6) {
         this.opcode = opcode;
         this.flags = flags;
         this.ioPrio = ioPrio;
         this.fd = fd;
-        this.rwFlags = rwFlags;
-        this.bufferAddress = bufferAddress;
-        this.length = length;
-        this.offset = offset;
+        this.union1 = union1;
+        this.union2 = union2;
+        this.len = len;
+        this.union3 = union3;
         this.data = data;
-        this.spliceFdIn = spliceFdIn;
+        this.union4 = union4;
+        this.personality = personality;
+        this.union5 = union5;
+        this.union6 = union6;
     }
 
-    /**
-     * Returns the filedescriptor.
-     *
-     * @return  fd
-     */
-    public int fd() {
-        return fd;
-    }
-
-    /**
-     * Returns the opcode.
-     *
-     * @return  opcode
-     */
-    public byte opcode() {
+    byte opcode() {
         return opcode;
     }
 
-    /**
-     * Returns the flags that will be applied.
-     *
-     * @return  flags
-     */
-    public int flags() {
+    byte flags() {
         return flags;
     }
 
-    /**
-     * Returns the priority.
-     *
-     * @return ioPrio
-     */
-    public short ioPrio() {
+    short ioPrio() {
         return ioPrio;
     }
 
-    /**
-     * Returns the rwFlags that will be applied. These are specific to the opcode.
-     *
-     * @return  rwFlags
-     */
-    public int rwFlags() {
-        return rwFlags;
+    int fd() {
+        return fd;
     }
 
-    /**
-     * Returns the bufferAddress that will be used. This is specific to the opcode.
-     *
-     * @return  bufferAddress
-     */
-    public long bufferAddress() {
-        return bufferAddress;
+    long union1() {
+        return union1;
     }
 
-    /**
-     * Returns the length that will be used. This is specific to the opcode.
-     *
-     * @return  length
-     */
-    public int length() {
-        return length;
+    long union2() {
+        return union2;
     }
 
-    /**
-     * Returns the offset that will be used. This is specific to the opcode.
-     *
-     * @return  offset
-     */
-    public long offset() {
-        return offset;
+    int len() {
+        return len;
     }
 
-    /**
-     * Returns the data that the user attached to the op. This data will be passed back on completion.
-     *
-     * @return  data
-     */
-    public short data() {
+    int union3() {
+        return union3;
+    }
+
+    short data() {
         return data;
     }
 
-    /**
-     * Returns the splice_fd_in that will be used. This is specific to the opcode.
-     *
-     * @return  spliceFdIn
-     */
-    public int spliceFdIn() {
-        return spliceFdIn;
+    short personality() {
+        return personality;
+    }
+
+    short union4() {
+        return union4;
+    }
+
+    int union5() {
+        return union5;
+    }
+
+    long union6() {
+        return union6;
     }
 
     @Override
@@ -159,12 +207,15 @@ public final class IoUringIoOps implements IoOps {
                 ", flags=" + flags +
                 ", ioPrio=" + ioPrio +
                 ", fd=" + fd +
-                ", rwFlags=" + rwFlags +
-                ", bufferAddress=" + bufferAddress +
-                ", length=" + length +
-                ", offset=" + offset +
+                ", union1=" + union1 +
+                ", union2=" + union2 +
+                ", len=" + len +
+                ", union3=" + union3 +
                 ", data=" + data +
-                ", spliceFdIn=" + spliceFdIn +
+                ", union4=" + union4 +
+                ", personality=" + personality +
+                ", union5=" + union5 +
+                ", union6=" + union6 +
                 '}';
     }
 
@@ -178,10 +229,10 @@ public final class IoUringIoOps implements IoOps {
      * @param data      the data
      * @return          ops.
      */
-    public static IoUringIoOps newAsyncCancel(int fd, int flags, long userData, short data) {
+    public static IoUringIoOps newAsyncCancel(int fd, byte flags, long userData, short data) {
         // Best effort to cancel the
-        return new IoUringIoOps(Native.IORING_OP_ASYNC_CANCEL, flags, (short) 0, fd, 0,
-                userData, 0, 0, 0, data);
+        return new IoUringIoOps(Native.IORING_OP_ASYNC_CANCEL, flags, (short) 0, fd, 0, userData, 0, 0,
+                data, (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -192,8 +243,9 @@ public final class IoUringIoOps implements IoOps {
      * @param data      the data
      * @return          ops.
      */
-    public static IoUringIoOps newClose(int fd, int flags, short data) {
-        return new IoUringIoOps(Native.IORING_OP_CLOSE, flags, (short) 0, fd, 0, 0, 0, 0, 0, data);
+    public static IoUringIoOps newClose(int fd, byte flags, short data) {
+        return new IoUringIoOps(Native.IORING_OP_CLOSE, flags, (short) 0, fd, 0L, 0L, 0, 0, data,
+                (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -205,8 +257,9 @@ public final class IoUringIoOps implements IoOps {
      * @param data      the data
      * @return          ops.
      */
-    public static IoUringIoOps newPollAdd(int fd, int flags, int mask, short data) {
-        return new IoUringIoOps(Native.IORING_OP_POLL_ADD, flags, (short) 0, fd, mask, 0, 0, 0, 0, data);
+    public static IoUringIoOps newPollAdd(int fd, byte flags, int mask, short data) {
+        return new IoUringIoOps(Native.IORING_OP_POLL_ADD, flags, (short) 0, fd, 0L, 0L, 0, mask, data,
+                (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -218,8 +271,9 @@ public final class IoUringIoOps implements IoOps {
      * @param data      the data
      * @return          ops.
      */
-    public static IoUringIoOps newSendmsg(int fd, int flags, int msgFlags, long address, short data) {
-        return new IoUringIoOps(Native.IORING_OP_SENDMSG, flags, (short) 0, fd, msgFlags, address, 1, 0, 0, data);
+    public static IoUringIoOps newSendmsg(int fd, byte flags, int msgFlags, long address, short data) {
+        return new IoUringIoOps(Native.IORING_OP_SENDMSG, flags, (short) 0, fd, 0L, address, 1, msgFlags, data,
+                (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -231,9 +285,9 @@ public final class IoUringIoOps implements IoOps {
      * @param data                  the data
      * @return                      ops.
      */
-    public static IoUringIoOps newConnect(int fd, int flags, long remoteMemoryAddress, short data) {
-        return new IoUringIoOps(Native.IORING_OP_CONNECT, flags, (short) 0, fd, 0, remoteMemoryAddress,
-                0, Native.SIZEOF_SOCKADDR_STORAGE, 0, data);
+    public static IoUringIoOps newConnect(int fd, byte flags, long remoteMemoryAddress, short data) {
+        return new IoUringIoOps(Native.IORING_OP_CONNECT, flags, (short) 0, fd, Native.SIZEOF_SOCKADDR_STORAGE,
+                remoteMemoryAddress, 0, 0, data, (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -246,8 +300,9 @@ public final class IoUringIoOps implements IoOps {
      * @param data      the data
      * @return          ops.
      */
-    public static IoUringIoOps newPollRemove(int fd, int flags, long userData, short data) {
-        return new IoUringIoOps(Native.IORING_OP_POLL_REMOVE, flags, (short) 0, fd, 0, userData, 0, 0, 0, data);
+    public static IoUringIoOps newPollRemove(int fd, byte flags, long userData, short data) {
+        return new IoUringIoOps(Native.IORING_OP_POLL_REMOVE, flags, (short) 0, fd, 0, userData, 0, 0, data,
+                (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -261,10 +316,11 @@ public final class IoUringIoOps implements IoOps {
      * @param data                                  the data
      * @return                                      ops.
      */
-    public static IoUringIoOps newAccept(int fd, int flags, int acceptFlags, long acceptedAddressMemoryAddress,
+    public static IoUringIoOps newAccept(int fd, byte flags, int acceptFlags, long acceptedAddressMemoryAddress,
                                          long acceptedAddressLengthMemoryAddress, short data) {
-        return new IoUringIoOps(Native.IORING_OP_ACCEPT, flags, (short) 0, fd, acceptFlags,
-                acceptedAddressMemoryAddress, 0, acceptedAddressLengthMemoryAddress, 0, data);
+
+        return new IoUringIoOps(Native.IORING_OP_ACCEPT, flags, (short) 0, fd, acceptedAddressLengthMemoryAddress,
+                acceptedAddressMemoryAddress, 0, acceptFlags, data, (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -278,10 +334,10 @@ public final class IoUringIoOps implements IoOps {
      * @param data                                  the data
      * @return                                      ops.
      */
-    public static IoUringIoOps newWritev(int fd, int flags, int writevFlags, long memoryAddress,
+    public static IoUringIoOps newWritev(int fd, byte flags, int writevFlags, long memoryAddress,
                                          int length, short data) {
         return new IoUringIoOps(Native.IORING_OP_WRITEV, flags, (short) 0, fd,
-                writevFlags, memoryAddress, length, 0, 0, data);
+                0, memoryAddress, length, writevFlags, data, (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -296,9 +352,9 @@ public final class IoUringIoOps implements IoOps {
      * @return                                      ops.
      */
     public static IoUringIoOps newWrite(
-            int fd, int flags, int writeFlags, long memoryAddress, int length, short data) {
+            int fd, byte flags, int writeFlags, long memoryAddress, int length, short data) {
         return new IoUringIoOps(Native.IORING_OP_WRITE, flags, (short) 0, fd,
-                writeFlags, memoryAddress, length, 0, 0, data);
+                0, memoryAddress, length, writeFlags, data, (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -313,9 +369,9 @@ public final class IoUringIoOps implements IoOps {
      * @return                                      ops.
      */
     public static IoUringIoOps newRecv(
-            int fd, int flags, int recvFlags, long memoryAddress, int length, short data) {
-        return new IoUringIoOps(
-                Native.IORING_OP_RECV, flags, (short) 0, fd, recvFlags, memoryAddress, length, 0, 0, data);
+            int fd, byte flags, int recvFlags, long memoryAddress, int length, short data) {
+        return new IoUringIoOps(Native.IORING_OP_RECV, flags, (short) 0, fd,
+                0, memoryAddress, length, recvFlags, data, (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -328,9 +384,10 @@ public final class IoUringIoOps implements IoOps {
      * @param data                                  the data
      * @return                                      ops.
      */
-    public static IoUringIoOps newRecvmsg(int fd, int flags, int msgFlags, long memoryAddress, short data) {
+    public static IoUringIoOps newRecvmsg(int fd, byte flags, int msgFlags, long memoryAddress, short data) {
         return new IoUringIoOps(
-                Native.IORING_OP_RECVMSG, flags, (short) 0, fd, msgFlags, memoryAddress, 1, 0, 0, data);
+                Native.IORING_OP_RECVMSG, flags, (short) 0, fd, 0L, memoryAddress, 1, msgFlags, data,
+                (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -345,9 +402,9 @@ public final class IoUringIoOps implements IoOps {
      * @return                                      ops.
      */
     public static IoUringIoOps newSend(
-            int fd, int flags, int sendFlags, long memoryAddress, int length, short data) {
-        return new IoUringIoOps(
-                Native.IORING_OP_SEND, flags, (short) 0, fd, sendFlags, memoryAddress, length, 0, 0, data);
+            int fd, byte flags, int sendFlags, long memoryAddress, int length, short data) {
+        return new IoUringIoOps(Native.IORING_OP_SEND, flags, (short) 0, fd,
+                memoryAddress, 0L, length, sendFlags, data, (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -359,8 +416,9 @@ public final class IoUringIoOps implements IoOps {
      * @param data                                  the data
      * @return                                      ops.
      */
-    public static IoUringIoOps newShutdown(int fd, int flags, int how, short data) {
-        return new IoUringIoOps(Native.IORING_OP_SHUTDOWN, flags, (short) 0, fd, 0, 0, how, 0, 0, data);
+    public static IoUringIoOps newShutdown(int fd, byte flags, int how, short data) {
+        return new IoUringIoOps(Native.IORING_OP_SHUTDOWN, flags, (short) 0, fd, 0, 0, how, 0, data,
+                (short) 0, (short) 0, 0, 0);
     }
 
     /**
@@ -381,11 +439,9 @@ public final class IoUringIoOps implements IoOps {
                                          int nbytes,
                                          int splice_flags,
                                          short data) {
-        //addr and off_in are in same union
         return new IoUringIoOps(
-                Native.IORING_OP_SPLICE, 0, (short) 0,
-                fd_out, splice_flags, off_in, nbytes, off_out,
-                fd_in, data
+                Native.IORING_OP_SPLICE, (byte) 0, (short) 0, fd_out, off_out, off_in,
+                nbytes, splice_flags, data, (short) 0, (short) 0, fd_in, 0
         );
     }
 }

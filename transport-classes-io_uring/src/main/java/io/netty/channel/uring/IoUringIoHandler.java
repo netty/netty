@@ -145,7 +145,7 @@ public final class IoUringIoHandler implements IoHandler {
 
         List<DefaultIoUringIoRegistration> copy = new ArrayList<>(registrations.values());
         // Ensure all previously submitted IOs get to complete before closing all fds.
-        submissionQueue.addNop(ringBuffer.fd(), Native.IOSQE_IO_DRAIN, RINGFD_ID, (short) 0);
+        submissionQueue.addNop(ringBuffer.fd(), (byte) Native.IOSQE_IO_DRAIN, RINGFD_ID, (short) 0);
 
         for (DefaultIoUringIoRegistration registration: copy) {
             registration.close();
@@ -169,7 +169,7 @@ public final class IoUringIoHandler implements IoHandler {
             submissionQueue.submit();
         }
         // Try to drain all the IO from the queue first...
-        submissionQueue.addNop(ringBuffer.fd(), Native.IOSQE_IO_DRAIN, RINGFD_ID, (short) 0);
+        submissionQueue.addNop(ringBuffer.fd(), (byte) Native.IOSQE_IO_DRAIN, RINGFD_ID, (short) 0);
         // ... but only wait for 200 milliseconds on this
         submissionQueue.addLinkTimeout(ringBuffer.fd(), TimeUnit.MILLISECONDS.toNanos(200), RINGFD_ID, (short) 0);
         submissionQueue.submitAndWait();
@@ -306,8 +306,8 @@ public final class IoUringIoHandler implements IoHandler {
 
         private void submit0(IoUringIoOps ioOps, long udata) {
             ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
-                    ioOps.rwFlags(), ioOps.fd(), ioOps.bufferAddress(),
-                    ioOps.length(), ioOps.offset(), udata, ioOps.spliceFdIn()
+                    ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), udata,
+                    ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
             );
             outstandingCompletions++;
         }
