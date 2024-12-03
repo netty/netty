@@ -101,6 +101,7 @@ public class OpenSslPrivateKeyMethodTest {
 
         GROUP = new DefaultEventLoopGroup();
         CERT = new CertificateBuilder()
+                .rsa2048()
                 .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
