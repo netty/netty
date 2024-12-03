@@ -18,7 +18,7 @@ package io.netty.channel.uring;
 import java.util.Arrays;
 
 final class MsgHdrMemoryArray {
-    static final long NO_ID = -1;
+    static final long NO_ID = 0;
 
     private final MsgHdrMemory[] hdrs;
     private final int capacity;

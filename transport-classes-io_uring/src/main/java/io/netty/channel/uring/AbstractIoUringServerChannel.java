@@ -62,8 +62,6 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     @Override
     protected final void doClose() throws Exception {
         super.doClose();
-        Buffer.free(acceptedAddressMemory);
-        Buffer.free(acceptedAddressLengthMemory);
     }
 
     @Override
@@ -170,6 +168,13 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
                             final ChannelPromise promise) {
             promise.setFailure(new UnsupportedOperationException());
+        }
+
+        @Override
+        protected void freeResourcesNow(IoUringIoRegistration reg) {
+            super.freeResourcesNow(reg);
+            Buffer.free(acceptedAddressMemory);
+            Buffer.free(acceptedAddressLengthMemory);
         }
     }
 }
