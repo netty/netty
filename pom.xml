@@ -1245,6 +1245,10 @@
                   </item>
                   <item>
                     <matcher>java-package</matcher>
+                    <match>/io\.netty\.example\..*/</match>
+                  </item>
+                  <item>
+                    <matcher>java-package</matcher>
                     <match>/.*\.internal/</match>
                   </item>
                   <item>
