@@ -53,6 +53,7 @@ import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
@@ -767,7 +768,9 @@ public class SslHandlerTest {
                 .subject("cn=localhost")
                 .setIsCertificateAuthority(true);
 
-        final SslContext sslServerCtx = SslContextBuilder.forServer(ca.buildSelfSigned().toKeyManagerFactory()).build();
+        X509Bundle cert = ca.buildSelfSigned();
+        final SslContext sslServerCtx = SslContextBuilder.forServer(
+                cert.getKeyPair().getPrivate(), cert.getCertificatePath()).build();
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(ca.buildSelfSigned().toTrustManagerFactory())
                 .build();

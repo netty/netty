@@ -147,7 +147,7 @@ public class OcspTest {
     }
 
     private static void testServerOcspNotEnabled(SslProvider sslProvider) throws Exception {
-        SslContext context = SslContextBuilder.forServer(ssc.toKeyManagerFactory())
+        SslContext context = SslContextBuilder.forServer(ssc.getKeyPair().getPrivate(), ssc.getCertificatePath())
                 .sslProvider(sslProvider)
                 .build();
         try {
@@ -357,7 +357,8 @@ public class OcspTest {
     private static void handshake(SslProvider sslProvider, CountDownLatch latch, ChannelHandler serverHandler,
             byte[] response, ChannelHandler clientHandler, OcspClientCallback callback) throws Exception {
 
-        SslContext serverSslContext = SslContextBuilder.forServer(ssc.toKeyManagerFactory())
+        SslContext serverSslContext = SslContextBuilder.forServer(ssc.getKeyPair().getPrivate(),
+                        ssc.getCertificatePath())
                 .sslProvider(sslProvider)
                 .enableOcsp(true)
                 .build();

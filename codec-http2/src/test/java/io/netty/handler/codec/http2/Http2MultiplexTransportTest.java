@@ -387,7 +387,7 @@ public class Http2MultiplexTransportTest {
                 .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
-        final SslContext sslCtx = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+        final SslContext sslCtx = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(), cert.getCertificatePath())
                 .trustManager(new X509TrustManager() {
                     @Override
                     public void checkClientTrusted(X509Certificate[] chain, String authType)
@@ -433,7 +433,7 @@ public class Http2MultiplexTransportTest {
         serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
 
         final SslContext clientCtx = SslContextBuilder.forClient()
-                .keyManager(cert.toKeyManagerFactory())
+                .keyManager(cert.getKeyPair().getPrivate(), cert.getCertificatePath())
                 .sslProvider(provider)
                 /* NOTE: the cipher filter may not include all ciphers required by the HTTP/2 specification.
                  * Please refer to the HTTP/2 specification for cipher requirements. */
@@ -543,7 +543,8 @@ public class Http2MultiplexTransportTest {
                 .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
-        final SslContext serverCtx = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+        final SslContext serverCtx = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(),
+                        cert.getCertificatePath())
                 .sslProvider(provider)
                 .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
                 .applicationProtocolConfig(new ApplicationProtocolConfig(

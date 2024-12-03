@@ -43,6 +43,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.SocketAddress;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -77,6 +79,7 @@ public class CipherSuiteCanaryTest {
     public static void init() throws Exception {
         GROUP = new DefaultEventLoopGroup();
         CERT = new CertificateBuilder()
+                .rsa2048()
                 .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
@@ -123,7 +126,9 @@ public class CipherSuiteCanaryTest {
 
         List<String> ciphers = Collections.singletonList(rfcCipherName);
 
-        final SslContext sslServerContext = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        PrivateKey privateKey = CERT.getKeyPair().getPrivate();
+        X509Certificate[] certChain = CERT.getCertificatePath();
+        final SslContext sslServerContext = SslContextBuilder.forServer(privateKey, certChain)
                 .sslProvider(serverSslProvider)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.

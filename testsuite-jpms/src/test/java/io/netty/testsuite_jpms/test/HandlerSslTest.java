@@ -103,7 +103,7 @@ public class HandlerSslTest {
             throws Exception {
 
         final String expectedHost = "localhost";
-        SslContext serverSslCtx = forServer(signedCert.toKeyManagerFactory())
+        SslContext serverSslCtx = forServer(signedCert.getKeyPair().getPrivate(), signedCert.getCertificatePath())
                 .sslProvider(sslProvider)
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)

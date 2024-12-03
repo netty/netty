@@ -96,7 +96,7 @@ public class ProxyHandlerTest {
                     .subject("cn=localhost")
                     .setIsCertificateAuthority(true)
                     .buildSelfSigned();
-            sctx = SslContextBuilder.forServer(cert.toKeyManagerFactory()).build();
+            sctx = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(), cert.getCertificatePath()).build();
             cctx = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
         } catch (Exception e) {
             throw new Error(e);

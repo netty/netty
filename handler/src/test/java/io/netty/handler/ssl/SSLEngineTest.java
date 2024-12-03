@@ -3141,7 +3141,7 @@ public abstract class SSLEngineTest {
         client.setSSLParameters(sslParameters);
 
         serverSslCtx = wrapContext(param, SslContextBuilder
-                .forServer(cert.toKeyManagerFactory())
+                .forServer(cert.getKeyPair().getPrivate(), cert.getCertificatePath())
                 .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .build());
