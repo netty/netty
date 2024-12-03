@@ -25,7 +25,8 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 
 /**
  * Simple SSL chat server modified from {@link TelnetServer}.
@@ -35,8 +36,11 @@ public final class SecureChatServer {
     static final int PORT = Integer.parseInt(System.getProperty("port", "8992"));
 
     public static void main(String[] args) throws Exception {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        X509Bundle ssc = new CertificateBuilder()
+                .subject("localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+        SslContext sslCtx = SslContextBuilder.forServer(ssc.toKeyManagerFactory())
             .build();
 
         EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());

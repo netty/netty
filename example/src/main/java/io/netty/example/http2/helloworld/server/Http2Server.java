@@ -36,7 +36,8 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 
 /**
  * An HTTP/2 Server that responds to requests with a Hello World. Once started, you can test the
@@ -53,8 +54,11 @@ public final class Http2Server {
         final SslContext sslCtx;
         if (SSL) {
             SslProvider provider = OpenSsl.isAlpnSupported() ? SslProvider.OPENSSL : SslProvider.JDK;
-            SelfSignedCertificate ssc = new SelfSignedCertificate();
-            sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+            X509Bundle ssc = new CertificateBuilder()
+                    .subject("localhost")
+                    .setIsCertificateAuthority(true)
+                    .buildSelfSigned();
+            sslCtx = SslContextBuilder.forServer(ssc.toKeyManagerFactory())
                 .sslProvider(provider)
                 /* NOTE: the cipher filter may not include all ciphers required by the HTTP/2 specification.
                  * Please refer to the HTTP/2 specification for cipher requirements. */

@@ -37,7 +37,8 @@ import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 
 import static io.netty.handler.ssl.SslContextBuilder.forServer;
 
@@ -136,11 +137,14 @@ public final class HttpHelloWorldServer {
                 return;
         }
 
-        SelfSignedCertificate signedCert = SelfSignedCertificate.builder().build();
+        X509Bundle cert = new CertificateBuilder()
+                .subject("localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
 
         SslContext sslContext;
         if (ssl) {
-            sslContext = forServer(signedCert.certificate(), signedCert.privateKey(), null)
+            sslContext = forServer(cert.toKeyManagerFactory())
                     .sslProvider(sslProvider)
                     .protocols("TLSv1.2")
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)

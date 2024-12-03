@@ -34,12 +34,12 @@ import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
@@ -57,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HandlerSslTest {
 
-    private static SelfSignedCertificate signedCert;
+    private static X509Bundle signedCert;
     private Channel clientChannel;
     private Channel serverChannel;
     private Channel serverConnectedChannel;
@@ -68,12 +68,10 @@ public class HandlerSslTest {
 
     @BeforeAll
     public static void setup() throws Exception {
-        signedCert = SelfSignedCertificate.builder().build();
-    }
-
-    @AfterAll
-    public static void cleanCert() {
-        signedCert.delete();
+        signedCert = new CertificateBuilder()
+                .subject("localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
     }
 
     @Test
@@ -102,10 +100,10 @@ public class HandlerSslTest {
 
     private Future<Void> mySetupClientHostnameValidation(SslProvider sslProvider,
                                                          final boolean failureExpected)
-            throws SSLException, InterruptedException {
+            throws Exception {
 
         final String expectedHost = "localhost";
-        SslContext serverSslCtx = forServer(signedCert.certificate(), signedCert.privateKey(), null)
+        SslContext serverSslCtx = forServer(signedCert.toKeyManagerFactory())
                 .sslProvider(sslProvider)
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
@@ -115,7 +113,7 @@ public class HandlerSslTest {
 
         SslContext clientSslCtx = forClient()
                 .sslProvider(sslProvider)
-                .trustManager(signedCert.certificate())
+                .trustManager(signedCert.toTrustManagerFactory())
                 .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
                 .sessionCacheSize(0)
                 .sessionTimeout(0)

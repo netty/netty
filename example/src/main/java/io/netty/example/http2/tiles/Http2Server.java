@@ -33,11 +33,8 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-
-import java.security.cert.CertificateException;
-
-import javax.net.ssl.SSLException;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 
 /**
  * Demonstrates an Http2 server using Netty to display a bunch of images and
@@ -69,8 +66,11 @@ public class Http2Server {
         return ch.closeFuture();
     }
 
-    private static SslContext configureTLS() throws CertificateException, SSLException {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+    private static SslContext configureTLS() throws Exception {
+        X509Bundle ssc = new CertificateBuilder()
+                .subject("localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
         ApplicationProtocolConfig apn = new ApplicationProtocolConfig(
                 Protocol.ALPN,
                 // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
@@ -80,7 +80,7 @@ public class Http2Server {
                 ApplicationProtocolNames.HTTP_2,
                 ApplicationProtocolNames.HTTP_1_1);
 
-        return SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
+        return SslContextBuilder.forServer(ssc.toKeyManagerFactory())
                                 .ciphers(CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
                                 .applicationProtocolConfig(apn).build();
     }

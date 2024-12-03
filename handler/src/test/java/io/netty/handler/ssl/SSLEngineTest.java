@@ -40,6 +40,8 @@ import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -3084,7 +3086,10 @@ public abstract class SSLEngineTest {
             return;
         }
         String fqdn = "something.netty.io";
-        SelfSignedCertificate cert = new SelfSignedCertificate(fqdn);
+        X509Bundle cert = new CertificateBuilder()
+                .subject(fqdn)
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
                 .trustManager(new TrustManagerFactory(new TrustManagerFactorySpi() {
@@ -3135,7 +3140,7 @@ public abstract class SSLEngineTest {
         client.setSSLParameters(sslParameters);
 
         serverSslCtx = wrapContext(param, SslContextBuilder
-                .forServer(cert.certificate(), cert.privateKey())
+                .forServer(cert.toKeyManagerFactory())
                 .sslContextProvider(serverSslContextProvider())
                 .sslProvider(sslServerProvider())
                 .build());

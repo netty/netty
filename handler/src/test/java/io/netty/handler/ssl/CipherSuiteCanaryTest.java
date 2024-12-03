@@ -32,7 +32,8 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
@@ -64,7 +65,7 @@ public class CipherSuiteCanaryTest {
 
     private static EventLoopGroup GROUP;
 
-    private static SelfSignedCertificate CERT;
+    private static X509Bundle CERT;
 
     static Collection<Object[]> parameters() {
        List<Object[]> dst = new ArrayList<Object[]>();
@@ -75,13 +76,15 @@ public class CipherSuiteCanaryTest {
     @BeforeAll
     public static void init() throws Exception {
         GROUP = new DefaultEventLoopGroup();
-        CERT = new SelfSignedCertificate();
+        CERT = new CertificateBuilder()
+                .subject("localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
     }
 
     @AfterAll
     public static void destroy() {
         GROUP.shutdownGracefully();
-        CERT.delete();
     }
 
     private static void assumeCipherAvailable(SslProvider provider, String cipher) throws NoSuchAlgorithmException {
@@ -120,7 +123,7 @@ public class CipherSuiteCanaryTest {
 
         List<String> ciphers = Collections.singletonList(rfcCipherName);
 
-        final SslContext sslServerContext = SslContextBuilder.forServer(CERT.certificate(), CERT.privateKey())
+        final SslContext sslServerContext = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
                 .sslProvider(serverSslProvider)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.

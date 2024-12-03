@@ -38,7 +38,8 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.hamcrest.CoreMatchers;
@@ -48,7 +49,6 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
 import java.net.SocketAddress;
-import java.security.cert.CertificateException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -67,12 +67,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class OcspTest {
-    private static SelfSignedCertificate ssc;
+    private static X509Bundle ssc;
 
     @BeforeAll
-    public static void checkOcspSupported() throws CertificateException {
+    public static void checkOcspSupported() throws Exception {
         assumeTrue(OpenSsl.isOcspSupported());
-        ssc = new SelfSignedCertificate();
+        ssc = new CertificateBuilder()
+                .subject("localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
     }
 
     @Test
@@ -93,7 +96,7 @@ public class OcspTest {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+                SslContextBuilder.forServer(ssc.toKeyManagerFactory())
                         .sslProvider(SslProvider.JDK)
                         .enableOcsp(true)
                         .build();
@@ -144,7 +147,7 @@ public class OcspTest {
     }
 
     private static void testServerOcspNotEnabled(SslProvider sslProvider) throws Exception {
-        SslContext context = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        SslContext context = SslContextBuilder.forServer(ssc.toKeyManagerFactory())
                 .sslProvider(sslProvider)
                 .build();
         try {
@@ -354,7 +357,7 @@ public class OcspTest {
     private static void handshake(SslProvider sslProvider, CountDownLatch latch, ChannelHandler serverHandler,
             byte[] response, ChannelHandler clientHandler, OcspClientCallback callback) throws Exception {
 
-        SslContext serverSslContext = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        SslContext serverSslContext = SslContextBuilder.forServer(ssc.toKeyManagerFactory())
                 .sslProvider(sslProvider)
                 .enableOcsp(true)
                 .build();

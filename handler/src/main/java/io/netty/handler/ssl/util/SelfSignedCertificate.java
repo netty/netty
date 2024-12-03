@@ -57,7 +57,9 @@ import java.util.Date;
  * At first, this method tries to use OpenJDK's X.509 implementation (the {@code sun.security.x509} package).
  * If it fails, it tries to use <a href="https://www.bouncycastle.org/">Bouncy Castle</a> as a fallback.
  * </p>
+ * @deprecated Use the {@code CertificateBuilder} from {@code netty-pkitesting} instead.
  */
+@Deprecated
 public final class SelfSignedCertificate {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SelfSignedCertificate.class);

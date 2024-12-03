@@ -32,7 +32,6 @@ import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.util.Objects;
-import java.util.function.Supplier;
 
 final class Signed {
     private final byte[] toBeSigned;

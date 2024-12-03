@@ -31,7 +31,8 @@ import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -43,7 +44,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.nio.channels.ClosedChannelException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -68,14 +68,16 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     private static final File KEY_FILE;
 
     static {
-        SelfSignedCertificate ssc;
         try {
-            ssc = new SelfSignedCertificate();
-        } catch (CertificateException e) {
-            throw new Error(e);
+            X509Bundle cert = new CertificateBuilder()
+                    .subject("localhost")
+                    .setIsCertificateAuthority(true)
+                    .buildSelfSigned();
+            CERT_FILE = cert.toTempCertChainPem();
+            KEY_FILE = cert.toTempPrivateKeyPem();
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
         }
-        CERT_FILE = ssc.certificate();
-        KEY_FILE = ssc.privateKey();
     }
 
     private static boolean openSslNotAvailable() {
