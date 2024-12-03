@@ -69,7 +69,7 @@ public class HandlerSslTest {
     @BeforeAll
     public static void setup() throws Exception {
         signedCert = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
     }

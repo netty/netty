@@ -93,7 +93,7 @@ public class ProxyHandlerTest {
         SslContext cctx;
         try {
             X509Bundle cert = new CertificateBuilder()
-                    .subject("localhost")
+                    .subject("cn=localhost")
                     .setIsCertificateAuthority(true)
                     .buildSelfSigned();
             sctx = SslContextBuilder.forServer(cert.toKeyManagerFactory()).build();

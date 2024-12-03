@@ -486,7 +486,7 @@ public class NettyBlockHoundIntegrationTest {
                 .sslProvider(SslProvider.JDK).protocols(tlsVersion).build();
 
         X509Bundle cert = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
         final SslContext sslServerCtx = SslContextBuilder.forServer(cert.toKeyManagerFactory())

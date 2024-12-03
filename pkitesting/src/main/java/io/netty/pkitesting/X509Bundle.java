@@ -277,7 +277,7 @@ public final class X509Bundle {
     /**
      * Create a {@link KeyStore} with the contents of this bundle.
      * The root certificate will be a trusted root in the key store.
-     * If this bundle is not a {@linkplain #isCertificateAuthority() certificate authority},
+     * If this bundle has a {@linkplain #getPrivateKeyPEM() private key},
      * then the private key and certificate path will also be added to the key store.
      * <p>
      * The key store will use the PKCS#12 format.
@@ -293,7 +293,7 @@ public final class X509Bundle {
     /**
      * Create a {@link KeyStore} with the contents of this bundle.
      * The root certificate will be a trusted root in the key store.
-     * If this bundle is not a {@linkplain #isCertificateAuthority() certificate authority},
+     * If this bundle has a {@linkplain #getPrivateKeyPEM() private key},
      * then the private key and certificate path will also be added to the key store.
      * <p>
      * The key store will use the format defined by the given algorithm.
@@ -311,7 +311,7 @@ public final class X509Bundle {
             throw new KeyStoreException("Failed to initialize '" + algorithm + "' KeyStore.", e);
         }
         keyStore.setCertificateEntry("1", root);
-        if (!isCertificateAuthority()) {
+        if (keyPair.getPrivate() != null) {
             keyStore.setKeyEntry("2", keyPair.getPrivate(), keyEntryPassword, certPath);
         }
         return keyStore;

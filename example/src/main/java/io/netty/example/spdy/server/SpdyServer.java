@@ -53,7 +53,7 @@ public final class SpdyServer {
     public static void main(String[] args) throws Exception {
         // Configure SSL.
         X509Bundle ssc = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
         SslContext sslCtx = SslContextBuilder.forServer(ssc.toKeyManagerFactory())

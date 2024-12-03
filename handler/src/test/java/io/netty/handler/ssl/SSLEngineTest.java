@@ -3087,9 +3087,10 @@ public abstract class SSLEngineTest {
         }
         String fqdn = "something.netty.io";
         X509Bundle cert = new CertificateBuilder()
-                .subject(fqdn)
+                .subject("CN=" + fqdn)
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
+
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
                 .trustManager(new TrustManagerFactory(new TrustManagerFactorySpi() {

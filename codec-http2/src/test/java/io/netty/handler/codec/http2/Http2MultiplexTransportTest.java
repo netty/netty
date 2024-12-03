@@ -384,7 +384,7 @@ public class Http2MultiplexTransportTest {
         }
         final String protocol = tlsv13 ? "TLSv1.3" : "TLSv1.2";
         X509Bundle cert = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
         final SslContext sslCtx = SslContextBuilder.forServer(cert.toKeyManagerFactory())
@@ -540,7 +540,7 @@ public class Http2MultiplexTransportTest {
 
     private void testFireChannelReadAfterHandshakeSuccess(SslProvider provider) throws Exception {
         X509Bundle cert = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
         final SslContext serverCtx = SslContextBuilder.forServer(cert.toKeyManagerFactory())

@@ -43,7 +43,7 @@ public final class PortUnificationServer {
     public static void main(String[] args) throws Exception {
         // Configure SSL context
         X509Bundle ssc = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
         final SslContext sslCtx = SslContextBuilder.forServer(ssc.toKeyManagerFactory())

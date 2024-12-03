@@ -764,7 +764,7 @@ public class SslHandlerTest {
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testCloseOnHandshakeFailure() throws Exception {
         CertificateBuilder ca = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true);
 
         final SslContext sslServerCtx = SslContextBuilder.forServer(ca.buildSelfSigned().toKeyManagerFactory()).build();

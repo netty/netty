@@ -55,7 +55,7 @@ public final class Http2Server {
         if (SSL) {
             SslProvider provider = OpenSsl.isAlpnSupported() ? SslProvider.OPENSSL : SslProvider.JDK;
             X509Bundle ssc = new CertificateBuilder()
-                    .subject("localhost")
+                    .subject("cn=localhost")
                     .setIsCertificateAuthority(true)
                     .buildSelfSigned();
             sslCtx = SslContextBuilder.forServer(ssc.toKeyManagerFactory())

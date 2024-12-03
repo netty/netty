@@ -35,7 +35,7 @@ public final class ServerUtil {
             return null;
         }
         X509Bundle ssc = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
         return SslContextBuilder

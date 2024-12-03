@@ -77,7 +77,7 @@ public class CipherSuiteCanaryTest {
     public static void init() throws Exception {
         GROUP = new DefaultEventLoopGroup();
         CERT = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
     }

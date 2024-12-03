@@ -39,7 +39,7 @@ public final class Http2StaticFileServer {
 
     public static void main(String[] args) throws Exception {
         X509Bundle ssc = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
 

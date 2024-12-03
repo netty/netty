@@ -37,7 +37,7 @@ public final class SecureChatServer {
 
     public static void main(String[] args) throws Exception {
         X509Bundle ssc = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
         SslContext sslCtx = SslContextBuilder.forServer(ssc.toKeyManagerFactory())

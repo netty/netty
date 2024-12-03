@@ -68,7 +68,7 @@ public class Http2Server {
 
     private static SslContext configureTLS() throws Exception {
         X509Bundle ssc = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
         ApplicationProtocolConfig apn = new ApplicationProtocolConfig(

@@ -73,7 +73,7 @@ public class OcspTest {
     public static void checkOcspSupported() throws Exception {
         assumeTrue(OpenSsl.isOcspSupported());
         ssc = new CertificateBuilder()
-                .subject("localhost")
+                .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
     }
