@@ -24,6 +24,7 @@ import java.security.Provider;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.spec.AlgorithmParameterSpec;
+import java.util.Locale;
 
 final class Algorithms {
     private static Provider bouncyCastle;
@@ -34,18 +35,18 @@ final class Algorithms {
     static String oidForAlgorithmName(String algorithmIdentifier) {
         // See the Java Security Standard Algorithm Names documentation for names and links to RFCs.
         // https://docs.oracle.com/en/java/javase/22/docs/specs/security/standard-names.html#signature-algorithms
-        switch (algorithmIdentifier) {
-            case "SHA256withECDSA":
+        switch (algorithmIdentifier.toLowerCase(Locale.ROOT)) {
+            case "sha256withecdsa":
                 return "1.2.840.10045.4.3.2";
-            case "SHA384withECDSA":
+            case "sha384withecdsa":
                 return "1.2.840.10045.4.3.3";
-            case "SHA256withRSA":
+            case "sha256withrsa":
                 return "1.2.840.113549.1.1.11";
-            case "SHA384withRSA":
+            case "sha384withrsa":
                 return "1.2.840.113549.1.1.12";
-            case "Ed25519":
+            case "ed25519":
                 return "1.3.101.112";
-            case "Ed448":
+            case "ed448":
                 return "1.3.101.113";
             default:
                 throw new UnsupportedOperationException("Algorithm not supported: " + algorithmIdentifier);
