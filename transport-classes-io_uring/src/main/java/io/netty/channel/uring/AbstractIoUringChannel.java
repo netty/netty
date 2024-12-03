@@ -259,8 +259,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         } else {
             // This one was never registered just use a syscall to close.
             socket.close();
-            freeRemoteAddressMemory();
-            freeMsgHdrArray();
+            ((AbstractUringUnsafe) unsafe()).freeResourcesNowIfNeeded(null);
         }
     }
 
@@ -450,7 +449,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     break;
             }
 
-            if (ioState == 0 && closed && !freed) {
+            if (ioState == 0 && closed) {
+                freeResourcesNowIfNeeded(reg);
+            }
+        }
+
+        private void freeResourcesNowIfNeeded(IoUringIoRegistration reg) {
+            if (!freed) {
                 freed = true;
                 freeResourcesNow(reg);
             }
@@ -459,12 +464,14 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         /**
          * Free all resources now. No new IO will be submitted for this channel via io_uring
          *
-         * @param reg   the {@link IoUringIoRegistration}.
+         * @param reg   the {@link IoUringIoRegistration} or {@code null} if it was never registered
          */
         protected void freeResourcesNow(IoUringIoRegistration reg) {
             freeMsgHdrArray();
             freeRemoteAddressMemory();
-            reg.cancel();
+            if (reg != null) {
+                reg.cancel();
+            }
         }
 
         private void handleDelayedClosed() {
@@ -691,10 +698,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * Called once POLLRDHUP event is ready to be processed
          */
         private void pollRdHup(int res) {
+            ioState &= ~POLL_RDHUP_SCHEDULED;
+
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
-            ioState &= ~POLL_RDHUP_SCHEDULED;
 
             // Mark that we received a POLLRDHUP and so need to continue reading until all the input ist drained.
             recvBufAllocHandle().rdHupReceived();
@@ -711,10 +719,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * Called once POLLIN event is ready to be processed
          */
         private void pollIn(int res) {
+            ioState &= ~POLL_IN_SCHEDULED;
+
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
-            ioState &= ~POLL_IN_SCHEDULED;
 
             scheduleFirstReadIfNeeded();
         }
@@ -757,10 +766,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param res   the result.
          */
         private void pollOut(int res) {
+            ioState &= ~POLL_OUT_SCHEDULED;
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
-            ioState &= ~POLL_OUT_SCHEDULED;
             // pending connect
             if (connectPromise != null) {
                 // Note this method is invoked by the event loop only if the connection attempt was
@@ -1057,12 +1066,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected final void doDeregister() {
-        if (registration == null) {
+        if (registration == null || !registration.isValid()) {
             return;
         }
 
         IoUringIoRegistration registration = this.registration;
-        this.registration = null;
         // Cancel all previous submitted ops.
         int fd = fd().intValue();
         if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
