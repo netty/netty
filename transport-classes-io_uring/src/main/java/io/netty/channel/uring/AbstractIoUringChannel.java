@@ -896,10 +896,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 // connect not complete yet need to wait for poll_out event
                 schedulePollOut();
             } else {
-                if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                    // Operation was cancelled, just return.
-                    return;
-                }
                 try {
                     if (res == 0) {
                         fulfillConnectPromise(connectPromise, active);
