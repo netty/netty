@@ -320,7 +320,7 @@ public final class IoUringIoHandler implements IoHandler {
         @Override
         public void cancel() {
             if (!cancellationPromise.trySuccess(null)) {
-                // Already cancelled.git
+                // Already cancelled.
                 return;
             }
             if (eventLoop.inEventLoop()) {
