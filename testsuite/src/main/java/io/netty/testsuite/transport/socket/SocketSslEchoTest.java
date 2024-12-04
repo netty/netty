@@ -85,6 +85,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         try {
             X509Bundle cert = new CertificateBuilder()
+                    .rsa2048()
                     .subject("cn=localhost")
                     .setIsCertificateAuthority(true)
                     .buildSelfSigned();
