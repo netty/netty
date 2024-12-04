@@ -253,14 +253,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         if (registration != null) {
             if (socket.markClosed()) {
                 int fd = fd().intValue();
-                IoUringIoOps ops = IoUringIoOps.newClose(fd, 0, nextOpsId());
+                IoUringIoOps ops = IoUringIoOps.newClose(fd, (byte) 0, nextOpsId());
                 registration.submit(ops);
             }
         } else {
             // This one was never registered just use a syscall to close.
             socket.close();
-            freeRemoteAddressMemory();
-            freeMsgHdrArray();
+            ((AbstractUringUnsafe) unsafe()).freeResourcesNowIfNeeded(null);
         }
     }
 
@@ -346,7 +345,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IoUringIoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                fd, 0, Native.POLLOUT, (short) Native.POLLOUT);
+                fd, (byte) 0, Native.POLLOUT, (short) Native.POLLOUT);
         pollOutId = registration.submit(ops);
         if (pollOutId != 0) {
             ioState |= POLL_OUT_SCHEDULED;
@@ -358,7 +357,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IoUringIoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                fd, 0, Native.POLLRDHUP, (short) Native.POLLRDHUP);
+                fd, (byte) 0, Native.POLLRDHUP, (short) Native.POLLRDHUP);
         pollRdhupId = registration.submit(ops);
         if (pollRdhupId != 0) {
             ioState |= POLL_RDHUP_SCHEDULED;
@@ -452,7 +451,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     break;
             }
 
-            if (ioState == 0 && closed && !freed) {
+            if (ioState == 0 && closed) {
+                freeResourcesNowIfNeeded(reg);
+            }
+        }
+
+        private void freeResourcesNowIfNeeded(IoUringIoRegistration reg) {
+            if (!freed) {
                 freed = true;
                 freeResourcesNow(reg);
             }
@@ -461,12 +466,14 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         /**
          * Free all resources now. No new IO will be submitted for this channel via io_uring
          *
-         * @param reg   the {@link IoUringIoRegistration}.
+         * @param reg   the {@link IoUringIoRegistration} or {@code null} if it was never registered
          */
         protected void freeResourcesNow(IoUringIoRegistration reg) {
             freeMsgHdrArray();
             freeRemoteAddressMemory();
-            reg.cancel();
+            if (reg != null) {
+                reg.cancel();
+            }
         }
 
         private void handleDelayedClosed() {
@@ -528,7 +535,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         int fd = fd().intValue();
                         // Best effort to cancel the already submitted connect request.
                         registration.submit(IoUringIoOps.newAsyncCancel(
-                                fd, 0, connectId, Native.IORING_OP_CONNECT));
+                                fd, (byte) 0, connectId, Native.IORING_OP_CONNECT));
                     }
                     cancelOutstandingReads(registration, numOutstandingReads);
                     cancelOutstandingWrites(registration, numOutstandingWrites);
@@ -658,7 +665,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             int fd = fd().intValue();
             IoUringIoRegistration registration = registration();
             IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                    fd, 0, Native.POLLIN, (short) Native.POLLIN);
+                    fd, (byte) 0, Native.POLLIN, (short) Native.POLLIN);
             pollInId = registration.submit(ops);
             if (pollInId != 0) {
                 ioState |= POLL_IN_SCHEDULED;
@@ -693,10 +700,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * Called once POLLRDHUP event is ready to be processed
          */
         private void pollRdHup(int res) {
+            ioState &= ~POLL_RDHUP_SCHEDULED;
+
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
-            ioState &= ~POLL_RDHUP_SCHEDULED;
 
             // Mark that we received a POLLRDHUP and so need to continue reading until all the input ist drained.
             recvBufAllocHandle().rdHupReceived();
@@ -713,10 +721,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * Called once POLLIN event is ready to be processed
          */
         private void pollIn(int res) {
+            ioState &= ~POLL_IN_SCHEDULED;
+
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
-            ioState &= ~POLL_IN_SCHEDULED;
 
             scheduleFirstReadIfNeeded();
         }
@@ -759,10 +768,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * @param res   the result.
          */
         private void pollOut(int res) {
+            ioState &= ~POLL_OUT_SCHEDULED;
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
-            ioState &= ~POLL_OUT_SCHEDULED;
             // pending connect
             if (connectPromise != null) {
                 // Note this method is invoked by the event loop only if the connection attempt was
@@ -975,7 +984,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
                     int fd = fd().intValue();
                     IoUringIoRegistration registration = registration();
-                    IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, 0, Native.MSG_FASTOPEN,
+                    IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
                             hdr.address(), hdr.idx());
                     connectId = registration.submit(ops);
                 } else {
@@ -1031,7 +1040,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IoUringIoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newConnect(
-                fd, 0, remoteAddressMemoryAddress, nextOpsId());
+                fd, (byte) 0, remoteAddressMemoryAddress, nextOpsId());
         connectId = registration.submit(ops);
     }
 
@@ -1059,31 +1068,30 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected final void doDeregister() {
-        if (registration == null) {
+        if (registration == null || !registration.isValid()) {
             return;
         }
 
         IoUringIoRegistration registration = this.registration;
-        this.registration = null;
         // Cancel all previous submitted ops.
         int fd = fd().intValue();
         if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
             registration.submit(IoUringIoOps.newPollRemove(
-                    fd, 0, pollRdhupId, (short) Native.POLLRDHUP));
+                    fd, (byte) 0, pollRdhupId, (short) Native.POLLRDHUP));
         }
         if ((ioState & POLL_IN_SCHEDULED) != 0) {
             registration.submit(IoUringIoOps.newPollRemove(
-                    fd, 0, pollInId, (short) Native.POLLIN));
+                    fd, (byte) 0, pollInId, (short) Native.POLLIN));
         }
         if ((ioState & POLL_OUT_SCHEDULED) != 0) {
             registration.submit(IoUringIoOps.newPollRemove(
-                    fd,  0, pollOutId, (short) Native.POLLOUT));
+                    fd,  (byte) 0, pollOutId, (short) Native.POLLOUT));
         }
 
         if (AbstractIoUringChannel.this.connectPromise != null && connectId != 0) {
             // Best effort to cancel the already submitted connect request.
             registration.submit(IoUringIoOps.newAsyncCancel(
-                    fd, 0, connectId, Native.IORING_OP_CONNECT));
+                    fd, (byte) 0, connectId, Native.IORING_OP_CONNECT));
         }
         cancelOutstandingReads(registration, numOutstandingReads);
         cancelOutstandingWrites(registration, numOutstandingWrites);

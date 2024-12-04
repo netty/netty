@@ -62,8 +62,6 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     @Override
     protected final void doClose() throws Exception {
         super.doClose();
-        Buffer.free(acceptedAddressMemory);
-        Buffer.free(acceptedAddressLengthMemory);
     }
 
     @Override
@@ -82,7 +80,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             assert numOutstandingReads == 1;
             int fd = fd().intValue();
             IoUringIoOps ops = IoUringIoOps.newAsyncCancel(
-                    fd, 0, acceptId, Native.IORING_OP_ACCEPT);
+                    fd, (byte) 0, acceptId, Native.IORING_OP_ACCEPT);
             registration.submit(ops);
         } else {
             assert numOutstandingReads == 0;
@@ -122,7 +120,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
 
             int fd = fd().intValue();
             IoUringIoRegistration registration = registration();
-            IoUringIoOps ops = IoUringIoOps.newAccept(fd, 0, 0,
+            IoUringIoOps ops = IoUringIoOps.newAccept(fd, (byte) 0, 0,
                     acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, nextOpsId());
             acceptId = registration.submit(ops);
             return 1;
@@ -170,6 +168,13 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
                             final ChannelPromise promise) {
             promise.setFailure(new UnsupportedOperationException());
+        }
+
+        @Override
+        protected void freeResourcesNow(IoUringIoRegistration reg) {
+            super.freeResourcesNow(reg);
+            Buffer.free(acceptedAddressMemory);
+            Buffer.free(acceptedAddressLengthMemory);
         }
     }
 }
