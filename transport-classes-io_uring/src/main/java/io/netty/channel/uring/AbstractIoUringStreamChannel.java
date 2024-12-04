@@ -448,6 +448,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
             return true;
         }
+
+        @Override
+        protected void freeResourcesNow(IoUringIoRegistration reg) {
+            super.freeResourcesNow(reg);
+            assert readBuffer == null;
+        }
     }
 
     @Override
