@@ -31,6 +31,7 @@ open module io.netty.testsuite_jpms.test {
     requires io.netty.common;
     requires io.netty.handler;
     requires io.netty.handler.ssl.ocsp;
+    requires io.netty.pkitesting;
     requires io.netty.transport;
     requires io.netty.transport.classes.kqueue;
     requires io.netty.transport.classes.epoll;

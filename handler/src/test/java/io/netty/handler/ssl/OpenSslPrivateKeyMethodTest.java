@@ -32,7 +32,8 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -59,8 +60,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -75,7 +74,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class OpenSslPrivateKeyMethodTest {
     private static final String RFC_CIPHER_NAME = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
     private static EventLoopGroup GROUP;
-    private static SelfSignedCertificate CERT;
+    private static X509Bundle CERT;
     private static DelayingExecutor EXECUTOR;
 
     static Collection<Object[]> parameters() {
@@ -101,7 +100,11 @@ public class OpenSslPrivateKeyMethodTest {
         assumeCipherAvailable(SslProvider.JDK);
 
         GROUP = new DefaultEventLoopGroup();
-        CERT = new SelfSignedCertificate();
+        CERT = new CertificateBuilder()
+                .rsa2048()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
         EXECUTOR = new DelayingExecutor(new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
@@ -114,7 +117,6 @@ public class OpenSslPrivateKeyMethodTest {
     public static void destroy() {
         if (OpenSsl.isBoringSSL()) {
             GROUP.shutdownGracefully();
-            CERT.delete();
             EXECUTOR.shutdown();
         }
     }
@@ -146,7 +148,7 @@ public class OpenSslPrivateKeyMethodTest {
     private SslContext buildServerContext(OpenSslPrivateKeyMethod method) throws Exception {
         List<String> ciphers = Collections.singletonList(RFC_CIPHER_NAME);
 
-        final KeyManagerFactory kmf = OpenSslX509KeyManagerFactory.newKeyless(CERT.cert());
+        final KeyManagerFactory kmf = OpenSslX509KeyManagerFactory.newKeyless(CERT.getCertificatePath());
 
         return SslContextBuilder.forServer(kmf)
                 .sslProvider(SslProvider.OPENSSL)
@@ -173,7 +175,7 @@ public class OpenSslPrivateKeyMethodTest {
     private SslContext buildServerContext(OpenSslAsyncPrivateKeyMethod method) throws Exception {
         List<String> ciphers = Collections.singletonList(RFC_CIPHER_NAME);
 
-        final KeyManagerFactory kmf = OpenSslX509KeyManagerFactory.newKeyless(CERT.cert());
+        final KeyManagerFactory kmf = OpenSslX509KeyManagerFactory.newKeyless(CERT.getCertificatePath());
 
         return SslContextBuilder.forServer(kmf)
                 .sslProvider(SslProvider.OPENSSL)
@@ -200,7 +202,7 @@ public class OpenSslPrivateKeyMethodTest {
                 signCalled.set(true);
                 assertThread(delegate);
 
-                assertEquals(CERT.cert().getPublicKey(),
+                assertEquals(CERT.getKeyPair().getPublic(),
                         engine.getSession().getLocalCertificates()[0].getPublicKey());
 
                 // Delegate signing to Java implementation.
@@ -215,7 +217,7 @@ public class OpenSslPrivateKeyMethodTest {
                 } else {
                     throw new AssertionError("Unexpected signature algorithm " + signatureAlgorithm);
                 }
-                signature.initSign(CERT.key());
+                signature.initSign(CERT.getKeyPair().getPrivate());
                 signature.update(input);
                 return signature.sign();
             }

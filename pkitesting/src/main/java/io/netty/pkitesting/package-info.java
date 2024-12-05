@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,15 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-module io.netty.testsuite_jpms.main {
-    requires io.netty.buffer;
-    requires io.netty.codec;
-    requires io.netty.codec.http;
-    requires io.netty.handler;
-    requires transitive io.netty.pkitesting;
-    requires io.netty.transport;
-    requires io.netty.transport.classes.kqueue;
-    requires io.netty.transport.classes.epoll;
-    requires io.netty.transport.classes.io_uring;
-    requires io.netty.tcnative.classes.openssl;
-}
+
+/**
+ * Tools for generating X.509 certificates for testing.
+ */
+package io.netty.pkitesting;

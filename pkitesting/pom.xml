@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2022 The Netty Project
+  ~ Copyright 2024 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,41 +23,28 @@
     <version>4.2.0.Beta2-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-handler-ssl-ocsp</artifactId>
+  <artifactId>netty-pkitesting</artifactId>
   <packaging>jar</packaging>
 
-  <properties>
-    <javaModuleName>io.netty.handler.ssl.ocsp</javaModuleName>
-  </properties>
+  <name>Netty/PKITesting</name>
 
-  <name>Netty/Handler/Ssl/Ocsp</name>
+  <properties>
+    <javaModuleName>io.netty.pkitesting</javaModuleName>
+  </properties>
 
   <dependencies>
     <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk18on</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-codec-http</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-transport</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-resolver-dns</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-pkitesting</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
     </dependency>
   </dependencies>
 
@@ -74,4 +61,5 @@
       </plugin>
     </plugins>
   </build>
+
 </project>

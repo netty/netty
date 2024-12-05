@@ -31,7 +31,8 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 
 /**
  * A SPDY Server that responds to a GET request with a Hello World.
@@ -51,8 +52,11 @@ public final class SpdyServer {
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        X509Bundle ssc = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+        SslContext sslCtx = SslContextBuilder.forServer(ssc.toKeyManagerFactory())
             .applicationProtocolConfig(new ApplicationProtocolConfig(
                         Protocol.ALPN,
                         // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.

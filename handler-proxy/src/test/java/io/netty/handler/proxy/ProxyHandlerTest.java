@@ -38,7 +38,8 @@ import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.SocketUtils;
@@ -91,8 +92,11 @@ public class ProxyHandlerTest {
         SslContext sctx;
         SslContext cctx;
         try {
-            SelfSignedCertificate ssc = new SelfSignedCertificate();
-            sctx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+            X509Bundle cert = new CertificateBuilder()
+                    .subject("cn=localhost")
+                    .setIsCertificateAuthority(true)
+                    .buildSelfSigned();
+            sctx = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(), cert.getCertificatePath()).build();
             cctx = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
         } catch (Exception e) {
             throw new Error(e);

@@ -645,7 +645,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
     <jboss.marshalling.version>1.4.11.Final</jboss.marshalling.version>
-    <bouncycastle.version>1.78.1</bouncycastle.version>
+    <bouncycastle.version>1.79</bouncycastle.version>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
@@ -742,6 +742,7 @@
     <module>handler-ssl-ocsp</module>
     <module>example</module>
     <module>testsuite</module>
+    <module>pkitesting</module>
     <module>testsuite-autobahn</module>
     <module>testsuite-http2</module>
     <module>testsuite-jpms</module>
@@ -1241,6 +1242,10 @@
                   <item>
                     <matcher>java-package</matcher>
                     <match>/.*\.internal\..*/</match>
+                  </item>
+                  <item>
+                    <matcher>java-package</matcher>
+                    <match>/io\.netty\.example\..*/</match>
                   </item>
                   <item>
                     <matcher>java-package</matcher>

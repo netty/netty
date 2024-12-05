@@ -52,6 +52,8 @@ import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
@@ -762,11 +764,15 @@ public class SslHandlerTest {
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testCloseOnHandshakeFailure() throws Exception {
-        final SelfSignedCertificate ssc = new SelfSignedCertificate();
+        CertificateBuilder ca = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true);
 
-        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.key(), ssc.cert()).build();
+        X509Bundle cert = ca.buildSelfSigned();
+        final SslContext sslServerCtx = SslContextBuilder.forServer(
+                cert.getKeyPair().getPrivate(), cert.getCertificatePath()).build();
         final SslContext sslClientCtx = SslContextBuilder.forClient()
-                .trustManager(new SelfSignedCertificate().cert())
+                .trustManager(ca.buildSelfSigned().toTrustManagerFactory())
                 .build();
 
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
