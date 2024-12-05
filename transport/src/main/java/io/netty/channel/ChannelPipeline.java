@@ -179,39 +179,27 @@ import java.util.NoSuchElementException;
  * <h3>Building a pipeline</h3>
  * <p>
  * A user is supposed to have one or more {@link ChannelHandler}s in a pipeline to receive I/O events (e.g. read) and
- * to request I/O operations (e.g. write and close).  For example, a typical server will have the following handlers
+ * to request I/O operations (e.g. write and close). For example, a typical server will have the following handlers
  * in each channel's pipeline, but your mileage may vary depending on the complexity and characteristics of the
  * protocol and business logic:
  *
  * <ol>
  * <li>Protocol Decoder - translates binary data (e.g. {@link ByteBuf}) into a Java object.</li>
  * <li>Protocol Encoder - translates a Java object into binary data.</li>
- * <li>Business Logic Handler - performs the actual business logic (e.g. database access).</li>
+ * <li>Business Logic Handler - performs the actual business logic.</li>
  * </ol>
  *
  * and it could be represented as shown in the following example:
  *
  * <pre>
- * static final {@link EventExecutorGroup} group = new {@link DefaultEventExecutorGroup}(16);
  * ...
  *
  * {@link ChannelPipeline} pipeline = ch.pipeline();
  *
  * pipeline.addLast("decoder", new MyProtocolDecoder());
  * pipeline.addLast("encoder", new MyProtocolEncoder());
- *
- * // Tell the pipeline to run MyBusinessLogicHandler's event handler methods
- * // in a different thread than an I/O thread so that the I/O thread is not blocked by
- * // a time-consuming task.
- * // If your business logic is fully asynchronous or finished very quickly, you don't
- * // need to specify a group.
- * pipeline.addLast(group, "handler", new MyBusinessLogicHandler());
+ * pipeline.addLast("handler", new MyBusinessLogicHandler());
  * </pre>
- *
- * Be aware that while using {@link DefaultEventLoopGroup} will offload the operation from the {@link EventLoop} it will
- * still process tasks in a serial fashion per {@link ChannelHandlerContext} and so guarantee ordering. Due the ordering
- * it may still become a bottle-neck. If ordering is not a requirement for your use-case you may want to consider using
- * {@link UnorderedThreadPoolEventExecutor} to maximize the parallelism of the task execution.
  *
  * <h3>Thread safety</h3>
  * <p>
@@ -247,7 +235,9 @@ public interface ChannelPipeline
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
      *         if the specified handler is {@code null}
+     * @deprecated use {@link #addFirst(String, ChannelHandler)}
      */
+    @Deprecated
     ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler);
 
     /**
@@ -275,7 +265,9 @@ public interface ChannelPipeline
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
      *         if the specified handler is {@code null}
+     * @deprecated use {@link #addLast(String, ChannelHandler)}
      */
+    @Deprecated
     ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler);
 
     /**
@@ -311,7 +303,9 @@ public interface ChannelPipeline
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
      *         if the specified baseName or handler is {@code null}
+     * @deprecated use {@link #addBefore(String, String, ChannelHandler)}
      */
+    @Deprecated
     ChannelPipeline addBefore(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
     /**
@@ -347,7 +341,9 @@ public interface ChannelPipeline
      *         if there's an entry with the same name already in the pipeline
      * @throws NullPointerException
      *         if the specified baseName or handler is {@code null}
+     * @deprecated use {@link #addAfter(String, String, ChannelHandler)}
      */
+    @Deprecated
     ChannelPipeline addAfter(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
 
     /**
@@ -364,8 +360,9 @@ public interface ChannelPipeline
      * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}s
      *                  methods.
      * @param handlers  the handlers to insert first
-     *
+     * @deprecated use {@link #addFirst(String, ChannelHandler)}
      */
+    @Deprecated
     ChannelPipeline addFirst(EventExecutorGroup group, ChannelHandler... handlers);
 
     /**
@@ -382,8 +379,9 @@ public interface ChannelPipeline
      * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}s
      *                  methods.
      * @param handlers  the handlers to insert last
-     *
+     * @deprecated use {@link #addLast(ChannelHandler...)}
      */
+    @Deprecated
     ChannelPipeline addLast(EventExecutorGroup group, ChannelHandler... handlers);
 
     /**
