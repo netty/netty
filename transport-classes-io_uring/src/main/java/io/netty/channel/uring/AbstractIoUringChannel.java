@@ -530,22 +530,39 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             } finally {
                 // It's important we cancel all outstanding connect, write and read operations now so
                 // we will be able to process a delayed close if needed.
-                if (registration != null) {
-                    if (cancelConnect && connectId != 0) {
-                        int fd = fd().intValue();
-                        // Best effort to cancel the already submitted connect request.
-                        registration.submit(IoUringIoOps.newAsyncCancel(
-                                fd, (byte) 0, connectId, Native.IORING_OP_CONNECT));
-                    }
-                    cancelOutstandingReads(registration, numOutstandingReads);
-                    cancelOutstandingWrites(registration, numOutstandingWrites);
-                }
+                cancelOps(cancelConnect);
             }
 
             if (canCloseNow()) {
                 // Currently there are is no WRITE and READ scheduled so we can start to teardown the channel.
                 closeNow(newPromise());
             }
+        }
+
+        private void cancelOps(boolean cancelConnect) {
+            if (registration == null || !registration.isValid()) {
+                return;
+            }
+            int fd = fd().intValue();
+            if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
+                registration.submit(IoUringIoOps.newPollRemove(
+                        fd, (byte) 0, pollRdhupId, (short) Native.POLLRDHUP));
+            }
+            if ((ioState & POLL_IN_SCHEDULED) != 0) {
+                registration.submit(IoUringIoOps.newPollRemove(
+                        fd, (byte) 0, pollInId, (short) Native.POLLIN));
+            }
+            if ((ioState & POLL_OUT_SCHEDULED) != 0) {
+                registration.submit(IoUringIoOps.newPollRemove(
+                        fd,  (byte) 0, pollOutId, (short) Native.POLLOUT));
+            }
+            if (cancelConnect && connectId != 0) {
+                // Best effort to cancel the already submitted connect request.
+                registration.submit(IoUringIoOps.newAsyncCancel(
+                        fd, (byte) 0, connectId, Native.IORING_OP_CONNECT));
+            }
+            cancelOutstandingReads(registration, numOutstandingReads);
+            cancelOutstandingWrites(registration, numOutstandingWrites);
         }
 
         private boolean canCloseNow() {
@@ -1068,33 +1085,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected final void doDeregister() {
-        if (registration == null || !registration.isValid()) {
-            return;
-        }
-
-        IoUringIoRegistration registration = this.registration;
         // Cancel all previous submitted ops.
-        int fd = fd().intValue();
-        if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
-            registration.submit(IoUringIoOps.newPollRemove(
-                    fd, (byte) 0, pollRdhupId, (short) Native.POLLRDHUP));
-        }
-        if ((ioState & POLL_IN_SCHEDULED) != 0) {
-            registration.submit(IoUringIoOps.newPollRemove(
-                    fd, (byte) 0, pollInId, (short) Native.POLLIN));
-        }
-        if ((ioState & POLL_OUT_SCHEDULED) != 0) {
-            registration.submit(IoUringIoOps.newPollRemove(
-                    fd,  (byte) 0, pollOutId, (short) Native.POLLOUT));
-        }
-
-        if (AbstractIoUringChannel.this.connectPromise != null && connectId != 0) {
-            // Best effort to cancel the already submitted connect request.
-            registration.submit(IoUringIoOps.newAsyncCancel(
-                    fd, (byte) 0, connectId, Native.IORING_OP_CONNECT));
-        }
-        cancelOutstandingReads(registration, numOutstandingReads);
-        cancelOutstandingWrites(registration, numOutstandingWrites);
+        ((AbstractUringUnsafe) unsafe()).cancelOps(connectPromise != null);
     }
 
     @Override
