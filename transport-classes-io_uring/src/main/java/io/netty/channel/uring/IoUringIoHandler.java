@@ -144,16 +144,19 @@ public final class IoUringIoHandler implements IoHandler {
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
 
         List<DefaultIoUringIoRegistration> copy = new ArrayList<>(registrations.values());
-        // Ensure all previously submitted IOs get to complete before closing all fds.
-        submissionQueue.addNop(ringBuffer.fd(), (byte) Native.IOSQE_IO_DRAIN, RINGFD_ID, (short) 0);
 
         for (DefaultIoUringIoRegistration registration: copy) {
             registration.close();
+        }
+
+        // Ensure all previously submitted IOs get to complete before tearing down everything.
+        submissionQueue.addNop(ringBuffer.fd(), (byte) Native.IOSQE_IO_DRAIN, RINGFD_ID, (short) 0);
+        submissionQueue.submit();
+        while (completionQueue.hasCompletions()) {
+            completionQueue.process(this::handle);
+
             if (submissionQueue.count() > 0) {
                 submissionQueue.submit();
-            }
-            if (completionQueue.hasCompletions()) {
-                completionQueue.process(this::handle);
             }
         }
     }
@@ -352,12 +355,9 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         void close() {
+            // Closing the handle will also cancel the registration.
+            // It's important that we not manually cancel as close() might need to submit some work to the ring.
             assert eventLoop.inEventLoop();
-            try {
-                cancel();
-            } catch (Exception e) {
-                logger.debug("Exception during canceling " + this, e);
-            }
             try {
                 handle.close();
             } catch (Exception e) {
