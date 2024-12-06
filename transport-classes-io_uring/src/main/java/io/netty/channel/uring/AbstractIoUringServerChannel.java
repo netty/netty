@@ -123,6 +123,9 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             IoUringIoOps ops = IoUringIoOps.newAccept(fd, (byte) 0, 0,
                     acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, nextOpsId());
             acceptId = registration.submit(ops);
+            if (acceptId == 0) {
+                return 0;
+            }
             return 1;
         }
 
