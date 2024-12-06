@@ -544,7 +544,39 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * Invoked before returning from {@link #runAllTasks()} and {@link #runAllTasks(long)}.
+     * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.
+     *
+     * @return {@code true} if at least one task was run.
+     */
+    protected boolean runAllTasks(int maxTasksPerRun) {
+        fetchFromScheduledTaskQueue();
+        Runnable task = pollTask();
+        if (task == null) {
+            afterRunningAllTasks();
+            return false;
+        }
+
+        long runTasks = 0;
+        long lastExecutionTime;
+        for (;;) {
+            safeExecute(task);
+
+            runTasks ++;
+
+            task = pollTask();
+            if (task == null || runTasks >= maxTasksPerRun) {
+                lastExecutionTime = getCurrentTimeNanos();
+                break;
+            }
+        }
+
+        afterRunningAllTasks();
+        this.lastExecutionTime = lastExecutionTime;
+        return true;
+    }
+
+    /**
+     * Invoked before returning from {@link #runAllTasks()}, {@link #runAllTasks(long)} and {@link #runAllTasks(int)}.
      */
     protected void afterRunningAllTasks() { }
 
