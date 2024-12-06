@@ -224,7 +224,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      * Cancel all outstanding writes
      *
      * @param registration          the {@link IoUringIoRegistration}.
-     * @param numOutstandingWrites   the number of outstanding writes.
+     * @param numOutstandingWrites  the number of outstanding writes.
      */
     protected abstract void cancelOutstandingWrites(IoUringIoRegistration registration, int numOutstandingWrites);
 
@@ -287,10 +287,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         if (socket.isBlocking()) {
             // If the socket is blocking we will directly call scheduleFirstReadIfNeeded() as we can use FASTPOLL.
             ioUringUnsafe().scheduleFirstReadIfNeeded();
-        } else {
-            if ((ioState & POLL_IN_SCHEDULED) == 0) {
-                ioUringUnsafe().schedulePollIn();
-            }
+        } else if ((ioState & POLL_IN_SCHEDULED) == 0) {
+            ioUringUnsafe().schedulePollIn();
         }
     }
 
@@ -340,28 +338,24 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private void schedulePollOut() {
         // This should only be done if the socket is non-blocking.
         assert !socket.isBlocking();
-
-        assert (ioState & POLL_OUT_SCHEDULED) == 0;
-        int fd = fd().intValue();
-        IoUringIoRegistration registration = registration();
-        IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                fd, (byte) 0, Native.POLLOUT, (short) Native.POLLOUT);
-        pollOutId = registration.submit(ops);
-        if (pollOutId != 0) {
-            ioState |= POLL_OUT_SCHEDULED;
-        }
+        pollOutId = schedulePollAdd(POLL_OUT_SCHEDULED, Native.POLLOUT);
     }
 
     final void schedulePollRdHup() {
-        assert (ioState & POLL_RDHUP_SCHEDULED) == 0;
+        pollRdhupId = schedulePollAdd(POLL_RDHUP_SCHEDULED, Native.POLLRDHUP);
+    }
+
+    private long schedulePollAdd(int ioMask, int mask) {
+        assert (ioState & ioMask) == 0;
         int fd = fd().intValue();
         IoUringIoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                fd, (byte) 0, Native.POLLRDHUP, (short) Native.POLLRDHUP);
-        pollRdhupId = registration.submit(ops);
-        if (pollRdhupId != 0) {
-            ioState |= POLL_RDHUP_SCHEDULED;
+                fd, (byte) 0, mask, (short) mask);
+        long id = registration.submit(ops);
+        if (id != 0) {
+            ioState |= ioMask;
         }
+        return id;
     }
 
     final void resetCachedAddresses() {
@@ -679,14 +673,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             if (!isActive() || shouldBreakIoUringInReady(config())) {
                 return;
             }
-            int fd = fd().intValue();
-            IoUringIoRegistration registration = registration();
-            IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                    fd, (byte) 0, Native.POLLIN, (short) Native.POLLIN);
-            pollInId = registration.submit(ops);
-            if (pollInId != 0) {
-                ioState |= POLL_IN_SCHEDULED;
-            }
+            pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN);
         }
 
         private void readComplete(byte op, int res, int flags, short data) {
@@ -718,7 +705,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          */
         private void pollRdHup(int res) {
             ioState &= ~POLL_RDHUP_SCHEDULED;
-
+            pollRdhupId = 0;
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
@@ -739,7 +726,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          */
         private void pollIn(int res) {
             ioState &= ~POLL_IN_SCHEDULED;
-
+            pollInId = 0;
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
@@ -786,6 +773,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          */
         private void pollOut(int res) {
             ioState &= ~POLL_OUT_SCHEDULED;
+            pollOutId = 0;
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
@@ -1138,13 +1126,19 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     private void clearPollFlag(int pollMask) {
         if ((pollMask & Native.POLLIN) != 0) {
+            assert pollInId != 0;
             ioState &= ~POLL_IN_SCHEDULED;
+            pollInId = 0;
         }
         if ((pollMask & Native.POLLOUT) != 0) {
+            assert pollOutId != 0;
             ioState &= ~POLL_OUT_SCHEDULED;
+            pollOutId = 0;
         }
         if ((pollMask & Native.POLLRDHUP) != 0) {
+            assert pollRdhupId != 0;
             ioState &= ~POLL_RDHUP_SCHEDULED;
+            pollRdhupId = 0;
         }
      }
 }
