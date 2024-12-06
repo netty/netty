@@ -250,10 +250,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         if (registration != null && registration.isValid()) {
             if (socket.markClosed()) {
-                int fd = fd().intValue();
-                IoUringIoOps ops = IoUringIoOps.newClose(fd, (byte) 0, nextOpsId());
-                registration.submit(ops);
-
                 boolean cancelConnect = false;
                 try {
                     ChannelPromise connectPromise = AbstractIoUringChannel.this.connectPromise;
@@ -270,6 +266,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     // we will be able to process a delayed close if needed.
                     ioUringUnsafe().cancelOps(cancelConnect);
                 }
+
+                int fd = fd().intValue();
+                IoUringIoOps ops = IoUringIoOps.newClose(fd, (byte) 0, nextOpsId());
+                registration.submit(ops);
             }
         } else {
             // This one was never registered just use a syscall to close.
