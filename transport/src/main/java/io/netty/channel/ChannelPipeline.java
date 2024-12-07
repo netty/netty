@@ -16,9 +16,7 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
-import io.netty.util.concurrent.UnorderedThreadPoolEventExecutor;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
