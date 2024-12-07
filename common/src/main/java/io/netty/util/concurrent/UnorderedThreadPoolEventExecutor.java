@@ -17,12 +17,14 @@ package io.netty.util.concurrent;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -37,15 +39,22 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
  * {@link EventExecutor} implementation which makes no guarantees about the ordering of task execution that
  * are submitted because there may be multiple threads executing these tasks.
  * This implementation is most useful for protocols that do not need strict ordering.
+ * <p>
+ * <strong>Because it provides no ordering, care should be taken when using it!</strong>
  *
- * <strong>Because it provides no ordering care should be taken when using it!</strong>
+ * @deprecated The behavior of this event executor deviates from the typical Netty execution model
+ * and can cause subtle issues as a result.
+ * Applications that wish to process messages with greater parallelism, should instead do explicit
+ * off-loading to their own thread-pools.
  */
+@Deprecated
 public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolExecutor implements EventExecutor {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             UnorderedThreadPoolEventExecutor.class);
 
     private final Promise<?> terminationFuture = GlobalEventExecutor.INSTANCE.newPromise();
-    private final Set<EventExecutor> executorSet = Collections.singleton((EventExecutor) this);
+    private final Set<EventExecutor> executorSet = Collections.singleton(this);
+    private final Set<Thread> eventLoopThreads = ConcurrentHashMap.newKeySet();
 
     /**
      * Calls {@link UnorderedThreadPoolEventExecutor#UnorderedThreadPoolEventExecutor(int, ThreadFactory)}
@@ -60,6 +69,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
      */
     public UnorderedThreadPoolEventExecutor(int corePoolSize, ThreadFactory threadFactory) {
         super(corePoolSize, threadFactory);
+        setThreadFactory(new AccountingThreadFactory(threadFactory, eventLoopThreads));
     }
 
     /**
@@ -76,6 +86,7 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
     public UnorderedThreadPoolEventExecutor(int corePoolSize, ThreadFactory threadFactory,
                                             RejectedExecutionHandler handler) {
         super(corePoolSize, threadFactory, handler);
+        setThreadFactory(new AccountingThreadFactory(threadFactory, eventLoopThreads));
     }
 
     @Override
@@ -90,12 +101,12 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
 
     @Override
     public boolean inEventLoop() {
-        return false;
+        return inEventLoop(Thread.currentThread());
     }
 
     @Override
     public boolean inEventLoop(Thread thread) {
-        return false;
+        return eventLoopThreads.contains(thread);
     }
 
     @Override
@@ -290,6 +301,28 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
         @Override
         public void run() {
             task.run();
+        }
+    }
+
+    private static final class AccountingThreadFactory implements ThreadFactory {
+        private final ThreadFactory delegate;
+        private final Set<Thread> threads;
+
+        private AccountingThreadFactory(ThreadFactory delegate, Set<Thread> threads) {
+            this.delegate = delegate;
+            this.threads = threads;
+        }
+
+        @Override
+        public Thread newThread(@NotNull Runnable r) {
+            return delegate.newThread(() -> {
+                threads.add(Thread.currentThread());
+                try {
+                    r.run();
+                } finally {
+                    threads.remove(Thread.currentThread());
+                }
+            });
         }
     }
 }

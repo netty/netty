@@ -132,4 +132,15 @@ public class UnorderedThreadPoolEventExecutorTest {
             executor.shutdownGracefully();
         }
     }
+
+    @Test
+    void tasksRunningInUnorderedExecutorAreInEventLoop() throws Exception {
+        UnorderedThreadPoolEventExecutor executor = new UnorderedThreadPoolEventExecutor(1);
+        try {
+            Future<Boolean> future = executor.submit(() -> executor.inEventLoop());
+            assertTrue(future.get());
+        } finally {
+            executor.shutdownGracefully();
+        }
+    }
 }
