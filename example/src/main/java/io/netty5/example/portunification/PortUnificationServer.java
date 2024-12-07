@@ -26,7 +26,8 @@ import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 
 /**
  * Serves two protocols (HTTP and Factorial) using only one port, enabling
@@ -41,8 +42,11 @@ public final class PortUnificationServer {
 
     public static void main(String[] args) throws Exception {
         // Configure SSL context
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        final SslContext sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        X509Bundle cert = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+        final SslContext sslCtx = SslContextBuilder.forServer(cert.toKeyManagerFactory())
             .build();
 
         EventLoopGroup bossGroup = new MultithreadEventLoopGroup(1, NioIoHandler.newFactory());

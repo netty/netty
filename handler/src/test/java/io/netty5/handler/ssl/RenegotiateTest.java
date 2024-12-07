@@ -27,9 +27,9 @@ import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
 import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
-import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -45,10 +45,13 @@ public abstract class RenegotiateTest {
     public void testRenegotiateServer() throws Throwable {
         final AtomicReference<Throwable> error = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(2);
-        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
+        X509Bundle cert = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
         EventLoopGroup group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
         try {
-            final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
+            final SslContext context = SslContextBuilder.forServer(cert.toKeyManagerFactory())
                     .sslProvider(serverSslProvider())
                     .protocols(SslProtocols.TLS_v1_2)
                     .build();

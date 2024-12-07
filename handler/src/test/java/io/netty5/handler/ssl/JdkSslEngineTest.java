@@ -19,9 +19,9 @@ import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
-import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.internal.EmptyArrays;
 
 import org.junit.jupiter.api.Disabled;
@@ -31,15 +31,29 @@ import org.opentest4j.TestAbortedException;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
+import java.io.File;
 import java.security.Provider;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JdkSslEngineTest extends SSLEngineTest {
+    private static final File CERT_FILE;
+    private static final File KEY_FILE;
+
+    static {
+        try {
+            CERT_FILE = CERT.toTempCertChainPem();
+            KEY_FILE = CERT.toTempPrivateKeyPem();
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
     public enum ProviderType {
         ALPN_JAVA {
             @Override
@@ -181,7 +195,6 @@ public class JdkSslEngineTest extends SSLEngineTest {
         try {
             param.providerType.activate(this);
             // ALPN
-            SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
             JdkApplicationProtocolNegotiator clientApn = new JdkAlpnApplicationProtocolNegotiator(true, true,
                 PREFERRED_APPLICATION_LEVEL_PROTOCOL);
             JdkApplicationProtocolNegotiator serverApn = new JdkAlpnApplicationProtocolNegotiator(
@@ -198,7 +211,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
 
             SslContext serverSslCtx = new JdkSslServerContext(param.providerType.provider(),
-                ssc.certificate(), ssc.privateKey(), null, null,
+                CERT_FILE, KEY_FILE, null, null,
                 IdentityCipherSuiteFilter.INSTANCE, serverApn, 0, 0);
             SslContext clientSslCtx = new JdkSslClientContext(param.providerType.provider(), null,
                 InsecureTrustManagerFactory.INSTANCE, null,
@@ -229,7 +242,7 @@ public class JdkSslEngineTest extends SSLEngineTest {
                 APPLICATION_LEVEL_PROTOCOL_NOT_COMPATIBLE);
             setupHandlers(param, serverApn, clientApn);
             assertTrue(serverLatch.await(2, TimeUnit.SECONDS));
-            assertTrue(serverException instanceof SSLHandshakeException);
+            assertInstanceOf(SSLHandshakeException.class, serverException);
         } catch (SkipTestException e) {
             // ALPN availability is dependent on the java version. If ALPN is not available because of
             // java version incompatibility don't fail the test, but instead just skip the test
@@ -261,7 +274,10 @@ public class JdkSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testEnablingAnAlreadyDisabledSslProtocol(SSLEngineTestParam param) throws Exception {
-        testEnablingAnAlreadyDisabledSslProtocol(param, new String[]{}, new String[]{ SslProtocols.TLS_v1_2 });
+        testEnablingAnAlreadyDisabledSslProtocol(
+                param,
+                EmptyArrays.EMPTY_STRINGS,
+                new String[]{ SslProtocols.TLS_v1_2 });
     }
 
     @MethodSource("newTestParams")

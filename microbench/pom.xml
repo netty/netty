@@ -150,6 +150,11 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-pkitesting</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>netty5-transport-native-epoll</artifactId>
       <version>${project.version}</version>
       <classifier>${epoll.classifier}</classifier>
