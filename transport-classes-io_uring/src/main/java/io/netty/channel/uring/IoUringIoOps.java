@@ -310,16 +310,18 @@ public final class IoUringIoOps implements IoOps {
      *
      * @param fd                                    the filedescriptor
      * @param flags                                 the flags.
+     * @param acceptFlags                           the flags for ACCEPT itself
+     * @param ioPrio                                io_prio
      * @param acceptedAddressMemoryAddress          the memory address of the sockaddr_storage.
      * @param acceptedAddressLengthMemoryAddress    the memory address of the length that will be updated once a new
      *                                              connection was accepted.
      * @param data                                  the data
      * @return                                      ops.
      */
-    static IoUringIoOps newAccept(int fd, byte flags, int acceptFlags, long acceptedAddressMemoryAddress,
+    static IoUringIoOps newAccept(int fd, byte flags, int acceptFlags, short ioPrio, long acceptedAddressMemoryAddress,
                                          long acceptedAddressLengthMemoryAddress, short data) {
 
-        return new IoUringIoOps(Native.IORING_OP_ACCEPT, flags, (short) 0, fd, acceptedAddressLengthMemoryAddress,
+        return new IoUringIoOps(Native.IORING_OP_ACCEPT, flags, ioPrio, fd, acceptedAddressLengthMemoryAddress,
                 acceptedAddressMemoryAddress, 0, acceptFlags, data, (short) 0, (short) 0, 0, 0);
     }
 
