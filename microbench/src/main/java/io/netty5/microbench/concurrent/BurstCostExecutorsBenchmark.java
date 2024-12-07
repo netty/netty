@@ -30,7 +30,6 @@ import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.concurrent.RejectedExecutionHandlers;
 import io.netty5.util.concurrent.SingleThreadEventExecutor;
-import io.netty5.util.concurrent.UnorderedThreadPoolEventExecutor;
 import io.netty5.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -215,10 +214,6 @@ public class BurstCostExecutorsBenchmark extends AbstractMicrobenchmark {
             break;
         case defaultEventExecutor:
             executor = new SingleThreadEventExecutor();
-            executorToShutdown = executor;
-            break;
-        case juc:
-            executor = new UnorderedThreadPoolEventExecutor(1);
             executorToShutdown = executor;
             break;
         case nioEventLoop:
