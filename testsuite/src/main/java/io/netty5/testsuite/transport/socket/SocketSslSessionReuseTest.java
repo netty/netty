@@ -32,7 +32,8 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.handler.ssl.SslProvider;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -46,7 +47,6 @@ import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -71,27 +71,26 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
     private static final Logger logger = LoggerFactory.getLogger(SocketSslSessionReuseTest.class);
 
-    private static final File CERT_FILE;
-    private static final File KEY_FILE;
+    private static final X509Bundle CERT;
 
     static {
-        SelfSignedCertificate ssc;
         try {
-            ssc = new SelfSignedCertificate();
-        } catch (CertificateException e) {
-            throw new Error(e);
+            CERT = new CertificateBuilder()
+                    .subject("cn=localhost")
+                    .setIsCertificateAuthority(true)
+                    .buildSelfSigned();
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
         }
-        CERT_FILE = ssc.certificate();
-        KEY_FILE = ssc.privateKey();
     }
 
     public static Collection<Object[]> jdkOnly() throws Exception {
         return Collections.singletonList(new Object[] {
-          SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+          SslContextBuilder.forServer(CERT.toKeyManagerFactory())
                   .sslProvider(SslProvider.JDK)
                   .endpointIdentificationAlgorithm(""),
           SslContextBuilder.forClient()
-                  .trustManager(CERT_FILE)
+                  .trustManager(CERT.toTrustManagerFactory())
                   .sslProvider(SslProvider.JDK)
                   .endpointIdentificationAlgorithm("")
         });
@@ -99,20 +98,20 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
     public static Collection<Object[]> jdkAndOpenSSL() throws Exception {
         return Arrays.asList(new Object[]{
-                        SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+                        SslContextBuilder.forServer(CERT.toKeyManagerFactory())
                                 .sslProvider(SslProvider.JDK)
                                 .endpointIdentificationAlgorithm(""),
                         SslContextBuilder.forClient()
-                                .trustManager(CERT_FILE)
+                                .trustManager(CERT.toTrustManagerFactory())
                                 .sslProvider(SslProvider.JDK)
                                 .endpointIdentificationAlgorithm("")
                 },
                 new Object[]{
-                        SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+                        SslContextBuilder.forServer(CERT.toKeyManagerFactory())
                                 .sslProvider(SslProvider.OPENSSL)
                                 .endpointIdentificationAlgorithm(""),
                         SslContextBuilder.forClient()
-                                .trustManager(CERT_FILE)
+                                .trustManager(CERT.toTrustManagerFactory())
                                 .sslProvider(SslProvider.OPENSSL)
                                 .endpointIdentificationAlgorithm("")
                 });

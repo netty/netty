@@ -32,7 +32,8 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.handler.ssl.SslProvider;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -42,9 +43,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
-import java.io.File;
 import java.io.IOException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -63,35 +62,35 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
     private static final Logger logger = LoggerFactory.getLogger(SocketSslGreetingTest.class);
 
     private static final LogLevel LOG_LEVEL = LogLevel.TRACE;
-    private static final File CERT_FILE;
-    private static final File KEY_FILE;
+    private static final X509Bundle CERT;
 
     static {
-        SelfSignedCertificate ssc;
         try {
-            ssc = new SelfSignedCertificate();
-        } catch (CertificateException e) {
-            throw new Error(e);
+            CERT = new CertificateBuilder()
+                    .subject("cn=localhost")
+                    .setIsCertificateAuthority(true)
+                    .buildSelfSigned();
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
         }
-        CERT_FILE = ssc.certificate();
-        KEY_FILE = ssc.privateKey();
     }
 
     public static Collection<Object[]> data() throws Exception {
         List<SslContext> serverContexts = new ArrayList<>();
-        serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE).sslProvider(SslProvider.JDK).build());
+        serverContexts.add(SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+                .sslProvider(SslProvider.JDK).build());
 
         List<SslContext> clientContexts = new ArrayList<>();
         clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.JDK)
-                .endpointIdentificationAlgorithm(null).trustManager(CERT_FILE).build());
+                .endpointIdentificationAlgorithm(null).trustManager(CERT.toTrustManagerFactory()).build());
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
-            serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+            serverContexts.add(SslContextBuilder.forServer(CERT.toKeyManagerFactory())
                                                 .sslProvider(SslProvider.OPENSSL).build());
             clientContexts.add(SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL)
                                                 .endpointIdentificationAlgorithm(null)
-                                                .trustManager(CERT_FILE).build());
+                                                .trustManager(CERT.toTrustManagerFactory()).build());
         } else {
             logger.warn("OpenSSL is unavailable and thus will not be tested.", OpenSsl.unavailabilityCause());
         }
