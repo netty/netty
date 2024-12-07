@@ -1078,17 +1078,14 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     private void clearPollFlag(int pollMask) {
         if ((pollMask & Native.POLLIN) != 0) {
-            assert pollInId != 0;
             ioState &= ~POLL_IN_SCHEDULED;
             pollInId = 0;
         }
         if ((pollMask & Native.POLLOUT) != 0) {
-            assert pollOutId != 0;
             ioState &= ~POLL_OUT_SCHEDULED;
             pollOutId = 0;
         }
         if ((pollMask & Native.POLLRDHUP) != 0) {
-            assert pollRdhupId != 0;
             ioState &= ~POLL_RDHUP_SCHEDULED;
             pollRdhupId = 0;
         }
