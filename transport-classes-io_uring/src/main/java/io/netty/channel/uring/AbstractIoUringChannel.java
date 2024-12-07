@@ -948,6 +948,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
                             hdr.address(), hdr.idx());
                     connectId = registration.submit(ops);
+                    if (connectId == 0) {
+                        // Directly release the memory if submitting failed.
+                        freeMsgHdrArray();
+                    }
                 } else {
                     submitConnect(inetSocketAddress);
                 }
@@ -1003,6 +1007,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         IoUringIoOps ops = IoUringIoOps.newConnect(
                 fd, (byte) 0, remoteAddressMemoryAddress, nextOpsId());
         connectId = registration.submit(ops);
+        if (connectId == 0) {
+            // Directly release the memory if submitting failed.
+            freeRemoteAddressMemory();
+        }
     }
 
     @Override
