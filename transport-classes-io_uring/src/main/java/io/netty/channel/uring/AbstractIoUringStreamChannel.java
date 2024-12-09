@@ -220,6 +220,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         private ByteBuf readBuffer;
         private IovArray iovArray;
+        private boolean socketWasEmpty;
 
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
@@ -295,13 +296,28 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.attemptedBytesRead(byteBuf.writableBytes());
                 int fd = fd().intValue();
                 IoUringIoRegistration registration = registration();
+
+                // Depending on if socketWasEmpty is true we will arm the poll upfront and skip the initial transfer
+                // attempt.
+                // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
+                final short ioPrio;
+
                 // Depending on if this is the first read or not we will use Native.MSG_DONTWAIT.
                 // The idea is that if the socket is blocking we can do the first read in a blocking fashion
                 // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
                 // be possible directly we schedule these with Native.MSG_DONTWAIT. This allows us to still be
                 // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
                 // transports.
-                IoUringIoOps ops = IoUringIoOps.newRecv(fd, (byte) 0, first ? 0 : Native.MSG_DONTWAIT,
+                final int recvFlags;
+
+                if (first) {
+                    ioPrio = socketWasEmpty ? Native.IORING_RECVSEND_POLL_FIRST : 0;
+                    recvFlags = 0;
+                } else {
+                    ioPrio = 0;
+                    recvFlags = Native.MSG_DONTWAIT;
+                }
+                IoUringIoOps ops = IoUringIoOps.newRecv(fd, (byte) 0, ioPrio, recvFlags,
                         byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
                 readId = registration.submit(ops);
                 if (readId == 0) {
@@ -362,13 +378,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.incMessagesRead(1);
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
-                if (allocHandle.continueReading() &&
-                        // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
-                        // trying to schedule a read. If it's supported and not part of the flags we know for sure
-                        // that the next read (which would be using Native.MSG_DONTWAIT) will complete without
-                        // be able to read any data. This is useless work and we can skip it.
-                        (!IoUring.isIOUringCqeFSockNonEmptySupported() ||
-                        (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
+                socketWasEmpty = socketWasEmptyForSure(flags);
+                if (allocHandle.continueReading() && !socketWasEmpty) {
                     // Let's schedule another read.
                     scheduleRead(false);
                 } else {
@@ -378,7 +389,15 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
+            } finally {
+                // We always reset this to false as we only want to respect it when scheduleRead(true) is called
+                // while in this method.
+                socketWasEmpty = false;
             }
+        }
+
+        private boolean socketWasEmptyForSure(int flags) {
+            return IoUring.isIOUringCqeFSockNonEmptySupported() &&  (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
         }
 
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
