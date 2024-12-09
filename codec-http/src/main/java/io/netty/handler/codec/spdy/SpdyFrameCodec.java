@@ -34,11 +34,11 @@ import java.util.List;
 public class SpdyFrameCodec extends ByteToMessageDecoder
         implements SpdyFrameDecoderDelegate, ChannelOutboundHandler {
 
-    private static final SpdyProtocolException INVALID_FRAME =
-            new SpdyProtocolException("Received invalid frame");
+    protected static final SpdyProtocolException INVALID_FRAME =
+        new SpdyProtocolException("Received invalid frame");
 
-    private final SpdyFrameDecoder spdyFrameDecoder;
-    private final SpdyFrameEncoder spdyFrameEncoder;
+    protected final SpdyFrameDecoder spdyFrameDecoder;
+    protected final SpdyFrameEncoder spdyFrameEncoder;
     private final SpdyHeaderBlockDecoder spdyHeaderBlockDecoder;
     private final SpdyHeaderBlockEncoder spdyHeaderBlockEncoder;
 
@@ -95,14 +95,24 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                 SpdyHeaderBlockEncoder.newInstance(version, compressionLevel, windowBits, memLevel), validateHeaders);
     }
 
-    protected SpdyFrameCodec(SpdyVersion version, int maxChunkSize,
-            SpdyHeaderBlockDecoder spdyHeaderBlockDecoder, SpdyHeaderBlockEncoder spdyHeaderBlockEncoder,
-            boolean validateHeaders) {
-        spdyFrameDecoder = new SpdyFrameDecoder(version, this, maxChunkSize);
-        spdyFrameEncoder = new SpdyFrameEncoder(version);
+    protected SpdyFrameCodec(SpdyVersion version,
+                             int maxChunkSize,
+                             SpdyHeaderBlockDecoder spdyHeaderBlockDecoder,
+                             SpdyHeaderBlockEncoder spdyHeaderBlockEncoder,
+                             boolean validateHeaders) {
+        this.spdyFrameDecoder = createDecoder(version, this, maxChunkSize);
+        this.spdyFrameEncoder = createEncoder(version);
         this.spdyHeaderBlockDecoder = spdyHeaderBlockDecoder;
         this.spdyHeaderBlockEncoder = spdyHeaderBlockEncoder;
         this.validateHeaders = validateHeaders;
+    }
+
+    protected SpdyFrameDecoder createDecoder(SpdyVersion version, SpdyFrameDecoderDelegate delegate, int maxChunkSize) {
+        return new SpdyFrameDecoder(version, delegate, maxChunkSize);
+    }
+
+    protected SpdyFrameEncoder createEncoder(SpdyVersion version) {
+        return new SpdyFrameEncoder(version);
     }
 
     @Override
@@ -406,5 +416,21 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
     @Override
     public void readFrameError(String message) {
         ctx.fireExceptionCaught(INVALID_FRAME);
+    }
+
+    protected void setRead(final boolean read) {
+        this.read = read;
+    }
+
+    protected ChannelHandlerContext getChannelHandlerContext() {
+        return this.ctx;
+    }
+
+    public SpdyFrameDecoder getSpdyFrameDecoder() {
+        return spdyFrameDecoder;
+    }
+
+    public SpdyFrameEncoder getSpdyFrameEncoder() {
+        return spdyFrameEncoder;
     }
 }
