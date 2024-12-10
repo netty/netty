@@ -19,14 +19,19 @@ package io.netty.channel.uring;
 final class RingBuffer {
     private final SubmissionQueue ioUringSubmissionQueue;
     private final CompletionQueue ioUringCompletionQueue;
-
-    RingBuffer(SubmissionQueue ioUringSubmissionQueue, CompletionQueue ioUringCompletionQueue) {
+    private final int features;
+    RingBuffer(SubmissionQueue ioUringSubmissionQueue, CompletionQueue ioUringCompletionQueue, int features) {
         this.ioUringSubmissionQueue = ioUringSubmissionQueue;
         this.ioUringCompletionQueue = ioUringCompletionQueue;
+        this.features = features;
     }
 
     int fd() {
         return ioUringCompletionQueue.ringFd;
+    }
+
+    int features() {
+        return features;
     }
 
     SubmissionQueue ioUringSubmissionQueue() {
