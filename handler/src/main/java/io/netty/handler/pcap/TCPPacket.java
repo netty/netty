@@ -36,13 +36,13 @@ final class TCPPacket {
      * @param srcPort Source Port
      * @param dstPort Destination Port
      */
-    static void writePacket(ByteBuf byteBuf, ByteBuf payload, int segmentNumber, int ackNumber, int srcPort,
+    static void writePacket(ByteBuf byteBuf, ByteBuf payload, long segmentNumber, long ackNumber, int srcPort,
                             int dstPort, TCPFlag... tcpFlags) {
 
         byteBuf.writeShort(srcPort);     // Source Port
         byteBuf.writeShort(dstPort);     // Destination Port
-        byteBuf.writeInt(segmentNumber); // Segment Number
-        byteBuf.writeInt(ackNumber);     // Acknowledgment Number
+        byteBuf.writeInt((int) segmentNumber); // Segment Number
+        byteBuf.writeInt((int) ackNumber);     // Acknowledgment Number
         byteBuf.writeShort(OFFSET | TCPFlag.getFlag(tcpFlags)); // Flags
         byteBuf.writeShort(65535);       // Window Size
         byteBuf.writeShort(0x0001);      // Checksum
