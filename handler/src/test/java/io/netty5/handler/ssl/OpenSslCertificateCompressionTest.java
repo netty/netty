@@ -30,7 +30,8 @@ import io.netty5.channel.local.LocalChannel;
 import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +51,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class OpenSslCertificateCompressionTest {
 
-    private static SelfSignedCertificate cert;
+    private static X509Bundle cert;
     private TestCertCompressionAlgo testZLibAlgoServer;
     private TestCertCompressionAlgo testBrotliAlgoServer;
     private TestCertCompressionAlgo testZstdAlgoServer;
@@ -60,7 +61,10 @@ public class OpenSslCertificateCompressionTest {
     @BeforeAll
     public static void init() throws Exception {
         assumeTrue(OpenSsl.isTlsv13Supported());
-        cert = new SelfSignedCertificate();
+        cert = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
     }
 
     @BeforeEach
@@ -236,7 +240,7 @@ public class OpenSslCertificateCompressionTest {
                                      OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
                              .build())
              .build();
-        final SslContext serverSslContext = SslContextBuilder.forServer(cert.key(), cert.cert())
+        final SslContext serverSslContext = SslContextBuilder.forServer(cert.toKeyManagerFactory())
                .sslProvider(SslProvider.OPENSSL)
                .protocols(SslProtocols.TLS_v1_2)
                .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
@@ -341,8 +345,8 @@ public class OpenSslCertificateCompressionTest {
         }
     }
 
-    private SslContext buildServerContext(OpenSslCertificateCompressionConfig compressionConfig) throws SSLException {
-        return SslContextBuilder.forServer(cert.key(), cert.cert())
+    private SslContext buildServerContext(OpenSslCertificateCompressionConfig compressionConfig) throws Exception {
+        return SslContextBuilder.forServer(cert.toKeyManagerFactory())
                 .sslProvider(SslProvider.OPENSSL)
                 .protocols(SslProtocols.TLS_v1_3)
             .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,

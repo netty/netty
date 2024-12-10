@@ -19,6 +19,8 @@ package io.netty5.handler.ssl;
 import io.netty5.bootstrap.Bootstrap;
 import io.netty5.bootstrap.ServerBootstrap;
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.Resource;
 import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
@@ -33,7 +35,6 @@ import io.netty5.channel.local.LocalChannel;
 import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
@@ -64,26 +65,26 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 public class CipherSuiteCanaryTest {
 
-    private static EventLoopGroup GROUP;
-
-    private static SelfSignedCertificate CERT;
+    private static EventLoopGroup group;
+    private static X509Bundle cert;
 
     static Collection<Object[]> parameters() {
-       List<Object[]> dst = new ArrayList<>();
-       dst.addAll(expand("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")); // DHE-RSA-AES128-GCM-SHA256
-       return dst;
+        return List.copyOf(expand("TLS_DHE_RSA_WITH_AES_128_GCM_SHA256")); // DHE-RSA-AES128-GCM-SHA256
     }
 
     @BeforeAll
     public static void init() throws Exception {
-        GROUP = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
-        CERT = new SelfSignedCertificate();
+        group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
+        cert = new CertificateBuilder()
+                .rsa2048()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
     }
 
     @AfterAll
     public static void destroy() {
-        GROUP.shutdownGracefully();
-        CERT.delete();
+        group.shutdownGracefully();
     }
 
     private static void assumeCipherAvailable(SslProvider provider, String cipher) throws NoSuchAlgorithmException {
@@ -122,7 +123,7 @@ public class CipherSuiteCanaryTest {
 
         List<String> ciphers = Collections.singletonList(rfcCipherName);
 
-        final SslContext sslServerContext = SslContextBuilder.forServer(CERT.certificate(), CERT.privateKey())
+        final SslContext sslServerContext = SslContextBuilder.forServer(cert.toKeyManagerFactory())
                 .sslProvider(serverSslProvider)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
@@ -141,8 +142,8 @@ public class CipherSuiteCanaryTest {
                     .build();
 
             try {
-                final Promise<Object> serverPromise = GROUP.next().newPromise();
-                final Promise<Object> clientPromise = GROUP.next().newPromise();
+                final Promise<Object> serverPromise = group.next().newPromise();
+                final Promise<Object> clientPromise = group.next().newPromise();
 
                 ChannelHandler serverHandler = new ChannelInitializer<Channel>() {
                     @Override
@@ -245,7 +246,7 @@ public class CipherSuiteCanaryTest {
     private static Channel server(LocalAddress address, ChannelHandler handler) throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .channel(LocalServerChannel.class)
-                .group(GROUP)
+                .group(group)
                 .childHandler(handler);
 
         return bootstrap.bind(address).asStage().get();
@@ -256,7 +257,7 @@ public class CipherSuiteCanaryTest {
 
         Bootstrap bootstrap = new Bootstrap()
                 .channel(LocalChannel.class)
-                .group(GROUP)
+                .group(group)
                 .handler(handler);
 
         return bootstrap.connect(remoteAddress).asStage().get();

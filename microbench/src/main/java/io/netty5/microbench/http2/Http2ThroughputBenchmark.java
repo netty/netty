@@ -60,8 +60,9 @@ import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -269,10 +270,13 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
         }
     }
 
-    private SslContext configureServerSsl() throws CertificateException, SSLException {
+    private SslContext configureServerSsl() throws Exception {
         if (ssl) {
-            SelfSignedCertificate ssc = new SelfSignedCertificate();
-            return SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+            X509Bundle cert = new CertificateBuilder()
+                    .subject("cn=localhost")
+                    .setIsCertificateAuthority(true)
+                    .buildSelfSigned();
+            return SslContextBuilder.forServer(cert.toKeyManagerFactory())
                     .sslProvider(OPENSSL)
                     .ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
                     .build();

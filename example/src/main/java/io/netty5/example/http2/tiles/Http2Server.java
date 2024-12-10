@@ -31,11 +31,9 @@ import io.netty5.handler.ssl.ApplicationProtocolNames;
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SupportedCipherSuiteFilter;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.concurrent.Future;
-
-import javax.net.ssl.SSLException;
-import java.security.cert.CertificateException;
 
 import static io.netty5.handler.codec.http2.Http2SecurityUtil.CIPHERS;
 
@@ -69,8 +67,11 @@ public class Http2Server {
         return ch.closeFuture();
     }
 
-    private static SslContext configureTLS() throws CertificateException, SSLException {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+    private static SslContext configureTLS() throws Exception {
+        X509Bundle cert = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
         ApplicationProtocolConfig apn = new ApplicationProtocolConfig(
                 Protocol.ALPN,
                 // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
@@ -80,7 +81,7 @@ public class Http2Server {
                 ApplicationProtocolNames.HTTP_2,
                 ApplicationProtocolNames.HTTP_1_1);
 
-        return SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
+        return SslContextBuilder.forServer(cert.toKeyManagerFactory())
                                 .ciphers(CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
                                 .applicationProtocolConfig(apn).build();
     }
