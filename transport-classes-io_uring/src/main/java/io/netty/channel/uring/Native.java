@@ -194,6 +194,8 @@ final class Native {
     static final byte IORING_OP_FTRUNCATE = 55;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
 
+    static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
+
     static final int SPLICE_F_MOVE = 1;
 
     static String opToStr(byte op) {
