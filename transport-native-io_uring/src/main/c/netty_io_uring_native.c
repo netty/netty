@@ -259,7 +259,7 @@ done:
 }
 
 
-static jobjectArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries) {
+static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries) {
     struct io_uring_params p;
     memset(&p, 0, sizeof(p));
 
@@ -267,19 +267,8 @@ static jobjectArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries
     p.flags = IORING_SETUP_SUBMIT_ALL;
 #endif
 
-    jobjectArray array = (*env)->NewObjectArray(env, 2, longArrayClass, NULL);
+    jobjectArray array = (*env)->NewObjectArray(env, 21, longArrayClass, NULL);
     if (array == NULL) {
-        // This will put an OOME on the stack
-        return NULL;
-    }
-    jlongArray submissionArray = (*env)->NewLongArray(env, 11);
-    if (submissionArray == NULL) {
-        // This will put an OOME on the stack
-        return NULL;
-
-    }
-    jlongArray completionArray = (*env)->NewLongArray(env, 9);
-    if (completionArray == NULL) {
         // This will put an OOME on the stack
         return NULL;
     }
@@ -317,7 +306,7 @@ static jobjectArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries
         (jlong)io_uring_ring.sq.ring_ptr,
         (jlong)ring_fd
     };
-    (*env)->SetLongArrayRegion(env, submissionArray, 0, 11, submissionArrayElements);
+    (*env)->SetLongArrayRegion(env, array, 0, 11, submissionArrayElements);
 
     jlong completionArrayElements[] = {
         (jlong)io_uring_ring.cq.khead,
@@ -330,10 +319,10 @@ static jobjectArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries
         (jlong)io_uring_ring.cq.ring_ptr,
         (jlong)ring_fd
     };
-    (*env)->SetLongArrayRegion(env, completionArray, 0, 9, completionArrayElements);
+    (*env)->SetLongArrayRegion(env, array, 11, 9, completionArrayElements);
 
-    (*env)->SetObjectArrayElement(env, array, 0, submissionArray);
-    (*env)->SetObjectArrayElement(env, array, 1, completionArray);
+    jlong features = (jlong) p.features;
+    (*env)->SetLongArrayRegion(env, array, 20, 1, &features);
     return array;
 }
 
@@ -615,7 +604,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 
 static const JNINativeMethod method_table[] = {
-    {"ioUringSetup", "(I)[[J", (void *) netty_io_uring_setup},
+    {"ioUringSetup", "(I)[J", (void *) netty_io_uring_setup},
     {"ioUringProbe", "(I[I)Z", (void *) netty_io_uring_probe},
     {"ioUringExit", "(JIJIJII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "(Ljava/lang/String;)I", (void *) netty_create_file},
