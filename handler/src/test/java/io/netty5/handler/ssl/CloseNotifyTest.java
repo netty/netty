@@ -20,9 +20,9 @@ import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.SimpleChannelInboundHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -148,10 +148,13 @@ public class CloseNotifyTest {
     private static EmbeddedChannel initChannel(SslProvider provider, String protocol, final boolean useClientMode,
             final BlockingQueue<Object> eventQueue) throws Exception {
 
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
+        X509Bundle cert = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
         final SslContext sslContext = (useClientMode
                 ? SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
-                : SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()))
+                : SslContextBuilder.forServer(cert.toKeyManagerFactory()))
                  .sslProvider(provider)
                  .protocols(protocol)
                 .build();
@@ -222,11 +225,9 @@ public class CloseNotifyTest {
 
     static void assertCloseNotify(@Nullable Buffer closeNotify) {
         assertThat(closeNotify, notNullValue());
-        try {
+        try (closeNotify) {
             assertThat("Doesn't match expected length of close_notify alert",
                     closeNotify.readableBytes(), greaterThanOrEqualTo(7));
-        } finally {
-            closeNotify.close();
         }
     }
 }
