@@ -30,7 +30,6 @@ import io.netty.util.internal.ThrowableUtil;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -293,36 +292,32 @@ final class Native {
 
     static RingBuffer createRingBuffer(int ringSize) {
         ObjectUtil.checkPositive(ringSize, "ringSize");
-        long[][] values = ioUringSetup(ringSize);
-        assert values.length == 2;
-        long[] completionQueueArgs = values[1];
-        assert completionQueueArgs.length == 9;
+        long[] values = ioUringSetup(ringSize);
+        assert values.length == 21;
         CompletionQueue completionQueue = new CompletionQueue(
-                completionQueueArgs[0],
-                completionQueueArgs[1],
-                completionQueueArgs[2],
-                completionQueueArgs[3],
-                completionQueueArgs[4],
-                completionQueueArgs[5],
-                (int) completionQueueArgs[6],
-                completionQueueArgs[7],
-                (int) completionQueueArgs[8]);
-        long[] submissionQueueArgs = values[0];
-        assert submissionQueueArgs.length == 11;
+                values[0],
+                values[1],
+                values[2],
+                values[3],
+                values[4],
+                values[5],
+                (int) values[6],
+                values[7],
+                (int) values[8]);
         SubmissionQueue submissionQueue = new SubmissionQueue(
-                submissionQueueArgs[0],
-                submissionQueueArgs[1],
-                submissionQueueArgs[2],
-                submissionQueueArgs[3],
-                submissionQueueArgs[4],
-                submissionQueueArgs[5],
-                submissionQueueArgs[6],
-                submissionQueueArgs[7],
-                (int) submissionQueueArgs[8],
-                submissionQueueArgs[9],
-                (int) submissionQueueArgs[10],
+                values[9],
+                values[10],
+                values[11],
+                values[12],
+                values[13],
+                values[14],
+                values[15],
+                values[16],
+                (int) values[17],
+                values[18],
+                (int) values[19],
                 completionQueue);
-        return new RingBuffer(submissionQueue, completionQueue);
+        return new RingBuffer(submissionQueue, completionQueue, (int) values[20]);
     }
 
     static void checkAllIOSupported(int ringFd) {
@@ -388,7 +383,7 @@ final class Native {
     }
 
     private static native boolean ioUringProbe(int ringFd, int[] ios);
-    private static native long[][] ioUringSetup(int entries);
+    private static native long[] ioUringSetup(int entries);
 
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
