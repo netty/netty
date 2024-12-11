@@ -362,6 +362,7 @@ public final class IoUringIoOps implements IoOps {
      *
      * @param fd                                    the filedescriptor
      * @param flags                                 the flags.
+     * @param ioPrio                                the ioPrio.
      * @param recvFlags                             the recv flags.
      * @param memoryAddress                         the memory address of the buffer
      * @param length                                the length of the buffer.
@@ -369,8 +370,8 @@ public final class IoUringIoOps implements IoOps {
      * @return                                      ops.
      */
     static IoUringIoOps newRecv(
-            int fd, byte flags, int recvFlags, long memoryAddress, int length, short data) {
-        return new IoUringIoOps(Native.IORING_OP_RECV, flags, (short) 0, fd,
+            int fd, byte flags, short ioPrio, int recvFlags, long memoryAddress, int length, short data) {
+        return new IoUringIoOps(Native.IORING_OP_RECV, flags, ioPrio, fd,
                 0, memoryAddress, length, recvFlags, data, (short) 0, (short) 0, 0, 0);
     }
 
