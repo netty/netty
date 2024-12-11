@@ -267,7 +267,7 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries) 
     p.flags = IORING_SETUP_SUBMIT_ALL;
 #endif
 
-    jobjectArray array = (*env)->NewObjectArray(env, 21, longArrayClass, NULL);
+    jlongArray array = (*env)->NewLongArray(env, 21);
     if (array == NULL) {
         // This will put an OOME on the stack
         return NULL;
@@ -293,6 +293,19 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries) 
         return NULL;
     }
 
+    jlong completionArrayElements[] = {
+        (jlong)io_uring_ring.cq.khead,
+        (jlong)io_uring_ring.cq.ktail,
+        (jlong)io_uring_ring.cq.kring_mask,
+        (jlong)io_uring_ring.cq.kring_entries,
+        (jlong)io_uring_ring.cq.koverflow,
+        (jlong)io_uring_ring.cq.cqes,
+        (jlong)io_uring_ring.cq.ring_sz,
+        (jlong)io_uring_ring.cq.ring_ptr,
+        (jlong)ring_fd
+    };
+    (*env)->SetLongArrayRegion(env, array, 0, 9, completionArrayElements);
+
     jlong submissionArrayElements[] = {
         (jlong)io_uring_ring.sq.khead,
         (jlong)io_uring_ring.sq.ktail,
@@ -306,20 +319,7 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries) 
         (jlong)io_uring_ring.sq.ring_ptr,
         (jlong)ring_fd
     };
-    (*env)->SetLongArrayRegion(env, array, 0, 11, submissionArrayElements);
-
-    jlong completionArrayElements[] = {
-        (jlong)io_uring_ring.cq.khead,
-        (jlong)io_uring_ring.cq.ktail,
-        (jlong)io_uring_ring.cq.kring_mask,
-        (jlong)io_uring_ring.cq.kring_entries,
-        (jlong)io_uring_ring.cq.koverflow,
-        (jlong)io_uring_ring.cq.cqes,
-        (jlong)io_uring_ring.cq.ring_sz,
-        (jlong)io_uring_ring.cq.ring_ptr,
-        (jlong)ring_fd
-    };
-    (*env)->SetLongArrayRegion(env, array, 11, 9, completionArrayElements);
+    (*env)->SetLongArrayRegion(env, array, 9, 11, submissionArrayElements);
 
     jlong features = (jlong) p.features;
     (*env)->SetLongArrayRegion(env, array, 20, 1, &features);
