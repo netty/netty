@@ -40,7 +40,7 @@ public class SpdyFrameCodecTest {
 
     @Test
     public void testDecodeUnknownFrame() {
-        final SpdyFrameEncoder encoder = codec.encoder();
+        final SpdyFrameEncoder encoder = new SpdyFrameEncoder(SpdyVersion.SPDY_3_1);
         final ByteBuf buf = encoder.encodeUnknownFrame(
             UnpooledByteBufAllocator.DEFAULT,
             200,
