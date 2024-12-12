@@ -88,9 +88,6 @@ public final class DefaultSpdyUnknownFrame extends DefaultByteBufHolder implemen
         if (!(o instanceof DefaultSpdyUnknownFrame)) {
             return false;
         }
-        if (!super.equals(o)) {
-            return false;
-        }
         final DefaultSpdyUnknownFrame that = (DefaultSpdyUnknownFrame) o;
         return frameType == that.frameType
             && flags == that.flags
