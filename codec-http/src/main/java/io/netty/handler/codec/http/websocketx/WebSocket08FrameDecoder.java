@@ -454,7 +454,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
 
     private static int toFrameLength(long l) {
         if (l > Integer.MAX_VALUE) {
-            throw new TooLongFrameException("Length:" + l);
+            throw new TooLongFrameException("frame length exceeds " + Integer.MAX_VALUE + ": " + l);
         } else {
             return (int) l;
         }
