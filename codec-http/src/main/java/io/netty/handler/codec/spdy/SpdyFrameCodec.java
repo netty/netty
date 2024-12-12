@@ -531,10 +531,13 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
         }
     }
 
-    public void readUnknownFrame(int frameType, byte flags, ByteBuf payload) {
+    private void readUnknownFrame(int frameType, byte flags, ByteBuf payload) {
         read = true;
-        SpdyUnknownFrame spdyUnknownFrame = new DefaultSpdyUnknownFrame(frameType, flags, payload);
-        ctx.fireChannelRead(spdyUnknownFrame);
+        ctx.fireChannelRead(newSpdyUnknownFrame(frameType, flags, payload));
+    }
+
+    protected SpdyUnknownFrame newSpdyUnknownFrame(int frameType, byte flags, ByteBuf payload) {
+        return new DefaultSpdyUnknownFrame(frameType, flags, payload);
     }
 
     /**
