@@ -326,12 +326,16 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
             ctx.write(frame, promise);
         } else if (msg instanceof SpdyUnknownFrame) {
             SpdyUnknownFrame spdyUnknownFrame = (SpdyUnknownFrame) msg;
-            frame = spdyFrameEncoder.encodeUnknownFrame(
-                ctx.alloc(),
-                spdyUnknownFrame.frameType(),
-                spdyUnknownFrame.flags(),
-                spdyUnknownFrame.content());
-            ctx.write(frame, promise);
+            try {
+                frame = spdyFrameEncoder.encodeUnknownFrame(
+                        ctx.alloc(),
+                        spdyUnknownFrame.frameType(),
+                        spdyUnknownFrame.flags(),
+                        spdyUnknownFrame.content());
+                ctx.write(frame, promise);
+            } finally {
+                spdyUnknownFrame.release();
+            }
         } else {
             throw new UnsupportedMessageTypeException(msg);
         }
@@ -461,7 +465,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
     /**
      * Check whether the unknown frame is valid, if not, the frame will be discarded,
      * otherwise, the frame will be passed to {@link SpdyFrameDecoder#decodeUnknownFrame(int, byte, int, ByteBuf)}.
-     *
+     * <p>
      * By default this method always returns {@code false}, sub-classes may override this.
      **/
     protected boolean isValidUnknownFrameHeader(@SuppressWarnings("unused") int streamId,
@@ -474,13 +478,5 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
     @Override
     public void readFrameError(String message) {
         ctx.fireExceptionCaught(INVALID_FRAME);
-    }
-
-    protected SpdyFrameDecoder decoder() {
-        return spdyFrameDecoder;
-    }
-
-    protected SpdyFrameEncoder encoder() {
-        return spdyFrameEncoder;
     }
 }
