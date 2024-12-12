@@ -53,6 +53,7 @@ public class SpdyFrameCodecTest {
         Assertions.assertEquals((byte) 13, frame.flags());
         ByteBuf data = frame.content();
         Assertions.assertEquals("Hello, world!", data.toString(CharsetUtil.UTF_8));
+        data.release();
     }
 
     @Test
@@ -71,6 +72,7 @@ public class SpdyFrameCodecTest {
         Assertions.assertEquals((byte) 13, frame.flags());
         ByteBuf data = frame.content();
         Assertions.assertEquals("Hello, world!", data.toString(CharsetUtil.UTF_8));
+        data.release();
     }
 
 }
