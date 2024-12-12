@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBuf;
 /**
  * {@link SpdyFrameDecoderDelegate} that also supports unknown frames.
  */
-public interface SpdyFrameDecoderExtendedDelegate extends SpdyFrameDecoderDelegate {
+interface SpdyFrameDecoderExtendedDelegate extends SpdyFrameDecoderDelegate {
 
     /**
      * Called when an unknown frame is received.
