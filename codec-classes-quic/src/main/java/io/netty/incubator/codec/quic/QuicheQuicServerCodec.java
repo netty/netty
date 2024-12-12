@@ -165,7 +165,9 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
             // The remote peer did not send a token.
             if (tokenHandler.writeToken(mintTokenBuffer, dcid, sender)) {
                 ByteBuffer connId = connectionIdAddressGenerator.newId(
-                        dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()), localConnIdLength);
+                        scid.internalNioBuffer(scid.readerIndex(), scid.readableBytes()),
+                        dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()),
+                        localConnIdLength);
                 connIdBuffer.writeBytes(connId);
 
                 ByteBuf out = ctx.alloc().directBuffer(Quic.MAX_DATAGRAM_SIZE);
@@ -205,7 +207,9 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         if (noToken) {
             connIdBuffer.clear();
             key = connectionIdAddressGenerator.newId(
-                    dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()), localConnIdLength);
+                    scid.internalNioBuffer(scid.readerIndex(), scid.readableBytes()),
+                    dcid.internalNioBuffer(dcid.readerIndex(), dcid.readableBytes()),
+                    localConnIdLength);
             connIdBuffer.writeBytes(key.duplicate());
             scidAddr = Quiche.readerMemoryAddress(connIdBuffer);
             scidLen = localConnIdLength;

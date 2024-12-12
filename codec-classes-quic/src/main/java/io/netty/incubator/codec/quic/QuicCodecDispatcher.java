@@ -281,6 +281,14 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
         }
 
         @Override
+        public ByteBuffer newId(ByteBuffer scid, ByteBuffer dcid, int length) {
+            if (length > Short.BYTES) {
+                return encodeIdx(idGenerator.newId(scid, dcid, length - Short.BYTES), idx);
+            }
+            return idGenerator.newId(scid, dcid, length);
+        }
+
+        @Override
         public int maxConnectionIdLength() {
             return idGenerator.maxConnectionIdLength();
         }
