@@ -32,7 +32,7 @@ import java.util.List;
  * A {@link ChannelHandler} that encodes and decodes SPDY Frames.
  */
 public class SpdyFrameCodec extends ByteToMessageDecoder
-        implements SpdyFrameDecoderExtendedDelegate, ChannelOutboundHandler {
+        implements SpdyFrameDecoderDelegate, ChannelOutboundHandler {
 
     protected static final SpdyProtocolException INVALID_FRAME =
         new SpdyProtocolException("Received invalid frame");
@@ -122,7 +122,83 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
             SpdyHeaderBlockDecoder spdyHeaderBlockDecoder, SpdyHeaderBlockEncoder spdyHeaderBlockEncoder,
             boolean validateHeaders, boolean supportsUnknownFrames) {
         this.supportsUnknownFrames = supportsUnknownFrames;
-        spdyFrameDecoder = createDecoder(version, this, maxChunkSize);
+        spdyFrameDecoder = createDecoder(version, supportsUnknownFrames ? new SpdyFrameDecoderExtendedDelegate() {
+            @Override
+            public void readUnknownFrame(int frameType, byte flags, ByteBuf payload) {
+                SpdyFrameCodec.this.readUnknownFrame(frameType, flags, payload);
+            }
+
+            @Override
+            public void readDataFrame(int streamId, boolean last, ByteBuf data) {
+                SpdyFrameCodec.this.readDataFrame(streamId, last, data);
+            }
+
+            @Override
+            public void readSynStreamFrame(int streamId, int associatedToStreamId, byte priority,
+                                           boolean last, boolean unidirectional) {
+                SpdyFrameCodec.this.readSynStreamFrame(streamId, associatedToStreamId, priority, last, unidirectional);
+            }
+
+            @Override
+            public void readSynReplyFrame(int streamId, boolean last) {
+                SpdyFrameCodec.this.readSynReplyFrame(streamId, last);
+            }
+
+            @Override
+            public void readRstStreamFrame(int streamId, int statusCode) {
+                SpdyFrameCodec.this.readRstStreamFrame(streamId, statusCode);
+            }
+
+            @Override
+            public void readSettingsFrame(boolean clearPersisted) {
+                SpdyFrameCodec.this.readSettingsFrame(clearPersisted);
+            }
+
+            @Override
+            public void readSetting(int id, int value, boolean persistValue, boolean persisted) {
+                SpdyFrameCodec.this.readSetting(id, value, persistValue, persisted);
+            }
+
+            @Override
+            public void readSettingsEnd() {
+                SpdyFrameCodec.this.readSettingsEnd();
+            }
+
+            @Override
+            public void readPingFrame(int id) {
+                SpdyFrameCodec.this.readPingFrame(id);
+            }
+
+            @Override
+            public void readGoAwayFrame(int lastGoodStreamId, int statusCode) {
+                SpdyFrameCodec.this.readGoAwayFrame(lastGoodStreamId, statusCode);
+            }
+
+            @Override
+            public void readHeadersFrame(int streamId, boolean last) {
+                SpdyFrameCodec.this.readHeadersFrame(streamId, last);
+            }
+
+            @Override
+            public void readWindowUpdateFrame(int streamId, int deltaWindowSize) {
+                SpdyFrameCodec.this.readWindowUpdateFrame(streamId, deltaWindowSize);
+            }
+
+            @Override
+            public void readHeaderBlock(ByteBuf headerBlock) {
+                SpdyFrameCodec.this.readHeaderBlock(headerBlock);
+            }
+
+            @Override
+            public void readHeaderBlockEnd() {
+                SpdyFrameCodec.this.readHeaderBlockEnd();
+            }
+
+            @Override
+            public void readFrameError(String message) {
+                SpdyFrameCodec.this.readFrameError(message);
+            }
+        } : this, maxChunkSize);
         spdyFrameEncoder = createEncoder(version);
         this.spdyHeaderBlockDecoder = spdyHeaderBlockDecoder;
         this.spdyHeaderBlockEncoder = spdyHeaderBlockEncoder;
@@ -455,7 +531,6 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
         }
     }
 
-    @Override
     public void readUnknownFrame(int frameType, byte flags, ByteBuf payload) {
         read = true;
         SpdyUnknownFrame spdyUnknownFrame = new DefaultSpdyUnknownFrame(frameType, flags, payload);
