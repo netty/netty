@@ -298,7 +298,8 @@ public class HashedWheelTimerTest {
         }
     }
 
-    @Test()
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void cancelWillCallCallback() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final HashedWheelTimer timer = new HashedWheelTimer();
