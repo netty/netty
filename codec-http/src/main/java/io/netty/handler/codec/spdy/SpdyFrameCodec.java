@@ -293,14 +293,17 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;
-            frame = spdyFrameEncoder.encodeDataFrame(
+            try {
+                frame = spdyFrameEncoder.encodeDataFrame(
                     ctx.alloc(),
                     spdyDataFrame.streamId(),
                     spdyDataFrame.isLast(),
                     spdyDataFrame.content()
-            );
-            spdyDataFrame.release();
-            ctx.write(frame, promise);
+                );
+                ctx.write(frame, promise);
+            } finally {
+                spdyDataFrame.release();
+            }
 
         } else if (msg instanceof SpdySynStreamFrame) {
 
