@@ -34,11 +34,11 @@ import java.util.List;
 public class SpdyFrameCodec extends ByteToMessageDecoder
         implements SpdyFrameDecoderDelegate, ChannelOutboundHandler {
 
-    private static final SpdyProtocolException INVALID_FRAME =
-            new SpdyProtocolException("Received invalid frame");
+    protected static final SpdyProtocolException INVALID_FRAME =
+        new SpdyProtocolException("Received invalid frame");
 
-    private final SpdyFrameDecoder spdyFrameDecoder;
-    private final SpdyFrameEncoder spdyFrameEncoder;
+    protected final SpdyFrameDecoder spdyFrameDecoder;
+    protected final SpdyFrameEncoder spdyFrameEncoder;
     private final SpdyHeaderBlockDecoder spdyHeaderBlockDecoder;
     private final SpdyHeaderBlockEncoder spdyHeaderBlockEncoder;
 
@@ -48,6 +48,7 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
     private ChannelHandlerContext ctx;
     private boolean read;
     private final boolean validateHeaders;
+    private final boolean supportsUnknownFrames;
 
     /**
      * Creates a new instance with the specified {@code version},
@@ -92,17 +93,56 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
             int compressionLevel, int windowBits, int memLevel, boolean validateHeaders) {
         this(version, maxChunkSize,
                 SpdyHeaderBlockDecoder.newInstance(version, maxHeaderSize),
-                SpdyHeaderBlockEncoder.newInstance(version, compressionLevel, windowBits, memLevel), validateHeaders);
+                SpdyHeaderBlockEncoder.newInstance(version, compressionLevel, windowBits, memLevel),
+                validateHeaders, false);
+    }
+
+    /**
+     * Creates a new instance with the specified {@code version}, {@code validateHeaders},
+     * decoder and encoder options.
+     */
+    public SpdyFrameCodec(
+            SpdyVersion version, int maxChunkSize, int maxHeaderSize,
+            int compressionLevel, int windowBits, int memLevel, boolean validateHeaders,
+            boolean supportsUnknownFrames) {
+        this(version, maxChunkSize,
+                SpdyHeaderBlockDecoder.newInstance(version, maxHeaderSize),
+                SpdyHeaderBlockEncoder.newInstance(version, compressionLevel, windowBits, memLevel),
+                validateHeaders, supportsUnknownFrames);
+    }
+
+    protected SpdyFrameCodec(SpdyVersion version, int maxChunkSize,
+                             SpdyHeaderBlockDecoder spdyHeaderBlockDecoder,
+                             SpdyHeaderBlockEncoder spdyHeaderBlockEncoder,
+                             boolean validateHeaders) {
+        this(version, maxChunkSize, spdyHeaderBlockDecoder, spdyHeaderBlockEncoder, validateHeaders, false);
     }
 
     protected SpdyFrameCodec(SpdyVersion version, int maxChunkSize,
             SpdyHeaderBlockDecoder spdyHeaderBlockDecoder, SpdyHeaderBlockEncoder spdyHeaderBlockEncoder,
-            boolean validateHeaders) {
-        spdyFrameDecoder = new SpdyFrameDecoder(version, this, maxChunkSize);
-        spdyFrameEncoder = new SpdyFrameEncoder(version);
+            boolean validateHeaders, boolean supportsUnknownFrames) {
+        this.supportsUnknownFrames = supportsUnknownFrames;
+        spdyFrameDecoder = createDecoder(version, this, maxChunkSize);
+        spdyFrameEncoder = createEncoder(version);
         this.spdyHeaderBlockDecoder = spdyHeaderBlockDecoder;
         this.spdyHeaderBlockEncoder = spdyHeaderBlockEncoder;
         this.validateHeaders = validateHeaders;
+    }
+
+    protected SpdyFrameDecoder createDecoder(SpdyVersion version, SpdyFrameDecoderDelegate delegate, int maxChunkSize) {
+        return new SpdyFrameDecoder(version, delegate, maxChunkSize) {
+            @Override
+            protected boolean isValidUnknownFrameHeader(int streamId, int type, byte flags, int length) {
+                if (supportsUnknownFrames) {
+                    return SpdyFrameCodec.this.isValidUnknownFrameHeader(streamId, type, flags, length);
+                }
+                return super.isValidUnknownFrameHeader(streamId, type, flags, length);
+            }
+        };
+    }
+
+    protected SpdyFrameEncoder createEncoder(SpdyVersion version) {
+        return new SpdyFrameEncoder(version);
     }
 
     @Override
@@ -284,6 +324,18 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
                     spdyWindowUpdateFrame.deltaWindowSize()
             );
             ctx.write(frame, promise);
+        } else if (msg instanceof SpdyUnknownFrame) {
+            SpdyUnknownFrame spdyUnknownFrame = (SpdyUnknownFrame) msg;
+            try {
+                frame = spdyFrameEncoder.encodeUnknownFrame(
+                        ctx.alloc(),
+                        spdyUnknownFrame.frameType(),
+                        spdyUnknownFrame.flags(),
+                        spdyUnknownFrame.content());
+                ctx.write(frame, promise);
+            } finally {
+                spdyUnknownFrame.release();
+            }
         } else {
             throw new UnsupportedMessageTypeException(msg);
         }
@@ -401,6 +453,29 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
 
             ctx.fireChannelRead(frame);
         }
+    }
+
+    @Override
+    public void readUnknownFrame(int frameType, byte flags, ByteBuf payload) {
+        read = true;
+        ctx.fireChannelRead(newSpdyUnknownFrame(frameType, flags, payload));
+    }
+
+    protected SpdyUnknownFrame newSpdyUnknownFrame(int frameType, byte flags, ByteBuf payload) {
+        return new DefaultSpdyUnknownFrame(frameType, flags, payload);
+    }
+
+    /**
+     * Check whether the unknown frame is valid, if not, the frame will be discarded,
+     * otherwise, the frame will be passed to {@link SpdyFrameDecoder#decodeUnknownFrame(int, byte, int, ByteBuf)}.
+     * <p>
+     * By default this method always returns {@code false}, sub-classes may override this.
+     **/
+    protected boolean isValidUnknownFrameHeader(@SuppressWarnings("unused") int streamId,
+                                                @SuppressWarnings("unused") int type,
+                                                @SuppressWarnings("unused") byte flags,
+                                                @SuppressWarnings("unused") int length) {
+        return false;
     }
 
     @Override
