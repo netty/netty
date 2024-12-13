@@ -99,8 +99,8 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 variableHeader = decodeVariableHeader(ctx, buffer, mqttFixedHeader);
                 if (bytesRemainingBeforeVariableHeader > maxBytesInMessage) {
                     buffer.skipBytes(actualReadableBytes());
-                    throw new TooLongFrameException(
-                            "too large message: " + bytesRemainingBeforeVariableHeader + " bytes");
+                    throw new TooLongFrameException("message length exceeds " + maxBytesInMessage + ": "
+                            + bytesRemainingBeforeVariableHeader);
                 }
                 checkpoint(DecoderState.READ_PAYLOAD);
                 // fall through
