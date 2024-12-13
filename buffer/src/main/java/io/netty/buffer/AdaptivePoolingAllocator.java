@@ -109,8 +109,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
      * This means the maximum amount of memory that we can have allocated-but-not-in-use is
      * 5 * {@link NettyRuntime#availableProcessors()} * {@link #MAX_CHUNK_SIZE} bytes.
      */
-    private static final int CENTRAL_QUEUE_CAPACITY = SystemPropertyUtil.getInt(
-            "io.netty.allocator.centralQueueCapacity", NettyRuntime.availableProcessors());
+    private static final int CENTRAL_QUEUE_CAPACITY = Math.min(2, SystemPropertyUtil.getInt(
+            "io.netty.allocator.centralQueueCapacity", NettyRuntime.availableProcessors()));
 
     /**
      * The capacity if the magazine local buffer queue. This queue just pools the outer ByteBuf instance and not
