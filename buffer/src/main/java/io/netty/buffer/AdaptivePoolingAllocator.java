@@ -878,7 +878,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             } finally {
                 if (chunk != null) {
                     // If chunk is not null we know that buf.init(...) failed and so we need to manually release
-                    // the chunk again as we retained it before calling buf.init(...).
+                    // the chunk again as we retained it before calling buf.init(...). Beside this we also need to
+                    // restore the old allocatedBytes value.
+                    allocatedBytes = startIndex;
                     chunk.release();
                 }
             }
