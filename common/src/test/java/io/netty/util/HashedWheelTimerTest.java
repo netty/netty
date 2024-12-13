@@ -298,6 +298,31 @@ public class HashedWheelTimerTest {
         }
     }
 
+    @Test
+    @org.junit.jupiter.api.Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void cancelWillCallCallback() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final HashedWheelTimer timer = new HashedWheelTimer();
+        final Timeout t1 = timer.newTimeout(new TimerTask() {
+            @Override
+            public void run(Timeout timeout) {
+                fail();
+            }
+
+            @Override
+            public void cancelled(Timeout timeout) {
+                latch.countDown();
+            }
+        }, 90, TimeUnit.MILLISECONDS);
+
+        assertEquals(1, timer.pendingTimeouts());
+        t1.cancel();
+        latch.await();
+
+        assertEquals(0, timer.pendingTimeouts());
+        timer.stop();
+    }
+
     private static TimerTask createNoOpTimerTask() {
         return new TimerTask() {
             @Override

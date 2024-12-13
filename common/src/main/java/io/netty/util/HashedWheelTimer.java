@@ -552,7 +552,7 @@ public class HashedWheelTimer implements Timer {
                     break;
                 }
                 try {
-                    timeout.remove();
+                    timeout.removeAfterCancellation();
                 } catch (Throwable t) {
                     if (logger.isWarnEnabled()) {
                         logger.warn("An exception was thrown while process a cancellation task", t);
@@ -665,13 +665,14 @@ public class HashedWheelTimer implements Timer {
             return true;
         }
 
-        void remove() {
+        void removeAfterCancellation() {
             HashedWheelBucket bucket = this.bucket;
             if (bucket != null) {
                 bucket.remove(this);
             } else {
                 timer.pendingTimeouts.decrementAndGet();
             }
+            task.cancelled(this);
         }
 
         public boolean compareAndSetState(int expected, int state) {
