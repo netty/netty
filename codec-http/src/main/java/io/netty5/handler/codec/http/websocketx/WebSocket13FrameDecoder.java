@@ -140,7 +140,7 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
 
     private static int toFrameLength(long length) {
         if (length > Integer.MAX_VALUE) {
-            throw new TooLongFrameException("Length:" + length);
+            throw new TooLongFrameException("frame length exceeds " + Integer.MAX_VALUE + ": " + length);
         } else {
             return (int) length;
         }
