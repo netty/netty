@@ -30,4 +30,14 @@ public interface TimerTask {
      * @param timeout a handle which is associated with this task
      */
     void run(Timeout timeout) throws Exception;
+
+    /**
+     * Called for {@link TimerTask}s that are successfully canceled via {@link Timeout#cancel()}. Overriding this
+     * method allows to for example run some cleanup.
+     *
+     * @param timeout a handle which is associated with this task
+     */
+    default void cancelled(Timeout timeout) {
+        // By default do nothing.
+    }
 }
