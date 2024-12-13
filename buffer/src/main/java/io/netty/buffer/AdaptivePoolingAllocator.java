@@ -624,7 +624,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 if (last.remainingCapacity() < RETIRE_CAPACITY) {
                     last.release();
                 } else {
-                    transferChunk(last);
+                    transferToNextInLineOrRelease(last);
                 }
             }
             if (curr.remainingCapacity() > size) {
@@ -646,7 +646,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                         curr.release();
                         current = newChunk;
                     } else {
-                        transferChunk(newChunk);
+                        transferToNextInLineOrRelease(newChunk);
                     }
                     newChunk = null;
                 } finally {
@@ -667,29 +667,24 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             }
         }
 
-        private void transferChunk(Chunk current) {
-            if (NEXT_IN_LINE.compareAndSet(this, null, current)) {
+        private void transferToNextInLineOrRelease(Chunk chunk) {
+            if (NEXT_IN_LINE.compareAndSet(this, null, chunk)) {
                 return;
             }
 
-            // Detach the chunk as we are about to offer it back for reuse.
-            current.detachFromMagazine();
-            if (parent.offerToQueue(current)) {
-                return;
-            }
-            // Attach it again
-            current.attachToMagazine(this);
             Chunk nextChunk = NEXT_IN_LINE.get(this);
             if (nextChunk != null && nextChunk != MAGAZINE_FREED
-                    && current.remainingCapacity() > nextChunk.remainingCapacity()) {
-                if (NEXT_IN_LINE.compareAndSet(this, nextChunk, current)) {
+                    && chunk.remainingCapacity() > nextChunk.remainingCapacity()) {
+                if (NEXT_IN_LINE.compareAndSet(this, nextChunk, chunk)) {
                     nextChunk.release();
                     return;
                 }
             }
-            // Next-in-line is occupied AND the central queue is full.
-            // Rare that we should get here, but we'll only do one allocation out of this chunk, then.
-            current.release();
+            // Next-in-line is occupied. We don't try to add it to the central queue yet as it might still be used
+            // by some buffers and so is attached to a Magazine.
+            // Once a Chunk is completely released by Chunk.release() it will try to move itself to the queue
+            // as last resort.
+            chunk.release();
         }
 
         private Chunk newChunkAllocation(int promptingSize) {
