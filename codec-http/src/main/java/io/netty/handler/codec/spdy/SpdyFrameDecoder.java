@@ -161,8 +161,7 @@ public class SpdyFrameDecoder {
                         return;
                     }
 
-                    ByteBuf data = buffer.alloc().buffer(dataLength);
-                    data.writeBytes(buffer, dataLength);
+                    ByteBuf data = buffer.readRetainedSlice(dataLength);
                     length -= dataLength;
 
                     if (length == 0) {
@@ -361,8 +360,7 @@ public class SpdyFrameDecoder {
                     }
 
                     int compressedBytes = Math.min(buffer.readableBytes(), length);
-                    ByteBuf headerBlock = buffer.alloc().buffer(compressedBytes);
-                    headerBlock.writeBytes(buffer, compressedBytes);
+                    ByteBuf headerBlock = buffer.readRetainedSlice(compressedBytes);
                     length -= compressedBytes;
 
                     delegate.readHeaderBlock(headerBlock);
@@ -445,8 +443,7 @@ public class SpdyFrameDecoder {
             return false;
         }
         if (delegate instanceof SpdyFrameDecoderExtendedDelegate) {
-            ByteBuf data = buffer.alloc().buffer(length);
-            data.writeBytes(buffer, length);
+            ByteBuf data = buffer.readRetainedSlice(length);
             ((SpdyFrameDecoderExtendedDelegate) delegate).readUnknownFrame(frameType, flags, data);
         } else {
             buffer.skipBytes(length);
