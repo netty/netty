@@ -441,7 +441,6 @@ public class SpdyFrameDecoder {
             return false;
         }
         ByteBuf data = buffer.readRetainedSlice(length);
-        data.writeBytes(buffer, length);
         delegate.readUnknownFrame(frameType, flags, data);
         return true;
     }
