@@ -576,6 +576,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             recordAllocationSize(sizeBucket);
             Chunk curr = current;
             if (curr != null) {
+                // We have a Chunk that has some space left.
                 if (curr.remainingCapacity() > size) {
                     curr.readInitInto(buf, size, maxCapacity);
                     // We still have some bytes left that we can use for the next allocation, just early return.
@@ -593,8 +594,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                         curr.release();
                     }
                 }
+
+                // Check if we either retain the chunk in the nextInLine cache or releasing it.
+                if (curr.remainingCapacity() < RETIRE_CAPACITY) {
+                    curr.release();
+                } else {
+                    // See if it makes sense to transfer the Chunk to the nextInLine cache for later usage.
+                    // This method will release curr if this is not the case
+                    transferToNextInLineOrRelease(curr);
+                }
             }
-            Chunk last = curr;
+
             assert current == null;
             // The fast-path for allocations did not work.
             //
@@ -610,51 +620,66 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     restoreMagazineFreed();
                     return false;
                 }
-            } else {
-                curr = parent.centralQueue.poll();
-                if (curr == null) {
-                    curr = newChunkAllocation(size);
-                } else {
-                    curr.attachToMagazine(this);
-                }
-            }
-            current = curr;
-            assert current != null;
-            if (last != null) {
-                if (last.remainingCapacity() < RETIRE_CAPACITY) {
-                    last.release();
-                } else {
-                    transferToNextInLineOrRelease(last);
-                }
-            }
-            if (curr.remainingCapacity() > size) {
-                curr.readInitInto(buf, size, maxCapacity);
-            } else if (curr.remainingCapacity() == size) {
-                try {
+
+                if (curr.remainingCapacity() > size) {
+                    // We have a Chunk that has some space left.
                     curr.readInitInto(buf, size, maxCapacity);
-                } finally {
+                    current = curr;
+                    return true;
+                }
+
+                if (curr.remainingCapacity() == size) {
+                    // At this point we know that this will be the last time curr will be used, so directly set it to
+                    // null and release it once we are done.
+                    try {
+                        curr.readInitInto(buf, size, maxCapacity);
+                        return true;
+                    } finally {
+                        // Release in a finally block so even if readInitInto(...) would throw we would still correctly
+                        // release the current chunk before null it out.
+                        curr.release();
+                    }
+                } else {
+                    // Release it as it's too small.
+                    curr.release();
+                }
+            }
+
+            // Now try to poll from the central queue first
+            curr = parent.centralQueue.poll();
+            if (curr == null) {
+                curr = newChunkAllocation(size);
+            } else {
+                curr.attachToMagazine(this);
+
+                if (curr.remainingCapacity() < size) {
+                    // Check if we either retain the chunk in the nextInLine cache or releasing it.
+                    if (curr.remainingCapacity() < RETIRE_CAPACITY) {
+                        curr.release();
+                    } else {
+                        // See if it makes sense to transfer the Chunk to the nextInLine cache for later usage.
+                        // This method will release curr if this is not the case
+                        transferToNextInLineOrRelease(curr);
+                    }
+                    curr = newChunkAllocation(size);
+                }
+            }
+
+            current = curr;
+            try {
+                assert current.remainingCapacity() >= size;
+                if (curr.remainingCapacity() > size) {
+                    curr.readInitInto(buf, size, maxCapacity);
+                    curr = null;
+                } else {
+                    curr.readInitInto(buf, size, maxCapacity);
+                }
+            } finally {
+                if (curr != null) {
                     // Release in a finally block so even if readInitInto(...) would throw we would still correctly
                     // release the current chunk before null it out.
                     curr.release();
                     current = null;
-                }
-            } else {
-                Chunk newChunk = newChunkAllocation(size);
-                try {
-                    newChunk.readInitInto(buf, size, maxCapacity);
-                    if (curr.remainingCapacity() < RETIRE_CAPACITY) {
-                        curr.release();
-                        current = newChunk;
-                    } else {
-                        transferToNextInLineOrRelease(newChunk);
-                    }
-                    newChunk = null;
-                } finally {
-                    if (newChunk != null) {
-                        assert current == null;
-                        // Something went wrong, let's ensure we not leak the newChunk.
-                        newChunk.release();
-                    }
                 }
             }
             return true;
