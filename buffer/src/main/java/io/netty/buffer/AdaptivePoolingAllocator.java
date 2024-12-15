@@ -107,7 +107,7 @@ final class AdaptivePoolingAllocator {
      * This means the maximum amount of memory that we can have allocated-but-not-in-use is
      * 5 * {@link NettyRuntime#availableProcessors()} * {@link #MAX_CHUNK_SIZE} bytes.
      */
-    private static final int CENTRAL_QUEUE_CAPACITY = Math.min(2, SystemPropertyUtil.getInt(
+    private static final int CENTRAL_QUEUE_CAPACITY = Math.max(2, SystemPropertyUtil.getInt(
             "io.netty.allocator.centralQueueCapacity", NettyRuntime.availableProcessors()));
 
     /**
