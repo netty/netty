@@ -45,9 +45,10 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.NetUtil;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.DatagramSocket;
@@ -57,9 +58,8 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -72,77 +72,80 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class PcapWriteHandlerTest {
 
     @Test
-    public void udpV4SharedOutputStreamTest() throws InterruptedException, IOException {
+    public void udpV4SharedOutputStreamTest() throws InterruptedException {
         udpV4(true, true);
     }
 
     @Test
-    public void udpV4NonOutputStream() throws InterruptedException, IOException {
+    public void udpV4NonOutputStream() throws InterruptedException {
         udpV4(false, true);
     }
 
     @Test
-    public void udpV4NoGlobalHeaderOutputStream() throws InterruptedException, IOException {
+    public void udpV4NoGlobalHeaderOutputStream() throws InterruptedException {
         udpV4(false, false);
     }
 
     private static void udpV4(boolean sharedOutputStream, boolean writeGlobalHeaders)
-            throws InterruptedException, IOException {
+            throws InterruptedException {
         ByteBuf byteBuf = Unpooled.buffer();
-
-        InetSocketAddress serverAddr = new InetSocketAddress("127.0.0.1", 0);
-        InetSocketAddress clientAddr = new InetSocketAddress("127.0.0.1", 0);
-
-        EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(2, NioIoHandler.newFactory());
-
-        // We'll bootstrap a UDP Server to avoid "Network Unreachable errors" when sending UDP Packet.
-        Bootstrap server = new Bootstrap()
-                .group(eventLoopGroup)
-                .channel(NioDatagramChannel.class)
-                .handler(new SimpleChannelInboundHandler<DatagramPacket>() {
-                    @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
-                        // Discard
-                    }
-                });
-
-        ChannelFuture channelFutureServer = server.bind(serverAddr).sync();
-        assertTrue(channelFutureServer.isSuccess());
-
-        CloseDetectingByteBufOutputStream outputStream = new CloseDetectingByteBufOutputStream(byteBuf);
-
-        // We'll bootstrap a UDP Client for sending UDP Packets to UDP Server.
-        Bootstrap client = new Bootstrap()
-                .group(eventLoopGroup)
-                .channel(NioDatagramChannel.class)
-                .handler(PcapWriteHandler.builder()
-                                         .sharedOutputStream(sharedOutputStream)
-                                         .writePcapGlobalHeader(writeGlobalHeaders)
-                                         .build(outputStream));
-
-        ChannelFuture channelFutureClient =
-                client.bind(clientAddr).sync();
-        assertTrue(channelFutureClient.isSuccess());
-
-        Channel clientChannel = channelFutureClient.channel();
         ByteBuf payload = Unpooled.wrappedBuffer("Meow".getBytes());
-        DatagramPacket datagram = new DatagramPacket(payload.copy(),
-                                                     (InetSocketAddress) channelFutureServer.channel().localAddress());
-        assertTrue(clientChannel.writeAndFlush(datagram).sync().isSuccess());
-        assertTrue(eventLoopGroup.shutdownGracefully().sync().isSuccess());
 
-        // if sharedOutputStream is true or writeGlobalHeaders is false, we don't verify the global headers.
-        verifyUdpCapture(!sharedOutputStream && writeGlobalHeaders,
-                         byteBuf, payload,
-                         (InetSocketAddress) channelFutureServer.channel().localAddress(),
-                         (InetSocketAddress) clientChannel.localAddress()
-        );
+        try {
+            InetSocketAddress serverAddr = new InetSocketAddress("127.0.0.1", 0);
+            InetSocketAddress clientAddr = new InetSocketAddress("127.0.0.1", 0);
 
-        assertTrue(byteBuf.release());
+            EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
 
-        // If sharedOutputStream is true, we don't close the outputStream.
-        // If sharedOutputStream is false, we close the outputStream.
-        assertEquals(!sharedOutputStream, outputStream.closeCalled());
+            // We'll bootstrap a UDP Server to avoid "Network Unreachable errors" when sending UDP Packet.
+            Bootstrap server = new Bootstrap()
+                    .group(eventLoopGroup)
+                    .channel(NioDatagramChannel.class)
+                    .handler(new SimpleChannelInboundHandler<DatagramPacket>() {
+                        @Override
+                        protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
+                            // Discard
+                        }
+                    });
+
+            ChannelFuture channelFutureServer = server.bind(serverAddr).sync();
+            assertTrue(channelFutureServer.isSuccess());
+
+            CloseDetectingByteBufOutputStream outputStream = new CloseDetectingByteBufOutputStream(byteBuf);
+
+            // We'll bootstrap a UDP Client for sending UDP Packets to UDP Server.
+            Bootstrap client = new Bootstrap()
+                    .group(eventLoopGroup)
+                    .channel(NioDatagramChannel.class)
+                    .handler(PcapWriteHandler.builder()
+                            .sharedOutputStream(sharedOutputStream)
+                            .writePcapGlobalHeader(writeGlobalHeaders)
+                            .build(outputStream));
+
+            ChannelFuture channelFutureClient =
+                    client.bind(clientAddr).sync();
+            assertTrue(channelFutureClient.isSuccess());
+
+            Channel clientChannel = channelFutureClient.channel();
+            DatagramPacket datagram = new DatagramPacket(payload.copy(),
+                    (InetSocketAddress) channelFutureServer.channel().localAddress());
+            assertTrue(clientChannel.writeAndFlush(datagram).sync().isSuccess());
+            assertTrue(eventLoopGroup.shutdownGracefully().sync().isSuccess());
+
+            // if sharedOutputStream is true or writeGlobalHeaders is false, we don't verify the global headers.
+            verifyUdpCapture(!sharedOutputStream && writeGlobalHeaders,
+                    byteBuf, payload,
+                    (InetSocketAddress) channelFutureServer.channel().localAddress(),
+                    (InetSocketAddress) clientChannel.localAddress()
+            );
+
+            // If sharedOutputStream is true, we don't close the outputStream.
+            // If sharedOutputStream is false, we close the outputStream.
+            assertEquals(!sharedOutputStream, outputStream.closeCalled());
+        } finally {
+            byteBuf.release();
+            payload.release();
+        }
     }
 
     @Test
@@ -150,30 +153,37 @@ public class PcapWriteHandlerTest {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.wrappedBuffer("Meow".getBytes());
 
-        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        try {
+            InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
-        // We fake a client
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(
-                PcapWriteHandler.builder()
-                                .forceUdpChannel(clientAddr, serverAddr)
-                                .build(new ByteBufOutputStream(pcapBuffer))
-        );
+            // We fake a client
+            EmbeddedChannel embeddedChannel = new EmbeddedChannel(
+                    PcapWriteHandler.builder()
+                            .forceUdpChannel(clientAddr, serverAddr)
+                            .build(new ByteBufOutputStream(pcapBuffer))
+            );
 
-        assertTrue(embeddedChannel.writeOutbound(payload));
-        assertEquals(payload, embeddedChannel.readOutbound());
+            assertTrue(embeddedChannel.writeOutbound(payload.retainedDuplicate()));
+            ByteBuf read = embeddedChannel.readOutbound();
+            assertEquals(payload, read);
+            read.release();
 
-        assertTrue(embeddedChannel.writeInbound(payload));
-        assertEquals(payload, embeddedChannel.<ByteBuf>readInbound());
+            assertTrue(embeddedChannel.writeInbound(payload.retainedDuplicate()));
+            read = embeddedChannel.readInbound();
+            assertEquals(payload, read);
+            read.release();
 
-        // Verify the capture data
-        verifyUdpCapture(true, pcapBuffer, payload, serverAddr, clientAddr);
+            // Verify the capture data
+            verifyUdpCapture(true, pcapBuffer, payload, serverAddr, clientAddr);
 
-        verifyUdpCapture(false, pcapBuffer, payload, clientAddr, serverAddr);
+            verifyUdpCapture(false, pcapBuffer, payload, clientAddr, serverAddr);
 
-        assertTrue(pcapBuffer.release());
-
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
+        } finally {
+            pcapBuffer.release();
+            payload.release();
+        }
     }
 
     @Test
@@ -181,24 +191,29 @@ public class PcapWriteHandlerTest {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.wrappedBuffer("Meow".getBytes());
 
-        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        // for ipv6 ::, it's allowed to connect to ipv4 on some systems
-        InetSocketAddress clientAddr = new InetSocketAddress("::", 3456);
+        try {
+            InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            // for ipv6 ::, it's allowed to connect to ipv4 on some systems
+            InetSocketAddress clientAddr = new InetSocketAddress("::", 3456);
 
-        // We fake a client
-        EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
-        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
-                                                           .build(new ByteBufOutputStream(pcapBuffer)));
+            // We fake a client
+            EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+            embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                    .build(new ByteBufOutputStream(pcapBuffer)));
 
-        assertTrue(embeddedChannel.writeOutbound(payload));
-        assertEquals(payload, embeddedChannel.readOutbound());
+            assertTrue(embeddedChannel.writeOutbound(payload.retainedDuplicate()));
+            ByteBuf read = embeddedChannel.readOutbound();
+            assertEquals(payload, read);
+            read.release();
 
-        // Verify the capture data
-        verifyUdpCapture(true, pcapBuffer, payload, serverAddr, new InetSocketAddress("0.0.0.0", 3456));
+            // Verify the capture data
+            verifyUdpCapture(true, pcapBuffer, payload, serverAddr, new InetSocketAddress("0.0.0.0", 3456));
 
-        assertTrue(pcapBuffer.release());
-
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
+        } finally {
+            pcapBuffer.release();
+            payload.release();
+        }
     }
 
     @Test
@@ -208,23 +223,28 @@ public class PcapWriteHandlerTest {
         String payloadString = new String(new char[65507 + 1]).replace('\0', 'X');
         final ByteBuf payload = Unpooled.wrappedBuffer(payloadString.getBytes());
 
-        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        try {
+            InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
-        // We fake a client
-        EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
-        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
-                                                           .build(new ByteBufOutputStream(pcapBuffer)));
+            // We fake a client
+            EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+            embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                    .build(new ByteBufOutputStream(pcapBuffer)));
 
-        assertTrue(embeddedChannel.writeOutbound(payload));
-        assertEquals(payload, embeddedChannel.readOutbound());
+            assertTrue(embeddedChannel.writeOutbound(payload.retainedDuplicate()));
+            ByteBuf read = embeddedChannel.readOutbound();
+            assertEquals(payload, read);
+            read.release();
 
-        // Verify only the PCAP global header was written. Large UDP payload should be discarded
-        assertEquals(24, pcapBuffer.readableBytes());
+            // Verify only the PCAP global header was written. Large UDP payload should be discarded
+            assertEquals(24, pcapBuffer.readableBytes());
 
-        assertTrue(pcapBuffer.release());
-
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
+        } finally {
+            pcapBuffer.release();
+            payload.release();
+        }
     }
 
     @Test
@@ -237,21 +257,25 @@ public class PcapWriteHandlerTest {
         String payloadString = new String(new char[65507 + 1]).replace('\0', 'X');
         final DatagramPacket datagram =
                 new DatagramPacket(Unpooled.wrappedBuffer(payloadString.getBytes()), serverAddr);
+        try {
+            // We fake a client
+            EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+            embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                    .build(new ByteBufOutputStream(pcapBuffer)));
 
-        // We fake a client
-        EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
-        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
-                                                           .build(new ByteBufOutputStream(pcapBuffer)));
+            assertTrue(embeddedChannel.writeOutbound(datagram.retainedDuplicate()));
+            DatagramPacket read = embeddedChannel.readOutbound();
+            assertEquals(datagram.content(), read.content());
+            read.release();
 
-        assertTrue(embeddedChannel.writeOutbound(datagram));
-        assertEquals(datagram, embeddedChannel.readOutbound());
+            // Verify only the PCAP global header was written. Large UDP payload should be discarded
+            assertEquals(24, pcapBuffer.readableBytes());
 
-        // Verify only the PCAP global header was written. Large UDP payload should be discarded
-        assertEquals(24, pcapBuffer.readableBytes());
-
-        assertTrue(pcapBuffer.release());
-
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
+        } finally {
+            pcapBuffer.release();
+            datagram.release();
+        }
     }
 
     @Test
@@ -259,28 +283,35 @@ public class PcapWriteHandlerTest {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
 
-        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        try {
+            InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
-        // We fake a client
-        EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
-        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
-                                                           .captureZeroByte(true)
-                                                           .build(new ByteBufOutputStream(pcapBuffer)));
+            // We fake a client
+            EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+            embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                    .captureZeroByte(true)
+                    .build(new ByteBufOutputStream(pcapBuffer)));
 
-        assertTrue(embeddedChannel.writeOutbound(payload));
-        assertEquals(payload, embeddedChannel.readOutbound());
+            assertTrue(embeddedChannel.writeOutbound(payload.retainedDuplicate()));
+            ByteBuf read = embeddedChannel.readOutbound();
+            assertEquals(payload, read);
+            read.release();
 
-        assertTrue(embeddedChannel.writeInbound(payload));
-        assertEquals(payload, embeddedChannel.readInbound());
+            assertTrue(embeddedChannel.writeInbound(payload.retainedDuplicate()));
+            read = embeddedChannel.readInbound();
+            assertEquals(payload, read);
+            read.release();
 
-        verifyUdpCapture(true, pcapBuffer, payload, serverAddr, clientAddr);
+            verifyUdpCapture(true, pcapBuffer, payload, serverAddr, clientAddr);
 
-        verifyUdpCapture(false, pcapBuffer, payload, clientAddr, serverAddr);
+            verifyUdpCapture(false, pcapBuffer, payload, clientAddr, serverAddr);
 
-        assertTrue(pcapBuffer.release());
-
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
+        } finally {
+            pcapBuffer.release();
+            payload.release();
+        }
     }
 
     @Test
@@ -288,117 +319,142 @@ public class PcapWriteHandlerTest {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
 
-        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        try {
+            InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
-        // We fake a client
-        EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
-        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
-                                                           .build(new ByteBufOutputStream(pcapBuffer)));
+            // We fake a client
+            EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+            embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                    .build(new ByteBufOutputStream(pcapBuffer)));
 
-        assertTrue(embeddedChannel.writeOutbound(payload));
-        assertEquals(payload, embeddedChannel.readOutbound());
+            assertTrue(embeddedChannel.writeOutbound(payload.retainedDuplicate()));
+            ByteBuf read = embeddedChannel.readOutbound();
+            assertEquals(payload, read);
+            read.release();
 
-        assertTrue(embeddedChannel.writeInbound(payload));
-        assertEquals(payload, embeddedChannel.readInbound());
+            assertTrue(embeddedChannel.writeInbound(payload.retainedDuplicate()));
+            read = embeddedChannel.readInbound();
+            assertEquals(payload, read);
+            read.release();
 
-        // Verify only the PCAP global header was written. Large UDP payload should be discarded
-        assertEquals(24, pcapBuffer.readableBytes());
+            // Verify only the PCAP global header was written. Large UDP payload should be discarded
+            assertEquals(24, pcapBuffer.readableBytes());
 
-        assertTrue(pcapBuffer.release());
-
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
+        } finally {
+            pcapBuffer.release();
+            payload.release();
+        }
     }
 
     @Test
     public void udpZeroLengthDatagramCaptured() {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
-
         InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
         InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        final DatagramPacket outbound = new DatagramPacket(payload.retainedDuplicate(), serverAddr);
+        final DatagramPacket inbound = new DatagramPacket(payload.retainedDuplicate(), clientAddr, serverAddr);
+        try {
+            // We fake a client
+            EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+            embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                    .captureZeroByte(true)
+                    .build(new ByteBufOutputStream(pcapBuffer)));
 
-        // We fake a client
-        EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
-        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
-                                                           .captureZeroByte(true)
-                                                           .build(new ByteBufOutputStream(pcapBuffer)));
+            assertTrue(embeddedChannel.writeOutbound(outbound.retainedDuplicate()));
+            DatagramPacket read = embeddedChannel.readOutbound();
+            assertEquals(outbound.content(), read.content());
+            read.release();
 
-        final DatagramPacket outbound = new DatagramPacket(payload, serverAddr);
-        final DatagramPacket inbound = new DatagramPacket(payload, clientAddr, serverAddr);
+            assertTrue(embeddedChannel.writeInbound(inbound.retainedDuplicate()));
+            read = embeddedChannel.readInbound();
+            assertEquals(inbound.content(), read.content());
+            read.release();
 
-        assertTrue(embeddedChannel.writeOutbound(outbound));
-        assertEquals(outbound, embeddedChannel.readOutbound());
+            verifyUdpCapture(true, pcapBuffer, payload, serverAddr, clientAddr);
 
-        assertTrue(embeddedChannel.writeInbound(inbound));
-        assertEquals(inbound, embeddedChannel.readInbound());
+            verifyUdpCapture(false, pcapBuffer, payload, clientAddr, serverAddr);
 
-        verifyUdpCapture(true, pcapBuffer, payload, serverAddr, clientAddr);
-
-        verifyUdpCapture(false, pcapBuffer, payload, clientAddr, serverAddr);
-
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
+        } finally {
+            pcapBuffer.release();
+            payload.release();
+            outbound.release();
+            inbound.release();
+        }
     }
 
     @Test
     public void udpZeroLengthDatagramDiscarded() {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
-
         InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
         InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        final DatagramPacket outbound = new DatagramPacket(payload.retainedDuplicate(), serverAddr);
+        final DatagramPacket inbound = new DatagramPacket(payload.retainedDuplicate(), clientAddr, serverAddr);
+        try {
+            // We fake a client
+            EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+            embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                    .build(new ByteBufOutputStream(pcapBuffer)));
 
-        // We fake a client
-        EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
-        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
-                                                           .build(new ByteBufOutputStream(pcapBuffer)));
+            assertTrue(embeddedChannel.writeOutbound(outbound.retainedDuplicate()));
+            DatagramPacket read = embeddedChannel.readOutbound();
+            assertEquals(outbound.content(), read.content());
+            read.release();
 
-        final DatagramPacket outbound = new DatagramPacket(payload, serverAddr);
-        final DatagramPacket inbound = new DatagramPacket(payload, clientAddr, serverAddr);
+            assertTrue(embeddedChannel.writeInbound(inbound.retainedDuplicate()));
+            read = embeddedChannel.readInbound();
+            assertEquals(inbound.content(), read.content());
+            read.release();
 
-        assertTrue(embeddedChannel.writeOutbound(outbound));
-        assertEquals(outbound, embeddedChannel.readOutbound());
+            // Verify only the PCAP global header was written. Large UDP payload should be discarded
+            assertEquals(24, pcapBuffer.readableBytes());
 
-        assertTrue(embeddedChannel.writeInbound(inbound));
-        assertEquals(inbound, embeddedChannel.readInbound());
-
-        // Verify only the PCAP global header was written. Large UDP payload should be discarded
-        assertEquals(24, pcapBuffer.readableBytes());
-
-        assertTrue(pcapBuffer.release());
-
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
+        } finally {
+            pcapBuffer.release();
+            payload.release();
+            outbound.release();
+            inbound.release();
+        }
     }
 
     @Test
     public void udpExceptionCaught() {
         final ByteBuf pcapBuffer = Unpooled.buffer();
-        final RuntimeException exception = new RuntimeException();
-
-        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
-
-        CloseDetectingByteBufOutputStream outputStream = new CloseDetectingByteBufOutputStream(pcapBuffer);
-        // We fake a client
-        EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
-        embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
-                                                           .build(outputStream));
-        embeddedChannel.pipeline().fireExceptionCaught(exception);
-
-        assertTrue(outputStream.closeCalled());
-
-        // Verify only the PCAP global header was written.
-        assertEquals(24, pcapBuffer.readableBytes());
-
-        // Verify thrown exception
         try {
-            embeddedChannel.checkException();
-            fail();
-        } catch (Throwable t) {
-            assertSame(exception, t);
-        }
+            final RuntimeException exception = new RuntimeException();
 
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+
+            CloseDetectingByteBufOutputStream outputStream = new CloseDetectingByteBufOutputStream(pcapBuffer);
+            // We fake a client
+            EmbeddedChannel embeddedChannel = new EmbeddedDatagramChannel(clientAddr, serverAddr);
+            embeddedChannel.pipeline().addLast(PcapWriteHandler.builder()
+                    .build(outputStream));
+            embeddedChannel.pipeline().fireExceptionCaught(exception);
+
+            assertTrue(outputStream.closeCalled());
+
+            // Verify only the PCAP global header was written.
+            assertEquals(24, pcapBuffer.readableBytes());
+
+            // Verify thrown exception
+            try {
+                embeddedChannel.checkException();
+                fail();
+            } catch (Throwable t) {
+                assertSame(exception, t);
+            }
+
+            assertFalse(embeddedChannel.finishAndReleaseAll());
+        } finally {
+            pcapBuffer.release();
+        }
     }
 
     @Test
@@ -418,110 +474,124 @@ public class PcapWriteHandlerTest {
 
     private static void tcpV4(final boolean sharedOutputStream, final boolean writeGlobalHeaders) throws Exception {
         final ByteBuf byteBuf = Unpooled.buffer();
-
-        EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
-        EventLoopGroup clientGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
-
-        // Configure the echo server
-        ServerBootstrap sb = new ServerBootstrap();
-        final Promise<Boolean> dataReadPromise = bossGroup.next().newPromise();
-        sb.group(bossGroup)
-          .channel(NioServerSocketChannel.class)
-          .option(ChannelOption.SO_BACKLOG, 100)
-          .childHandler(new ChannelInitializer<SocketChannel>() {
-              @Override
-              public void initChannel(SocketChannel ch) throws Exception {
-                  ChannelPipeline p = ch.pipeline();
-                  p.addLast(PcapWriteHandler.builder().sharedOutputStream(sharedOutputStream)
-                                            .writePcapGlobalHeader(writeGlobalHeaders)
-                                            .build(new ByteBufOutputStream(byteBuf)));
-                  p.addLast(new ChannelInboundHandlerAdapter() {
-                      @Override
-                      public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                          ctx.write(msg);
-                      }
-
-                      @Override
-                      public void channelReadComplete(ChannelHandlerContext ctx) {
-                          ctx.flush();
-                          dataReadPromise.setSuccess(true);
-                      }
-
-                      @Override
-                      public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                          ctx.close();
-                      }
-                  });
-              }
-          });
-
-        // Start the server.
-        ChannelFuture serverChannelFuture = sb.bind(new InetSocketAddress("127.0.0.1", 0)).sync();
-        assertTrue(serverChannelFuture.isSuccess());
-
-        // configure the client
-        Bootstrap cb = new Bootstrap();
         final ByteBuf payload = Unpooled.wrappedBuffer("Meow".getBytes());
-        final Promise<Boolean> dataWrittenPromise = clientGroup.next().newPromise();
-        cb.group(clientGroup)
-          .channel(NioSocketChannel.class)
-          .option(ChannelOption.TCP_NODELAY, true)
-          .handler(new ChannelInitializer<SocketChannel>() {
-              @Override
-              public void initChannel(SocketChannel ch) throws Exception {
-                  ChannelPipeline p = ch.pipeline();
-                  p.addLast(new ChannelInboundHandlerAdapter() {
-                      @Override
-                      public void channelActive(ChannelHandlerContext ctx) {
-                          ctx.writeAndFlush(payload.copy());
-                          dataWrittenPromise.setSuccess(true);
-                      }
+        try {
+            EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
 
-                      @Override
-                      public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                          ctx.close();
-                      }
-                  });
-              }
-          });
+            // Configure the echo server
+            ServerBootstrap sb = new ServerBootstrap();
+            final CountDownLatch serverLatch = new CountDownLatch(1);
+            sb.group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .option(ChannelOption.SO_BACKLOG, 100)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) throws Exception {
+                            ChannelPipeline p = ch.pipeline();
+                            p.addLast(PcapWriteHandler.builder().sharedOutputStream(sharedOutputStream)
+                                    .writePcapGlobalHeader(writeGlobalHeaders)
+                                    .build(new ByteBufOutputStream(byteBuf)));
+                            p.addLast(new ChannelInboundHandlerAdapter() {
+                                private int read;
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                    ByteBuf buf = (ByteBuf) msg;
+                                    read += buf.readableBytes();
+                                    ctx.writeAndFlush(buf);
+                                    if (read == payload.readableBytes()) {
+                                        serverLatch.countDown();
+                                    }
+                                }
 
-        // Start the client.
-        ChannelFuture clientChannelFuture = cb.connect(serverChannelFuture.channel().localAddress()).sync();
-        assertTrue(clientChannelFuture.isSuccess());
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    ctx.close();
+                                }
+                            });
+                        }
+                    });
 
-        assertTrue(dataWrittenPromise.await(5, TimeUnit.SECONDS));
-        assertTrue(dataReadPromise.await(5, TimeUnit.SECONDS));
+            // Start the server.
+            ChannelFuture serverChannelFuture = sb.bind(new InetSocketAddress("127.0.0.1", 0)).sync();
+            assertTrue(serverChannelFuture.isSuccess());
 
-        clientChannelFuture.channel().close().sync();
-        serverChannelFuture.channel().close().sync();
+            // configure the client
+            Bootstrap cb = new Bootstrap();
+            final CountDownLatch clientLatch = new CountDownLatch(1);
+            cb.group(group)
+                    .channel(NioSocketChannel.class)
+                    .option(ChannelOption.TCP_NODELAY, true)
+                    .handler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) throws Exception {
+                            ChannelPipeline p = ch.pipeline();
+                            p.addLast(new ChannelInboundHandlerAdapter() {
+                                private int read;
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                    ByteBuf buf = (ByteBuf) msg;
+                                    read += buf.readableBytes();
+                                    buf.release();
+                                    if (read == payload.readableBytes()) {
+                                        clientLatch.countDown();
+                                    }
+                                }
 
-        // Shut down all event loops to terminate all threads.
-        assertTrue(clientGroup.shutdownGracefully().sync().isSuccess());
-        assertTrue(bossGroup.shutdownGracefully().sync().isSuccess());
+                                @Override
+                                public void channelActive(ChannelHandlerContext ctx) {
+                                    ctx.writeAndFlush(payload.copy());
+                                }
 
-        // if sharedOutputStream is true or writeGlobalHeaders is false, we don't verify the global headers.
-        verifyTcpHandshakeCapture(
-                writeGlobalHeaders && !sharedOutputStream,
-                byteBuf,
-                (InetSocketAddress) serverChannelFuture.channel().localAddress(),
-                (InetSocketAddress) clientChannelFuture.channel().localAddress());
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    ctx.close();
+                                }
+                            });
+                        }
+                    });
 
-        verifyTcpCapture(
-                byteBuf, payload,
-                (InetSocketAddress) serverChannelFuture.channel().localAddress(),
-                (InetSocketAddress) clientChannelFuture.channel().localAddress(),
-                1, 1); //After handshake, sequence and ack are 1
+            InetSocketAddress serverAddress = (InetSocketAddress) serverChannelFuture.channel().localAddress();
+            // Start the client.
+            ChannelFuture clientChannelFuture = cb.connect(serverAddress).sync();
+            assertTrue(clientChannelFuture.isSuccess());
 
-        verifyTcpCapture(
-                byteBuf, payload,
-                (InetSocketAddress) clientChannelFuture.channel().localAddress(),
-                (InetSocketAddress) serverChannelFuture.channel().localAddress(),
-                1, 5); //Server has read 4 bytes so its ack is now 5
+            InetSocketAddress clientAddress = (InetSocketAddress) clientChannelFuture.channel().localAddress();
+            assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
+            assertTrue(clientLatch.await(5, TimeUnit.SECONDS));
 
-        verifyTcpCloseCapture(byteBuf,
-                              (InetSocketAddress) serverChannelFuture.channel().localAddress(),
-                              (InetSocketAddress) clientChannelFuture.channel().localAddress(),
-                              5, 5); //Server and client have both read 4 bytes
+            clientChannelFuture.channel().close().sync();
+            serverChannelFuture.channel().close().sync();
+
+            // Shut down all event loops to terminate all threads.
+            assertTrue(group.shutdownGracefully().sync().isSuccess());
+
+            // if sharedOutputStream is true or writeGlobalHeaders is false, we don't verify the global headers.
+            verifyTcpHandshakeCapture(
+                    writeGlobalHeaders && !sharedOutputStream,
+                    byteBuf,
+                    serverAddress,
+                    clientAddress);
+
+            verifyTcpCapture(
+                    byteBuf, payload,
+                    serverAddress,
+                    clientAddress,
+                    1, 1); //After handshake, sequence and ack are 1
+
+            verifyTcpCapture(
+                    byteBuf, payload,
+                    clientAddress,
+                    serverAddress,
+                    1, 5); //Server has read 4 bytes so its ack is now 5
+
+            verifyTcpCloseCapture(byteBuf,
+                    serverAddress,
+                    clientAddress,
+                    5, 5); //Server and client have both read 4 bytes
+        } finally {
+            byteBuf.release();
+            payload.release();
+        }
     }
 
     @Test
@@ -531,38 +601,48 @@ public class PcapWriteHandlerTest {
         final ByteBuf readPayload = Unpooled.wrappedBuffer("Read".getBytes());
         final ByteBuf writePayload = Unpooled.wrappedBuffer("Write".getBytes());
 
-        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        try {
+            InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(
-                PcapWriteHandler.builder()
-                                .forceTcpChannel(serverAddr, clientAddr, false)
-                                .build(new ByteBufOutputStream(pcapBuffer))
-        );
+            EmbeddedChannel embeddedChannel = new EmbeddedChannel(
+                    PcapWriteHandler.builder()
+                            .forceTcpChannel(serverAddr, clientAddr, false)
+                            .build(new ByteBufOutputStream(pcapBuffer))
+            );
 
-        assertTrue(embeddedChannel.writeInbound(readPayload));
-        assertEquals(readPayload, embeddedChannel.readInbound());
+            assertTrue(embeddedChannel.writeInbound(readPayload.retainedDuplicate()));
+            ByteBuf read = embeddedChannel.readInbound();
+            assertEquals(readPayload, read);
+            read.release();
 
-        assertTrue(embeddedChannel.writeOutbound(writePayload));
-        assertEquals(writePayload, embeddedChannel.readOutbound());
+            assertTrue(embeddedChannel.writeOutbound(writePayload.retainedDuplicate()));
+            read = embeddedChannel.readOutbound();
+            assertEquals(writePayload, read);
+            read.release();
 
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
 
-        // Verify the capture data
-        verifyTcpHandshakeCapture(true, pcapBuffer, serverAddr, clientAddr);
+            // Verify the capture data
+            verifyTcpHandshakeCapture(true, pcapBuffer, serverAddr, clientAddr);
 
-        //Verify client read
-        verifyTcpCapture(pcapBuffer, readPayload,
-                         clientAddr, serverAddr,
-                         1, 1);
+            //Verify client read
+            verifyTcpCapture(pcapBuffer, readPayload,
+                    clientAddr, serverAddr,
+                    1, 1);
 
-        //Verify client write
-        verifyTcpCapture(pcapBuffer, writePayload,
-                         serverAddr, clientAddr,
-                         1, 5);
+            //Verify client write
+            verifyTcpCapture(pcapBuffer, writePayload,
+                    serverAddr, clientAddr,
+                    1, 5);
 
-        verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
-                              6, 5); //Client has received 4 bytes and sent 5 bytes
+            verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
+                    6, 5); //Client has received 4 bytes and sent 5 bytes
+        } finally {
+            pcapBuffer.release();
+            readPayload.release();
+            writePayload.release();
+        }
     }
 
     @Test
@@ -572,38 +652,48 @@ public class PcapWriteHandlerTest {
         final ByteBuf readPayload = Unpooled.wrappedBuffer("Read".getBytes());
         final ByteBuf writePayload = Unpooled.wrappedBuffer("Write".getBytes());
 
-        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        try {
+            InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(
-                PcapWriteHandler.builder()
-                                .forceTcpChannel(serverAddr, clientAddr, true)
-                                .build(new ByteBufOutputStream(pcapBuffer))
-        );
+            EmbeddedChannel embeddedChannel = new EmbeddedChannel(
+                    PcapWriteHandler.builder()
+                            .forceTcpChannel(serverAddr, clientAddr, true)
+                            .build(new ByteBufOutputStream(pcapBuffer))
+            );
 
-        assertTrue(embeddedChannel.writeInbound(readPayload));
-        assertEquals(readPayload, embeddedChannel.readInbound());
+            assertTrue(embeddedChannel.writeInbound(readPayload.retainedDuplicate()));
+            ByteBuf read = embeddedChannel.readInbound();
+            assertEquals(readPayload, read);
+            read.release();
 
-        assertTrue(embeddedChannel.writeOutbound(writePayload));
-        assertEquals(writePayload, embeddedChannel.readOutbound());
+            assertTrue(embeddedChannel.writeOutbound(writePayload.retainedDuplicate()));
+            read = embeddedChannel.readOutbound();
+            assertEquals(writePayload, read);
+            read.release();
 
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
 
-        // Verify the capture data
-        verifyTcpHandshakeCapture(true, pcapBuffer, serverAddr, clientAddr);
+            // Verify the capture data
+            verifyTcpHandshakeCapture(true, pcapBuffer, serverAddr, clientAddr);
 
-        //Verify server read
-        verifyTcpCapture(pcapBuffer, readPayload,
-                         serverAddr, clientAddr,
-                         1, 1);
+            //Verify server read
+            verifyTcpCapture(pcapBuffer, readPayload,
+                    serverAddr, clientAddr,
+                    1, 1);
 
-        //Verify server write
-        verifyTcpCapture(pcapBuffer, writePayload,
-                         clientAddr, serverAddr,
-                         1, 5);
+            //Verify server write
+            verifyTcpCapture(pcapBuffer, writePayload,
+                    clientAddr, serverAddr,
+                    1, 5);
 
-        verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
-                              5, 6); //Client has received 5 bytes and sent 4
+            verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
+                    5, 6); //Client has received 5 bytes and sent 4
+        } finally {
+            pcapBuffer.release();
+            readPayload.release();
+            writePayload.release();
+        }
     }
 
     @Test
@@ -611,34 +701,40 @@ public class PcapWriteHandlerTest {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         String payloadString = new String(new char[65495 + 1]).replace('\0', 'X');
         final ByteBuf payload = Unpooled.wrappedBuffer(payloadString.getBytes());
+        try {
+            InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
-        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+            EmbeddedChannel embeddedChannel = new EmbeddedChannel(
+                    PcapWriteHandler.builder()
+                            .forceTcpChannel(serverAddr, clientAddr, false)
+                            .build(new ByteBufOutputStream(pcapBuffer))
+            );
 
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(
-                PcapWriteHandler.builder()
-                                .forceTcpChannel(serverAddr, clientAddr, false)
-                                .build(new ByteBufOutputStream(pcapBuffer))
-        );
+            assertTrue(embeddedChannel.writeOutbound(payload.retainedDuplicate()));
+            ByteBuf read = embeddedChannel.readOutbound();
+            assertEquals(payload, read);
+            read.release();
 
-        assertTrue(embeddedChannel.writeOutbound(payload));
-        assertEquals(payload, embeddedChannel.readOutbound());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
 
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            // Verify the capture data
+            verifyTcpHandshakeCapture(true, pcapBuffer, serverAddr, clientAddr);
+            //Verify client write
+            verifyTcpCapture(pcapBuffer, payload.slice(0, 65495),
+                    serverAddr, clientAddr,
+                    1, 1);
+            //Verify client write
+            verifyTcpCapture(pcapBuffer, payload.slice(65495, 1),
+                    serverAddr, clientAddr,
+                    65496, 1);
 
-        // Verify the capture data
-        verifyTcpHandshakeCapture(true, pcapBuffer, serverAddr, clientAddr);
-        //Verify client write
-        verifyTcpCapture(pcapBuffer, payload.slice(0, 65495),
-                         serverAddr, clientAddr,
-                         1, 1);
-        //Verify client write
-        verifyTcpCapture(pcapBuffer, payload.slice(65495, 1),
-                         serverAddr, clientAddr,
-                         65496, 1);
-
-        verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
-                              65497, 1); //Client has received 4 bytes and sent 5 bytes
+            verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
+                    65497, 1); //Client has received 4 bytes and sent 5 bytes
+        } finally {
+            pcapBuffer.release();
+            payload.release();
+        }
     }
 
     @Test
@@ -646,39 +742,47 @@ public class PcapWriteHandlerTest {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
 
-        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        try {
+            InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(
-                PcapWriteHandler.builder()
-                                .forceTcpChannel(serverAddr, clientAddr, false)
-                                .captureZeroByte(true) //Enable zero byte capture
-                                .build(new ByteBufOutputStream(pcapBuffer))
-        );
+            EmbeddedChannel embeddedChannel = new EmbeddedChannel(
+                    PcapWriteHandler.builder()
+                            .forceTcpChannel(serverAddr, clientAddr, false)
+                            .captureZeroByte(true) //Enable zero byte capture
+                            .build(new ByteBufOutputStream(pcapBuffer))
+            );
 
-        assertTrue(embeddedChannel.writeOutbound(payload));
-        assertEquals(payload, embeddedChannel.readOutbound());
+            assertTrue(embeddedChannel.writeOutbound(payload.retainedDuplicate()));
+            ByteBuf read = embeddedChannel.readOutbound();
+            assertEquals(payload, read);
+            read.release();
 
-        assertTrue(embeddedChannel.writeInbound(payload));
-        assertEquals(payload, embeddedChannel.readInbound());
+            assertTrue(embeddedChannel.writeInbound(payload.retainedDuplicate()));
+            read = embeddedChannel.readInbound();
+            assertEquals(payload, read);
 
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
 
-        // Verify the capture data
-        verifyTcpHandshakeCapture(true, pcapBuffer, serverAddr, clientAddr);
+            // Verify the capture data
+            verifyTcpHandshakeCapture(true, pcapBuffer, serverAddr, clientAddr);
 
-        //Verify client write empty payload
-        verifyTcpCapture(pcapBuffer, payload,
-                         serverAddr, clientAddr,
-                         1, 1);
+            //Verify client write empty payload
+            verifyTcpCapture(pcapBuffer, payload,
+                    serverAddr, clientAddr,
+                    1, 1);
 
-        //Verify client read empty payload
-        verifyTcpCapture(pcapBuffer, payload,
-                         clientAddr, serverAddr,
-                         1, 1);
+            //Verify client read empty payload
+            verifyTcpCapture(pcapBuffer, payload,
+                    clientAddr, serverAddr,
+                    1, 1);
 
-        verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
-                              1, 1);
+            verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
+                    1, 1);
+        } finally {
+            pcapBuffer.release();
+            payload.release();
+        }
     }
 
     @Test
@@ -686,28 +790,37 @@ public class PcapWriteHandlerTest {
         final ByteBuf pcapBuffer = Unpooled.buffer();
         final ByteBuf payload = Unpooled.buffer();
 
-        InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        try {
+            InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(
-                PcapWriteHandler.builder()
-                                .forceTcpChannel(serverAddr, clientAddr, false)
-                                .build(new ByteBufOutputStream(pcapBuffer))
-        );
+            EmbeddedChannel embeddedChannel = new EmbeddedChannel(
+                    PcapWriteHandler.builder()
+                            .forceTcpChannel(serverAddr, clientAddr, false)
+                            .build(new ByteBufOutputStream(pcapBuffer))
+            );
 
-        assertTrue(embeddedChannel.writeOutbound(payload));
-        assertEquals(payload, embeddedChannel.readOutbound());
+            assertTrue(embeddedChannel.writeOutbound(payload.retainedDuplicate()));
+            ByteBuf read = embeddedChannel.readOutbound();
+            assertEquals(payload, read);
+            read.release();
 
-        assertTrue(embeddedChannel.writeInbound(payload));
-        assertEquals(payload, embeddedChannel.readInbound());
+            assertTrue(embeddedChannel.writeInbound(payload.retainedDuplicate()));
+            read = embeddedChannel.readInbound();
+            assertEquals(payload, read);
+            read.release();
 
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            assertFalse(embeddedChannel.finishAndReleaseAll());
 
-        //Verify client discard empty payloads. Pcap should only contain header, syn, and fin messages
+            //Verify client discard empty payloads. Pcap should only contain header, syn, and fin messages
 
-        verifyTcpHandshakeCapture(true, pcapBuffer, serverAddr, clientAddr);
-        verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
-                              1, 1);
+            verifyTcpHandshakeCapture(true, pcapBuffer, serverAddr, clientAddr);
+            verifyTcpCloseCapture(pcapBuffer, serverAddr, clientAddr,
+                    1, 1);
+        } finally {
+            pcapBuffer.release();
+            payload.release();
+        }
     }
 
     @Test
@@ -758,6 +871,8 @@ public class PcapWriteHandlerTest {
             fail();
         } catch (Throwable t) {
             assertSame(exception, t);
+        } finally {
+            pcapBuffer.release();
         }
 
         assertFalse(embeddedChannel.finishAndReleaseAll());
@@ -767,29 +882,49 @@ public class PcapWriteHandlerTest {
     public void writePcapGreaterThan4Gb() {
         InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
         InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
-        final AtomicLong bytesWritten = new AtomicLong(0);
-        final AtomicReference<ByteBuf> pcapBuffer = new AtomicReference<ByteBuf>();
+
+        class RecordingOutputStream extends OutputStream {
+            private long bytesWritten;
+            private ByteArrayOutputStream out;
+            @Override
+            public void write(int b) {
+                bytesWritten++;
+                if (out != null) {
+                    out.write(b);
+                }
+            }
+
+            @Override
+            public void write(byte[] b, int off, int len) {
+                bytesWritten += len;
+                if (out != null) {
+                    out.write(b, off, len);
+                }
+            }
+
+            void record() {
+                out = new ByteArrayOutputStream();
+            }
+
+            void reset() {
+                out = null;
+            }
+
+            byte[] recordedBytes() {
+                return out.toByteArray();
+            }
+
+            long bytesWritten() {
+                return bytesWritten;
+            }
+        }
+
+        RecordingOutputStream outputStream = new RecordingOutputStream();
         EmbeddedChannel embeddedChannel = new EmbeddedChannel(
                 new DiscardingWritesAndFlushesHandler(), //Discard writes/flushes
                 PcapWriteHandler.builder()
                                 .forceTcpChannel(serverAddr, clientAddr, true)
-                                .build(new OutputStream() {
-                                    @Override
-                                    public void write(int b) {
-                                        bytesWritten.incrementAndGet();
-                                        if (pcapBuffer.get() != null) {
-                                            pcapBuffer.get().writeByte(b);
-                                        }
-                                    }
-
-                                    @Override
-                                    public void write(byte[] b, int off, int len) {
-                                        bytesWritten.addAndGet(len);
-                                        if (pcapBuffer.get() != null) {
-                                            pcapBuffer.get().writeBytes(b, off, len);
-                                        }
-                                    }
-                                }),
+                                .build(outputStream),
                 new DiscardingReadsHandler() //Discard reads
         );
 
@@ -797,89 +932,105 @@ public class PcapWriteHandlerTest {
         String payloadString = new String(new char[chunkSize]).replace('\0', 'X');
         final ByteBuf payload = Unpooled.wrappedBuffer(payloadString.getBytes());
 
-        long fourGB = 0xFFFFFFFFL;
+        try {
+            long fourGB = 0xFFFFFFFFL;
 
-        // Let's send 4 GiB inbound, ...
-        long msgCount = (fourGB / chunkSize) + 2;
-        for (int i = 0; i < msgCount; i++) {
-            //Only store the last data/ack
-            if (i == msgCount - 1) {
-                pcapBuffer.set(Unpooled.buffer());
+            // Let's send 4 GiB inbound, ...
+            long msgCount = (fourGB / chunkSize) + 2;
+            for (int i = 0; i < msgCount; i++) {
+                //Only store the last data/ack
+                if (i == msgCount - 1) {
+                    outputStream.record();
+                }
+                embeddedChannel.writeInbound(payload.retainedDuplicate());
             }
-            embeddedChannel.writeInbound(payload);
-        }
 
-        //Validate the wrapped number
-        long sequenceNumber = ((msgCount - 1) * chunkSize) - fourGB;
-        long ackNumber = 1;
-        verifyTcpCapture(pcapBuffer.get(), payload, serverAddr, clientAddr, sequenceNumber, ackNumber);
-        pcapBuffer.set(null);
+            //Validate the wrapped number
+            long sequenceNumber = ((msgCount - 1) * chunkSize) - fourGB;
+            long ackNumber = 1;
+            ByteBuf buf = Unpooled.wrappedBuffer(outputStream.recordedBytes());
+            verifyTcpCapture(buf, payload, serverAddr, clientAddr, sequenceNumber, ackNumber);
+            buf.release();
+            outputStream.reset();
 
-        // ... and 4 GiB outbound.
-        for (int i = 0; i < msgCount; i++) {
-            //Only store the last data/ack
-            if (i == msgCount - 1) {
-                pcapBuffer.set(Unpooled.buffer());
+            // ... and 4 GiB outbound.
+            for (int i = 0; i < msgCount; i++) {
+                //Only store the last data/ack
+                if (i == msgCount - 1) {
+                    outputStream.record();
+                }
+                embeddedChannel.writeOutbound(payload.retainedDuplicate());
             }
-            embeddedChannel.writeOutbound(payload);
+
+            //Validate the wrapped number
+            ackNumber = sequenceNumber + chunkSize;
+            buf = Unpooled.wrappedBuffer(outputStream.recordedBytes());
+            verifyTcpCapture(buf, payload, clientAddr, serverAddr, sequenceNumber, ackNumber);
+            buf.release();
+            outputStream.reset();
+            assertThat(outputStream.bytesWritten()).isGreaterThan(2 * (fourGB + 1000));
+
+            assertFalse(embeddedChannel.finishAndReleaseAll());
+        } finally {
+            payload.release();
         }
-
-        //Validate the wrapped number
-        ackNumber = sequenceNumber + chunkSize;
-        verifyTcpCapture(pcapBuffer.get(), payload, clientAddr, serverAddr, sequenceNumber, ackNumber);
-
-        assertThat(bytesWritten.get()).isGreaterThan(2 * (fourGB + 1000));
-
-        assertFalse(embeddedChannel.finishAndReleaseAll());
     }
 
     @Test
     public void writerStateTest() throws Exception {
         final ByteBuf payload = Unpooled.wrappedBuffer("Meow".getBytes());
-        final InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
-        final InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
+        try {
+            final InetSocketAddress serverAddr = new InetSocketAddress("1.1.1.1", 1234);
+            final InetSocketAddress clientAddr = new InetSocketAddress("2.2.2.2", 3456);
 
-        PcapWriteHandler pcapWriteHandler = PcapWriteHandler.builder()
-                                                            .forceTcpChannel(serverAddr, clientAddr, true)
-                                                            .build(new OutputStream() {
-                                                                @Override
-                                                                public void write(int b) {
-                                                                    // Discard everything
-                                                                }
-                                                            });
+            PcapWriteHandler pcapWriteHandler = PcapWriteHandler.builder()
+                    .forceTcpChannel(serverAddr, clientAddr, true)
+                    .build(new OutputStream() {
+                        @Override
+                        public void write(int b) {
+                            // Discard everything
+                        }
+                    });
 
-        // State is INIT because we haven't written anything yet
-        // and 'channelActive' is not called yet as this Handler
-        // is yet to be attached to `EmbeddedChannel`.
-        assertEquals(State.INIT, pcapWriteHandler.state());
+            // State is INIT because we haven't written anything yet
+            // and 'channelActive' is not called yet as this Handler
+            // is yet to be attached to `EmbeddedChannel`.
+            assertEquals(State.INIT, pcapWriteHandler.state());
 
-        // Create a new 'EmbeddedChannel' and add the 'PcapWriteHandler'
-        EmbeddedChannel embeddedChannel = new EmbeddedChannel(pcapWriteHandler);
+            // Create a new 'EmbeddedChannel' and add the 'PcapWriteHandler'
+            EmbeddedChannel embeddedChannel = new EmbeddedChannel(pcapWriteHandler);
 
-        // Write and read some data and verify it.
-        assertTrue(embeddedChannel.writeInbound(payload));
-        assertEquals(payload, embeddedChannel.readInbound());
+            // Write and read some data and verify it.
+            assertTrue(embeddedChannel.writeInbound(payload.retainedDuplicate()));
+            ByteBuf read = embeddedChannel.readInbound();
+            assertEquals(payload, read);
+            read.release();
 
-        assertTrue(embeddedChannel.writeOutbound(payload));
-        assertEquals(payload, embeddedChannel.readOutbound());
+            assertTrue(embeddedChannel.writeOutbound(payload.retainedDuplicate()));
+            read = embeddedChannel.readOutbound();
+            assertEquals(payload, read);
+            read.release();
 
-        // State is now WRITING because we attached Handler to 'EmbeddedChannel'.
-        assertEquals(State.WRITING, pcapWriteHandler.state());
+            // State is now WRITING because we attached Handler to 'EmbeddedChannel'.
+            assertEquals(State.WRITING, pcapWriteHandler.state());
 
-        // Close the PcapWriter. This should trigger closure of PcapWriteHandler too.
-        pcapWriteHandler.pCapWriter().close();
+            // Close the PcapWriter. This should trigger closure of PcapWriteHandler too.
+            pcapWriteHandler.pCapWriter().close();
 
-        // State should be changed to closed by now
-        assertEquals(State.CLOSED, pcapWriteHandler.state());
+            // State should be changed to closed by now
+            assertEquals(State.CLOSED, pcapWriteHandler.state());
 
-        // Close PcapWriteHandler again. This should be a no-op.
-        pcapWriteHandler.close();
+            // Close PcapWriteHandler again. This should be a no-op.
+            pcapWriteHandler.close();
 
-        // State should still be CLOSED. No change.
-        assertEquals(State.CLOSED, pcapWriteHandler.state());
+            // State should still be CLOSED. No change.
+            assertEquals(State.CLOSED, pcapWriteHandler.state());
 
-        // Close the 'EmbeddedChannel'.
-        assertFalse(embeddedChannel.finishAndReleaseAll());
+            // Close the 'EmbeddedChannel'.
+            assertFalse(embeddedChannel.finishAndReleaseAll());
+        } finally {
+            payload.release();
+        }
     }
 
     @Test
@@ -947,10 +1098,12 @@ public class PcapWriteHandlerTest {
     @Test
     public void globalHeadersStandalone() throws IOException {
         ByteBuf pcapBuffer = Unpooled.buffer();
-        ByteBufOutputStream outputStream = new ByteBufOutputStream(pcapBuffer);
+        ByteBufOutputStream outputStream = new ByteBufOutputStream(pcapBuffer, true);
         PcapWriteHandler.writeGlobalHeader(outputStream);
 
         verifyGlobalHeaders(pcapBuffer);
+
+        outputStream.close();
     }
 
     private static void verifyGlobalHeaders(ByteBuf byteBuf) {
@@ -1345,6 +1498,7 @@ public class PcapWriteHandlerTest {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             //Discard
+            ReferenceCountUtil.release(msg);
         }
     }
 
@@ -1357,6 +1511,8 @@ public class PcapWriteHandlerTest {
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             //Discard
+            ReferenceCountUtil.release(msg);
+            promise.setSuccess();
         }
     }
 }
