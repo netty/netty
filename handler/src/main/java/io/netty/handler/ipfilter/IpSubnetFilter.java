@@ -160,13 +160,13 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
             ipFilterRuleTypeIPv6 = null;
         }
 
-        this.ipv4Rules = sortAndFilter(unsortedIPv4Rules);
-        this.ipv6Rules = sortAndFilter(unsortedIPv6Rules);
+        this.ipv4Rules = unsortedIPv4Rules.isEmpty() ? null : sortAndFilter(unsortedIPv4Rules);
+        this.ipv6Rules = unsortedIPv6Rules.isEmpty() ? null : sortAndFilter(unsortedIPv6Rules);
     }
 
     @Override
     protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
-        if (remoteAddress.getAddress() instanceof Inet4Address) {
+        if (ipv4Rules != null && remoteAddress.getAddress() instanceof Inet4Address) {
             int indexOf = Collections.binarySearch(ipv4Rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
             if (indexOf >= 0) {
                 if (ipFilterRuleTypeIPv4 == null) {
@@ -175,7 +175,7 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
                     return ipFilterRuleTypeIPv4 == IpFilterRuleType.ACCEPT;
                 }
             }
-        } else {
+        } else if (ipv6Rules != null) {
             int indexOf = Collections.binarySearch(ipv6Rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
             if (indexOf >= 0) {
                 if (ipFilterRuleTypeIPv6 == null) {
