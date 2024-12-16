@@ -354,6 +354,10 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         if (freed) {
             return false;
         }
+        // The Buffer should not be used anymore, let's add an assert to so we guard against bugs in the future.
+        assert buffer.allocatedBytes == 0;
+        assert buffer.magazine == null;
+
         boolean isAdded = centralQueue.offer(buffer);
         if (freed && isAdded) {
             // Help to free the centralQueue.
