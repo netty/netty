@@ -233,7 +233,6 @@
       <plugin>
         <groupId>com.github.veithen.alta</groupId>
         <artifactId>alta-maven-plugin</artifactId>
-        <version>0.6.2</version>
         <executions>
           <execution>
             <goals>
@@ -242,9 +241,11 @@
             <configuration>
               <name>%bundle.symbolicName%.link</name>
               <value>%url%</value>
-              <dependencySet>
-                <scope>test</scope>
-              </dependencySet>
+              <artifactSet>
+                <dependencySet>
+                  <scope>test</scope>
+                </dependencySet>
+              </artifactSet>
             </configuration>
           </execution>
         </executions>
