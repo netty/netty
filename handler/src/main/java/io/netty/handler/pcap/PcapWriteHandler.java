@@ -67,7 +67,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  *    </ul>
  * </p>
  */
-public final class PcapWriteHandler extends ChannelDuplexHandler implements Closeable {
+public class PcapWriteHandler extends ChannelDuplexHandler implements Closeable {
 
     /**
      * Logger for logging events
@@ -177,7 +177,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         sharedOutputStream = false;
     }
 
-    private PcapWriteHandler(Builder builder, OutputStream outputStream) {
+    public PcapWriteHandler(Builder builder, OutputStream outputStream) {
         this.outputStream = outputStream;
         captureZeroByte = builder.captureZeroByte;
         sharedOutputStream = builder.sharedOutputStream;
@@ -670,7 +670,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     /**
      * Logger for TCP
      */
-    private void logTCP(boolean isWriteOperation, int bytes, long sendSegmentNumber, long receiveSegmentNumber,
+    protected void logTCP(boolean isWriteOperation, int bytes, long sendSegmentNumber, long receiveSegmentNumber,
                         InetSocketAddress srcAddr, InetSocketAddress dstAddr, boolean ackOnly) {
         // If `ackOnly` is `true` when we don't need to write any data so we'll not
         // log number of bytes being written and mark the operation as "TCP ACK".

@@ -920,12 +920,19 @@ public class PcapWriteHandlerTest {
             }
         }
 
+        PcapWriteHandler.Builder pcapWriteHandlerBuilder = PcapWriteHandler.builder()
+                .forceTcpChannel(serverAddr, clientAddr, true);
+
         RecordingOutputStream outputStream = new RecordingOutputStream();
         EmbeddedChannel embeddedChannel = new EmbeddedChannel(
                 new DiscardingWritesAndFlushesHandler(), //Discard writes/flushes
-                PcapWriteHandler.builder()
-                                .forceTcpChannel(serverAddr, clientAddr, true)
-                                .build(outputStream),
+                new PcapWriteHandler(pcapWriteHandlerBuilder, outputStream) {
+                    @Override
+                    protected void logTCP(boolean isWriteOperation, int bytes, long sendSegmentNumber, long receiveSegmentNumber,
+                                          InetSocketAddress srcAddr, InetSocketAddress dstAddr, boolean ackOnly) {
+                        // Disable logging
+                    }
+                },
                 new DiscardingReadsHandler() //Discard reads
         );
 
