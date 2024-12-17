@@ -928,8 +928,9 @@ public class PcapWriteHandlerTest {
                 new DiscardingWritesAndFlushesHandler(), //Discard writes/flushes
                 new PcapWriteHandler(pcapWriteHandlerBuilder, outputStream) {
                     @Override
-                    protected void logTCP(boolean isWriteOperation, int bytes, long sendSegmentNumber, long receiveSegmentNumber,
-                                          InetSocketAddress srcAddr, InetSocketAddress dstAddr, boolean ackOnly) {
+                    protected void logTCP(boolean isWriteOperation, int bytes, long sendSegmentNumber,
+                                          long receiveSegmentNumber, InetSocketAddress srcAddr,
+                                          InetSocketAddress dstAddr, boolean ackOnly) {
                         // Disable logging
                     }
                 },
