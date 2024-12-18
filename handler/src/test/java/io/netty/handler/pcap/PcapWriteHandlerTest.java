@@ -555,7 +555,6 @@ public class PcapWriteHandlerTest {
             assertTrue(clientChannelFuture.isSuccess());
 
             InetSocketAddress clientAddress = (InetSocketAddress) clientChannelFuture.channel().localAddress();
-            System.err.println(clientAddress);
 
             assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
             assertTrue(clientLatch.await(5, TimeUnit.SECONDS));
