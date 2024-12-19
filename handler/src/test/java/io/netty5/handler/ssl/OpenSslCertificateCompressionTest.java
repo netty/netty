@@ -240,7 +240,8 @@ public class OpenSslCertificateCompressionTest {
                                      OpenSslCertificateCompressionConfig.AlgorithmMode.Decompress)
                              .build())
              .build();
-        final SslContext serverSslContext = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+        final SslContext serverSslContext = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(),
+                        cert.getCertificatePath())
                .sslProvider(SslProvider.OPENSSL)
                .protocols(SslProtocols.TLS_v1_2)
                .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
@@ -346,7 +347,7 @@ public class OpenSslCertificateCompressionTest {
     }
 
     private SslContext buildServerContext(OpenSslCertificateCompressionConfig compressionConfig) throws Exception {
-        return SslContextBuilder.forServer(cert.toKeyManagerFactory())
+        return SslContextBuilder.forServer(cert.getKeyPair().getPrivate(), cert.getCertificatePath())
                 .sslProvider(SslProvider.OPENSSL)
                 .protocols(SslProtocols.TLS_v1_3)
             .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,

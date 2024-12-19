@@ -480,7 +480,8 @@ public class NettyBlockHoundIntegrationTest {
                 .subject("cn=localhost")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
-        final SslContext sslServerCtx = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(),
+                        cert.getCertificatePath())
                 .sslProvider(SslProvider.JDK).protocols(tlsVersion).build();
 
         final SslHandler clientSslHandler = sslClientCtx.newHandler(offHeapAllocator(), executor);

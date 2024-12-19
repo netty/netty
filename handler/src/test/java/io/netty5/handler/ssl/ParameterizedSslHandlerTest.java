@@ -138,7 +138,8 @@ public class ParameterizedSslHandlerTest {
             final boolean serverDisableWrapSize,
             final boolean letHandlerCreateServerEngine, final boolean letHandlerCreateClientEngine)
             throws Exception {
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(serverProvider)
                 .build();
 
@@ -287,7 +288,8 @@ public class ParameterizedSslHandlerTest {
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testAlertProducedAndSend(SslProvider clientProvider, SslProvider serverProvider) throws Exception {
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(serverProvider)
                 .trustManager(new SimpleTrustManagerFactory() {
                     @Override
@@ -406,7 +408,8 @@ public class ParameterizedSslHandlerTest {
 
     private static void testCloseNotify(SslProvider clientProvider, SslProvider serverProvider,
                                         final long closeNotifyReadTimeout, final boolean timeout) throws Exception {
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                                          .sslProvider(serverProvider)
                                                          // Use TLSv1.2 as we depend on the fact that the handshake
                                                          // is done in an extra round trip in the test which
@@ -565,7 +568,8 @@ public class ParameterizedSslHandlerTest {
                                                    Class<? extends ServerChannel> serverClass,
                                                    Class<? extends Channel> clientClass, boolean serverAutoRead,
                                                    boolean clientAutoRead) throws Exception {
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(serverProvider)
                 .build();
 

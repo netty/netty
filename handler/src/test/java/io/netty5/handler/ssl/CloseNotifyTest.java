@@ -154,7 +154,7 @@ public class CloseNotifyTest {
                 .buildSelfSigned();
         final SslContext sslContext = (useClientMode
                 ? SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
-                : SslContextBuilder.forServer(cert.toKeyManagerFactory()))
+                : SslContextBuilder.forServer(cert.getKeyPair().getPrivate(), cert.getCertificatePath()))
                  .sslProvider(provider)
                  .protocols(protocol)
                 .build();

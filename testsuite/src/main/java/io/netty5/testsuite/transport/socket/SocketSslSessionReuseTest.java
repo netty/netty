@@ -107,7 +107,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
                                 .endpointIdentificationAlgorithm("")
                 },
                 new Object[]{
-                        SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+                        SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                                 .sslProvider(SslProvider.OPENSSL)
                                 .endpointIdentificationAlgorithm(""),
                         SslContextBuilder.forClient()

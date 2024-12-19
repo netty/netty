@@ -243,7 +243,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
                                         .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -281,7 +282,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
                                         .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -336,7 +338,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
                                         .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -376,7 +379,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
                                         .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -469,7 +473,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     private void testCorrectlyCalculateSpaceForAlert(SSLEngineTestParam param, boolean jdkCompatabilityMode)
             throws Exception {
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -535,7 +540,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                         .sslProvider(sslClientProvider())
                                         .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .build());
 
@@ -566,7 +572,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                         .sslProvider(sslClientProvider())
                                         .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .build());
 
@@ -594,7 +601,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
                 .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .build());
 
@@ -632,7 +640,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
                 .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .build());
 
@@ -678,7 +687,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(offHeapAllocator()).engine());
 
         serverSslCtx = wrapContext(param, SslContextBuilder
-                .forServer(CERT.toKeyManagerFactory())
+                .forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -758,7 +767,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(offHeapAllocator()).engine());
 
         serverSslCtx = wrapContext(param, SslContextBuilder
-                .forServer(CERT.toKeyManagerFactory())
+                .forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -847,7 +856,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(offHeapAllocator()).engine());
 
         serverSslCtx = wrapContext(param, SslContextBuilder
-                .forServer(CERT.toKeyManagerFactory())
+                .forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -926,7 +935,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(offHeapAllocator()).engine());
 
         serverSslCtx = wrapContext(param, SslContextBuilder
-                .forServer(CERT.toKeyManagerFactory())
+                .forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -1054,7 +1063,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testSNIMatchersDoesNotThrow(SSLEngineTestParam param) throws Exception {
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -1074,7 +1084,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @ParameterizedTest
     public void testSNIMatchersWithSNINameWithUnderscore(SSLEngineTestParam param) throws Exception {
         byte[] name = "rb8hx3pww30y3tvw0mwy.v1_1".getBytes(UTF_8);
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -1108,7 +1119,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testAlgorithmConstraintsThrows(SSLEngineTestParam param) throws Exception {
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -1165,7 +1177,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
         if (param.combo() != ProtocolCipherCombo.tlsv12()) {
             return;
         }
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .sslProvider(OPENSSL).build());
@@ -1440,7 +1453,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
             clientCtxBuilder.protocols(clientProtocol);
         }
         clientSslCtx = wrapContext(param, clientCtxBuilder.build());
-        SslContextBuilder serverCtxBuilder = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        SslContextBuilder serverCtxBuilder = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider());
         if (serverProtocol != null) {
@@ -1567,7 +1581,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
                 .protocols(param.protocols())
@@ -1593,7 +1608,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .ciphers(param.ciphers())
                 .option(OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES, 10)
                 .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
                 .protocols(param.protocols())

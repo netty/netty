@@ -505,7 +505,7 @@ public class SniHandlerTest {
 
                 try {
                     final SslContext sslServerContext = SslContextBuilder
-                            .forServer(CERT.toKeyManagerFactory())
+                            .forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                             .sslProvider(provider)
                             .build();
 
@@ -648,7 +648,8 @@ public class SniHandlerTest {
 
     private static void testWithFragmentSize(SslProvider provider, final int maxFragmentSize) throws Exception {
         final String sni = "netty.io";
-        final SslContext context = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        final SslContext context = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(provider)
                 .build();
         try {

@@ -88,7 +88,7 @@ public class SocketStartTlsTest extends AbstractSocketTest {
                 .build());
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
-            serverContexts.add(SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+            serverContexts.add(SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                                                 .sslProvider(SslProvider.OPENSSL).build());
             clientContexts.add(SslContextBuilder.forClient()
                     .sslProvider(SslProvider.OPENSSL)

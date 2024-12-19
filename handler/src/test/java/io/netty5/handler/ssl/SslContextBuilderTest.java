@@ -254,7 +254,8 @@ public class SslContextBuilderTest {
     }
 
     private static void testKeyStoreType(SslProvider provider) throws Exception {
-        SslContextBuilder builder = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        SslContextBuilder builder = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(provider)
                 .keyStoreType("PKCS12");
         SslContext context = builder.build();
@@ -302,7 +303,8 @@ public class SslContextBuilderTest {
     }
 
     private static void testServerContextFromFile(SslProvider provider) throws Exception {
-        SslContextBuilder builder = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        SslContextBuilder builder = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                                      .sslProvider(provider)
                                                      .trustManager(CERT.toTrustManagerFactory())
                                                      .clientAuth(ClientAuth.OPTIONAL);
@@ -315,7 +317,8 @@ public class SslContextBuilderTest {
     }
 
     private static void testServerContext(SslProvider provider) throws Exception {
-        SslContextBuilder builder = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        SslContextBuilder builder = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                                      .sslProvider(provider)
                                                      .trustManager(CERT.toTrustManagerFactory())
                                                      .clientAuth(ClientAuth.REQUIRE);
@@ -329,7 +332,8 @@ public class SslContextBuilderTest {
 
     private static void testServerContextWithSecureRandom(SslProvider provider,
                                                           SpySecureRandom secureRandom) throws Exception {
-        SslContextBuilder builder = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        SslContextBuilder builder = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(provider)
                 .secureRandom(secureRandom)
                 .trustManager(CERT.toTrustManagerFactory())

@@ -88,7 +88,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
-            serverContexts.add(SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+            serverContexts.add(SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                     .sslProvider(SslProvider.OPENSSL)
                     .build()
             );

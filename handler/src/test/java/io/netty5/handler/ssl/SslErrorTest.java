@@ -131,7 +131,8 @@ public class SslErrorTest {
         // no need to run it if there is no openssl is available at all.
         OpenSsl.ensureAvailability();
 
-        SslContextBuilder sslServerCtxBuilder = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        SslContextBuilder sslServerCtxBuilder = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(serverProvider)
                 .clientAuth(ClientAuth.REQUIRE);
         SslContextBuilder sslClientCtxBuilder =  SslContextBuilder.forClient()

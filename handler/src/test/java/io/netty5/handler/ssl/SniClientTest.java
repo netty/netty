@@ -138,7 +138,7 @@ public class SniClientTest {
         Channel sc = null;
         Channel cc = null;
         try {
-            sslServerContext = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+            sslServerContext = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(), cert.getCertificatePath())
                     .sslProvider(sslServerProvider).build();
             final Promise<Void> promise = group.next().newPromise();
             ServerBootstrap sb = new ServerBootstrap();
@@ -412,7 +412,8 @@ public class SniClientTest {
         try {
             if ((sslServerProvider == SslProvider.OPENSSL || sslServerProvider == SslProvider.OPENSSL_REFCNT)
                 && !OpenSsl.supportsKeyManagerFactory()) {
-                sslServerContext = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+                sslServerContext = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(),
+                                cert.getCertificatePath())
                                                     .sslProvider(sslServerProvider)
                                                     .build();
             } else {

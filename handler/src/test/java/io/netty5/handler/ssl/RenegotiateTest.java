@@ -51,7 +51,8 @@ public abstract class RenegotiateTest {
                 .buildSelfSigned();
         EventLoopGroup group = new MultithreadEventLoopGroup(LocalIoHandler.newFactory());
         try {
-            final SslContext context = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+            final SslContext context = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(),
+                            cert.getCertificatePath())
                     .sslProvider(serverSslProvider())
                     .protocols(SslProtocols.TLS_v1_2)
                     .build();

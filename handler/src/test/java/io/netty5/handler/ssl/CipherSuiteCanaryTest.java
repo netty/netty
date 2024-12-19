@@ -123,7 +123,8 @@ public class CipherSuiteCanaryTest {
 
         List<String> ciphers = Collections.singletonList(rfcCipherName);
 
-        final SslContext sslServerContext = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+        final SslContext sslServerContext = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(),
+                        cert.getCertificatePath())
                 .sslProvider(serverSslProvider)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.

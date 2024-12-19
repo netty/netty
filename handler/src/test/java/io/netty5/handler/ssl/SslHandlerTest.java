@@ -409,7 +409,7 @@ public class SslHandlerTest {
     public void testReleaseSslEngine() throws Exception {
         OpenSsl.ensureAvailability();
 
-        SslContext sslContext = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        SslContext sslContext = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .sslProvider(SslProvider.OPENSSL)
                 .build();
         try (AutoCloseable ignore = autoClosing(sslContext)) {
@@ -497,7 +497,9 @@ public class SslHandlerTest {
             ServerBootstrap serverBootstrap = new ServerBootstrap()
                     .group(group, group)
                     .channel(NioServerSocketChannel.class)
-                    .childHandler(newHandler(SslContextBuilder.forServer(CERT.toKeyManagerFactory()).build(),
+                    .childHandler(newHandler(
+                            SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
+                                    .build(),
                             serverPromise));
             sc = serverBootstrap.bind(new InetSocketAddress(0)).asStage().get();
             cc = bootstrap.connect(sc.localAddress()).asStage().get();
@@ -599,7 +601,8 @@ public class SslHandlerTest {
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testHandshakeFailBeforeWritePromise() throws Exception {
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory()).build();
+        final SslContext sslServerCtx =
+                SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath()).build();
         final CountDownLatch latch = new CountDownLatch(2);
         final CountDownLatch latch2 = new CountDownLatch(2);
         final BlockingQueue<Object> events = new LinkedBlockingQueue<>();
@@ -706,7 +709,8 @@ public class SslHandlerTest {
 
     @Test
     public void writingReadOnlyBufferDoesNotBreakAggregation() throws Exception {
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory()).build();
+        final SslContext sslServerCtx =
+                SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath()).build();
 
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
@@ -777,7 +781,8 @@ public class SslHandlerTest {
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testCloseOnHandshakeFailure() throws Exception {
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory()).build();
+        final SslContext sslServerCtx =
+                SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath()).build();
         final SslContext sslClientCtx = SslContextBuilder.forClient()
                 .trustManager(new CertificateBuilder().subject("cn=other").setIsCertificateAuthority(true)
                         .buildSelfSigned().toTrustManagerFactory())
@@ -1109,10 +1114,10 @@ public class SslHandlerTest {
         if (mtls) {
             sslClientCtx = SslContextBuilder.forClient().protocols(SslProtocols.TLS_v1_2)
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    .keyManager(CERT.toKeyManagerFactory())
+                    .keyManager(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                     .sslProvider(provider).build();
 
-            sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+            sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                     .protocols(SslProtocols.TLS_v1_2)
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .clientAuth(ClientAuth.REQUIRE)
@@ -1122,7 +1127,7 @@ public class SslHandlerTest {
                     .trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .sslProvider(provider).build();
 
-            sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+            sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                     .sslProvider(provider).build();
         }
 
@@ -1203,7 +1208,8 @@ public class SslHandlerTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(SslProvider.JDK).build();
 
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(SslProvider.JDK).build();
 
         EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
@@ -1304,7 +1310,8 @@ public class SslHandlerTest {
         // Explicit enable session cache as it's disabled by default atm.
         ((OpenSslContext) sslClientCtx).sessionContext().setSessionCacheEnabled(true);
 
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(provider)
                 .protocols(protocol)
                 .build();
@@ -1492,7 +1499,8 @@ public class SslHandlerTest {
                 })
                 .sslProvider(SslProvider.JDK).build();
 
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(SslProvider.JDK).build();
 
         EventLoopGroup group = new MultithreadEventLoopGroup(NioIoHandler.newFactory());
@@ -1598,7 +1606,8 @@ public class SslHandlerTest {
                 .ciphers(Collections.singleton(clientCipher))
                 .sslProvider(provider).build();
 
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .protocols(protocol)
                 .ciphers(Collections.singleton(serverCipher))
                 .sslProvider(provider).build();
@@ -1712,7 +1721,8 @@ public class SslHandlerTest {
                 .protocols(protocol)
                 .sslProvider(provider).build();
 
-        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .protocols(protocol)
                 .sslProvider(provider).build();
 
