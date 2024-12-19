@@ -268,7 +268,7 @@ public class SslContextBuilderTest {
         SslContextBuilder builder = SslContextBuilder.forClient()
                 .sslProvider(provider)
                 .ciphers(Collections.singleton("SOME_INVALID_CIPHER"))
-                .keyManager(CERT.toKeyManagerFactory())
+                .keyManager(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .trustManager(CERT.toTrustManagerFactory());
         SslContext context = builder.build();
         context.newEngine(offHeapAllocator());
@@ -277,7 +277,8 @@ public class SslContextBuilderTest {
     private static void testClientContextFromFile(SslProvider provider) throws Exception {
         SslContextBuilder builder = SslContextBuilder.forClient()
                                                      .sslProvider(provider)
-                                                     .keyManager(CERT.toKeyManagerFactory())
+                                                     .keyManager(CERT.getKeyPair().getPrivate(),
+                                                             CERT.getCertificatePath())
                                                      .trustManager(CERT.toTrustManagerFactory())
                                                      .clientAuth(ClientAuth.OPTIONAL);
         SslContext context = builder.build();
@@ -291,7 +292,8 @@ public class SslContextBuilderTest {
     private static void testClientContext(SslProvider provider) throws Exception {
         SslContextBuilder builder = SslContextBuilder.forClient()
                                                      .sslProvider(provider)
-                                                     .keyManager(CERT.toKeyManagerFactory())
+                                                     .keyManager(CERT.getKeyPair().getPrivate(),
+                                                             CERT.getCertificatePath())
                                                      .trustManager(CERT.toTrustManagerFactory())
                                                      .clientAuth(ClientAuth.OPTIONAL);
         SslContext context = builder.build();
@@ -352,7 +354,7 @@ public class SslContextBuilderTest {
         SslContextBuilder builder = SslContextBuilder.forClient()
                 .sslProvider(provider)
                 .secureRandom(secureRandom)
-                .keyManager(CERT.toKeyManagerFactory())
+                .keyManager(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .trustManager(CERT.toTrustManagerFactory())
                 .clientAuth(ClientAuth.OPTIONAL);
         SslContext context = builder.build();

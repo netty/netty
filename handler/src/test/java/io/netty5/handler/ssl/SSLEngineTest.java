@@ -4560,7 +4560,7 @@ public abstract class SSLEngineTest {
     @ParameterizedTest
     public void testBufferUnderflowPacketSizeDependency(SSLEngineTestParam param) throws Exception {
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
-                .keyManager(CERT.toKeyManagerFactory())
+                .keyManager(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .trustManager((TrustManagerFactory) null)
                 .sslProvider(sslClientProvider())
                 .sslContextProvider(clientSslContextProvider())
