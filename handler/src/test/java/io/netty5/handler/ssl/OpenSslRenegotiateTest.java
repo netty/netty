@@ -36,6 +36,7 @@ public class OpenSslRenegotiateTest extends RenegotiateTest {
         return SslProvider.OPENSSL;
     }
 
+    @Override
     protected void verifyResult(AtomicReference<Throwable> error) throws Throwable {
         Throwable cause = error.get();
         // Renegotiation is not supported by the OpenSslEngine.
