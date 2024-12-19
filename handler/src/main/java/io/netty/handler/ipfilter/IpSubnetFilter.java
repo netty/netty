@@ -55,8 +55,8 @@ import java.util.List;
 public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
     private final boolean acceptIfNotFound;
-    private final List<IpSubnetFilterRule> ipv4Rules;
-    private final List<IpSubnetFilterRule> ipv6Rules;
+    private final IpSubnetFilterRule[] ipv4Rules;
+    private final IpSubnetFilterRule[] ipv6Rules;
     private final IpFilterRuleType ipFilterRuleTypeIPv4;
     private final IpFilterRuleType ipFilterRuleTypeIPv6;
 
@@ -160,26 +160,26 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
             ipFilterRuleTypeIPv6 = null;
         }
 
-        this.ipv4Rules = sortAndFilter(unsortedIPv4Rules);
-        this.ipv6Rules = sortAndFilter(unsortedIPv6Rules);
+        this.ipv4Rules = unsortedIPv4Rules.isEmpty() ? null : sortAndFilter(unsortedIPv4Rules);
+        this.ipv6Rules = unsortedIPv6Rules.isEmpty() ? null : sortAndFilter(unsortedIPv6Rules);
     }
 
     @Override
     protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) {
-        if (remoteAddress.getAddress() instanceof Inet4Address) {
-            int indexOf = Collections.binarySearch(ipv4Rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
+        if (ipv4Rules != null && remoteAddress.getAddress() instanceof Inet4Address) {
+            int indexOf = Arrays.binarySearch(ipv4Rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
             if (indexOf >= 0) {
                 if (ipFilterRuleTypeIPv4 == null) {
-                    return ipv4Rules.get(indexOf).ruleType() == IpFilterRuleType.ACCEPT;
+                    return ipv4Rules[indexOf].ruleType() == IpFilterRuleType.ACCEPT;
                 } else {
                     return ipFilterRuleTypeIPv4 == IpFilterRuleType.ACCEPT;
                 }
             }
-        } else {
-            int indexOf = Collections.binarySearch(ipv6Rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
+        } else if (ipv6Rules != null) {
+            int indexOf = Arrays.binarySearch(ipv6Rules, remoteAddress, IpSubnetFilterRuleComparator.INSTANCE);
             if (indexOf >= 0) {
                 if (ipFilterRuleTypeIPv6 == null) {
-                    return ipv6Rules.get(indexOf).ruleType() == IpFilterRuleType.ACCEPT;
+                    return ipv6Rules[indexOf].ruleType() == IpFilterRuleType.ACCEPT;
                 } else {
                     return ipFilterRuleTypeIPv6 == IpFilterRuleType.ACCEPT;
                 }
@@ -196,8 +196,8 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
      *     <li> Sort the list again </li>
      * </ol>
      */
-    @SuppressWarnings("ConstantConditions")
-    private static List<IpSubnetFilterRule> sortAndFilter(List<IpSubnetFilterRule> rules) {
+    @SuppressWarnings("ZeroLengthArrayAllocation")
+    private static IpSubnetFilterRule[] sortAndFilter(List<IpSubnetFilterRule> rules) {
         Collections.sort(rules);
         Iterator<IpSubnetFilterRule> iterator = rules.iterator();
         List<IpSubnetFilterRule> toKeep = new ArrayList<IpSubnetFilterRule>();
@@ -221,6 +221,6 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
             }
         }
 
-        return toKeep;
+        return toKeep.toArray(new IpSubnetFilterRule[0]);
     }
 }
