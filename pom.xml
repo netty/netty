@@ -1301,6 +1301,15 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method void io.netty.handler.codec.spdy.SpdyFrameCodec::readUnknownFrame(int, byte, io.netty.buffer.ByteBuf)</old>
+                  <new>method void io.netty.handler.codec.spdy.SpdyFrameCodec::readUnknownFrame(int, byte, io.netty.buffer.ByteBuf)</new>
+                  <oldVisibility>private</oldVisibility>
+                  <newVisibility>public</newVisibility>
+                  <justification>Was private before and is needed</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.field.constantValueChanged</code>
                   <classQualifiedName>io.netty.handler.codec.http2.Http2CodecUtil</classQualifiedName>
                   <field>CONTINUATION_FRAME_HEADER_LENGTH</field>
