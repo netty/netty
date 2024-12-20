@@ -30,6 +30,10 @@ final class RedisCodecUtil {
         return Long.toString(value).getBytes(CharsetUtil.US_ASCII);
     }
 
+    static byte[] doubleToAsciiBytes(double value) {
+        return Double.toString(value).getBytes(CharsetUtil.US_ASCII);
+    }
+
     /**
      * Returns a {@code short} value using endian order.
      */
