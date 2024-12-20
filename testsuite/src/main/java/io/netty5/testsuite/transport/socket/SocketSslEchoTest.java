@@ -138,7 +138,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
-            serverContexts.add(SslContextBuilder.forServer(CERT.toKeyManagerFactory())
+            serverContexts.add(SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                                                 .sslProvider(SslProvider.OPENSSL)
                                                 // As we test renegotiation we should use a protocol that support it.
                                                 .protocols("TLSv1.2")
