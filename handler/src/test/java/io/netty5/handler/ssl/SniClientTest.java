@@ -27,10 +27,10 @@ import io.netty5.channel.local.LocalAddress;
 import io.netty5.channel.local.LocalChannel;
 import io.netty5.channel.local.LocalIoHandler;
 import io.netty5.channel.local.LocalServerChannel;
-import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
@@ -126,7 +126,10 @@ public class SniClientTest {
     private static void testSniClient(SslProvider sslClientProvider, SslProvider sslServerProvider, final boolean match)
             throws Throwable {
         final String sniHost = "sni.netty.io";
-        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
+        X509Bundle cert = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
         LocalAddress address = new LocalAddress(SniClientTest.class);
         EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
         SslContext sslServerContext = null;
@@ -135,7 +138,7 @@ public class SniClientTest {
         Channel sc = null;
         Channel cc = null;
         try {
-            sslServerContext = SslContextBuilder.forServer(cert.key(), cert.cert())
+            sslServerContext = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(), cert.getCertificatePath())
                     .sslProvider(sslServerProvider).build();
             final Promise<Void> promise = group.next().newPromise();
             ServerBootstrap sb = new ServerBootstrap();
@@ -303,12 +306,11 @@ public class SniClientTest {
         }
     }
 
-    static KeyManagerFactory newSniX509KeyManagerFactory(SelfSignedCertificate cert, String hostname)
+    static KeyManagerFactory newSniX509KeyManagerFactory(X509Bundle cert, String hostname)
             throws NoSuchAlgorithmException, KeyStoreException, UnrecoverableKeyException,
             IOException, CertificateException {
         return new SniX509KeyManagerFactory(
-                new SNIHostName(hostname), SslContext.buildKeyManagerFactory(
-                new X509Certificate[] { cert.cert() }, null,  cert.key(), null, null, null));
+                new SNIHostName(hostname), cert.toKeyManagerFactory());
     }
 
     private static final class SniX509KeyManagerFactory extends KeyManagerFactory {
@@ -385,7 +387,7 @@ public class SniClientTest {
                             managers.add(km);
                         }
                     }
-                    return managers.toArray(new KeyManager[0]);
+                    return managers.toArray(KeyManager[]::new);
                 }
             }, factory.getProvider(), factory.getAlgorithm());
         }
@@ -398,7 +400,10 @@ public class SniClientTest {
         String sniHostName = "sni.netty.io";
         LocalAddress address = new LocalAddress(SniClientTest.class);
         EventLoopGroup group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
-        SelfSignedCertificate cert = new SelfSignedCertificate();
+        X509Bundle cert = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
         SslContext sslServerContext = null;
         SslContext sslClientContext = null;
 
@@ -407,7 +412,8 @@ public class SniClientTest {
         try {
             if ((sslServerProvider == SslProvider.OPENSSL || sslServerProvider == SslProvider.OPENSSL_REFCNT)
                 && !OpenSsl.supportsKeyManagerFactory()) {
-                sslServerContext = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
+                sslServerContext = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(),
+                                cert.getCertificatePath())
                                                     .sslProvider(sslServerProvider)
                                                     .build();
             } else {
@@ -456,8 +462,6 @@ public class SniClientTest {
             }
             Resource.dispose(sslServerContext);
             Resource.dispose(sslClientContext);
-
-            cert.delete();
 
             group.shutdownGracefully();
         }

@@ -17,10 +17,8 @@ package io.netty5.example.util;
 
 import io.netty5.handler.ssl.SslContext;
 import io.netty5.handler.ssl.SslContextBuilder;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
-
-import javax.net.ssl.SSLException;
-import java.security.cert.CertificateException;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 
 /**
  * Some useful methods for server side.
@@ -32,13 +30,16 @@ public final class ServerUtil {
     private ServerUtil() {
     }
 
-    public static SslContext buildSslContext() throws CertificateException, SSLException {
+    public static SslContext buildSslContext() throws Exception {
         if (!SSL) {
             return null;
         }
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        X509Bundle cert = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
         return SslContextBuilder
-                .forServer(ssc.certificate(), ssc.privateKey())
+                .forServer(cert.toKeyManagerFactory())
                 .build();
     }
 }

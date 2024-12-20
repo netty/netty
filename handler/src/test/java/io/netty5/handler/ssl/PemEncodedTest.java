@@ -16,15 +16,13 @@
 
 package io.netty5.handler.ssl;
 
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.Resource;
-import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 
 import static io.netty5.util.internal.SilentDispose.autoClosing;
@@ -49,9 +47,15 @@ public class PemEncodedTest {
     private static void testPemEncoded(SslProvider provider) throws Exception {
         OpenSsl.ensureAvailability();
         assumeFalse(OpenSsl.supportsKeyManagerFactory());
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        PemPrivateKey pemKey = PemPrivateKey.valueOf(toByteArray(ssc.privateKey()));
-        PemX509Certificate pemCert = PemX509Certificate.valueOf(toByteArray(ssc.certificate()));
+
+        X509Bundle cert = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+        PemPrivateKey pemKey = PemPrivateKey.valueOf(
+                cert.getPrivateKeyPEM().getBytes(StandardCharsets.ISO_8859_1));
+        PemX509Certificate pemCert = PemX509Certificate.valueOf(
+                cert.getCertificatePEM().getBytes(StandardCharsets.ISO_8859_1));
 
         assertTrue(pemKey.content().readOnly());
         assertTrue(pemCert.content().readOnly());
@@ -96,17 +100,5 @@ public class PemEncodedTest {
     private static void assertRelease(PemEncoded encoded) {
         encoded.close();
         assertFalse(((Resource<?>) encoded).isAccessible());
-    }
-
-    private static byte[] toByteArray(File file) throws Exception {
-        try (FileInputStream in = new FileInputStream(file);
-             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            byte[] buf = new byte[1024];
-            int len;
-            while ((len = in.read(buf)) != -1) {
-                baos.write(buf, 0, len);
-            }
-            return baos.toByteArray();
-        }
     }
 }

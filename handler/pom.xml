@@ -103,6 +103,12 @@
       <classifier>${corretto.classifier}</classifier>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-pkitesting</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
 
     <!-- Automatic native-image reflection metadata generation for handlers dependencies -->
     <dependency>

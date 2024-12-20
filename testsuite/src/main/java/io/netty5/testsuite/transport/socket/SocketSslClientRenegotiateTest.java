@@ -30,7 +30,8 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.handler.ssl.SslProvider;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -41,9 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLHandshakeException;
-import java.io.File;
 import java.nio.channels.ClosedChannelException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -53,24 +52,24 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     private static final Logger logger = LoggerFactory.getLogger(SocketSslClientRenegotiateTest.class);
-    private static final File CERT_FILE;
-    private static final File KEY_FILE;
+    private static final X509Bundle CERT;
 
     static {
-        SelfSignedCertificate ssc;
         try {
-            ssc = new SelfSignedCertificate();
-        } catch (CertificateException e) {
-            throw new Error(e);
+            CERT = new CertificateBuilder()
+                    .subject("cn=localhost")
+                    .setIsCertificateAuthority(true)
+                    .buildSelfSigned();
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
         }
-        CERT_FILE = ssc.certificate();
-        KEY_FILE = ssc.privateKey();
     }
 
     private static boolean openSslNotAvailable() {
@@ -81,7 +80,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
         List<SslContext> serverContexts = new ArrayList<>();
         List<SslContext> clientContexts = new ArrayList<>();
         clientContexts.add(SslContextBuilder.forClient()
-                .trustManager(CERT_FILE)
+                .trustManager(CERT.toTrustManagerFactory())
                 .sslProvider(SslProvider.JDK)
                 .endpointIdentificationAlgorithm("")
                 .build()
@@ -89,7 +88,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
-            serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+            serverContexts.add(SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                     .sslProvider(SslProvider.OPENSSL)
                     .build()
             );
@@ -192,7 +191,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                 }
                 fail();
             } catch (DecoderException e) {
-                assertTrue(e.getCause() instanceof SSLHandshakeException);
+                assertInstanceOf(SSLHandshakeException.class, e.getCause());
             }
             if (clientException.get() != null) {
                 throw clientException.get();
@@ -253,7 +252,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
                     assertTrue(handshakeEvt.isSuccess());
                 } else {
                     if (ctx.channel().parent() == null) {
-                        assertTrue(handshakeEvt.cause() instanceof ClosedChannelException);
+                        assertInstanceOf(ClosedChannelException.class, handshakeEvt.cause());
                     }
                 }
             }

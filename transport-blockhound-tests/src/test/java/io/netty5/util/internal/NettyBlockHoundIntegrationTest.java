@@ -36,7 +36,8 @@ import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.resolver.dns.DnsNameResolverBuilder;
 import io.netty5.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty5.util.HashedWheelTimer;
@@ -475,8 +476,12 @@ public class NettyBlockHoundIntegrationTest {
                 .endpointIdentificationAlgorithm(null)
                 .sslProvider(SslProvider.JDK).protocols(tlsVersion).build();
 
-        final SelfSignedCertificate cert = new SelfSignedCertificate();
-        final SslContext sslServerCtx = SslContextBuilder.forServer(cert.key(), cert.cert())
+        X509Bundle cert = new CertificateBuilder()
+                .subject("cn=localhost")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+        final SslContext sslServerCtx = SslContextBuilder.forServer(cert.getKeyPair().getPrivate(),
+                        cert.getCertificatePath())
                 .sslProvider(SslProvider.JDK).protocols(tlsVersion).build();
 
         final SslHandler clientSslHandler = sslClientCtx.newHandler(offHeapAllocator(), executor);
