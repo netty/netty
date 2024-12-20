@@ -42,4 +42,5 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Boolean> TCP_QUICKACK = valueOf(IoUringChannelOption.class, "TCP_QUICKACK");
 
     public static final ChannelOption<Integer> MAX_DATAGRAM_PAYLOAD_SIZE = valueOf("MAX_DATAGRAM_PAYLOAD_SIZE");
+    public static final ChannelOption<Boolean> USE_POLL_IN_FIRST = valueOf("USE_POLL_IN_FIRST");
 }

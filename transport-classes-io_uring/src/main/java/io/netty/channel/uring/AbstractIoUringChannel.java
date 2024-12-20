@@ -44,7 +44,6 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -68,7 +67,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 abstract class AbstractIoUringChannel extends AbstractChannel implements UnixChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractIoUringChannel.class);
-    private static final boolean USE_POLL_IN_FIRST = SystemPropertyUtil.getBoolean("io.netty.iouring.usePollInFirst", false);
     final LinuxSocket socket;
     protected volatile boolean active;
 
@@ -301,7 +299,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void doBeginReadNow() {
-        if (socket.isBlocking() && !USE_POLL_IN_FIRST) {
+        boolean usePoolInFirst = Boolean.TRUE.equals(config().getOption(IoUringChannelOption.USE_POLL_IN_FIRST));
+        if (socket.isBlocking() && !usePoolInFirst) {
             // If the socket is blocking we will directly call scheduleFirstReadIfNeeded() as we can use FASTPOLL.
             ioUringUnsafe().scheduleFirstReadIfNeeded();
         } else if ((ioState & POLL_IN_SCHEDULED) == 0) {

@@ -35,6 +35,7 @@ import static io.netty.channel.ChannelOption.*;
 final class IOUringSocketChannelConfig extends DefaultChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
+    private volatile boolean usePoolInFirst;
 
     IOUringSocketChannelConfig(Channel channel) {
         super(channel);
@@ -50,7 +51,7 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
                 ALLOW_HALF_CLOSURE, IoUringChannelOption.TCP_CORK, IoUringChannelOption.TCP_NOTSENT_LOWAT,
                 IoUringChannelOption.TCP_KEEPCNT, IoUringChannelOption.TCP_KEEPIDLE, IoUringChannelOption.TCP_KEEPINTVL,
-                IoUringChannelOption.TCP_QUICKACK, IoUringChannelOption.IP_TRANSPARENT,
+                IoUringChannelOption.TCP_QUICKACK, IoUringChannelOption.IP_TRANSPARENT, IoUringChannelOption.USE_POLL_IN_FIRST,
                 ChannelOption.TCP_FASTOPEN_CONNECT);
     }
 
@@ -108,6 +109,9 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
         if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             return (T) Boolean.valueOf(isTcpFastOpenConnect());
         }
+        if (option == IoUringChannelOption.USE_POLL_IN_FIRST) {
+            return (T) Boolean.valueOf(isUsePoolInFirst());
+        }
         return super.getOption(option);
     }
 
@@ -149,6 +153,8 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
             setTcpQuickAck((Boolean) value);
         } else if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             setTcpFastOpenConnect((Boolean) value);
+        } else if (option == IoUringChannelOption.USE_POLL_IN_FIRST) {
+            setUsePoolInFirst((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -545,6 +551,15 @@ final class IOUringSocketChannelConfig extends DefaultChannelConfig implements S
      */
     public boolean isTcpFastOpenConnect() {
         return tcpFastopen;
+    }
+
+    public IOUringSocketChannelConfig setUsePoolInFirst(boolean usePoolInFirst) {
+        this.usePoolInFirst = usePoolInFirst;
+        return this;
+    }
+
+    public boolean isUsePoolInFirst() {
+        return usePoolInFirst;
     }
 
     @Override
