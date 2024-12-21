@@ -35,10 +35,10 @@ import java.util.concurrent.TimeUnit;
 public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements IoEventLoop {
 
     // TODO: Is this a sensible default ?
-    protected static final long DEFAULT_MAX_TASKS_PER_RUN_NS = TimeUnit.MILLISECONDS.toNanos(Math.max(10,
-            SystemPropertyUtil.getInt("io.netty.eventLoop.maxTaskProcessingDurationPerRun", 1000)));
+    protected static final long DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS= TimeUnit.MILLISECONDS.toNanos(Math.max(100,
+            SystemPropertyUtil.getInt("io.netty.eventLoop.maxTaskProcessingQuantumMs", 1000)));
 
-    private final long maxTaskDurationPerRun = DEFAULT_MAX_TASKS_PER_RUN_NS;
+    private final long maxTaskProcessingQuantumNs = DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS;
     private final IoExecutionContext context = new IoExecutionContext() {
         @Override
         public boolean canBlock() {
@@ -159,7 +159,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
                 ioHandler.prepareToDestroy();
             }
             // Now run all tasks for the maximum configured amount of time before trying to run IO again.
-            runAllTasks(maxTaskDurationPerRun);
+            runAllTasks(maxTaskProcessingQuantumNs);
 
             // We should continue with our loop until we either confirmed a shutdown or we can suspend it.
         } while (!confirmShutdown() && !canSuspend());
