@@ -26,6 +26,7 @@ import io.netty.util.internal.SystemPropertyUtil;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 /**
  * {@link IoEventLoop} implementation that execute all its submitted tasks in a single thread using the provided
@@ -34,10 +35,10 @@ import java.util.concurrent.ThreadFactory;
 public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements IoEventLoop {
 
     // TODO: Is this a sensible default ?
-    protected static final int DEFAULT_MAX_TASKS_PER_RUN = Math.max(1,
-            SystemPropertyUtil.getInt("io.netty.eventLoop.maxTaskPerRun", 1024 * 4));
+    private static final long DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS = TimeUnit.MILLISECONDS.toNanos(Math.max(100,
+            SystemPropertyUtil.getInt("io.netty.eventLoop.maxTaskProcessingQuantumMs", 1000)));
 
-    private final int maxTasksPerRun = DEFAULT_MAX_TASKS_PER_RUN;
+    private final long maxTaskProcessingQuantumNs;
     private final IoExecutionContext context = new IoExecutionContext() {
         @Override
         public boolean canBlock() {
@@ -77,6 +78,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
                                    IoHandler ioHandler) {
         super(parent, threadFactory, false, true);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
+        this.maxTaskProcessingQuantumNs = DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS;
     }
 
     /**
@@ -89,44 +91,59 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor, IoHandler ioHandler) {
         super(parent, executor, false, true);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
+        this.maxTaskProcessingQuantumNs = DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS;
     }
 
     /**
      *  Creates a new instance
      *
-     * @param parent                    the parent that holds this {@link IoEventLoop}.
-     * @param threadFactory             the {@link ThreadFactory} that is used to create the underlying {@link Thread}.
-     * @param ioHandler                 the {@link IoHandler} used to run all IO.
-     * @param maxPendingTasks           the maximum pending tasks that are allowed before
-     *                                  {@link RejectedExecutionHandler#rejected(Runnable, SingleThreadEventExecutor)}
-     *                                  is called to handle it.
-     * @param rejectedExecutionHandler  the {@link RejectedExecutionHandler} that handles when more tasks are added
-     *                                  then allowed per {@code maxPendingTasks}.
+     * @param parent                        the parent that holds this {@link IoEventLoop}.
+     * @param threadFactory                 the {@link ThreadFactory} that is used to create the underlying
+     *                                      {@link Thread}.
+     * @param ioHandler                     the {@link IoHandler} used to run all IO.
+     * @param maxPendingTasks               the maximum pending tasks that are allowed before
+     *                                      {@link RejectedExecutionHandler#rejected(Runnable,
+     *                                          SingleThreadEventExecutor)}
+     *                                      is called to handle it.
+     * @param rejectedExecutionHandler      the {@link RejectedExecutionHandler} that handles when more tasks are added
+     *                                      then allowed per {@code maxPendingTasks}.
+     * @param maxTaskProcessingQuantumMs    the maximum number of milliseconds that will be spent to run tasks before
+     *                                      trying to run IO again.
      */
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, ThreadFactory threadFactory,
                                    IoHandler ioHandler, int maxPendingTasks,
-                                   RejectedExecutionHandler rejectedExecutionHandler) {
+                                   RejectedExecutionHandler rejectedExecutionHandler, long maxTaskProcessingQuantumMs) {
         super(parent, threadFactory, false, true, maxPendingTasks, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
+        this.maxTaskProcessingQuantumNs =
+                ObjectUtil.checkPositiveOrZero(maxTaskProcessingQuantumMs, "maxTaskProcessingQuantumMs") == 0 ?
+                        DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS : maxTaskProcessingQuantumMs;
     }
 
     /**
      *  Creates a new instance
      *
-     * @param parent                    the parent that holds this {@link IoEventLoop}.
-     * @param ioHandler                 the {@link IoHandler} used to run all IO.
-     * @param executor                  the {@link Executor} that is used for dispatching the work.
-     * @param maxPendingTasks           the maximum pending tasks that are allowed before
-     *                                  {@link RejectedExecutionHandler#rejected(Runnable, SingleThreadEventExecutor)}
-     *                                  is called to handle it.
-     * @param rejectedExecutionHandler  the {@link RejectedExecutionHandler} that handles when more tasks are added
-     *                                  then allowed per {@code maxPendingTasks}.
+     * @param parent                        the parent that holds this {@link IoEventLoop}.
+     * @param ioHandler                     the {@link IoHandler} used to run all IO.
+     * @param executor                      the {@link Executor} that is used for dispatching the work.
+     * @param maxPendingTasks               the maximum pending tasks that are allowed before
+     *                                      {@link RejectedExecutionHandler#rejected(Runnable,
+     *                                          SingleThreadEventExecutor)}
+     *                                      is called to handle it.
+     * @param rejectedExecutionHandler      the {@link RejectedExecutionHandler} that handles when more tasks are added
+     *                                      then allowed per {@code maxPendingTasks}.
+     * @param maxTaskProcessingQuantumMs    the maximum number of milliseconds that will be spent to run tasks before
+     *                                      trying to run IO again.
      */
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor,
                                    IoHandler ioHandler, int maxPendingTasks,
-                                   RejectedExecutionHandler rejectedExecutionHandler) {
+                                   RejectedExecutionHandler rejectedExecutionHandler,
+                                   long maxTaskProcessingQuantumMs) {
         super(parent, executor, false, true, maxPendingTasks, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
+        this.maxTaskProcessingQuantumNs =
+                ObjectUtil.checkPositiveOrZero(maxTaskProcessingQuantumMs, "maxTaskProcessingQuantumMs") == 0 ?
+                        DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS : maxTaskProcessingQuantumMs;
     }
 
     /**
@@ -147,6 +164,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
                                       RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, executor, false, true, taskQueue, tailTaskQueue, rejectedExecutionHandler);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandler, "ioHandler");
+        this.maxTaskProcessingQuantumNs = DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS;
     }
 
     @Override
@@ -157,7 +175,8 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             if (isShuttingDown()) {
                 ioHandler.prepareToDestroy();
             }
-            runAllTasks(maxTasksPerRun);
+            // Now run all tasks for the maximum configured amount of time before trying to run IO again.
+            runAllTasks(maxTaskProcessingQuantumNs);
 
             // We should continue with our loop until we either confirmed a shutdown or we can suspend it.
         } while (!confirmShutdown() && !canSuspend());
