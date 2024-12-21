@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements IoEventLoop {
 
     // TODO: Is this a sensible default ?
-    protected static final long DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS= TimeUnit.MILLISECONDS.toNanos(Math.max(100,
+    private static final long DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS = TimeUnit.MILLISECONDS.toNanos(Math.max(100,
             SystemPropertyUtil.getInt("io.netty.eventLoop.maxTaskProcessingQuantumMs", 1000)));
 
     private final long maxTaskProcessingQuantumNs = DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS;
