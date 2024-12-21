@@ -651,7 +651,6 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     }
                 };
             }
-
         }
 
         private static byte[] newByteArray(int size) {
@@ -741,7 +740,6 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     }
                 };
             }
-
         }
 
         @Override

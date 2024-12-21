@@ -53,7 +53,6 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             this.recyclerHandle = null;
             this.handleNoThreadLocal = (Handle<PooledByteBuf<T>>) recyclerHandle;
         }
-
     }
 
     void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
@@ -186,8 +185,8 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             tmpNioBuf = null;
             chunk = null;
             cache = null;
-            assert ((this.recyclerHandle == null && this.handleNoThreadLocal != null) ||
-                    (this.recyclerHandle != null && this.handleNoThreadLocal == null));
+            assert (this.recyclerHandle == null && this.handleNoThreadLocal != null) ||
+                    (this.recyclerHandle != null && this.handleNoThreadLocal == null);
             if (this.recyclerHandle != null) {
                 this.recyclerHandle.unguardedRecycle(this);
             } else {
