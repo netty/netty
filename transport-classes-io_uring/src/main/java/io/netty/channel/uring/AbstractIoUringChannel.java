@@ -299,7 +299,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void doBeginReadNow() {
-        if (socket.isBlocking()) {
+        if (socket.isBlocking() && !((IOUringChannelConfig) config()).getPollInFirst()) {
             // If the socket is blocking we will directly call scheduleFirstReadIfNeeded() as we can use FASTPOLL.
             ioUringUnsafe().scheduleFirstReadIfNeeded();
         } else if ((ioState & POLL_IN_SCHEDULED) == 0) {
@@ -610,9 +610,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
 
         final void schedulePollIn() {
-            // This should only be done if the socket is non-blocking.
-            assert !socket.isBlocking();
-
             assert (ioState & POLL_IN_SCHEDULED) == 0;
             if (!isActive() || shouldBreakIoUringInReady(config())) {
                 return;

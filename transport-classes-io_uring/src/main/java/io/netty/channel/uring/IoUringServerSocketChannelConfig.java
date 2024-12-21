@@ -18,7 +18,6 @@ package io.netty.channel.uring;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
@@ -32,7 +31,7 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.TCP_FASTOPEN;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
-final class IoUringServerSocketChannelConfig extends DefaultChannelConfig implements ServerSocketChannelConfig {
+final class IoUringServerSocketChannelConfig extends IOUringChannelConfig implements ServerSocketChannelConfig {
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile int pendingFastOpenRequestsThreshold;
 
