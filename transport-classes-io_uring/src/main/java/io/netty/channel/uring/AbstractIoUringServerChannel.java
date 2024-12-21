@@ -43,7 +43,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     private long acceptId;
 
     protected AbstractIoUringServerChannel(LinuxSocket socket, boolean active) {
-        super(null, socket, active);
+        super(null, IoUring.isIOUringAcceptNoWaitSupported() ? LinuxSocket.makeBlocking(socket) : socket, active);
 
         acceptedAddressMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
         acceptedAddressMemoryAddress = Buffer.memoryAddress(acceptedAddressMemory);
@@ -120,7 +120,9 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
 
             int fd = fd().intValue();
             IoUringIoRegistration registration = registration();
+            // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10#improvements-for-accept
             IoUringIoOps ops = IoUringIoOps.newAccept(fd, (byte) 0, 0,
+                    first ? (short) 0 : Native.IORING_ACCEPT_DONT_WAIT,
                     acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, nextOpsId());
             acceptId = registration.submit(ops);
             if (acceptId == 0) {
@@ -145,7 +147,17 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
                     Channel channel = newChildChannel(
                             res, acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress);
                     pipeline.fireChannelRead(channel);
-                    if (allocHandle.continueReading()) {
+
+                    if (allocHandle.continueReading() &&
+                            // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
+                            // trying to schedule a read. If it's supported and not part of the flags we know for sure
+                            // that the next read (which would be using Native.IORING_ACCEPT_DONT_WAIT) will complete
+                            // without be able to read any data. This is useless work and we can skip it.
+                            //
+                            // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10
+                            (!IoUring.isIOUringAcceptNoWaitSupported() ||
+                                    !IoUring.isIOUringCqeFSockNonEmptySupported() ||
+                                    (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
                         scheduleRead(false);
                     } else {
                         allocHandle.readComplete();

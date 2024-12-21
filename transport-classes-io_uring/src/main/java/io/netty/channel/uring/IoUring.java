@@ -26,10 +26,13 @@ public final class IoUring {
     private static final Throwable UNAVAILABILITY_CAUSE;
     private static final boolean IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED;
     private static final boolean IORING_SPLICE_SUPPORTED;
+    private static final boolean IORING_ACCEPT_NO_WAIT_SUPPORTED;
+
     static {
         Throwable cause = null;
         boolean socketNonEmptySupported = false;
         boolean spliceSupported = false;
+        boolean acceptSupportNoWait = false;
         try {
             if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
                 cause = new UnsupportedOperationException(
@@ -45,6 +48,8 @@ public final class IoUring {
                         Native.checkAllIOSupported(ringBuffer.fd());
                         socketNonEmptySupported = Native.isIOUringCqeFSockNonEmptySupported(ringBuffer.fd());
                         spliceSupported = Native.isIOUringSupportSplice(ringBuffer.fd());
+                        // IORING_FEAT_RECVSEND_BUNDLE was adde in the same release.
+                        acceptSupportNoWait = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
                     } finally {
                         if (ringBuffer != null) {
                             try {
@@ -72,6 +77,7 @@ public final class IoUring {
         UNAVAILABILITY_CAUSE = cause;
         IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED = socketNonEmptySupported;
         IORING_SPLICE_SUPPORTED = spliceSupported;
+        IORING_ACCEPT_NO_WAIT_SUPPORTED = acceptSupportNoWait;
     }
 
     public static boolean isAvailable() {
@@ -104,6 +110,10 @@ public final class IoUring {
 
     static boolean isIOUringSpliceSupported() {
         return IORING_SPLICE_SUPPORTED;
+    }
+
+    static boolean isIOUringAcceptNoWaitSupported() {
+        return IORING_ACCEPT_NO_WAIT_SUPPORTED;
     }
 
     public static void ensureAvailability() {
