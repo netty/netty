@@ -16,6 +16,8 @@
 package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketShutdownOutputBySelfTest;
 import org.junit.jupiter.api.BeforeAll;
@@ -34,5 +36,11 @@ public class IoUringSocketShutdownOutputBySelfTest extends SocketShutdownOutputB
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
         return IoUringSocketTestPermutation.INSTANCE.clientSocket();
+    }
+
+    @Override
+    protected void configure(Bootstrap bootstrap, ByteBufAllocator allocator) {
+        super.configure(bootstrap, allocator);
+        bootstrap.option(IoUringChannelOption.POLLIN_FIRST, true);
     }
 }

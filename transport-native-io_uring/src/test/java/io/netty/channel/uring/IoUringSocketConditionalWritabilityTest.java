@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketConditionalWritabilityTest;
 import org.junit.jupiter.api.BeforeAll;
@@ -44,5 +45,13 @@ public class IoUringSocketConditionalWritabilityTest extends SocketConditionalWr
     public void testConditionalWritability(TestInfo testInfo) throws Throwable {
         // Ignore as it does not pass on QEMU atm
         // super.testConditionalWritability();
+    }
+
+    @Override
+    protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
+        super.configure(sb, cb, allocator);
+        sb.option(IoUringChannelOption.POLLIN_FIRST, false);
+        sb.childOption(IoUringChannelOption.POLLIN_FIRST, false);
+        cb.option(IoUringChannelOption.POLLIN_FIRST, false);
     }
 }

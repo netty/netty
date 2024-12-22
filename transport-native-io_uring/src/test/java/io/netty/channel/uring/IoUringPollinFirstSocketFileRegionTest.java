@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,11 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.SocketHalfClosedTest;
-import io.netty.util.internal.PlatformDependent;
-import org.junit.jupiter.api.Assumptions;
+import io.netty.testsuite.transport.socket.SocketFileRegionTest;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -31,7 +28,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringSocketHalfClosedTest extends SocketHalfClosedTest {
+public class IoUringPollinFirstSocketFileRegionTest extends SocketFileRegionTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -43,23 +40,22 @@ public class IoUringSocketHalfClosedTest extends SocketHalfClosedTest {
         return IoUringSocketTestPermutation.INSTANCE.socket();
     }
 
-    @Disabled
+    @Override
+    protected boolean supportsCustomFileRegion() {
+        return false;
+    }
+
+    //@Disabled("Fix me")
     @Test
-    public void testAutoCloseFalseDoesShutdownOutput(TestInfo testInfo) throws Throwable {
-        // This test only works on Linux / BSD / MacOS as we assume some semantics that are not true for Windows.
-        Assumptions.assumeFalse(PlatformDependent.isWindows());
-        this.run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
-            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
-                testAutoCloseFalseDoesShutdownOutput(serverBootstrap, bootstrap);
-            }
-        });
+    public void testFileRegionCountLargerThenFile(TestInfo testInfo) throws Throwable {
+        super.testFileRegionCountLargerThenFile(testInfo);
     }
 
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.option(IoUringChannelOption.POLLIN_FIRST, false);
-        sb.childOption(IoUringChannelOption.POLLIN_FIRST, false);
-        cb.option(IoUringChannelOption.POLLIN_FIRST, false);
+        sb.option(IoUringChannelOption.POLLIN_FIRST, true);
+        sb.childOption(IoUringChannelOption.POLLIN_FIRST, true);
+        cb.option(IoUringChannelOption.POLLIN_FIRST, true);
     }
 }

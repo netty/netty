@@ -18,14 +18,14 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.WriteBeforeRegisteredTest;
+import io.netty.testsuite.transport.socket.DatagramMulticastTest;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest {
+public class IoUringPollinFirstDatagramMulticastTest extends DatagramMulticastTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -33,13 +33,14 @@ public class IoUringWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest 
     }
 
     @Override
-    protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
-        return IoUringSocketTestPermutation.INSTANCE.clientSocket();
+    protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
+        return IoUringSocketTestPermutation.INSTANCE.datagram(socketProtocolFamily());
     }
 
     @Override
-    protected void configure(Bootstrap bootstrap, ByteBufAllocator allocator) {
-        super.configure(bootstrap, allocator);
-        bootstrap.option(IoUringChannelOption.POLLIN_FIRST, false);
+    protected void configure(Bootstrap bootstrap, Bootstrap bootstrap2, ByteBufAllocator allocator) {
+        super.configure(bootstrap, bootstrap2, allocator);
+        bootstrap.option(IoUringChannelOption.POLLIN_FIRST, true);
+        bootstrap2.option(IoUringChannelOption.POLLIN_FIRST, true);
     }
 }
