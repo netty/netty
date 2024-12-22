@@ -335,11 +335,6 @@ final class Native {
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
     }
 
-    static boolean isIOUringAcceptSupportNoWait(int ringFd) {
-        // IORING_OP_BIND was added one release after (6.11);
-        return ioUringProbe(ringFd, new int[] { Native.IORING_OP_BIND });
-    }
-
     static boolean isIOUringSupportSplice(int ringFd) {
         // IORING_OP_SPLICE Available since 5.7
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
