@@ -220,7 +220,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         private ByteBuf readBuffer;
         private IovArray iovArray;
-        private boolean socketWasEmpty;
 
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
@@ -286,7 +285,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected int scheduleRead0(boolean first) {
+        protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
             assert readBuffer == null;
             assert readId == 0;
 
@@ -297,7 +296,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 int fd = fd().intValue();
                 IoUringIoRegistration registration = registration();
 
-                // Depending on if socketWasEmpty is true we will arm the poll upfront and skip the initial transfer
+                // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
                 // attempt.
                 // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
                 final short ioPrio;
@@ -311,7 +310,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 final int recvFlags;
 
                 if (first) {
-                    ioPrio = socketWasEmpty ? Native.IORING_RECVSEND_POLL_FIRST : 0;
+                    ioPrio = socketIsEmpty ? Native.IORING_RECVSEND_POLL_FIRST : 0;
                     recvFlags = 0;
                 } else {
                     ioPrio = 0;
@@ -378,8 +377,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.incMessagesRead(1);
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
-                socketWasEmpty = socketWasEmptyForSure(flags);
-                if (allocHandle.continueReading() && !socketWasEmpty) {
+                if (allocHandle.continueReading() && !socketIsEmpty(flags)) {
                     // Let's schedule another read.
                     scheduleRead(false);
                 } else {
@@ -389,10 +387,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 }
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
-            } finally {
-                // We always reset this to false as we only want to respect it when scheduleRead(true) is called
-                // while in this method.
-                socketWasEmpty = false;
             }
         }
 

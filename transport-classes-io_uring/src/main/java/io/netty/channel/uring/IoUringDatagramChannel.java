@@ -446,7 +446,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        protected int scheduleRead0(boolean first) {
+        protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             ByteBuf byteBuf = allocHandle.allocate(alloc());
             assert readBuffer == null;

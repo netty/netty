@@ -115,7 +115,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected int scheduleRead0(boolean first) {
+        protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
             assert acceptId == 0;
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.attemptedBytesRead(1);
@@ -123,7 +123,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             int fd = fd().intValue();
             IoUringIoRegistration registration = registration();
 
-            // Depending on if socketWasEmpty is true we will arm the poll upfront and skip the initial transfer
+            // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
             // attempt.
             // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
             //
@@ -136,7 +136,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             final short ioPrio;
 
             if (first) {
-                ioPrio = socketWasEmpty ? Native.IORING_RECVSEND_POLL_FIRST : 0;
+                ioPrio = socketIsEmpty ? Native.IORING_RECVSEND_POLL_FIRST : 0;
             } else {
                 ioPrio = Native.IORING_ACCEPT_DONT_WAIT;
             }
@@ -167,8 +167,6 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
                             res, acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress);
                     pipeline.fireChannelRead(channel);
 
-                    socketWasEmpty = socketWasEmptyForSure(flags);
-
                     if (allocHandle.continueReading() &&
                             // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
                             // trying to schedule a read. If it's supported and not part of the flags we know for sure
@@ -176,7 +174,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
                             // without be able to read any data. This is useless work and we can skip it.
                             //
                             // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10
-                            (!IoUring.isIOUringAcceptNoWaitSupported() || !socketWasEmpty)) {
+                            (!IoUring.isIOUringAcceptNoWaitSupported() || !socketIsEmpty(flags))) {
                         scheduleRead(false);
                     } else {
                         allocHandle.readComplete();
@@ -186,10 +184,6 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
                     allocHandle.readComplete();
                     pipeline.fireChannelReadComplete();
                     pipeline.fireExceptionCaught(cause);
-                } finally {
-                    // We always reset this to false as we only want to respect it when scheduleRead(true) is called
-                    // while in this method.
-                    socketWasEmpty = false;
                 }
             } else if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
                 allocHandle.readComplete();
