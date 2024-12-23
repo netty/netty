@@ -191,10 +191,13 @@ final class Native {
     static final byte IORING_OP_FUTEX_WAITV = 53;
     static final byte IORING_OP_FIXED_FD_INSTALL = 54;
     static final byte IORING_OP_FTRUNCATE = 55;
+    static final byte IORING_OP_BIND = 56;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
 
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
+    static final int IORING_ACCEPT_DONT_WAIT = 1 << 1;
 
+    static final int IORING_FEAT_RECVSEND_BUNDLE = 1 << 14;
     static final int SPLICE_F_MOVE = 1;
 
     static String opToStr(byte op) {
