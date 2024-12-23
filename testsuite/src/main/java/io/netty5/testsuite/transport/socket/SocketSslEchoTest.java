@@ -33,8 +33,9 @@ import io.netty5.handler.ssl.SslContextBuilder;
 import io.netty5.handler.ssl.SslHandler;
 import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.handler.ssl.SslProvider;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.stream.ChunkedWriteHandler;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.testsuite.util.TestUtils;
 import io.netty5.util.concurrent.Future;
 import org.junit.jupiter.api.AfterAll;
@@ -46,9 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLEngine;
-import java.io.File;
 import java.io.IOException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -74,21 +73,21 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
     private static final int FIRST_MESSAGE_SIZE = 16384;
     private static final Random random = new Random();
-    private static final File CERT_FILE;
-    private static final File KEY_FILE;
+    private static final X509Bundle CERT;
     static final byte[] data = new byte[1048576];
 
     static {
         random.nextBytes(data);
 
-        SelfSignedCertificate ssc;
         try {
-            ssc = new SelfSignedCertificate();
-        } catch (CertificateException e) {
-            throw new Error(e);
+            CERT = new CertificateBuilder()
+                    .rsa2048()
+                    .subject("cn=localhost")
+                    .setIsCertificateAuthority(true)
+                    .buildSelfSigned();
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
         }
-        CERT_FILE = ssc.certificate();
-        KEY_FILE = ssc.privateKey();
     }
 
     private static final BufferAllocator bufferAllocator = DefaultBufferAllocators.preferredAllocator();
@@ -99,7 +98,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         SERVER_INITIATED, // renegotiation from server
     }
 
-    protected static class Renegotiation {
+    public static class Renegotiation {
         static final Renegotiation NONE = new Renegotiation(RenegotiationType.NONE, null);
 
         final RenegotiationType type;
@@ -122,7 +121,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
     public static Collection<Object[]> data() throws Exception {
         List<SslContext> serverContexts = new ArrayList<>();
-        serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+        serverContexts.add(SslContextBuilder.forServer(CERT.toKeyManagerFactory())
                                             .sslProvider(SslProvider.JDK)
                                             // As we test renegotiation we should use a protocol that support it.
                                             .protocols("TLSv1.2")
@@ -131,7 +130,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         List<SslContext> clientContexts = new ArrayList<>();
         clientContexts.add(SslContextBuilder.forClient()
                                             .sslProvider(SslProvider.JDK)
-                                            .trustManager(CERT_FILE)
+                                            .trustManager(CERT.toTrustManagerFactory())
                                             // As we test renegotiation we should use a protocol that support it.
                                             .protocols("TLSv1.2")
                                             .endpointIdentificationAlgorithm(null)
@@ -139,14 +138,14 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
         boolean hasOpenSsl = OpenSsl.isAvailable();
         if (hasOpenSsl) {
-            serverContexts.add(SslContextBuilder.forServer(CERT_FILE, KEY_FILE)
+            serverContexts.add(SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                                                 .sslProvider(SslProvider.OPENSSL)
                                                 // As we test renegotiation we should use a protocol that support it.
                                                 .protocols("TLSv1.2")
                                                 .build());
             clientContexts.add(SslContextBuilder.forClient()
                                                 .sslProvider(SslProvider.OPENSSL)
-                                                .trustManager(CERT_FILE)
+                                                .trustManager(CERT.toTrustManagerFactory())
                                                 // As we test renegotiation we should use a protocol that support it.
                                                 .protocols("TLSv1.2")
                                                 .endpointIdentificationAlgorithm(null)

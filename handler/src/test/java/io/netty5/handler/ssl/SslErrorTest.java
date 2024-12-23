@@ -28,10 +28,10 @@ import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.logging.LogLevel;
 import io.netty5.handler.logging.LoggingHandler;
-import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Timeout;
@@ -64,6 +64,18 @@ import java.util.concurrent.TimeUnit;
 import static io.netty5.util.internal.SilentDispose.autoClosing;
 
 public class SslErrorTest {
+    private static final X509Bundle CERT;
+
+    static {
+        try {
+            CERT = new CertificateBuilder()
+                    .subject("cn=localhost")
+                    .setIsCertificateAuthority(true)
+                    .buildSelfSigned();
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
 
     static Collection<Object[]> data() {
         List<SslProvider> serverProviders = new ArrayList<>(2);
@@ -119,9 +131,8 @@ public class SslErrorTest {
         // no need to run it if there is no openssl is available at all.
         OpenSsl.ensureAvailability();
 
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-
-        SslContextBuilder sslServerCtxBuilder = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        SslContextBuilder sslServerCtxBuilder = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(serverProvider)
                 .clientAuth(ClientAuth.REQUIRE);
         SslContextBuilder sslClientCtxBuilder =  SslContextBuilder.forClient()

@@ -20,8 +20,8 @@ import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -187,9 +187,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                     return false;
                 }
                 int bugfix = Integer.parseInt(versionParts[2]);
-                if (bugfix > 0) {
-                    return false;
-                }
+                return bugfix <= 0;
             }
         }
         return true;
@@ -245,8 +243,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
                                         .build());
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -284,8 +282,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
                                         .build());
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -340,8 +338,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
                                         .build());
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -381,8 +379,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
                                         .build());
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -475,8 +473,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     private void testCorrectlyCalculateSpaceForAlert(SSLEngineTestParam param, boolean jdkCompatabilityMode)
             throws Exception {
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -542,8 +540,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                         .sslProvider(sslClientProvider())
                                         .build());
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .build());
 
@@ -574,8 +572,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .trustManager(InsecureTrustManagerFactory.INSTANCE)
                                         .sslProvider(sslClientProvider())
                                         .build());
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .build());
 
@@ -603,8 +601,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
                 .build());
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .build());
 
@@ -642,8 +640,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
                 .build());
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .build());
 
@@ -678,11 +676,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @ParameterizedTest
     public void testMultipleRecordsInOneBufferWithNonZeroPositionJDKCompatabilityModeOff(SSLEngineTestParam param)
             throws Exception {
-        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
-
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
-                .trustManager(cert.cert())
+                .trustManager(CERT.toTrustManagerFactory())
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -691,7 +687,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(offHeapAllocator()).engine());
 
         serverSslCtx = wrapContext(param, SslContextBuilder
-                .forServer(cert.certificate(), cert.privateKey())
+                .forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -760,11 +756,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testInputTooBigAndFillsUpBuffersJDKCompatabilityModeOff(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
-
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
-                .trustManager(cert.cert())
+                .trustManager(CERT.toTrustManagerFactory())
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -773,7 +767,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(offHeapAllocator()).engine());
 
         serverSslCtx = wrapContext(param, SslContextBuilder
-                .forServer(cert.certificate(), cert.privateKey())
+                .forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -851,11 +845,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testPartialPacketUnwrapJDKCompatabilityModeOff(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
-
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
-                .trustManager(cert.cert())
+                .trustManager(CERT.toTrustManagerFactory())
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -864,7 +856,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(offHeapAllocator()).engine());
 
         serverSslCtx = wrapContext(param, SslContextBuilder
-                .forServer(cert.certificate(), cert.privateKey())
+                .forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -932,11 +924,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testBufferUnderFlowAvoidedIfJDKCompatabilityModeOff(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
-
         clientSslCtx = wrapContext(param, SslContextBuilder
                 .forClient()
-                .trustManager(cert.cert())
+                .trustManager(CERT.toTrustManagerFactory())
                 .sslProvider(sslClientProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -945,7 +935,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SSLEngine client = wrapEngine(clientSslCtx.newHandler(offHeapAllocator()).engine());
 
         serverSslCtx = wrapContext(param, SslContextBuilder
-                .forServer(cert.certificate(), cert.privateKey())
+                .forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
@@ -1073,8 +1063,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testSNIMatchersDoesNotThrow(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -1094,8 +1084,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @ParameterizedTest
     public void testSNIMatchersWithSNINameWithUnderscore(SSLEngineTestParam param) throws Exception {
         byte[] name = "rb8hx3pww30y3tvw0mwy.v1_1".getBytes(UTF_8);
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -1129,8 +1119,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testAlgorithmConstraintsThrows(SSLEngineTestParam param) throws Exception {
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                         .sslProvider(sslServerProvider())
                                         .protocols(param.protocols())
                                         .ciphers(param.ciphers())
@@ -1187,15 +1177,15 @@ public class OpenSslEngineTest extends SSLEngineTest {
         if (param.combo() != ProtocolCipherCombo.tlsv12()) {
             return;
         }
-        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(cert.key(), cert.cert())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .sslProvider(OPENSSL).build());
         final SSLEngine serverEngine =
                 wrapEngine(serverSslCtx.newEngine(offHeapAllocator()));
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
-                .trustManager(cert.certificate())
+                .trustManager(CERT.toTrustManagerFactory())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .endpointIdentificationAlgorithm(null)
@@ -1463,9 +1453,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
             clientCtxBuilder.protocols(clientProtocol);
         }
         clientSslCtx = wrapContext(param, clientCtxBuilder.build());
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-
-        SslContextBuilder serverCtxBuilder = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        SslContextBuilder serverCtxBuilder = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider());
         if (serverProtocol != null) {
@@ -1585,7 +1574,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
     @Test
     public void testExtraDataInLastSrcBufferForClientUnwrapNonjdkCompatabilityMode() throws Exception {
         SSLEngineTestParam param = new SSLEngineTestParam(BufferType.Direct, ProtocolCipherCombo.tlsv12(), false);
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .sslProvider(sslClientProvider())
@@ -1593,7 +1581,8 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
                 .protocols(param.protocols())
@@ -1610,17 +1599,17 @@ public class OpenSslEngineTest extends SSLEngineTest {
     public void testMaxCertificateList(final SSLEngineTestParam param) throws Exception {
         assumeTrue(SslProvider.isOptionSupported(sslClientProvider(), OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES));
         assumeTrue(SslProvider.isOptionSupported(sslServerProvider(), OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES));
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .keyManager(ssc.certificate(), ssc.privateKey())
+                .keyManager(CERT.toKeyManagerFactory())
                 .sslProvider(sslClientProvider())
                 .sslContextProvider(clientSslContextProvider())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .option(OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES, 10)
                 .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(sslServerProvider())
                 .sslContextProvider(serverSslContextProvider())
                 .protocols(param.protocols())

@@ -35,10 +35,10 @@ import io.netty5.channel.local.LocalServerChannel;
 import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
 import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.Resource;
 import io.netty5.util.Send;
 import io.netty5.util.concurrent.Promise;
@@ -67,7 +67,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -79,6 +78,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ParameterizedSslHandlerTest {
 
     private static final String PARAMETERIZED_NAME = "{index}: clientProvider={0}, {index}: serverProvider={1}";
+    private static final X509Bundle CERT;
+
+    static {
+        try {
+            CERT = new CertificateBuilder()
+                    .subject("cn=localhost")
+                    .setIsCertificateAuthority(true)
+                    .buildSelfSigned();
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
 
     static Collection<Object[]> data() {
         List<SslProvider> providers = new ArrayList<>(3);
@@ -126,10 +137,9 @@ public class ParameterizedSslHandlerTest {
             SslProvider serverProvider, SslProvider clientProvider,
             final boolean serverDisableWrapSize,
             final boolean letHandlerCreateServerEngine, final boolean letHandlerCreateClientEngine)
-            throws CertificateException, SSLException, ExecutionException, InterruptedException {
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-
-        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+            throws Exception {
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(serverProvider)
                 .build();
 
@@ -278,9 +288,8 @@ public class ParameterizedSslHandlerTest {
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testAlertProducedAndSend(SslProvider clientProvider, SslProvider serverProvider) throws Exception {
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-
-        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(serverProvider)
                 .trustManager(new SimpleTrustManagerFactory() {
                     @Override
@@ -399,9 +408,8 @@ public class ParameterizedSslHandlerTest {
 
     private static void testCloseNotify(SslProvider clientProvider, SslProvider serverProvider,
                                         final long closeNotifyReadTimeout, final boolean timeout) throws Exception {
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-
-        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                                                          .sslProvider(serverProvider)
                                                          // Use TLSv1.2 as we depend on the fact that the handshake
                                                          // is done in an extra round trip in the test which
@@ -560,8 +568,8 @@ public class ParameterizedSslHandlerTest {
                                                    Class<? extends ServerChannel> serverClass,
                                                    Class<? extends Channel> clientClass, boolean serverAutoRead,
                                                    boolean clientAutoRead) throws Exception {
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        final SslContext sslServerCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
+        final SslContext sslServerCtx = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(serverProvider)
                 .build();
 
@@ -679,17 +687,13 @@ public class ParameterizedSslHandlerTest {
             LOGGER.error("Caught possible write failure in ParameterizedSslHandlerTest.", cause);
             readQueue.append("failed to write '").append(toWrite).append("': ");
 
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            try {
+            try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                 cause.printStackTrace(new PrintStream(out));
                 readQueue.append(out.toString(StandardCharsets.US_ASCII));
+            } catch (IOException ignore) {
+                // ignore
             } finally {
                 doneLatch.countDown();
-                try {
-                    out.close();
-                } catch (IOException ignore) {
-                    // ignore
-                }
             }
         }
     }

@@ -36,9 +36,9 @@ import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
 import io.netty5.handler.codec.DecoderException;
 import io.netty5.handler.codec.TooLongFrameException;
-import io.netty5.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.handler.ssl.util.SelfSignedCertificate;
+import io.netty5.pkitesting.CertificateBuilder;
+import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.DomainNameMapping;
 import io.netty5.util.DomainNameMappingBuilder;
 import io.netty5.util.Mapping;
@@ -86,6 +86,18 @@ import static org.mockito.Mockito.mock;
 
 public class SniHandlerTest {
     private static final Logger logger = LoggerFactory.getLogger(SniHandlerTest.class);
+    private static final X509Bundle CERT;
+
+    static {
+        try {
+            CERT = new CertificateBuilder()
+                    .subject("cn=localhost")
+                    .setIsCertificateAuthority(true)
+                    .buildSelfSigned();
+        } catch (Exception e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
 
     private static ApplicationProtocolConfig newAlpnConfig() {
         return new ApplicationProtocolConfig(
@@ -491,11 +503,9 @@ public class SniHandlerTest {
                 Channel cc = null;
                 SslContext sslContext = null;
 
-                SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
-
                 try {
                     final SslContext sslServerContext = SslContextBuilder
-                            .forServer(cert.key(), cert.cert())
+                            .forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
                             .sslProvider(provider)
                             .build();
 
@@ -638,8 +648,8 @@ public class SniHandlerTest {
 
     private static void testWithFragmentSize(SslProvider provider, final int maxFragmentSize) throws Exception {
         final String sni = "netty.io";
-        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
-        final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
+        final SslContext context = SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(),
+                        CERT.getCertificatePath())
                 .sslProvider(provider)
                 .build();
         try {
