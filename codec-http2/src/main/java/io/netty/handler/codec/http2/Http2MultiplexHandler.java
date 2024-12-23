@@ -284,6 +284,10 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         return new Http2MultiplexHandlerStreamChannel((DefaultHttp2FrameStream) newStream(), null);
     }
 
+    Http2StreamChannel newOutboundStream(int streamId) {
+        return new Http2MultiplexHandlerStreamChannel((DefaultHttp2FrameStream) newStream(streamId), null);
+    }
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, final Throwable cause) throws Exception {
         if (cause instanceof Http2FrameStreamException) {
