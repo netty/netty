@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,6 +69,46 @@ public class AbstractScheduledEventExecutorTest {
         assertNull(executor.pollScheduledTask());
     }
 
+    @Test
+    public void testTaskScheduler_scheduleRunnableZero() {
+        TestScheduledEventExecutor executor = new TestScheduledEventExecutor(
+                excutor -> new TestTaskScheduler(excutor));
+        Future<?> future = executor.schedule(TEST_RUNNABLE, 0, TimeUnit.NANOSECONDS);
+        assertEquals(0, getDelay(future));
+        assertNotNull(executor.pollScheduledTask());
+        assertNull(executor.pollScheduledTask());
+    }
+
+    @Test
+    public void testTaskScheduler_testScheduleRunnableNegative() {
+        TestScheduledEventExecutor executor = new TestScheduledEventExecutor(
+                excutor -> new TestTaskScheduler(excutor));
+        Future<?> future = executor.schedule(TEST_RUNNABLE, -1, TimeUnit.NANOSECONDS);
+        assertEquals(0, getDelay(future));
+        assertNotNull(executor.pollScheduledTask());
+        assertNull(executor.pollScheduledTask());
+    }
+
+    @Test
+    public void testTaskScheduler_testScheduleCallableZero() {
+        TestScheduledEventExecutor executor = new TestScheduledEventExecutor(
+                excutor -> new TestTaskScheduler(excutor));
+        Future<?> future = executor.schedule(TEST_CALLABLE, 0, TimeUnit.NANOSECONDS);
+        assertEquals(0, getDelay(future));
+        assertNotNull(executor.pollScheduledTask());
+        assertNull(executor.pollScheduledTask());
+    }
+
+    @Test
+    public void testTaskScheduler_testScheduleCallableNegative() {
+        TestScheduledEventExecutor executor = new TestScheduledEventExecutor(
+                excutor -> new TestTaskScheduler(excutor));
+        Future<?> future = executor.schedule(TEST_CALLABLE, -1, TimeUnit.NANOSECONDS);
+        assertEquals(0, getDelay(future));
+        assertNotNull(executor.pollScheduledTask());
+        assertNull(executor.pollScheduledTask());
+    }
+
     private static long getDelay(Future<?> future) {
         return ((RunnableScheduledFuture<?>) future).delayNanos();
     }
@@ -76,28 +117,79 @@ public class AbstractScheduledEventExecutorTest {
     public void testScheduleAtFixedRateRunnableZero() {
         TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
         assertThrows(IllegalArgumentException.class,
-            () -> executor.scheduleAtFixedRate(TEST_RUNNABLE, 0, 0, TimeUnit.DAYS));
+                     () -> executor.scheduleAtFixedRate(TEST_RUNNABLE, 0, 0, TimeUnit.DAYS));
     }
 
     @Test
     public void testScheduleAtFixedRateRunnableNegative() {
         TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
         assertThrows(IllegalArgumentException.class,
-            () -> executor.scheduleAtFixedRate(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS));
+                     () -> executor.scheduleAtFixedRate(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS));
     }
 
     @Test
     public void testScheduleWithFixedDelayZero() {
         TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
         assertThrows(IllegalArgumentException.class,
-            () -> executor.scheduleWithFixedDelay(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS));
+                     () -> executor.scheduleWithFixedDelay(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS));
     }
 
     @Test
     public void testScheduleWithFixedDelayNegative() {
         TestScheduledEventExecutor executor = new TestScheduledEventExecutor();
         assertThrows(IllegalArgumentException.class,
-            () -> executor.scheduleWithFixedDelay(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS));
+                     () -> executor.scheduleWithFixedDelay(TEST_RUNNABLE, 0, -1, TimeUnit.DAYS));
+    }
+
+    @Test
+    public void testTaskScheduler_scheduleAtFixedRate() {
+        MockTicker ticker = Ticker.newMockTicker();
+        TestScheduledEventExecutor executor = new TestScheduledEventExecutor(
+                excutor -> new TestTaskScheduler(excutor), ticker);
+        executor.scheduleAtFixedRate(TEST_RUNNABLE, 100L, 100L, TimeUnit.MILLISECONDS);
+        assertNotNull(executor.peekScheduledTask());
+        assertNull(executor.pollScheduledTask());
+
+        ticker.advanceMillis(100);
+        executor.pollScheduledTask().run();
+        assertNotNull(executor.peekScheduledTask());
+        assertNull(executor.pollScheduledTask());
+
+        ticker.advanceMillis(150);
+        executor.pollScheduledTask().run();
+        assertNotNull(executor.peekScheduledTask());
+        assertNull(executor.pollScheduledTask());
+
+        ticker.advanceMillis(50);
+        assertNotNull(executor.pollScheduledTask());
+        assertNull(executor.pollScheduledTask());
+    }
+
+    @Test
+    public void testTaskScheduler_scheduleAtFixedDelay() {
+        MockTicker ticker = Ticker.newMockTicker();
+        TestScheduledEventExecutor executor = new TestScheduledEventExecutor(
+                excutor -> new TestTaskScheduler(excutor), ticker);
+        executor.scheduleWithFixedDelay(TEST_RUNNABLE, 100L, 100L, TimeUnit.MILLISECONDS);
+        assertNotNull(executor.peekScheduledTask());
+        assertNull(executor.pollScheduledTask());
+
+        ticker.advanceMillis(100);
+        executor.pollScheduledTask().run();
+        assertNotNull(executor.peekScheduledTask());
+        assertNull(executor.pollScheduledTask());
+
+        ticker.advanceMillis(150);
+        executor.pollScheduledTask().run();
+        assertNotNull(executor.peekScheduledTask());
+        assertNull(executor.pollScheduledTask());
+
+        ticker.advanceMillis(50);
+        assertNull(executor.pollScheduledTask());
+
+        ticker.advanceMillis(50);
+        assertNotNull(executor.pollScheduledTask());
+        assertNull(executor.pollScheduledTask());
     }
 
     @Test
@@ -107,6 +199,26 @@ public class AbstractScheduledEventExecutorTest {
     }
 
     private static final class TestScheduledEventExecutor extends AbstractScheduledEventExecutor {
+
+        private Ticker ticker;
+
+        private TestScheduledEventExecutor() {
+        }
+
+        private TestScheduledEventExecutor(TaskSchedulerFactory taskSchedulerFactory) {
+            super(taskSchedulerFactory);
+        }
+
+        private TestScheduledEventExecutor(TaskSchedulerFactory taskSchedulerFactory, Ticker ticker) {
+            super(taskSchedulerFactory);
+            this.ticker = ticker;
+        }
+
+        @Override
+        protected Ticker ticker() {
+            return ticker != null ? ticker : super.ticker();
+        }
+
         @Override
         public boolean isShuttingDown() {
             return false;
@@ -145,6 +257,64 @@ public class AbstractScheduledEventExecutorTest {
         @Override
         public void execute(Runnable task) {
             throw new UnsupportedOperationException();
+        }
+    }
+
+    private static final class TestTaskScheduler extends AbstractTaskScheduler {
+
+        private final AbstractScheduledEventExecutor executor;
+        private final LinkedBlockingQueue<RunnableScheduledFuture<?>> scheduledTaskQueue;
+
+        private TestTaskScheduler(AbstractScheduledEventExecutor executor) {
+            this.executor = executor;
+            scheduledTaskQueue = new LinkedBlockingQueue<>();
+        }
+
+        @Override
+        protected <V> RunnableScheduledFuture<V> newScheduledTaskFor(Callable<V> callable, long deadlineNanos,
+                                                                     long period) {
+            return new RunnableScheduledFutureAdapter<>(executor, executor.newPromise(), callable,
+                                                        deadlineNanos, period);
+        }
+
+        @Override
+        protected Ticker ticker() {
+            return executor.ticker();
+        }
+
+        @Override
+        public <V> Future<V> schedule(RunnableScheduledFuture<V> task) {
+            if (executor.inEventLoop()) {
+                scheduledTaskQueue.add(task);
+            } else {
+                executor.execute(() -> schedule(task));
+            }
+            return task;
+        }
+
+        @Override
+        public RunnableScheduledFuture<?> peekScheduledTask() {
+            return scheduledTaskQueue.peek();
+        }
+
+        @Override
+        public void removeNextScheduledTask() {
+            scheduledTaskQueue.clear();
+        }
+
+        @Override
+        public void removeScheduled(RunnableScheduledFuture<?> task) {
+            scheduledTaskQueue.remove(task);
+        }
+
+        @Override
+        public void cancelScheduledTasks() {
+            scheduledTaskQueue.clear();
+        }
+
+        @Override
+        public int size() {
+            return scheduledTaskQueue.size();
         }
     }
 }
