@@ -31,7 +31,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringSocketHalfClosedTest extends SocketHalfClosedTest {
+public class IoUringPollinFirstSocketHalfClosedTest extends SocketHalfClosedTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -58,8 +58,8 @@ public class IoUringSocketHalfClosedTest extends SocketHalfClosedTest {
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.option(IoUringChannelOption.POLLIN_FIRST, false);
-        sb.childOption(IoUringChannelOption.POLLIN_FIRST, false);
-        cb.option(IoUringChannelOption.POLLIN_FIRST, false);
+        sb.option(IoUringChannelOption.POLLIN_FIRST, true);
+        sb.childOption(IoUringChannelOption.POLLIN_FIRST, true);
+        cb.option(IoUringChannelOption.POLLIN_FIRST, true);
     }
 }

@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketSslGreetingTest;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,5 +36,13 @@ public class IoUringSocketSslGreetingTest extends SocketSslGreetingTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IoUringSocketTestPermutation.INSTANCE.socket();
+    }
+
+    @Override
+    protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
+        super.configure(sb, cb, allocator);
+        sb.option(IoUringChannelOption.POLLIN_FIRST, false);
+        sb.childOption(IoUringChannelOption.POLLIN_FIRST, false);
+        cb.option(IoUringChannelOption.POLLIN_FIRST, false);
     }
 }

@@ -39,7 +39,7 @@ import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringDatagramUnicastTest extends DatagramUnicastInetTest {
+public class IoUringPollinFirstDatagramUnicastTest extends DatagramUnicastInetTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -54,8 +54,8 @@ public class IoUringDatagramUnicastTest extends DatagramUnicastInetTest {
     @Override
     protected void configure(Bootstrap bootstrap, Bootstrap bootstrap2, ByteBufAllocator allocator) {
         super.configure(bootstrap, bootstrap2, allocator);
-        bootstrap.option(IoUringChannelOption.POLLIN_FIRST, false);
-        bootstrap2.option(IoUringChannelOption.POLLIN_FIRST, false);
+        bootstrap.option(IoUringChannelOption.POLLIN_FIRST, true);
+        bootstrap2.option(IoUringChannelOption.POLLIN_FIRST, true);
     }
 
     @Test

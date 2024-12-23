@@ -25,7 +25,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest {
+public class IoUringPollinFirstWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -40,6 +40,6 @@ public class IoUringWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest 
     @Override
     protected void configure(Bootstrap bootstrap, ByteBufAllocator allocator) {
         super.configure(bootstrap, allocator);
-        bootstrap.option(IoUringChannelOption.POLLIN_FIRST, false);
+        bootstrap.option(IoUringChannelOption.POLLIN_FIRST, true);
     }
 }
