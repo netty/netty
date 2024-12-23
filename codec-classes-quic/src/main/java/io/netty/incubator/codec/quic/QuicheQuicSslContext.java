@@ -186,6 +186,10 @@ final class QuicheQuicSslContext extends QuicSslContext {
             keyManager = chooseKeyManager(keyManagerFactory);
         }
         String[] groups = NAMED_GROUPS;
+        String[] sigalgs = EmptyArrays.EMPTY_STRINGS;
+        Map<String, String> serverKeyTypes = null;
+        Set<String> clientKeyTypes = null;
+
         if (ctxOptions != null) {
             for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
                 SslContextOption<?> option = ctxOpt.getKey();
@@ -197,6 +201,17 @@ final class QuicheQuicSslContext extends QuicSslContext {
                         groupsSet.add(GroupsConverter.toBoringSSL(group));
                     }
                     groups = groupsSet.toArray(EmptyArrays.EMPTY_STRINGS);
+                } else if (option == BoringSSLContextOption.SIGNATURE_ALGORITHMS) {
+                    String[] sigalgsArray = (String[]) ctxOpt.getValue();
+                    Set<String> sigalgsSet = new LinkedHashSet<String>(sigalgsArray.length);
+                    for (String sigalg : sigalgsArray) {
+                        sigalgsSet.add(sigalg);
+                    }
+                    sigalgs = sigalgsSet.toArray(EmptyArrays.EMPTY_STRINGS);
+                } else if (option == BoringSSLContextOption.CLIENT_KEY_TYPES) {
+                    clientKeyTypes = (Set<String>) ctxOpt.getValue();
+                } else if (option == BoringSSLContextOption.SERVER_KEY_TYPES) {
+                    serverKeyTypes = (Map<String, String>) ctxOpt.getValue();
                 } else {
                     LOGGER.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
                             + ": " + ctxOpt.getKey());
@@ -214,7 +229,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         int verifyMode = server ? boringSSLVerifyModeForServer(this.clientAuth) : BoringSSL.SSL_VERIFY_PEER;
         nativeSslContext = new NativeSslContext(BoringSSL.SSLContext_new(server, applicationProtocols,
                 new BoringSSLHandshakeCompleteCallback(engineMap),
-                new BoringSSLCertificateCallback(engineMap, keyManager, password),
+                new BoringSSLCertificateCallback(engineMap, keyManager, password, serverKeyTypes, clientKeyTypes),
                 new BoringSSLCertificateVerifyCallback(engineMap, trustManager),
                 mapping == null ? null : new BoringSSLTlsextServernameCallback(engineMap, mapping),
                 keylog == null ? null : new BoringSSLKeylogCallback(engineMap, keylog),
@@ -225,6 +240,16 @@ final class QuicheQuicSslContext extends QuicSslContext {
         try {
             if (groups.length > 0 && BoringSSL.SSLContext_set1_groups_list(nativeSslContext.ctx, groups) == 0) {
                 String msg = "failed to set curves / groups list: " + Arrays.toString(groups);
+                String lastError = BoringSSL.ERR_last_error();
+                if (lastError != null) {
+                    // We have some more details about why the operations failed, include these into the message.
+                    msg += ". " + lastError;
+                }
+                throw new IllegalStateException(msg);
+            }
+
+            if (sigalgs.length > 0 && BoringSSL.SSLContext_set1_sigalgs_list(nativeSslContext.ctx, sigalgs) == 0) {
+                String msg = "failed to set signature algorithm list: " + Arrays.toString(sigalgs);
                 String lastError = BoringSSL.ERR_last_error();
                 if (lastError != null) {
                     // We have some more details about why the operations failed, include these into the message.

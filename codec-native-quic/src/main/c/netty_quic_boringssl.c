@@ -1427,6 +1427,13 @@ jint netty_boringssl_SSLContext_set1_groups_list(JNIEnv* env, jclass clazz, jlon
     return (jint) ret;
 }
 
+jint netty_boringssl_SSLContext_set1_sigalgs_list(JNIEnv* env, jclass clazz, jlong ctx, jstring sigalgs) {
+    const char *nativeString = (*env)->GetStringUTFChars(env, sigalgs, 0);
+    int ret = SSL_CTX_set1_sigalgs_list((SSL_CTX *) ctx, nativeString);
+    (*env)->ReleaseStringUTFChars(env, sigalgs, nativeString);
+    return (jint) ret;
+}
+
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
@@ -1464,6 +1471,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "SSLContext_set_early_data_enabled", "(JZ)V", (void *) netty_boringssl_SSLContext_set_early_data_enabled },
   { "SSLContext_setSessionTicketKeys", "(JZ)V", (void *) netty_boringssl_SSLContext_setSessionTicketKeys },
   { "SSLContext_set1_groups_list", "(JLjava/lang/String;)I", (void *) netty_boringssl_SSLContext_set1_groups_list },
+  { "SSLContext_set1_sigalgs_list", "(JLjava/lang/String;)I", (void *) netty_boringssl_SSLContext_set1_sigalgs_list },
   { "SSL_new0", "(JZLjava/lang/String;)J", (void *) netty_boringssl_SSL_new0 },
   { "SSL_free", "(J)V", (void *) netty_boringssl_SSL_free },
   { "SSL_getTask", "(J)Ljava/lang/Runnable;", (void *) netty_boringssl_SSL_getTask },

@@ -102,6 +102,22 @@ final class BoringSSL {
         return SSLContext_set1_groups_list(ctx, sb.toString());
     }
 
+    static int SSLContext_set1_sigalgs_list(long ctx, String... sigalgs) {
+        if (sigalgs.length == 0) {
+            throw new IllegalArgumentException();
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String sigalg: sigalgs) {
+            sb.append(sigalg);
+            // Groups are separated by : as explained in the manpage.
+            sb.append(':');
+        }
+        sb.setLength(sb.length() - 1);
+        return SSLContext_set1_sigalgs_list(ctx, sb.toString());
+    }
+ 
+    private static native int SSLContext_set1_sigalgs_list(long context, String sigalgs);
+
     private static native int SSLContext_set1_groups_list(long context, String groups);
     static native void SSLContext_free(long context);
     static long SSL_new(long context, boolean server, String hostname) {

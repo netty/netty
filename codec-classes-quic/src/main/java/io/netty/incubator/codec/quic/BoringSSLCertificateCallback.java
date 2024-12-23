@@ -66,18 +66,18 @@ final class BoringSSLCertificateCallback {
     static final String KEY_TYPE_EC_RSA = "EC_RSA";
 
     // key type mappings for types.
-    private static final Map<String, String> KEY_TYPES = new HashMap<String, String>();
+    private static final Map<String, String> DEFAULT_SERVER_KEY_TYPES = new HashMap<String, String>();
     static {
-        KEY_TYPES.put("RSA", KEY_TYPE_RSA);
-        KEY_TYPES.put("DHE_RSA", KEY_TYPE_RSA);
-        KEY_TYPES.put("ECDHE_RSA", KEY_TYPE_RSA);
-        KEY_TYPES.put("ECDHE_ECDSA", KEY_TYPE_EC);
-        KEY_TYPES.put("ECDH_RSA", KEY_TYPE_EC_RSA);
-        KEY_TYPES.put("ECDH_ECDSA", KEY_TYPE_EC_EC);
-        KEY_TYPES.put("DH_RSA", KEY_TYPE_DH_RSA);
+        DEFAULT_SERVER_KEY_TYPES.put("RSA", KEY_TYPE_RSA);
+        DEFAULT_SERVER_KEY_TYPES.put("DHE_RSA", KEY_TYPE_RSA);
+        DEFAULT_SERVER_KEY_TYPES.put("ECDHE_RSA", KEY_TYPE_RSA);
+        DEFAULT_SERVER_KEY_TYPES.put("ECDHE_ECDSA", KEY_TYPE_EC);
+        DEFAULT_SERVER_KEY_TYPES.put("ECDH_RSA", KEY_TYPE_EC_RSA);
+        DEFAULT_SERVER_KEY_TYPES.put("ECDH_ECDSA", KEY_TYPE_EC_EC);
+        DEFAULT_SERVER_KEY_TYPES.put("DH_RSA", KEY_TYPE_DH_RSA);
     }
 
-    private static final Set<String> SUPPORTED_KEY_TYPES = Collections.unmodifiableSet(new LinkedHashSet<>(
+    private static final Set<String> DEFAULT_CLIENT_KEY_TYPES = Collections.unmodifiableSet(new LinkedHashSet<>(
             Arrays.asList(KEY_TYPE_RSA,
                     KEY_TYPE_DH_RSA,
                     KEY_TYPE_EC,
@@ -90,11 +90,16 @@ final class BoringSSLCertificateCallback {
     private final QuicheQuicSslEngineMap engineMap;
     private final X509ExtendedKeyManager keyManager;
     private final String password;
+    private final Map<String, String> serverKeyTypes;
+    private final Set<String> clientKeyTypes;
 
-    BoringSSLCertificateCallback(QuicheQuicSslEngineMap engineMap, @Nullable X509ExtendedKeyManager keyManager, String password) {
+    BoringSSLCertificateCallback(QuicheQuicSslEngineMap engineMap, @Nullable X509ExtendedKeyManager keyManager, String password, Map<String, String> serverKeyTypes, Set<String> clientKeyTypes) {
         this.engineMap = engineMap;
         this.keyManager = keyManager;
         this.password = password;
+
+        this.serverKeyTypes = serverKeyTypes != null ? serverKeyTypes : DEFAULT_SERVER_KEY_TYPES;
+        this.clientKeyTypes = clientKeyTypes != null ? clientKeyTypes : DEFAULT_CLIENT_KEY_TYPES;
     }
 
     @SuppressWarnings("unused")
@@ -154,9 +159,9 @@ final class BoringSSLCertificateCallback {
         // authMethods may contain duplicates or may result in the same type
         // but call chooseServerAlias(...) may be expensive. So let's ensure
         // we filter out duplicates.
-        Set<String> typeSet = new HashSet<String>(KEY_TYPES.size());
+        Set<String> typeSet = new HashSet<String>(serverKeyTypes.size());
         for (String authMethod : authMethods) {
-            String type = KEY_TYPES.get(authMethod);
+            String type = serverKeyTypes.get(authMethod);
             if (type != null && typeSet.add(type)) {
                 String alias = chooseServerAlias(engine, type);
                 if (alias != null) {
@@ -243,10 +248,10 @@ final class BoringSSLCertificateCallback {
      * @return supported key types that can be used in {@code X509KeyManager.chooseClientAlias} and
      *         {@code X509ExtendedKeyManager.chooseEngineClientAlias}.
      */
-    private static Set<String> supportedClientKeyTypes(byte @Nullable[] clientCertificateTypes) {
+    private Set<String> supportedClientKeyTypes(byte @Nullable[] clientCertificateTypes) {
         if (clientCertificateTypes == null) {
             // Try all of the supported key types.
-            return SUPPORTED_KEY_TYPES;
+            return clientKeyTypes;
         }
         Set<String> result = new HashSet<>(clientCertificateTypes.length);
         for (byte keyTypeCode : clientCertificateTypes) {
