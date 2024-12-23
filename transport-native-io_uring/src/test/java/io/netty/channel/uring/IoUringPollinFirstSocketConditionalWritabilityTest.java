@@ -21,8 +21,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketConditionalWritabilityTest;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 
 import java.util.List;
 
@@ -38,13 +36,6 @@ public class IoUringPollinFirstSocketConditionalWritabilityTest extends SocketCo
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IoUringSocketTestPermutation.INSTANCE.socket();
-    }
-
-    @Test
-    @Override
-    public void testConditionalWritability(TestInfo testInfo) throws Throwable {
-        // Ignore as it does not pass on QEMU atm
-        // super.testConditionalWritability();
     }
 
     @Override
