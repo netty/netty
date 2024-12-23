@@ -396,10 +396,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
         }
 
-        private boolean socketWasEmptyForSure(int flags) {
-            return IoUring.isIOUringCqeFSockNonEmptySupported() &&  (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
-        }
-
         private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
                                          Throwable cause, boolean allDataRead,
                                          IoUringRecvByteAllocatorHandle allocHandle) {

@@ -1087,4 +1087,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             pollRdhupId = 0;
         }
      }
+
+    static boolean socketWasEmptyForSure(int flags) {
+        return IoUring.isIOUringCqeFSockNonEmptySupported() &&  (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
+    }
 }
