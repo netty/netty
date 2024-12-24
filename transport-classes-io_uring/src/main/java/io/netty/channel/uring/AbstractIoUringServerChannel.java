@@ -97,8 +97,6 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
 
     private final class UringServerChannelUnsafe extends AbstractIoUringChannel.AbstractUringUnsafe {
 
-        private boolean socketWasEmpty;
-
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
             throw new UnsupportedOperationException();
