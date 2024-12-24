@@ -380,6 +380,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
         private IoUringRecvByteAllocatorHandle allocHandle;
+        private boolean socketIsEmpty;
 
         /**
          * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer} and returns the number of
@@ -625,8 +626,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             }
             inReadComplete = true;
             try {
+                socketIsEmpty = socketIsEmpty(flags);
+
                 readComplete0(op, res, flags, data, numOutstandingReads);
             } finally {
+                socketIsEmpty = false;
                 inReadComplete = false;
                 // There is a pending read and readComplete0(...) also did stop issue read request.
                 // Let's trigger the requested read now.
@@ -692,7 +696,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         protected final void scheduleRead(boolean first) {
             // Only schedule another read if the fd is still open.
             if (fd().isOpen() && (ioState & READ_SCHEDULED) == 0) {
-                numOutstandingReads = (short) scheduleRead0(first);
+                numOutstandingReads = (short) scheduleRead0(first, socketIsEmpty);
                 if (numOutstandingReads > 0) {
                     ioState |= READ_SCHEDULED;
                 }
@@ -703,9 +707,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * Schedule a read and returns the number of {@link #readComplete(byte, int, int, short)}
          * calls that are expected because of the scheduled read.
          *
-         * @param first {@code true} if this is the first read of a read loop.
+         * @param first             {@code true} if this is the first read of a read loop.
+         * @param socketIsEmpty     {@code true} if the socket is guaranteed to be empty, {@code false} otherwise.
          */
-        protected abstract int scheduleRead0(boolean first);
+        protected abstract int scheduleRead0(boolean first, boolean socketIsEmpty);
 
         /**
          * Called once POLLOUT event is ready to be processed
@@ -1087,4 +1092,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             pollRdhupId = 0;
         }
      }
+
+    protected static boolean socketIsEmpty(int flags) {
+        return IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
+    }
 }

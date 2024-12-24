@@ -113,16 +113,33 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected int scheduleRead0(boolean first) {
+        protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
             assert acceptId == 0;
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             allocHandle.attemptedBytesRead(1);
 
             int fd = fd().intValue();
             IoUringIoRegistration registration = registration();
+
+            // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
+            // attempt.
+            // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
+            //
+            // Depending on if this is the first read or not we will use Native.IORING_ACCEPT_DONT_WAIT.
+            // The idea is that if the socket is blocking we can do the first read in a blocking fashion
+            // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
+            // be possible directly we schedule these with Native.IORING_ACCEPT_DONT_WAIT. This allows us to still be
+            // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
+            // transports.
+            final short ioPrio;
+
+            if (first) {
+                ioPrio = socketIsEmpty ? Native.IORING_RECVSEND_POLL_FIRST : 0;
+            } else {
+                ioPrio = Native.IORING_ACCEPT_DONT_WAIT;
+            }
             // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10#improvements-for-accept
-            IoUringIoOps ops = IoUringIoOps.newAccept(fd, (byte) 0, 0,
-                    first ? (short) 0 : Native.IORING_ACCEPT_DONT_WAIT,
+            IoUringIoOps ops = IoUringIoOps.newAccept(fd, (byte) 0, 0, ioPrio,
                     acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, nextOpsId());
             acceptId = registration.submit(ops);
             if (acceptId == 0) {
@@ -155,9 +172,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
                             // without be able to read any data. This is useless work and we can skip it.
                             //
                             // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10
-                            (!IoUring.isIOUringAcceptNoWaitSupported() ||
-                                    !IoUring.isIOUringCqeFSockNonEmptySupported() ||
-                                    (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
+                            (!IoUring.isIOUringAcceptNoWaitSupported() || !socketIsEmpty(flags))) {
                         scheduleRead(false);
                     } else {
                         allocHandle.readComplete();
