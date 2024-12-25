@@ -44,6 +44,7 @@ import java.security.Provider;
 
 final class BouncyCastlePemReader {
     private static final String BC_PROVIDER = "org.bouncycastle.jce.provider.BouncyCastleProvider";
+    private static final String BC_FIPS_PROVIDER = "org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider";
     private static final String BC_PEMPARSER = "org.bouncycastle.openssl.PEMParser";
     private static final Logger logger = LoggerFactory.getLogger(BouncyCastlePemReader.class);
 
@@ -75,9 +76,18 @@ final class BouncyCastlePemReader {
             public Void run() {
                 try {
                     ClassLoader classLoader = getClass().getClassLoader();
-                    // Check for bcprov-jdk18on:
-                    Class<Provider> bcProviderClass =
-                            (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
+                    // Check for bcprov-jdk18on or bc-fips:
+                    Class<Provider> bcProviderClass;
+                    try {
+                        bcProviderClass = (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
+                    } catch (ClassNotFoundException e) {
+                        try {
+                            bcProviderClass = (Class<Provider>) Class.forName(BC_FIPS_PROVIDER, true, classLoader);
+                        } catch (ClassNotFoundException ex) {
+                            e.addSuppressed(ex);
+                            throw e;
+                        }
+                    }
                     // Check for bcpkix-jdk18on:
                     Class.forName(BC_PEMPARSER, true, classLoader);
                     bcProvider = bcProviderClass.getConstructor().newInstance();
