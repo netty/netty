@@ -17,6 +17,7 @@ package io.netty5.util.concurrent;
 
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.ThreadExecutorMap;
+import io.netty5.util.internal.ThrowableUtil;
 import org.jetbrains.annotations.Async.Execute;
 import org.jetbrains.annotations.Async.Schedule;
 import org.jetbrains.annotations.VisibleForTesting;
@@ -76,8 +77,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     private final AtomicBoolean started = new AtomicBoolean();
     volatile Thread thread;
 
-    private final Future<Void> terminationFuture = DefaultPromise.<Void>newFailedPromise(
-            this, new UnsupportedOperationException()).asFuture();
+    private final Future<Void> terminationFuture;
 
     private GlobalEventExecutor() {
         threadFactory = ThreadExecutorMap.apply(new DefaultThreadFactory(
@@ -92,6 +92,11 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                 -SCHEDULE_QUIET_PERIOD_INTERVAL);
 
         scheduledTaskQueue().add(quietPeriodTask);
+
+        UnsupportedOperationException terminationFailure = new UnsupportedOperationException();
+        ThrowableUtil.unknownStackTrace(terminationFailure, GlobalEventExecutor.class, "terminationFuture");
+        terminationFuture = DefaultPromise.<Void>newFailedPromise(
+                this, terminationFailure).asFuture();
     }
 
     /**
@@ -229,23 +234,35 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
 
     private void startThread() {
         if (started.compareAndSet(false, true)) {
-            final Thread t = threadFactory.newThread(taskRunner);
-            // Set to null to ensure we not create classloader leaks by holds a strong reference to the inherited
-            // classloader.
-            // See:
-            // - https://github.com/netty/netty/issues/7290
-            // - https://bugs.openjdk.java.net/browse/JDK-7008595
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                t.setContextClassLoader(null);
-                return null;
-            });
+            Thread callingThread = Thread.currentThread();
+            ClassLoader parentCCL = callingThread.getContextClassLoader();
+            // Avoid calling classloader leaking through Thread.inheritedAccessControlContext.
+            setContextClassLoader(callingThread, null);
+            try {
+                final Thread t = threadFactory.newThread(taskRunner);
+                // Set to null to ensure we not create classloader leaks by holds a strong reference to the inherited
+                // classloader.
+                // See:
+                // - https://github.com/netty/netty/issues/7290
+                // - https://bugs.openjdk.java.net/browse/JDK-7008595
+                setContextClassLoader(t, null);
 
-            // Set the thread before starting it as otherwise inEventLoop() may return false and so produce
-            // an assert error.
-            // See https://github.com/netty/netty/issues/4357
-            thread = t;
-            t.start();
+                // Set the thread before starting it as otherwise inEventLoop() may return false and so produce
+                // an assert error.
+                // See https://github.com/netty/netty/issues/4357
+                thread = t;
+                t.start();
+            } finally {
+                setContextClassLoader(callingThread, parentCCL);
+            }
         }
+    }
+
+    private static void setContextClassLoader(final Thread t, final ClassLoader cl) {
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            t.setContextClassLoader(cl);
+            return null;
+        });
     }
 
     final class TaskRunner implements Runnable {
