@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.encoder.Encoder;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Standard Compression Options for {@link BrotliOptions},
@@ -42,6 +43,30 @@ public final class StandardCompressionOptions {
      * @throws NullPointerException If {@link Encoder.Parameters} is {@code null}
      */
     public static BrotliOptions brotli(Encoder.Parameters parameters) {
+        return new BrotliOptions(parameters);
+    }
+
+    /**
+     * Create a new {@link BrotliOptions}
+     *
+     * @param  quality
+     *           Specifies the compression level.
+     * @param  window
+     *           Specifies the size of the sliding window when compressing.
+     * @param  mode
+     *           optimizes the compression algorithm based on the type of input data.
+     *
+     * @throws NullPointerException If {@link BrotliMode} is {@code null}
+     */
+    public static BrotliOptions brotli(int quality, int window, BrotliMode mode) {
+        ObjectUtil.checkInRange(quality, 0, 11, "quality");
+        ObjectUtil.checkInRange(window, 10, 24, "window");
+        ObjectUtil.checkNotNull(mode, "mode");
+
+        Encoder.Parameters parameters = new Encoder.Parameters()
+                .setQuality(quality)
+                .setWindow(window)
+                .setMode(mode.adapt());
         return new BrotliOptions(parameters);
     }
 
