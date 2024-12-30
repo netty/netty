@@ -30,24 +30,17 @@ public enum BrotliMode {
 	 *  making it suitable for a wide range of data types.
 	 *  default mode.
 	 */
-	GENERIC(Mode.GENERIC),
+	GENERIC,
 
 	/**
 	 *  Optimized for UTF-8 formatted text input.
 	 */
-	TEXT(Mode.TEXT),
+	TEXT,
 
 	/**
 	 *  Designed specifically for font data compression, as used in WOFF 2.0.
 	 */
-	FONT(Mode.FONT);
-
-	private final Mode encoderMode;
-
-	BrotliMode(Mode encoderMode) {
-		this.encoderMode = encoderMode;
-	}
-
+	FONT;
 
 	/**
 	 *  Convert to Brotli {@link Encoder.Mode}.
@@ -55,6 +48,15 @@ public enum BrotliMode {
 	 * @return a new {@link Encoder.Mode}
 	 */
 	Mode adapt() {
-		return encoderMode;
+		switch (this) {
+		case GENERIC:
+			return Mode.GENERIC;
+		case TEXT:
+			return Mode.TEXT;
+		case FONT:
+			return Mode.FONT;
+		default:
+			throw new IllegalStateException("Unsupported enum value: " + this);
+		}
 	}
 }
