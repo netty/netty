@@ -68,7 +68,13 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
 
     private void encodePtrRecord(DnsPtrRecord record, ByteBuf out) throws Exception {
         encodeRecord0(record, out);
+        int writerIndex = out.writerIndex();
+        // Skip 2 bytes as these will be used to encode the rdataLen after we know how many bytes were written.
+        // See https://www.rfc-editor.org/rfc/rfc1035.html#section-3.2.1
+        out.writerIndex(writerIndex + 2);
         encodeName(record.hostname(), out);
+        int rdLength = out.writerIndex() - (writerIndex + 2);
+        out.setShort(writerIndex, rdLength);
     }
 
     private void encodeOptPseudoRecord(DnsOptPseudoRecord record, ByteBuf out) throws Exception {
