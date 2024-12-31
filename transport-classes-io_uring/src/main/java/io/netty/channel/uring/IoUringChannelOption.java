@@ -53,4 +53,9 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
      * reserved upfront even if we are not sure yet when exactly the read will happen.
      */
     public static final ChannelOption<Boolean> POLLIN_FIRST = valueOf("POLLIN_FIRST");
+
+    /**
+     * Use {@code IOSQE_ASYNC} when submitting {@link IoUringIoOps}.
+     */
+    public static final ChannelOption<Boolean> IOSQE_ASYNC = valueOf("IOSQE_ASYNC");
 }
