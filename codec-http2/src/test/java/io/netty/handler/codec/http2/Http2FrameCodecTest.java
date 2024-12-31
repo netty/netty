@@ -609,6 +609,35 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void newOutboundStreamWithSpecifiedID() {
+        final Http2FrameStream stream = frameCodec.newStream(9110);
+
+        assertNotNull(stream);
+        assertTrue(isStreamIdValid(stream.id()));
+
+        final Promise<Void> listenerExecuted = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
+
+        channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false).stream(stream))
+                .addListener(new ChannelFutureListener() {
+                                 @Override
+                                 public void operationComplete(ChannelFuture future) throws Exception {
+                                     assertTrue(future.isSuccess());
+                                     assertTrue(isStreamIdValid(stream.id()));
+                                     assertEquals(9110, stream.id());
+                                     listenerExecuted.setSuccess(null);
+                                 }
+                             }
+                );
+        ByteBuf data = Unpooled.buffer().writeZero(100);
+        ChannelFuture f = channel.writeAndFlush(new DefaultHttp2DataFrame(data).stream(stream));
+        assertTrue(f.isSuccess());
+
+        listenerExecuted.syncUninterruptibly();
+        assertTrue(listenerExecuted.isSuccess());
+    }
+
+    @Test
     public void newOutboundStreamsShouldBeBuffered() throws Exception {
         setUp(Http2FrameCodecBuilder.forServer().encoderEnforceMaxConcurrentStreams(true),
               new Http2Settings().maxConcurrentStreams(1));
