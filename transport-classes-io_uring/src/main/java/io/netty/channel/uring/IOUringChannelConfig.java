@@ -77,7 +77,6 @@ abstract class IOUringChannelConfig extends DefaultChannelConfig {
         this.pollInFirst = pollInFirst;
     }
 
-
     boolean getIoseqAsync() {
         return ioseqAsync;
     }
