@@ -36,6 +36,10 @@ final class PooledUnsafeHeapByteBuf extends PooledHeapByteBuf {
         return buf;
     }
 
+    static PooledUnsafeHeapByteBuf newUnsafeInstanceNoThreadLocal(Handle<PooledUnsafeHeapByteBuf> handle) {
+        return new PooledUnsafeHeapByteBuf(handle, 0);
+    }
+
     private PooledUnsafeHeapByteBuf(Handle<PooledUnsafeHeapByteBuf> recyclerHandle, int maxCapacity) {
         super(recyclerHandle, maxCapacity);
     }
