@@ -1229,7 +1229,15 @@ final class AdaptivePoolingAllocator {
             if (rootParent.hasArray()) {
                 return rootParent.setBytes(idx(index), in, length);
             }
-            byte[] tmp = ByteBufUtil.threadLocalTempArray(length);
+            final byte[] tmp;
+            // Only make use of ThreadLocal if we use a FastThreadLocalThread to make the implementation
+            // Virtual Thread friendly.
+            // See https://github.com/netty/netty/issues/14609
+            if (Thread.currentThread() instanceof FastThreadLocalThread) {
+                tmp = ByteBufUtil.threadLocalTempArray(length);
+            } else {
+                tmp = new byte[length];
+            }
             int readBytes = in.read(tmp, 0, length);
             if (readBytes <= 0) {
                 return readBytes;
