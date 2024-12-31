@@ -639,7 +639,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
      */
     @Deprecated
     public int numThreadLocalCaches() {
-        PoolArena<?>[] arenas = heapArenas != null ? heapArenas : directArenas;
+        return Math.max(numThreadLocalCaches(heapArenas), numThreadLocalCaches(directArenas));
+    }
+
+    private static int numThreadLocalCaches(PoolArena<?>[] arenas) {
         if (arenas == null) {
             return 0;
         }
