@@ -20,43 +20,42 @@ import com.aayushatharva.brotli4j.encoder.Encoder;
 import static com.aayushatharva.brotli4j.encoder.Encoder.Mode;
 
 /**
- *  Provides a way to specify the Brotli compression mode.
- *
+ * Provides a way to specify the Brotli compression mode.
  */
 public enum BrotliMode {
 
-	/**
-	 *  The compressor does not make any assumptions about the input data's properties,
-	 *  making it suitable for a wide range of data types.
-	 *  default mode.
-	 */
-	GENERIC,
+    /**
+     * The compressor does not make any assumptions about the input data's properties,
+     * making it suitable for a wide range of data types.
+     * default mode.
+     */
+    GENERIC,
 
-	/**
-	 *  Optimized for UTF-8 formatted text input.
-	 */
-	TEXT,
+    /**
+     * Optimized for UTF-8 formatted text input.
+     */
+    TEXT,
 
-	/**
-	 *  Designed specifically for font data compression, as used in WOFF 2.0.
-	 */
-	FONT;
+    /**
+     * Designed specifically for font data compression, as used in WOFF 2.0.
+     */
+    FONT;
 
-	/**
-	 *  Convert to Brotli {@link Encoder.Mode}.
-	 *
-	 * @return a new {@link Encoder.Mode}
-	 */
-	Mode adapt() {
-		switch (this) {
-		case GENERIC:
-			return Mode.GENERIC;
-		case TEXT:
-			return Mode.TEXT;
-		case FONT:
-			return Mode.FONT;
-		default:
-			throw new IllegalStateException("Unsupported enum value: " + this);
-		}
-	}
+    /**
+     * Convert to Brotli {@link Encoder.Mode}.
+     *
+     * @return a new {@link Encoder.Mode}
+     */
+    Mode adapt() {
+        switch (this) {
+            case GENERIC:
+                return Mode.GENERIC;
+            case TEXT:
+                return Mode.TEXT;
+            case FONT:
+                return Mode.FONT;
+            default:
+                throw new IllegalStateException("Unsupported enum value: " + this);
+        }
+    }
 }

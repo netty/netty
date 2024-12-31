@@ -49,13 +49,9 @@ public final class StandardCompressionOptions {
     /**
      * Create a new {@link BrotliOptions}
      *
-     * @param  quality
-     *           Specifies the compression level.
-     * @param  window
-     *           Specifies the size of the sliding window when compressing.
-     * @param  mode
-     *           optimizes the compression algorithm based on the type of input data.
-     *
+     * @param quality Specifies the compression level.
+     * @param window  Specifies the size of the sliding window when compressing.
+     * @param mode    optimizes the compression algorithm based on the type of input data.
      * @throws NullPointerException If {@link BrotliMode} is {@code null}
      */
     public static BrotliOptions brotli(int quality, int window, BrotliMode mode) {
@@ -82,12 +78,9 @@ public final class StandardCompressionOptions {
     /**
      * Create a new {@link ZstdOptions}
      *
-     * @param  blockSize
-     *           is used to calculate the compressionLevel
-     * @param  maxEncodeSize
-     *           specifies the size of the largest compressed object
-     * @param  compressionLevel
-     *           specifies the level of the compression
+     * @param blockSize        is used to calculate the compressionLevel
+     * @param maxEncodeSize    specifies the size of the largest compressed object
+     * @param compressionLevel specifies the level of the compression
      */
     public static ZstdOptions zstd(int compressionLevel, int blockSize, int maxEncodeSize) {
         return new ZstdOptions(compressionLevel, blockSize, maxEncodeSize);
@@ -95,13 +88,12 @@ public final class StandardCompressionOptions {
 
     /**
      * Create a new {@link SnappyOptions}
-     *
      */
     public static SnappyOptions snappy() {
         return new SnappyOptions();
     }
 
-     /**
+    /**
      * Default implementation of {@link GzipOptions} with
      * {@code compressionLevel()} set to 6, {@code windowBits()} set to 15 and {@code memLevel()} set to 8.
      */
@@ -115,12 +107,10 @@ public final class StandardCompressionOptions {
      * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
      *                         best compression.  {@code 0} means no compression.  The default
      *                         compression level is {@code 6}.
-     *
      * @param windowBits       The base two logarithm of the size of the history buffer.  The
      *                         value should be in the range {@code 9} to {@code 15} inclusive.
      *                         Larger values result in better compression at the expense of
      *                         memory usage.  The default value is {@code 15}.
-     *
      * @param memLevel         How much memory should be allocated for the internal compression
      *                         state.  {@code 1} uses minimum memory and {@code 9} uses maximum
      *                         memory.  Larger values result in better and faster compression
@@ -144,12 +134,10 @@ public final class StandardCompressionOptions {
      * @param compressionLevel {@code 1} yields the fastest compression and {@code 9} yields the
      *                         best compression.  {@code 0} means no compression.  The default
      *                         compression level is {@code 6}.
-     *
      * @param windowBits       The base two logarithm of the size of the history buffer.  The
      *                         value should be in the range {@code 9} to {@code 15} inclusive.
      *                         Larger values result in better compression at the expense of
      *                         memory usage.  The default value is {@code 15}.
-     *
      * @param memLevel         How much memory should be allocated for the internal compression
      *                         state.  {@code 1} uses minimum memory and {@code 9} uses maximum
      *                         memory.  Larger values result in better and faster compression
