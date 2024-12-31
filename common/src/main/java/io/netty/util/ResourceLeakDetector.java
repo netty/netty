@@ -97,10 +97,12 @@ public class ResourceLeakDetector<T> {
     }
 
     private static Level level;
+    private static final Level stableLevel;
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ResourceLeakDetector.class);
 
     static {
+        final boolean immutableLevel = SystemPropertyUtil.get("io.netty.immutableResourceLeakDetection") != null;
         final boolean disabled;
         if (SystemPropertyUtil.get("io.netty.noResourceLeakDetection") != null) {
             disabled = SystemPropertyUtil.getBoolean("io.netty.noResourceLeakDetection", false);
@@ -124,7 +126,13 @@ public class ResourceLeakDetector<T> {
         TARGET_RECORDS = SystemPropertyUtil.getInt(PROP_TARGET_RECORDS, DEFAULT_TARGET_RECORDS);
         SAMPLING_INTERVAL = SystemPropertyUtil.getInt(PROP_SAMPLING_INTERVAL, DEFAULT_SAMPLING_INTERVAL);
 
-        ResourceLeakDetector.level = level;
+        if (immutableLevel) {
+            ResourceLeakDetector.level = null;
+            stableLevel = level;
+        } else {
+            ResourceLeakDetector.level = level;
+            stableLevel = null;
+        }
         if (logger.isDebugEnabled()) {
             logger.debug("-D{}: {}", PROP_LEVEL, level.name().toLowerCase());
             logger.debug("-D{}: {}", PROP_TARGET_RECORDS, TARGET_RECORDS);
@@ -139,17 +147,24 @@ public class ResourceLeakDetector<T> {
         setLevel(enabled? Level.SIMPLE : Level.DISABLED);
     }
 
+    private static boolean isImmutableDisabled() {
+        return stableLevel == Level.DISABLED;
+    }
+
     /**
      * Returns {@code true} if resource leak detection is enabled.
      */
     public static boolean isEnabled() {
-        return getLevel().ordinal() > Level.DISABLED.ordinal();
+        return getLevel() != Level.DISABLED;
     }
 
     /**
      * Sets the resource leak detection level.
      */
     public static void setLevel(Level level) {
+        if (stableLevel != null) {
+            return;
+        }
         ResourceLeakDetector.level = ObjectUtil.checkNotNull(level, "level");
     }
 
@@ -157,15 +172,18 @@ public class ResourceLeakDetector<T> {
      * Returns the current resource leak detection level.
      */
     public static Level getLevel() {
+        if (stableLevel != null) {
+            return stableLevel;
+        }
         return level;
     }
 
     /** the collection of active resources */
-    private final Set<DefaultResourceLeak<?>> allLeaks =
+    private final Set<DefaultResourceLeak<?>> allLeaks = isImmutableDisabled()? null :
             Collections.newSetFromMap(new ConcurrentHashMap<DefaultResourceLeak<?>, Boolean>());
 
-    private final ReferenceQueue<Object> refQueue = new ReferenceQueue<Object>();
-    private final Set<String> reportedLeaks =
+    private final ReferenceQueue<Object> refQueue = isImmutableDisabled()? null : new ReferenceQueue<Object>();
+    private final Set<String> reportedLeaks = isImmutableDisabled()? null :
             Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     private final String resourceType;
@@ -266,7 +284,7 @@ public class ResourceLeakDetector<T> {
 
     @SuppressWarnings("unchecked")
     private DefaultResourceLeak track0(T obj, boolean force) {
-        Level level = ResourceLeakDetector.level;
+        Level level = getLevel();
         if (force ||
                 level == Level.PARANOID ||
                 (level != Level.DISABLED && PlatformDependent.threadLocalRandom().nextInt(samplingInterval) == 0)) {
@@ -613,10 +631,13 @@ public class ResourceLeakDetector<T> {
         }
     }
 
-    private static final AtomicReference<String[]> excludedMethods =
+    private static final AtomicReference<String[]> excludedMethods = isImmutableDisabled()? null :
             new AtomicReference<String[]>(EmptyArrays.EMPTY_STRINGS);
 
     public static void addExclusions(Class clz, String ... methodNames) {
+        if (isImmutableDisabled()) {
+            return;
+        }
         Set<String> nameSet = new HashSet<String>(Arrays.asList(methodNames));
         // Use loop rather than lookup. This avoids knowing the parameters, and doesn't have to handle
         // NoSuchMethodException.
