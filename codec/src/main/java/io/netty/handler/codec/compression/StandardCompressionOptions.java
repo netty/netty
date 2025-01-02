@@ -41,7 +41,9 @@ public final class StandardCompressionOptions {
      *
      * @param parameters {@link Encoder.Parameters} Instance
      * @throws NullPointerException If {@link Encoder.Parameters} is {@code null}
+     * @deprecated Use {@link #brotli(int, int, BrotliMode)}
      */
+    @Deprecated
     public static BrotliOptions brotli(Encoder.Parameters parameters) {
         return new BrotliOptions(parameters);
     }
