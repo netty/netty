@@ -15,7 +15,6 @@
  */
 package io.netty.util;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -29,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 public class ResourceLeakDetectorTest {
     @SuppressWarnings("unused")
@@ -141,9 +141,9 @@ public class ResourceLeakDetectorTest {
         };
         try {
             leakResource();
-            Assertions.fail("expected failure");
+            fail("expected failure");
         } catch (RuntimeException e) {
-            Assertions.assertEquals("expected failure", e.getMessage());
+            assertThat("expected failure").isEqualTo(e.getMessage());
         }
         DefaultResource.detectorWithSetupHint.initialHint = DefaultResource.detectorWithSetupHint.canaryString;
 
