@@ -143,7 +143,7 @@ public class ResourceLeakDetectorTest {
             leakResource();
             fail("expected failure");
         } catch (RuntimeException e) {
-            assertThat("expected failure").isEqualTo(e.getMessage());
+            assertThat(e.getMessage()).isEqualTo("expected failure");
         }
         DefaultResource.detectorWithSetupHint.initialHint = DefaultResource.detectorWithSetupHint.canaryString;
 
