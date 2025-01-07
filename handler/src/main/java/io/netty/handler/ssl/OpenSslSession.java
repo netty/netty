@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import java.security.cert.Certificate;
 import java.util.Map;
@@ -41,6 +42,17 @@ interface OpenSslSession extends SSLSession {
      * and so its ok to not copy the array.
      */
     void setLocalCertificate(Certificate[] localCertificate);
+
+    /**
+     * Returns true if the peer has provided certificates during the handshake.
+     * <p>
+     * This method is similar to {@link SSLSession#getPeerCertificates()} but it does not throw a
+     * {@link SSLPeerUnverifiedException} if no certs are provided, making it more efficient to check if a mTLS
+     * connection is used.
+     *
+     * @return true if peer certificates are available.
+     */
+    boolean hasPeerCertificates();
 
     /**
      * Set the details for the session which might come from a cache.

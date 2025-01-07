@@ -2605,6 +2605,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         @Override
+        public boolean hasPeerCertificates() {
+            synchronized (ReferenceCountedOpenSslEngine.this) {
+                return !isEmpty(peerCerts);
+            }
+        }
+
+        @Override
         public Certificate[] getLocalCertificates() {
             Certificate[] localCerts = this.localCertificateChain;
             if (localCerts == null) {

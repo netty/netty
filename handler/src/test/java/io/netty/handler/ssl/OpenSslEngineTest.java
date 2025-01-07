@@ -56,6 +56,7 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509ExtendedKeyManager;
 
 import static io.netty.handler.ssl.OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES;
@@ -163,6 +164,12 @@ public class OpenSslEngineTest extends SSLEngineTest {
     public void testSupportedSignatureAlgorithms(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSupportedSignatureAlgorithms(param);
+    }
+
+    @Override
+    protected void additionalPeerAssertions(SSLSession sslSession, boolean mutualAuth) {
+        assumeTrue(sslSession instanceof OpenSslSession);
+        assertEquals(mutualAuth, ((OpenSslSession) sslSession).hasPeerCertificates());
     }
 
     private static boolean isNpnSupported(String versionString) {

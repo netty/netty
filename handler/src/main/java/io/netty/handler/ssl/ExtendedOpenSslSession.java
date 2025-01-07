@@ -175,6 +175,11 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     }
 
     @Override
+    public boolean hasPeerCertificates() {
+        return wrapped.hasPeerCertificates();
+    }
+
+    @Override
     public final Certificate[] getLocalCertificates() {
         return wrapped.getLocalCertificates();
     }

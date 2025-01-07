@@ -452,6 +452,11 @@ class OpenSslSessionCache implements SSLSessionCache {
         }
 
         @Override
+        public boolean hasPeerCertificates() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public Certificate[] getLocalCertificates() {
             throw new UnsupportedOperationException();
         }
