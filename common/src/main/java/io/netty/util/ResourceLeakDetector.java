@@ -23,8 +23,8 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.ref.WeakReference;
 import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
@@ -415,6 +415,8 @@ public class ResourceLeakDetector<T> {
 
             assert referent != null;
 
+            this.allLeaks = allLeaks;
+
             // Store the hash of the tracked object to later assert it in the close(...) method.
             // It's important that we not store a reference to the referent as this would disallow it from
             // be collected via the WeakReference.
@@ -423,7 +425,6 @@ public class ResourceLeakDetector<T> {
             // Create a new Record so we always have the creation stacktrace included.
             headUpdater.set(this, initialHint == null ?
                     new TraceRecord(TraceRecord.BOTTOM) : new TraceRecord(TraceRecord.BOTTOM, initialHint));
-            this.allLeaks = allLeaks;
         }
 
         @Override
