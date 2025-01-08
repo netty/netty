@@ -168,8 +168,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Override
     protected void additionalPeerAssertions(SSLSession sslSession, boolean mutualAuth) {
-        assumeTrue(sslSession instanceof OpenSslSession);
-        assertEquals(mutualAuth, ((OpenSslSession) sslSession).hasPeerCertificates());
+        if (sslSession instanceof OpenSslSession) {
+            assertEquals(mutualAuth, ((OpenSslSession) sslSession).hasPeerCertificates());
+        }
     }
 
     private static boolean isNpnSupported(String versionString) {
