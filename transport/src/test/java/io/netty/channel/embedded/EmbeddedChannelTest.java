@@ -767,7 +767,7 @@ public class EmbeddedChannelTest {
     void testReentrantClose() {
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-            boolean runningRead = false;
+            boolean runningRead;
 
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
