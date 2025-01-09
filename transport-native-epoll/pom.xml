@@ -553,6 +553,7 @@
                   <configureArgs>
                     <arg>${jni.compiler.args.ldflags}</arg>
                     <arg>${jni.compiler.args.libs}</arg>
+                    <arg>CFLAGS=${env.CFLAGS} -I${unix.common.include.unpacked.dir}</arg>
                     <configureArg>--libdir=${project.build.directory}/native-build/target/lib</configureArg>
                   </configureArgs>
                 </configuration>
