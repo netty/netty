@@ -15,12 +15,6 @@
  */
 package io.netty.channel.embedded;
 
-import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.concurrent.TimeUnit;
-
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
@@ -44,6 +38,12 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Base class for {@link Channel} implementations that are used in an embedded fashion.
@@ -77,6 +77,7 @@ public class EmbeddedChannel extends AbstractChannel {
     private Throwable lastException;
     private State state;
     private int executingStackCnt;
+    private boolean cancelRemainingScheduledTasks;
 
     /**
      * Create a new instance with an {@link EmbeddedChannelId} and an empty pipeline.
@@ -586,14 +587,6 @@ public class EmbeddedChannel extends AbstractChannel {
         return false;
     }
 
-    private void finishPendingTasks(boolean cancel) {
-        runPendingTasks();
-        if (cancel) {
-            // Cancel all scheduled tasks that are left.
-            embeddedEventLoop().cancelScheduledTasks();
-        }
-    }
-
     @Override
     public final ChannelFuture close() {
         return close(newPromise());
@@ -613,13 +606,12 @@ public class EmbeddedChannel extends AbstractChannel {
         try {
             runPendingTasks();
             future = super.close(promise);
+
+            cancelRemainingScheduledTasks = true;
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
-
-        // Now finish everything else and cancel all scheduled tasks that were not ready set.
-        finishPendingTasks(true);
         return future;
     }
 
@@ -629,11 +621,14 @@ public class EmbeddedChannel extends AbstractChannel {
         ChannelFuture future;
         try {
             future = super.disconnect(promise);
+
+            if (!metadata.hasDisconnect()) {
+                cancelRemainingScheduledTasks = true;
+            }
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
-        finishPendingTasks(!metadata.hasDisconnect());
         return future;
     }
 
@@ -802,6 +797,11 @@ public class EmbeddedChannel extends AbstractChannel {
     private void maybeRunPendingTasks() {
         if (executingStackCnt == 0) {
             runPendingTasks();
+
+            if (cancelRemainingScheduledTasks) {
+                // Cancel all scheduled tasks that are left.
+                embeddedEventLoop().cancelScheduledTasks();
+            }
         }
     }
 
