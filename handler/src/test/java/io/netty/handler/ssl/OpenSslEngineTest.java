@@ -168,7 +168,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Override
     protected void additionalPeerAssertions(SSLSession sslSession, boolean mutualAuth) {
-        if (sslSession instanceof OpenSslInternalSession) {
+        if (sslSession instanceof OpenSslSession) {
             assertEquals(mutualAuth, ((OpenSslInternalSession) sslSession).hasPeerCertificates());
         }
     }
