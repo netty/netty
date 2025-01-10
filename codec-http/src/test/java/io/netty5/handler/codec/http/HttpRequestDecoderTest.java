@@ -17,10 +17,14 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.buffer.BufferUtil;
+import io.netty5.channel.ChannelHandler;
+import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.headers.HttpCookiePair;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.AsciiString;
+import io.netty5.util.Resource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,6 +38,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -584,6 +589,45 @@ public class HttpRequestDecoderTest {
     @Test
     public void testNulInInitialLine() {
         testInvalidHeaders0("GET / HTTP/1.1\r\u0000\nHost: whatever\r\n\r\n");
+    }
+
+    @Test
+    void reentrantClose() {
+        String requestStr = "GET / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 0\r\n" +
+                "\r\n" +
+                "GET / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 0\r\n" +
+                "\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(), new ChannelHandler() {
+            private int i;
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                if (i == 0) {
+                    assertInstanceOf(HttpRequest.class, msg);
+                } else if (i == 1) {
+                    assertInstanceOf(LastHttpContent.class, msg);
+                } else if (i == 2) {
+                    assertInstanceOf(HttpRequest.class, msg);
+                } else if (i == 3) {
+                    assertInstanceOf(LastHttpContent.class, msg);
+                }
+                if (msg instanceof Resource<?>) {
+                    ((Resource<?>) msg).close();
+                }
+
+                if (++i == 1) {
+                    // first request
+                    ctx.close();
+                }
+            }
+        });
+
+        assertFalse(channel.writeInbound(BufferUtil.writeAscii(channel.bufferAllocator(), requestStr)));
+        assertFalse(channel.finish());
     }
 
     private void testInvalidHeaders0(String request) {
