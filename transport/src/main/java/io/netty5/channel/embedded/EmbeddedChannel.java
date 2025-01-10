@@ -31,6 +31,7 @@ import io.netty5.channel.DefaultChannelPipeline;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.IoHandle;
 import io.netty5.channel.MaxMessagesWriteHandleFactory;
+import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.util.ReferenceCountUtil;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
@@ -69,6 +70,8 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     private State state;
     private boolean inputShutdown;
     private boolean outputShutdown;
+    private int executingStackCnt;
+    private boolean cancelRemainingScheduledTasks;
 
     private final EmbeddedIoHandle handle = new EmbeddedIoHandle() {
         @Override
@@ -293,7 +296,14 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
 
     @Override
     public Future<Void> register() {
-        Future<Void> future = super.register();
+        Future<Void> future;
+        executingStackCnt++;
+        try {
+            future = super.register();
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
         assert future.isDone();
         Throwable cause = future.cause();
         if (cause != null) {
@@ -374,12 +384,18 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
             return isNotEmpty(inboundMessages);
         }
 
-        ChannelPipeline p = pipeline();
-        for (Object m: msgs) {
-            p.fireChannelRead(m);
-        }
+        executingStackCnt++;
+        try {
+            ChannelPipeline p = pipeline();
+            for (Object m : msgs) {
+                p.fireChannelRead(m);
+            }
 
-        flushInbound(false);
+            flushInbound(false);
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
         return isNotEmpty(inboundMessages);
     }
 
@@ -390,8 +406,14 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      * @see #writeOneOutbound(Object)
      */
     public Future<Void> writeOneInbound(Object msg) {
-        if (checkOpen(true)) {
-            pipeline().fireChannelRead(msg);
+        executingStackCnt++;
+        try {
+            if (checkOpen(true)) {
+                pipeline().fireChannelRead(msg);
+            }
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
         }
         return checkException0();
     }
@@ -407,11 +429,17 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
     }
 
     private void flushInbound(boolean recordException) {
-      if (checkOpen(recordException)) {
-          pipeline().fireChannelReadComplete();
-          embeddedEventLoop().execute(this::readIfIsAutoRead);
-          runPendingTasks();
-      }
+        executingStackCnt++;
+        try {
+            if (checkOpen(recordException)) {
+                pipeline().fireChannelReadComplete();
+                embeddedEventLoop().execute(this::readIfIsAutoRead);
+                runPendingTasks();
+            }
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
       checkException();
     }
 
@@ -427,26 +455,32 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
             return isNotEmpty(outboundMessages);
         }
 
+        executingStackCnt++;
         RecyclableArrayList futures = RecyclableArrayList.newInstance(msgs.length);
         try {
-            for (Object m: msgs) {
-                if (m == null) {
-                    break;
+            try {
+                for (Object m : msgs) {
+                    if (m == null) {
+                        break;
+                    }
+                    futures.add(write(m));
                 }
-                futures.add(write(m));
-            }
 
-            flushOutbound0();
+                flushOutbound0();
 
-            int size = futures.size();
-            for (int i = 0; i < size; i++) {
-                Future<Void> future = (Future<Void>) futures.get(i);
-                if (future.isDone()) {
-                    recordException(future);
-                } else {
-                    // The write may be delayed to run later by runPendingTasks()
-                    future.addListener(recordExceptionListener);
+                int size = futures.size();
+                for (int i = 0; i < size; i++) {
+                    Future<Void> future = (Future<Void>) futures.get(i);
+                    if (future.isDone()) {
+                        recordException(future);
+                    } else {
+                        // The write may be delayed to run later by runPendingTasks()
+                        future.addListener(recordExceptionListener);
+                    }
                 }
+            } finally {
+                executingStackCnt--;
+                maybeRunPendingTasks();
             }
 
             checkException();
@@ -463,8 +497,14 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      * @see #writeOneInbound(Object)
      */
     public Future<Void> writeOneOutbound(Object msg) {
-        if (checkOpen(true)) {
-            return write(msg);
+        executingStackCnt++;
+        try {
+            if (checkOpen(true)) {
+                return write(msg);
+            }
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
         }
         return checkException0();
     }
@@ -475,8 +515,14 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      * @see #flushInbound()
      */
     public EmbeddedChannel flushOutbound() {
-        if (checkOpen(true)) {
-            flushOutbound0();
+        executingStackCnt++;
+        try {
+            if (checkOpen(true)) {
+                flushOutbound0();
+            }
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
         }
         checkException();
         return this;
@@ -516,7 +562,13 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
      * @return bufferReadable returns {@code true} if any of the used buffers has something left to read
      */
     private boolean finish(boolean releaseAll) {
-        close();
+        executingStackCnt++;
+        try {
+            close();
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
         try {
             checkException();
             return isNotEmpty(inboundMessages) || isNotEmpty(outboundMessages);
@@ -570,31 +622,135 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
         return false;
     }
 
-    private void finishPendingTasks(boolean cancel) {
-        runPendingTasks();
-        if (cancel) {
-            // Cancel all scheduled tasks that are left.
-            ((EmbeddedEventLoop) executor()).cancelScheduled();
-        }
-    }
-
     @Override
     public final Future<Void> close() {
-        // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
-        // that needs to be run before the actual close takes place.
-        runPendingTasks();
-        Future<Void> future = super.close();
-
-        // Now finish everything else and cancel all scheduled tasks that were not ready set.
-        finishPendingTasks(true);
+        Future<Void> future;
+        executingStackCnt++;
+        try {
+            // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
+            // that needs to be run before the actual close takes place.
+            runPendingTasks();
+            future = super.close();
+            cancelRemainingScheduledTasks = true;
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
         return future;
     }
 
     @Override
     public final Future<Void> disconnect() {
-        Future<Void> future = super.disconnect();
-        finishPendingTasks(!isSupportingDisconnect());
+        Future<Void> future;
+        try {
+            future = super.disconnect();
+            if (!isSupportingDisconnect()) {
+                cancelRemainingScheduledTasks = true;
+            }
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
         return future;
+    }
+
+    @Override
+    public Future<Void> bind(SocketAddress localAddress) {
+        executingStackCnt++;
+        try {
+            return super.bind(localAddress);
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
+    }
+
+    @Override
+    public Future<Void> connect(SocketAddress remoteAddress) {
+        executingStackCnt++;
+        try {
+            return super.connect(remoteAddress);
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
+    }
+
+    @Override
+    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        executingStackCnt++;
+        try {
+            return super.connect(remoteAddress, localAddress);
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
+    }
+
+    @Override
+    public Future<Void> deregister() {
+        executingStackCnt++;
+        try {
+            return super.deregister();
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
+    }
+
+    @Override
+    public Channel flush() {
+        executingStackCnt++;
+        try {
+            return super.flush();
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
+    }
+
+    @Override
+    public Channel read() {
+        executingStackCnt++;
+        try {
+            return super.read();
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
+    }
+
+    @Override
+    public Channel read(ReadBufferAllocator readBufferAllocator) {
+        executingStackCnt++;
+        try {
+            return super.read(readBufferAllocator);
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
+    }
+
+    @Override
+    public Future<Void> write(Object msg) {
+        executingStackCnt++;
+        try {
+            return super.write(msg);
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
+    }
+
+    @Override
+    public Future<Void> writeAndFlush(Object msg) {
+        executingStackCnt++;
+        try {
+            return super.writeAndFlush(msg);
+        } finally {
+            executingStackCnt--;
+            maybeRunPendingTasks();
+        }
     }
 
     private static boolean isNotEmpty(Queue<Object> queue) {
@@ -603,6 +759,17 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
 
     private static Object poll(Queue<Object> queue) {
         return queue != null ? queue.poll() : null;
+    }
+
+    private void maybeRunPendingTasks() {
+        if (executingStackCnt == 0) {
+            runPendingTasks();
+
+            if (cancelRemainingScheduledTasks) {
+                // Cancel all scheduled tasks that are left.
+                embeddedEventLoop().cancelScheduled();
+            }
+        }
     }
 
     /**

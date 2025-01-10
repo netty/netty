@@ -38,9 +38,10 @@ public class FlushConsolidationHandlerTest {
         EmbeddedChannel channel = newChannel(flushCount,  true);
         channel.executor().execute(() -> {
             // Flushes should not go through immediately, as they're scheduled as an async task
-            channel.flush();
+            // To ensure we not run the async task directly we will call trigger the flush() via the pipeline.
+            channel.pipeline().flush();
             assertEquals(0, flushCount.get());
-            channel.flush();
+            channel.pipeline().flush();
             assertEquals(0, flushCount.get());
         });
         assertEquals(1, flushCount.get());
@@ -54,7 +55,8 @@ public class FlushConsolidationHandlerTest {
         channel.executor().execute(() -> {
             // After a given threshold, the async task should be bypassed and a flush should be triggered immediately
             for (int i = 0; i < EXPLICIT_FLUSH_AFTER_FLUSHES; i++) {
-                channel.flush();
+                // To ensure we not run the async task directly we will call trigger the flush() via the pipeline.
+                channel.pipeline().flush();
             }
             assertEquals(1, flushCount.get());
         });

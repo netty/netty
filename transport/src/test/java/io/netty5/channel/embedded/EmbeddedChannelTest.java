@@ -588,6 +588,33 @@ public class EmbeddedChannelTest {
         });
     }
 
+    @Test
+    void testReentrantClose() {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        channel.pipeline().addLast(new ChannelHandler() {
+            boolean runningRead;
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                runningRead = true;
+                try {
+                    ctx.channel().close();
+                } finally {
+                    runningRead = false;
+                }
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                if (runningRead) {
+                    throw new IllegalStateException("Reentrant handlerRemoved");
+                }
+            }
+        });
+        channel.writeInbound("foo");
+        channel.checkException();
+    }
+
     private static final class EventOutboundHandler implements ChannelHandler {
         static final Integer DISCONNECT = 0;
         static final Integer CLOSE = 1;
