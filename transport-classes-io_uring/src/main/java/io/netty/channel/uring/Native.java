@@ -340,6 +340,15 @@ final class Native {
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
     }
 
+    /**
+     * check current kernel version whether support io_uring_register_io_wq_worker
+     * Available since 5.15.
+     * @return true if support io_uring_register_io_wq_worker
+     */
+    static boolean isRegisterIOWQWorkerSupported() {
+        return Native.checkKernelVersion(Native.kernelVersion(), 5, 15);
+    }
+
     static void checkKernelVersion(String kernelVersion) {
         boolean enforceKernelVersion = SystemPropertyUtil.getBoolean(
                 "io.netty5.transport.iouring.enforceKernelVersion", true);
@@ -353,6 +362,36 @@ final class Native {
                         "trying to use io_uring anyway");
             }
         }
+    }
+
+    static boolean checkKernelVersion(String kernelVersion, int major, int minor) {
+        String[] versionComponents = kernelVersion.split("\\.");
+        if (versionComponents.length < 3) {
+            return false;
+        }
+        int nativeMajor;
+        try {
+            nativeMajor = Integer.parseInt(versionComponents[0]);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+
+        if (nativeMajor < major) {
+            return false;
+        }
+
+        if (nativeMajor > major) {
+            return true;
+        }
+
+        int nativeMinor;
+        try {
+            nativeMinor = Integer.parseInt(versionComponents[1]);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+
+        return nativeMinor >= minor;
     }
 
     private static boolean checkKernelVersion0(String kernelVersion) {
@@ -387,6 +426,8 @@ final class Native {
 
     private static native boolean ioUringProbe(int ringFd, int[] ios);
     private static native long[] ioUringSetup(int entries);
+
+    static native int ioUringRegisterIoWqMaxWorkers(int ringFd, int maxBoundedValue, int maxUnboundedValue);
 
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
