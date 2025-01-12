@@ -102,6 +102,34 @@ public final class Errors {
         }
     }
 
+    public static final class NativeCallException extends RuntimeException {
+        private static final long serialVersionUID = -5532328671712318161L;
+        private final int expectedErr;
+        private final boolean fillInStackTrace;
+
+        public NativeCallException(String method, int expectedErr) {
+            this(method, expectedErr, true);
+        }
+
+        public NativeCallException(String method, int expectedErr, boolean fillInStackTrace) {
+            super(method + "(..) failed: " + errnoString(-expectedErr));
+            this.expectedErr = expectedErr;
+            this.fillInStackTrace = fillInStackTrace;
+        }
+
+        public int expectedErr() {
+            return expectedErr;
+        }
+
+        @Override
+        public synchronized Throwable fillInStackTrace() {
+            if (fillInStackTrace) {
+                return super.fillInStackTrace();
+            }
+            return this;
+        }
+    }
+
     static final class NativeConnectException extends ConnectException {
         private static final long serialVersionUID = -5532328671712318161L;
         private final int expectedErr;

@@ -22,6 +22,7 @@ import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
+import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
@@ -77,6 +78,15 @@ public final class IoUringIoHandler implements IoHandler {
         registrations = new IntObjectHashMap<>();
         eventfd = Native.newBlockingEventFd();
         eventfdReadBuf = PlatformDependent.allocateMemory(8);
+    }
+
+    IoUringIoHandler(IoUringIoHandlerOption ioUringIoHandlerOption) {
+        this(Native.createRingBuffer(ioUringIoHandlerOption.getRingSize()));
+        if (Native.isRegisterIOWQWorkerSupported() && ioUringIoHandlerOption.needRegisterIOWQWorker()) {
+            int maxBoundedWorker = Math.max(ioUringIoHandlerOption.getMaxBoundedWorker(), 0);
+            int maxUnboundedWorker = Math.max(ioUringIoHandlerOption.getMaxUnboundedWorker(), 0);
+            adjustIOWQWorkder(maxBoundedWorker, maxUnboundedWorker);
+        }
     }
 
     @Override
@@ -396,6 +406,13 @@ public final class IoUringIoHandler implements IoHandler {
         return IoUringIoHandle.class.isAssignableFrom(handleType);
     }
 
+    public void adjustIOWQWorkder(int maxBoundedWorker, int maxUnboundedWorker) {
+        int result = Native.ioUringRegisterIoWqMaxWorkers(ringBuffer.fd(), maxBoundedWorker, maxUnboundedWorker);
+        if (result < 0) {
+            throw new Errors.NativeCallException("ioUringRegisterIoWqMaxWorkers(...)", result);
+        }
+    }
+
     /**
      * {@code byte[]} that can be used as temporary storage to encode the ipv4 address
      */
@@ -432,4 +449,17 @@ public final class IoUringIoHandler implements IoHandler {
         ObjectUtil.checkPositive(ringSize, "ringSize");
         return () -> new IoUringIoHandler(Native.createRingBuffer(ringSize));
     }
+
+    /**
+     * Create a new {@link IoHandlerFactory} that can be used to create {@link IoUringIoHandler}s.
+     * Each {@link IoUringIoHandler} will use same option
+     * @param option the io_uring option
+     * @return factory
+     */
+    public static IoHandlerFactory newFactory(IoUringIoHandlerOption option) {
+        IoUring.ensureAvailability();
+        ObjectUtil.checkNotNull(option, "option");
+        return () -> new IoUringIoHandler(option);
+    }
+
 }
