@@ -31,10 +31,10 @@ import javax.net.ssl.SSLSessionBindingListener;
 import javax.security.cert.X509Certificate;
 
 /**
- * Delegates all operations to a wrapped {@link OpenSslSession} except the methods defined by {@link ExtendedSSLSession}
- * itself.
+ * Delegates all operations to a wrapped {@link OpenSslInternalSession} except the methods defined by
+ * {@link ExtendedSSLSession} itself.
  */
-abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements OpenSslSession {
+abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements OpenSslInternalSession {
 
     // TODO: use OpenSSL API to actually fetch the real data but for now just do what Conscrypt does:
     // https://github.com/google/conscrypt/blob/1.2.0/common/
@@ -45,9 +45,9 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
             "RSASSA-PSS",
     };
 
-    private final OpenSslSession wrapped;
+    private final OpenSslInternalSession wrapped;
 
-    ExtendedOpenSslSession(OpenSslSession wrapped) {
+    ExtendedOpenSslSession(OpenSslInternalSession wrapped) {
         this.wrapped = wrapped;
     }
 
@@ -169,6 +169,11 @@ abstract class ExtendedOpenSslSession extends ExtendedSSLSession implements Open
     @Override
     public final Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
         return wrapped.getPeerCertificates();
+    }
+
+    @Override
+    public boolean hasPeerCertificates() {
+        return wrapped.hasPeerCertificates();
     }
 
     @Override
