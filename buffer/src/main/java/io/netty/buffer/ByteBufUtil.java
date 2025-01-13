@@ -22,6 +22,7 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectPool.Handle;
@@ -45,7 +46,6 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
 import java.util.Arrays;
-import java.util.Locale;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -110,8 +110,13 @@ public final class ByteBufUtil {
      * Allocates a new array if minLength > {@link ByteBufUtil#MAX_TL_ARRAY_LEN}
      */
     static byte[] threadLocalTempArray(int minLength) {
-        return minLength <= MAX_TL_ARRAY_LEN ? BYTE_ARRAYS.get()
-            : PlatformDependent.allocateUninitializedArray(minLength);
+        // Only make use of ThreadLocal if we use a FastThreadLocalThread to make the implementation
+        // Virtual Thread friendly.
+        // See https://github.com/netty/netty/issues/14609
+        if (minLength <= MAX_TL_ARRAY_LEN && Thread.currentThread() instanceof FastThreadLocalThread) {
+            return BYTE_ARRAYS.get();
+        }
+        return PlatformDependent.allocateUninitializedArray(minLength);
     }
 
     /**
