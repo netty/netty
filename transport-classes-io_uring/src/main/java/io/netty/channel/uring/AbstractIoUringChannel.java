@@ -230,6 +230,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected void doDisconnect() throws Exception {
     }
 
+    protected byte flags(byte flags) {
+        if (((IOUringChannelConfig) config()).getIoseqAsync()) {
+            return (byte) (flags | Native.IOSQE_ASYNC);
+        }
+        return flags;
+    }
+
     private void freeRemoteAddressMemory() {
         if (remoteAddressMemory != null) {
             Buffer.free(remoteAddressMemory);
@@ -268,7 +275,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 }
 
                 int fd = fd().intValue();
-                IoUringIoOps ops = IoUringIoOps.newClose(fd, (byte) 0, nextOpsId());
+                IoUringIoOps ops = IoUringIoOps.newClose(fd, flags((byte) 0), nextOpsId());
                 registration.submit(ops);
             }
         } else {
@@ -365,7 +372,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IoUringIoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                fd, (byte) 0, mask, (short) mask);
+                fd, flags((byte) 0), mask, (short) mask);
         long id = registration.submit(ops);
         if (id != 0) {
             ioState |= ioMask;
@@ -493,22 +500,23 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 return;
             }
             int fd = fd().intValue();
+            byte flags = flags((byte) 0);
             if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
                 registration.submit(IoUringIoOps.newPollRemove(
-                        fd, (byte) 0, pollRdhupId, (short) Native.POLLRDHUP));
+                        fd, flags, pollRdhupId, (short) Native.POLLRDHUP));
             }
             if ((ioState & POLL_IN_SCHEDULED) != 0) {
                 registration.submit(IoUringIoOps.newPollRemove(
-                        fd, (byte) 0, pollInId, (short) Native.POLLIN));
+                        fd, flags, pollInId, (short) Native.POLLIN));
             }
             if ((ioState & POLL_OUT_SCHEDULED) != 0) {
                 registration.submit(IoUringIoOps.newPollRemove(
-                        fd,  (byte) 0, pollOutId, (short) Native.POLLOUT));
+                        fd, flags, pollOutId, (short) Native.POLLOUT));
             }
             if (cancelConnect && connectId != 0) {
                 // Best effort to cancel the already submitted connect request.
                 registration.submit(IoUringIoOps.newAsyncCancel(
-                        fd, (byte) 0, connectId, Native.IORING_OP_CONNECT));
+                        fd, flags, connectId, Native.IORING_OP_CONNECT));
             }
             cancelOutstandingReads(registration, numOutstandingReads);
             cancelOutstandingWrites(registration, numOutstandingWrites);
@@ -935,7 +943,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
                     int fd = fd().intValue();
                     IoUringIoRegistration registration = registration();
-                    IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
+                    IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, flags((byte) 0), Native.MSG_FASTOPEN,
                             hdr.address(), hdr.idx());
                     connectId = registration.submit(ops);
                     if (connectId == 0) {
@@ -995,7 +1003,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IoUringIoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newConnect(
-                fd, (byte) 0, remoteAddressMemoryAddress, nextOpsId());
+                fd, flags((byte) 0), remoteAddressMemoryAddress, nextOpsId());
         connectId = registration.submit(ops);
         if (connectId == 0) {
             // Directly release the memory if submitting failed.
