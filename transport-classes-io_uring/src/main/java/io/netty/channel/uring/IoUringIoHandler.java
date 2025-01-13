@@ -446,14 +446,14 @@ public final class IoUringIoHandler implements IoHandler {
 
     /**
      * Create a new {@link IoHandlerFactory} that can be used to create {@link IoUringIoHandler}s.
-     * Each {@link IoUringIoHandler} will use same option
-     * @param option the io_uring option
-     * @return factory
+     * Each {@link IoUringIoHandler} will use same {@link IoUringIoHandlerConfiguration}.
+     * @param config    the io_uring config
+     * @return          factory
      */
-    public static IoHandlerFactory newFactory(IoUringIoHandlerConfiguration option) {
+    public static IoHandlerFactory newFactory(IoUringIoHandlerConfiguration config) {
         IoUring.ensureAvailability();
-        ObjectUtil.checkNotNull(option, "option");
-        return () -> new IoUringIoHandler(option);
+        ObjectUtil.checkNotNull(config, "config");
+        return () -> new IoUringIoHandler(config);
     }
 
 }
