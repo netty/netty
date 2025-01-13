@@ -851,27 +851,39 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                 SSLEngineResult result;
 
-                if (buf.readableBytes() > MAX_PLAINTEXT_LENGTH) {
-                    // If we pulled a buffer larger than the supported packet size, we can slice it up and iteratively,
-                    // encrypting multiple packets into a single larger buffer. This substantially saves on allocations
-                    // for large responses. Here we estimate how large of a buffer we need. If we overestimate a bit,
-                    // that's fine. If we underestimate, we'll simply re-enqueue the remaining buffer and get it on the
-                    // next outer loop.
-                    int readableBytes = buf.readableBytes();
-                    int numPackets = readableBytes / MAX_PLAINTEXT_LENGTH;
-                    if (readableBytes % MAX_PLAINTEXT_LENGTH != 0) {
-                        numPackets += 1;
-                    }
+                try {
+                    if (buf.readableBytes() > MAX_PLAINTEXT_LENGTH) {
+                        // If we pulled a buffer larger than the supported packet size, we can slice it up and
+                        // iteratively, encrypting multiple packets into a single larger buffer. This substantially
+                        // saves on allocations for large responses. Here we estimate how large of a buffer we need.
+                        // If we overestimate a bit, that's fine. If we underestimate, we'll simply re-enqueue the
+                        // remaining buffer and get it on the next outer loop.
+                        int readableBytes = buf.readableBytes();
+                        int numPackets = readableBytes / MAX_PLAINTEXT_LENGTH;
+                        if (readableBytes % MAX_PLAINTEXT_LENGTH != 0) {
+                            numPackets += 1;
+                        }
 
-                    if (out == null) {
-                        out = allocateOutNetBuf(ctx, readableBytes, buf.nioBufferCount() + numPackets);
+                        if (out == null) {
+                            out = allocateOutNetBuf(ctx, readableBytes, buf.nioBufferCount() + numPackets);
+                        }
+                        result = wrapMultiple(alloc, engine, buf, out);
+                    } else {
+                        if (out == null) {
+                            out = allocateOutNetBuf(ctx, buf.readableBytes(), buf.nioBufferCount());
+                        }
+                        result = wrap(alloc, engine, buf, out);
                     }
-                    result = wrapMultiple(alloc, engine, buf, out);
-                } else {
-                    if (out == null) {
-                        out = allocateOutNetBuf(ctx, buf.readableBytes(), buf.nioBufferCount());
-                    }
-                    result = wrap(alloc, engine, buf, out);
+                } catch (SSLException e) {
+                    // Either wrapMultiple(...) or wrap(...) did throw. In this case we need to release the buffer
+                    // that we removed from pendingUnencryptedWrites before failing the promise and rethrowing it.
+                    // Failing to do so would result in a buffer leak.
+                    // See https://github.com/netty/netty/issues/14644
+                    //
+                    // We don't need to release out here as this is done in a finally block already.
+                    buf.release();
+                    promise.setFailure(e);
+                    throw e;
                 }
 
                 if (buf.isReadable()) {
