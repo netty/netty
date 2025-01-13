@@ -81,6 +81,13 @@ final class ResolvConf {
 
             if (ln.startsWith("nameserver")) {
                 ln = ln.substring("nameserver".length()).trim();
+                int cIndex = ln.indexOf('#');
+                if (cIndex != -1) {
+                    ln = ln.substring(0, cIndex).trim();
+                }
+                if (ln.isEmpty()) {
+                    continue;
+                }
                 nameservers.add(new InetSocketAddress(ln, 53));
             }
         }
