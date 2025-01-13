@@ -71,25 +71,24 @@ public final class IoUringIoHandler implements IoHandler {
     private static final int RINGFD_ID = EVENTFD_ID - 1;
     private static final int INVALID_ID = 0;
 
-    IoUringIoHandler(RingBuffer ringBuffer) {
+    IoUringIoHandler(IoUringIoHandlerConfiguration ioUringIoHandlerConfiguration) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IoUring.ensureAvailability();
-        this.ringBuffer = requireNonNull(ringBuffer, "ringBuffer");
-        registrations = new IntObjectHashMap<>();
-        eventfd = Native.newBlockingEventFd();
-        eventfdReadBuf = PlatformDependent.allocateMemory(8);
-    }
-
-    IoUringIoHandler(IoUringIoHandlerConfiguration ioUringIoHandlerConfiguration) {
-        this(Native.createRingBuffer(ioUringIoHandlerConfiguration.getRingSize()));
+        requireNonNull(ioUringIoHandlerConfiguration, "ioUringIoHandlerConfiguration");
+        this.ringBuffer = Native.createRingBuffer(ioUringIoHandlerConfiguration.getRingSize());
         if (Native.isRegisterIOWQWorkerSupported() && ioUringIoHandlerConfiguration.needRegisterIOWQWorker()) {
             int maxBoundedWorker = Math.max(ioUringIoHandlerConfiguration.getMaxBoundedWorker(), 0);
             int maxUnboundedWorker = Math.max(ioUringIoHandlerConfiguration.getMaxUnboundedWorker(), 0);
             int result = Native.ioUringRegisterIoWqMaxWorkers(ringBuffer.fd(), maxBoundedWorker, maxUnboundedWorker);
             if (result < 0) {
+                // Close ringBuffer before throwing to ensure we release all memory on failure.
+                ringBuffer.close();
                 throw new Errors.NativeCallException("ioUringRegisterIoWqMaxWorkers(...)", result);
             }
         }
+        registrations = new IntObjectHashMap<>();
+        eventfd = Native.newBlockingEventFd();
+        eventfdReadBuf = PlatformDependent.allocateMemory(8);
     }
 
     @Override
@@ -429,8 +428,7 @@ public final class IoUringIoHandler implements IoHandler {
      * @return factory
      */
     public static IoHandlerFactory newFactory() {
-        IoUring.ensureAvailability();
-        return () -> new IoUringIoHandler(Native.createRingBuffer());
+        return newFactory(new IoUringIoHandlerConfiguration());
     }
 
     /**
@@ -441,9 +439,9 @@ public final class IoUringIoHandler implements IoHandler {
      * @return              factory
      */
     public static IoHandlerFactory newFactory(int ringSize) {
-        IoUring.ensureAvailability();
-        ObjectUtil.checkPositive(ringSize, "ringSize");
-        return () -> new IoUringIoHandler(Native.createRingBuffer(ringSize));
+        IoUringIoHandlerConfiguration configuration = new IoUringIoHandlerConfiguration();
+        configuration.setRingSize(ringSize);
+        return () -> new IoUringIoHandler(configuration);
     }
 
     /**
