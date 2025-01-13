@@ -110,7 +110,6 @@ public final class ByteBufUtil {
      * Allocates a new array if minLength > {@link ByteBufUtil#MAX_TL_ARRAY_LEN}
      */
     static byte[] threadLocalTempArray(int minLength) {
-        final byte[] tmp;
         // Only make use of ThreadLocal if we use a FastThreadLocalThread to make the implementation
         // Virtual Thread friendly.
         // See https://github.com/netty/netty/issues/14609
