@@ -85,7 +85,7 @@ public final class IoUringIoHandler implements IoHandler {
         if (Native.isRegisterIOWQWorkerSupported() && ioUringIoHandlerOption.needRegisterIOWQWorker()) {
             int maxBoundedWorker = Math.max(ioUringIoHandlerOption.getMaxBoundedWorker(), 0);
             int maxUnboundedWorker = Math.max(ioUringIoHandlerOption.getMaxUnboundedWorker(), 0);
-            adjustIOWQWorkder(maxBoundedWorker, maxUnboundedWorker);
+            adjustIOWQWorker(maxBoundedWorker, maxUnboundedWorker);
         }
     }
 
@@ -406,7 +406,7 @@ public final class IoUringIoHandler implements IoHandler {
         return IoUringIoHandle.class.isAssignableFrom(handleType);
     }
 
-    public void adjustIOWQWorkder(int maxBoundedWorker, int maxUnboundedWorker) {
+    private void adjustIOWQWorker(int maxBoundedWorker, int maxUnboundedWorker) {
         int result = Native.ioUringRegisterIoWqMaxWorkers(ringBuffer.fd(), maxBoundedWorker, maxUnboundedWorker);
         if (result < 0) {
             throw new Errors.NativeCallException("ioUringRegisterIoWqMaxWorkers(...)", result);
