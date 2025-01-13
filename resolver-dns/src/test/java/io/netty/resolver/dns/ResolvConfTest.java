@@ -48,13 +48,13 @@ public class ResolvConfTest {
     @MethodSource
     public void scenarios(String resolvConf, List<String> nameservers) throws Exception {
         assertIterableEquals(
-                ResolvConf.fromReader(new BufferedReader(new StringReader(resolvConf))).getNameservers(),
                 nameservers.stream().map(new Function<String, InetSocketAddress>() {
                     @Override
                     public InetSocketAddress apply(String n) {
                         return new InetSocketAddress(n, 53);
                     }
-                }).collect(Collectors.toList()));
+                }).collect(Collectors.toList()),
+                ResolvConf.fromReader(new BufferedReader(new StringReader(resolvConf))).getNameservers());
     }
 
     static List<Arguments> scenarios() {
@@ -72,6 +72,11 @@ public class ResolvConfTest {
                                 + "# nameserver hello\n"
                                 + "\n"
                                 + "nameserver 1.2.3.4\n"
+                                + "nameserver 127.1.2.3",
+                        Arrays.asList("1.2.3.4", "127.1.2.3")),
+                arguments(
+                        "# some comment\n"
+                                + "nameserver 1.2.3.4 # comment\n"
                                 + "nameserver 127.1.2.3",
                         Arrays.asList("1.2.3.4", "127.1.2.3")),
                 arguments(
