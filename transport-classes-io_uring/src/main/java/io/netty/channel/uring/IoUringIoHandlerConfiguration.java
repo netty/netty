@@ -120,7 +120,7 @@ public final class IoUringIoHandlerConfiguration {
         return this;
     }
 
-    boolean needRegisterIOWQWorker() {
+    boolean needRegisterIowqMaxWorker() {
         return maxBoundedWorker > 0 || maxUnboundedWorker > 0;
     }
 }

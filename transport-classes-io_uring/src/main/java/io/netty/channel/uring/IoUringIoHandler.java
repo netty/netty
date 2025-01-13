@@ -76,7 +76,7 @@ public final class IoUringIoHandler implements IoHandler {
         IoUring.ensureAvailability();
         requireNonNull(ioUringIoHandlerConfiguration, "ioUringIoHandlerConfiguration");
         this.ringBuffer = Native.createRingBuffer(ioUringIoHandlerConfiguration.getRingSize());
-        if (Native.isRegisterIOWQWorkerSupported() && ioUringIoHandlerConfiguration.needRegisterIOWQWorker()) {
+        if (IoUring.isRegisterIowqMaxWorkersSupported() && ioUringIoHandlerConfiguration.needRegisterIowqMaxWorker()) {
             int maxBoundedWorker = Math.max(ioUringIoHandlerConfiguration.getMaxBoundedWorker(), 0);
             int maxUnboundedWorker = Math.max(ioUringIoHandlerConfiguration.getMaxUnboundedWorker(), 0);
             int result = Native.ioUringRegisterIoWqMaxWorkers(ringBuffer.fd(), maxBoundedWorker, maxUnboundedWorker);

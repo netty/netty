@@ -345,8 +345,14 @@ final class Native {
      * Available since 5.15.
      * @return true if support io_uring_register_io_wq_worker
      */
-    static boolean isRegisterIOWQWorkerSupported() {
-        return Native.checkKernelVersion(Native.kernelVersion(), 5, 15);
+    static boolean isRegisterIOWQWorkerSupported(int ringFd) {
+        // See https://github.com/torvalds/linux/blob/v5.5/fs/io_uring.c#L5488C10-L5488C16
+        int result = ioUringRegisterIoWqMaxWorkers(ringFd, 1, 1);
+        if (result >= 0) {
+            return true;
+        }
+        // This is not supported and so will return -EINVAL
+        return false;
     }
 
     static void checkKernelVersion(String kernelVersion) {
@@ -364,7 +370,7 @@ final class Native {
         }
     }
 
-    static boolean checkKernelVersion(String kernelVersion, int major, int minor) {
+    private static boolean checkKernelVersion(String kernelVersion, int major, int minor) {
         String[] versionComponents = kernelVersion.split("\\.");
         if (versionComponents.length < 3) {
             return false;

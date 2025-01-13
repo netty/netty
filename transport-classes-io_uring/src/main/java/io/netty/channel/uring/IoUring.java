@@ -27,12 +27,14 @@ public final class IoUring {
     private static final boolean IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED;
     private static final boolean IORING_SPLICE_SUPPORTED;
     private static final boolean IORING_ACCEPT_NO_WAIT_SUPPORTED;
+    private static final boolean IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
 
     static {
         Throwable cause = null;
         boolean socketNonEmptySupported = false;
         boolean spliceSupported = false;
         boolean acceptSupportNoWait = false;
+        boolean registerIowqWorkersSupported = false;
         try {
             if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
                 cause = new UnsupportedOperationException(
@@ -50,6 +52,7 @@ public final class IoUring {
                         spliceSupported = Native.isIOUringSupportSplice(ringBuffer.fd());
                         // IORING_FEAT_RECVSEND_BUNDLE was adde in the same release.
                         acceptSupportNoWait = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
+                        registerIowqWorkersSupported = Native.isRegisterIOWQWorkerSupported(ringBuffer.fd());
                     } finally {
                         if (ringBuffer != null) {
                             try {
@@ -78,6 +81,7 @@ public final class IoUring {
         IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED = socketNonEmptySupported;
         IORING_SPLICE_SUPPORTED = spliceSupported;
         IORING_ACCEPT_NO_WAIT_SUPPORTED = acceptSupportNoWait;
+        IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED = registerIowqWorkersSupported;
     }
 
     public static boolean isAvailable() {
@@ -114,6 +118,10 @@ public final class IoUring {
 
     static boolean isIOUringAcceptNoWaitSupported() {
         return IORING_ACCEPT_NO_WAIT_SUPPORTED;
+    }
+
+    static boolean isRegisterIowqMaxWorkersSupported() {
+        return IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     }
 
     public static void ensureAvailability() {
