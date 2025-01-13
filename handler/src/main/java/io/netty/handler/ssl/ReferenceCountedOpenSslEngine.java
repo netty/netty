@@ -204,7 +204,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private final OpenSslEngineMap engineMap;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final ReferenceCountedOpenSslContext parentContext;
-    private final OpenSslSession session;
+    private final OpenSslInternalSession session;
     private final ByteBuffer[] singleSrcBuffer = new ByteBuffer[1];
     private final ByteBuffer[] singleDstBuffer = new ByteBuffer[1];
     private final boolean enableOcsp;
@@ -2341,7 +2341,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private static final X509Certificate[] JAVAX_CERTS_NOT_SUPPORTED = new X509Certificate[0];
 
-    private final class DefaultOpenSslSession implements OpenSslSession  {
+    private final class DefaultOpenSslSession implements OpenSslInternalSession {
         private final OpenSslSessionContext sessionContext;
 
         // These are guarded by synchronized(OpenSslEngine.this) as handshakeFinished() may be triggered by any
@@ -2503,8 +2503,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         /**
-         * Finish the handshake and so init everything in the {@link OpenSslSession} that should be accessible by
-         * the user.
+         * Finish the handshake and so init everything in the {@link OpenSslInternalSession} that should be accessible
+         * by the user.
          */
         @Override
         public void handshakeFinished(byte[] id, String cipher, String protocol, byte[] peerCertificate,
@@ -2601,6 +2601,13 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     throw new SSLPeerUnverifiedException("peer not verified");
                 }
                 return peerCerts.clone();
+            }
+        }
+
+        @Override
+        public boolean hasPeerCertificates() {
+            synchronized (ReferenceCountedOpenSslEngine.this) {
+                return !isEmpty(peerCerts);
             }
         }
 
@@ -2716,10 +2723,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 return true;
             }
             // We trust all sub-types as we use different types but the interface is package-private
-            if (!(o instanceof OpenSslSession)) {
+            if (!(o instanceof OpenSslInternalSession)) {
                 return false;
             }
-            return sessionId().equals(((OpenSslSession) o).sessionId());
+            return sessionId().equals(((OpenSslInternalSession) o).sessionId());
         }
     }
 
