@@ -80,12 +80,15 @@ public final class IoUringIoHandler implements IoHandler {
         eventfdReadBuf = PlatformDependent.allocateMemory(8);
     }
 
-    IoUringIoHandler(IoUringIoHandlerOption ioUringIoHandlerOption) {
-        this(Native.createRingBuffer(ioUringIoHandlerOption.getRingSize()));
-        if (Native.isRegisterIOWQWorkerSupported() && ioUringIoHandlerOption.needRegisterIOWQWorker()) {
-            int maxBoundedWorker = Math.max(ioUringIoHandlerOption.getMaxBoundedWorker(), 0);
-            int maxUnboundedWorker = Math.max(ioUringIoHandlerOption.getMaxUnboundedWorker(), 0);
-            adjustIOWQWorker(maxBoundedWorker, maxUnboundedWorker);
+    IoUringIoHandler(IoUringIoHandlerConfiguration ioUringIoHandlerConfiguration) {
+        this(Native.createRingBuffer(ioUringIoHandlerConfiguration.getRingSize()));
+        if (Native.isRegisterIOWQWorkerSupported() && ioUringIoHandlerConfiguration.needRegisterIOWQWorker()) {
+            int maxBoundedWorker = Math.max(ioUringIoHandlerConfiguration.getMaxBoundedWorker(), 0);
+            int maxUnboundedWorker = Math.max(ioUringIoHandlerConfiguration.getMaxUnboundedWorker(), 0);
+            int result = Native.ioUringRegisterIoWqMaxWorkers(ringBuffer.fd(), maxBoundedWorker, maxUnboundedWorker);
+            if (result < 0) {
+                throw new Errors.NativeCallException("ioUringRegisterIoWqMaxWorkers(...)", result);
+            }
         }
     }
 
@@ -406,13 +409,6 @@ public final class IoUringIoHandler implements IoHandler {
         return IoUringIoHandle.class.isAssignableFrom(handleType);
     }
 
-    private void adjustIOWQWorker(int maxBoundedWorker, int maxUnboundedWorker) {
-        int result = Native.ioUringRegisterIoWqMaxWorkers(ringBuffer.fd(), maxBoundedWorker, maxUnboundedWorker);
-        if (result < 0) {
-            throw new Errors.NativeCallException("ioUringRegisterIoWqMaxWorkers(...)", result);
-        }
-    }
-
     /**
      * {@code byte[]} that can be used as temporary storage to encode the ipv4 address
      */
@@ -456,7 +452,7 @@ public final class IoUringIoHandler implements IoHandler {
      * @param option the io_uring option
      * @return factory
      */
-    public static IoHandlerFactory newFactory(IoUringIoHandlerOption option) {
+    public static IoHandlerFactory newFactory(IoUringIoHandlerConfiguration option) {
         IoUring.ensureAvailability();
         ObjectUtil.checkNotNull(option, "option");
         return () -> new IoUringIoHandler(option);
