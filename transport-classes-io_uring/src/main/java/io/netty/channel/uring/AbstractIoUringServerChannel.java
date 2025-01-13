@@ -80,7 +80,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             assert numOutstandingReads == 1;
             int fd = fd().intValue();
             IoUringIoOps ops = IoUringIoOps.newAsyncCancel(
-                    fd, (byte) 0, acceptId, Native.IORING_OP_ACCEPT);
+                    fd, flags((byte) 0), acceptId, Native.IORING_OP_ACCEPT);
             registration.submit(ops);
         } else {
             assert numOutstandingReads == 0;
@@ -139,7 +139,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
                 ioPrio = Native.IORING_ACCEPT_DONT_WAIT;
             }
             // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10#improvements-for-accept
-            IoUringIoOps ops = IoUringIoOps.newAccept(fd, (byte) 0, 0, ioPrio,
+            IoUringIoOps ops = IoUringIoOps.newAccept(fd, flags((byte) 0), 0, ioPrio,
                     acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, nextOpsId());
             acceptId = registration.submit(ops);
             if (acceptId == 0) {

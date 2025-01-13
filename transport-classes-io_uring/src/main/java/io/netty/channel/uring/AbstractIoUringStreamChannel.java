@@ -234,7 +234,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
                 int fd = fd().intValue();
                 IoUringIoRegistration registration = registration();
-                IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArray.memoryAddress(offset),
+                IoUringIoOps ops = IoUringIoOps.newWritev(fd, flags((byte) 0), 0, iovArray.memoryAddress(offset),
                         iovArray.count() - offset, nextOpsId());
                 byte opCode = ops.opcode();
                 writeId = registration.submit(ops);
@@ -271,7 +271,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ops = fileRegion.splice(fd);
             } else {
                 ByteBuf buf = (ByteBuf) msg;
-                ops = IoUringIoOps.newWrite(fd, (byte) 0, 0,
+                ops = IoUringIoOps.newWrite(fd, flags((byte) 0), 0,
                         buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
             }
 
@@ -316,7 +316,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     ioPrio = 0;
                     recvFlags = Native.MSG_DONTWAIT;
                 }
-                IoUringIoOps ops = IoUringIoOps.newRecv(fd, (byte) 0, ioPrio, recvFlags,
+                IoUringIoOps ops = IoUringIoOps.newRecv(fd, flags((byte) 0), ioPrio, recvFlags,
                         byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
                 readId = registration.submit(ops);
                 if (readId == 0) {
@@ -471,7 +471,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
             assert numOutstandingReads == 1;
             int fd = fd().intValue();
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(fd, (byte) 0, readId, Native.IORING_OP_RECV);
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(fd, flags((byte) 0), readId, Native.IORING_OP_RECV);
             registration.submit(ops);
         } else {
             assert numOutstandingReads == 0;
@@ -486,7 +486,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert numOutstandingWrites == 1;
             assert writeOpCode != 0;
             int fd = fd().intValue();
-            registration.submit(IoUringIoOps.newAsyncCancel(fd, (byte) 0, writeId, writeOpCode));
+            registration.submit(IoUringIoOps.newAsyncCancel(fd, flags((byte) 0), writeId, writeOpCode));
         } else {
             assert numOutstandingWrites == 0;
         }
