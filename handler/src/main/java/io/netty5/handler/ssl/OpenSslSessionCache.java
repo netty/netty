@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link SSLSessionCache} implementation for our native SSL implementation.
  */
 class OpenSslSessionCache implements SSLSessionCache {
-    private static final OpenSslSession[] EMPTY_SESSIONS = new OpenSslSession[0];
+    private static final OpenSslInternalSession[] EMPTY_SESSIONS = new OpenSslInternalSession[0];
 
     private static final int DEFAULT_CACHE_SIZE;
     static {
@@ -92,7 +92,7 @@ class OpenSslSessionCache implements SSLSessionCache {
     }
 
     /**
-     * Called once a new {@link OpenSslSession} was created.
+     * Called once a new {@link OpenSslInternalSession} was created.
      *
      * @param session the new session.
      * @return {@code true} if the session should be cached, {@code false} otherwise.
@@ -102,7 +102,7 @@ class OpenSslSessionCache implements SSLSessionCache {
     }
 
     /**
-     * Called once an {@link OpenSslSession} was removed from the cache.
+     * Called once an {@link OpenSslInternalSession} was removed from the cache.
      *
      * @param session the session to remove.
      */
@@ -147,7 +147,7 @@ class OpenSslSessionCache implements SSLSessionCache {
             // We couldn't find the engine itself.
             return false;
         }
-        OpenSslSession openSslSession = (OpenSslSession) engine.getSession();
+        OpenSslInternalSession openSslSession = (OpenSslInternalSession) engine.getSession();
         // Create the native session that we will put into our cache. We will share the key-value storage
         // with the already existing session instance.
         NativeSslSession session = new NativeSslSession(sslSession, engine.getPeerHost(), engine.getPeerPort(),
@@ -210,7 +210,7 @@ class OpenSslSessionCache implements SSLSessionCache {
         session.setLastAccessedTime(System.currentTimeMillis());
         ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
         if (engine != null) {
-            OpenSslSession sslSession = (OpenSslSession) engine.getSession();
+            OpenSslInternalSession sslSession = (OpenSslInternalSession) engine.getSession();
             sslSession.setSessionDetails(session.getCreationTime(),
                     session.getLastAccessedTime(), session.sessionId(), session.keyValueStorage);
         }
@@ -218,7 +218,7 @@ class OpenSslSessionCache implements SSLSessionCache {
         return session.session();
     }
 
-    boolean setSession(long ssl, OpenSslSession session, String host, int port) {
+    boolean setSession(long ssl, OpenSslInternalSession session, String host, int port) {
         // Do nothing by default as this needs special handling for the client side.
        return false;
     }
@@ -246,9 +246,9 @@ class OpenSslSessionCache implements SSLSessionCache {
     }
 
     /**
-     * Return the {@link OpenSslSession} which is cached for the given id.
+     * Return the {@link OpenSslInternalSession} which is cached for the given id.
      */
-    final synchronized OpenSslSession getSession(OpenSslSessionId id) {
+    final synchronized OpenSslInternalSession getSession(OpenSslSessionId id) {
         NativeSslSession session = sessions.get(id);
         if (session != null && !session.isValid()) {
             // The session is not valid anymore, let's remove it and just signal back that there is no session
@@ -263,12 +263,12 @@ class OpenSslSessionCache implements SSLSessionCache {
      * Returns a snapshot of the session ids of the current valid sessions.
      */
     final List<OpenSslSessionId> getIds() {
-        final OpenSslSession[] sessionsArray;
+        final OpenSslInternalSession[] sessionsArray;
         synchronized (this) {
             sessionsArray = sessions.values().toArray(EMPTY_SESSIONS);
         }
         List<OpenSslSessionId> ids = new ArrayList<>(sessionsArray.length);
-        for (OpenSslSession session: sessionsArray) {
+        for (OpenSslInternalSession session: sessionsArray) {
             if (session.isValid()) {
                 ids.add(session.sessionId());
             }
@@ -291,9 +291,9 @@ class OpenSslSessionCache implements SSLSessionCache {
     }
 
     /**
-     * {@link OpenSslSession} implementation which wraps the native SSL_SESSION* while in cache.
+     * {@link OpenSslInternalSession} implementation which wraps the native SSL_SESSION* while in cache.
      */
-    static final class NativeSslSession implements OpenSslSession {
+    static final class NativeSslSession implements OpenSslInternalSession {
         static final ResourceLeakDetector<NativeSslSession> LEAK_DETECTOR = ResourceLeakDetectorFactory.instance()
                 .newResourceLeakDetector(NativeSslSession.class);
         private final ResourceLeakTracker<NativeSslSession> leakTracker;
@@ -452,6 +452,11 @@ class OpenSslSessionCache implements SSLSessionCache {
         }
 
         @Override
+        public boolean hasPeerCertificates() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public Certificate[] getLocalCertificates() {
             throw new UnsupportedOperationException();
         }
@@ -511,10 +516,10 @@ class OpenSslSessionCache implements SSLSessionCache {
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof OpenSslSession)) {
+            if (!(o instanceof OpenSslInternalSession)) {
                 return false;
             }
-            OpenSslSession session1 = (OpenSslSession) o;
+            OpenSslInternalSession session1 = (OpenSslInternalSession) o;
             return id.equals(session1.sessionId());
         }
     }

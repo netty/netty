@@ -20,8 +20,6 @@ import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.pkitesting.CertificateBuilder;
-import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.internal.EmptyArrays;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -42,6 +40,7 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509ExtendedKeyManager;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -165,6 +164,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
     public void testSupportedSignatureAlgorithms(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSupportedSignatureAlgorithms(param);
+    }
+
+    @Override
+    protected void additionalPeerAssertions(SSLSession sslSession, boolean mutualAuth) {
+        if (sslSession instanceof OpenSslSession) {
+            assertEquals(mutualAuth, ((OpenSslSession) sslSession).hasPeerCertificates());
+        }
     }
 
     private static boolean isNpnSupported(String versionString) {

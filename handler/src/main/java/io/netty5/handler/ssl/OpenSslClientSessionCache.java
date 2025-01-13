@@ -70,7 +70,7 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
     }
 
     @Override
-    boolean setSession(long ssl, OpenSslSession session, String host, int port) {
+    boolean setSession(long ssl, OpenSslInternalSession session, String host, int port) {
         HostPort hostPort = keyFor(host, port);
         if (hostPort == null) {
             return false;
@@ -149,7 +149,7 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
     }
 
     /**
-     * Host / Port tuple used to find a {@link OpenSslSession} in the cache.
+     * Host / Port tuple used to find a {@link OpenSslInternalSession} in the cache.
      */
     private static final class HostPort {
         private final int hash;
