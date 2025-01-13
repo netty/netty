@@ -122,7 +122,7 @@ public final class Errors {
         }
 
         @Override
-        public synchronized Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {
             if (fillInStackTrace) {
                 return super.fillInStackTrace();
             }

@@ -352,7 +352,7 @@ final class Native {
     static void checkKernelVersion(String kernelVersion) {
         boolean enforceKernelVersion = SystemPropertyUtil.getBoolean(
                 "io.netty5.transport.iouring.enforceKernelVersion", true);
-        boolean kernelSupported = checkKernelVersion0(kernelVersion);
+        boolean kernelSupported = checkKernelVersion(kernelVersion, 5, 9);
         if (!kernelSupported) {
             if (enforceKernelVersion) {
                 throw new UnsupportedOperationException(
@@ -392,36 +392,6 @@ final class Native {
         }
 
         return nativeMinor >= minor;
-    }
-
-    private static boolean checkKernelVersion0(String kernelVersion) {
-        String[] versionComponents = kernelVersion.split("\\.");
-        if (versionComponents.length < 3) {
-            return false;
-        }
-
-        int major;
-        try {
-            major = Integer.parseInt(versionComponents[0]);
-        } catch (NumberFormatException e) {
-            return false;
-        }
-
-        if (major <= 4) {
-            return false;
-        }
-        if (major > 5) {
-            return true;
-        }
-
-        int minor;
-        try {
-            minor = Integer.parseInt(versionComponents[1]);
-        } catch (NumberFormatException e) {
-            return false;
-        }
-
-        return minor >= 9;
     }
 
     private static native boolean ioUringProbe(int ringFd, int[] ios);

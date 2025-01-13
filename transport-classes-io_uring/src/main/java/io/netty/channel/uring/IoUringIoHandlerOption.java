@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,12 +15,14 @@
  */
 package io.netty.channel.uring;
 
-public class IoUringIoHandlerOption {
+import io.netty.util.internal.ObjectUtil;
+
+public final class IoUringIoHandlerOption {
     private int ringSize = Native.DEFAULT_RING_SIZE;
 
-    private int maxBoundedWorker = -1;
+    private int maxBoundedWorker;
 
-    private int maxUnboundedWorker = -1;
+    private int maxUnboundedWorker;
 
     public int getRingSize() {
         return ringSize;
@@ -35,16 +37,19 @@ public class IoUringIoHandlerOption {
     }
 
     public IoUringIoHandlerOption setRingSize(int ringSize) {
+        ObjectUtil.checkPositive(ringSize, "ringSize");
         this.ringSize = ringSize;
         return this;
     }
 
     public IoUringIoHandlerOption setMaxBoundedWorker(int maxBoundedWorker) {
+        ObjectUtil.checkPositive(maxBoundedWorker, "maxBoundedWorker");
         this.maxBoundedWorker = maxBoundedWorker;
         return this;
     }
 
     public IoUringIoHandlerOption setMaxUnboundedWorker(int maxUnboundedWorker) {
+        ObjectUtil.checkPositive(maxUnboundedWorker, "maxUnboundedWorker");
         this.maxUnboundedWorker = maxUnboundedWorker;
         return this;
     }
