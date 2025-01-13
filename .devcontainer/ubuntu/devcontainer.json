@@ -6,5 +6,9 @@
   build: {
     dockerfile: "Dockerfile",
   },
-  "securityOpt": [ "seccomp=unconfined" ]
+  "securityOpt": [ "seccomp=unconfined" ],
+  "runArgs": [
+    "--privileged"
+  ],
+  "postCreateCommand": "apt-get update && apt-get install -y procps && sysctl -w kernel.perf_event_paranoid=1"
 }
