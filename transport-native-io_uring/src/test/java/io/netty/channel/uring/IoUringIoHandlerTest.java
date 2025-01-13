@@ -23,7 +23,7 @@ public class IoUringIoHandlerTest {
 
     @Test
     public void testOptions() {
-        IoUringIoHandlerOption handlerOption = new IoUringIoHandlerOption();
+        IoUringIoHandlerConfiguration handlerOption = new IoUringIoHandlerConfiguration();
         handlerOption
                 .setMaxBoundedWorker(2)
                 .setMaxUnboundedWorker(2);
