@@ -62,7 +62,7 @@ public final class IoUringIoHandlerConfiguration {
     private int maxUnboundedWorker;
 
     /**
-     * return the ring size of the io_uring instance.
+     * Return the ring size of the io_uring instance.
      * @return the ring size of the io_uring instance.
      */
     public int getRingSize() {
@@ -70,7 +70,7 @@ public final class IoUringIoHandlerConfiguration {
     }
 
     /**
-     * return the maximum number of bounded iowq worker threads.
+     * Return the maximum number of bounded iowq worker threads.
      * @return the maximum number of bounded iowq worker threads.
      */
     public int getMaxBoundedWorker() {
@@ -78,7 +78,7 @@ public final class IoUringIoHandlerConfiguration {
     }
 
     /**
-     * return the maximum number of unbounded iowq worker threads.
+     * Return the maximum number of unbounded iowq worker threads.
      * @return the maximum number of unbounded iowq worker threads.
      */
     public int getMaxUnboundedWorker() {
@@ -91,8 +91,7 @@ public final class IoUringIoHandlerConfiguration {
      * @return reference to this, so the API can be used fluently
      */
     public IoUringIoHandlerConfiguration setRingSize(int ringSize) {
-        ObjectUtil.checkPositive(ringSize, "ringSize");
-        this.ringSize = ringSize;
+        this.ringSize = ObjectUtil.checkPositive(ringSize, "ringSize");
         return this;
     }
 
@@ -103,8 +102,7 @@ public final class IoUringIoHandlerConfiguration {
      * @return reference to this, so the API can be used fluently
      */
     public IoUringIoHandlerConfiguration setMaxBoundedWorker(int maxBoundedWorker) {
-        ObjectUtil.checkPositiveOrZero(maxBoundedWorker, "maxBoundedWorker");
-        this.maxBoundedWorker = maxBoundedWorker;
+        this.maxBoundedWorker = ObjectUtil.checkPositiveOrZero(maxBoundedWorker, "maxBoundedWorker");
         return this;
     }
 
@@ -115,8 +113,7 @@ public final class IoUringIoHandlerConfiguration {
      * @return reference to this, so the API can be used fluently
      */
     public IoUringIoHandlerConfiguration setMaxUnboundedWorker(int maxUnboundedWorker) {
-        ObjectUtil.checkPositiveOrZero(maxUnboundedWorker, "maxUnboundedWorker");
-        this.maxUnboundedWorker = maxUnboundedWorker;
+        this.maxUnboundedWorker = ObjectUtil.checkPositiveOrZero(maxUnboundedWorker, "maxUnboundedWorker");
         return this;
     }
 

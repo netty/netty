@@ -612,7 +612,7 @@ static const jint statically_referenced_fixed_method_table_size = sizeof(statica
 
 static const JNINativeMethod method_table[] = {
     {"ioUringSetup", "(I)[J", (void *) netty_io_uring_setup},
-    {"ioUringRegisterIoWqMaxWorkers","(III)I", (void*)netty_io_uring_register_iowq_max_workers },
+    {"ioUringRegisterIoWqMaxWorkers","(III)I", (void*) netty_io_uring_register_iowq_max_workers },
     {"ioUringProbe", "(I[I)Z", (void *) netty_io_uring_probe},
     {"ioUringExit", "(JIJIJII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "(Ljava/lang/String;)I", (void *) netty_create_file},

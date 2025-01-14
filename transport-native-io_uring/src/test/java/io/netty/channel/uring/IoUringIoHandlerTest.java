@@ -23,13 +23,12 @@ public class IoUringIoHandlerTest {
 
     @Test
     public void testOptions() {
-        IoUringIoHandlerConfiguration handlerOption = new IoUringIoHandlerConfiguration();
-        handlerOption
+        IoUringIoHandlerConfiguration config = new IoUringIoHandlerConfiguration();
+        config
                 .setMaxBoundedWorker(2)
                 .setMaxUnboundedWorker(2);
-        IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory(handlerOption);
-        Assertions.assertDoesNotThrow(() -> {
-            ioHandlerFactory.newHandler();
-        });
+        IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory(config);
+        IoHandler handler = ioHandlerFactory.newHandler();
+        handler.close();
     }
 }
