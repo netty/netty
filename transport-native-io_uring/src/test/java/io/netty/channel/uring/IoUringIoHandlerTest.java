@@ -15,8 +15,8 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class IoUringIoHandlerTest {
@@ -24,11 +24,10 @@ public class IoUringIoHandlerTest {
     @Test
     public void testOptions() {
         IoUringIoHandlerConfiguration config = new IoUringIoHandlerConfiguration();
-        config
-                .setMaxBoundedWorker(2)
+        config.setMaxBoundedWorker(2)
                 .setMaxUnboundedWorker(2);
         IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory(config);
         IoHandler handler = ioHandlerFactory.newHandler();
-        handler.close();
+        handler.destroy();
     }
 }
