@@ -77,7 +77,7 @@ public final class HttpDecoderConfig implements Cloneable {
      * Set the maximum line length of header lines.
      * This limits how much memory Netty will use when parsing HTTP header key-value pairs.
      * The limit applies to the sum of all the headers, so it applies equally to many short header-lines,
-     * or fewer bug longer header lines.
+     * or fewer but longer header lines.
      * <p>
      * You would typically set this to the same value as {@link #setMaxInitialLineLength(int)}.
      *
