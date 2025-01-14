@@ -44,6 +44,11 @@ final class MsgHdrMemoryArray {
         return hdrs[idx++];
     }
 
+    void restoreNextHdr(MsgHdrMemory hdr) {
+        assert hdr.idx() == idx - 1;
+        idx--;
+    }
+
     MsgHdrMemory hdr(int idx) {
         return hdrs[idx];
     }
