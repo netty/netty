@@ -240,6 +240,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 writeId = registration.submit(ops);
                 writeOpCode = opCode;
                 if (writeId == 0) {
+                    iovArray.release();
+                    iovArray = null;
                     return 0;
                 }
             } catch (Exception e) {
