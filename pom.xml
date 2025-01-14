@@ -6976,6 +6976,12 @@
                 <item>
                   <ignore>true</ignore>
                   <code>java.class.removed</code>
+                  <old>class io.netty.handler.codec.compression.BrotliMode</old>
+                  <justification>Compression moved to netty-codec-compression</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.removed</code>
                   <old>class io.netty.handler.codec.compression.BrotliOptions</old>
                   <justification>Compression moved to netty-codec-compression</justification>
                 </item>
