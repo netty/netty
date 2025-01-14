@@ -134,7 +134,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             final short ioPrio;
 
             if (first) {
-                ioPrio = socketIsEmpty ? Native.IORING_RECVSEND_POLL_FIRST : 0;
+                ioPrio = socketIsEmpty ? Native.IORING_ACCEPT_POLL_FIRST : 0;
             } else {
                 ioPrio = Native.IORING_ACCEPT_DONT_WAIT;
             }
