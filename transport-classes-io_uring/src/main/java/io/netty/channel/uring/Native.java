@@ -195,8 +195,8 @@ final class Native {
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
 
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
-    static final int IORING_ACCEPT_DONT_WAIT = 1 << 1;
-
+    static final short IORING_ACCEPT_DONT_WAIT = 1 << 1;
+    static final short IORING_ACCEPT_POLL_FIRST = 1 << 2;
     static final int IORING_FEAT_RECVSEND_BUNDLE = 1 << 14;
     static final int SPLICE_F_MOVE = 1;
 
