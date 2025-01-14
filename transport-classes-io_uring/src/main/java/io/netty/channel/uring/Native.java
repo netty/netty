@@ -347,7 +347,7 @@ final class Native {
      */
     static boolean isRegisterIOWQWorkerSupported(int ringFd) {
         // See https://github.com/torvalds/linux/blob/v5.5/fs/io_uring.c#L5488C10-L5488C16
-        int result = ioUringRegisterIoWqMaxWorkers(ringFd, 1, 1);
+        int result = ioUringRegisterIoWqMaxWorkers(ringFd, 0, 0);
         if (result >= 0) {
             return true;
         }
