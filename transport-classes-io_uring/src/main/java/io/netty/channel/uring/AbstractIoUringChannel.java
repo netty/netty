@@ -44,6 +44,7 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -97,6 +98,18 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private boolean readPending;
     private boolean inReadComplete;
 
+    private final class DelayedClose {
+        private final ChannelPromise promise;
+        private final Throwable cause;
+        private final ClosedChannelException closeCause;
+
+        DelayedClose(ChannelPromise promise, Throwable cause, ClosedChannelException closeCause) {
+            this.promise = promise;
+            this.cause = cause;
+            this.closeCause = closeCause;
+        }
+    }
+    private DelayedClose delayedClose;
     private boolean inputClosedSeenErrorOnRead;
 
     /**
@@ -255,25 +268,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected void doClose() throws Exception {
         active = false;
 
-        if (registration != null && registration.isValid()) {
+        if (registration != null) {
             if (socket.markClosed()) {
-                boolean cancelConnect = false;
-                try {
-                    ChannelPromise connectPromise = AbstractIoUringChannel.this.connectPromise;
-                    if (connectPromise != null) {
-                        // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                        connectPromise.tryFailure(new ClosedChannelException());
-                        AbstractIoUringChannel.this.connectPromise = null;
-                        cancelConnect = true;
-                    }
-
-                    cancelConnectTimeoutFuture();
-                } finally {
-                    // It's important we cancel all outstanding connect, write and read operations now so
-                    // we will be able to process a delayed close if needed.
-                    ioUringUnsafe().cancelOps(cancelConnect);
-                }
-
                 int fd = fd().intValue();
                 IoUringIoOps ops = IoUringIoOps.newClose(fd, flags((byte) 0), nextOpsId());
                 registration.submit(ops);
@@ -325,7 +321,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private int scheduleWrite(ChannelOutboundBuffer in) {
-        if (numOutstandingWrites == Short.MAX_VALUE) {
+        if (delayedClose != null || numOutstandingWrites == Short.MAX_VALUE) {
             return 0;
         }
         if (in == null) {
@@ -418,6 +414,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_RECVMSG:
                 case Native.IORING_OP_READ:
                     readComplete(op, res, flags, data);
+
+                    // We delay the actual close if there is still a write or read scheduled, let's see if there
+                    // was a close that needs to be done now.
+                    handleDelayedClosed();
                     break;
                 case Native.IORING_OP_WRITEV:
                 case Native.IORING_OP_SEND:
@@ -425,6 +425,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_WRITE:
                 case Native.IORING_OP_SPLICE:
                     writeComplete(op, res, flags, data);
+
+                    // We delay the actual close if there is still a write or read scheduled, let's see if there
+                    // was a close that needs to be done now.
+                    handleDelayedClosed();
                     break;
                 case Native.IORING_OP_POLL_ADD:
                     pollAddComplete(res, flags, data);
@@ -438,6 +442,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     break;
                 case Native.IORING_OP_ASYNC_CANCEL:
                     cancelComplete0(op, res, flags, data);
+
+                    // We delay the actual close if there is still a write or read scheduled, let's see if there
+                    // was a close that needs to be done now.
+                    handleDelayedClosed();
                     break;
                 case Native.IORING_OP_CONNECT:
                     connectComplete(op, res, flags, data);
@@ -448,6 +456,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     break;
                 case Native.IORING_OP_CLOSE:
                     if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
+                        if (delayedClose != null) {
+                            delayedClose.promise.setSuccess();
+                        }
                         closed = true;
                     }
                     break;
@@ -478,6 +489,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             }
         }
 
+        private void handleDelayedClosed() {
+            if (delayedClose != null && canCloseNow()) {
+                closeNow();
+            }
+        }
+
         private void pollAddComplete(int res, int flags, short data) {
             if ((data & Native.POLLOUT) != 0) {
                 pollOut(res);
@@ -493,6 +510,46 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         @Override
         public final void close() throws Exception {
             close(voidPromise());
+        }
+
+        @Override
+        protected void close(ChannelPromise promise, Throwable cause, ClosedChannelException closeCause) {
+            if (closeFuture().isDone()) {
+                // Closed already before.
+                safeSetSuccess(promise);
+                return;
+            }
+            if (delayedClose == null) {
+                // We have a write operation pending that should be completed asap.
+                // We will do the actual close operation one this write result is returned as otherwise
+                // we may get into trouble as we may close the fd while we did not process the write yet.
+                delayedClose = new DelayedClose(promise.isVoid() ? newPromise() : promise, cause, closeCause);
+            } else {
+                delayedClose.promise.addListener(new PromiseNotifier<>(false, promise));
+                return;
+            }
+
+            boolean cancelConnect = false;
+            try {
+                ChannelPromise connectPromise = AbstractIoUringChannel.this.connectPromise;
+                if (connectPromise != null) {
+                    // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+                    connectPromise.tryFailure(new ClosedChannelException());
+                    AbstractIoUringChannel.this.connectPromise = null;
+                    cancelConnect = true;
+                }
+
+                cancelConnectTimeoutFuture();
+            } finally {
+                // It's important we cancel all outstanding connect, write and read operations now so
+                // we will be able to process a delayed close if needed.
+                cancelOps(cancelConnect);
+            }
+
+            if (canCloseNow()) {
+                // Currently there are is no WRITE and READ scheduled so we can start to teardown the channel.
+                closeNow();
+            }
         }
 
         private void cancelOps(boolean cancelConnect) {
@@ -520,6 +577,16 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             }
             cancelOutstandingReads(registration, numOutstandingReads);
             cancelOutstandingWrites(registration, numOutstandingWrites);
+        }
+
+        private boolean canCloseNow() {
+            // Currently there are is no WRITE and READ scheduled, we can close the channel now without
+            // problems related to re-ordering of completions.
+            return (ioState & (WRITE_SCHEDULED | READ_SCHEDULED)) == 0;
+        }
+
+        private void closeNow() {
+            super.close(newPromise(), delayedClose.cause, delayedClose.closeCause);
         }
 
         @Override
@@ -703,7 +770,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         protected final void scheduleRead(boolean first) {
             // Only schedule another read if the fd is still open.
-            if (fd().isOpen() && (ioState & READ_SCHEDULED) == 0) {
+            if (delayedClose == null && fd().isOpen() && (ioState & READ_SCHEDULED) == 0) {
                 numOutstandingReads = (short) scheduleRead0(first, socketIsEmpty);
                 if (numOutstandingReads > 0) {
                     ioState |= READ_SCHEDULED;
@@ -896,7 +963,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 return;
             }
 
-            if (!isOpen()) {
+            if (delayedClose != null) {
                 promise.tryFailure(annotateConnectException(new ClosedChannelException(), remoteAddress));
                 return;
             }
