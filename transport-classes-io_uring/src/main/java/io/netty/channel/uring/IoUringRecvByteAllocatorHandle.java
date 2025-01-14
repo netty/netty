@@ -27,6 +27,10 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
 
+    // We need to continue reading as long as we received something when using io_uring. Otherwise
+    // we will not be able to batch things in an efficient way.
+    private final UncheckedBooleanSupplier defaultSupplier = () -> lastBytesRead() > 0;
+
     IoUringRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
         super(handle);
     }
@@ -53,8 +57,8 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
 
     @Override
     public boolean continueReading() {
-        // If we received an POLLRDHUP we need to continue draining the input until there is nothing left.
-        return super.continueReading() || rdHupReceived;
+        // Ensure we use the our own supplier that will take care of reading data until there is nothing left.
+        return continueReading(defaultSupplier);
     }
 
     @Override
