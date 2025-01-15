@@ -43,15 +43,6 @@ final class LinuxSocket extends Socket {
         super(fd);
     }
 
-    static LinuxSocket makeBlocking(LinuxSocket socket) {
-        try {
-            socket.makeBlocking();
-            return socket;
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
-    }
-
     SocketProtocolFamily family() {
         return ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET;
     }

@@ -48,13 +48,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     private long readId;
 
     AbstractIoUringStreamChannel(Channel parent, LinuxSocket socket, boolean active) {
-        // Use a blocking fd, we can make use of fastpoll.
-        super(parent, LinuxSocket.makeBlocking(socket), active);
+        super(parent, socket, active);
     }
 
     AbstractIoUringStreamChannel(Channel parent, LinuxSocket socket, SocketAddress remote) {
-        // Use a blocking fd, we can make use of fastpoll.
-        super(parent, LinuxSocket.makeBlocking(socket), remote);
+        super(parent, socket, remote);
     }
 
     @Override

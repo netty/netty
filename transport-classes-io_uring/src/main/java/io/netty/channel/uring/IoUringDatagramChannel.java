@@ -101,7 +101,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
     private IoUringDatagramChannel(LinuxSocket fd, boolean active) {
         // Always use a blocking fd and so make use of fast-poll.
-        super(null, LinuxSocket.makeBlocking(fd), active);
+        super(null, fd, active);
         config = new IoUringDatagramChannelConfig(this);
     }
 
