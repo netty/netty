@@ -17,6 +17,9 @@ package io.netty.channel.uring;
 
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Configuration class for an {@link IoUringIoHandler},
  * managing the settings for a {@link RingBuffer} and its io_uring file descriptor.
@@ -60,6 +63,8 @@ public final class IoUringIoHandlerConfig {
     private int maxBoundedWorker;
 
     private int maxUnboundedWorker;
+
+    private List<BufferRingConfig> bufferRingConfigs = new ArrayList<>(0);
 
     /**
      * Return the ring size of the io_uring instance.
@@ -117,7 +122,34 @@ public final class IoUringIoHandlerConfig {
         return this;
     }
 
+    /**
+     * Append a buffer ring configuration to the list of buffer ring configurations.
+     * @param ringConfig the buffer ring configuration to append.
+     * @return reference to this, so the API can be used fluently
+     */
+    public IoUringIoHandlerConfig appendBufferRingConfig(BufferRingConfig ringConfig) {
+        for (BufferRingConfig bufferRingConfig : bufferRingConfigs) {
+            if (bufferRingConfig.bufferGroupId() == ringConfig.bufferGroupId()) {
+                throw new IllegalArgumentException("Duplicated buffer group id: " + ringConfig.bufferGroupId());
+            }
+        }
+        bufferRingConfigs.add(ringConfig);
+        return this;
+    }
+
+    /**
+     * Get the list of buffer ring configurations.
+     * @return the copy of buffer ring configurations.
+     */
+    public List<BufferRingConfig> getBufferRingConfigs() {
+        return new ArrayList<>(bufferRingConfigs);
+    }
+
     boolean needRegisterIowqMaxWorker() {
         return maxBoundedWorker > 0 || maxUnboundedWorker > 0;
+    }
+
+    List<BufferRingConfig> getInternBufferRingConfigs() {
+        return bufferRingConfigs;
     }
 }

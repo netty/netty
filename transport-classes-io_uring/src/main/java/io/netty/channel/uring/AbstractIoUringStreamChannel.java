@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -218,6 +219,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         private ByteBuf readBuffer;
         private IovArray iovArray;
+        private IoUringBufferRing lastUsedBufferRing;
 
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
@@ -289,6 +291,21 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert readBuffer == null;
             assert readId == 0;
 
+            final IOUringStreamChannelConfig channelConfig = (IOUringStreamChannelConfig) config();
+            final IoUringIoHandler ioUringIoHandler = (IoUringIoHandler) registration().ioHandler();
+            // Although we checked whether the current kernel supports `register_buffer_ring`
+            // during the initialization of IoUringIoHandler
+            // we still perform this check again here.
+            // When the kernel does not support this feature, it helps the JIT to delete this branch.
+            if (IoUring.isRegisterBufferRingSupported() && channelConfig.isEnableBufferSelectRead()) {
+                short bgId = channelConfig.getBufferRingConfig().bufferGroupId();
+                IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(bgId);
+                if (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull()) {
+                    lastUsedBufferRing = ioUringBufferRing;
+                    return scheduleReadProviderBuffer(alloc(), ioUringBufferRing);
+                }
+            }
+
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             ByteBuf byteBuf = allocHandle.allocate(alloc());
             try {
@@ -335,6 +352,36 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
         }
 
+        private int scheduleReadProviderBuffer(ByteBufAllocator byteBufAllocator, IoUringBufferRing bufferRing) {
+            short bgId = bufferRing.bufferGroupId();
+            try {
+                int chunkSize = bufferRing.chunkSize();
+                IoUringIoRegistration registration = registration();
+                IoUringBufferRing ioUringBufferRing = ((IoUringIoHandler) registration.ioHandler())
+                        .findBufferRing(bgId);
+
+                if (!ioUringBufferRing.isFull()) {
+                    ioUringBufferRing.appendBuffer(byteBufAllocator, 1);
+                }
+
+                int fd = fd().intValue();
+
+                IoUringIoOps ops = IoUringIoOps.newRecv(
+                        fd, (byte) Native.IOSQE_BUFFER_SELECT, (short) 0, 0, 0,
+                        chunkSize, nextOpsId(), bgId
+                );
+                readId = registration.submit(ops);
+                if (readId == 0) {
+                    return 0;
+                }
+                lastUsedBufferRing = ioUringBufferRing;
+                return 1;
+            } catch (IllegalArgumentException illegalArgumentException) {
+                this.handleWriteError(illegalArgumentException);
+                return 0;
+            }
+        }
+
         @Override
         protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
             assert readId != 0;
@@ -344,20 +391,36 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             final ChannelPipeline pipeline = pipeline();
             ByteBuf byteBuf = this.readBuffer;
+            IoUringBufferRing bufferRing = lastUsedBufferRing;
             this.readBuffer = null;
-            assert byteBuf != null;
+            this.lastUsedBufferRing = null;
 
             try {
                 if (res < 0) {
-                    if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                    //recv without buffer ring
+                    if (res == Native.ERRNO_ECANCELED_NEGATIVE && byteBuf != null) {
                         byteBuf.release();
                         return;
                     }
+
+                    if (res == Native.ERRNO_NO_BUFFER_NEGATIVE) {
+                        //recv with provider buffer fail!
+                        //fallback to normal recv
+                        bufferRing.markReadFail();
+                        scheduleNextRead(flags);
+                        return;
+                    }
+
                     // If res is negative we should pass it to ioResult(...) which will either throw
                     // or convert it to 0 if we could not read because the socket was not readable.
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
-                    byteBuf.writerIndex(byteBuf.writerIndex() + res);
+                    if (bufferRing != null) {
+                        byteBuf = bufferRing.borrowBuffer(flags >> Native.IORING_CQE_BUFFER_SHIFT, res);
+                        byteBuf.writerIndex(res);
+                    } else {
+                        byteBuf.writerIndex(byteBuf.writerIndex() + res);
+                    }
                     allocHandle.lastBytesRead(res);
                 } else {
                     // EOF which we signal with -1.
@@ -380,16 +443,22 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.incMessagesRead(1);
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
-                if (allocHandle.continueReading() && !socketIsEmpty(flags)) {
-                    // Let's schedule another read.
-                    scheduleRead(false);
-                } else {
-                    // We did not fill the whole ByteBuf so we should break the "read loop" and try again later.
-                    allocHandle.readComplete();
-                    pipeline.fireChannelReadComplete();
-                }
+                scheduleNextRead(flags);
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
+            }
+        }
+
+        private void scheduleNextRead(int cqeFlags) {
+            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            final ChannelPipeline pipeline = pipeline();
+            if (allocHandle.continueReading() && !socketIsEmpty(cqeFlags)) {
+                // Let's schedule another read.
+                scheduleRead(false);
+            } else {
+                // We did not fill the whole ByteBuf so we should break the "read loop" and try again later.
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
             }
         }
 

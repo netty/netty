@@ -36,6 +36,7 @@ final class NativeStaticallyReferencedJniMethods {
     static native int afInet6();
     static native int sizeofSockaddrIn();
     static native int sizeofSockaddrIn6();
+    static native int pageSize();
     static native int sockaddrInOffsetofSinFamily();
     static native int sockaddrInOffsetofSinPort();
     static native int sockaddrInOffsetofSinAddr();
@@ -61,6 +62,7 @@ final class NativeStaticallyReferencedJniMethods {
     static native int msghdrOffsetofMsgFlags();
     static native int etime();
     static native int ecanceled();
+    static native int enobufs();
     static native int pollin();
     static native int pollout();
     static native int pollrdhup();
@@ -69,6 +71,7 @@ final class NativeStaticallyReferencedJniMethods {
     static native int iosqeLink();
     static native int iosqeDrain();
     static native int msgDontwait();
+    static native int iosqeBufferSelect();
     static native int msgFastopen();
     static native int cmsgSpace();
     static native int cmsgLen();
@@ -77,5 +80,10 @@ final class NativeStaticallyReferencedJniMethods {
     static native int cmsghdrOffsetofCmsgLen();
     static native int cmsghdrOffsetofCmsgLevel();
     static native int cmsghdrOffsetofCmsgType();
+    static native int ioUringBufferRingOffsetTail();
+    static native int ioUringBufferOffsetAddr();
+    static native int ioUringBufferOffsetLen();
+    static native int ioUringBufferOffsetBid();
+    static native int sizeofIoUringBuf();
     static native int tcpFastopenMode();
 }

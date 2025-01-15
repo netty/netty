@@ -508,6 +508,10 @@ public final class PlatformDependent {
         PlatformDependent0.safeConstructPutInt(object, fieldOffset, value);
     }
 
+    public static void putShortVolatile(long adddress, short newValue) {
+        PlatformDependent0.putShortVolatile(adddress, newValue);
+    }
+
     public static int getIntVolatile(long address) {
         return PlatformDependent0.getIntVolatile(address);
     }

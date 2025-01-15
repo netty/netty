@@ -115,6 +115,8 @@ final class Native {
     static final int CMSG_OFFSETOF_CMSG_LEVEL = NativeStaticallyReferencedJniMethods.cmsghdrOffsetofCmsgLevel();
     static final int CMSG_OFFSETOF_CMSG_TYPE = NativeStaticallyReferencedJniMethods.cmsghdrOffsetofCmsgType();
 
+    static final int IO_URING_BUFFER_RING_TAIL = NativeStaticallyReferencedJniMethods.ioUringBufferRingOffsetTail();
+
     static final int IOVEC_OFFSETOF_IOV_BASE = NativeStaticallyReferencedJniMethods.iovecOffsetofIovBase();
     static final int IOVEC_OFFSETOF_IOV_LEN = NativeStaticallyReferencedJniMethods.iovecOffsetofIovLen();
     static final int SIZEOF_MSGHDR = NativeStaticallyReferencedJniMethods.sizeofMsghdr();
@@ -131,6 +133,14 @@ final class Native {
     static final int POLLRDHUP = NativeStaticallyReferencedJniMethods.pollrdhup();
     static final int ERRNO_ECANCELED_NEGATIVE = -NativeStaticallyReferencedJniMethods.ecanceled();
     static final int ERRNO_ETIME_NEGATIVE = -NativeStaticallyReferencedJniMethods.etime();
+    static final int ERRNO_NO_BUFFER_NEGATIVE = -NativeStaticallyReferencedJniMethods.enobufs();
+
+    static final int PAGE_SIZE = NativeStaticallyReferencedJniMethods.pageSize();
+
+    static final int SIZEOF_IOURING_BUF = NativeStaticallyReferencedJniMethods.sizeofIoUringBuf();
+    static final int IOURING_BUFFER_OFFSETOF_ADDR = NativeStaticallyReferencedJniMethods.ioUringBufferOffsetAddr();
+    static final int IOURING_BUFFER_OFFSETOF_LEN = NativeStaticallyReferencedJniMethods.ioUringBufferOffsetLen();
+    static final int IOURING_BUFFER_OFFSETOF_BID = NativeStaticallyReferencedJniMethods.ioUringBufferOffsetBid();
 
     // These constants must be defined to have the same numeric value as their corresponding
     // ordinal in the enum defined in the io_uring.h header file.
@@ -198,6 +208,7 @@ final class Native {
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
+    static final int IORING_CQE_BUFFER_SHIFT = 16;
 
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;
@@ -256,6 +267,7 @@ final class Native {
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
     static final int IOSQE_LINK = NativeStaticallyReferencedJniMethods.iosqeLink();
     static final int IOSQE_IO_DRAIN = NativeStaticallyReferencedJniMethods.iosqeDrain();
+    static final int IOSQE_BUFFER_SELECT = NativeStaticallyReferencedJniMethods.iosqeBufferSelect();
     static final int MSG_DONTWAIT = NativeStaticallyReferencedJniMethods.msgDontwait();
     static final int MSG_FASTOPEN = NativeStaticallyReferencedJniMethods.msgFastopen();
     static final int SOL_UDP = NativeStaticallyReferencedJniMethods.solUdp();
@@ -372,6 +384,16 @@ final class Native {
         return false;
     }
 
+    static boolean isRegisterBufferRingSupported(int ringFd) {
+        long result = ioUringRegisterBuffRing(ringFd, 2, (short) 1, 0);
+        if (result >= 0) {
+            ioUringUnRegisterBufRing(ringFd, result, 2, 1);
+            return true;
+        }
+        // This is not supported and so will return -EINVAL
+        return false;
+    }
+
     static void checkKernelVersion(String kernelVersion) {
         boolean enforceKernelVersion = SystemPropertyUtil.getBoolean(
                 "io.netty.transport.iouring.enforceKernelVersion", true);
@@ -424,6 +446,10 @@ final class Native {
     static native int ioUringRegisterIoWqMaxWorkers(int ringFd, int maxBoundedValue, int maxUnboundedValue);
     static native int ioUringRegisterEnableRings(int ringFd);
     static native int ioUringRegisterRingFds(int ringFds);
+
+    static native long ioUringRegisterBuffRing(int ringFd, int entries, short bufferGroup, int flags);
+    static native int ioUringUnRegisterBufRing(int ringFd, long ioUringBufRingAddr, int entries, int bufferGroupId);
+
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
     static native void eventFdWrite(int fd, long value);

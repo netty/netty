@@ -722,6 +722,10 @@ final class PlatformDependent0 {
         UNSAFE.putShort(address, value);
     }
 
+    static void putShortVolatile(long adddress, short newValue) {
+        UNSAFE.putShortVolatile(null, adddress, newValue);
+    }
+
     static void putInt(long address, int value) {
         UNSAFE.putInt(address, value);
     }

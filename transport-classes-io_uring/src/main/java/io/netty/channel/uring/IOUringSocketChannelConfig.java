@@ -31,7 +31,7 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.*;
 
 
-final class IOUringSocketChannelConfig extends IOUringChannelConfig implements SocketChannelConfig {
+final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
 
@@ -623,6 +623,18 @@ final class IOUringSocketChannelConfig extends IOUringChannelConfig implements S
     @Override
     public IOUringSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
+        return this;
+    }
+
+    @Override
+    public IOUringSocketChannelConfig setEnableBufferSelectRead(boolean enableBufferSelectRead) {
+        super.setEnableBufferSelectRead(enableBufferSelectRead);
+        return this;
+    }
+
+    @Override
+    public IOUringStreamChannelConfig setBufferRingConfig(BufferRingConfig bufferRingConfig) {
+        super.setBufferRingConfig(bufferRingConfig);
         return this;
     }
 }

@@ -58,4 +58,10 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
      * Use {@code IOSQE_ASYNC} when submitting {@link IoUringIoOps}.
      */
     public static final ChannelOption<Boolean> IOSQE_ASYNC = valueOf("IOSQE_ASYNC");
+
+    public static final ChannelOption<Boolean> ENABLE_BUFFER_SELECT_READ = valueOf("ENABLE_BUFFER_SELECT_READ");
+
+    public static final ChannelOption<BufferRingConfig> IOURING_BUFFER_RING_CONFIG =
+            ChannelOption.valueOf(IoUringChannelOption.class, "IOURING_BUFFER_GROUP_CONFIG");
+
 }

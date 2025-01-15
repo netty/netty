@@ -379,9 +379,14 @@ public final class IoUringIoOps implements IoOps {
      */
     static IoUringIoOps newRecv(
             int fd, byte flags, short ioPrio, int recvFlags, long memoryAddress, int length, short data) {
+        return newRecv(fd, flags, ioPrio, recvFlags, memoryAddress, length, data, (short) 0);
+    }
+
+    static IoUringIoOps newRecv(
+            int fd, byte flags, short ioPrio, int recvFlags, long memoryAddress, int length, short data, short bid) {
         // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L898
         return new IoUringIoOps(Native.IORING_OP_RECV, flags, ioPrio, fd,
-                0, memoryAddress, length, recvFlags, data, (short) 0, (short) 0, 0, 0);
+                0, memoryAddress, length, recvFlags, data, bid, (short) 0, 0, 0);
     }
 
     /**

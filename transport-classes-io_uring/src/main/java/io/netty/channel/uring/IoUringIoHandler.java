@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -59,6 +60,7 @@ public final class IoUringIoHandler implements IoHandler {
     private static final short RING_CLOSE = 1;
 
     private final RingBuffer ringBuffer;
+    private final IntObjectMap<IoUringBufferRing> registeredIoUringBufferRing;
     private final IntObjectMap<DefaultIoUringIoRegistration> registrations;
     // The maximum number of bytes for an InetAddress / Inet6Address
     private final byte[] inet4AddressArray = new byte[SockaddrIn.IPV4_ADDRESS_LENGTH];
@@ -68,6 +70,8 @@ public final class IoUringIoHandler implements IoHandler {
     private final FileDescriptor eventfd;
     private final long eventfdReadBuf;
     private final long timeoutMemoryAddress;
+
+    private final Queue<Runnable> beforeIOHook;
 
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
@@ -105,9 +109,29 @@ public final class IoUringIoHandler implements IoHandler {
                 throw new UncheckedIOException(Errors.newIOException("io_uring_register", result));
             }
         }
+
+        registeredIoUringBufferRing = new IntObjectHashMap<>();
+        List<BufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
+        if (!bufferRingConfigs.isEmpty()) {
+            if (!IoUring.isRegisterBufferRingSupported()) {
+                throw new UnsupportedOperationException("io_uring_register_buffer_ring is not supported");
+            }
+            for (BufferRingConfig bufferRingConfig : bufferRingConfigs) {
+                try {
+                    registerBufferRing(bufferRingConfig);
+                } catch (Errors.NativeIoException e) {
+                    for (IoUringBufferRing bufferRing : registeredIoUringBufferRing.values()) {
+                        bufferRing.close();
+                    }
+                    throw new UncheckedIOException(e);
+                }
+            }
+        }
+
         registrations = new IntObjectHashMap<>();
         eventfd = Native.newBlockingEventFd();
         eventfdReadBuf = PlatformDependent.allocateMemory(8);
+        beforeIOHook = PlatformDependent.newMpscQueue();
         this.timeoutMemoryAddress = PlatformDependent.allocateMemory(KERNEL_TIMESPEC_SIZE);
 
         // We buffer a maximum of 2 * CompletionQueue.ringSize completions before we drain them in batches.
@@ -123,6 +147,13 @@ public final class IoUringIoHandler implements IoHandler {
     @Override
     public int run(IoExecutorContext context) {
         processedPerRun = 0;
+        for (;;) {
+            Runnable poll = beforeIOHook.poll();
+            if (poll == null) {
+                break;
+            }
+            poll.run();
+        }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         if (!completionQueue.hasCompletions() && context.canBlock()) {
@@ -150,6 +181,40 @@ public final class IoUringIoHandler implements IoHandler {
         if (submissionQueue.submit() > 0) {
             processedPerRun += drainAndProcessAll(completionQueue, this::handle);
         }
+    }
+
+    void submitBeforeIO(Runnable runnable) {
+        beforeIOHook.add(runnable);
+        //wakeup ioHandler to process the runnable as soon as possible
+        Native.eventFdWrite(eventfd.intValue(), 1L);
+    }
+
+    IoUringBufferRing registerBufferRing(BufferRingConfig bufferRingConfig) throws Errors.NativeIoException {
+        int ringFd = ringBuffer.fd();
+        short bufferRingSize = bufferRingConfig.bufferRingSize();
+        short bufferGroupId = bufferRingConfig.bufferGroupId();
+        int chunkSize = bufferRingConfig.chunkSize();
+        long ioUringBufRingAddr = Native.ioUringRegisterBuffRing(ringFd, bufferRingSize, bufferGroupId, 0);
+        if (ioUringBufRingAddr < 0) {
+            throw Errors.newIOException("ioUringRegisterBuffRing", (int) ioUringBufRingAddr);
+        }
+        IoUringBufferRing ioUringBufferRing = new IoUringBufferRing(
+                ringFd, ioUringBufRingAddr,
+                bufferRingSize, bufferGroupId, chunkSize,
+                this
+        );
+        registeredIoUringBufferRing.put(bufferGroupId, ioUringBufferRing);
+        return ioUringBufferRing;
+    }
+
+    IoUringBufferRing findBufferRing(short bgId) {
+        IoUringBufferRing cached = registeredIoUringBufferRing.get(bgId);
+        if (cached != null) {
+            return cached;
+        }
+        throw new IllegalArgumentException(
+                String.format("Cant find bgId:%d, please register it in ioUringIoHandler", bgId)
+        );
     }
 
     private int drainAndProcessAll(CompletionQueue completionQueue, CompletionCallback callback) {
@@ -302,6 +367,9 @@ public final class IoUringIoHandler implements IoHandler {
         // ... but only wait for 200 milliseconds on this
         submitAndWaitWithTimeout(submissionQueue, true, TimeUnit.MILLISECONDS.toNanos(200));
         completionQueue.process(this::handle);
+        for (IoUringBufferRing ioUringBufferRing : registeredIoUringBufferRing.values()) {
+            ioUringBufferRing.close();
+        }
         completeRingClose();
     }
 
