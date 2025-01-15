@@ -357,7 +357,7 @@ final class Native {
 
     static void checkKernelVersion(String kernelVersion) {
         boolean enforceKernelVersion = SystemPropertyUtil.getBoolean(
-                "io.netty5.transport.iouring.enforceKernelVersion", true);
+                "io.netty.transport.iouring.enforceKernelVersion", true);
         boolean kernelSupported = checkKernelVersion(kernelVersion, 5, 9);
         if (!kernelSupported) {
             if (enforceKernelVersion) {

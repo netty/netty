@@ -97,8 +97,8 @@ public final class IoUringIoHandlerConfiguration {
 
     /**
      * Set the maximum number of bounded iowq worker threads.
-     * @param maxBoundedWorker the maximum number of bounded iowq worker threads.
-     *                         if it is 0, We will not modify the number of threads
+     * @param maxBoundedWorker the maximum number of bounded iowq worker threads,
+     *                         or 0 for the Linux kernel default
      * @return reference to this, so the API can be used fluently
      */
     public IoUringIoHandlerConfiguration setMaxBoundedWorker(int maxBoundedWorker) {
@@ -108,8 +108,8 @@ public final class IoUringIoHandlerConfiguration {
 
     /**
      * Set the maximum number of unbounded iowq worker threads.
-     * @param maxUnboundedWorker the maximum number of unbounded iowq worker threads.
-     *                           if it is 0, We will not modify the number of threads
+     * @param maxUnboundedWorker the maximum number of unbounded iowq worker threads,
+     *                           of 0 for the Linux kernel default
      * @return reference to this, so the API can be used fluently
      */
     public IoUringIoHandlerConfiguration setMaxUnboundedWorker(int maxUnboundedWorker) {

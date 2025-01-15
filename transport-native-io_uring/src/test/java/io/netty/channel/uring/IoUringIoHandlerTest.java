@@ -21,6 +21,10 @@ import org.junit.jupiter.api.Test;
 
 public class IoUringIoHandlerTest {
 
+    @BeforeAll
+    public static void loadJNI() {
+        assumeTrue(IoUring.isAvailable());
+    }
     @Test
     public void testOptions() {
         IoUringIoHandlerConfiguration config = new IoUringIoHandlerConfiguration();
