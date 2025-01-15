@@ -124,12 +124,22 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
      * Creates a new instance with the default
      * {@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}, and
      * {@code maxChunkSize (8192)}.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
      */
     public HttpResponseDecoder() {
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @param maxInitialLineLength the initial size of the temporary buffer used when parsing the lines of the
+     * HTTP headers.
+     * @param maxHeaderSize the maximum permitted combined size of all headers in any one response.
+     * @param maxChunkSize The maximum amount of data that the decoder will buffer
+     * before sending chunks down the pipeline.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
      */
     public HttpResponseDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
@@ -141,6 +151,8 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
 
     /**
      * @deprecated Prefer the {@link #HttpResponseDecoder(HttpDecoderConfig)} constructor.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
      */
     @Deprecated
     public HttpResponseDecoder(
@@ -150,6 +162,8 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
 
     /**
      * @deprecated Prefer the {@link #HttpResponseDecoder(HttpDecoderConfig)} constructor.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
      */
     @Deprecated
     public HttpResponseDecoder(
@@ -161,6 +175,8 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
 
     /**
      * @deprecated Prefer the {@link #HttpResponseDecoder(HttpDecoderConfig)} constructor.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
      */
     @Deprecated
     public HttpResponseDecoder(
@@ -172,6 +188,8 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
 
     /**
      * @deprecated Prefer the {@link #HttpResponseDecoder(HttpDecoderConfig)} constructor.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
      */
     @Deprecated
     public HttpResponseDecoder(
@@ -183,6 +201,8 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
 
     /**
      * Creates a new instance with the specified configuration.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
      */
     public HttpResponseDecoder(HttpDecoderConfig config) {
         super(config);
