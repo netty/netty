@@ -17,7 +17,10 @@ package io.netty.channel.uring;
 
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringIoHandlerTest {
 
@@ -25,6 +28,7 @@ public class IoUringIoHandlerTest {
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
     }
+
     @Test
     public void testOptions() {
         IoUringIoHandlerConfiguration config = new IoUringIoHandlerConfiguration();

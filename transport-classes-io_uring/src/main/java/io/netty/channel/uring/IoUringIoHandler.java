@@ -35,6 +35,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
@@ -71,19 +72,19 @@ public final class IoUringIoHandler implements IoHandler {
     private static final int RINGFD_ID = EVENTFD_ID - 1;
     private static final int INVALID_ID = 0;
 
-    IoUringIoHandler(IoUringIoHandlerConfiguration ioUringIoHandlerConfiguration) {
+    IoUringIoHandler(IoUringIoHandlerConfiguration config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IoUring.ensureAvailability();
-        requireNonNull(ioUringIoHandlerConfiguration, "ioUringIoHandlerConfiguration");
-        this.ringBuffer = Native.createRingBuffer(ioUringIoHandlerConfiguration.getRingSize());
-        if (IoUring.isRegisterIowqMaxWorkersSupported() && ioUringIoHandlerConfiguration.needRegisterIowqMaxWorker()) {
-            int maxBoundedWorker = Math.max(ioUringIoHandlerConfiguration.getMaxBoundedWorker(), 0);
-            int maxUnboundedWorker = Math.max(ioUringIoHandlerConfiguration.getMaxUnboundedWorker(), 0);
+        requireNonNull(config, "config");
+        this.ringBuffer = Native.createRingBuffer(config.getRingSize());
+        if (IoUring.isRegisterIowqMaxWorkersSupported() && config.needRegisterIowqMaxWorker()) {
+            int maxBoundedWorker = Math.max(config.getMaxBoundedWorker(), 0);
+            int maxUnboundedWorker = Math.max(config.getMaxUnboundedWorker(), 0);
             int result = Native.ioUringRegisterIoWqMaxWorkers(ringBuffer.fd(), maxBoundedWorker, maxUnboundedWorker);
             if (result < 0) {
                 // Close ringBuffer before throwing to ensure we release all memory on failure.
                 ringBuffer.close();
-                throw new Errors.NativeCallException("ioUringRegisterIoWqMaxWorkers(...)", result);
+                throw new UncheckedIOException(Errors.newIOException("io_uring_register", result));
             }
         }
         registrations = new IntObjectHashMap<>();
@@ -447,13 +448,13 @@ public final class IoUringIoHandler implements IoHandler {
     /**
      * Create a new {@link IoHandlerFactory} that can be used to create {@link IoUringIoHandler}s.
      * Each {@link IoUringIoHandler} will use same option
-     * @param option the io_uring option
+     * @param config the io_uring configuration
      * @return factory
      */
-    public static IoHandlerFactory newFactory(IoUringIoHandlerConfiguration option) {
+    public static IoHandlerFactory newFactory(IoUringIoHandlerConfiguration config) {
         IoUring.ensureAvailability();
-        ObjectUtil.checkNotNull(option, "option");
-        return () -> new IoUringIoHandler(option);
+        ObjectUtil.checkNotNull(config, "config");
+        return () -> new IoUringIoHandler(config);
     }
 
 }
