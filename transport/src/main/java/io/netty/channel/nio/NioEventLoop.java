@@ -22,7 +22,6 @@ import io.netty.channel.EventLoopException;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SingleThreadEventLoop;
-import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -55,7 +54,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * {@link Selector} and so does the multi-plexing of these in the event loop.
  *
  */
-public final class NioEventLoop extends SingleThreadEventLoop {
+public final class NioEventLoop extends SingleThreadEventLoop implements io.netty.util.IntSupplier {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
 
@@ -67,12 +66,10 @@ public final class NioEventLoop extends SingleThreadEventLoop {
     private static final int MIN_PREMATURE_SELECTOR_RETURNS = 3;
     private static final int SELECTOR_AUTO_REBUILD_THRESHOLD;
 
-    private final IntSupplier selectNowSupplier = new IntSupplier() {
-        @Override
-        public int get() throws Exception {
-            return selectNow();
-        }
-    };
+    @Override
+    public int get() throws Exception {
+        return selectNow();
+    }
 
     // Workaround for JDK NIO bug.
     //
@@ -507,7 +504,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             try {
                 int strategy;
                 try {
-                    strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
+                    strategy = selectStrategy.calculateStrategy(this, hasTasks());
                     switch (strategy) {
                     case SelectStrategy.CONTINUE:
                         continue;

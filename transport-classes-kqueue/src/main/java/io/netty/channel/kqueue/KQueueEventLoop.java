@@ -44,7 +44,7 @@ import static java.lang.Math.min;
 /**
  * {@link EventLoop} which uses kqueue under the covers. Only works on BSD!
  */
-final class KQueueEventLoop extends SingleThreadEventLoop {
+final class KQueueEventLoop extends SingleThreadEventLoop implements IntSupplier {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueEventLoop.class);
     private static final AtomicIntegerFieldUpdater<KQueueEventLoop> WAKEN_UP_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(KQueueEventLoop.class, "wakenUp");
@@ -66,16 +66,15 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     private final KQueueEventArray eventList;
     private final SelectStrategy selectStrategy;
     private final IovArray iovArray = new IovArray();
-    private final IntSupplier selectNowSupplier = new IntSupplier() {
-        @Override
-        public int get() throws Exception {
-            return kqueueWaitNow();
-        }
-    };
     private final IntObjectMap<AbstractKQueueChannel> channels = new IntObjectHashMap<AbstractKQueueChannel>(4096);
 
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
+
+    @Override
+    public int get() throws Exception {
+        return kqueueWaitNow();
+    }
 
     KQueueEventLoop(EventLoopGroup parent, Executor executor, int maxEvents,
                     SelectStrategy strategy, RejectedExecutionHandler rejectedExecutionHandler,
@@ -233,7 +232,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     protected void run() {
         for (;;) {
             try {
-                int strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
+                int strategy = selectStrategy.calculateStrategy(this, hasTasks());
                 switch (strategy) {
                     case SelectStrategy.CONTINUE:
                         continue;

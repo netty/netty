@@ -46,7 +46,7 @@ import static java.lang.Math.min;
 /**
  * {@link EventLoop} which uses epoll under the covers. Only works on Linux!
  */
-public class EpollEventLoop extends SingleThreadEventLoop {
+public class EpollEventLoop extends SingleThreadEventLoop implements IntSupplier {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollEventLoop.class);
     private static final long EPOLL_WAIT_MILLIS_THRESHOLD =
             SystemPropertyUtil.getLong("io.netty.channel.epoll.epollWaitThreshold", 10);
@@ -69,12 +69,11 @@ public class EpollEventLoop extends SingleThreadEventLoop {
     private NativeDatagramPacketArray datagramPacketArray;
 
     private final SelectStrategy selectStrategy;
-    private final IntSupplier selectNowSupplier = new IntSupplier() {
-        @Override
-        public int get() throws Exception {
-            return epollWaitNow();
-        }
-    };
+
+    @Override
+    public int get() throws Exception {
+        return epollWaitNow();
+    }
 
     private static final long AWAKE = -1L;
     private static final long NONE = Long.MAX_VALUE;
@@ -326,7 +325,7 @@ public class EpollEventLoop extends SingleThreadEventLoop {
         long prevDeadlineNanos = NONE;
         for (;;) {
             try {
-                int strategy = selectStrategy.calculateStrategy(selectNowSupplier, hasTasks());
+                int strategy = selectStrategy.calculateStrategy(this, hasTasks());
                 switch (strategy) {
                     case SelectStrategy.CONTINUE:
                         continue;
