@@ -28,6 +28,7 @@ public final class IoUring {
     private static final boolean IORING_SPLICE_SUPPORTED;
     private static final boolean IORING_ACCEPT_NO_WAIT_SUPPORTED;
     private static final boolean IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
+    private static final boolean IORING_SETUP_SUBMIT_ALL_SUPPORTED;
 
     static {
         Throwable cause = null;
@@ -35,6 +36,7 @@ public final class IoUring {
         boolean spliceSupported = false;
         boolean acceptSupportNoWait = false;
         boolean registerIowqWorkersSupported = false;
+        boolean submitAllSupported = false;
         try {
             if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
                 cause = new UnsupportedOperationException(
@@ -46,13 +48,14 @@ public final class IoUring {
                 if (unsafeCause == null) {
                     RingBuffer ringBuffer = null;
                     try {
-                        ringBuffer = Native.createRingBuffer();
+                        ringBuffer = Native.createRingBuffer(1, 0);
                         Native.checkAllIOSupported(ringBuffer.fd());
                         socketNonEmptySupported = Native.isIOUringCqeFSockNonEmptySupported(ringBuffer.fd());
                         spliceSupported = Native.isIOUringSupportSplice(ringBuffer.fd());
-                        // IORING_FEAT_RECVSEND_BUNDLE was adde in the same release.
+                        // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
                         acceptSupportNoWait = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
                         registerIowqWorkersSupported = Native.isRegisterIOWQWorkerSupported(ringBuffer.fd());
+                        submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
                     } finally {
                         if (ringBuffer != null) {
                             try {
@@ -82,6 +85,7 @@ public final class IoUring {
         IORING_SPLICE_SUPPORTED = spliceSupported;
         IORING_ACCEPT_NO_WAIT_SUPPORTED = acceptSupportNoWait;
         IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED = registerIowqWorkersSupported;
+        IORING_SETUP_SUBMIT_ALL_SUPPORTED = submitAllSupported;
     }
 
     public static boolean isAvailable() {
@@ -122,6 +126,10 @@ public final class IoUring {
 
     static boolean isRegisterIowqMaxWorkersSupported() {
         return IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
+    }
+
+    static boolean isIOUringSetupSubmitAllSupported() {
+        return IORING_SETUP_SUBMIT_ALL_SUPPORTED;
     }
 
     public static void ensureAvailability() {

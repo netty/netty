@@ -84,7 +84,7 @@ public final class IoUringIoHandler implements IoHandler {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IoUring.ensureAvailability();
         requireNonNull(config, "config");
-        this.ringBuffer = Native.createRingBuffer(config.getRingSize());
+        this.ringBuffer = Native.createRingBuffer(config.getRingSize(), Native.setupFlags());
         if (IoUring.isRegisterIowqMaxWorkersSupported() && config.needRegisterIowqMaxWorker()) {
             int maxBoundedWorker = Math.max(config.getMaxBoundedWorker(), 0);
             int maxUnboundedWorker = Math.max(config.getMaxUnboundedWorker(), 0);

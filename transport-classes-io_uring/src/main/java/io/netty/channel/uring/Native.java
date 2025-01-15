@@ -183,7 +183,7 @@ final class Native {
     static final byte IORING_OP_SOCKET = 45;
     static final byte IORING_OP_URING_CMD = 46;
     static final byte IORING_OP_SEND_ZC = 47;
-    static final byte  IORING_OP_SENDMSG_ZC = 48;
+    static final byte IORING_OP_SENDMSG_ZC = 48;
     static final byte IORING_OP_READ_MULTISHOT = 49;
     static final byte IORING_OP_WAITID = 50;
     static final byte IORING_OP_FUTEX_WAIT = 51;
@@ -194,6 +194,7 @@ final class Native {
     static final byte IORING_OP_BIND = 56;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
 
+    static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;
     static final short IORING_ACCEPT_POLL_FIRST = 1 << 2;
@@ -289,13 +290,13 @@ final class Native {
             IORING_OP_SEND
     };
 
-    static RingBuffer createRingBuffer() {
-        return createRingBuffer(DEFAULT_RING_SIZE);
+    static int setupFlags() {
+        return IoUring.isIOUringSetupSubmitAllSupported() ? Native.IORING_SETUP_SUBMIT_ALL : 0;
     }
 
-    static RingBuffer createRingBuffer(int ringSize) {
+    static RingBuffer createRingBuffer(int ringSize, int setupFlags) {
         ObjectUtil.checkPositive(ringSize, "ringSize");
-        long[] values = ioUringSetup(ringSize);
+        long[] values = ioUringSetup(ringSize, setupFlags);
         assert values.length == 21;
         CompletionQueue completionQueue = new CompletionQueue(
                 values[0],
@@ -399,8 +400,9 @@ final class Native {
         return nativeMinor >= minor;
     }
 
+    static native boolean ioUringSetupSupportsFlags(int setupFlags);
     private static native boolean ioUringProbe(int ringFd, int[] ios);
-    private static native long[] ioUringSetup(int entries);
+    private static native long[] ioUringSetup(int entries, int setupFlags);
 
     static native int ioUringRegisterIoWqMaxWorkers(int ringFd, int maxBoundedValue, int maxUnboundedValue);
 
