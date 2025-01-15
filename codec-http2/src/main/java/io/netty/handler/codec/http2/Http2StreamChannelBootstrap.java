@@ -101,7 +101,15 @@ public final class Http2StreamChannelBootstrap {
      * @return the {@link Future} that will be notified once the channel was opened successfully or it failed.
      */
     public Future<Http2StreamChannel> open() {
-        return open(channel.eventLoop().<Http2StreamChannel>newPromise());
+        return open(-1);
+    }
+
+    /**
+     * Open a new {@link Http2StreamChannel} to use.
+     * @return the {@link Future} that will be notified once the channel was opened successfully or it failed.
+     */
+    public Future<Http2StreamChannel> open(int streamId) {
+        return open(channel.eventLoop().<Http2StreamChannel>newPromise(), streamId);
     }
 
     /**
@@ -109,6 +117,14 @@ public final class Http2StreamChannelBootstrap {
      * @return the {@link Future} that will be notified once the channel was opened successfully or it failed.
      */
     public Future<Http2StreamChannel> open(final Promise<Http2StreamChannel> promise) {
+        return open(promise, -1);
+    }
+
+    /**
+     * Open a new {@link Http2StreamChannel} to use and notifies the given {@link Promise}.
+     * @return the {@link Future} that will be notified once the channel was opened successfully or it failed.
+     */
+    public Future<Http2StreamChannel> open(final Promise<Http2StreamChannel> promise, final int streamId) {
         try {
             ChannelHandlerContext ctx = findCtx();
             EventExecutor executor = ctx.executor();
@@ -120,7 +136,7 @@ public final class Http2StreamChannelBootstrap {
                     @Override
                     public void run() {
                         if (channel.isActive()) {
-                            open0(finalCtx, promise);
+                            open0(finalCtx, promise, streamId);
                         } else {
                             promise.setFailure(new ClosedChannelException());
                         }
@@ -163,6 +179,14 @@ public final class Http2StreamChannelBootstrap {
      */
     @Deprecated
     public void open0(ChannelHandlerContext ctx, final Promise<Http2StreamChannel> promise) {
+        open0(ctx, promise, -1);
+    }
+
+    /**
+     * @deprecated should not be used directly. Use {@link #open()} or {@link #open(Promise)}
+     */
+    @Deprecated
+    public void open0(ChannelHandlerContext ctx, final Promise<Http2StreamChannel> promise, int streamId) {
         assert ctx.executor().inEventLoop();
         if (!promise.setUncancellable()) {
             return;
@@ -170,9 +194,17 @@ public final class Http2StreamChannelBootstrap {
         final Http2StreamChannel streamChannel;
         try {
             if (ctx.handler() instanceof Http2MultiplexCodec) {
-                streamChannel = ((Http2MultiplexCodec) ctx.handler()).newOutboundStream();
+                if (streamId == -1) {
+                    streamChannel = ((Http2MultiplexCodec) ctx.handler()).newOutboundStream();
+                } else {
+                    streamChannel = ((Http2MultiplexCodec) ctx.handler()).newOutboundStream(streamId);
+                }
             } else {
-                streamChannel = ((Http2MultiplexHandler) ctx.handler()).newOutboundStream();
+                if (streamId == -1) {
+                    streamChannel = ((Http2MultiplexHandler) ctx.handler()).newOutboundStream();
+                } else {
+                    streamChannel = ((Http2MultiplexHandler) ctx.handler()).newOutboundStream(streamId);
+                }
             }
         } catch (Exception e) {
             promise.setFailure(e);
