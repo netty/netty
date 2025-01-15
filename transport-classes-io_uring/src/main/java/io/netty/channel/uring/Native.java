@@ -340,10 +340,25 @@ final class Native {
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
     }
 
+    /**
+     * check current kernel version whether support io_uring_register_io_wq_worker
+     * Available since 5.15.
+     * @return true if support io_uring_register_io_wq_worker
+     */
+    static boolean isRegisterIOWQWorkerSupported(int ringFd) {
+        // See https://github.com/torvalds/linux/blob/v5.5/fs/io_uring.c#L5488C10-L5488C16
+        int result = ioUringRegisterIoWqMaxWorkers(ringFd, 0, 0);
+        if (result >= 0) {
+            return true;
+        }
+        // This is not supported and so will return -EINVAL
+        return false;
+    }
+
     static void checkKernelVersion(String kernelVersion) {
         boolean enforceKernelVersion = SystemPropertyUtil.getBoolean(
-                "io.netty5.transport.iouring.enforceKernelVersion", true);
-        boolean kernelSupported = checkKernelVersion0(kernelVersion);
+                "io.netty.transport.iouring.enforceKernelVersion", true);
+        boolean kernelSupported = checkKernelVersion(kernelVersion, 5, 9);
         if (!kernelSupported) {
             if (enforceKernelVersion) {
                 throw new UnsupportedOperationException(
@@ -355,38 +370,40 @@ final class Native {
         }
     }
 
-    private static boolean checkKernelVersion0(String kernelVersion) {
+    private static boolean checkKernelVersion(String kernelVersion, int major, int minor) {
         String[] versionComponents = kernelVersion.split("\\.");
         if (versionComponents.length < 3) {
             return false;
         }
-
-        int major;
+        int nativeMajor;
         try {
-            major = Integer.parseInt(versionComponents[0]);
+            nativeMajor = Integer.parseInt(versionComponents[0]);
         } catch (NumberFormatException e) {
             return false;
         }
 
-        if (major <= 4) {
+        if (nativeMajor < major) {
             return false;
         }
-        if (major > 5) {
+
+        if (nativeMajor > major) {
             return true;
         }
 
-        int minor;
+        int nativeMinor;
         try {
-            minor = Integer.parseInt(versionComponents[1]);
+            nativeMinor = Integer.parseInt(versionComponents[1]);
         } catch (NumberFormatException e) {
             return false;
         }
 
-        return minor >= 9;
+        return nativeMinor >= minor;
     }
 
     private static native boolean ioUringProbe(int ringFd, int[] ios);
     private static native long[] ioUringSetup(int entries);
+
+    static native int ioUringRegisterIoWqMaxWorkers(int ringFd, int maxBoundedValue, int maxUnboundedValue);
 
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
