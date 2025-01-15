@@ -1166,9 +1166,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             ioState &= ~POLL_RDHUP_SCHEDULED;
             pollRdhupId = 0;
         }
-     }
-
-    protected static boolean socketIsEmpty(int flags) {
-        return IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
     }
+
+    /**
+     * Return if the socket is guaranteed to be empty when the submitted io was executed and the completion event be
+     * created.
+     * @param flags     the flags that were part of the completion
+     * @return          {@code true} if empty.
+     */
+    protected abstract boolean socketIsEmpty(int flags);
 }
