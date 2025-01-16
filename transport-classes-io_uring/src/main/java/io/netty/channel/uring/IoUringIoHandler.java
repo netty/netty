@@ -288,7 +288,6 @@ public final class IoUringIoHandler implements IoHandler {
             }
         }
 
-        ringBuffer.ioUringSubmissionQueue().incrementHandledFds();
         return registration;
     }
 
@@ -379,7 +378,6 @@ public final class IoUringIoHandler implements IoHandler {
         private void remove() {
             DefaultIoUringIoRegistration old = registrations.remove(id);
             assert old == this;
-            ringBuffer.ioUringSubmissionQueue().decrementHandledFds();
         }
 
         void close() {

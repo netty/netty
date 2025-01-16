@@ -25,7 +25,7 @@ import java.util.function.IntSupplier;
 /**
  * Completion queue implementation for io_uring.
  */
-final class CompletionQueue implements IntSupplier {
+final class CompletionQueue {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CompletionQueue.class);
 
     //these offsets are used to access specific properties
@@ -71,11 +71,6 @@ final class CompletionQueue implements IntSupplier {
      */
     boolean hasCompletions() {
         return ringHead != PlatformDependent.getIntVolatile(kTailAddress);
-    }
-
-    @Override
-    public int getAsInt() {
-        return count();
     }
 
     int count() {

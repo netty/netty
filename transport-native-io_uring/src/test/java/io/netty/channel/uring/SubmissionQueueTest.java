@@ -52,7 +52,6 @@ public class SubmissionQueueTest {
             assertEquals(1, submissionQueue.count());
             submissionQueue.submitAndWait();
             assertEquals(9, completionQueue.count());
-            assertEquals(9, completionQueue.getAsInt());
         } finally {
             ringBuffer.close();
         }
