@@ -318,8 +318,7 @@ final class Native {
                 values[16],
                 (int) values[17],
                 values[18],
-                (int) values[19],
-                completionQueue);
+                (int) values[19]);
         return new RingBuffer(submissionQueue, completionQueue, (int) values[20]);
     }
 
