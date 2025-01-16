@@ -310,7 +310,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 final int recvFlags;
 
                 if (first) {
-                    ioPrio = socketIsEmpty ? Native.IORING_RECVSEND_POLL_FIRST : 0;
+                    // IORING_RECVSEND_POLL_FIRST and IORING_CQE_F_SOCK_NONEMPTY were added in the same release (5.19).
+                    // We need to check if it's supported as otherwise providing these would result in an -EINVAL.
+                    ioPrio = socketIsEmpty && IoUring.isIOUringCqeFSockNonEmptySupported() ?
+                            Native.IORING_RECVSEND_POLL_FIRST : 0;
                     recvFlags = 0;
                 } else {
                     ioPrio = 0;
