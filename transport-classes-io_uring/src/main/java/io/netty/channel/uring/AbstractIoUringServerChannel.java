@@ -43,7 +43,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     private long acceptId;
 
     protected AbstractIoUringServerChannel(LinuxSocket socket, boolean active) {
-        super(null, IoUring.isIOUringAcceptNoWaitSupported() ? LinuxSocket.makeBlocking(socket) : socket, active);
+        super(null, socket, active);
 
         acceptedAddressMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
         acceptedAddressMemoryAddress = Buffer.memoryAddress(acceptedAddressMemory);
