@@ -20,7 +20,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.StringJoiner;
-import java.util.function.IntSupplier;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -66,15 +65,12 @@ final class SubmissionQueue {
     final long ringAddress;
     final int ringFd;
     private final long timeoutMemoryAddress;
-    private final IntSupplier completionCount;
-    private int numHandledFds;
     private int head;
     private int tail;
 
     SubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
                     long kFlagsAddress, long kDroppedAddress, long kArrayAddress,
-                    long submissionQueueArrayAddress, int ringSize, long ringAddress, int ringFd,
-                    IntSupplier completionCount) {
+                    long submissionQueueArrayAddress, int ringSize, long ringAddress, int ringFd) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
         this.kFlagsAddress = kFlagsAddress;
@@ -90,7 +86,6 @@ final class SubmissionQueue {
         this.tail = PlatformDependent.getIntVolatile(kTailAddress);
 
         this.timeoutMemoryAddress = PlatformDependent.allocateMemory(KERNEL_TIMESPEC_SIZE);
-        this.completionCount = completionCount;
 
         // Zero the whole SQE array first
         PlatformDependent.setMemory(submissionQueueArrayAddress, ringEntries * SQE_SIZE, (byte) 0);
@@ -100,15 +95,6 @@ final class SubmissionQueue {
         for (int i = 0; i < ringEntries; i++, address += INT_SIZE) {
             PlatformDependent.putInt(address, i);
         }
-    }
-
-    void incrementHandledFds() {
-        numHandledFds++;
-    }
-
-    void decrementHandledFds() {
-        numHandledFds--;
-        assert numHandledFds >= 0;
     }
 
     private long enqueueSqe0(int id, byte opcode, byte flags, short ioPrio, int fd, long union1, long union2, int len,
@@ -242,8 +228,7 @@ final class SubmissionQueue {
                 throw new RuntimeException("ioUringEnter syscall returned " + ret);
             }
             // some submission might fail if these are done inline and failed.
-            logger.trace("Not all submissions succeeded. Only {} of {} SQEs were submitted, " +
-                    "while there are {} pending completions.", ret, toSubmit, completionCount.getAsInt());
+            logger.trace("Not all submissions succeeded. Only {} of {} SQEs were submitted.", ret, toSubmit);
         }
         return ret;
     }
