@@ -110,7 +110,11 @@ public final class IoUringIoHandler implements IoHandler {
         return completionQueue.process(this::handle);
     }
 
-    private void handle(int res, int flags, int id, byte op, short data) {
+    private void handle(int res, int flags, long udata) {
+        int id = UserData.decodeId(udata);
+        byte op = UserData.decodeOp(udata);
+        short data = UserData.decodeData(udata);
+
         if (id == EVENTFD_ID) {
             handleEventFdRead();
             return;
@@ -140,14 +144,17 @@ public final class IoUringIoHandler implements IoHandler {
 
     private void submitEventFdRead() {
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        long udata = UserData.encode(EVENTFD_ID, Native.IORING_OP_READ, (short) 0);
+
         eventfdReadSubmitted = submissionQueue.addEventFdRead(
-                eventfd.intValue(), eventfdReadBuf, 0, 8, EVENTFD_ID, (short) 0);
+                eventfd.intValue(), eventfdReadBuf, 0, 8, udata);
     }
 
     private void submitTimeout(IoExecutionContext context) {
         long delayNanos = context.delayNanos(System.nanoTime());
-        ringBuffer.ioUringSubmissionQueue().addTimeout(
-                ringBuffer.fd(), delayNanos, RINGFD_ID, (short) 0);
+        long udata = UserData.encode(RINGFD_ID, Native.IORING_OP_TIMEOUT, (short) 0);
+
+        ringBuffer.ioUringSubmissionQueue().addTimeout(ringBuffer.fd(), delayNanos, udata);
     }
 
     @Override
@@ -163,7 +170,8 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         // Ensure all previously submitted IOs get to complete before tearing down everything.
-        submissionQueue.addNop(ringBuffer.fd(), (byte) Native.IOSQE_IO_DRAIN, RINGFD_ID, (short) 0);
+        long udata = UserData.encode(RINGFD_ID, Native.IORING_OP_NOP, (short) 0);
+        submissionQueue.addNop(ringBuffer.fd(), (byte) Native.IOSQE_IO_DRAIN, udata);
         submissionQueue.submit();
         while (completionQueue.hasCompletions()) {
             completionQueue.process(this::handle);
@@ -185,9 +193,11 @@ public final class IoUringIoHandler implements IoHandler {
             submissionQueue.submit();
         }
         // Try to drain all the IO from the queue first...
-        submissionQueue.addNop(ringBuffer.fd(), (byte) Native.IOSQE_IO_DRAIN, RINGFD_ID, (short) 0);
+        long udata = UserData.encode(RINGFD_ID, Native.IORING_OP_NOP, (short) 0);
+        submissionQueue.addNop(ringBuffer.fd(), (byte) Native.IOSQE_IO_DRAIN, udata);
         // ... but only wait for 200 milliseconds on this
-        submissionQueue.addLinkTimeout(ringBuffer.fd(), TimeUnit.MILLISECONDS.toNanos(200), RINGFD_ID, (short) 0);
+        udata = UserData.encode(RINGFD_ID, Native.IORING_OP_LINK_TIMEOUT, (short) 0);
+        submissionQueue.addLinkTimeout(ringBuffer.fd(), TimeUnit.MILLISECONDS.toNanos(200), udata);
         submissionQueue.submitAndWait();
         completionQueue.process(this::handle);
         completeRingClose();
@@ -215,11 +225,11 @@ public final class IoUringIoHandler implements IoHandler {
                 boolean eventFdDrained;
 
                 @Override
-                public void handle(int res, int flags, int id, byte op, short data) {
-                    if (id == EVENTFD_ID) {
+                public void handle(int res, int flags, long udata) {
+                    if (UserData.decodeId(udata) == EVENTFD_ID) {
                         eventFdDrained = true;
                     }
-                    IoUringIoHandler.this.handle(res, flags, id, op, data);
+                    IoUringIoHandler.this.handle(res, flags, udata);
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
@@ -233,7 +243,8 @@ public final class IoUringIoHandler implements IoHandler {
         // transition back to false, thus we should never have any more events written.
         // So, if we have a read event pending, we can cancel it.
         if (eventfdReadSubmitted != 0) {
-            submissionQueue.addCancel(eventfd.intValue(), eventfdReadSubmitted, EVENTFD_ID);
+            long udata = UserData.encode(EVENTFD_ID, Native.IORING_OP_ASYNC_CANCEL, (short) 0);
+            submissionQueue.addCancel(eventfd.intValue(), eventfdReadSubmitted, udata);
             eventfdReadSubmitted = 0;
             submissionQueue.submit();
         }
