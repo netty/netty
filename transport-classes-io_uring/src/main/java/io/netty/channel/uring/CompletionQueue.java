@@ -145,17 +145,4 @@ final class CompletionQueue implements IntSupplier {
         }
         return sb.toString();
     }
-
-    /**
-     * Block until there is at least one completion ready to be processed.
-     */
-    void ioUringWaitCqe() {
-        int ret = Native.ioUringEnter(ringFd, 0, 1, Native.IORING_ENTER_GETEVENTS);
-        if (logger.isTraceEnabled()) {
-            logger.trace("completed(ring {}): {}", ringFd, this);
-        }
-        if (ret < 0) {
-            throw new RuntimeException("ioUringEnter syscall returned " + ret);
-        }
-    }
 }
