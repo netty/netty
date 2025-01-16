@@ -89,7 +89,6 @@ final class CompletionQueue implements IntSupplier {
     int process(CompletionCallback callback) {
         int tail = PlatformDependent.getIntVolatile(kTailAddress);
         int i = 0;
-        boolean isTraceEnabled = logger.isTraceEnabled();
         while (ringHead != tail) {
             long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
 
@@ -103,10 +102,6 @@ final class CompletionQueue implements IntSupplier {
 
             i++;
 
-            if (isTraceEnabled) {
-                logger.trace("completed(ring {}: (res={}, flags={}, udata={})",
-                        ringFd, res, flags, udata);
-            }
             try {
                 callback.handle(res, flags, udata);
             } catch (Error e) {

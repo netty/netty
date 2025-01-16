@@ -115,6 +115,10 @@ public final class IoUringIoHandler implements IoHandler {
         byte op = UserData.decodeOp(udata);
         short data = UserData.decodeData(udata);
 
+        if (logger.isTraceEnabled()) {
+            logger.trace("completed(ring {}): {}(id={}, res={})",
+                    ringBuffer.fd(), Native.opToStr(op), data, res);
+        }
         if (id == EVENTFD_ID) {
             handleEventFdRead();
             return;
