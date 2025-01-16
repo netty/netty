@@ -19,5 +19,5 @@ interface CompletionCallback {
     /**
      * Called for a completion event that was put into the {@link CompletionQueue}.
      */
-    void handle(int res, int flags, long udata);
+    boolean handle(int res, int flags, long udata);
 }

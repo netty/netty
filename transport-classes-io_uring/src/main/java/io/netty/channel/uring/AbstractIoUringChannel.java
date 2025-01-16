@@ -310,6 +310,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
+    private void submitAndRunNow() {
+        // Force a submit and processing of the completions to ensure we drain the outbound buffer and
+        // send the data to the remote peer.
+        registration().submit(IoUringIoHandler.SUBMIT_AND_RUN_ALL);
+    }
+
     @Override
     protected void doWrite(ChannelOutboundBuffer in) {
         if ((ioState & WRITE_SCHEDULED) != 0) {
@@ -317,6 +323,24 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
         if (scheduleWrite(in) > 0) {
             ioState |= WRITE_SCHEDULED;
+            if (!isWritable()) {
+                submitAndRunNow();
+            }
+        }
+    }
+
+    @Override
+    protected void channelWritabilityChanged() {
+        if (isWritable()) {
+            super.channelWritabilityChanged();
+        } else {
+            // Channel is not writable, let's try to submit and run completions inline. If its still not writable
+            // anymore we will propagate it to the user.
+            submitAndRunNow();
+            if (!isWritable()) {
+                // Still not writable
+                super.channelWritabilityChanged();
+            }
         }
     }
 

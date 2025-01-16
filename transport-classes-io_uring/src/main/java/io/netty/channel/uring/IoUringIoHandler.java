@@ -48,6 +48,11 @@ import static java.util.Objects.requireNonNull;
  * {@link IoHandler} which is implemented in terms of the Linux-specific {@code io_uring} API.
  */
 public final class IoUringIoHandler implements IoHandler {
+
+    // Special IoUringIoOps that will cause a submission and running of all completions.
+    static final IoUringIoOps SUBMIT_AND_RUN_ALL = new IoUringIoOps(
+            (byte) -1, (byte) -1, (short) -1, -1, -1, -1, -1, -1, (short) -1, (short) -1, (short) -1, -1, -1);
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringIoHandler.class);
     private static final short RING_CLOSE = 1;
 
@@ -66,11 +71,16 @@ public final class IoUringIoHandler implements IoHandler {
     private volatile boolean shuttingDown;
     private boolean closeCompleted;
     private int nextRegistrationId = Integer.MIN_VALUE;
+    private int processedPerRun;
 
     // these two ids are used internally any so can't be used by nextRegistrationId().
     private static final int EVENTFD_ID = Integer.MAX_VALUE;
     private static final int RINGFD_ID = EVENTFD_ID - 1;
     private static final int INVALID_ID = 0;
+
+    // We buffer a maximum of 4096 completions before we drain them in batches.
+    // Also as we never submit an udata which is 0L we use this as the tombstone marker.
+    private final CompletionBuffer completionArray = new CompletionBuffer(4096, 0);
 
     IoUringIoHandler(IoUringIoHandlerConfiguration config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
@@ -94,6 +104,7 @@ public final class IoUringIoHandler implements IoHandler {
 
     @Override
     public int run(IoExecutionContext context) {
+        processedPerRun = 0;
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         if (!completionQueue.hasCompletions() && context.canBlock()) {
@@ -107,10 +118,45 @@ public final class IoUringIoHandler implements IoHandler {
         } else {
             submissionQueue.submit();
         }
-        return completionQueue.process(this::handle);
+        // we might call submitAndRunNow() while processing stuff in the completionArray we need to
+        // add the processed completions to processedPerRun as this might also be updated by submitAndRunNow()
+        processedPerRun += drainAndProcessAll(completionQueue);
+        return processedPerRun;
     }
 
-    private void handle(int res, int flags, long udata) {
+    private void submitAndRunNow() {
+        SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+        if (submissionQueue.submit() > 0) {
+            processedPerRun += drainAndProcessAll(completionQueue);
+        }
+    }
+
+    private int drainAndProcessAll(CompletionQueue completionQueue) {
+        int processed = 0;
+        for (;;) {
+            boolean drainedAll = completionArray.drain(completionQueue);
+            processed += completionArray.processNow(this::handle);
+            if (drainedAll) {
+                break;
+            }
+        }
+        return processed;
+    }
+
+    private static void handleLoopException(Throwable throwable) {
+        logger.warn("Unexpected exception in the IO event loop.", throwable);
+
+        // Prevent possible consecutive immediate failures that lead to
+        // excessive CPU consumption.
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException ignore) {
+            // ignore
+        }
+    }
+
+    private boolean handle(int res, int flags, long udata) {
         try {
             int id = UserData.decodeId(udata);
             byte op = UserData.decodeOp(udata);
@@ -122,36 +168,27 @@ public final class IoUringIoHandler implements IoHandler {
             }
             if (id == EVENTFD_ID) {
                 handleEventFdRead();
-                return;
+                return true;
             }
             if (id == RINGFD_ID) {
                 if (op == Native.IORING_OP_NOP && data == RING_CLOSE) {
                     completeRingClose();
                 }
-                return;
+                return true;
             }
             DefaultIoUringIoRegistration registration = registrations.get(id);
             if (registration == null) {
                 logger.debug("ignoring {} completion for unknown registration (id={}, res={})",
                         Native.opToStr(op), id, res);
-                return;
+                return true;
             }
             registration.handle(res, flags, op, data);
+            return true;
         } catch (Error e) {
             throw e;
         } catch (Throwable throwable) {
             handleLoopException(throwable);
-        }
-    }
-
-    private static void handleLoopException(Throwable throwable) {
-        logger.warn("Unexpected exception in the IO event loop.", throwable);
-
-        // Prevent possible consecutive immediate failures that lead to
-        // excessive CPU consumption.
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException ignore) {
+            return true;
         }
     }
 
@@ -246,11 +283,11 @@ public final class IoUringIoHandler implements IoHandler {
                 boolean eventFdDrained;
 
                 @Override
-                public void handle(int res, int flags, long udata) {
+                public boolean handle(int res, int flags, long udata) {
                     if (UserData.decodeId(udata) == EVENTFD_ID) {
                         eventFdDrained = true;
                     }
-                    IoUringIoHandler.this.handle(res, flags, udata);
+                    return IoUringIoHandler.this.handle(res, flags, udata);
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
@@ -352,11 +389,15 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         private void submit0(IoUringIoOps ioOps, long udata) {
-            ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
-                    ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), udata,
-                    ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
-            );
-            outstandingCompletions++;
+            if (ioOps == SUBMIT_AND_RUN_ALL) {
+                submitAndRunNow();
+            } else {
+                ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
+                        ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), udata,
+                        ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
+                );
+                outstandingCompletions++;
+            }
         }
 
         @Override

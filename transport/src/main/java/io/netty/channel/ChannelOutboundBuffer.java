@@ -72,7 +72,7 @@ public final class ChannelOutboundBuffer {
         }
     };
 
-    private final Channel channel;
+    private final AbstractChannel channel;
 
     // Entry(flushedEntry) --> ... Entry(unflushedEntry) --> ... Entry(tailEntry)
     //
@@ -643,20 +643,19 @@ public final class ChannelOutboundBuffer {
     }
 
     private void fireChannelWritabilityChanged(boolean invokeLater) {
-        final ChannelPipeline pipeline = channel.pipeline();
         if (invokeLater) {
             Runnable task = fireChannelWritabilityChangedTask;
             if (task == null) {
                 fireChannelWritabilityChangedTask = task = new Runnable() {
                     @Override
                     public void run() {
-                        pipeline.fireChannelWritabilityChanged();
+                        channel.channelWritabilityChanged();
                     }
                 };
             }
             channel.eventLoop().execute(task);
         } else {
-            pipeline.fireChannelWritabilityChanged();
+            channel.channelWritabilityChanged();
         }
     }
 
