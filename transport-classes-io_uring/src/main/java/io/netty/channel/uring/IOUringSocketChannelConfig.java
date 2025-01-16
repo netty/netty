@@ -633,8 +633,8 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     }
 
     @Override
-    public IOUringStreamChannelConfig setBufferRingConfig(BufferRingConfig bufferRingConfig) {
-        super.setBufferRingConfig(bufferRingConfig);
+    public IOUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
+        super.setBufferGroupId(bufferGroupId);
         return this;
     }
 }

@@ -26,6 +26,7 @@ public final class ObjectUtil {
     private static final double DOUBLE_ZERO = 0.0D;
     private static final long LONG_ZERO = 0L;
     private static final int INT_ZERO = 0;
+    private static final short SHORT_ZERO = 0;
 
     private ObjectUtil() {
     }
@@ -133,6 +134,17 @@ public final class ObjectUtil {
             throw new IllegalArgumentException(name + " : " + f + " (expected: > 0)");
         }
         return f;
+    }
+
+    /**
+     * Checks that the given argument is positive or zero. If it is not , throws {@link IllegalArgumentException}.
+     * Otherwise, returns the argument.
+     */
+    public static short checkPositive(short s, String name) {
+        if (s <= SHORT_ZERO) {
+            throw new IllegalArgumentException(name + " : " + s + " (expected: > 0)");
+        }
+        return s;
     }
 
     /**

@@ -21,7 +21,7 @@ import io.netty.channel.RecvByteBufAllocator;
 
 abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
 
-    private volatile BufferRingConfig bufferRingConfig;
+    private volatile short bufferGroupId;
 
     private volatile boolean enableBufferSelectRead;
 
@@ -37,8 +37,8 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
     public <T> T getOption(ChannelOption<T> option) {
         if (option == IoUringChannelOption.ENABLE_BUFFER_SELECT_READ) {
             return (T) Boolean.valueOf(isEnableBufferSelectRead());
-        } else if (option == IoUringChannelOption.IOURING_BUFFER_RING_CONFIG) {
-            return (T) getBufferRingConfig();
+        } else if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
+            return (T) Short.valueOf(getBufferRingConfig());
         }
         return super.getOption(option);
     }
@@ -47,8 +47,8 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         if (option == IoUringChannelOption.ENABLE_BUFFER_SELECT_READ) {
             setEnableBufferSelectRead((Boolean) value);
-        } else if (option == IoUringChannelOption.IOURING_BUFFER_RING_CONFIG) {
-            setBufferRingConfig((BufferRingConfig) value);
+        } else if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
+            setBufferGroupId((Short) value);
         }
         return super.setOption(option, value);
     }
@@ -76,18 +76,18 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
      *
      * @return the buffer ring config.
      */
-    public BufferRingConfig getBufferRingConfig() {
-        return bufferRingConfig;
+    public short getBufferRingConfig() {
+        return bufferGroupId;
     }
 
     /**
      * Set the buffer ring config.
      *
-     * @param bufferRingConfig
+     * @param bufferGroupId the buffer group id.
      * @return
      */
-    public IOUringStreamChannelConfig setBufferRingConfig(BufferRingConfig bufferRingConfig) {
-        this.bufferRingConfig = bufferRingConfig;
+    public IOUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
+        this.bufferGroupId = bufferGroupId;
         return this;
     }
 }

@@ -61,7 +61,7 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
 
     public static final ChannelOption<Boolean> ENABLE_BUFFER_SELECT_READ = valueOf("ENABLE_BUFFER_SELECT_READ");
 
-    public static final ChannelOption<BufferRingConfig> IOURING_BUFFER_RING_CONFIG =
-            ChannelOption.valueOf(IoUringChannelOption.class, "IOURING_BUFFER_GROUP_CONFIG");
+    public static final ChannelOption<Short> IO_URING_BUFFER_GROUP_ID =
+            ChannelOption.valueOf(IoUringChannelOption.class, "IOURING_BUFFER_GROUP_ID");
 
 }

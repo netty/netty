@@ -295,13 +295,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             final IoUringIoHandler ioUringIoHandler = (IoUringIoHandler) registration().ioHandler();
             // Although we checked whether the current kernel supports `register_buffer_ring`
             // during the initialization of IoUringIoHandler
-            // we still perform this check again here.
+            // we still check it again here.
             // When the kernel does not support this feature, it helps the JIT to delete this branch.
             if (IoUring.isRegisterBufferRingSupported() && channelConfig.isEnableBufferSelectRead()) {
-                short bgId = channelConfig.getBufferRingConfig().bufferGroupId();
+                short bgId = channelConfig.getBufferRingConfig();
                 IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(bgId);
                 if (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull()) {
-                    lastUsedBufferRing = ioUringBufferRing;
                     return scheduleReadProviderBuffer(alloc(), ioUringBufferRing);
                 }
             }
