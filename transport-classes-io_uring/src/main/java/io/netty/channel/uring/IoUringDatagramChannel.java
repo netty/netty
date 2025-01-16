@@ -674,4 +674,9 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
         return cancelled;
     }
+
+    @Override
+    protected boolean socketIsEmpty(int flags) {
+        return IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
+    }
 }

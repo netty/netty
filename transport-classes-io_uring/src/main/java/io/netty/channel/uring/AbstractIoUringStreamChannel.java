@@ -493,4 +493,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert numOutstandingWrites == 0;
         }
     }
+
+    @Override
+    protected boolean socketIsEmpty(int flags) {
+        return IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
+    }
 }

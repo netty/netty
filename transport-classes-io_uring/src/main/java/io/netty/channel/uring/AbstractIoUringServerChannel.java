@@ -168,11 +168,11 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
                     if (allocHandle.continueReading() &&
                             // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
                             // trying to schedule a read. If it's supported and not part of the flags we know for sure
-                            // that the next read (which would be using Native.IORING_ACCEPT_DONT_WAIT) will complete
+                            // that the next read (which would be using Native.IORING_ACCEPT_DONTWAIT) will complete
                             // without be able to read any data. This is useless work and we can skip it.
                             //
                             // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10
-                            (!IoUring.isIOUringAcceptNoWaitSupported() || !socketIsEmpty(flags))) {
+                            !socketIsEmpty(flags)) {
                         scheduleRead(false);
                     } else {
                         allocHandle.readComplete();
@@ -206,6 +206,14 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             Buffer.free(acceptedAddressMemory);
             Buffer.free(acceptedAddressLengthMemory);
         }
+    }
+
+    @Override
+    protected boolean socketIsEmpty(int flags) {
+        // IORING_CQE_F_SOCK_NONEMPTY is used for accept since IORING_ACCEPT_DONTWAIT was added.
+        // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10
+        return IoUring.isIOUringAcceptNoWaitSupported() &&
+                IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
     }
 }
 
