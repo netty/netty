@@ -302,7 +302,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void doBeginReadNow() {
-        if (socket.isBlocking() && !((IOUringChannelConfig) config()).getPollInFirst()) {
+        if (!((IOUringChannelConfig) config()).getPollInFirst()) {
             // If the socket is blocking we will directly call scheduleFirstReadIfNeeded() as we can use FASTPOLL.
             ioUringUnsafe().scheduleFirstReadIfNeeded();
         } else if ((ioState & POLL_IN_SCHEDULED) == 0) {
@@ -354,8 +354,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void schedulePollOut() {
-        // This should only be done if the socket is non-blocking.
-        assert !socket.isBlocking();
         pollOutId = schedulePollAdd(POLL_OUT_SCHEDULED, Native.POLLOUT);
     }
 
@@ -823,9 +821,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         cancelConnectTimeoutFuture();
                         connectPromise = null;
                     } else {
-                        // This should only happen if the socket is non-blocking.
-                        assert !socket.isBlocking();
-
                         // The connect was not done yet, register for POLLOUT again
                         schedulePollOut();
                     }
@@ -872,8 +867,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
             boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
             if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
-                // This should only happen if the socket is non-blocking.
-                assert !socket.isBlocking();
 
                 // We were not able to write everything, let's register for POLLOUT
                 schedulePollOut();
@@ -925,9 +918,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             freeRemoteAddressMemory();
 
             if (res == ERRNO_EINPROGRESS_NEGATIVE || res == ERROR_EALREADY_NEGATIVE) {
-                // This should only happen if the socket is non-blocking.
-                assert !socket.isBlocking();
-
                 // connect not complete yet need to wait for poll_out event
                 schedulePollOut();
             } else {

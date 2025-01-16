@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.socket.SocketProtocolFamily;
-import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
@@ -37,7 +36,6 @@ final class LinuxSocket extends Socket {
     static final InetAddress INET6_ANY = unsafeInetAddrByName("::");
     private static final InetAddress INET_ANY = unsafeInetAddrByName("0.0.0.0");
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
-    private boolean blocking;
 
     LinuxSocket(int fd) {
         super(fd);
@@ -281,18 +279,6 @@ final class LinuxSocket extends Socket {
 
     void setUdpGro(boolean gro) throws IOException {
         setUdpGro(intValue(), gro ? 1 : 0);
-    }
-
-    void makeBlocking() throws IOException {
-        int result = makeBlocking(intValue());
-        if (result != 0) {
-            throw Errors.newIOException("makeBlocking", result);
-        }
-        blocking = true;
-    }
-
-    boolean isBlocking() {
-        return blocking;
     }
 
     private static InetAddress deriveInetAddress(NetworkInterface netInterface, boolean ipv6) {
