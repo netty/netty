@@ -133,10 +133,16 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             // transports.
             final short ioPrio;
 
-            if (first) {
-                ioPrio = socketIsEmpty ? Native.IORING_ACCEPT_POLL_FIRST : 0;
+            // IORING_ACCEPT_POLL_FIRST and IORING_ACCEPT_DONTWAIT were added in the same release.
+            // We need to check if its supported as otherwise providing these would result in an -EINVAL.
+            if (IoUring.isIOUringAcceptNoWaitSupported()) {
+                if (first) {
+                    ioPrio = socketIsEmpty ? Native.IORING_ACCEPT_POLL_FIRST : 0;
+                } else {
+                    ioPrio = Native.IORING_ACCEPT_DONTWAIT;
+                }
             } else {
-                ioPrio = Native.IORING_ACCEPT_DONTWAIT;
+                ioPrio = 0;
             }
             // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10#improvements-for-accept
             IoUringIoOps ops = IoUringIoOps.newAccept(fd, flags((byte) 0), 0, ioPrio,
