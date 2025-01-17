@@ -318,12 +318,16 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) {
+        scheduleWriteIfNeeded(in, true);
+    }
+
+    protected void scheduleWriteIfNeeded(ChannelOutboundBuffer in, boolean submitAndRunNow) {
         if ((ioState & WRITE_SCHEDULED) != 0) {
             return;
         }
         if (scheduleWrite(in) > 0) {
             ioState |= WRITE_SCHEDULED;
-            if (!isWritable()) {
+            if (submitAndRunNow && !isWritable()) {
                 submitAndRunNow();
             }
         }
@@ -903,7 +907,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
                 // If we could write all and we did not schedule a pollout yet let us try to write again
                 if (writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
-                    doWrite(unsafe().outboundBuffer());
+                    scheduleWriteIfNeeded(unsafe().outboundBuffer(), false);
                 }
             }
         }
