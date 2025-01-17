@@ -333,21 +333,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
-    @Override
-    protected void channelWritabilityChanged() {
-        if (isWritable()) {
-            super.channelWritabilityChanged();
-        } else {
-            // Channel is not writable, let's try to submit and run completions inline. If its still not writable
-            // anymore we will propagate it to the user.
-            submitAndRunNow();
-            if (!isWritable()) {
-                // Still not writable
-                super.channelWritabilityChanged();
-            }
-        }
-    }
-
     private int scheduleWrite(ChannelOutboundBuffer in) {
         if (delayedClose != null || numOutstandingWrites == Short.MAX_VALUE) {
             return 0;

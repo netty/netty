@@ -282,10 +282,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return pipeline.voidPromise();
     }
 
-    protected void channelWritabilityChanged() {
-        pipeline.fireChannelWritabilityChanged();
-    }
-
     /**
      * {@link Unsafe} implementation which sub-classes must extend and use.
      */
