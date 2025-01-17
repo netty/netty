@@ -33,12 +33,10 @@ import io.netty5.util.internal.SWARUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.Arrays;
 
 import static io.netty5.buffer.internal.InternalBufferUtils.MAX_BUFFER_SIZE;
 import static io.netty5.buffer.internal.InternalBufferUtils.bbput;
@@ -286,7 +284,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         if (hasWritableArray()) {
             System.arraycopy(source, srcPos, writableArray(), writableArrayOffset(), length);
         } else {
-            InternalBufferUtils.bbput(wmem, woff, source, srcPos, length);
+            bbput(wmem, woff, source, srcPos, length);
         }
 
         skipWritableBytes(length);
@@ -303,7 +301,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         if (hasWritableArray()) {
             source.get(writableArray(), writableArrayOffset(), length);
         } else {
-            InternalBufferUtils.bbput(wmem, woff, source, source.position(), length);
+            bbput(wmem, woff, source, source.position(), length);
             source.position(source.position() + length);
         }
 
@@ -1275,7 +1273,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         byte byteValue;
 
         ForwardNioByteCursor(ByteBuffer rmem, int fromOffset, int length) {
-            buffer = rmem.duplicate().order(ByteOrder.BIG_ENDIAN);
+            buffer = rmem;
             index = fromOffset;
             end = index + length;
             byteValue = -1;
@@ -1314,7 +1312,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         byte byteValue;
 
         ReverseNioByteCursor(ByteBuffer rmem, int fromOffset, int length) {
-            buffer = rmem.duplicate().order(ByteOrder.LITTLE_ENDIAN);
+            buffer = rmem;
             index = fromOffset;
             end = index - length;
             byteValue = -1;
