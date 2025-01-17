@@ -35,15 +35,17 @@ final class CompletionBuffer {
         capacity = MathUtil.findNextPositivePowerOfTwo(numCompletions * 2);
         array = new long[capacity];
         mask = capacity - 1;
-        for (int i = 1; i < capacity; i++) {
-            if (i % 2 == 0) {
-                array[i] = tombstone;
-            }
+        for (int i = 0; i < capacity; i += 2) {
+            array[i] = tombstone;
         }
         this.tombstone = tombstone;
     }
 
     private boolean add(int res, int flags, long udata) {
+        if (size == capacity) {
+            // The buffer is already full.
+            return false;
+        }
         if (udata == tombstone) {
             throw new IllegalStateException("udata can't be the same as the tombstone");
         }

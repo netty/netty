@@ -18,6 +18,11 @@ package io.netty.channel.uring;
 interface CompletionCallback {
     /**
      * Called for a completion event that was put into the {@link CompletionQueue}.
+     *
+     * @param res   the result of the completion event.
+     * @param flags the flags
+     * @param udata the user data that was provided as part of the submission
+     * @return      {@code true} if we more data (in a loop) can be handled be this callback, {@code false} otherwise.
      */
     boolean handle(int res, int flags, long udata);
 }

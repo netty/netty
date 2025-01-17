@@ -78,9 +78,7 @@ public final class IoUringIoHandler implements IoHandler {
     private static final int RINGFD_ID = EVENTFD_ID - 1;
     private static final int INVALID_ID = 0;
 
-    // We buffer a maximum of 4096 completions before we drain them in batches.
-    // Also as we never submit an udata which is 0L we use this as the tombstone marker.
-    private final CompletionBuffer completionArray = new CompletionBuffer(4096, 0);
+    private final CompletionBuffer completionBuffer;
 
     IoUringIoHandler(IoUringIoHandlerConfiguration config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
@@ -100,6 +98,10 @@ public final class IoUringIoHandler implements IoHandler {
         registrations = new IntObjectHashMap<>();
         eventfd = Native.newBlockingEventFd();
         eventfdReadBuf = PlatformDependent.allocateMemory(8);
+
+        // We buffer a maximum of 2 * CompletionQueue.ringSize completions before we drain them in batches.
+        // Also as we never submit an udata which is 0L we use this as the tombstone marker.
+        completionBuffer = new CompletionBuffer(ringBuffer.ioUringCompletionQueue().ringSize * 2, 0);
     }
 
     @Override
@@ -120,7 +122,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
         // we might call submitAndRunNow() while processing stuff in the completionArray we need to
         // add the processed completions to processedPerRun as this might also be updated by submitAndRunNow()
-        processedPerRun += drainAndProcessAll(completionQueue);
+        processedPerRun += drainAndProcessAll(completionQueue, this::handle);
         return processedPerRun;
     }
 
@@ -128,15 +130,15 @@ public final class IoUringIoHandler implements IoHandler {
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         if (submissionQueue.submit() > 0) {
-            processedPerRun += drainAndProcessAll(completionQueue);
+            processedPerRun += drainAndProcessAll(completionQueue, this::handle);
         }
     }
 
-    private int drainAndProcessAll(CompletionQueue completionQueue) {
+    private int drainAndProcessAll(CompletionQueue completionQueue, CompletionCallback callback) {
         int processed = 0;
         for (;;) {
-            boolean drainedAll = completionArray.drain(completionQueue);
-            processed += completionArray.processNow(this::handle);
+            boolean drainedAll = completionBuffer.drain(completionQueue);
+            processed += completionBuffer.processNow(callback);
             if (drainedAll) {
                 break;
             }
@@ -291,10 +293,11 @@ public final class IoUringIoHandler implements IoHandler {
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
+            drainAndProcessAll(completionQueue, handler);
             completionQueue.process(handler);
             while (!handler.eventFdDrained) {
                 submissionQueue.submitAndWait();
-                completionQueue.process(handler);
+                drainAndProcessAll(completionQueue, handler);
             }
         }
         // We've consumed any pending eventfd read and `eventfdAsyncNotify` should never
