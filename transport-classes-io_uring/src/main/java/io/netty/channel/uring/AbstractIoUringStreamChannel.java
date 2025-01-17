@@ -297,7 +297,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             // during the initialization of IoUringIoHandler
             // we still check it again here.
             // When the kernel does not support this feature, it helps the JIT to delete this branch.
-            if (IoUring.isRegisterBufferRingSupported() && channelConfig.isEnableBufferSelectRead()) {
+            // only `first` value is true,we will recv with the buffer ring;
+            if (IoUring.isRegisterBufferRingSupported() && first && channelConfig.isEnableBufferSelectRead()) {
                 short bgId = channelConfig.getBufferRingConfig();
                 IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(bgId);
                 if (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull()) {
