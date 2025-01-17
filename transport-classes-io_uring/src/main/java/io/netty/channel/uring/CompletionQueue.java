@@ -16,17 +16,13 @@
 package io.netty.channel.uring;
 
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.StringJoiner;
-import java.util.function.IntSupplier;
 
 /**
  * Completion queue implementation for io_uring.
  */
 final class CompletionQueue {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CompletionQueue.class);
 
     //these offsets are used to access specific properties
     //CQE (https://github.com/axboe/liburing/blob/master/src/include/liburing/io_uring.h#L162)
@@ -96,27 +92,9 @@ final class CompletionQueue {
             PlatformDependent.putIntOrdered(kHeadAddress, ringHead);
 
             i++;
-
-            try {
-                callback.handle(res, flags, udata);
-            } catch (Error e) {
-                throw e;
-            } catch (Throwable throwable) {
-                handleLoopException(throwable);
-            }
+            callback.handle(res, flags, udata);
         }
         return i;
-    }
-
-    private static void handleLoopException(Throwable throwable) {
-        logger.warn("Unexpected exception in the IO event loop.", throwable);
-
-        // Prevent possible consecutive immediate failures that lead to
-        // excessive CPU consumption.
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException ignore) {
-        }
     }
 
     @Override

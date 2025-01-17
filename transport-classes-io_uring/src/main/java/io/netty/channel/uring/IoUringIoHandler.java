@@ -111,31 +111,48 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     private void handle(int res, int flags, long udata) {
-        int id = UserData.decodeId(udata);
-        byte op = UserData.decodeOp(udata);
-        short data = UserData.decodeData(udata);
+        try {
+            int id = UserData.decodeId(udata);
+            byte op = UserData.decodeOp(udata);
+            short data = UserData.decodeData(udata);
 
-        if (logger.isTraceEnabled()) {
-            logger.trace("completed(ring {}): {}(id={}, res={})",
-                    ringBuffer.fd(), Native.opToStr(op), data, res);
-        }
-        if (id == EVENTFD_ID) {
-            handleEventFdRead();
-            return;
-        }
-        if (id == RINGFD_ID) {
-            if (op == Native.IORING_OP_NOP && data == RING_CLOSE) {
-                completeRingClose();
+            if (logger.isTraceEnabled()) {
+                logger.trace("completed(ring {}): {}(id={}, res={})",
+                        ringBuffer.fd(), Native.opToStr(op), data, res);
             }
-            return;
+            if (id == EVENTFD_ID) {
+                handleEventFdRead();
+                return;
+            }
+            if (id == RINGFD_ID) {
+                if (op == Native.IORING_OP_NOP && data == RING_CLOSE) {
+                    completeRingClose();
+                }
+                return;
+            }
+            DefaultIoUringIoRegistration registration = registrations.get(id);
+            if (registration == null) {
+                logger.debug("ignoring {} completion for unknown registration (id={}, res={})",
+                        Native.opToStr(op), id, res);
+                return;
+            }
+            registration.handle(res, flags, op, data);
+        } catch (Error e) {
+            throw e;
+        } catch (Throwable throwable) {
+            handleLoopException(throwable);
         }
-        DefaultIoUringIoRegistration registration = registrations.get(id);
-        if (registration == null) {
-            logger.debug("ignoring {} completion for unknown registration (id={}, res={})",
-                    Native.opToStr(op), id, res);
-            return;
+    }
+
+    private static void handleLoopException(Throwable throwable) {
+        logger.warn("Unexpected exception in the IO event loop.", throwable);
+
+        // Prevent possible consecutive immediate failures that lead to
+        // excessive CPU consumption.
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException ignore) {
         }
-        registration.handle(res, flags, op, data);
     }
 
     private void handleEventFdRead() {
