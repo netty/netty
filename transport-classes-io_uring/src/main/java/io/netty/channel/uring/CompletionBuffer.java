@@ -42,10 +42,6 @@ final class CompletionBuffer {
     }
 
     private boolean add(int res, int flags, long udata) {
-        if (size == capacity) {
-            // The buffer is already full.
-            return false;
-        }
         if (udata == tombstone) {
             throw new IllegalStateException("udata can't be the same as the tombstone");
         }
@@ -65,6 +61,10 @@ final class CompletionBuffer {
      * @return      {@code true} if the whole queue was drained, {@code false} otherwise.
      */
     boolean drain(CompletionQueue queue) {
+        if (size == capacity) {
+            // The buffer is already full.
+            return false;
+        }
         queue.process(callback);
         return !queue.hasCompletions();
     }
