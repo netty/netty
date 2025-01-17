@@ -26,15 +26,11 @@ public class UserDataTest {
         for (int fd : new int[] { -10, -1, 0, 1, 10, Short.MAX_VALUE, Integer.MAX_VALUE }) {
             for (byte op = 0; op < 20; op++) {
                 for (int data = Short.MIN_VALUE; data <= Short.MAX_VALUE; data++) {
-                    final int expectedFd = fd;
-                    final byte expectedOp = op;
                     final short expectedData = (short) data;
-                    long udata = UserData.encode(expectedFd, expectedOp, expectedData);
-                    UserData.decode(0, 0, udata, (res, flags, actualFd, actualOp, actualData) -> {
-                        assertEquals(expectedFd, actualFd);
-                        assertEquals(expectedOp, actualOp);
-                        assertEquals(expectedData, actualData);
-                    });
+                    long udata = UserData.encode(fd, op, expectedData);
+                    assertEquals(fd, UserData.decodeId(udata));
+                    assertEquals(op, UserData.decodeOp(udata));
+                    assertEquals(expectedData, UserData.decodeData(udata));
                 }
             }
         }

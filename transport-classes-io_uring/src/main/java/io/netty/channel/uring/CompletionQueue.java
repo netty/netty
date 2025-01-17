@@ -22,8 +22,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.StringJoiner;
 import java.util.function.IntSupplier;
 
-import static io.netty.channel.uring.UserData.decode;
-
 /**
  * Completion queue implementation for io_uring.
  */
@@ -86,7 +84,6 @@ final class CompletionQueue {
     int process(CompletionCallback callback) {
         int tail = PlatformDependent.getIntVolatile(kTailAddress);
         int i = 0;
-        boolean isTraceEnabled = logger.isTraceEnabled();
         while (ringHead != tail) {
             long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
 
@@ -100,12 +97,8 @@ final class CompletionQueue {
 
             i++;
 
-            if (isTraceEnabled) {
-                logger.trace("completed(ring {}): {}(id={}, res={})",
-                        ringFd, Native.opToStr(UserData.decodeOp(udata)), UserData.decodeId(udata), res);
-            }
             try {
-                decode(res, flags, udata, callback);
+                callback.handle(res, flags, udata);
             } catch (Error e) {
                 throw e;
             } catch (Throwable throwable) {
@@ -135,7 +128,9 @@ final class CompletionQueue {
             long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
             long udata = PlatformDependent.getLong(cqeAddress + CQE_USER_DATA_FIELD);
             int res = PlatformDependent.getInt(cqeAddress + CQE_RES_FIELD);
-            sb.add(Native.opToStr(UserData.decodeOp(udata)) + "(id=" + UserData.decodeId(udata) + ",res=" + res + ')');
+            int flags = PlatformDependent.getInt(cqeAddress + CQE_FLAGS_FIELD);
+
+            sb.add("(res=" + res).add(", flags=" + flags).add(", udata=" + udata).add(")");
             head++;
         }
         return sb.toString();

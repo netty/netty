@@ -31,13 +31,6 @@ final class UserData {
         return ((long) data << 48) | ((op & 0xFFL)  << 32) | id & 0xFFFFFFFFL;
     }
 
-    static void decode(int res, int flags, long udata, CompletionCallback callback) {
-        int id = decodeId(udata);
-        byte op = decodeOp(udata);
-        short data = decodeData(udata);
-        callback.handle(res, flags, id, op, data);
-    }
-
     static int decodeId(long udata) {
         return (int) (udata & 0xFFFFFFFFL);
     }
