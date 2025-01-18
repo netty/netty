@@ -30,7 +30,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -99,7 +98,7 @@ public class HttpResponseDecoderTest {
         assertTrue(channel.finish());
         Object msg = channel.readInbound();
         assertThat(msg).isInstanceOf(LastHttpContent.class);
-        ((LastHttpContent<?>) msg).close();
+        Resource.dispose(msg);
     }
 
     /**
@@ -130,6 +129,36 @@ public class HttpResponseDecoderTest {
 
         assertFalse(channel.finish());
         assertNull(channel.readInbound());
+    }
+
+    @Test
+    void testTotalHeaderLimit() throws Exception {
+        String requestStr = "HTTP/1.1 200 OK\r\n" +
+                "Server: X\r\n" + // 9 content bytes
+                "a1: b\r\n" +     // + 5 = 14 bytes,
+                "a2: b\r\n\r\n";  // + 5 = 19 bytes
+
+        // Decoding with a max header size of 18 bytes must fail:
+        setUpDecoder(new HttpResponseDecoder(1024, 18));
+        assertTrue(channel.writeInbound(allocator.copyOf(requestStr, US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isFailure());
+        assertInstanceOf(TooLongHttpHeaderException.class, response.decoderResult().cause());
+        assertFalse(channel.finish());
+
+        // Decoding with a max header size of 19 must pass:
+        setUpDecoder(new HttpResponseDecoder(1024, 19));
+        assertTrue(channel.writeInbound(allocator.copyOf(requestStr, US_ASCII)));
+        response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertEquals("X", response.headers().get("Server"));
+        assertEquals("b", response.headers().get("a1"));
+        assertEquals("b", response.headers().get("a2"));
+        channel.close();
+        try (HttpContent<?> empty = channel.readInbound()) {
+            assertThat(empty).isInstanceOf(EmptyLastHttpContent.class);
+        }
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -599,7 +628,7 @@ public class HttpResponseDecoderTest {
         assertThat(res.status().code()).isEqualTo(999);
         assertTrue(res.decoderResult().isFailure());
         assertThat(res).isInstanceOf(FullHttpResponse.class);
-        ((FullHttpResponse) res).close();
+        Resource.dispose(res);
         assertThat((Object) channel.readInbound()).isNull();
 
         // More garbage should not generate anything (i.e. the decoder discards anything beyond this point.)
@@ -860,8 +889,8 @@ public class HttpResponseDecoderTest {
         String cookieString = "Set-Cookie: myCookie=myValue;max-age=50;path=/apathsomewhere;domain=.adomainsomewhere;" +
                               "secure;comment=this is a comment;version=1;";
         HttpSetCookie cookie = parseRequestWithCookies(cookieString).headers().getSetCookie("myCookie");
-        assertEquals("myValue", cookie.value());
         assertNotNull(cookie);
+        assertEquals("myValue", cookie.value());
         assertEquals(".adomainsomewhere", cookie.domain());
         assertEquals(50, cookie.maxAge());
         assertEquals("/apathsomewhere", cookie.path());
@@ -992,6 +1021,7 @@ public class HttpResponseDecoderTest {
                               + "utmcmd=referral|utmcct=/Home-Garden/Furniture/Clearance,/clearance,/32/dept.html";
         HttpSetCookie cookie = parseRequestWithCookies(cookieString).headers().getSetCookie("ARPT");
 
+        assertNotNull(cookie);
         assertEquals("ARPT", cookie.name());
         assertEquals("LWUKQPSWRTUN04CKKJI", cookie.value());
     }
@@ -1007,6 +1037,7 @@ public class HttpResponseDecoderTest {
 
         HttpSetCookie cookie = parseRequestWithCookies(cookieString).headers().getSetCookie("Format");
 
+        assertNotNull(cookie);
         assertTrue(Math.abs(expectedMaxAge - cookie.expiresAsMaxAge()) < 2);
     }
 
@@ -1025,6 +1056,7 @@ public class HttpResponseDecoderTest {
         String cookieString = "Set-Cookie: path=; expires=Mon, 01-Jan-1990 00:00:00 GMT; path=/; " +
                               "domain=.www.google.com";
         HttpSetCookie cookie = parseRequestWithCookies(cookieString).headers().getSetCookie("path");
+        assertNotNull(cookie);
         assertEquals("path", cookie.name());
         assertEquals("", cookie.value());
         assertEquals("/", cookie.path());
@@ -1034,6 +1066,7 @@ public class HttpResponseDecoderTest {
     public void setCookieHeaderDecodingWeirdNames2() {
         String cookieString = "Set-Cookie: HTTPOnly=";
         HttpSetCookie cookie = parseRequestWithCookies(cookieString).headers().getSetCookie("HTTPOnly");
+        assertNotNull(cookie);
         assertEquals("HTTPOnly", cookie.name());
         assertEquals("", cookie.value());
     }
@@ -1107,6 +1140,7 @@ public class HttpResponseDecoderTest {
 
         HttpSetCookie cookie = parseRequestWithCookies(
                 "Set-Cookie: bh=\"" + longValue + '"').headers().getSetCookie("bh");
+        assertNotNull(cookie);
         assertEquals("bh", cookie.name());
         assertEquals(longValue, cookie.value());
     }
@@ -1115,6 +1149,7 @@ public class HttpResponseDecoderTest {
     public void setCookieHeaderIgnoreEmptyDomain() {
         String cookieString = "Set-Cookie: sessionid=OTY4ZDllNTgtYjU3OC00MWRjLTkzMWMtNGUwNzk4MTY0MTUw; Domain=; Path=/";
         HttpSetCookie cookie = parseRequestWithCookies(cookieString).headers().getSetCookie("sessionid");
+        assertNotNull(cookie);
         assertThat(cookie.domain()).isEmpty();
     }
 
@@ -1122,6 +1157,7 @@ public class HttpResponseDecoderTest {
     public void setCookieHeaderIgnoreEmptyPath() {
         String cookieString = "Set-Cookie: sessionid=OTY4ZDllNTgtYjU3OC00MWRjLTkzMWMtNGUwNzk4MTY0MTUw; Domain=; Path=";
         HttpSetCookie cookie = parseRequestWithCookies(cookieString).headers().getSetCookie("sessionid");
+        assertNotNull(cookie);
         assertThat(cookie.path()).isEmpty();
     }
 

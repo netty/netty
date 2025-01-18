@@ -30,7 +30,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 import static io.netty5.handler.codec.http.HttpHeaderNames.HOST;
@@ -255,7 +254,7 @@ public class HttpRequestDecoderTest {
         assertThat((Object) channel.readInbound()).isInstanceOf(HttpRequest.class);
         Object msg = channel.readInbound();
         assertThat(msg).isInstanceOf(LastHttpContent.class);
-        ((LastHttpContent<?>) msg).close();
+        Resource.dispose(msg);
 
         assertFalse(channel.finish());
     }
@@ -285,7 +284,7 @@ public class HttpRequestDecoderTest {
         assertThat(msg).isInstanceOf(HttpRequest.class);
         msg = channel.readInbound();
         assertThat(msg).isInstanceOf(LastHttpContent.class);
-        ((LastHttpContent<?>) msg).close();
+        Resource.dispose(msg);
 
         assertFalse(channel.finish());
     }
@@ -326,9 +325,9 @@ public class HttpRequestDecoderTest {
 
         HttpRequest request = parseRequest(requestStr);
         assertTrue(request.decoderResult().isFailure());
-        assertTrue(request.decoderResult().cause() instanceof TooLongHttpLineException);
+        assertInstanceOf(TooLongHttpLineException.class, request.decoderResult().cause());
         assertThat(request).isInstanceOf(FullHttpRequest.class);
-        ((FullHttpRequest) request).close();
+        Resource.dispose(request);
         assertFalse(channel.finish());
     }
 
@@ -349,9 +348,9 @@ public class HttpRequestDecoderTest {
 
         HttpRequest request = parseRequest(requestStr);
         assertTrue(request.decoderResult().isFailure());
-        assertTrue(request.decoderResult().cause() instanceof TooLongHttpLineException);
+        assertInstanceOf(TooLongHttpLineException.class, request.decoderResult().cause());
         assertThat(request).isInstanceOf(FullHttpRequest.class);
-        ((FullHttpRequest) request).close();
+        Resource.dispose(request);
         assertFalse(channel.finish());
     }
 
@@ -375,7 +374,34 @@ public class HttpRequestDecoderTest {
 
         HttpRequest request = parseRequest(requestStr);
         assertTrue(request.decoderResult().isFailure());
-        assertTrue(request.decoderResult().cause() instanceof TooLongHttpHeaderException);
+        assertInstanceOf(TooLongHttpHeaderException.class, request.decoderResult().cause());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    void testTotalHeaderLimit() throws Exception {
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Host: a.b\r\n" + // 11 bytes
+                "a1: b\r\n" +     // + 7 = 18 bytes,
+                "a2: b\r\n\r\n";  // + 7 = 25 bytes
+
+        // Decoding with a max header size of 24 bytes must fail:
+        setUpDecoder(new HttpRequestDecoder(1024, 18));
+        HttpRequest request = parseRequest(requestStr);
+        assertTrue(request.decoderResult().isFailure());
+        assertThat(request.decoderResult().cause()).isInstanceOf(TooLongHttpHeaderException.class);
+        assertFalse(channel.finish());
+
+        // Decoding with a max header size of 25 must pass:
+        setUpDecoder(new HttpRequestDecoder(1024, 19));
+        request = parseRequest(requestStr);
+        assertTrue(request.decoderResult().isSuccess());
+        assertEquals("a.b", request.headers().get("Host"));
+        assertEquals("b", request.headers().get("a1"));
+        assertEquals("b", request.headers().get("a2"));
+        try (HttpContent<?> empty = channel.readInbound()) {
+            assertThat(empty).isInstanceOf(EmptyLastHttpContent.class);
+        }
         assertFalse(channel.finish());
     }
 
@@ -384,12 +410,11 @@ public class HttpRequestDecoderTest {
         String responseStr = "HTTP/1.1 200 \r\n" +
                 "Content-Length: 0\r\n\r\n";
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
-        assertTrue(channel.writeInbound(allocator.copyOf(responseStr, StandardCharsets.US_ASCII)));
+        assertTrue(channel.writeInbound(allocator.copyOf(responseStr, US_ASCII)));
         HttpResponse response = channel.readInbound();
         assertTrue(response.decoderResult().isSuccess());
         assertEquals(HttpResponseStatus.OK, response.status());
-        HttpContent c = channel.readInbound();
-        c.close();
+        Resource.dispose(channel.readInbound());
         assertFalse(channel.finish());
     }
 
@@ -615,9 +640,7 @@ public class HttpRequestDecoderTest {
                 } else if (i == 3) {
                     assertInstanceOf(LastHttpContent.class, msg);
                 }
-                if (msg instanceof Resource<?>) {
-                    ((Resource<?>) msg).close();
-                }
+                Resource.dispose(msg);
 
                 if (++i == 1) {
                     // first request
@@ -659,7 +682,7 @@ public class HttpRequestDecoderTest {
         assertFalse(request.headers().contains("Content-Length"));
         Object msg = channel.readInbound();
         assertThat(msg).isInstanceOf(LastHttpContent.class);
-        ((LastHttpContent<?>) msg).close();
+        Resource.dispose(msg);
         assertFalse(channel.finish());
     }
 
@@ -676,8 +699,7 @@ public class HttpRequestDecoderTest {
         assertThat(decoderResult.initialLineLength()).isEqualTo(23);
         assertThat(decoderResult.headerSize()).isEqualTo(35);
         assertThat(decoderResult.totalSize()).isEqualTo(58);
-        HttpContent<?> c = channel.readInbound();
-        c.close();
+        Resource.dispose(channel.readInbound());
         assertFalse(channel.finish());
     }
 

@@ -106,6 +106,12 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @param maxInitialLineLength the initial size of the temporary buffer used when parsing the lines of the
+     * HTTP headers.
+     * @param maxHeaderSize the maximum permitted combined size of all headers in any one response.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
      */
     public HttpResponseDecoder(
             int maxInitialLineLength, int maxHeaderSize) {
@@ -117,6 +123,8 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
     /**
      * Creates a new instance with the specified configuration.
      * @param config The configuration for the response decoder.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
      */
     public HttpResponseDecoder(HttpDecoderConfig config) {
         super(config);

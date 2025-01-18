@@ -136,16 +136,32 @@ public interface MemoryManager {
      * to any {@linkplain #onLeakDetected(Consumer) on-leak callback handler}.
      *
      * @param array The byte array that will be embedded in the created buffer.
-     * @return A buffer that wraps the given byte array
+     * @return A buffer that wraps the given byte array.
      */
     @UnstableApi
     static Buffer unsafeWrap(byte[] array) {
         MemoryManager manager = instance();
-        ManagedBufferAllocator allocator = new ManagedBufferAllocator(manager, false);
+        ManagedBufferAllocator allocator = ManagedBufferAllocator.getUnpooledBufferAllocator(manager);
         WrappingAllocation allocationType = new WrappingAllocation(array);
         Buffer buffer = manager.allocateShared(allocator, array.length, ArcDrop::wrap, allocationType);
         buffer.skipWritableBytes(array.length);
         return buffer.makeReadOnly();
+    }
+
+    /**
+     * Create a new on-heap {@link Buffer} instance of the given size.
+     * <p>
+     * <strong>Note:</strong> The buffers created with this method are not subject to leak detection, and if they
+     * are garbage collected without being {@linkplain Buffer#close() closed} first, then no callback will be issued
+     * to any {@linkplain #onLeakDetected(Consumer) on-leak callback handler}.
+     *
+     * @param size The size in bytes of the created buffer.
+     * @return A heap buffer of the given size.
+     */
+    static Buffer unpooledHeap(long size) {
+        MemoryManager manager = instance();
+        ManagedBufferAllocator allocator = ManagedBufferAllocator.getUnpooledBufferAllocator(manager);
+        return manager.allocateShared(allocator, size, ArcDrop::wrap, StandardAllocationTypes.ON_HEAP);
     }
 
     /**
