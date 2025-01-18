@@ -653,42 +653,19 @@ public final class NioIoHandler implements IoHandler {
                     // - a scheduled task is ready for processing
                     break;
                 }
-                if (Thread.interrupted()) {
-                    // Thread was interrupted so reset selected keys and break so we not run into a busy loop.
-                    // As this is most likely a bug in the handler of the user or it's client library we will
-                    // also log it.
-                    //
-                    // See https://github.com/netty/netty/issues/2426
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Selector.select() returned prematurely because " +
-                                "Thread.currentThread().interrupt() was called. Use " +
-                                "NioHandler.shutdownGracefully() to shutdown the NioHandler.");
-                    }
-                    selectCnt = 1;
+                if (unexpectedSelectorWakeup(selectCnt)) {
                     break;
                 }
 
                 long time = System.nanoTime();
-                if (time - TimeUnit.MILLISECONDS.toNanos(timeoutMillis) >= currentTimeNanos) {
+                if (selectReturnPrematurely(selectCnt, time, currentTimeNanos, timeoutMillis)) {
                     // timeoutMillis elapsed without anything selected.
                     selectCnt = 1;
-                } else if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
-                        selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
-                    // The code exists in an extra method to ensure the method is not too big to inline as this
-                    // branch is not very likely to get hit very frequently.
-                    selector = selectRebuildSelector(selectCnt);
-                    selectCnt = 1;
+                } else if (selectReturnPrematurelyManyTimes(selectCnt)) {
                     break;
                 }
 
                 currentTimeNanos = time;
-            }
-
-            if (selectCnt > MIN_PREMATURE_SELECTOR_RETURNS) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Selector.select() returned prematurely {} times in a row for Selector {}.",
-                            selectCnt - 1, selector);
-                }
             }
         } catch (CancelledKeyException e) {
             if (logger.isDebugEnabled()) {
@@ -710,7 +687,52 @@ public final class NioIoHandler implements IoHandler {
         }
     }
 
+    // returns true if selectCnt should be reset
+    private boolean selectReturnPrematurely(int selectCnt,
+                                            long currentTimeNanos,
+                                            long startTimeNanos,
+                                            long timeoutMillis) {
+        if (currentTimeNanos - TimeUnit.MILLISECONDS.toNanos(timeoutMillis) >= startTimeNanos) {
+            // The select operation returned after the timeoutMillis elapsed.
+            if (selectCnt > MIN_PREMATURE_SELECTOR_RETURNS && logger.isDebugEnabled()) {
+                logger.debug("Selector.select() returned prematurely {} times in a row for Selector {}.",
+                    selectCnt - 1, selector);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    // returns true if selectCnt should be reset
+    private boolean unexpectedSelectorWakeup(int selectCnt) throws IOException {
+        if (Thread.interrupted()) {
+            // Thread was interrupted so reset selected keys and break so we not run into a busy loop.
+            // As this is most likely a bug in the handler of the user or it's client library we will
+            // also log it.
+            //
+            // See https://github.com/netty/netty/issues/2426
+            if (logger.isDebugEnabled()) {
+                logger.debug("Selector.select() returned prematurely because " +
+                    "Thread.currentThread().interrupt() was called. Use " +
+                    "NioHandler.shutdownGracefully() to shutdown the NioHandler.");
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean selectReturnPrematurelyManyTimes(final int selectCnt) throws IOException {
+        if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
+            selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
+            selector = selectRebuildSelector(selectCnt);
+            return true;
+        }
+        return false;
+    }
+
     private Selector selectRebuildSelector(int selectCnt) throws IOException {
+        // The code exists in an extra method to ensure the method is not too big to inline as this
+        // branch is not very likely to get hit very frequently.
         // The selector returned prematurely many times in a row.
         // Rebuild the selector to work around the problem.
         logger.warn(
