@@ -92,7 +92,10 @@ final class CompletionQueue {
             PlatformDependent.putIntOrdered(kHeadAddress, ringHead);
 
             i++;
-            callback.handle(res, flags, udata);
+            if (!callback.handle(res, flags, udata)) {
+                // Stop processing. as the callback can not handle any more completions for now,
+                break;
+            }
         }
         return i;
     }
