@@ -407,7 +407,7 @@ public final class IoUringIoOps implements IoOps {
     static IoUringIoOps newSend(
             int fd, byte flags, int sendFlags, long memoryAddress, int length, short data) {
         return new IoUringIoOps(Native.IORING_OP_SEND, flags, (short) 0, fd,
-                memoryAddress, 0L, length, sendFlags, data, (short) 0, (short) 0, 0, 0);
+                0, memoryAddress, length, sendFlags, data, (short) 0, (short) 0, 0, 0);
     }
 
     /**
