@@ -123,6 +123,10 @@ public final class IoUringIoHandler implements IoHandler {
         // we might call submitAndRunNow() while processing stuff in the completionArray we need to
         // add the processed completions to processedPerRun as this might also be updated by submitAndRunNow()
         processedPerRun += drainAndProcessAll(completionQueue, this::handle);
+
+        // Let's submit one more time as the completions might have added things to the submission queue.
+        submissionQueue.submit();
+
         return processedPerRun;
     }
 
