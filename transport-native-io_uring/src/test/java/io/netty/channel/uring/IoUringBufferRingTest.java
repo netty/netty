@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -82,11 +83,20 @@ public class IoUringBufferRingTest {
         String randomString = UUID.randomUUID().toString();
         int randomStringLength = randomString.length();
 
+        ArrayBlockingQueue<BufferRingExhaustedEvent> eventSyncer = new ArrayBlockingQueue<>(1);
+
         Channel serverChannel = serverBootstrap.group(group)
                 .childHandler(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                         bufferSyncer.offer((ByteBuf) msg);
+                    }
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                        if (evt instanceof BufferRingExhaustedEvent) {
+                            eventSyncer.add((BufferRingExhaustedEvent) evt);
+                        }
                     }
                 })
                 .childOption(IoUringChannelOption.ENABLE_BUFFER_SELECT_READ, true)
@@ -111,10 +121,14 @@ public class IoUringBufferRingTest {
         ByteBuf userspaceIoUringBufferElement1 = readBuffer;
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer);
         assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, readBuffer);
+        assertEquals(0, eventSyncer.size());
 
         //now we run out of buffer ring buffer
         readBuffer = sendAndRecvMessage(clientChannel, writeBuffer);
         assertFalse(readBuffer instanceof IoUringBufferRing.UserspaceIoUringBuffer);
+        assertEquals(1, eventSyncer.size());
+        assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take().bufferGroupId());
+
 
         //now we release the buffer ring buffer
         userspaceIoUringBufferElement1.release();

@@ -397,9 +397,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
             try {
                 if (res < 0) {
-                    //recv without buffer ring
-                    if (res == Native.ERRNO_ECANCELED_NEGATIVE && byteBuf != null) {
-                        byteBuf.release();
+                    if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                        if (byteBuf != null) {
+                            //recv without buffer ring
+                            byteBuf.release();
+                        }
                         return;
                     }
 
@@ -407,6 +409,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                         //recv with provider buffer fail!
                         //fallback to normal recv
                         bufferRing.markReadFail();
+                        // fire the BufferRingExhaustedEvent to notify users.
+                        // Users can then switch the ring buffer or do other things as they wish
+                        pipeline.fireUserEventTriggered(new BufferRingExhaustedEvent(bufferRing.bufferGroupId()));
                         scheduleNextRead(flags);
                         return;
                     }
