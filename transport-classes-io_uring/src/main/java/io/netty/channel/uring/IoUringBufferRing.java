@@ -29,7 +29,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
-public final class IoUringBufferRing {
+final class IoUringBufferRing {
 
     private final long ioUringBufRingAddr;
 

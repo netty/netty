@@ -17,7 +17,11 @@ package io.netty.channel.uring;
 
 import io.netty.util.internal.ObjectUtil;
 
-public class BufferRingConfig {
+/**
+ * Configuration class for an {@link IoUringBufferRing}.
+ * It will configure the buffer ring size, buffer group id and the chunk size.
+ */
+public final class BufferRingConfig {
     public static final BufferRingConfig DEFAULT_BUFFER_RING_CONFIG = defaultConfig();
 
     private final short bgId;
@@ -27,7 +31,7 @@ public class BufferRingConfig {
     public BufferRingConfig(short bgId, short bufferRingSize, int chunkSize) {
         this.bgId = ObjectUtil.checkPositive(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
-        this.chunkSize = chunkSize;
+        this.chunkSize = ObjectUtil.checkPositive(chunkSize, "chunkSize");
     }
 
     private static BufferRingConfig defaultConfig() {

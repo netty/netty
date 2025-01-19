@@ -99,7 +99,6 @@ public class IoUringBufferRingTest {
                         }
                     }
                 })
-                .childOption(IoUringChannelOption.ENABLE_BUFFER_SELECT_READ, true)
                 .childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, bufferRingConfig.bufferGroupId())
                 .bind(NetUtil.LOCALHOST, 0)
                 .syncUninterruptibly().channel();
@@ -128,7 +127,6 @@ public class IoUringBufferRingTest {
         assertFalse(readBuffer instanceof IoUringBufferRing.UserspaceIoUringBuffer);
         assertEquals(1, eventSyncer.size());
         assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take().bufferGroupId());
-
 
         //now we release the buffer ring buffer
         userspaceIoUringBufferElement1.release();

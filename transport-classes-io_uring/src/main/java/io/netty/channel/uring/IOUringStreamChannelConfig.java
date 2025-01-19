@@ -21,9 +21,9 @@ import io.netty.channel.RecvByteBufAllocator;
 
 abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
 
-    private volatile short bufferGroupId;
+    private static final short DISABLE_BUFFER_SELECT_READ = -1;
 
-    private volatile boolean enableBufferSelectRead;
+    private volatile short bufferGroupId;
 
     IOUringStreamChannelConfig(Channel channel) {
         super(channel);
@@ -35,9 +35,7 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
 
     @Override
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == IoUringChannelOption.ENABLE_BUFFER_SELECT_READ) {
-            return (T) Boolean.valueOf(isEnableBufferSelectRead());
-        } else if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
+        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
             return (T) Short.valueOf(getBufferRingConfig());
         }
         return super.getOption(option);
@@ -45,9 +43,7 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
 
     @Override
     public <T> boolean setOption(ChannelOption<T> option, T value) {
-        if (option == IoUringChannelOption.ENABLE_BUFFER_SELECT_READ) {
-            setEnableBufferSelectRead((Boolean) value);
-        } else if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
+        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
             setBufferGroupId((Short) value);
         }
         return super.setOption(option, value);
@@ -60,14 +56,14 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
      * otherwise.
      */
     public boolean isEnableBufferSelectRead() {
-        return enableBufferSelectRead;
+        return bufferGroupId != DISABLE_BUFFER_SELECT_READ;
     }
 
     /**
      * enable provider buffer, See this <a href="https://lwn.net/Articles/815491/">LWN article</a> for more info
      */
-    public IOUringStreamChannelConfig setEnableBufferSelectRead(boolean enableBufferSelectRead) {
-        this.enableBufferSelectRead = enableBufferSelectRead;
+    public IOUringStreamChannelConfig disableBufferSelectRead() {
+        setBufferGroupId(DISABLE_BUFFER_SELECT_READ);
         return this;
     }
 

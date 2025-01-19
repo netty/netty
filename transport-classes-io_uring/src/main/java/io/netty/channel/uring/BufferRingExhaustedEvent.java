@@ -18,7 +18,7 @@ package io.netty.channel.uring;
 /**
  * Event that is fired when a cqe`s res is NO_BUFFER
  */
-public class BufferRingExhaustedEvent {
+public final class BufferRingExhaustedEvent {
     private short bufferGroupId;
 
     public BufferRingExhaustedEvent(short bufferGroupId) {
@@ -27,5 +27,18 @@ public class BufferRingExhaustedEvent {
 
     public short bufferGroupId() {
         return bufferGroupId;
+    }
+
+    @Override
+    public int hashCode() {
+        return Short.hashCode(bufferGroupId);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof BufferRingExhaustedEvent) {
+            return bufferGroupId == ((BufferRingExhaustedEvent) obj).bufferGroupId;
+        }
+        return false;
     }
 }

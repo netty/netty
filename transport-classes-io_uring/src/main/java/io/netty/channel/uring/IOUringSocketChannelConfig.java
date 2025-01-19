@@ -627,8 +627,8 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     }
 
     @Override
-    public IOUringSocketChannelConfig setEnableBufferSelectRead(boolean enableBufferSelectRead) {
-        super.setEnableBufferSelectRead(enableBufferSelectRead);
+    public IOUringSocketChannelConfig disableBufferSelectRead() {
+        super.disableBufferSelectRead();
         return this;
     }
 
