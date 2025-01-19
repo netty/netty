@@ -422,10 +422,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 } else if (res > 0) {
                     if (bufferRing != null) {
                         byteBuf = bufferRing.borrowBuffer(flags >> Native.IORING_CQE_BUFFER_SHIFT, res);
-                        byteBuf.writerIndex(res);
-                    } else {
-                        byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     }
+                    byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     allocHandle.lastBytesRead(res);
                 } else {
                     // EOF which we signal with -1.
