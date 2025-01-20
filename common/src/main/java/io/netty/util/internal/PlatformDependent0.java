@@ -722,8 +722,8 @@ final class PlatformDependent0 {
     }
 
     static void putShortOrdered(long adddress, short newValue) {
-        UNSAFE.putShort(null, adddress, newValue);
         UNSAFE.storeFence();
+        UNSAFE.putShort(null, adddress, newValue);
     }
 
     static void putInt(long address, int value) {

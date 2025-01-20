@@ -114,6 +114,8 @@ public final class IoUringIoHandler implements IoHandler {
         List<BufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
         if (!bufferRingConfigs.isEmpty()) {
             if (!IoUring.isRegisterBufferRingSupported()) {
+                // Close ringBuffer before throwing to ensure we release all memory on failure.
+                ringBuffer.close();
                 throw new UnsupportedOperationException("io_uring_register_buffer_ring is not supported");
             }
             for (BufferRingConfig bufferRingConfig : bufferRingConfigs) {
@@ -123,6 +125,8 @@ public final class IoUringIoHandler implements IoHandler {
                     for (IoUringBufferRing bufferRing : registeredIoUringBufferRing.values()) {
                         bufferRing.close();
                     }
+                    // Close ringBuffer before throwing to ensure we release all memory on failure.
+                    ringBuffer.close();
                     throw new UncheckedIOException(e);
                 }
             }
@@ -152,7 +156,11 @@ public final class IoUringIoHandler implements IoHandler {
             if (poll == null) {
                 break;
             }
-            poll.run();
+            try {
+                poll.run();
+            } catch (Throwable t) {
+                logger.error("Failed to run before io task", t);
+            }
         }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();

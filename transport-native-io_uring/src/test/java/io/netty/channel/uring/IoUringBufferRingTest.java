@@ -141,7 +141,7 @@ public class IoUringBufferRingTest {
         group.shutdownGracefully();
     }
 
-    public ByteBuf sendAndRecvMessage(Channel clientChannel, ByteBuf writeBuffer) throws InterruptedException {
+    private ByteBuf sendAndRecvMessage(Channel clientChannel, ByteBuf writeBuffer) throws InterruptedException {
         //retain the buffer to assert
         writeBuffer.retain();
         clientChannel.writeAndFlush(writeBuffer).sync();
