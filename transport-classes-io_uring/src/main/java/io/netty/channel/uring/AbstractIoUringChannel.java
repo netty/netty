@@ -310,12 +310,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
-    private void submitAndRunNow() {
-        // Force a submit and processing of the completions to ensure we drain the outbound buffer and
-        // send the data to the remote peer.
-        registration().submit(IoUringIoHandler.SUBMIT_AND_RUN_ALL);
-    }
-
     @Override
     protected void doWrite(ChannelOutboundBuffer in) {
         scheduleWriteIfNeeded(in, true);
@@ -327,8 +321,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
         if (scheduleWrite(in) > 0) {
             ioState |= WRITE_SCHEDULED;
-            if (submitAndRunNow && !isWritable()) {
-                submitAndRunNow();
+            if (submitAndRunNow && !isWritable() && !((IOUringChannelConfig) config()).getIoseqAsync()) {
+                // Force a submit and processing of the completions to ensure we drain the outbound buffer and
+                // send the data to the remote peer.
+                // We only do this if IOSEQ_ASYNC is not used as if its used it's impossible that the
+                // write is executed inline.
+                registration().submit(IoUringIoHandler.SUBMIT_AND_RUN_ALL);
             }
         }
     }
