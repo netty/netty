@@ -36,6 +36,7 @@ public class IoUringIoHandlerTest {
                 .setMaxUnboundedWorker(2);
         IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory(config);
         IoHandler handler = ioHandlerFactory.newHandler();
+        handler.initalize(null);
         handler.destroy();
     }
 }

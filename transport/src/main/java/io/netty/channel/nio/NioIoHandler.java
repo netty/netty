@@ -114,6 +114,7 @@ public final class NioIoHandler implements IoHandler {
     private final SelectStrategy selectStrategy;
     private int cancelledKeys;
     private boolean needsToSelectAgain;
+    private IoEventLoop eventLoop;
 
     private NioIoHandler(SelectorProvider selectorProvider,
                          SelectStrategy strategy) {
@@ -393,7 +394,12 @@ public final class NioIoHandler implements IoHandler {
     }
 
     @Override
-    public NioIoRegistration register(IoEventLoop eventLoop, IoHandle handle)
+    public void initalize(IoEventLoop eventLoop) {
+        this.eventLoop = eventLoop;
+    }
+
+    @Override
+    public NioIoRegistration register(IoHandle handle)
             throws Exception {
         NioIoHandle nioHandle = nioHandle(handle);
         NioIoOps ops = NioIoOps.NONE;
@@ -601,7 +607,7 @@ public final class NioIoHandler implements IoHandler {
     }
 
     @Override
-    public void wakeup(IoEventLoop eventLoop) {
+    public void wakeup() {
         if (!eventLoop.inEventLoop() && wakenUp.compareAndSet(false, true)) {
             selector.wakeup();
         }

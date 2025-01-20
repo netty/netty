@@ -95,6 +95,7 @@ public class EpollIoHandler implements IoHandler {
     private boolean pendingWakeup;
 
     private int numChannels;
+    private IoEventLoop eventLoop;
 
     // See https://man7.org/linux/man-pages/man2/timerfd_create.2.html.
     private static final long MAX_SCHEDULED_TIMERFD_NS = 999999999;
@@ -146,6 +147,11 @@ public class EpollIoHandler implements IoHandler {
             return (EpollIoOps) ops;
         }
         throw new IllegalArgumentException("IoOps of type " + StringUtil.simpleClassName(ops) + " not supported");
+    }
+
+    @Override
+    public void initalize(IoEventLoop eventLoop) {
+        this.eventLoop = eventLoop;
     }
 
     /**
@@ -221,7 +227,7 @@ public class EpollIoHandler implements IoHandler {
     }
 
     @Override
-    public void wakeup(IoEventLoop eventLoop) {
+    public void wakeup() {
         if (!eventLoop.inEventLoop() && nextWakeupNanos.getAndSet(AWAKE) != AWAKE) {
             // write to the evfd which will then wake-up epoll_wait(...)
             Native.eventFdWrite(eventFd.intValue(), 1L);
@@ -343,7 +349,7 @@ public class EpollIoHandler implements IoHandler {
     }
 
     @Override
-    public EpollIoRegistration register(IoEventLoop eventLoop, IoHandle handle)
+    public EpollIoRegistration register(IoHandle handle)
             throws Exception {
         final EpollIoHandle epollHandle = cast(handle);
         DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(eventLoop, epollHandle);

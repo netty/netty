@@ -170,6 +170,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     @Override
     protected void run() {
         assert inEventLoop();
+        ioHandler.initalize(this);
         do {
             runIo();
             if (isShuttingDown()) {
@@ -224,7 +225,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         assert inEventLoop();
         final IoRegistration registration;
         try {
-            registration = ioHandler.register(this, handle);
+            registration = ioHandler.register(handle);
         } catch (Exception e) {
             promise.setFailure(e);
             return;
@@ -236,7 +237,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     @Override
     protected final void wakeup(boolean inEventLoop) {
-        ioHandler.wakeup(this);
+        ioHandler.wakeup();
     }
 
     @Override

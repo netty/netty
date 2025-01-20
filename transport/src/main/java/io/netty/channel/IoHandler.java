@@ -17,10 +17,10 @@ package io.netty.channel;
 
 /**
  * Handles IO dispatching for an {@link IoEventLoop}
- * All operations except {@link #wakeup(IoEventLoop)} and {@link #isCompatible(Class)} <strong>MUST</strong> be executed
+ * All operations except {@link #wakeup()} and {@link #isCompatible(Class)} <strong>MUST</strong> be executed
  * on the {@link IoEventLoop} thread and should never be called from the user-directly.
  * <p>
- * Once a {@link IoHandle} is registered via the {@link #register(IoEventLoop, IoHandle)} method it's possible
+ * Once a {@link IoHandle} is registered via the {@link #register(IoHandle)} method it's possible
  * to submit {@link IoOps} related to the {@link IoHandle} via {@link IoRegistration#submit(IoOps)}.
  * These submitted {@link IoOps} are the "source" of {@link IoEvent}s that are dispatched to the registered
  * {@link IoHandle} via the {@link IoHandle#handle(IoRegistration, IoEvent)} method.
@@ -28,6 +28,15 @@ package io.netty.channel;
  *
  */
 public interface IoHandler {
+
+    /**
+     * Will be called as part of the initialization of the {@link IoHandler} by the {@link EventLoop}
+     * that uses this {@link IoHandler}.
+     *
+     * @param eventLoop     the {@link IoEventLoop} that will use this {@link IoHandler}.
+     */
+    void initalize(IoEventLoop eventLoop);
+
     /**
      * Run the IO handled by this {@link IoHandler}. The {@link IoExecutionContext} should be used
      * to ensure we not execute too long and so block the processing of other task that are
@@ -53,17 +62,16 @@ public interface IoHandler {
     /**
      * Register a {@link IoHandle} for IO.
      *
-     * @param eventLoop     the {@link IoEventLoop} that did issue the registration.
      * @param handle        the {@link IoHandle} to register.
      * @throws Exception    thrown if an error happens during registration.
      */
-    IoRegistration register(IoEventLoop eventLoop, IoHandle handle) throws Exception;
+    IoRegistration register(IoHandle handle) throws Exception;
 
     /**
      * Wakeup the {@link IoHandler}, which means if any operation blocks it should be unblocked and
      * return as soon as possible.
      */
-    void wakeup(IoEventLoop eventLoop);
+    void wakeup();
 
     /**
      * Returns {@code true} if the given type is compatible with this {@link IoHandler} and so can be registered,

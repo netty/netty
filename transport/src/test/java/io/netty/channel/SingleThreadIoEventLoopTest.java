@@ -96,6 +96,8 @@ public class SingleThreadIoEventLoopTest {
 
     private static class TestIoHandler implements IoHandler {
         private final Semaphore semaphore = new Semaphore(0);
+        private IoEventLoop eventLoop;
+
         @Override
         public void prepareToDestroy() {
             // NOOP
@@ -107,7 +109,12 @@ public class SingleThreadIoEventLoopTest {
         }
 
         @Override
-        public IoRegistration register(final IoEventLoop eventLoop, final IoHandle handle) {
+        public void initalize(IoEventLoop eventLoop) {
+            this.eventLoop = eventLoop;
+        }
+
+        @Override
+        public IoRegistration register(final IoHandle handle) {
             return new IoRegistration() {
                 private final Promise<?> cancellationPromise = eventLoop.newPromise();
                 @Override
@@ -133,7 +140,7 @@ public class SingleThreadIoEventLoopTest {
         }
 
         @Override
-        public void wakeup(IoEventLoop eventLoop) {
+        public void wakeup() {
             semaphore.release();
         }
 

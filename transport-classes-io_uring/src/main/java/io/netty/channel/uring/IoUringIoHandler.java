@@ -66,6 +66,7 @@ public final class IoUringIoHandler implements IoHandler {
     private final FileDescriptor eventfd;
     private final long eventfdReadBuf;
 
+    private IoEventLoop eventLoop;
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
@@ -102,6 +103,11 @@ public final class IoUringIoHandler implements IoHandler {
         // We buffer a maximum of 2 * CompletionQueue.ringSize completions before we drain them in batches.
         // Also as we never submit an udata which is 0L we use this as the tombstone marker.
         completionBuffer = new CompletionBuffer(ringBuffer.ioUringCompletionQueue().ringSize * 2, 0);
+    }
+
+    @Override
+    public void initalize(IoEventLoop eventLoop) {
+        this.eventLoop = eventLoop;
     }
 
     @Override
@@ -331,7 +337,7 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     @Override
-    public IoRegistration register(IoEventLoop eventLoop, IoHandle handle) throws Exception {
+    public IoRegistration register(IoHandle handle) throws Exception {
         IoUringIoHandle ioHandle = cast(handle);
         if (shuttingDown) {
             throw new RejectedExecutionException("IoEventLoop is shutting down");
@@ -475,7 +481,7 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     @Override
-    public void wakeup(IoEventLoop eventLoop) {
+    public void wakeup() {
         if (!eventLoop.inEventLoop() && !eventfdAsyncNotify.getAndSet(true)) {
             // write to the eventfd which will then trigger an eventfd read completion.
             Native.eventFdWrite(eventfd.intValue(), 1L);

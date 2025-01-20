@@ -79,7 +79,7 @@ public final class KQueueIoHandler implements IoHandler {
     };
     private final IntObjectMap<DefaultKqueueIoRegistration> registrations = new IntObjectHashMap<>(4096);
     private int numChannels;
-
+    private IoEventLoop eventLoop;
     private volatile int wakenUp;
 
     /**
@@ -131,13 +131,18 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     @Override
-    public void wakeup(IoEventLoop eventLoop) {
+    public void initalize(IoEventLoop eventLoop) {
+        this.eventLoop = eventLoop;
+    }
+
+    @Override
+    public void wakeup() {
         if (!eventLoop.inEventLoop() && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
             wakeup();
         }
     }
 
-    private void wakeup() {
+    private void wakeup0() {
         Native.keventTriggerUserEvent(kqueueFd.intValue(), KQUEUE_WAKE_UP_IDENT);
         // Note that the result may return an error (e.g. errno = EBADF after the event loop has been shutdown).
         // So it is not very practical to assert the return value is always >= 0.
@@ -237,7 +242,7 @@ public final class KQueueIoHandler implements IoHandler {
                     // (OK - no wake-up required).
 
                     if (wakenUp == 1) {
-                        wakeup();
+                        wakeup0();
                     }
                     // fall-through
                 default:
@@ -325,7 +330,7 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     @Override
-    public KQueueIoRegistration register(IoEventLoop eventLoop, IoHandle handle) {
+    public KQueueIoRegistration register(IoHandle handle) {
         final KQueueIoHandle kqueueHandle = cast(handle);
         if (kqueueHandle.ident() == KQUEUE_WAKE_UP_IDENT) {
             throw new IllegalArgumentException("ident " + KQUEUE_WAKE_UP_IDENT + " is reserved for internal usage");
