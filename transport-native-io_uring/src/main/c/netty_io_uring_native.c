@@ -345,6 +345,10 @@ static jint netty_io_uring_register_iowq_max_workers(JNIEnv *env, jclass clazz, 
      return sys_io_uring_register(ringFd, IORING_REGISTER_IOWQ_MAX_WORKERS, values, 2);
 }
 
+static jint netty_io_uring_register_enable_rings(JNIEnv *env, jclass clazz, jint ringFd) {
+     return sys_io_uring_register(ringFd, IORING_REGISTER_ENABLE_RINGS, NULL, 0);
+}
+
 static jint netty_create_file(JNIEnv *env, jclass class, jstring filename) {
     const char *file = (*env)->GetStringUTFChars(env, filename, 0);
 
@@ -626,6 +630,7 @@ static const JNINativeMethod method_table[] = {
     {"ioUringSetupSupportsFlags", "(I)Z", (void *) netty_io_uring_setup_supports_flags },
     {"ioUringSetup", "(II)[J", (void *) netty_io_uring_setup},
     {"ioUringRegisterIoWqMaxWorkers","(III)I", (void*) netty_io_uring_register_iowq_max_workers },
+    {"ioUringRegisterEnableRings","(I)I", (void*) netty_io_uring_register_enable_rings },
     {"ioUringProbe", "(I[I)Z", (void *) netty_io_uring_probe},
     {"ioUringExit", "(JIJIJII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "(Ljava/lang/String;)I", (void *) netty_create_file},

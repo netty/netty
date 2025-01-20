@@ -105,6 +105,12 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     @Override
+    public void initalize() {
+        // We create our ring in disabled mode and so need to enable it first.
+        Native.ioUringRegisterEnableRings(ringBuffer.fd());
+    }
+
+    @Override
     public int run(IoExecutionContext context) {
         processedPerRun = 0;
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();

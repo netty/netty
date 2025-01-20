@@ -29,6 +29,8 @@ public final class IoUring {
     private static final boolean IORING_ACCEPT_NO_WAIT_SUPPORTED;
     private static final boolean IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     private static final boolean IORING_SETUP_SUBMIT_ALL_SUPPORTED;
+    private static final boolean IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
+    private static final boolean IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
 
     static {
         Throwable cause = null;
@@ -37,6 +39,8 @@ public final class IoUring {
         boolean acceptSupportNoWait = false;
         boolean registerIowqWorkersSupported = false;
         boolean submitAllSupported = false;
+        boolean singleIssuerSupported = false;
+        boolean deferTaskrunSupported = false;
         try {
             if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
                 cause = new UnsupportedOperationException(
@@ -56,6 +60,8 @@ public final class IoUring {
                         acceptSupportNoWait = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
                         registerIowqWorkersSupported = Native.isRegisterIOWQWorkerSupported(ringBuffer.fd());
                         submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
+                        singleIssuerSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
+                        deferTaskrunSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_DEFER_TASKRUN);
                     } finally {
                         if (ringBuffer != null) {
                             try {
@@ -86,6 +92,8 @@ public final class IoUring {
         IORING_ACCEPT_NO_WAIT_SUPPORTED = acceptSupportNoWait;
         IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED = registerIowqWorkersSupported;
         IORING_SETUP_SUBMIT_ALL_SUPPORTED = submitAllSupported;
+        IORING_SETUP_SINGLE_ISSUER_SUPPORTED = singleIssuerSupported;
+        IORING_SETUP_DEFER_TASKRUN_SUPPORTED = deferTaskrunSupported;
     }
 
     public static boolean isAvailable() {
@@ -130,6 +138,14 @@ public final class IoUring {
 
     static boolean isIOUringSetupSubmitAllSupported() {
         return IORING_SETUP_SUBMIT_ALL_SUPPORTED;
+    }
+
+    static boolean isIOUringSetupSingleIssuerSupported() {
+        return IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
+    }
+
+    static boolean isIOUringSetupDeferTaskrunSupported() {
+        return IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
     }
 
     public static void ensureAvailability() {
