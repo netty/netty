@@ -201,7 +201,7 @@ public final class IoUringIoHandler implements IoHandler {
         IoUringBufferRing ioUringBufferRing = new IoUringBufferRing(
                 ringFd, ioUringBufRingAddr,
                 bufferRingSize, bufferGroupId, chunkSize,
-                this
+                this, bufferRingConfig.allocator()
         );
         registeredIoUringBufferRing.put(bufferGroupId, ioUringBufferRing);
         return ioUringBufferRing;

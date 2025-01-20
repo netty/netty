@@ -35,22 +35,31 @@ final class IoUringBufferRing {
 
     private final short entries;
 
+    private final short mask;
+
     private final short bufferGroupId;
 
     private final int ringFd;
 
     private final ByteBuf[] userspaceBufferHolder;
     private final int chunkSize;
+    private final IoUringIoHandler source;
+    private final ByteBufAllocator byteBufAllocator;
+    private final Runnable[] recycleBufferTasks;
+
     private short nextIndex;
     private boolean hasSpareBuffer;
-    private IoUringIoHandler source;
+
+    private BufferRingExhaustedEvent exhaustedEvent;
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
                       short entries, short bufferGroupId,
-                      int chunkSize, IoUringIoHandler ioUringIoHandler
+                      int chunkSize, IoUringIoHandler ioUringIoHandler,
+                      ByteBufAllocator byteBufAllocator
     ) {
         this.ioUringBufRingAddr = ioUringBufRingAddr;
         this.entries = entries;
+        this.mask = (short) (entries - 1);
         this.bufferGroupId = bufferGroupId;
         this.ringFd = ringFd;
         this.userspaceBufferHolder = new ByteBuf[entries];
@@ -58,31 +67,42 @@ final class IoUringBufferRing {
         this.chunkSize = chunkSize;
         this.hasSpareBuffer = false;
         this.source = ioUringIoHandler;
+        this.byteBufAllocator = byteBufAllocator;
+        this.recycleBufferTasks = new Runnable[entries];
     }
 
-    public void markReadFail() {
+    void markReadFail() {
         hasSpareBuffer = false;
     }
 
-    public boolean hasSpareBuffer() {
+    boolean hasSpareBuffer() {
         return hasSpareBuffer;
     }
 
+    /**
+     * lazy get the event, if the event is null, create a new one
+     * @return a BufferRingExhaustedEvent Instance
+     */
+    BufferRingExhaustedEvent getExhaustedEvent() {
+        BufferRingExhaustedEvent res = exhaustedEvent;
+        if (res == null) {
+            res = new BufferRingExhaustedEvent(bufferGroupId);
+            exhaustedEvent = res;
+        }
+        return res;
+    }
+
     void recycleBuffer(short bid) {
-        source.submitBeforeIO(new Runnable() {
-            @Override
-            public void run() {
-                addToRing(bid, true);
-            }
-        });
+        source.submitBeforeIO(recycleBufferTasks[bid]);
     }
 
     void addToRing(short bid, boolean needAdvance) {
         ByteBuf byteBuf = userspaceBufferHolder[bid];
-        int mask = entries - 1;
         long tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
         int ringIndex = oldTail & mask;
+        //  see:
+        //  https://github.com/axboe/liburing/blob/19134a8fffd406b22595a5813a3e319c19630ac9/src/include/liburing.h#L1561
         long ioUringBufAddress = ioUringBufRingAddr + (long) Native.SIZEOF_IOURING_BUF * ringIndex;
         PlatformDependent.putLong(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_ADDR, byteBuf.memoryAddress());
         PlatformDependent.putInt(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_LEN, (short) byteBuf.capacity());
@@ -92,16 +112,27 @@ final class IoUringBufferRing {
         }
     }
 
-    void appendBuffer(ByteBufAllocator byteBufAllocator, int count) {
+    void appendBuffer(int count) {
         int expectedIndex = nextIndex + count;
         if (expectedIndex > entries) {
-            throw new IllegalStateException("Buffer ring is full");
+            throw new IllegalStateException(
+                    String.format(
+                            "We want append %d buffer, but buffer ring is full. The ring hold %s buffers",
+                            count, entries)
+            );
         }
 
         for (int i = 0; i < count; i++) {
             ByteBuf buffer = byteBufAllocator.ioBuffer(chunkSize);
-            userspaceBufferHolder[nextIndex] = buffer;
+            short bid = nextIndex;
+            userspaceBufferHolder[bid] = buffer;
             addToRing(nextIndex, false);
+            recycleBufferTasks[bid] = new Runnable() {
+                @Override
+                public void run() {
+                    addToRing(bid, true);
+                }
+            };
             nextIndex++;
         }
         advanceTail(count);
@@ -109,7 +140,7 @@ final class IoUringBufferRing {
 
     ByteBuf borrowBuffer(int bid, int maxCap) {
         ByteBuf byteBuf = userspaceBufferHolder[bid];
-        ByteBuf slice = byteBuf.slice(0, maxCap);
+        ByteBuf slice = byteBuf.retainedSlice(0, maxCap);
         return new UserspaceIoUringBuffer(maxCap, (short) bid, slice);
     }
 
@@ -117,31 +148,31 @@ final class IoUringBufferRing {
         long tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
         short newTail = (short) (oldTail + count);
-        PlatformDependent.putShortVolatile(tailFieldAddress, newTail);
+        PlatformDependent.putShortOrdered(tailFieldAddress, newTail);
         hasSpareBuffer = true;
     }
 
-    public int entries() {
+    int entries() {
         return entries;
     }
 
-    public short bufferGroupId() {
+    short bufferGroupId() {
         return bufferGroupId;
     }
 
-    public int chunkSize() {
+    int chunkSize() {
         return chunkSize;
     }
 
-    public boolean isFull() {
+    boolean isFull() {
         return nextIndex == entries;
     }
 
-    public long address() {
+    long address() {
         return ioUringBufRingAddr;
     }
 
-    public void close() {
+    void close() {
         Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, 4, 1);
         for (ByteBuf byteBuf : userspaceBufferHolder) {
             if (byteBuf != null) {
@@ -150,7 +181,7 @@ final class IoUringBufferRing {
         }
     }
 
-    public class UserspaceIoUringBuffer extends AbstractReferenceCountedByteBuf {
+    class UserspaceIoUringBuffer extends AbstractReferenceCountedByteBuf {
 
         private final short bid;
 
@@ -164,6 +195,7 @@ final class IoUringBufferRing {
 
         @Override
         protected void deallocate() {
+            userspaceBufferHolder[bid].release();
             recycleBuffer(bid);
         }
 
@@ -264,7 +296,14 @@ final class IoUringBufferRing {
 
         @Override
         public ByteBuf capacity(int newCapacity) {
-            return this;
+            if (newCapacity <= maxCapacity()) {
+                this.maxCapacity(newCapacity);
+                return this;
+            }
+            ByteBuf newByteBuffer = byteBufAllocator.directBuffer(newCapacity);
+            newByteBuffer.writeBytes(userspaceBuffer, 0, maxCapacity());
+            userspaceBuffer.release();
+            return newByteBuffer;
         }
 
         @Override
@@ -284,7 +323,7 @@ final class IoUringBufferRing {
 
         @Override
         public boolean isDirect() {
-            return true;
+            return userspaceBuffer.isDirect();
         }
 
         @Override

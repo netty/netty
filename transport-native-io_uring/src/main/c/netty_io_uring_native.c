@@ -376,10 +376,11 @@ static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
 
     memset(&reg, 0, sizeof(reg));
     ring_size = nentries * sizeof(struct io_uring_buf);
-    br = mmap(NULL, ring_size, PROT_READ | PROT_WRITE,MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    br = mmap(NULL, ring_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (br == MAP_FAILED) {
         return -errno;
     }
+    memset(&reg, 0, sizeof(struct io_uring_buf_reg));
     reg.ring_addr = (__u64)br;
     reg.ring_entries = nentries;
     reg.bgid = bgid;
@@ -574,7 +575,6 @@ static jint netty_io_uring_ioUringBufOffsetofbid(JNIEnv* env, jclass clazz) {
 static jint netty_io_uring_sizeofIoUringBuf(JNIEnv* env, jclass clazz) {
     return sizeof(struct io_uring_buf);
 }
-
 
 static int getSysctlValue(const char * property, int* returnValue) {
     int rc = -1;

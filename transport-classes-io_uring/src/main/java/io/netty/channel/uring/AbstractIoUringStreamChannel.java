@@ -302,7 +302,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 short bgId = channelConfig.getBufferRingConfig();
                 IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(bgId);
                 if (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull()) {
-                    return scheduleReadProviderBuffer(alloc(), ioUringBufferRing);
+                    return scheduleReadProviderBuffer(ioUringBufferRing);
                 }
             }
 
@@ -352,7 +352,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
         }
 
-        private int scheduleReadProviderBuffer(ByteBufAllocator byteBufAllocator, IoUringBufferRing bufferRing) {
+        private int scheduleReadProviderBuffer(IoUringBufferRing bufferRing) {
             short bgId = bufferRing.bufferGroupId();
             try {
                 int chunkSize = bufferRing.chunkSize();
@@ -361,13 +361,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                         .findBufferRing(bgId);
 
                 if (!ioUringBufferRing.isFull()) {
-                    ioUringBufferRing.appendBuffer(byteBufAllocator, 1);
+                    ioUringBufferRing.appendBuffer(1);
                 }
 
                 int fd = fd().intValue();
 
                 IoUringIoOps ops = IoUringIoOps.newRecv(
-                        fd, (byte) Native.IOSQE_BUFFER_SELECT, (short) 0, 0, 0,
+                        fd, flags((byte) Native.IOSQE_BUFFER_SELECT), (short) 0, 0, 0,
                         chunkSize, nextOpsId(), bgId
                 );
                 readId = registration.submit(ops);
@@ -377,7 +377,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 lastUsedBufferRing = ioUringBufferRing;
                 return 1;
             } catch (IllegalArgumentException illegalArgumentException) {
-                this.handleWriteError(illegalArgumentException);
+                this.handleReadException(pipeline(), null, illegalArgumentException, false, recvBufAllocHandle());
                 return 0;
             }
         }
@@ -411,7 +411,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                         bufferRing.markReadFail();
                         // fire the BufferRingExhaustedEvent to notify users.
                         // Users can then switch the ring buffer or do other things as they wish
-                        pipeline.fireUserEventTriggered(new BufferRingExhaustedEvent(bufferRing.bufferGroupId()));
+                        pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
                         scheduleNextRead(flags);
                         return;
                     }

@@ -31,7 +31,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.lang.invoke.MethodType.methodType;
 
 /**
@@ -722,8 +721,9 @@ final class PlatformDependent0 {
         UNSAFE.putShort(address, value);
     }
 
-    static void putShortVolatile(long adddress, short newValue) {
-        UNSAFE.putShortVolatile(null, adddress, newValue);
+    static void putShortOrdered(long adddress, short newValue) {
+        UNSAFE.putShort(null, adddress, newValue);
+        UNSAFE.storeFence();
     }
 
     static void putInt(long address, int value) {

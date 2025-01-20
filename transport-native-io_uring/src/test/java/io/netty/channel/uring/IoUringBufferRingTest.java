@@ -18,6 +18,7 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -56,8 +57,9 @@ public class IoUringBufferRingTest {
                     ioUringBufRingAddr > 0,
                     "ioUringSetupBufRing result must great than 0, but now result is " + ioUringBufRingAddr);
             int freeRes = Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, 4, 1);
-            assumeTrue(
-                    freeRes == 0,
+            assertEquals(
+                    0,
+                    freeRes,
                     "ioUringFreeBufRing result must be 0, but now result is " + freeRes
             );
         } finally {
@@ -65,13 +67,13 @@ public class IoUringBufferRingTest {
         }
     }
 
-    private BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
+    private final BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
 
     @Test
     public void testProviderBufferRead() throws InterruptedException {
 
         IoUringIoHandlerConfiguration ioUringIoHandlerConfiguration = new IoUringIoHandlerConfiguration();
-        BufferRingConfig bufferRingConfig = new BufferRingConfig((short) 1, (short) 2, 1024);
+        BufferRingConfig bufferRingConfig = new BufferRingConfig((short) 1, (short) 2, 1024, ByteBufAllocator.DEFAULT);
         ioUringIoHandlerConfiguration.appendBufferRingConfig(bufferRingConfig);
 
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1,

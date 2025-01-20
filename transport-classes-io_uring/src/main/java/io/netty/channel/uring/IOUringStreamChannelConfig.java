@@ -19,6 +19,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.RecvByteBufAllocator;
 
+import java.util.Map;
+
 abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
 
     private static final short DISABLE_BUFFER_SELECT_READ = -1;
@@ -49,13 +51,18 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
         return super.setOption(option, value);
     }
 
+    @Override
+    public Map<ChannelOption<?>, Object> getOptions() {
+        return getOptions(super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID);
+    }
+
     /**
      * Returns {@code true}
      * if <a href="https://man7.org/linux/man-pages/man3/io_uring_setup_buf_ring.3.html">Provider Buffer Read</a>
      * is enabled, {@code false}
      * otherwise.
      */
-    public boolean isEnableBufferSelectRead() {
+    boolean isEnableBufferSelectRead() {
         return bufferGroupId != DISABLE_BUFFER_SELECT_READ;
     }
 

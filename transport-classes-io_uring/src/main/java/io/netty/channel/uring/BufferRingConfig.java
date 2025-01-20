@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.ObjectUtil;
 
 /**
@@ -22,22 +23,17 @@ import io.netty.util.internal.ObjectUtil;
  * It will configure the buffer ring size, buffer group id and the chunk size.
  */
 public final class BufferRingConfig {
-    public static final BufferRingConfig DEFAULT_BUFFER_RING_CONFIG = defaultConfig();
 
     private final short bgId;
     private final short bufferRingSize;
     private final int chunkSize;
+    private final ByteBufAllocator allocator;
 
-    public BufferRingConfig(short bgId, short bufferRingSize, int chunkSize) {
+    public BufferRingConfig(short bgId, short bufferRingSize, int chunkSize, ByteBufAllocator allocator) {
         this.bgId = ObjectUtil.checkPositive(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
         this.chunkSize = ObjectUtil.checkPositive(chunkSize, "chunkSize");
-    }
-
-    private static BufferRingConfig defaultConfig() {
-        return new BufferRingConfig(
-                (short) 1, (short) 16, Native.PAGE_SIZE
-        );
+        this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
     }
 
     public short bufferGroupId() {
@@ -50,6 +46,10 @@ public final class BufferRingConfig {
 
     public int chunkSize() {
         return chunkSize;
+    }
+
+    public ByteBufAllocator allocator() {
+        return allocator;
     }
 
     private static short checkBufferRingSize(short bufferRingSize) {
