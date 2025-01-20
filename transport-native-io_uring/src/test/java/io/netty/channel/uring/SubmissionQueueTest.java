@@ -32,7 +32,7 @@ public class SubmissionQueueTest {
 
     @Test
     public void sqeFullTest() {
-        RingBuffer ringBuffer = Native.createRingBuffer(8);
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
         try {
             SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
             final CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
