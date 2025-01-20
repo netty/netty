@@ -194,6 +194,7 @@ final class Native {
     static final byte IORING_OP_BIND = 56;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
 
+    static final int IORING_SETUP_R_DISABLED = 1 << 6;
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
@@ -294,7 +295,7 @@ final class Native {
     };
 
     static int setupFlags() {
-        int flags = 0;
+        int flags = Native.IORING_SETUP_R_DISABLED;
         if (IoUring.isIOUringSetupSubmitAllSupported()) {
             flags |= Native.IORING_SETUP_SUBMIT_ALL;
         }

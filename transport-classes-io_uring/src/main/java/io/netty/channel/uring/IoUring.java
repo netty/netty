@@ -61,7 +61,10 @@ public final class IoUring {
                         registerIowqWorkersSupported = Native.isRegisterIOWQWorkerSupported(ringBuffer.fd());
                         submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
                         singleIssuerSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
-                        deferTaskrunSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_DEFER_TASKRUN);
+                        // IORING_SETUP_DEFER_TASKRUN requires to also set IORING_SETUP_SINGLE_ISSUER.
+                        // See https://manpages.debian.org/unstable/liburing-dev/io_uring_setup.2.en.html
+                        deferTaskrunSupported = Native.ioUringSetupSupportsFlags(
+                                Native.IORING_SETUP_SINGLE_ISSUER | Native.IORING_SETUP_DEFER_TASKRUN);
                     } finally {
                         if (ringBuffer != null) {
                             try {
