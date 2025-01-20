@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.0.RC2-SNAPSHOT</version>
+  <version>4.2.0.RC2</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -53,7 +53,7 @@
     <url>https://github.com/netty/netty</url>
     <connection>scm:git:git://github.com/netty/netty.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>netty-4.2.0.RC2</tag>
   </scm>
 
   <developers>
@@ -655,7 +655,7 @@
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
-    <jacoco.argLine/>
+    <jacoco.argLine />
     <argLine.printGC>-XX:+PrintGCDetails</argLine.printGC>
     <argLine.java9 /> <!-- Overridden when 'java9' profile is active -->
     <argLine.javaProperties>-D_</argLine.javaProperties>
