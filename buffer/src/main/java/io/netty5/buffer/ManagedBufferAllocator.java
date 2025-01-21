@@ -26,6 +26,8 @@ import static io.netty5.buffer.internal.InternalBufferUtils.allocatorClosedExcep
 import static io.netty5.buffer.internal.InternalBufferUtils.standardDrop;
 
 class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
+    private static volatile UnpooledAllocator unpooledAllocator;
+
     private final MemoryManager manager;
     private final AllocationType allocationType;
     private volatile boolean closed;
@@ -33,6 +35,16 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     ManagedBufferAllocator(MemoryManager manager, boolean direct) {
         this.manager = manager;
         allocationType = direct? StandardAllocationTypes.OFF_HEAP : StandardAllocationTypes.ON_HEAP;
+    }
+
+    static ManagedBufferAllocator getUnpooledBufferAllocator(MemoryManager manager) {
+        UnpooledAllocator unpooled = unpooledAllocator;
+        if (unpooled == null || unpooled.manager != manager) {
+            // No locking necessary. A few duplicates at runtime is fine.
+            unpooled = new UnpooledAllocator(manager, new ManagedBufferAllocator(manager, false));
+            unpooledAllocator = unpooled;
+        }
+        return unpooled.allocator;
     }
 
     @Override
@@ -91,5 +103,15 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     @Override
     public String toString() {
         return "BufferAllocator(" + allocationType + (closed ? ", closed)" : ")");
+    }
+
+    private static final class UnpooledAllocator {
+        final MemoryManager manager;
+        final ManagedBufferAllocator allocator;
+
+        UnpooledAllocator(MemoryManager manager, ManagedBufferAllocator allocator) {
+            this.manager = manager;
+            this.allocator = allocator;
+        }
     }
 }
