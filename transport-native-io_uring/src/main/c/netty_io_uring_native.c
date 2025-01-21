@@ -217,12 +217,18 @@ static jint netty_io_uring_getFd0(JNIEnv* env, jclass clazz, jobject fileRegion)
 
 static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass clazz,
         jlong submissionQueueArrayAddress, jint submissionQueueRingEntries, jlong submissionQueueRingAddress, jint submissionQueueRingSize,
-        jlong completionQueueRingAddress, jint completionQueueRingSize, jint ringFd) {
+        jlong completionQueueRingAddress, jint completionQueueRingSize, jint ringFd, jint enterRingFd) {
     munmap((struct io_uring_sqe*) submissionQueueArrayAddress, submissionQueueRingEntries * sizeof(struct io_uring_sqe));
     munmap((void*) submissionQueueRingAddress, submissionQueueRingSize);
 
     if (((void *) completionQueueRingAddress) && ((void *) completionQueueRingAddress) != ((void *) submissionQueueRingAddress)) {
         munmap((void *)completionQueueRingAddress, completionQueueRingSize);
+    }
+    if (enterRingFd != ringFd) {
+         struct io_uring_rsrc_update up = {
+            .offset = enterRingFd,
+        };
+        sys_io_uring_register(ringFd, IORING_UNREGISTER_RING_FDS, &up, 1);
     }
     close(ringFd);
 }
@@ -347,6 +353,18 @@ static jint netty_io_uring_register_iowq_max_workers(JNIEnv *env, jclass clazz, 
 
 static jint netty_io_uring_register_enable_rings(JNIEnv *env, jclass clazz, jint ringFd) {
      return sys_io_uring_register(ringFd, IORING_REGISTER_ENABLE_RINGS, NULL, 0);
+}
+
+static jint netty_io_uring_register_ring_fds(JNIEnv *env, jclass clazz, jint ringFd) {
+    struct io_uring_rsrc_update up = {
+        .data = ringFd,
+        .offset = -1U,
+    };
+    int ret = sys_io_uring_register(ringFd, IORING_REGISTER_RING_FDS, &up, 1);
+    if (ret == 1) {
+        return up.offset;
+    }
+    return -1;
 }
 
 static jint netty_create_file(JNIEnv *env, jclass class, jstring filename) {
@@ -631,8 +649,9 @@ static const JNINativeMethod method_table[] = {
     {"ioUringSetup", "(II)[J", (void *) netty_io_uring_setup},
     {"ioUringRegisterIoWqMaxWorkers","(III)I", (void*) netty_io_uring_register_iowq_max_workers },
     {"ioUringRegisterEnableRings","(I)I", (void*) netty_io_uring_register_enable_rings },
+    {"ioUringRegisterRingFds","(I)I", (void*) netty_io_uring_register_ring_fds },
     {"ioUringProbe", "(I[I)Z", (void *) netty_io_uring_probe},
-    {"ioUringExit", "(JIJIJII)V", (void *) netty_io_uring_ring_buffer_exit},
+    {"ioUringExit", "(JIJIJIII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "(Ljava/lang/String;)I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *) netty_io_uring_enter},
     {"blockingEventFd", "()I", (void *) netty_epoll_native_blocking_event_fd},
