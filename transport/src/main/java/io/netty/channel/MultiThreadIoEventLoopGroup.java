@@ -190,20 +190,21 @@ public class MultiThreadIoEventLoopGroup extends MultithreadEventLoopGroup imple
         } else {
             argsCopy = EmptyArrays.EMPTY_OBJECTS;
         }
-        return newChild(executor, handlerFactory.newHandler(), argsCopy);
+        return newChild(executor, handlerFactory, argsCopy);
     }
 
     /**
      * Creates a new {@link IoEventLoop} to use with the given {@link Executor} and {@link IoHandler}.
      *
-     * @param executor      the {@link Executor} that should be used to handle execution of tasks and IO.
-     * @param ioHandler     the {@link IoHandler} that should be used to handle IO.
-     * @param args          extra arguments that are based by the constructor.
-     * @return              the created {@link IoEventLoop}.
+     * @param executor              the {@link Executor} that should be used to handle execution of tasks and IO.
+     * @param ioHandlerFactory      the {@link IoHandlerFactory} that should be used to obtain {@link IoHandler} to
+     *                              handle IO.
+     * @param args                  extra arguments that are based by the constructor.
+     * @return                      the created {@link IoEventLoop}.
      */
-    protected IoEventLoop newChild(Executor executor, IoHandler ioHandler,
+    protected IoEventLoop newChild(Executor executor, IoHandlerFactory ioHandlerFactory,
                                    @SuppressWarnings("unused") Object... args) {
-        return new SingleThreadIoEventLoop(this, executor, ioHandler);
+        return new SingleThreadIoEventLoop(this, executor, ioHandlerFactory);
     }
 
     @Override

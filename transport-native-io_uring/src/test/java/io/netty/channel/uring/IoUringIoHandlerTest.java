@@ -15,11 +15,14 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.IoExecutionContext;
+import io.netty.channel.IoExecutor;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -36,23 +39,23 @@ public class IoUringIoHandlerTest {
         config.setMaxBoundedWorker(2)
                 .setMaxUnboundedWorker(2);
         IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory(config);
-        IoHandler handler = ioHandlerFactory.newHandler();
-        handler.run(new IoExecutionContext() {
+        IoHandler handler = ioHandlerFactory.newHandler(new IoExecutor() {
             @Override
-            public boolean canBlock() {
-                return false;
+            public boolean inExecutorThread(Thread thread) {
+                return ImmediateEventExecutor.INSTANCE.inEventLoop(thread);
             }
 
             @Override
-            public long delayNanos(long currentTimeNanos) {
-                return 0;
+            public <V> Promise<V> newPromise() {
+                return ImmediateEventExecutor.INSTANCE.newPromise();
             }
 
             @Override
-            public long deadlineNanos() {
-                return 0;
+            public void execute(Runnable command) {
+                ImmediateEventExecutor.INSTANCE.execute(command);
             }
         });
+        handler.initialize();
         handler.destroy();
     }
 }

@@ -16,10 +16,11 @@
 package io.netty.channel;
 
 /**
- * The execution context for an {@link IoHandler}.
- * All methods must be called from the {@link IoEventLoop} thread.
+ * The execution context for an {@link IoExecutor}.
+ * All methods  <strong>MUST</strong> be executed on the {@link IoExecutor} thread
+ * (which means {@link IoExecutor#inExecutorThread(Thread)} must return {@code true}).
  */
-public interface IoExecutionContext {
+public interface IoExecutorContext {
     /**
      * Returns {@code true} if blocking for IO is allowed or if we should try to do a non-blocking request for IO to be
      * ready.
