@@ -170,20 +170,20 @@ final class SubmissionQueue {
         return sb.toString();
     }
 
-    long addNop(int fd, byte flags, long udata) {
-        return enqueueSqe0(Native.IORING_OP_NOP, flags, (short) 0, fd, 0, 0, 0, 0, udata,
+    long addNop(byte flags, long udata) {
+        return enqueueSqe0(Native.IORING_OP_NOP, flags, (short) 0, 0, 0, 0, 0, 0, udata,
                 (short) 0, (short) 0, 0, 0);
     }
 
-    long addTimeout(int fd, long nanoSeconds, long udata) {
+    long addTimeout(long nanoSeconds, long udata) {
         setTimeout(nanoSeconds);
-        return enqueueSqe0(Native.IORING_OP_TIMEOUT, (byte) 0, (short) 0, fd, 0, timeoutMemoryAddress, 1,
+        return enqueueSqe0(Native.IORING_OP_TIMEOUT, (byte) 0, (short) 0, 0, 0, timeoutMemoryAddress, 1,
                 0, udata, (short) 0, (short) 0, 0, 0);
     }
 
-    long addLinkTimeout(int fd, long nanoSeconds, long extraData) {
+    long addLinkTimeout(long nanoSeconds, long extraData) {
         setTimeout(nanoSeconds);
-        return enqueueSqe0(Native.IORING_OP_LINK_TIMEOUT, (byte) 0, (short) 0, fd, 0, timeoutMemoryAddress, 1,
+        return enqueueSqe0(Native.IORING_OP_LINK_TIMEOUT, (byte) 0, (short) 0, 0, 0, timeoutMemoryAddress, 1,
                 0, extraData, (short) 0, (short) 0, 0, 0);
     }
 
@@ -192,8 +192,8 @@ final class SubmissionQueue {
                 0, udata, (short) 0, (short) 0, 0, 0);
     }
 
-    long addCancel(int fd, long sqeToCancel, long udata) {
-        return enqueueSqe0(Native.IORING_OP_ASYNC_CANCEL, (byte) 0, (short) 0, fd, 0, sqeToCancel, 0, 0,
+    long addCancel(long sqeToCancel, long udata) {
+        return enqueueSqe0(Native.IORING_OP_ASYNC_CANCEL, (byte) 0, (short) 0, 0, 0, sqeToCancel, 0, 0,
                 udata, (short) 0, (short) 0, 0, 0);
     }
 
