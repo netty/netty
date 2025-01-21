@@ -75,7 +75,7 @@ public final class LocalIoHandler implements IoHandler {
 
     @Override
     public void wakeup() {
-        if (!eventLoop.inEventLoop()) {
+        if (eventLoop == null || !eventLoop.inEventLoop()) {
             Thread thread = executionThread;
             if (thread != null) {
                 // Wakeup if we block at the moment.

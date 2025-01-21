@@ -482,7 +482,7 @@ public final class IoUringIoHandler implements IoHandler {
 
     @Override
     public void wakeup() {
-        if (!eventLoop.inEventLoop() && !eventfdAsyncNotify.getAndSet(true)) {
+        if ((eventLoop == null || !eventLoop.inEventLoop()) && !eventfdAsyncNotify.getAndSet(true)) {
             // write to the eventfd which will then trigger an eventfd read completion.
             Native.eventFdWrite(eventfd.intValue(), 1L);
         }

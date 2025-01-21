@@ -137,7 +137,7 @@ public final class KQueueIoHandler implements IoHandler {
 
     @Override
     public void wakeup() {
-        if (!eventLoop.inEventLoop() && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
+        if ((eventLoop == null || !eventLoop.inEventLoop()) && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
             wakeup();
         }
     }

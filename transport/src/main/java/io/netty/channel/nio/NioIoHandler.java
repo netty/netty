@@ -608,7 +608,7 @@ public final class NioIoHandler implements IoHandler {
 
     @Override
     public void wakeup() {
-        if (!eventLoop.inEventLoop() && wakenUp.compareAndSet(false, true)) {
+        if ((eventLoop == null || !eventLoop.inEventLoop()) && wakenUp.compareAndSet(false, true)) {
             selector.wakeup();
         }
     }
