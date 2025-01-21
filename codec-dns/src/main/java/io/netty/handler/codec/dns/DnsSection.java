@@ -15,12 +15,9 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * Represents a section of a {@link DnsMessage}.
  */
-@UnstableApi
 public enum DnsSection {
     /**
      * The section that contains {@link DnsQuestion}s.

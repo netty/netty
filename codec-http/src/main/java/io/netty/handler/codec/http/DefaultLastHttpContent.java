@@ -17,11 +17,11 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.DefaultHeaders.NameValidator;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Map.Entry;
 
+import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.trailersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
@@ -29,26 +29,55 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public class DefaultLastHttpContent extends DefaultHttpContent implements LastHttpContent {
     private final HttpHeaders trailingHeaders;
-    private final boolean validateHeaders;
 
+    /**
+     * Create a new empty, last HTTP content message.
+     */
     public DefaultLastHttpContent() {
         this(Unpooled.buffer(0));
     }
 
+    /**
+     * Create a new last HTTP content message with the given contents.
+     */
     public DefaultLastHttpContent(ByteBuf content) {
-        this(content, true);
+        this(content, trailersFactory());
     }
 
+    /**
+     * Create a new last HTTP content message with the given contents, and optional trailing header validation.
+     * <p>
+     * <b>Warning!</b> Setting {@code validateHeaders} to {@code false} will mean that Netty won't
+     * validate & protect against user-supplied header values that are malicious.
+     * This can leave your server implementation vulnerable to
+     * <a href="https://cwe.mitre.org/data/definitions/113.html">
+     *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+     * </a>.
+     * When disabling this validation, it is the responsibility of the caller to ensure that the values supplied
+     * do not contain a non-url-escaped carriage return (CR) and/or line feed (LF) characters.
+     *
+     * @deprecated Prefer the {@link #DefaultLastHttpContent(ByteBuf)} constructor instead, to always have header
+     * validation enabled.
+     */
+    @Deprecated
     public DefaultLastHttpContent(ByteBuf content, boolean validateHeaders) {
-        super(content);
-        trailingHeaders = new TrailingHttpHeaders(validateHeaders);
-        this.validateHeaders = validateHeaders;
+        this(content, trailersFactory().withValidation(validateHeaders));
     }
 
+    /**
+     * Create a new last HTTP content message with the given contents, and trailing headers from the given factory.
+     */
+    public DefaultLastHttpContent(ByteBuf content, HttpHeadersFactory trailersFactory) {
+        super(content);
+        trailingHeaders = trailersFactory.newHeaders();
+    }
+
+    /**
+     * Create a new last HTTP content message with the given contents, and trailing headers.
+     */
     public DefaultLastHttpContent(ByteBuf content, HttpHeaders trailingHeaders) {
         super(content);
         this.trailingHeaders = checkNotNull(trailingHeaders, "trailingHeaders");
-        this.validateHeaders = false;
     }
 
     @Override
@@ -68,9 +97,7 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
 
     @Override
     public LastHttpContent replace(ByteBuf content) {
-        final DefaultLastHttpContent dup = new DefaultLastHttpContent(content, validateHeaders);
-        dup.trailingHeaders().set(trailingHeaders());
-        return dup;
+        return new DefaultLastHttpContent(content, trailingHeaders().copy());
     }
 
     @Override
@@ -119,25 +146,6 @@ public class DefaultLastHttpContent extends DefaultHttpContent implements LastHt
             buf.append(": ");
             buf.append(e.getValue());
             buf.append(StringUtil.NEWLINE);
-        }
-    }
-
-    private static final class TrailingHttpHeaders extends DefaultHttpHeaders {
-        private static final NameValidator<CharSequence> TrailerNameValidator = new NameValidator<CharSequence>() {
-            @Override
-            public void validateName(CharSequence name) {
-                DefaultHttpHeaders.HttpNameValidator.validateName(name);
-                if (HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(name)
-                        || HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(name)
-                        || HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(name)) {
-                    throw new IllegalArgumentException("prohibited trailing header: " + name);
-                }
-            }
-        };
-
-        @SuppressWarnings({ "unchecked" })
-        TrailingHttpHeaders(boolean validate) {
-            super(validate, validate ? TrailerNameValidator : NameValidator.NOT_NULL);
         }
     }
 }

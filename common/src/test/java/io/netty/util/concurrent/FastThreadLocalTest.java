@@ -335,4 +335,29 @@ public class FastThreadLocalTest {
         FastThreadLocal.removeAll();
         assertEquals(0, FastThreadLocal.size());
     }
+
+    @Test
+    public void testFastThreadLocalInitialValueWithUnset() throws Exception {
+        final AtomicReference<Throwable> throwable = new AtomicReference<Throwable>();
+        final FastThreadLocal fst = new FastThreadLocal() {
+            @Override
+            protected Object initialValue() throws Exception {
+                return InternalThreadLocalMap.UNSET;
+            }
+        };
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    fst.get();
+                } catch (Throwable t) {
+                    throwable.set(t);
+                }
+            }
+        };
+        FastThreadLocalThread fastThreadLocalThread = new FastThreadLocalThread(runnable);
+        fastThreadLocalThread.start();
+        fastThreadLocalThread.join();
+        assertThat(throwable.get(), is(instanceOf(IllegalArgumentException.class)));
+    }
 }

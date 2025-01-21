@@ -25,7 +25,7 @@ import static io.netty.resolver.dns.DnsServerAddresses.sequential;
 public final class SequentialDnsServerAddressStreamProvider extends UniSequentialDnsServerAddressStreamProvider {
     /**
      * Create a new instance.
-     * @param addresses The addresses which will be be returned in sequential order via
+     * @param addresses The addresses which will be returned in sequential order via
      * {@link #nameServerAddressStream(String)}
      */
     public SequentialDnsServerAddressStreamProvider(InetSocketAddress... addresses) {
@@ -34,7 +34,7 @@ public final class SequentialDnsServerAddressStreamProvider extends UniSequentia
 
     /**
      * Create a new instance.
-     * @param addresses The addresses which will be be returned in sequential order via
+     * @param addresses The addresses which will be returned in sequential order via
      * {@link #nameServerAddressStream(String)}
      */
     public SequentialDnsServerAddressStreamProvider(Iterable<? extends InetSocketAddress> addresses) {

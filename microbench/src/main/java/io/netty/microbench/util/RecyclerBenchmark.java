@@ -16,6 +16,10 @@
 package io.netty.microbench.util;
 
 import io.netty.util.Recycler;
+import io.netty.util.Recycler.EnhancedHandle;
+import io.netty.util.internal.PlatformDependent;
+import org.jctools.queues.MpmcArrayQueue;
+import org.jctools.queues.atomic.MpmcAtomicArrayQueue;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Group;
@@ -23,12 +27,13 @@ import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Control;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
 @Warmup(iterations = AbstractMicrobenchmarkBase.DEFAULT_WARMUP_ITERATIONS, time = 1)
@@ -36,12 +41,6 @@ import java.util.concurrent.TimeUnit;
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class RecyclerBenchmark extends AbstractMicrobenchmark {
-    private Recycler<DummyObject> recycler = new Recycler<DummyObject>() {
-        @Override
-        protected DummyObject newObject(Recycler.Handle<DummyObject> handle) {
-            return new DummyObject(handle);
-        }
-    };
 
     @Override
     protected ChainedOptionsBuilder newOptionsBuilder() throws Exception {
@@ -54,28 +53,49 @@ public class RecyclerBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public DummyObject recyclerGetAndOrphan() {
-        return recycler.get();
+    public DummyObject recyclerGetAndOrphan(ProducerConsumerState state) {
+        return state.recycler.get();
     }
 
     @Benchmark
-    public DummyObject recyclerGetAndRecycle() {
-        DummyObject o = recycler.get();
+    public DummyObject recyclerGetAndRecycle(ProducerConsumerState state) {
+        DummyObject o = state.recycler.get();
         o.recycle();
+        return o;
+    }
+
+    @Benchmark
+    public DummyObject recyclerGetAndUnguardedRecycle(ProducerConsumerState state) {
+        DummyObject o = state.recycler.get();
+        o.unguardedRecycle();
         return o;
     }
 
     @State(Scope.Benchmark)
     public static class ProducerConsumerState {
-        final ArrayBlockingQueue<DummyObject> queue = new ArrayBlockingQueue<DummyObject>(100);
+        Queue<DummyObject> queue;
+
+        Recycler<DummyObject> recycler;
+
+        @Setup
+        public void init() {
+            queue = PlatformDependent.hasUnsafe()? new MpmcArrayQueue<DummyObject>(100) :
+                    new MpmcAtomicArrayQueue<DummyObject>(100);
+            recycler = new Recycler<DummyObject>() {
+                @Override
+                protected DummyObject newObject(Recycler.Handle<DummyObject> handle) {
+                    return new DummyObject((EnhancedHandle<DummyObject>) handle);
+                }
+            };
+        }
     }
 
     // The allocation stats are the main thing interesting about this benchmark
     @Benchmark
     @Group("producerConsumer")
     public void producer(ProducerConsumerState state, Control control) throws Exception {
-        ArrayBlockingQueue<DummyObject> queue = state.queue;
-        DummyObject object = recycler.get();
+        Queue<DummyObject> queue = state.queue;
+        DummyObject object = state.recycler.get();
         while (!control.stopMeasurement) {
             if (queue.offer(object)) {
                 break;
@@ -86,9 +106,10 @@ public class RecyclerBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     @Group("producerConsumer")
     public void consumer(ProducerConsumerState state, Control control) throws Exception {
+        Queue<DummyObject> queue = state.queue;
         DummyObject object;
         do {
-            object = state.queue.poll();
+            object = queue.poll();
             if (object != null) {
                 object.recycle();
                 return;
@@ -96,9 +117,36 @@ public class RecyclerBenchmark extends AbstractMicrobenchmark {
         } while (!control.stopMeasurement);
     }
 
+    // The allocation stats are the main thing interesting about this benchmark
+    @Benchmark
+    @Group("unguardedProducerConsumer")
+    public void unguardedProducer(ProducerConsumerState state, Control control) throws Exception {
+        Queue<DummyObject> queue = state.queue;
+        DummyObject object = state.recycler.get();
+        while (!control.stopMeasurement) {
+            if (queue.offer(object)) {
+                break;
+            }
+        }
+    }
+
+    @Benchmark
+    @Group("unguardedProducerConsumer")
+    public void unguardedConsumer(ProducerConsumerState state, Control control) throws Exception {
+        Queue<DummyObject> queue = state.queue;
+        DummyObject object;
+        do {
+            object = queue.poll();
+            if (object != null) {
+                object.unguardedRecycle();
+                return;
+            }
+        } while (!control.stopMeasurement);
+    }
+
     @SuppressWarnings("unused")
     private static final class DummyObject {
-        private final Recycler.Handle<DummyObject> handle;
+        private final EnhancedHandle<DummyObject> handle;
         private long l1;
         private long l2;
         private long l3;
@@ -114,12 +162,16 @@ public class RecyclerBenchmark extends AbstractMicrobenchmark {
             this(null);
         }
 
-        DummyObject(Recycler.Handle<DummyObject> handle) {
+        DummyObject(EnhancedHandle<DummyObject> handle) {
             this.handle = handle;
         }
 
         public void recycle() {
             handle.recycle(this);
+        }
+
+        public void unguardedRecycle() {
+            handle.unguardedRecycle(this);
         }
     }
 }

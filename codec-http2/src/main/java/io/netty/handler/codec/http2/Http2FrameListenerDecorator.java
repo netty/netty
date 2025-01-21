@@ -17,12 +17,10 @@ package io.netty.handler.codec.http2;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Provides a decorator around a {@link Http2FrameListener} and delegates all method calls
  */
-@UnstableApi
 public class Http2FrameListenerDecorator implements Http2FrameListener {
     protected final Http2FrameListener listener;
 

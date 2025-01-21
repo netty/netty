@@ -35,10 +35,10 @@ public class SpdyFrameEncoder {
      * Creates a new instance with the specified {@code spdyVersion}.
      */
     public SpdyFrameEncoder(SpdyVersion spdyVersion) {
-        version = ObjectUtil.checkNotNull(spdyVersion, "spdyVersion").getVersion();
+        version = ObjectUtil.checkNotNull(spdyVersion, "spdyVersion").version();
     }
 
-    private void writeControlFrameHeader(ByteBuf buffer, int type, byte flags, int length) {
+    protected void writeControlFrameHeader(ByteBuf buffer, int type, byte flags, int length) {
         buffer.writeShort(version | 0x8000);
         buffer.writeShort(type);
         buffer.writeByte(flags);
@@ -156,6 +156,16 @@ public class SpdyFrameEncoder {
         writeControlFrameHeader(frame, SPDY_WINDOW_UPDATE_FRAME, flags, length);
         frame.writeInt(streamId);
         frame.writeInt(deltaWindowSize);
+        return frame;
+    }
+
+    public ByteBuf encodeUnknownFrame(ByteBufAllocator allocator, int frameType, byte flags, ByteBuf data) {
+        int length = data.readableBytes();
+        ByteBuf frame = allocator.ioBuffer(SPDY_HEADER_SIZE + length).order(ByteOrder.BIG_ENDIAN);
+        writeControlFrameHeader(frame, frameType, flags, length);
+        if (length > 0) {
+            frame.writeBytes(data, data.readerIndex(), length);
+        }
         return frame;
     }
 }

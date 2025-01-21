@@ -206,7 +206,7 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
     }
 
     /**
-     * Remove the given {@link OpenSslSession} from the cache, and so not re-use it for new connections.
+     * Remove the given {@link OpenSslInternalSession} from the cache, and so not re-use it for new connections.
      */
     final void removeFromCache(OpenSslSessionId id) {
         sessionCache.removeSessionWithId(id);
@@ -216,8 +216,8 @@ public abstract class OpenSslSessionContext implements SSLSessionContext {
         return sessionCache.containsSessionWithId(id);
     }
 
-    void setSessionFromCache(String host, int port, long ssl) {
-        sessionCache.setSession(ssl, host, port);
+    boolean setSessionFromCache(long ssl, OpenSslInternalSession session, String host, int port) {
+        return sessionCache.setSession(ssl, session, host, port);
     }
 
     final void destroy() {

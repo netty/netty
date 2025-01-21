@@ -23,6 +23,7 @@ import java.security.PrivateKey;
 
 import io.netty.buffer.UnpooledByteBufAllocator;
 
+import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
@@ -48,15 +49,9 @@ public class PemEncodedTest {
     private static void testPemEncoded(SslProvider provider) throws Exception {
         OpenSsl.ensureAvailability();
         assumeFalse(OpenSsl.useKeyManagerFactory());
-        PemPrivateKey pemKey;
-        PemX509Certificate pemCert;
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
-        try {
-            pemKey = PemPrivateKey.valueOf(toByteArray(ssc.privateKey()));
-            pemCert = PemX509Certificate.valueOf(toByteArray(ssc.certificate()));
-        } finally {
-            ssc.delete();
-        }
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
+        PemPrivateKey pemKey = PemPrivateKey.valueOf(toByteArray(ssc.privateKey()));
+        PemX509Certificate pemCert = PemX509Certificate.valueOf(toByteArray(ssc.certificate()));
 
         SslContext context = SslContextBuilder.forServer(pemKey, pemCert)
                 .sslProvider(provider)

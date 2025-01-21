@@ -32,7 +32,18 @@ import java.io.Serializable;
  * compatible with the standard {@link ObjectInputStream}.  Please use
  * {@link ObjectDecoder} or {@link ObjectDecoderInputStream} to ensure the
  * interoperability with this encoder.
+ * <p>
+ * <strong>Security:</strong> serialization can be a security liability,
+ * and should not be used without defining a list of classes that are
+ * allowed to be desirialized. Such a list can be specified with the
+ * <tt>jdk.serialFilter</tt> system property, for instance.
+ * See the <a href="https://docs.oracle.com/en/java/javase/17/core/serialization-filtering1.html">
+ * serialization filtering</a> article for more information.
+ *
+ * @deprecated This class has been deprecated with no replacement,
+ * because serialization can be a security liability
  */
+@Deprecated
 @Sharable
 public class ObjectEncoder extends MessageToByteEncoder<Serializable> {
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];

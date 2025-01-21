@@ -1,0 +1,25 @@
+FROM --platform=linux/amd64 ubuntu:20.04
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# Install requirements
+RUN apt-get update -qq \
+ && apt-get install -qq -y \
+        autoconf \
+        automake \
+        curl \
+        gcc-riscv64-linux-gnu \
+        git \
+        gpg \
+        libaio-dev \
+        libc-dev \
+        libssl-dev \
+        libtool \
+        make \
+        openjdk-8-jdk-headless \
+        tar \
+        unzip \
+        zip \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"

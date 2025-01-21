@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.85.Final-SNAPSHOT</version>
+    <version>4.1.118.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-unix-common</artifactId>
 
@@ -43,6 +43,8 @@
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <defaultJarFile>${project.build.directory}/${project.build.finalName}.jar</defaultJarFile>
     <nativeJarFile>${project.build.directory}/${project.build.finalName}-${jni.classifier}.jar</nativeJarFile>
+    <!-- Always check JNI during test run so we catch bugs that could cause crashes -->
+    <argLine.jni>-Xcheck:jni</argLine.jni>
   </properties>
 
   <build>
@@ -154,12 +156,12 @@
                       <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
                       <env key="JNI_PLATFORM" value="${jni.platform}" />
                       <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
-                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt -Wl,-platform_version,macos,10.2,10.2" />
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt -Wl,-platform_version,macos,10.9,10.9" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
                       <!-- support for __attribute__((weak_import)) by the linker was added in 10.2 so ensure we
                            explicitly set the target platform. Otherwise we may get fatal link errors due to weakly linked
                            methods which are not expected to be present on MacOS (e.g. accept4). -->
-                      <env key="MACOSX_DEPLOYMENT_TARGET" value="10.2" />
+                      <env key="MACOSX_DEPLOYMENT_TARGET" value="10.9" />
                     </exec>
                   </target>
                 </configuration>
@@ -297,9 +299,9 @@
                       <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
                       <env key="JNI_PLATFORM" value="${jni.platform}" />
                       <env key="CFLAGS" value="-target arm64-apple-macos11 -O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
-                      <env key="LDFLAGS" value="-arch arm64 -Wl,--no-as-needed -lrt -Wl,-platform_version,macos,10.6,10.6" />
+                      <env key="LDFLAGS" value="-arch arm64 -Wl,--no-as-needed -lrt -Wl,-platform_version,macos,10.9,10.9" />
                       <env key="LIB_NAME" value="${nativeLibName}" />
-                      <env key="MACOSX_DEPLOYMENT_TARGET" value="10.6" />
+                      <env key="MACOSX_DEPLOYMENT_TARGET" value="10.9" />
                     </exec>
                   </target>
                 </configuration>
@@ -388,6 +390,76 @@
         <jni.platform>linux</jni.platform>
         <exe.compiler>aarch64-none-linux-gnu-gcc</exe.compiler>
         <exe.archiver>aarch64-none-linux-gnu-ar</exe.archiver>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <!-- Build the additional JAR that contains the native library. -->
+              <execution>
+                <id>native-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <copy todir="${nativeJarWorkdir}">
+                      <zipfileset src="${defaultJarFile}" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeLibOnlyDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+)$" to="META-INF/native/lib/\1" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${nativeIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <copy todir="${nativeJarWorkdir}" includeEmptyDirs="false">
+                      <zipfileset dir="${jniUtilIncludeDir}" />
+                      <regexpmapper handledirsep="yes" from="^(?:[^/]+/)*([^/]+).h$" to="META-INF/native/include/\1.h" />
+                    </copy>
+                    <jar destfile="${nativeJarFile}" manifest="${nativeJarWorkdir}/META-INF/MANIFEST.MF" basedir="${nativeJarWorkdir}" index="true" excludes="META-INF/MANIFEST.MF,META-INF/INDEX.LIST" />
+                    <attachartifact file="${nativeJarFile}" classifier="${jni.classifier}" type="jar" />
+                  </target>
+                </configuration>
+              </execution>
+              <!-- invoke the make file to build a static library -->
+              <execution>
+                <id>build-native-lib</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <exec executable="${exe.make}" failonerror="true" resolveexecutable="true">
+                      <env key="CC" value="${exe.compiler}" />
+                      <env key="AR" value="${exe.archiver}" />
+                      <env key="LIB_DIR" value="${nativeLibOnlyDir}" />
+                      <env key="OBJ_DIR" value="${nativeObjsOnlyDir}" />
+                      <env key="JNI_PLATFORM" value="${jni.platform}" />
+                      <env key="CFLAGS" value="-O3 -Werror -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable -fvisibility=hidden" />
+                      <env key="LDFLAGS" value="-Wl,--no-as-needed -lrt" />
+                      <env key="LIB_NAME" value="${nativeLibName}" />
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>linux-riscv64</id>
+      <properties>
+        <!-- use riscv64 as this is also what os.detected.arch will use on an riscv64 system -->
+        <jni.classifier>${os.detected.name}-riscv64</jni.classifier>
+        <jni.platform>linux</jni.platform>
+        <exe.compiler>riscv64-linux-gnu-gcc</exe.compiler>
+        <exe.archiver>riscv64-linux-gnu-ar</exe.archiver>
       </properties>
       <build>
         <plugins>

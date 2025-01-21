@@ -45,6 +45,7 @@ import java.net.NetworkInterface;
 import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.UnresolvedAddressException;
 
 import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
 
@@ -53,7 +54,7 @@ import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
  * maximal performance.
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true);
+    private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
             StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
@@ -319,7 +320,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             if (socketAddress.getAddress().isAnyLocalAddress() &&
                     socketAddress.getAddress() instanceof Inet4Address) {
                 if (socket.family() == InternetProtocolFamily.IPv6) {
-                    localAddress = new InetSocketAddress(LinuxSocket.INET6_ANY, socketAddress.getPort());
+                    localAddress = new InetSocketAddress(Native.INET6_ANY, socketAddress.getPort());
                 }
             }
         }
@@ -417,6 +418,13 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         return doWriteOrSendBytes(data, remoteAddress, false) > 0;
     }
 
+    private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
+        if (envelope.recipient() instanceof InetSocketAddress
+                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
+            throw new UnresolvedAddressException();
+        }
+    }
+
     @Override
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof io.netty.channel.unix.SegmentedDatagramPacket) {
@@ -425,12 +433,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
             }
             io.netty.channel.unix.SegmentedDatagramPacket packet = (io.netty.channel.unix.SegmentedDatagramPacket) msg;
+            checkUnresolved(packet);
+
             ByteBuf content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
                     packet.replace(newDirectBuffer(packet, content)) : msg;
         }
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
+            checkUnresolved(packet);
+
             ByteBuf content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
                     new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
@@ -444,6 +456,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
+            checkUnresolved(e);
+
             if (e.content() instanceof ByteBuf &&
                 (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
 
@@ -681,16 +695,12 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             DatagramPacket packet = msg.newDatagramPacket(byteBuf, local);
             if (!(packet instanceof io.netty.channel.unix.SegmentedDatagramPacket)) {
                 processPacket(pipeline(), allocHandle, bytesReceived, packet);
-                byteBuf = null;
             } else {
                 // Its important that we process all received data out of the NativeDatagramPacketArray
                 // before we call fireChannelRead(...). This is because the user may call flush()
                 // in a channelRead(...) method and so may re-use the NativeDatagramPacketArray again.
                 datagramPackets = RecyclableArrayList.newInstance();
                 addDatagramPacketToOut(packet, datagramPackets);
-                // null out byteBuf as addDatagramPacketToOut did take ownership of the ByteBuf / packet and transfered
-                // it into the RecyclableArrayList.
-                byteBuf = null;
 
                 processPacketList(pipeline(), allocHandle, bytesReceived, datagramPackets);
                 datagramPackets.recycle();
@@ -723,15 +733,18 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 allocHandle.lastBytesRead(-1);
                 return false;
             }
-            int bytesReceived = received * datagramSize;
-            byteBuf.writerIndex(bytesReceived);
+
             InetSocketAddress local = localAddress();
+
+            // Set the writerIndex too the maximum number of bytes we might have read.
+            int bytesReceived = received * datagramSize;
+            byteBuf.writerIndex(byteBuf.writerIndex() + bytesReceived);
+
             if (received == 1) {
                 // Single packet fast-path
                 DatagramPacket packet = packets[0].newDatagramPacket(byteBuf, local);
                 if (!(packet instanceof io.netty.channel.unix.SegmentedDatagramPacket)) {
                     processPacket(pipeline(), allocHandle, datagramSize, packet);
-                    byteBuf = null;
                     return true;
                 }
             }
@@ -740,7 +753,11 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             // in a channelRead(...) method and so may re-use the NativeDatagramPacketArray again.
             datagramPackets = RecyclableArrayList.newInstance();
             for (int i = 0; i < received; i++) {
-                DatagramPacket packet = packets[i].newDatagramPacket(byteBuf.readRetainedSlice(datagramSize), local);
+                DatagramPacket packet = packets[i].newDatagramPacket(byteBuf, local);
+
+                // We need to skip the maximum datagram size to ensure we have the readerIndex in the right position
+                // for the next one.
+                byteBuf.skipBytes(datagramSize);
                 addDatagramPacketToOut(packet, datagramPackets);
             }
             // Ass we did use readRetainedSlice(...) before we should now release the byteBuf and null it out.

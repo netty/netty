@@ -15,10 +15,12 @@
  */
 package io.netty.channel;
 
+import io.netty.buffer.AbstractReferenceCountedByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.InternalThreadLocalMap;
@@ -45,7 +47,6 @@ import static java.lang.Math.min;
  * <p>
  * All methods must be called by a transport implementation from an I/O thread, except the following ones:
  * <ul>
- * <li>{@link #size()} and {@link #isEmpty()}</li>
  * <li>{@link #isWritable()}</li>
  * <li>{@link #getUserDefinedWritability(int)} and {@link #setUserDefinedWritability(int, boolean)}</li>
  * </ul>
@@ -122,6 +123,16 @@ public final class ChannelOutboundBuffer {
         tailEntry = entry;
         if (unflushedEntry == null) {
             unflushedEntry = entry;
+        }
+
+        // Touch the message to make it easier to debug buffer leaks.
+
+        // this save both checking against the ReferenceCounted interface
+        // and makes better use of virtual calls vs interface ones
+        if (msg instanceof AbstractReferenceCountedByteBuf) {
+            ((AbstractReferenceCountedByteBuf) msg).touch();
+        } else {
+            ReferenceCountUtil.touch(msg);
         }
 
         // increment pending bytes after adding message to the unflushed arrays.
@@ -243,7 +254,16 @@ public final class ChannelOutboundBuffer {
         ChannelPromise p = e.promise;
         long progress = e.progress + amount;
         e.progress = progress;
-        if (p instanceof ChannelProgressivePromise) {
+        assert p != null;
+        final Class<?> promiseClass = p.getClass();
+        // fast-path to save O(n) ChannelProgressivePromise's type check on OpenJDK
+        if (promiseClass == VoidChannelPromise.class || promiseClass == DefaultChannelPromise.class) {
+            return;
+        }
+        // this is going to save from type pollution due to https://bugs.openjdk.org/browse/JDK-8180450
+        if (p instanceof DefaultChannelProgressivePromise) {
+            ((DefaultChannelProgressivePromise) p).tryProgress(progress, e.total);
+        } else if (p instanceof ChannelProgressivePromise) {
             ((ChannelProgressivePromise) p).tryProgress(progress, e.total);
         }
     }
@@ -266,15 +286,26 @@ public final class ChannelOutboundBuffer {
 
         removeEntry(e);
 
+        // only release message, notify and decrement if it was not canceled before.
         if (!e.cancelled) {
-            // only release message, notify and decrement if it was not canceled before.
-            ReferenceCountUtil.safeRelease(msg);
+            // this save both checking against the ReferenceCounted interface
+            // and makes better use of virtual calls vs interface ones
+            if (msg instanceof AbstractReferenceCountedByteBuf) {
+                try {
+                    // release now as it is flushed.
+                    ((AbstractReferenceCountedByteBuf) msg).release();
+                } catch (Throwable t) {
+                    logger.warn("Failed to release a ByteBuf: {}", msg, t);
+                }
+            } else {
+                ReferenceCountUtil.safeRelease(msg);
+            }
             safeSuccess(promise);
             decrementPendingOutboundBytes(size, false, true);
         }
 
         // recycle the entry
-        e.recycle();
+        e.unguardedRecycle();
 
         return true;
     }
@@ -310,7 +341,7 @@ public final class ChannelOutboundBuffer {
         }
 
         // recycle the entry
-        e.recycle();
+        e.unguardedRecycle();
 
         return true;
     }
@@ -699,7 +730,7 @@ public final class ChannelOutboundBuffer {
                     ReferenceCountUtil.safeRelease(e.msg);
                     safeFail(e.promise, cause);
                 }
-                e = e.recycleAndGetNext();
+                e = e.unguardedRecycleAndGetNext();
             }
         } finally {
             inFail = false;
@@ -737,14 +768,12 @@ public final class ChannelOutboundBuffer {
      * This quantity will always be non-negative. If {@link #isWritable()} is {@code false} then 0.
      */
     public long bytesBeforeUnwritable() {
-        long bytes = channel.config().getWriteBufferHighWaterMark() - totalPendingSize;
+        // +1 because writability doesn't change until the threshold is crossed (not equal to).
+        long bytes = channel.config().getWriteBufferHighWaterMark() - totalPendingSize + 1;
         // If bytes is negative we know we are not writable, but if bytes is non-negative we have to check writability.
         // Note that totalPendingSize and isWritable() use different volatile variables that are not synchronized
         // together. totalPendingSize will be updated before isWritable().
-        if (bytes > 0) {
-            return isWritable() ? bytes : 0;
-        }
-        return 0;
+        return bytes > 0 && isWritable() ? bytes : 0;
     }
 
     /**
@@ -752,14 +781,12 @@ public final class ChannelOutboundBuffer {
      * This quantity will always be non-negative. If {@link #isWritable()} is {@code true} then 0.
      */
     public long bytesBeforeWritable() {
-        long bytes = totalPendingSize - channel.config().getWriteBufferLowWaterMark();
+        // +1 because writability doesn't change until the threshold is crossed (not equal to).
+        long bytes = totalPendingSize - channel.config().getWriteBufferLowWaterMark() + 1;
         // If bytes is negative we know we are writable, but if bytes is non-negative we have to check writability.
         // Note that totalPendingSize and isWritable() use different volatile variables that are not synchronized
         // together. totalPendingSize will be updated before isWritable().
-        if (bytes > 0) {
-            return isWritable() ? 0 : bytes;
-        }
-        return 0;
+        return bytes <= 0 || isWritable() ? 0 : bytes;
     }
 
     /**
@@ -805,7 +832,7 @@ public final class ChannelOutboundBuffer {
             }
         });
 
-        private final Handle<Entry> handle;
+        private final EnhancedHandle<Entry> handle;
         Entry next;
         Object msg;
         ByteBuffer[] bufs;
@@ -818,7 +845,7 @@ public final class ChannelOutboundBuffer {
         boolean cancelled;
 
         private Entry(Handle<Entry> handle) {
-            this.handle = handle;
+            this.handle = (EnhancedHandle<Entry>) handle;
         }
 
         static Entry newInstance(Object msg, int size, long total, ChannelPromise promise) {
@@ -849,7 +876,7 @@ public final class ChannelOutboundBuffer {
             return 0;
         }
 
-        void recycle() {
+        void unguardedRecycle() {
             next = null;
             bufs = null;
             buf = null;
@@ -860,12 +887,12 @@ public final class ChannelOutboundBuffer {
             pendingSize = 0;
             count = -1;
             cancelled = false;
-            handle.recycle(this);
+            handle.unguardedRecycle(this);
         }
 
-        Entry recycleAndGetNext() {
+        Entry unguardedRecycleAndGetNext() {
             Entry next = this.next;
-            recycle();
+            unguardedRecycle();
             return next;
         }
     }

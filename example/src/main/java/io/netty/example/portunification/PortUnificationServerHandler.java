@@ -23,6 +23,7 @@ import io.netty.example.factorial.FactorialServerHandler;
 import io.netty.example.factorial.NumberEncoder;
 import io.netty.example.http.snoop.HttpSnoopServerHandler;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.http.HttpContentCompressor;
@@ -81,7 +82,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
 
     private boolean isSsl(ByteBuf buf) {
         if (detectSsl) {
-            return SslHandler.isEncrypted(buf);
+            return SslHandler.isEncrypted(buf, false);
         }
         return false;
     }
@@ -129,7 +130,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
         ChannelPipeline p = ctx.pipeline();
         p.addLast("decoder", new HttpRequestDecoder());
         p.addLast("encoder", new HttpResponseEncoder());
-        p.addLast("deflater", new HttpContentCompressor());
+        p.addLast("deflater", new HttpContentCompressor((CompressionOptions[]) null));
         p.addLast("handler", new HttpSnoopServerHandler());
         p.remove(this);
     }

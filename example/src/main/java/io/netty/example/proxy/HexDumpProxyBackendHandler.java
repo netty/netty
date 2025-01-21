@@ -31,7 +31,11 @@ public class HexDumpProxyBackendHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        ctx.read();
+        if (!inboundChannel.isActive()) {
+            HexDumpProxyFrontendHandler.closeOnFlush(ctx.channel());
+        } else {
+            ctx.read();
+        }
     }
 
     @Override

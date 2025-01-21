@@ -18,7 +18,6 @@ package io.netty.channel;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.ThrowableUtil;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * A {@link RuntimeException} which is thrown when an I/O operation fails.
@@ -54,7 +53,6 @@ public class ChannelException extends RuntimeException {
         super(cause);
     }
 
-    @UnstableApi
     @SuppressJava6Requirement(reason = "uses Java 7+ RuntimeException.<init>(String, Throwable, boolean, boolean)" +
             " but is guarded by version checks")
     protected ChannelException(String message, Throwable cause, boolean shared) {

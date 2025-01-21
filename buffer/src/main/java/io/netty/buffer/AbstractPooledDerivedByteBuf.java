@@ -16,6 +16,8 @@
 
 package io.netty.buffer;
 
+import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.internal.ObjectPool.Handle;
 
 import java.nio.ByteBuffer;
@@ -26,12 +28,12 @@ import java.nio.ByteOrder;
  */
 abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByteBuf {
 
-    private final Handle<AbstractPooledDerivedByteBuf> recyclerHandle;
+    private final EnhancedHandle<AbstractPooledDerivedByteBuf> recyclerHandle;
     private AbstractByteBuf rootParent;
     /**
      * Deallocations of a pooled derived buffer should always propagate through the entire chain of derived buffers.
      * This is because each pooled derived buffer maintains its own reference count and we should respect each one.
-     * If deallocations cause a release of the "root parent" then then we may prematurely release the underlying
+     * If deallocations cause a release of the "root parent" then we may prematurely release the underlying
      * content before all the derived buffers have been released.
      */
     private ByteBuf parent;
@@ -39,7 +41,7 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
     @SuppressWarnings("unchecked")
     AbstractPooledDerivedByteBuf(Handle<? extends AbstractPooledDerivedByteBuf> recyclerHandle) {
         super(0);
-        this.recyclerHandle = (Handle<AbstractPooledDerivedByteBuf>) recyclerHandle;
+        this.recyclerHandle = (EnhancedHandle<AbstractPooledDerivedByteBuf>) recyclerHandle;
     }
 
     // Called from within SimpleLeakAwareByteBuf and AdvancedLeakAwareByteBuf.
@@ -50,6 +52,10 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
 
     @Override
     public final AbstractByteBuf unwrap() {
+        AbstractByteBuf rootParent = this.rootParent;
+        if (rootParent == null) {
+            throw new IllegalReferenceCountException();
+        }
         return rootParent;
     }
 
@@ -82,7 +88,9 @@ abstract class AbstractPooledDerivedByteBuf extends AbstractReferenceCountedByte
         // otherwise it is possible that the same AbstractPooledDerivedByteBuf is again obtained and init(...) is
         // called before we actually have a chance to call release(). This leads to call release() on the wrong parent.
         ByteBuf parent = this.parent;
-        recyclerHandle.recycle(this);
+        // Remove references to parent and root so that they can be GCed for leak detection [netty/netty#14247]
+        this.parent = this.rootParent = null;
+        recyclerHandle.unguardedRecycle(this);
         parent.release();
     }
 

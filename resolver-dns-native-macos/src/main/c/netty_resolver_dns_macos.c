@@ -32,7 +32,7 @@
 
 #define STREAM_CLASSNAME "io/netty/resolver/dns/macos/MacOSDnsServerAddressStreamProvider"
 
-static jclass dnsResolverClass = NULL;
+static jweak dnsResolverClassWeak = NULL;
 static jclass byteArrayClass = NULL;
 static jclass stringClass = NULL;
 static jmethodID dnsResolverMethodId = NULL;
@@ -45,10 +45,13 @@ static char const* staticPackagePrefix = NULL;
 //     https://src.chromium.org/viewvc/chrome?revision=218617&view=revision
 //     https://opensource.apple.com/tarballs/mDNSResponder/
 static jobjectArray netty_resolver_dns_macos_resolvers(JNIEnv* env, jclass clazz) {
+    jclass dnsResolverClass = NULL;
     dns_config_t* config = dns_configuration_copy();
     if (config == NULL) {
         goto error;
     }
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, dnsResolverClass, dnsResolverClassWeak, error);
+
     jobjectArray array = (*env)->NewObjectArray(env, config->n_resolver, dnsResolverClass, NULL);
     if (array == NULL) {
         goto error;
@@ -126,11 +129,13 @@ static jobjectArray netty_resolver_dns_macos_resolvers(JNIEnv* env, jclass clazz
     }
 
     dns_configuration_free(config);
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, dnsResolverClass);
     return array;
 error:
     if (config != NULL) {
         dns_configuration_free(config);
     }
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, dnsResolverClass);
     return NULL;
 }
 
@@ -154,6 +159,7 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
 static void netty_resolver_dns_native_macos_JNI_OnUnLoad(JNIEnv* env) {
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, byteArrayClass);
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, stringClass);
+    NETTY_JNI_UTIL_UNLOAD_CLASS_WEAK(env, dnsResolverClassWeak);
     netty_jni_util_unregister_natives(env, staticPackagePrefix, STREAM_CLASSNAME);
 
     if (staticPackagePrefix != NULL) {
@@ -168,6 +174,7 @@ static jint netty_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, char const* 
     int ret = JNI_ERR;
     int providerRegistered = 0;
     char* nettyClassName = NULL;
+    jclass dnsResolverClass = NULL;
 
     // Register the methods which are not referenced by static member variables
     JNINativeMethod* dynamicMethods = createDynamicMethodsTable(packagePrefix);
@@ -183,9 +190,10 @@ static jint netty_resolver_dns_native_macos_JNI_OnLoad(JNIEnv* env, char const* 
     providerRegistered = 1;
 
     nettyClassName = netty_jni_util_prepend(packagePrefix, "io/netty/resolver/dns/macos/DnsResolver");
-    NETTY_JNI_UTIL_LOAD_CLASS(env, dnsResolverClass, nettyClassName, done);
+    NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, dnsResolverClassWeak, nettyClassName, done);
     netty_jni_util_free_dynamic_name(&nettyClassName);
 
+    NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, dnsResolverClass, dnsResolverClassWeak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, dnsResolverClass, dnsResolverMethodId, "<init>", "(Ljava/lang/String;[[BI[Ljava/lang/String;Ljava/lang/String;II)V", done);
 
     NETTY_JNI_UTIL_LOAD_CLASS(env, byteArrayClass, "[B", done);
@@ -202,6 +210,9 @@ done:
     }
     netty_jni_util_free_dynamic_methods_table(dynamicMethods, 0, 1);
     free(nettyClassName);
+
+    NETTY_JNI_UTIL_DELETE_LOCAL(env, dnsResolverClass);
+
     return ret;
 }
 

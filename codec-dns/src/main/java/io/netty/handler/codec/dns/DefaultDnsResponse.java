@@ -15,14 +15,11 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The default {@link DnsResponse} implementation.
  */
-@UnstableApi
 public class DefaultDnsResponse extends AbstractDnsMessage implements DnsResponse {
 
     private boolean authoritativeAnswer;

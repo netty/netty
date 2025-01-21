@@ -18,14 +18,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.UnstableApi;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Decorator around another {@link Http2FrameWriter} instance.
  */
-@UnstableApi
 public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
     private final Http2FrameWriter delegate;
 

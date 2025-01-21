@@ -21,7 +21,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
@@ -34,10 +33,7 @@ import io.netty.util.concurrent.FutureListener;
 
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.handler.codec.http.HttpMethod.*;
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpUtil.*;
-import static io.netty.handler.codec.http.HttpVersion.*;
 import static io.netty.util.internal.ObjectUtil.*;
 
 /**
@@ -73,11 +69,6 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             }
 
             try {
-                if (!GET.equals(req.method())) {
-                    sendHttpResponse(ctx, req, new DefaultFullHttpResponse(HTTP_1_1, FORBIDDEN, ctx.alloc().buffer(0)));
-                    return;
-                }
-
                 final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
                         getWebSocketLocation(ctx.pipeline(), req, serverConfig.websocketPath()),
                         serverConfig.subprotocols(), serverConfig.decoderConfig());
@@ -127,9 +118,9 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
     private boolean isWebSocketPath(HttpRequest req) {
         String websocketPath = serverConfig.websocketPath();
         String uri = req.uri();
-        boolean checkStartUri = uri.startsWith(websocketPath);
-        boolean checkNextUri = "/".equals(websocketPath) || checkNextUri(uri, websocketPath);
-        return serverConfig.checkStartsWith() ? (checkStartUri && checkNextUri) : uri.equals(websocketPath);
+        return serverConfig.checkStartsWith()
+                ? uri.startsWith(websocketPath) && ("/".equals(websocketPath) || checkNextUri(uri, websocketPath))
+                : uri.equals(websocketPath);
     }
 
     private boolean checkNextUri(String uri, String websocketPath) {

@@ -16,6 +16,7 @@
 package io.netty.util;
 
 import io.netty.util.NetUtilInitializations.NetworkIfaceAndInetAddress;
+import io.netty.util.internal.BoundedInputStream;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -24,7 +25,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -37,6 +38,7 @@ import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
+import java.util.Collection;
 
 import static io.netty.util.AsciiString.indexOf;
 
@@ -69,6 +71,11 @@ public final class NetUtil {
      * The loopback {@link NetworkInterface} of the current machine
      */
     public static final NetworkInterface LOOPBACK_IF;
+
+    /**
+     * An unmodifiable Collection of all the interfaces on this machine.
+     */
+    public static final Collection<NetworkInterface> NETWORK_INTERFACES;
 
     /**
      * The SOMAXCONN value of the current machine.  If failed to get the value,  {@code 200} is used as a
@@ -124,8 +131,7 @@ public final class NetUtil {
     /**
      * {@code true} if an IPv6 address should be preferred when a host has both an IPv4 address and an IPv6 address.
      */
-    private static final boolean IPV6_ADDRESSES_PREFERRED =
-            SystemPropertyUtil.getBoolean("java.net.preferIPv6Addresses", false);
+    private static final boolean IPV6_ADDRESSES_PREFERRED;
 
     /**
      * The logger being used by this class
@@ -133,8 +139,17 @@ public final class NetUtil {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NetUtil.class);
 
     static {
+        String prefer = SystemPropertyUtil.get("java.net.preferIPv6Addresses", "false");
+        if ("true".equalsIgnoreCase(prefer.trim())) {
+            IPV6_ADDRESSES_PREFERRED = true;
+        } else {
+            // Let's just use false in this case as only true is "forcing" ipv6.
+            IPV6_ADDRESSES_PREFERRED = false;
+        }
         logger.debug("-Djava.net.preferIPv4Stack: {}", IPV4_PREFERRED);
-        logger.debug("-Djava.net.preferIPv6Addresses: {}", IPV6_ADDRESSES_PREFERRED);
+        logger.debug("-Djava.net.preferIPv6Addresses: {}", prefer);
+
+        NETWORK_INTERFACES = NetUtilInitializations.networkInterfaces();
 
         // Create IPv4 loopback address.
         LOCALHOST4 = NetUtilInitializations.createLocalhost4();
@@ -142,7 +157,8 @@ public final class NetUtil {
         // Create IPv6 loopback address.
         LOCALHOST6 = NetUtilInitializations.createLocalhost6();
 
-        NetworkIfaceAndInetAddress loopback = NetUtilInitializations.determineLoopback(LOCALHOST4, LOCALHOST6);
+        NetworkIfaceAndInetAddress loopback =
+                NetUtilInitializations.determineLoopback(NETWORK_INTERFACES, LOCALHOST4, LOCALHOST6);
         LOOPBACK_IF = loopback.iface();
         LOCALHOST = loopback.address();
 
@@ -158,8 +174,16 @@ public final class NetUtil {
             // Determine the default somaxconn (server socket backlog) value of the platform.
             // The known defaults:
             // - Windows NT Server 4.0+: 200
-            // - Linux and Mac OS X: 128
-            int somaxconn = PlatformDependent.isWindows() ? 200 : 128;
+            // - Mac OS X: 128
+            // - Linux kernel > 5.4 : 4096
+            int somaxconn;
+            if (PlatformDependent.isWindows()) {
+                somaxconn = 200;
+            } else if (PlatformDependent.isOsx()) {
+                somaxconn = 128;
+            } else {
+                somaxconn = 4096;
+            }
             File file = new File("/proc/sys/net/core/somaxconn");
             BufferedReader in = null;
             try {
@@ -167,7 +191,8 @@ public final class NetUtil {
                 // try / catch block.
                 // See https://github.com/netty/netty/issues/4936
                 if (file.exists()) {
-                    in = new BufferedReader(new FileReader(file));
+                    in = new BufferedReader(new InputStreamReader(
+                            new BoundedInputStream(new FileInputStream(file))));
                     somaxconn = Integer.parseInt(in.readLine());
                     if (logger.isDebugEnabled()) {
                         logger.debug("{}: {}", file, somaxconn);
@@ -219,8 +244,8 @@ public final class NetUtil {
         Process process = new ProcessBuilder("sysctl", sysctlKey).start();
         try {
             // Suppress warnings about resource leaks since the buffered reader is closed below
-            InputStream is = process.getInputStream();  // lgtm[java/input-resource-leak
-            InputStreamReader isr = new InputStreamReader(is);  // lgtm[java/input-resource-leak
+            InputStream is = process.getInputStream();
+            InputStreamReader isr = new InputStreamReader(new BoundedInputStream(is));
             BufferedReader br = new BufferedReader(isr);
             try {
                 String line = br.readLine();
@@ -973,10 +998,9 @@ public final class NetUtil {
 
     private static String toAddressString(byte[] bytes, int offset, boolean ipv4Mapped) {
         final int[] words = new int[IPV6_WORD_COUNT];
-        int i;
-        final int end = offset + words.length;
-        for (i = offset; i < end; ++i) {
-            words[i] = ((bytes[i << 1] & 0xff) << 8) | (bytes[(i << 1) + 1] & 0xff);
+        for (int i = 0; i < words.length; ++i) {
+            int idx = (i << 1) + offset;
+            words[i] = ((bytes[idx] & 0xff) << 8) | (bytes[idx + 1] & 0xff);
         }
 
         // Find longest run of 0s, tie goes to first found instance
@@ -984,7 +1008,7 @@ public final class NetUtil {
         int currentLength;
         int shortestStart = -1;
         int shortestLength = 0;
-        for (i = 0; i < words.length; ++i) {
+        for (int i = 0; i < words.length; ++i) {
             if (words[i] == 0) {
                 if (currentStart < 0) {
                     currentStart = i;
@@ -1000,7 +1024,7 @@ public final class NetUtil {
         }
         // If the array ends on a streak of zeros, make sure we account for it
         if (currentStart >= 0) {
-            currentLength = i - currentStart;
+            currentLength = words.length - currentStart;
             if (currentLength > shortestLength) {
                 shortestStart = currentStart;
                 shortestLength = currentLength;
@@ -1017,7 +1041,7 @@ public final class NetUtil {
         final StringBuilder b = new StringBuilder(IPV6_MAX_CHAR_COUNT);
         if (shortestEnd < 0) { // Optimization when there is no compressing needed
             b.append(Integer.toHexString(words[0]));
-            for (i = 1; i < words.length; ++i) {
+            for (int i = 1; i < words.length; ++i) {
                 b.append(':');
                 b.append(Integer.toHexString(words[i]));
             }
@@ -1031,7 +1055,7 @@ public final class NetUtil {
                 b.append(Integer.toHexString(words[0]));
                 isIpv4Mapped = false;
             }
-            for (i = 1; i < words.length; ++i) {
+            for (int i = 1; i < words.length; ++i) {
                 if (!inRangeEndExclusive(i, shortestStart, shortestEnd)) {
                     if (!inRangeEndExclusive(i - 1, shortestStart, shortestEnd)) {
                         // If the last index was not part of the shortened sequence

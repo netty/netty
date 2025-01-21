@@ -18,9 +18,7 @@ package io.netty.handler.codec.dns;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
-@UnstableApi
 public class DefaultDnsPtrRecord extends AbstractDnsRecord implements DnsPtrRecord {
 
     private final String hostname;

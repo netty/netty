@@ -18,12 +18,10 @@ package io.netty.channel.kqueue;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * If KQueue is available the JNI resources will be loaded when this class loads.
  */
-@UnstableApi
 public final class KQueue {
     private static final Throwable UNAVAILABILITY_CAUSE;
 

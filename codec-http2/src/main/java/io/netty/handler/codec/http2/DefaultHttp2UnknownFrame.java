@@ -19,9 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
-@UnstableApi
 public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder implements Http2UnknownFrame {
     private final byte frameType;
     private final Http2Flags flags;

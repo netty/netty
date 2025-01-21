@@ -104,7 +104,6 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
      *
      * @param task to be added.
      */
-    @UnstableApi
     public final void executeAfterEventLoopIteration(Runnable task) {
         ObjectUtil.checkNotNull(task, "task");
         if (isShutdown()) {
@@ -115,7 +114,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
             reject(task);
         }
 
-        if (!(task instanceof LazyRunnable) && wakesUpForTask(task)) {
+        if (wakesUpForTask(task)) {
             wakeup(inEventLoop());
         }
     }
@@ -127,7 +126,6 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
      *
      * @return {@code true} if the task was removed as a result of this call.
      */
-    @UnstableApi
     final boolean removeAfterEventLoopIterationTask(Runnable task) {
         return tailTasks.remove(ObjectUtil.checkNotNull(task, "task"));
     }

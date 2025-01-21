@@ -24,6 +24,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
@@ -324,21 +325,30 @@ public class JZlibEncoder extends ZlibEncoder {
             final ChannelHandlerContext ctx,
             final ChannelPromise promise) {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
-        f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture f) throws Exception {
-                ctx.close(promise);
-            }
-        });
 
         if (!f.isDone()) {
             // Ensure the channel is closed even if the write operation completes in time.
-            ctx.executor().schedule(new Runnable() {
+            final Future<?> future = ctx.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    ctx.close(promise);
+                    if (!promise.isDone()) {
+                        ctx.close(promise);
+                    }
                 }
             }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
+
+            f.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture f) {
+                    // Cancel the scheduled timeout.
+                    future.cancel(true);
+                    if (!promise.isDone()) {
+                        ctx.close(promise);
+                    }
+                }
+            });
+        } else {
+            ctx.close(promise);
         }
     }
 
@@ -367,7 +377,7 @@ public class JZlibEncoder extends ZlibEncoder {
             if (resultCode != JZlib.Z_OK && resultCode != JZlib.Z_STREAM_END) {
                 promise.setFailure(ZlibUtil.deflaterException(z, "compression failure", resultCode));
                 return promise;
-            } else if (z.next_out_index != 0) { // lgtm[java/constant-comparison]
+            } else if (z.next_out_index != 0) {
                 // Suppressed a warning above to be on the safe side
                 // even if z.next_out_index seems to be always 0 here
                 footer = Unpooled.wrappedBuffer(out, 0, z.next_out_index);

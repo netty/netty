@@ -42,5 +42,6 @@ final class ErrorsStaticallyReferencedJniMethods {
     static native int errorEISCONN();
     static native int errorEALREADY();
     static native int errorENETUNREACH();
+    static native int errorEHOSTUNREACH();
     static native String strError(int err);
 }

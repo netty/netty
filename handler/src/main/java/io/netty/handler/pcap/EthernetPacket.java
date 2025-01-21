@@ -50,7 +50,7 @@ final class EthernetPacket {
      * @param payload Payload of IPv4
      */
     static void writeIPv4(ByteBuf byteBuf, ByteBuf payload) {
-        EthernetPacket.writePacket(byteBuf, payload, DUMMY_SOURCE_MAC_ADDRESS, DUMMY_DESTINATION_MAC_ADDRESS, V4);
+        writePacket(byteBuf, payload, DUMMY_SOURCE_MAC_ADDRESS, DUMMY_DESTINATION_MAC_ADDRESS, V4);
     }
 
     /**
@@ -60,7 +60,7 @@ final class EthernetPacket {
      * @param payload Payload of IPv6
      */
     static void writeIPv6(ByteBuf byteBuf, ByteBuf payload) {
-        EthernetPacket.writePacket(byteBuf, payload, DUMMY_SOURCE_MAC_ADDRESS, DUMMY_DESTINATION_MAC_ADDRESS, V6);
+        writePacket(byteBuf, payload, DUMMY_SOURCE_MAC_ADDRESS, DUMMY_DESTINATION_MAC_ADDRESS, V6);
     }
 
     /**

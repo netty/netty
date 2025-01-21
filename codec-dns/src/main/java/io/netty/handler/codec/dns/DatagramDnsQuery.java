@@ -16,7 +16,6 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.channel.AddressedEnvelope;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -24,7 +23,6 @@ import java.net.SocketAddress;
 /**
  * A {@link DnsQuery} implementation for UDP/IP.
  */
-@UnstableApi
 public class DatagramDnsQuery extends DefaultDnsQuery
         implements AddressedEnvelope<DatagramDnsQuery, InetSocketAddress> {
 

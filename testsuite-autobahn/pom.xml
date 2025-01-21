@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.85.Final-SNAPSHOT</version>
+    <version>4.1.118.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-autobahn</artifactId>
@@ -30,6 +30,7 @@
 
   <properties>
     <japicmp.skip>true</japicmp.skip>
+    <revapi.skip>true</revapi.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
     <javaModuleName>io.netty.testsuite_autobahn</javaModuleName>
@@ -99,7 +100,7 @@
           <dependency>
             <groupId>org.python</groupId>
             <artifactId>jython-standalone</artifactId>
-            <version>2.7.1</version>
+            <version>2.7.2</version>
           </dependency>
         </dependencies>
       </plugin>

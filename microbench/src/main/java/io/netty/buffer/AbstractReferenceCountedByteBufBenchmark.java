@@ -34,7 +34,13 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class AbstractReferenceCountedByteBufBenchmark extends AbstractMicrobenchmark {
 
-    @Param({ "1", "10", "100", "1000", "10000" })
+    @Param({
+            "1",
+            "10",
+            "100",
+            "1000",
+            "10000",
+    })
     public int delay;
 
     AbstractReferenceCountedByteBuf buf;

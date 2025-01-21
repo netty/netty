@@ -32,7 +32,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -89,7 +88,7 @@ import static io.netty.util.internal.logging.InternalLogLevel.DEBUG;
  * {@link Http2ChannelDuplexHandler#newStream()}, and then writing a {@link Http2HeadersFrame} object with the stream
  * attached.
  *
- * <pre>
+ * <pre> {@code
  *     final Http2Stream2 stream = handler.newStream();
  *     ctx.write(headersFrame.stream(stream)).addListener(new ChannelFutureListener() {
  *
@@ -109,6 +108,7 @@ import static io.netty.util.internal.logging.InternalLogLevel.DEBUG;
  *                 }
  *             }
  *         }
+ *     }
  *     }
  * </pre>
  *
@@ -144,10 +144,14 @@ import static io.netty.util.internal.logging.InternalLogLevel.DEBUG;
  * Server-side HTTP to HTTP/2 upgrade is supported in conjunction with {@link Http2ServerUpgradeCodec}; the necessary
  * HTTP-to-HTTP/2 conversion is performed automatically.
  */
-@UnstableApi
 public class Http2FrameCodec extends Http2ConnectionHandler {
 
     private static final InternalLogger LOG = InternalLoggerFactory.getInstance(Http2FrameCodec.class);
+
+    private static final Class<?>[] SUPPORTED_MESSAGES = new Class[] {
+            Http2DataFrame.class, Http2HeadersFrame.class, Http2WindowUpdateFrame.class, Http2ResetFrame.class,
+            Http2PingFrame.class, Http2SettingsFrame.class, Http2SettingsAckFrame.class, Http2GoAwayFrame.class,
+            Http2PushPromiseFrame.class, Http2PriorityFrame.class, Http2UnknownFrame.class };
 
     protected final PropertyKey streamKey;
     private final PropertyKey upgradeKey;
@@ -285,8 +289,13 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 upgrade.release();
             }
         } else {
+            onUserEventTriggered(ctx, evt);
             ctx.fireUserEventTriggered(evt);
         }
+    }
+
+    void onUserEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
+        // noop
     }
 
     /**
@@ -354,7 +363,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             ctx.write(msg, promise);
         } else {
             ReferenceCountUtil.release(msg);
-            throw new UnsupportedMessageTypeException(msg);
+            throw new UnsupportedMessageTypeException(msg, SUPPORTED_MESSAGES);
         }
     }
 
@@ -393,12 +402,14 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     }
 
     private void writeHeadersFrame(final ChannelHandlerContext ctx, Http2HeadersFrame headersFrame,
-                                   final ChannelPromise promise) {
+                                   ChannelPromise promise) {
 
         if (isStreamIdValid(headersFrame.stream().id())) {
             encoder().writeHeaders(ctx, headersFrame.stream().id(), headersFrame.headers(), headersFrame.padding(),
                     headersFrame.isEndStream(), promise);
         } else if (initializeNewStream(ctx, (DefaultHttp2FrameStream) headersFrame.stream(), promise)) {
+            promise = promise.unvoid();
+
             final int streamId = headersFrame.stream().id();
 
             encoder().writeHeaders(ctx, streamId, headersFrame.headers(), headersFrame.padding(),

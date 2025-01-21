@@ -15,13 +15,11 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Provides an extensibility point for users to define the validity of push requests.
  * @see <a href="https://tools.ietf.org/html/rfc7540#section-8.2">[RFC 7540], Section 8.2</a>.
  */
-@UnstableApi
 public interface Http2PromisedRequestVerifier {
     /**
      * Determine if a {@link Http2Headers} are authoritative for a particular {@link ChannelHandlerContext}.

@@ -18,7 +18,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
-import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_HEADER_LIST_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_RESERVED_STREAMS;
@@ -71,11 +70,12 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * @param <T> The type of handler created by this builder.
  * @param <B> The concrete type of this builder.
  */
-@UnstableApi
 public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2ConnectionHandler,
                                                             B extends AbstractHttp2ConnectionHandlerBuilder<T, B>> {
 
     private static final SensitivityDetector DEFAULT_HEADER_SENSITIVITY_DETECTOR = Http2HeadersEncoder.NEVER_SENSITIVE;
+
+    private static final int DEFAULT_MAX_RST_FRAMES_PER_CONNECTION_FOR_SERVER = 200;
 
     // The properties that can always be set.
     private Http2Settings initialSettings = Http2Settings.defaultSettings();
@@ -109,6 +109,8 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
     private boolean autoAckPingFrame = true;
     private int maxQueuedControlFrames = Http2CodecUtil.DEFAULT_MAX_QUEUED_CONTROL_FRAMES;
     private int maxConsecutiveEmptyFrames = 2;
+    private Integer maxRstFramesPerWindow;
+    private int secondsPerWindow = 30;
 
     /**
      * Sets the {@link Http2Settings} to use for the initial connection settings exchange.
@@ -410,7 +412,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Returns the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed before
-     * the connection is closed. This allows to protected against the remote peer flooding us with such frames and
+     * the connection is closed. This allows to protect against the remote peer flooding us with such frames and
      * so use up a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
      *
      * {@code 0} means no protection is in place.
@@ -421,7 +423,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
 
     /**
      * Sets the maximum number of consecutive empty DATA frames (without end_of_stream flag) that are allowed before
-     * the connection is closed. This allows to protected against the remote peer flooding us with such frames and
+     * the connection is closed. This allows to protect against the remote peer flooding us with such frames and
      * so use up a lot of CPU. There is no valid use-case for empty DATA frames without end_of_stream flag.
      *
      * {@code 0} means no protection should be applied.
@@ -430,6 +432,21 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         enforceNonCodecConstraints("maxConsecutiveEmptyFrames");
         this.maxConsecutiveEmptyFrames = checkPositiveOrZero(
                 maxConsecutiveEmptyFrames, "maxConsecutiveEmptyFrames");
+        return self();
+    }
+
+    /**
+     * Sets the maximum number RST frames that are allowed per window before
+     * the connection is closed. This allows to protect against the remote peer flooding us with such frames and
+     * so use up a lot of CPU.
+     *
+     * {@code 0} for any of the parameters means no protection should be applied.
+     */
+    protected B decoderEnforceMaxRstFramesPerWindow(int maxRstFramesPerWindow, int secondsPerWindow) {
+        enforceNonCodecConstraints("decoderEnforceMaxRstFramesPerWindow");
+        this.maxRstFramesPerWindow = checkPositiveOrZero(
+                maxRstFramesPerWindow, "maxRstFramesPerWindow");
+        this.secondsPerWindow = checkPositiveOrZero(secondsPerWindow, "secondsPerWindow");
         return self();
     }
 
@@ -566,7 +583,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         }
 
         DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
-                promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame());
+            promisedRequestVerifier(), isAutoAckSettingsFrame(), isAutoAckPingFrame(), isValidateHeaders());
         return buildFromCodec(decoder, encoder);
     }
 
@@ -574,6 +591,20 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
         int maxConsecutiveEmptyDataFrames = decoderEnforceMaxConsecutiveEmptyDataFrames();
         if (maxConsecutiveEmptyDataFrames > 0) {
             decoder = new Http2EmptyDataFrameConnectionDecoder(decoder, maxConsecutiveEmptyDataFrames);
+        }
+        final int maxRstFrames;
+        if (maxRstFramesPerWindow == null) {
+            // Only enable by default on the server.
+            if (isServer()) {
+                maxRstFrames = DEFAULT_MAX_RST_FRAMES_PER_CONNECTION_FOR_SERVER;
+            } else {
+                maxRstFrames = 0;
+            }
+        } else {
+            maxRstFrames = maxRstFramesPerWindow;
+        }
+        if (maxRstFrames > 0 && secondsPerWindow > 0) {
+            decoder = new Http2MaxRstFrameDecoder(decoder, maxRstFrames, secondsPerWindow);
         }
         final T handler;
         try {

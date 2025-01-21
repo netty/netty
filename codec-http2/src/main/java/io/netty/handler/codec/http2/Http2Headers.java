@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -25,7 +24,6 @@ import java.util.Map.Entry;
 /**
  * A collection of headers sent or received via HTTP/2.
  */
-@UnstableApi
 public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2Headers> {
 
     /**
@@ -68,13 +66,6 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
 
         private final AsciiString value;
         private final boolean requestOnly;
-        private static final CharSequenceMap<PseudoHeaderName> PSEUDO_HEADERS = new CharSequenceMap<PseudoHeaderName>();
-
-        static {
-            for (PseudoHeaderName pseudoHeader : values()) {
-                PSEUDO_HEADERS.add(pseudoHeader.value(), pseudoHeader);
-            }
-        }
 
         PseudoHeaderName(String value, boolean requestOnly) {
             this.value = AsciiString.cached(value);
@@ -104,7 +95,21 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
          * Indicates whether the given header name is a valid HTTP/2 pseudo header.
          */
         public static boolean isPseudoHeader(CharSequence header) {
-            return PSEUDO_HEADERS.contains(header);
+            return getPseudoHeader(header) != null;
+        }
+
+        /**
+         * Indicates whether the given header name is a valid HTTP/2 pseudo header.
+         */
+        public static boolean isPseudoHeader(AsciiString header) {
+            return getPseudoHeader(header) != null;
+        }
+
+        /**
+         * Indicates whether the given header name is a valid HTTP/2 pseudo header.
+         */
+        public static boolean isPseudoHeader(String header) {
+            return getPseudoHeader(header) != null;
         }
 
         /**
@@ -113,7 +118,87 @@ public interface Http2Headers extends Headers<CharSequence, CharSequence, Http2H
          * @return corresponding {@link PseudoHeaderName} if any, {@code null} otherwise.
          */
         public static PseudoHeaderName getPseudoHeader(CharSequence header) {
-            return PSEUDO_HEADERS.get(header);
+            if (header instanceof AsciiString) {
+                return getPseudoHeader((AsciiString) header);
+            }
+            return getPseudoHeaderName(header);
+        }
+
+        private static PseudoHeaderName getPseudoHeaderName(CharSequence header) {
+            int length = header.length();
+            if (length > 0 && header.charAt(0) == PSEUDO_HEADER_PREFIX) {
+                switch (length) {
+                case 5:
+                    // :path
+                    return ":path".contentEquals(header)? PATH : null;
+                case 7:
+                    // :method, :scheme, :status
+                    if (":method" == header) {
+                        return METHOD;
+                    }
+                    if (":scheme" == header) {
+                        return SCHEME;
+                    }
+                    if (":status" == header) {
+                        return STATUS;
+                    }
+                    if (":method".contentEquals(header)) {
+                        return METHOD;
+                    }
+                    if (":scheme".contentEquals(header)) {
+                        return SCHEME;
+                    }
+                    return ":status".contentEquals(header)? STATUS : null;
+                case 9:
+                    // :protocol
+                    return ":protocol".contentEquals(header)? PROTOCOL : null;
+                case 10:
+                    // :authority
+                    return ":authority".contentEquals(header)? AUTHORITY : null;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Returns the {@link PseudoHeaderName} corresponding to the specified header name.
+         *
+         * @return corresponding {@link PseudoHeaderName} if any, {@code null} otherwise.
+         */
+        public static PseudoHeaderName getPseudoHeader(AsciiString header) {
+            int length = header.length();
+            if (length > 0 && header.charAt(0) == PSEUDO_HEADER_PREFIX) {
+                switch (length) {
+                case 5:
+                    // :path
+                    return PATH.value().equals(header) ? PATH : null;
+                case 7:
+                    if (header == METHOD.value()) {
+                        return METHOD;
+                    }
+                    if (header == SCHEME.value()) {
+                        return SCHEME;
+                    }
+                    if (header == STATUS.value()) {
+                        return STATUS;
+                    }
+                    // :method, :scheme, :status
+                    if (METHOD.value().equals(header)) {
+                        return METHOD;
+                    }
+                    if (SCHEME.value().equals(header)) {
+                        return SCHEME;
+                    }
+                    return STATUS.value().equals(header)? STATUS : null;
+                case 9:
+                    // :protocol
+                    return PROTOCOL.value().equals(header)? PROTOCOL : null;
+                case 10:
+                    // :authority
+                    return AUTHORITY.value().equals(header)? AUTHORITY : null;
+                }
+            }
+            return null;
         }
 
         /**

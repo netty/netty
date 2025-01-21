@@ -18,15 +18,12 @@ package io.netty.handler.codec.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
-import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * The default {@link DnsRecordEncoder} implementation.
  *
  * @see DefaultDnsRecordDecoder
  */
-@UnstableApi
 public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
     private static final int PREFIX_MASK = Byte.SIZE - 1;
 
@@ -42,6 +39,10 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         out.writeShort(question.dnsClass());
     }
 
+    private static final Class<?>[] SUPPORTED_MESSAGES = new Class<?>[] {
+            DnsQuestion.class, DnsPtrRecord.class,
+            DnsOptEcsRecord.class, DnsOptPseudoRecord.class, DnsRawRecord.class };
+
     @Override
     public void encodeRecord(DnsRecord record, ByteBuf out) throws Exception {
         if (record instanceof DnsQuestion) {
@@ -55,7 +56,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         } else if (record instanceof DnsRawRecord) {
             encodeRawRecord((DnsRawRecord) record, out);
         } else {
-            throw new UnsupportedMessageTypeException(StringUtil.simpleClassName(record));
+            throw new UnsupportedMessageTypeException(record, SUPPORTED_MESSAGES);
         }
     }
 
@@ -68,7 +69,13 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
 
     private void encodePtrRecord(DnsPtrRecord record, ByteBuf out) throws Exception {
         encodeRecord0(record, out);
+        int writerIndex = out.writerIndex();
+        // Skip 2 bytes as these will be used to encode the rdataLen after we know how many bytes were written.
+        // See https://www.rfc-editor.org/rfc/rfc1035.html#section-3.2.1
+        out.writerIndex(writerIndex + 2);
         encodeName(record.hostname(), out);
+        int rdLength = out.writerIndex() - (writerIndex + 2);
+        out.setShort(writerIndex, rdLength);
     }
 
     private void encodeOptPseudoRecord(DnsOptPseudoRecord record, ByteBuf out) throws Exception {

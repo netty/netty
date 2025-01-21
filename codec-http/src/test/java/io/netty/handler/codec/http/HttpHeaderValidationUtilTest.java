@@ -18,7 +18,6 @@ package io.netty.handler.codec.http;
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledForJreRange;
-import org.junit.jupiter.api.condition.DisabledOnJre;
 import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -28,8 +27,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static io.netty.handler.codec.http.HttpHeaderValidationUtil.validateToken;
 import static io.netty.handler.codec.http.HttpHeaderValidationUtil.validateValidHeaderValue;
@@ -217,11 +218,24 @@ public class HttpHeaderValidationUtilTest {
         List<AsciiString> list = new ArrayList<AsciiString>();
 
         for (byte i = 0; i < 0x21; i++) {
-            list.add(new AsciiString(new byte[]{i, 'a'}));
+            asciiStrings(new byte[]{i, 'a'}, list);
         }
-        list.add(new AsciiString(new byte[]{0x7F, 'a'}));
+        asciiStrings(new byte[]{0x7F, 'a'}, list);
 
         return list;
+    }
+
+    private static void asciiStrings(byte[] chars, List<AsciiString> out) {
+        out.add(new AsciiString(chars));
+        out.add(new AsciiString(Arrays.copyOf(chars, chars.length + 1), 0, chars.length, false));
+
+        byte[] cs = Arrays.copyOf(chars, chars.length + 1);
+        System.arraycopy(cs, 0, cs, 1, chars.length);
+        out.add(new AsciiString(cs, 1, chars.length, false));
+
+        cs = Arrays.copyOf(chars, chars.length + 2);
+        System.arraycopy(cs, 0, cs, 1, chars.length);
+        out.add(new AsciiString(cs, 1, chars.length, false));
     }
 
     @ParameterizedTest
@@ -243,7 +257,7 @@ public class HttpHeaderValidationUtilTest {
             if (i == 0x7F) {
                 continue;
             }
-            list.add(new AsciiString(new byte[]{(byte) i, 'a'}));
+            asciiStrings(new byte[]{(byte) i, 'a'}, list);
         }
 
         return list;
@@ -268,9 +282,9 @@ public class HttpHeaderValidationUtilTest {
             if (i == ' ' || i == '\t') {
                 continue; // Space and horizontal tab are only illegal as first chars.
             }
-            list.add(new AsciiString(new byte[]{'a', i}));
+            asciiStrings(new byte[]{'a', i}, list);
         }
-        list.add(new AsciiString(new byte[]{'a', 0x7F}));
+        asciiStrings(new byte[]{'a', 0x7F}, list);
 
         return list;
     }
@@ -294,7 +308,7 @@ public class HttpHeaderValidationUtilTest {
             if (i == 0x7F || i < 0x21 && (i != ' ' || i != '\t')) {
                 continue;
             }
-            list.add(new AsciiString(new byte[] {'a', (byte) i}));
+            asciiStrings(new byte[] {'a', (byte) i}, list);
         }
 
         return list;
@@ -525,58 +539,69 @@ public class HttpHeaderValidationUtilTest {
         }
     }
 
-    public static List<Character> validTokenChars() {
-        List<Character> list = new ArrayList<Character>();
+    public static List<Arguments> validTokenChars() {
+        List<Character> charList = new ArrayList<Character>();
         for (char c = '0'; c <= '9'; c++) {
-            list.add(c);
+            charList.add(c);
         }
         for (char c = 'a'; c <= 'z'; c++) {
-            list.add(c);
+            charList.add(c);
         }
         for (char c = 'A'; c <= 'Z'; c++) {
-            list.add(c);
+            charList.add(c);
         }
 
         // Unreserved characters:
-        list.add('-');
-        list.add('.');
-        list.add('_');
-        list.add('~');
+        charList.add('-');
+        charList.add('.');
+        charList.add('_');
+        charList.add('~');
 
         // Token special characters:
-        list.add('!');
-        list.add('#');
-        list.add('$');
-        list.add('%');
-        list.add('&');
-        list.add('\'');
-        list.add('*');
-        list.add('+');
-        list.add('^');
-        list.add('`');
-        list.add('|');
+        charList.add('!');
+        charList.add('#');
+        charList.add('$');
+        charList.add('%');
+        charList.add('&');
+        charList.add('\'');
+        charList.add('*');
+        charList.add('+');
+        charList.add('^');
+        charList.add('`');
+        charList.add('|');
+
+        List<AsciiString> asciiStrings = new ArrayList<AsciiString>();
+        List<Arguments> list = new ArrayList<Arguments>();
+
+        for (char tokenChar : charList) {
+            for (byte[] cs : Arrays.asList(new byte[] {(byte) tokenChar, 'a'}, new byte[] {'a', (byte) tokenChar})) {
+                asciiStrings.clear();
+                asciiStrings(cs, asciiStrings);
+                for (AsciiString asciiString : asciiStrings) {
+                    list.add(args(asciiString, new String(cs)));
+                }
+                for (AsciiString asciiString : asciiStrings) {
+                    list.add(args(asciiString, asciiString.toString()));
+                }
+            }
+        }
 
         return list;
     }
 
-    @ParameterizedTest
-    @MethodSource("validTokenChars")
-    void allTokenCharsAreValidFirstCharHeaderName(char tokenChar) {
-        AsciiString asciiString = new AsciiString(new byte[] {(byte) tokenChar, 'a'});
-        CharSequence charSequence = asCharSequence(asciiString);
-        String string = tokenChar + "a";
-
-        assertEquals(-1, validateToken(asciiString));
-        assertEquals(-1, validateToken(charSequence));
-        assertEquals(-1, validateToken(string));
+    private static Arguments args(final Object... objs) {
+        return new Arguments() {
+            @Override
+            public Object[] get() {
+                return objs;
+            }
+        };
     }
 
     @ParameterizedTest
     @MethodSource("validTokenChars")
-    void allTokenCharsAreValidSecondCharHeaderName(char tokenChar) {
-        AsciiString asciiString = new AsciiString(new byte[] {'a', (byte) tokenChar});
+    void allTokenCharsAreValidInHeaderName(AsciiString asciiString, String string) {
         CharSequence charSequence = asCharSequence(asciiString);
-        String string = "a" + tokenChar;
 
         assertEquals(-1, validateToken(asciiString));
         assertEquals(-1, validateToken(charSequence));

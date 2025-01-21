@@ -32,6 +32,7 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
 import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.unmodifiableBuffer;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -57,7 +58,7 @@ public class ReadOnlyByteBufTest {
 
     @Test
     public void testUnmodifiableBuffer() {
-        assertTrue(unmodifiableBuffer(buffer(1)) instanceof ReadOnlyByteBuf);
+        assertThat(unmodifiableBuffer(buffer(1))).isInstanceOf(ReadOnlyByteBuf.class);
     }
 
     @Test
@@ -77,16 +78,16 @@ public class ReadOnlyByteBufTest {
     @Test
     public void shouldReturnReadOnlyDerivedBuffer() {
         ByteBuf buf = unmodifiableBuffer(buffer(1));
-        assertTrue(buf.duplicate() instanceof ReadOnlyByteBuf);
-        assertTrue(buf.slice() instanceof ReadOnlyByteBuf);
-        assertTrue(buf.slice(0, 1) instanceof ReadOnlyByteBuf);
-        assertTrue(buf.duplicate() instanceof ReadOnlyByteBuf);
+        assertThat(buf.duplicate()).isInstanceOf(ReadOnlyByteBuf.class);
+        assertThat(buf.slice()).isInstanceOf(ReadOnlyByteBuf.class);
+        assertThat(buf.slice(0, 1)).isInstanceOf(ReadOnlyByteBuf.class);
+        assertThat(buf.duplicate()).isInstanceOf(ReadOnlyByteBuf.class);
     }
 
     @Test
     public void shouldReturnWritableCopy() {
         ByteBuf buf = unmodifiableBuffer(buffer(1));
-        assertFalse(buf.copy() instanceof ReadOnlyByteBuf);
+        assertThat(buf.copy()).isNotInstanceOf(ReadOnlyByteBuf.class);
     }
 
     @Test
@@ -296,4 +297,59 @@ public class ReadOnlyByteBufTest {
         assertSame(readOnly, readOnly.asReadOnly());
         readOnly.release();
     }
+
+    @Test
+    public void testDuplicateOfSliceHasTheSameCapacityAsTheSlice() {
+        ByteBuf buffer = buffer(16);
+
+        ByteBuf slice = buffer.slice();
+        ByteBuf duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+
+        slice = buffer.slice(0, buffer.capacity() - 2);
+        duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+
+        slice = buffer.slice();
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        duplicate.release();
+
+        slice = buffer.slice(0, buffer.capacity() - 2);
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        duplicate.release();
+
+        buffer.release();
+    }
+
+    @Test
+    public void testDuplicateOfRetainedSliceHasTheSameCapacityAsTheSlice() {
+        ByteBuf buffer = buffer(16);
+
+        ByteBuf slice = buffer.retainedSlice();
+        ByteBuf duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+
+        slice = buffer.retainedSlice(0, buffer.capacity() - 2);
+        duplicate = slice.duplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+
+        slice = buffer.retainedSlice();
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+        duplicate.release();
+
+        slice = buffer.retainedSlice(0, buffer.capacity() - 2);
+        duplicate = slice.retainedDuplicate();
+        assertEquals(slice.capacity(), duplicate.capacity());
+        slice.release();
+        duplicate.release();
+
+        buffer.release();
+    }
+
 }

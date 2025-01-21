@@ -24,6 +24,8 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+  
+permissions: read-all
 
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
@@ -40,14 +42,18 @@ jobs:
           - setup: linux-aarch64
             docker-compose-build: "-f docker/docker-compose.centos-7.yaml build"
             docker-compose-run: "-f docker/docker-compose.centos-7.yaml run cross-compile-aarch64-stage-snapshot"
+          - setup: linux-riscv64
+            docker-compose-build: "-f docker/docker-compose.ubuntu-20.04.yaml build"
+            docker-compose-run: "-f docker/docker-compose.ubuntu-20.04.yaml run cross-compile-riscv64-stage-snapshot"
 
     name: stage-snapshot-${{ matrix.setup }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v4
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
@@ -55,47 +61,40 @@ jobs:
             ${{ runner.os }}-maven-${{ matrix.setup }}-
             ${{ runner.os }}-maven-
 
-      # Enable caching of Docker layers
-      - uses: satackey/action-docker-layer-caching@v0.0.11
-        env:
-          docker-cache-name: staging-${{ matrix.setup }}-cache-docker
-        continue-on-error: true
-        with:
-          key: ${{ runner.os }}-staging-${{ env.docker-cache-name }}-{hash}
-          restore-keys: |
-            ${{ runner.os }}-staging-${{ env.docker-cache-name }}-
-
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
 
       - name: Build docker image
-        run: docker-compose ${{ matrix.docker-compose-build }}
+        run: docker compose ${{ matrix.docker-compose-build }}
 
       - name: Stage snapshots to local staging directory
-        run: docker-compose ${{ matrix.docker-compose-run }}
+        run: docker compose ${{ matrix.docker-compose-run }}
 
       - name: Upload local staging directory
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.setup }}-local-staging
           path: ~/local-staging
           if-no-files-found: error
+          include-hidden-files: true
 
   deploy-staged-snapshots:
     runs-on: ubuntu-latest
     # Wait until we have staged everything
     needs: stage-snapshot
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 8
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v4
         with:
-          java-version: 8
+          distribution: 'zulu'
+          java-version: '8'
 
       # Cache .m2/repository
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v4
+        continue-on-error: true
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-deploy-staged-snapshots-${{ hashFiles('**/pom.xml') }}
@@ -111,26 +110,47 @@ jobs:
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups. There is currently no way to pull this out of the config.
       - name: Download linux-aarch64 staging directory
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: linux-aarch64-local-staging
           path: ~/linux-aarch64-local-staging
 
+      - name: Download linux-riscv64 staging directory
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-riscv64-local-staging
+          path: ~/linux-riscv64-local-staging
+
       - name: Download linux-x86_64-java8 staging directory
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: linux-x86_64-java8-local-staging
           path: ~/linux-x86_64-java8-local-staging
+
+      - name: Copy previous build artifacts to local maven repository
+        run: |
+          cp -r ~/linux-aarch64-local-staging/deferred/* ~/.m2/repository/
+          cp -r ~/linux-riscv64-local-staging/deferred/* ~/.m2/repository/
+          cp -r ~/linux-x86_64-java8-local-staging/deferred/* ~/.m2/repository/
+
+      - name: Generate netty-all and deploy to local staging.
+        run: |
+          mkdir -p ~/all-local-staging
+          ./mvnw -B --file pom.xml -Plinux-native-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Merge staging repositories
         run: |
           mkdir -p ~/local-staging/deferred
           cat ~/linux-aarch64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
           cp -r ~/linux-aarch64-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/linux-riscv64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/linux-riscv64-local-staging/deferred/* ~/local-staging/deferred/
           cat ~/linux-x86_64-java8-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
           cp -r ~/linux-x86_64-java8-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/all-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/all-local-staging/deferred/io/netty/netty-all/* ~/local-staging/deferred/io/netty/netty-all/
 
-      - uses: s4u/maven-settings-action@v2.2.0
+      - uses: s4u/maven-settings-action@v3.0.0
         with:
           servers: |
             [{

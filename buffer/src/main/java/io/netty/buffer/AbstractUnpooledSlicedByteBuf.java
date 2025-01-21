@@ -215,7 +215,12 @@ abstract class AbstractUnpooledSlicedByteBuf extends AbstractDerivedByteBuf {
 
     @Override
     public ByteBuf duplicate() {
-        return unwrap().duplicate().setIndex(idx(readerIndex()), idx(writerIndex()));
+        return slice(0, capacity()).setIndex(readerIndex(), writerIndex());
+    }
+
+    @Override
+    public ByteBuf retainedDuplicate() {
+        return retainedSlice(0, capacity()).setIndex(readerIndex(), writerIndex());
     }
 
     @Override

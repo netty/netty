@@ -18,6 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.socket.TunAddress;
+import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.Socket;
@@ -43,12 +44,10 @@ import static io.netty.util.CharsetUtil.US_ASCII;
  */
 @UnstableApi
 public final class LinuxSocket extends Socket {
-    static final InetAddress INET6_ANY = unsafeInetAddrByName("::");
     static final int IFNAMSIZ = 16; // net/if.h
     private static final IllegalArgumentException TUN_ILLEGAL_NAME_EXCEPTION =
             new IllegalArgumentException("Device name must be an ASCII string shorter than " +
                     IFNAMSIZ + " characters or null.");
-    private static final InetAddress INET_ANY = unsafeInetAddrByName("0.0.0.0");
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
 
     LinuxSocket(int fd) {
@@ -88,7 +87,7 @@ public final class LinuxSocket extends Socket {
 
     void setNetworkInterface(NetworkInterface netInterface) throws IOException {
         InetAddress address = deriveInetAddress(netInterface, family() == InternetProtocolFamily.IPv6);
-        if (address.equals(family() == InternetProtocolFamily.IPv4 ? INET_ANY : INET6_ANY)) {
+        if (address.equals(family() == InternetProtocolFamily.IPv4 ? Native.INET_ANY : Native.INET6_ANY)) {
             throw new IOException("NetworkInterface does not support " + family());
         }
         final NativeInetAddress nativeAddress = NativeInetAddress.newInstance(address);
@@ -219,6 +218,10 @@ public final class LinuxSocket extends Socket {
         setTcpUserTimeout(intValue(), milliseconds);
     }
 
+    void setIpBindAddressNoPort(boolean enabled) throws IOException {
+        setIpBindAddressNoPort(intValue(), enabled ? 1 : 0);
+    }
+
     void setIpFreeBind(boolean enabled) throws IOException {
         setIpFreeBind(intValue(), enabled ? 1 : 0);
     }
@@ -280,6 +283,10 @@ public final class LinuxSocket extends Socket {
         return getTcpUserTimeout(intValue());
     }
 
+    boolean isIpBindAddressNoPort() throws IOException {
+        return isIpBindAddressNoPort(intValue()) != 0;
+    }
+
     boolean isIpFreeBind() throws IOException {
         return isIpFreeBind(intValue()) != 0;
     }
@@ -324,8 +331,48 @@ public final class LinuxSocket extends Socket {
         return ioResult("sendfile", (int) res);
     }
 
+    public void bindVSock(VSockAddress address) throws IOException {
+        int res = bindVSock(/*fd*/intValue(), address.getCid(), address.getPort());
+        if (res < 0) {
+            throw newIOException("bindVSock", res);
+        }
+    }
+
+    public boolean connectVSock(VSockAddress address) throws IOException {
+        int res = connectVSock(/*fd*/intValue(), address.getCid(), address.getPort());
+        if (res < 0) {
+            return Errors.handleConnectErrno("connectVSock", res);
+        }
+        return true;
+    }
+
+    public VSockAddress remoteVSockAddress() {
+        byte[] addr = remoteVSockAddress(/*fd*/intValue());
+        if (addr == null) {
+            return null;
+        }
+        int cid = getIntAt(addr, 0);
+        int port = getIntAt(addr, 4);
+        return new VSockAddress(cid, port);
+    }
+
+    public VSockAddress localVSockAddress() {
+        byte[] addr = localVSockAddress(/*fd*/intValue());
+        if (addr == null) {
+            return null;
+        }
+        int cid = getIntAt(addr, 0);
+        int port = getIntAt(addr, 4);
+        return new VSockAddress(cid, port);
+    }
+
+    private static int getIntAt(byte[] array, int startIndex) {
+        return array[startIndex] << 24 | (array[startIndex + 1] & 0xFF) << 16
+                | (array[startIndex + 2] & 0xFF) << 8 | (array[startIndex + 3] & 0xFF);
+    }
+
     private static InetAddress deriveInetAddress(NetworkInterface netInterface, boolean ipv6) {
-        final InetAddress ipAny = ipv6 ? INET6_ANY : INET_ANY;
+        final InetAddress ipAny = ipv6 ? Native.INET6_ANY : Native.INET_ANY;
         if (netInterface != null) {
             final Enumeration<InetAddress> ias = netInterface.getInetAddresses();
             while (ias.hasMoreElements()) {
@@ -337,6 +384,22 @@ public final class LinuxSocket extends Socket {
             }
         }
         return ipAny;
+    }
+
+    public static LinuxSocket newSocket(int fd) {
+        return new LinuxSocket(fd);
+    }
+
+    public static LinuxSocket newVSockStream() {
+        return new LinuxSocket(newVSockStream0());
+    }
+
+    static int newVSockStream0() {
+        int res = newVSockStreamFd();
+        if (res < 0) {
+            throw new ChannelException(newIOException("newVSockStream", res));
+        }
+        return res;
     }
 
     public static LinuxSocket newSocketStream(boolean ipv6) {
@@ -371,13 +434,11 @@ public final class LinuxSocket extends Socket {
         return new LinuxSocket(newSocketDomainDgram0());
     }
 
-    private static InetAddress unsafeInetAddrByName(String inetName) {
-        try {
-            return InetAddress.getByName(inetName);
-        } catch (UnknownHostException uhe) {
-            throw new ChannelException(uhe);
-        }
-    }
+    private static native int newVSockStreamFd();
+    private static native int bindVSock(int fd, int cid, int port);
+    private static native int connectVSock(int fd, int cid, int port);
+    private static native byte[] remoteVSockAddress(int fd);
+    private static native byte[] localVSockAddress(int fd);
 
     public static LinuxSocket newSocketTun() {
         int res = newSocketTunFd();
@@ -443,6 +504,7 @@ public final class LinuxSocket extends Socket {
     private static native int getTcpKeepCnt(int fd) throws IOException;
     private static native int getTcpUserTimeout(int fd) throws IOException;
     private static native int getTimeToLive(int fd) throws IOException;
+    private static native int isIpBindAddressNoPort(int fd) throws IOException;
     private static native int isIpFreeBind(int fd) throws IOException;
     private static native int isIpTransparent(int fd) throws IOException;
     private static native int isIpRecvOrigDestAddr(int fd) throws IOException;
@@ -459,6 +521,7 @@ public final class LinuxSocket extends Socket {
     private static native void setTcpKeepIntvl(int fd, int seconds) throws IOException;
     private static native void setTcpKeepCnt(int fd, int probes) throws IOException;
     private static native void setTcpUserTimeout(int fd, int milliseconds)throws IOException;
+    private static native void setIpBindAddressNoPort(int fd, int ipBindAddressNoPort) throws IOException;
     private static native void setIpFreeBind(int fd, int freeBind) throws IOException;
     private static native void setIpTransparent(int fd, int transparent) throws IOException;
     private static native void setIpRecvOrigDestAddr(int fd, int transparent) throws IOException;

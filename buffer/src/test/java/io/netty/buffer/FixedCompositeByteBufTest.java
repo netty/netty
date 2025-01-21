@@ -502,7 +502,10 @@ public class FixedCompositeByteBufTest {
         assertTrue(buf.hasArray());
         assertArrayEquals(EMPTY_BUFFER.array(), buf.array());
         assertEquals(EMPTY_BUFFER.isDirect(), buf.isDirect());
-        assertEquals(EMPTY_BUFFER.memoryAddress(), buf.memoryAddress());
+        assertEquals(EMPTY_BUFFER.hasMemoryAddress(), buf.hasMemoryAddress());
+        if (buf.hasMemoryAddress()) {
+            assertEquals(EMPTY_BUFFER.memoryAddress(), buf.memoryAddress());
+        }
         buf.release();
     }
 

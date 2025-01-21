@@ -19,6 +19,7 @@ import com.ning.compress.lzf.LZFEncoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -68,6 +69,6 @@ public class LzfDecoderTest extends AbstractDecoderTest {
 
     @Override
     protected byte[] compress(byte[] data) throws Exception {
-        return LZFEncoder.encode(data);
+        return PlatformDependent.hasUnsafe() ? LZFEncoder.encode(data) : LZFEncoder.safeEncode(data);
     }
 }

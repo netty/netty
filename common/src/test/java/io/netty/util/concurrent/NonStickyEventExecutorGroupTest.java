@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -129,7 +130,7 @@ public class NonStickyEventExecutorGroupTest {
     }
 
     private static void execute(EventExecutorGroup group, CountDownLatch startLatch) throws Throwable {
-        EventExecutor executor = group.next();
+        final EventExecutor executor = group.next();
         assertTrue(executor instanceof OrderedEventExecutor);
         final AtomicReference<Throwable> cause = new AtomicReference<Throwable>();
         final AtomicInteger last = new AtomicInteger();
@@ -140,10 +141,15 @@ public class NonStickyEventExecutorGroupTest {
 
         for (int i = 1 ; i <= tasks; i++) {
             final int id = i;
+            assertFalse(executor.inEventLoop());
+            assertFalse(executor.inEventLoop(Thread.currentThread()));
             futures.add(executor.submit(new Runnable() {
                 @Override
                 public void run() {
                     try {
+                        assertTrue(executor.inEventLoop(Thread.currentThread()));
+                        assertTrue(executor.inEventLoop());
+
                         if (cause.get() == null) {
                             int lastId = last.get();
                             if (lastId >= id) {

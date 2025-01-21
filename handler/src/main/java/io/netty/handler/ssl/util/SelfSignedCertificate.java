@@ -240,7 +240,12 @@ public final class SelfSignedCertificate {
             paths = BouncyCastleSelfSignedCertGenerator.generate(
                     fqdn, keypair, random, notBefore, notAfter, algorithm);
         } catch (Throwable t) {
-            logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t);
+            if (!isBouncyCastleAvailable()) {
+                logger.debug("Failed to generate a self-signed X.509 certificate because " +
+                        "BouncyCastle PKIX is not available in classpath");
+            } else {
+                logger.debug("Failed to generate a self-signed X.509 certificate using Bouncy Castle:", t);
+            }
             try {
                 // Try the OpenJDK's proprietary implementation.
                 paths = OpenJdkSelfSignedCertGenerator.generate(fqdn, keypair, random, notBefore, notAfter, algorithm);
@@ -399,6 +404,16 @@ public final class SelfSignedCertificate {
             if (logger.isWarnEnabled()) {
                 logger.warn("Failed to close a file: " + keyFile, e);
             }
+        }
+    }
+
+    private static boolean isBouncyCastleAvailable() {
+        try {
+            // this class is in bcpkix, both fips and non-fips
+            Class.forName("org.bouncycastle.cert.X509v3CertificateBuilder");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
         }
     }
 }

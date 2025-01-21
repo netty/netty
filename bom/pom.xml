@@ -25,7 +25,7 @@
 
   <groupId>io.netty</groupId>
   <artifactId>netty-bom</artifactId>
-  <version>4.1.85.Final-SNAPSHOT</version>
+  <version>4.1.118.Final-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Netty/BOM</name>
@@ -65,7 +65,7 @@
 
   <properties>
     <!-- Keep in sync with ../pom.xml -->
-    <tcnative.version>2.0.54.Final</tcnative.version>
+    <tcnative.version>2.0.69.Final</tcnative.version>
   </properties>
 
   <build>
@@ -167,6 +167,11 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
+        <artifactId>netty-handler-ssl-ocsp</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
         <artifactId>netty-resolver</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -242,6 +247,12 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
         <version>${project.version}</version>
+        <classifier>linux-riscv64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport-native-unix-common</artifactId>
+        <version>${project.version}</version>
         <classifier>linux-x86_64</classifier>
       </dependency>
       <dependency>
@@ -271,6 +282,12 @@
         <artifactId>netty-transport-native-epoll</artifactId>
         <version>${project.version}</version>
         <classifier>linux-aarch_64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport-native-epoll</artifactId>
+        <version>${project.version}</version>
+        <classifier>linux-riscv64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>

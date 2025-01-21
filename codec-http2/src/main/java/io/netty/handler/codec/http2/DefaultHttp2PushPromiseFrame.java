@@ -15,12 +15,9 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * Default implementation of {@link Http2PushPromiseFrame}
  */
-@UnstableApi
 public final class DefaultHttp2PushPromiseFrame implements Http2PushPromiseFrame {
 
     private Http2FrameStream pushStreamFrame;

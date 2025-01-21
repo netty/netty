@@ -22,6 +22,7 @@ import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
@@ -33,12 +34,12 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     private final AuthoritativeDnsServerCache authoritativeDnsServerCache;
     private final boolean completeEarlyIfPossible;
 
-    DnsAddressResolveContext(DnsNameResolver parent, Promise<?> originalPromise,
-                             String hostname, DnsRecord[] additionals,
+    DnsAddressResolveContext(DnsNameResolver parent, Channel channel,
+                             Promise<?> originalPromise, String hostname, DnsRecord[] additionals,
                              DnsServerAddressStream nameServerAddrs, int allowedQueries, DnsCache resolveCache,
                              AuthoritativeDnsServerCache authoritativeDnsServerCache,
                              boolean completeEarlyIfPossible) {
-        super(parent, originalPromise, hostname, DnsRecord.CLASS_IN,
+        super(parent, channel, originalPromise, hostname, DnsRecord.CLASS_IN,
               parent.resolveRecordTypes(), additionals, nameServerAddrs, allowedQueries);
         this.resolveCache = resolveCache;
         this.authoritativeDnsServerCache = authoritativeDnsServerCache;
@@ -46,13 +47,14 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     }
 
     @Override
-    DnsResolveContext<InetAddress> newResolverContext(DnsNameResolver parent, Promise<?> originalPromise,
+    DnsResolveContext<InetAddress> newResolverContext(DnsNameResolver parent, Channel channel,
+                                                      Promise<?> originalPromise,
                                                       String hostname,
                                                       int dnsClass, DnsRecordType[] expectedTypes,
                                                       DnsRecord[] additionals,
                                                       DnsServerAddressStream nameServerAddrs, int allowedQueries) {
-        return new DnsAddressResolveContext(parent, originalPromise, hostname, additionals, nameServerAddrs,
-                allowedQueries, resolveCache, authoritativeDnsServerCache, completeEarlyIfPossible);
+        return new DnsAddressResolveContext(parent, channel, originalPromise, hostname, additionals,
+                nameServerAddrs, allowedQueries, resolveCache, authoritativeDnsServerCache, completeEarlyIfPossible);
     }
 
     @Override
@@ -80,19 +82,20 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     @Override
     void cache(String hostname, DnsRecord[] additionals,
                DnsRecord result, InetAddress convertedResult) {
-        resolveCache.cache(hostname, additionals, convertedResult, result.timeToLive(), parent.ch.eventLoop());
+        resolveCache.cache(hostname, additionals, convertedResult, result.timeToLive(),
+                channel().eventLoop());
     }
 
     @Override
     void cache(String hostname, DnsRecord[] additionals, UnknownHostException cause) {
-        resolveCache.cache(hostname, additionals, cause, parent.ch.eventLoop());
+        resolveCache.cache(hostname, additionals, cause, channel().eventLoop());
     }
 
     @Override
     void doSearchDomainQuery(String hostname, Promise<List<InetAddress>> nextPromise) {
         // Query the cache for the hostname first and only do a query if we could not find it in the cache.
-        if (!DnsNameResolver.doResolveAllCached(
-                hostname, additionals, nextPromise, resolveCache, parent.resolvedInternetProtocolFamiliesUnsafe())) {
+        if (!DnsNameResolver.doResolveAllCached(hostname, additionals, nextPromise, resolveCache,
+                parent.searchDomains(), parent.ndots(), parent.resolvedInternetProtocolFamiliesUnsafe())) {
             super.doSearchDomainQuery(hostname, nextPromise);
         }
     }

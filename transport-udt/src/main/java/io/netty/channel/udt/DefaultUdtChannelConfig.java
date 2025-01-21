@@ -214,7 +214,7 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
     }
 
     @Override
-    public UdtChannelConfig setSystemSendBufferSize(
+    public UdtChannelConfig setSystemReceiveBufferSize(
             final int systemReceiveBufferSize) {
         this.systemReceiveBufferSize = systemReceiveBufferSize;
         return this;
@@ -233,7 +233,7 @@ public class DefaultUdtChannelConfig extends DefaultChannelConfig implements
     }
 
     @Override
-    public UdtChannelConfig setSystemReceiveBufferSize(
+    public UdtChannelConfig setSystemSendBufferSize(
             final int systemSendBufferSize) {
         this.systemSendBufferSize = systemSendBufferSize;
         return this;

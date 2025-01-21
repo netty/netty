@@ -16,7 +16,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.Closeable;
 import java.util.List;
@@ -27,7 +26,6 @@ import java.util.List;
  * application-specific processing. Note that frames of an unknown type (i.e. HTTP/2 extensions)
  * will skip all protocol checks and be given directly to the listener for processing.
  */
-@UnstableApi
 public interface Http2ConnectionDecoder extends Closeable {
 
     /**

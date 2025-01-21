@@ -15,15 +15,18 @@
  */
 package io.netty.microbench.buffer;
 
+import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.Random;
 
@@ -36,6 +39,7 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
     private static final ByteBufAllocator unpooledAllocator = new UnpooledByteBufAllocator(true);
     private static final ByteBufAllocator pooledAllocator =
             new PooledByteBufAllocator(true, 4, 4, 8192, 11, 0, 0, 0, true, 0); // Disable thread-local cache
+    private static final ByteBufAllocator adaptiveAllocator = new AdaptiveByteBufAllocator();
 
     private static final int MAX_LIVE_BUFFERS = 8192;
     private static final Random rand = new Random();
@@ -45,8 +49,17 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
     private static final ByteBuf[] pooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
     private static final ByteBuf[] defaultPooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
     private static final ByteBuf[] defaultPooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] adaptiveHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
+    private static final ByteBuf[] adaptiveDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
 
-    @Param({ "00000", "00256", "01024", "04096", "16384", "65536" })
+    @Param({
+            "00000",
+            "00256",
+            "01024",
+            "04096",
+            "16384",
+            "65536",
+    })
     public int size;
 
     @Benchmark
@@ -107,5 +120,25 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
             oldBuf.release();
         }
         defaultPooledDirectBuffers[idx] = PooledByteBufAllocator.DEFAULT.directBuffer(size);
+    }
+
+    @Benchmark
+    public void adaptiveHeapAllocAndFree() {
+        int idx = rand.nextInt(adaptiveHeapBuffers.length);
+        ByteBuf oldBuf = adaptiveHeapBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
+        }
+        adaptiveHeapBuffers[idx] = adaptiveAllocator.heapBuffer(size);
+    }
+
+    @Benchmark
+    public void adaptiveDirectAllocAndFree() {
+        int idx = rand.nextInt(adaptiveDirectBuffers.length);
+        ByteBuf oldBuf = adaptiveDirectBuffers[idx];
+        if (oldBuf != null) {
+            oldBuf.release();
+        }
+        adaptiveDirectBuffers[idx] = adaptiveAllocator.directBuffer(size);
     }
 }

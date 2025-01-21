@@ -30,25 +30,29 @@ import javax.net.ssl.SSLException;
 public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
                    int mode, Certificate[] keyCertChain,
-                   ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
+                   ClientAuth clientAuth, String[] protocols, boolean startTls, String endpointIdentificationAlgorithm,
+                   boolean enableOcsp, ResumptionController resumptionController,
                    Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apnCfg), mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, false, options);
+                clientAuth, protocols, startTls, endpointIdentificationAlgorithm, enableOcsp, false,
+                resumptionController, options);
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
                    int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
+                   ResumptionController resumptionController,
                    Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, false, options);
+                clientAuth, protocols, startTls, null, enableOcsp, false, resumptionController, options);
     }
 
     @Override
     final SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
-        return new OpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode);
+        return new OpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode,
+                endpointIdentificationAlgorithm);
     }
 
     @Override

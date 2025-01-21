@@ -22,7 +22,6 @@ import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -624,7 +623,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          * Shutdown the output portion of the corresponding {@link Channel}.
          * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
          */
-        @UnstableApi
         public final void shutdownOutput(final ChannelPromise promise) {
             assertEventLoop();
             shutdownOutput(promise, null);
@@ -1098,7 +1096,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Called when conditions justify shutting down the output portion of the channel. This may happen if a write
      * operation throws an exception.
      */
-    @UnstableApi
     protected void doShutdownOutput() throws Exception {
         doClose();
     }
@@ -1176,7 +1173,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             return this;
         }
     }
@@ -1192,7 +1189,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             return this;
         }
     }
@@ -1208,7 +1205,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             return this;
         }
     }

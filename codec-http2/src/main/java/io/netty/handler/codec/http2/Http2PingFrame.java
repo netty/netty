@@ -16,12 +16,9 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * HTTP/2 PING Frame.
  */
-@UnstableApi
 public interface Http2PingFrame extends Http2Frame {
 
     /**

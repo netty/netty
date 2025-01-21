@@ -85,6 +85,8 @@ public abstract class WebSocketClientHandshaker {
 
     private final boolean absoluteUpgradeUrl;
 
+    protected final boolean generateOriginHeader;
+
     /**
      * Base constructor
      *
@@ -151,6 +153,36 @@ public abstract class WebSocketClientHandshaker {
     protected WebSocketClientHandshaker(URI uri, WebSocketVersion version, String subprotocol,
                                         HttpHeaders customHeaders, int maxFramePayloadLength,
                                         long forceCloseTimeoutMillis, boolean absoluteUpgradeUrl) {
+        this(uri, version, subprotocol, customHeaders, maxFramePayloadLength, forceCloseTimeoutMillis,
+                absoluteUpgradeUrl, true);
+    }
+
+    /**
+     * Base constructor
+     *
+     * @param uri
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath". Subsequent web socket frames will be
+     *            sent to this URL.
+     * @param version
+     *            Version of web socket specification to use to connect to the server
+     * @param subprotocol
+     *            Sub protocol request sent to the server.
+     * @param customHeaders
+     *            Map of custom headers to add to the client request
+     * @param maxFramePayloadLength
+     *            Maximum length of a frame's payload
+     * @param forceCloseTimeoutMillis
+     *            Close the connection if it was not closed by the server after timeout specified
+     * @param  absoluteUpgradeUrl
+     *            Use an absolute url for the Upgrade request, typically when connecting through an HTTP proxy over
+     *            clear HTTP
+     * @param generateOriginHeader
+     *            Allows to generate the `Origin`|`Sec-WebSocket-Origin` header value for handshake request
+     *            according to the given webSocketURL
+     */
+    protected WebSocketClientHandshaker(URI uri, WebSocketVersion version, String subprotocol,
+            HttpHeaders customHeaders, int maxFramePayloadLength,
+            long forceCloseTimeoutMillis, boolean absoluteUpgradeUrl, boolean generateOriginHeader) {
         this.uri = uri;
         this.version = version;
         expectedSubprotocol = subprotocol;
@@ -158,6 +190,7 @@ public abstract class WebSocketClientHandshaker {
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.forceCloseTimeoutMillis = forceCloseTimeoutMillis;
         this.absoluteUpgradeUrl = absoluteUpgradeUrl;
+        this.generateOriginHeader = generateOriginHeader;
     }
 
     /**
@@ -262,6 +295,28 @@ public abstract class WebSocketClientHandshaker {
                promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
                        "an HttpResponseDecoder or HttpClientCodec"));
                return promise;
+            }
+        }
+
+        if (uri.getHost() == null) {
+            if (customHeaders == null || !customHeaders.contains(HttpHeaderNames.HOST)) {
+                promise.setFailure(new IllegalArgumentException("Cannot generate the 'host' header value," +
+                        " webSocketURI should contain host or passed through customHeaders"));
+                return promise;
+            }
+
+            if (generateOriginHeader && !customHeaders.contains(HttpHeaderNames.ORIGIN)) {
+                final String originName;
+                if (version == WebSocketVersion.V07 || version == WebSocketVersion.V08) {
+                    originName = HttpHeaderNames.SEC_WEBSOCKET_ORIGIN.toString();
+                } else {
+                    originName = HttpHeaderNames.ORIGIN.toString();
+                }
+
+                promise.setFailure(new IllegalArgumentException("Cannot generate the '" + originName + "' header" +
+                        " value, webSocketURI should contain host or disable generateOriginHeader or pass value" +
+                        " through customHeaders"));
+                return promise;
             }
         }
 

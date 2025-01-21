@@ -15,19 +15,21 @@
 
 package io.netty.handler.codec.http2;
 
+import java.io.Closeable;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2Error.COMPRESSION_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-@UnstableApi
-public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2HeadersEncoder.Configuration {
+public class DefaultHttp2HeadersEncoder implements
+    Http2HeadersEncoder, Http2HeadersEncoder.Configuration, Closeable {
+
     private final HpackEncoder hpackEncoder;
     private final SensitivityDetector sensitivityDetector;
-    private final ByteBuf tableSizeChangeOutput = Unpooled.buffer();
+    private ByteBuf tableSizeChangeOutput;
 
     public DefaultHttp2HeadersEncoder() {
         this(NEVER_SENSITIVE);
@@ -66,7 +68,7 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
         try {
             // If there was a change in the table size, serialize the output from the hpackEncoder
             // resulting from that change.
-            if (tableSizeChangeOutput.isReadable()) {
+            if (tableSizeChangeOutput != null && tableSizeChangeOutput.isReadable()) {
                 buffer.writeBytes(tableSizeChangeOutput);
                 tableSizeChangeOutput.clear();
             }
@@ -81,6 +83,9 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
 
     @Override
     public void maxHeaderTableSize(long max) throws Http2Exception {
+        if (tableSizeChangeOutput == null) {
+            tableSizeChangeOutput = Unpooled.buffer();
+        }
         hpackEncoder.setMaxHeaderTableSize(tableSizeChangeOutput, max);
     }
 
@@ -102,5 +107,16 @@ public class DefaultHttp2HeadersEncoder implements Http2HeadersEncoder, Http2Hea
     @Override
     public Configuration configuration() {
         return this;
+    }
+
+    /**
+     * Close the encoder and release all its associated data.
+     */
+    @Override
+    public void close() {
+        if (tableSizeChangeOutput != null) {
+            tableSizeChangeOutput.release();
+            tableSizeChangeOutput = null;
+        }
     }
 }

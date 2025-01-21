@@ -17,10 +17,15 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,6 +40,7 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -59,6 +65,7 @@ public class HttpRequestDecoderTest {
                 "Upgrade: WebSocket" + lineDelimiter2 +
                 "Connection: Upgrade" + lineDelimiter +
                 "Host: localhost" + lineDelimiter2 +
+                "Accept: */*" + lineDelimiter +
                 "Origin: http://localhost:8080" + lineDelimiter +
                 "Sec-WebSocket-Key1: 10  28 8V7 8 48     0" + lineDelimiter2 +
                 "Sec-WebSocket-Key2: 8 Xt754O3Q3QW 0   _60" + lineDelimiter +
@@ -82,8 +89,21 @@ public class HttpRequestDecoderTest {
         testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS);
     }
 
+    @Test
+    public void testDecodeWholeRequestAtOnceMixedDelimitersWithIntegerOverflowOnMaxBodySize() {
+        testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, Integer.MAX_VALUE);
+        testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, Integer.MAX_VALUE - 1);
+    }
+
     private static void testDecodeWholeRequestAtOnce(byte[] content) {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        testDecodeWholeRequestAtOnce(content, HttpRequestDecoder.DEFAULT_MAX_HEADER_SIZE);
+    }
+
+    private static void testDecodeWholeRequestAtOnce(byte[] content, int maxHeaderSize) {
+        EmbeddedChannel channel =
+                new EmbeddedChannel(new HttpRequestDecoder(HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH,
+                                                           maxHeaderSize,
+                                                           HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE));
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(content)));
         HttpRequest req = channel.readInbound();
         assertNotNull(req);
@@ -100,10 +120,11 @@ public class HttpRequestDecoderTest {
     }
 
     private static void checkHeaders(HttpHeaders headers) {
-        assertEquals(7, headers.names().size());
+        assertEquals(8, headers.names().size());
         checkHeader(headers, "Upgrade", "WebSocket");
         checkHeader(headers, "Connection", "Upgrade");
         checkHeader(headers, "Host", "localhost");
+        checkHeader(headers, "Accept", "*/*");
         checkHeader(headers, "Origin", "http://localhost:8080");
         checkHeader(headers, "Sec-WebSocket-Key1", "10  28 8V7 8 48     0");
         checkHeader(headers, "Sec-WebSocket-Key2", "8 Xt754O3Q3QW 0   _60");
@@ -307,7 +328,7 @@ public class HttpRequestDecoderTest {
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isFailure());
-        assertTrue(request.decoderResult().cause() instanceof TooLongHttpLineException);
+        assertThat(request.decoderResult().cause(), instanceOf(TooLongHttpLineException.class));
         assertFalse(channel.finish());
     }
 
@@ -357,6 +378,33 @@ public class HttpRequestDecoderTest {
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isFailure());
         assertTrue(request.decoderResult().cause() instanceof TooLongHttpHeaderException);
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    void testTotalHeaderLimit() throws Exception {
+        String requestStr = "GET /some/path HTTP/1.1\r\n" +
+                "Host: a.b\r\n" + // 9 content bytes
+                "a1: b\r\n" +     // + 5 = 14 bytes,
+                "a2: b\r\n\r\n";  // + 5 = 19 bytes
+
+        // Decoding with a max header size of 18 bytes must fail:
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(1024, 18, 1024));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isFailure());
+        assertInstanceOf(TooLongHttpHeaderException.class, request.decoderResult().cause());
+        assertFalse(channel.finish());
+
+        // Decoding with a max header size of 19 must pass:
+        channel = new EmbeddedChannel(new HttpRequestDecoder(1024, 19, 1024));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        assertEquals("a.b", request.headers().get("Host"));
+        assertEquals("b", request.headers().get("a1"));
+        assertEquals("b", request.headers().get("a2"));
+        assertEquals(LastHttpContent.EMPTY_LAST_CONTENT, channel.readInbound());
         assertFalse(channel.finish());
     }
 
@@ -544,6 +592,7 @@ public class HttpRequestDecoderTest {
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
         assertFalse(request.decoderResult().isFailure());
+        assertTrue(request.headers().names().contains("Transfer-Encoding"));
         assertTrue(request.headers().contains("Transfer-Encoding", "chunked", false));
         assertFalse(request.headers().contains("Content-Length"));
         LastHttpContent c = channel.readInbound();
@@ -585,6 +634,136 @@ public class HttpRequestDecoderTest {
         assertThat(decoderResult.totalSize(), is(58));
         HttpContent c = channel.readInbound();
         c.release();
+        assertFalse(channel.finish());
+    }
+
+    /**
+     * <a href="https://datatracker.ietf.org/doc/html/rfc9112#name-field-syntax">RFC 9112</a> define the header field
+     * syntax thusly, where the field value is bracketed by optional whitespace:
+     * <pre>
+     *     field-line   = field-name ":" OWS field-value OWS
+     * </pre>
+     * Meanwhile, <a href="https://datatracker.ietf.org/doc/html/rfc9110#name-whitespace">RFC 9110</a> says that
+     * "optional whitespace" (OWS) is defined as "zero or more linear whitespace octets".
+     * And a "linear whitespace octet" is defined in the ABNF as either a space or a tab character.
+     */
+    @Test
+    void headerValuesMayBeBracketedByZeroOrMoreWhitespace() throws Exception {
+        String requestStr = "GET / HTTP/1.1\r\n" +
+                "Host:example.com\r\n" + // zero whitespace
+                "X-0-Header:  x0\r\n" + // two whitespace
+                "X-1-Header:\tx1\r\n" + // tab whitespace
+                "X-2-Header: \t x2\r\n" + // mixed whitespace
+                "X-3-Header:x3\t \r\n" + // whitespace after the value
+                "\r\n";
+        HttpRequestDecoder decoder = new HttpRequestDecoder();
+        EmbeddedChannel channel = new EmbeddedChannel(decoder);
+
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        HttpHeaders headers = request.headers();
+        assertEquals("example.com", headers.get("Host"));
+        assertEquals("x0", headers.get("X-0-Header"));
+        assertEquals("x1", headers.get("X-1-Header"));
+        assertEquals("x2", headers.get("X-2-Header"));
+        assertEquals("x3", headers.get("X-3-Header"));
+        LastHttpContent last = channel.readInbound();
+        assertEquals(LastHttpContent.EMPTY_LAST_CONTENT, last);
+        last.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testChunkSizeOverflow() {
+        String requestStr = "PUT /some/path HTTP/1.1\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "8ccccccc\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        HttpContent c = channel.readInbound();
+        c.release();
+        assertTrue(c.decoderResult().isFailure());
+        assertInstanceOf(NumberFormatException.class, c.decoderResult().cause());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testChunkSizeOverflow2() {
+        String requestStr = "PUT /some/path HTTP/1.1\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "bbbbbbbe;\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertTrue(request.decoderResult().isSuccess());
+        HttpContent c = channel.readInbound();
+        c.release();
+        assertTrue(c.decoderResult().isFailure());
+        assertInstanceOf(NumberFormatException.class, c.decoderResult().cause());
+        assertFalse(channel.finish());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "HTP/1.1", "HTTP", "HTTP/1x", "Something/1.1", "HTTP/1",
+            "HTTP/1.11", "HTTP/11.1", "HTTP/A.1", "HTTP/1.B"})
+    public void testInvalidVersion(String version) {
+        testInvalidHeaders0("GET / " + version + "\r\nHost: whatever\r\n\r\n");
+    }
+
+    @ParameterizedTest
+    // See https://www.unicode.org/charts/nameslist/n_0000.html
+    @ValueSource(strings = { "\r", "\u000b", "\u000c" })
+    public void testHeaderValueWithInvalidSuffix(String suffix) {
+        testInvalidHeaders0("GET / HTTP/1.1\r\nHost: whatever\r\nTest-Key: test-value" + suffix + "\r\n\r\n");
+    }
+
+    @Test
+    public void testLeadingWhitespaceInFirstHeaderName() {
+        testInvalidHeaders0("POST / HTTP/1.1\r\n\tContent-Length: 1\r\n\r\nX");
+    }
+
+   @Test
+    public void testNulInInitialLine() {
+        testInvalidHeaders0("GET / HTTP/1.1\r\u0000\nHost: whatever\r\n\r\n");
+    }
+
+    @Test
+    void reentrantClose() {
+        String requestStr = "GET / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 0\r\n" +
+                "\r\n" +
+                "GET / HTTP/1.1\r\n" +
+                "Host: example.com\r\n" +
+                "Content-Length: 0\r\n" +
+                "\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(), new ChannelInboundHandlerAdapter() {
+            private int i;
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                if (i == 0) {
+                    assertInstanceOf(HttpRequest.class, msg);
+                } else if (i == 1) {
+                    assertInstanceOf(LastHttpContent.class, msg);
+                } else if (i == 2) {
+                    assertInstanceOf(HttpRequest.class, msg);
+                } else if (i == 3) {
+                    assertInstanceOf(LastHttpContent.class, msg);
+                }
+                ReferenceCountUtil.release(msg);
+
+                if (++i == 1) {
+                    // first request
+                    ctx.close();
+                }
+            }
+        });
+
+        assertFalse(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         assertFalse(channel.finish());
     }
 

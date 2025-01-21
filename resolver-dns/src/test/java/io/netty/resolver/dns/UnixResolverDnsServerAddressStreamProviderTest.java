@@ -288,6 +288,18 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
         assertHostNameEquals("127.0.0.2", stream.next());
     }
 
+    @Test
+    public void ipv6Nameserver(@TempDir Path tempDir) throws Exception {
+        File f = buildFile(tempDir, "search localdomain\n" +
+                "nameserver 10.211.55.1\n" +
+                "nameserver fe80::21c:42ff:fe00:18%nonexisting\n");
+        UnixResolverDnsServerAddressStreamProvider p =
+                new UnixResolverDnsServerAddressStreamProvider(f, null);
+
+        DnsServerAddressStream stream = p.nameServerAddressStream("somehost");
+        assertHostNameEquals("10.211.55.1", stream.next());
+    }
+
     private static void assertHostNameEquals(String expectedHostname, InetSocketAddress next) {
         assertEquals(expectedHostname, next.getHostString(), "unexpected hostname: " + next);
     }

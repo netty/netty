@@ -1,0 +1,47 @@
+# ----------------------------------------------------------------------------
+# Copyright 2023 The Netty Project
+#
+# The Netty Project licenses this file to you under the Apache License,
+# version 2.0 (the "License"); you may not use this file except in compliance
+# with the License. You may obtain a copy of the License at:
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+# ----------------------------------------------------------------------------
+name: thread dump jvms
+description: Triggers a thread dump for all running JVMs
+runs:
+  using: composite
+  steps:
+    - run: |
+        if [[ "$OSTYPE" == "linux-gnu"* ]] && command -v sudo &> /dev/null; then
+          # use jattach so that Java processes in docker containers are also covered
+          # download jattach
+          curl -s -L -o /tmp/jattach https://github.com/apangin/jattach/releases/download/v2.1/jattach
+          if command -v sha256sum &> /dev/null; then
+            # verify hash of jattach binary
+            sha256sum -c <(echo "07885fdc782e02e7302c6d190f54c3930afa10a38140365adf54076ec1086a8e  /tmp/jattach") || exit 1
+          fi
+          chmod +x /tmp/jattach
+          for java_pid in $(sudo pgrep java); do
+            echo "----------------------- pid $java_pid -----------------------"
+            echo "command line: $(sudo cat /proc/$java_pid/cmdline | xargs -0 echo)"
+            sudo /tmp/jattach $java_pid jcmd VM.command_line || true
+            sudo /tmp/jattach $java_pid jcmd "Thread.print -l"
+            sudo /tmp/jattach $java_pid jcmd GC.heap_info || true
+          done
+        else
+          for java_pid in $(jps -q -J-XX:+PerfDisableSharedMem); do
+            echo "----------------------- pid $java_pid -----------------------"
+            jcmd $java_pid VM.command_line || true
+            jcmd $java_pid Thread.print -l
+            jcmd $java_pid GC.heap_info || true
+          done
+        fi
+        exit 0
+      shell: bash

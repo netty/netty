@@ -37,4 +37,9 @@ public class Http2MultiplexCodecTest extends Http2MultiplexTest<Http2FrameCodec>
     protected boolean ignoreWindowUpdateFrames() {
         return false;
     }
+
+    @Override
+    protected boolean useUserEventForPriorityFrame() {
+        return false;
+    }
 }

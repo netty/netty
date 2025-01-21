@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.util.internal.EmptyArrays;
 import org.bouncycastle.asn1.ocsp.OCSPResponseStatus;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -204,6 +205,6 @@ public class OcspServerExample {
             parser.close();
         }
 
-        return dst.toArray(new X509Certificate[0]);
+        return dst.toArray(EmptyArrays.EMPTY_X509_CERTIFICATES);
     }
 }

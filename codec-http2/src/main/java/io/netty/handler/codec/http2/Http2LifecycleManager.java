@@ -18,13 +18,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Manager for the life cycle of the HTTP/2 connection. Handles graceful shutdown of the channel,
  * closing only after all of the streams have closed.
  */
-@UnstableApi
 public interface Http2LifecycleManager {
 
     /**

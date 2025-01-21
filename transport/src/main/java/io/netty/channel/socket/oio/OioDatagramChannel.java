@@ -45,6 +45,7 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.NotYetConnectedException;
+import java.nio.channels.UnresolvedAddressException;
 import java.util.List;
 import java.util.Locale;
 
@@ -292,15 +293,28 @@ public class OioDatagramChannel extends AbstractOioMessageChannel
         }
     }
 
+    private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
+        if (envelope.recipient() instanceof InetSocketAddress
+                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
+            throw new UnresolvedAddressException();
+        }
+    }
+
     @Override
     protected Object filterOutboundMessage(Object msg) {
-        if (msg instanceof DatagramPacket || msg instanceof ByteBuf) {
+        if (msg instanceof DatagramPacket) {
+            checkUnresolved((DatagramPacket) msg);
+            return msg;
+        }
+
+        if (msg instanceof ByteBuf) {
             return msg;
         }
 
         if (msg instanceof AddressedEnvelope) {
             @SuppressWarnings("unchecked")
             AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
+            checkUnresolved(e);
             if (e.content() instanceof ByteBuf) {
                 return msg;
             }

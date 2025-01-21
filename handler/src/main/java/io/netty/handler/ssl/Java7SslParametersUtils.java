@@ -35,4 +35,14 @@ final class Java7SslParametersUtils {
     static void setAlgorithmConstraints(SSLParameters sslParameters, Object algorithmConstraints) {
         sslParameters.setAlgorithmConstraints((AlgorithmConstraints) algorithmConstraints);
     }
+
+    /**
+     * Utility method for calling the {@code setEndpointIdentitificationAlgorithm} method,
+     * which was introduced in Java 7.
+     */
+    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
+    static void setEndpointIdentificationAlgorithm(
+            SSLParameters sslParameters, String endpointIdentificationAlgorithm) {
+        sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
+    }
 }

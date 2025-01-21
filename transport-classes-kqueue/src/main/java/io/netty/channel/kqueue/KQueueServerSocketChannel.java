@@ -18,7 +18,6 @@ package io.netty.channel.kqueue;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.util.internal.UnstableApi;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -26,7 +25,6 @@ import java.net.SocketAddress;
 import static io.netty.channel.kqueue.BsdSocket.newSocketStream;
 import static io.netty.channel.unix.NativeInetAddress.address;
 
-@UnstableApi
 public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel implements ServerSocketChannel {
     private final KQueueServerSocketChannelConfig config;
 

@@ -57,7 +57,7 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
     private static final int STRING_BUILDER_MAX_SIZE;
 
     private static final InternalLogger logger;
-
+    /** Internal use only. */
     public static final Object UNSET = new Object();
 
     /** Used by {@link FastThreadLocal} */

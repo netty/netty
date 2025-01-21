@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelPipeline;
 
 /**
@@ -102,6 +103,18 @@ import io.netty.channel.ChannelPipeline;
  * use {@link HttpClientCodec} if you are writing an HTTP client that issues a
  * <tt>CONNECT</tt> request.
  * </p>
+ *
+ * <h3>Header Validation</h3>
+ *
+ * It is recommended to always enable header validation.
+ * <p>
+ * Without header validation, your system can become vulnerable to
+ * <a href="https://cwe.mitre.org/data/definitions/113.html">
+ *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+ * </a>.
+ * <p>
+ * This recommendation stands even when both peers in the HTTP exchange are trusted,
+ * as it helps with defence-in-depth.
  */
 public class HttpResponseDecoder extends HttpObjectDecoder {
 
@@ -111,23 +124,48 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
      * Creates a new instance with the default
      * {@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}, and
      * {@code maxChunkSize (8192)}.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
      */
     public HttpResponseDecoder() {
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @param maxInitialLineLength the initial size of the temporary buffer used when parsing the lines of the
+     * HTTP headers.
+     * @param maxHeaderSize the maximum permitted combined size of all headers in any one response.
+     * @param maxChunkSize The maximum amount of data that the decoder will buffer
+     * before sending chunks down the pipeline.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
      */
     public HttpResponseDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize) {
-        super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED);
+        super(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize));
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpResponseDecoder(HttpDecoderConfig)} constructor.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
+     */
+    @Deprecated
     public HttpResponseDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders) {
         super(maxInitialLineLength, maxHeaderSize, maxChunkSize, DEFAULT_CHUNKED_SUPPORTED, validateHeaders);
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpResponseDecoder(HttpDecoderConfig)} constructor.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
+     */
+    @Deprecated
     public HttpResponseDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
             int initialBufferSize) {
@@ -135,6 +173,12 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
               initialBufferSize);
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpResponseDecoder(HttpDecoderConfig)} constructor.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
+     */
+    @Deprecated
     public HttpResponseDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
             int initialBufferSize, boolean allowDuplicateContentLengths) {
@@ -142,6 +186,12 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
               initialBufferSize, allowDuplicateContentLengths);
     }
 
+    /**
+     * @deprecated Prefer the {@link #HttpResponseDecoder(HttpDecoderConfig)} constructor.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
+     */
+    @Deprecated
     public HttpResponseDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean validateHeaders,
             int initialBufferSize, boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
@@ -149,16 +199,27 @@ public class HttpResponseDecoder extends HttpObjectDecoder {
               initialBufferSize, allowDuplicateContentLengths, allowPartialChunks);
     }
 
+    /**
+     * Creates a new instance with the specified configuration.
+     * @see HttpDecoderConfig HttpDecoderConfig API documentation for detailed descriptions of
+     * the configuration parameters.
+     */
+    public HttpResponseDecoder(HttpDecoderConfig config) {
+        super(config);
+    }
+
     @Override
     protected HttpMessage createMessage(String[] initialLine) {
         return new DefaultHttpResponse(
-                HttpVersion.valueOf(initialLine[0]),
-                HttpResponseStatus.valueOf(Integer.parseInt(initialLine[1]), initialLine[2]), validateHeaders);
+                // Do strict version checking
+                HttpVersion.valueOf(initialLine[0], true),
+                HttpResponseStatus.valueOf(Integer.parseInt(initialLine[1]), initialLine[2]), headersFactory);
     }
 
     @Override
     protected HttpMessage createInvalidMessage() {
-        return new DefaultFullHttpResponse(HttpVersion.HTTP_1_0, UNKNOWN_STATUS, validateHeaders);
+        return new DefaultFullHttpResponse(HttpVersion.HTTP_1_0, UNKNOWN_STATUS, Unpooled.buffer(0),
+                headersFactory, trailersFactory);
     }
 
     @Override

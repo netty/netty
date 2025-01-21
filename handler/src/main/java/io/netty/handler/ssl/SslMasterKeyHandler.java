@@ -171,10 +171,12 @@ public abstract class SslMasterKeyHandler extends ChannelInboundHandlerAdapter {
     }
 
     /**
-     * Record the session identifier and master key to the {@link InternalLogger} named <code>io.netty.wireshark</code>.
-     * ex. <code>RSA Session-ID:XXX Master-Key:YYY</code>
+     * Record the session identifier and master key to the {@link InternalLogger} named {@code io.netty.wireshark}.
+     * ex. {@code RSA Session-ID:XXX Master-Key:YYY}
      * This format is understood by Wireshark 1.6.0.
-     * https://code.wireshark.org/review/gitweb?p=wireshark.git;a=commit;h=686d4cabb41185591c361f9ec6b709034317144b
+     * See: <a href=
+     * "https://code.wireshark.org/review/gitweb?p=wireshark.git;a=commit;h=686d4cabb41185591c361f9ec6b709034317144b"
+     * >Wireshark</a>
      * The key and session identifier are forwarded to the log named 'io.netty.wireshark'.
      */
     private static final class WiresharkSslMasterKeyHandler extends SslMasterKeyHandler {

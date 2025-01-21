@@ -6,7 +6,7 @@ services:
     image: netty:centos-6-1.11
     build:
       args:
-        java_version : "11.0.17-zulu"
+        java_version : "11.0.25-zulu"
 
   build:
     image: netty:centos-6-1.11
@@ -18,6 +18,12 @@ services:
     image: netty:centos-6-1.11
 
   build-leak-boringssl-static:
+    image: netty:centos-6-1.11
+
+  build-leak-adaptive:
+    image: netty:centos-6-1.11
+
+  build-boringssl-snapshot:
     image: netty:centos-6-1.11
 
   shell:

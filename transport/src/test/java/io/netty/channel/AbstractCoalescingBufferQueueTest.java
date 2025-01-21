@@ -19,13 +19,17 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.nio.channels.ClosedChannelException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AbstractCoalescingBufferQueueTest {
@@ -87,5 +91,67 @@ public class AbstractCoalescingBufferQueueTest {
         assertEquals(0, queue.readableBytes());
 
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testKeepStateConsistentOnError() {
+        final IllegalReferenceCountException exception = new IllegalReferenceCountException();
+        final EmbeddedChannel channel = new EmbeddedChannel();
+        final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(channel, 128) {
+            @Override
+            protected ByteBuf compose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
+                // Simulate throwing an IllegalReferenceCountException.
+                throw exception;
+            }
+
+            @Override
+            protected ByteBuf composeFirst(ByteBufAllocator allocator, ByteBuf first, int bufferSize) {
+                // Simulate throwing an IllegalReferenceCountException.
+                throw exception;
+            }
+
+            @Override
+            protected ByteBuf removeEmptyValue() {
+                return Unpooled.EMPTY_BUFFER;
+            }
+        };
+
+        ChannelPromise promise = channel.newPromise();
+        ByteBuf buffer = Unpooled.buffer().writeLong(0);
+        queue.add(buffer, promise);
+
+        ChannelPromise promise2 = channel.newPromise();
+        ByteBuf buffer2 = Unpooled.buffer().writeLong(0);
+        queue.add(buffer2, promise2);
+
+        // Size should be 4 as its 2 buffers and 2 listeners.
+        assertEquals(4, queue.size());
+        assertEquals(16, queue.readableBytes());
+
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                queue.remove(channel.alloc(), 128,  channel.newPromise());
+            }
+        });
+
+        // This should result in have the first buf and first listener removed from the queue.
+        assertEquals(2, queue.size());
+        assertEquals(8, queue.readableBytes());
+        assertSame(exception, promise.cause());
+        assertEquals(0, buffer.refCnt());
+
+        assertFalse(promise2.isDone());
+        assertEquals(1, buffer2.refCnt());
+        ByteBuf removed = queue.remove(channel.alloc(), 128, channel.newPromise());
+        assertEquals(8, removed.readableBytes());
+        removed.release();
+
+        assertTrue(queue.isEmpty());
+        assertEquals(0, queue.size());
+        assertEquals(0, queue.readableBytes());
+        ByteBuf removed2 = queue.remove(channel.alloc(), 128, channel.newPromise());
+        assertEquals(0, removed2.readableBytes());
+        removed2.release();
     }
 }

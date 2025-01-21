@@ -170,8 +170,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
                 if (handler == headContext) {
                     headContext.channelRegistered(this);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).channelRegistered(this);
+                } else if (handler instanceof ChannelInboundHandlerAdapter) {
+                    ((ChannelInboundHandlerAdapter) handler).channelRegistered(this);
                 } else {
                     ((ChannelInboundHandler) handler).channelRegistered(this);
                 }
@@ -213,8 +213,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
                 if (handler == headContext) {
                     headContext.channelUnregistered(this);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).channelUnregistered(this);
+                } else if (handler instanceof ChannelInboundHandlerAdapter) {
+                    ((ChannelInboundHandlerAdapter) handler).channelUnregistered(this);
                 } else {
                     ((ChannelInboundHandler) handler).channelUnregistered(this);
                 }
@@ -256,8 +256,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
                 if (handler == headContext) {
                     headContext.channelActive(this);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).channelActive(this);
+                } else if (handler instanceof ChannelInboundHandlerAdapter) {
+                    ((ChannelInboundHandlerAdapter) handler).channelActive(this);
                 } else {
                     ((ChannelInboundHandler) handler).channelActive(this);
                 }
@@ -299,8 +299,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
                 if (handler == headContext) {
                     headContext.channelInactive(this);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).channelInactive(this);
+                } else if (handler instanceof ChannelInboundHandlerAdapter) {
+                    ((ChannelInboundHandlerAdapter) handler).channelInactive(this);
                 } else {
                     ((ChannelInboundHandler) handler).channelInactive(this);
                 }
@@ -394,8 +394,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
                 if (handler == headContext) {
                     headContext.userEventTriggered(this, event);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).userEventTriggered(this, event);
+                } else if (handler instanceof ChannelInboundHandlerAdapter) {
+                    ((ChannelInboundHandlerAdapter) handler).userEventTriggered(this, event);
                 } else {
                     ((ChannelInboundHandler) handler).userEventTriggered(this, event);
                 }
@@ -522,8 +522,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
                 if (handler == headContext) {
                     headContext.channelWritabilityChanged(this);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).channelWritabilityChanged(this);
+                } else if (handler instanceof ChannelInboundHandlerAdapter) {
+                    ((ChannelInboundHandlerAdapter) handler).channelWritabilityChanged(this);
                 } else {
                     ((ChannelInboundHandler) handler).channelWritabilityChanged(this);
                 }
@@ -600,6 +600,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     headContext.bind(this, localAddress, promise);
                 } else if (handler instanceof ChannelDuplexHandler) {
                     ((ChannelDuplexHandler) handler).bind(this, localAddress, promise);
+                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
+                    ((ChannelOutboundHandlerAdapter) handler).bind(this, localAddress, promise);
                 } else {
                     ((ChannelOutboundHandler) handler).bind(this, localAddress, promise);
                 }
@@ -653,6 +655,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     headContext.connect(this, remoteAddress, localAddress, promise);
                 } else if (handler instanceof ChannelDuplexHandler) {
                     ((ChannelDuplexHandler) handler).connect(this, remoteAddress, localAddress, promise);
+                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
+                    ((ChannelOutboundHandlerAdapter) handler).connect(this, remoteAddress, localAddress, promise);
                 } else {
                     ((ChannelOutboundHandler) handler).connect(this, remoteAddress, localAddress, promise);
                 }
@@ -703,6 +707,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     headContext.disconnect(this, promise);
                 } else if (handler instanceof ChannelDuplexHandler) {
                     ((ChannelDuplexHandler) handler).disconnect(this, promise);
+                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
+                    ((ChannelOutboundHandlerAdapter) handler).disconnect(this, promise);
                 } else {
                     ((ChannelOutboundHandler) handler).disconnect(this, promise);
                 }
@@ -749,6 +755,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     headContext.close(this, promise);
                 } else if (handler instanceof ChannelDuplexHandler) {
                     ((ChannelDuplexHandler) handler).close(this, promise);
+                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
+                    ((ChannelOutboundHandlerAdapter) handler).close(this, promise);
                 } else {
                     ((ChannelOutboundHandler) handler).close(this, promise);
                 }
@@ -795,6 +803,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     headContext.deregister(this, promise);
                 } else if (handler instanceof ChannelDuplexHandler) {
                     ((ChannelDuplexHandler) handler).deregister(this, promise);
+                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
+                    ((ChannelOutboundHandlerAdapter) handler).deregister(this, promise);
                 } else {
                     ((ChannelOutboundHandler) handler).deregister(this, promise);
                 }
@@ -835,6 +845,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     headContext.read(this);
                 } else if (handler instanceof ChannelDuplexHandler) {
                     ((ChannelDuplexHandler) handler).read(this);
+                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
+                    ((ChannelOutboundHandlerAdapter) handler).read(this);
                 } else {
                     ((ChannelOutboundHandler) handler).read(this);
                 }
@@ -877,6 +889,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 headContext.write(this, msg, promise);
             } else if (handler instanceof ChannelDuplexHandler) {
                 ((ChannelDuplexHandler) handler).write(this, msg, promise);
+            } else if (handler instanceof ChannelOutboundHandlerAdapter) {
+                ((ChannelOutboundHandlerAdapter) handler).write(this, msg, promise);
             } else {
                 ((ChannelOutboundHandler) handler).write(this, msg, promise);
             }
@@ -921,6 +935,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 headContext.flush(this);
             } else if (handler instanceof ChannelDuplexHandler) {
                 ((ChannelDuplexHandler) handler).flush(this);
+            } else if (handler instanceof ChannelOutboundHandlerAdapter) {
+                ((ChannelOutboundHandlerAdapter) handler).flush(this);
             } else {
                 ((ChannelOutboundHandler) handler).flush(this);
             }

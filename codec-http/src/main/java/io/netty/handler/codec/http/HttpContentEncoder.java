@@ -17,6 +17,7 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.DecoderResult;
@@ -63,7 +64,6 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
     private static final CharSequence ZERO_LENGTH_HEAD = "HEAD";
     private static final CharSequence ZERO_LENGTH_CONNECT = "CONNECT";
-    private static final int CONTINUE_CODE = HttpResponseStatus.CONTINUE.code();
 
     private final Queue<CharSequence> acceptEncodingQueue = new ArrayDeque<CharSequence>();
     private EmbeddedChannel encoder;
@@ -112,10 +112,12 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
                 final HttpResponse res = (HttpResponse) msg;
                 final int code = res.status().code();
+                final HttpStatusClass codeClass = res.status().codeClass();
                 final CharSequence acceptEncoding;
-                if (code == CONTINUE_CODE) {
-                    // We need to not poll the encoding when response with CONTINUE as another response will follow
-                    // for the issued request. See https://github.com/netty/netty/issues/4079
+                if (codeClass == HttpStatusClass.INFORMATIONAL) {
+                    // We need to not poll the encoding when response with 1xx codes as another response will follow
+                    // for the issued request.
+                    // See https://github.com/netty/netty/issues/12904 and https://github.com/netty/netty/issues/4079
                     acceptEncoding = null;
                 } else {
                     // Get the list of encodings accepted by the peer.
@@ -207,6 +209,9 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                 ensureContent(msg);
                 if (encodeContent((HttpContent) msg, out)) {
                     state = State.AWAIT_HEADERS;
+                } else if (out.isEmpty()) {
+                    // MessageToMessageCodec needs at least one output message
+                    out.add(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
                 }
                 break;
             }

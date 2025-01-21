@@ -55,7 +55,6 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.condition.DisabledIf;
 import reactor.blockhound.BlockHound;
 import reactor.blockhound.BlockingOperationError;
 import reactor.blockhound.integration.BlockHoundIntegration;
@@ -87,12 +86,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-@DisabledIf("isDisabledIfJavaVersion18OrAbove")
 public class NettyBlockHoundIntegrationTest {
-
-    private static boolean isDisabledIfJavaVersion18OrAbove() {
-        return PlatformDependent.javaVersion() >= 18;
-    }
 
     @BeforeAll
     public static void setUpClass() {
@@ -187,6 +181,23 @@ public class NettyBlockHoundIntegrationTest {
         taskQueue.waitUntilContented();
         taskQueue.removeContention();
         latch.await();
+    }
+
+    @Test
+    void permittingBlockingCallsInFastThreadLocalThreadSubclass() throws Exception {
+        final FutureTask<Void> future = new FutureTask<>(() -> {
+            Thread.sleep(0);
+            return null;
+        });
+        FastThreadLocalThread thread = new FastThreadLocalThread(future) {
+            @Override
+            public boolean permitBlockingCalls() {
+                return true; // The Thread.sleep(0) call should not be flagged because we allow blocking calls.
+            }
+        };
+        thread.start();
+        future.get(5, TimeUnit.SECONDS);
+        thread.join();
     }
 
     @Test
@@ -396,7 +407,7 @@ public class NettyBlockHoundIntegrationTest {
         NioEventLoopGroup group = new NioEventLoopGroup();
         try {
             DnsNameResolverBuilder builder = new DnsNameResolverBuilder(group.next())
-                    .channelFactory(NioDatagramChannel::new);
+                    .datagramChannelFactory(NioDatagramChannel::new);
             doTestParseResolverFilesAllowsBlockingCalls(builder::build);
         } finally {
             group.shutdownGracefully();

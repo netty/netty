@@ -24,6 +24,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
@@ -509,6 +510,18 @@ public class StreamBufferingEncoderTest {
 
         ChannelFuture f = encoderWriteHeaders(3, newPromise());
         assertNotNull(f.cause());
+    }
+
+    @Test
+    public void testExhaustedStreamId() throws Http2Exception {
+        testStreamId(Integer.MAX_VALUE - 2);
+        testStreamId(connection.local().incrementAndGetNextStreamId());
+    }
+
+    private void testStreamId(int nextStreamId) throws Http2Exception {
+        connection.local().createStream(nextStreamId, false);
+        ChannelFuture channelFuture = encoder.writeData(ctx, nextStreamId, EMPTY_BUFFER, 0, false, newPromise());
+        assertNull(channelFuture.cause());
     }
 
     private void setMaxConcurrentStreams(int newValue) {

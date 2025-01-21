@@ -22,6 +22,8 @@ import com.oracle.svm.core.annotate.TargetClass;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Collection;
 
 @TargetClass(NetUtil.class)
 final class NetUtilSubstitutions {
@@ -39,6 +41,10 @@ final class NetUtilSubstitutions {
     @Alias
     @InjectAccessors(NetUtilLocalhostAccessor.class)
     public static InetAddress LOCALHOST;
+
+    @Alias
+    @InjectAccessors(NetUtilNetworkInterfacesAccessor.class)
+    public static Collection<NetworkInterface> NETWORK_INTERFACES;
 
     private static final class NetUtilLocalhost4Accessor {
         static Inet4Address get() {
@@ -83,8 +89,25 @@ final class NetUtilSubstitutions {
 
     private static final class NetUtilLocalhostLazyHolder {
         private static final InetAddress LOCALHOST = NetUtilInitializations
-                .determineLoopback(NetUtilLocalhost4LazyHolder.LOCALHOST4, NetUtilLocalhost6LazyHolder.LOCALHOST6)
+                .determineLoopback(NetUtilNetworkInterfacesLazyHolder.NETWORK_INTERFACES,
+                        NetUtilLocalhost4LazyHolder.LOCALHOST4, NetUtilLocalhost6LazyHolder.LOCALHOST6)
                 .address();
+    }
+
+    private static final class NetUtilNetworkInterfacesAccessor {
+        static Collection<NetworkInterface> get() {
+            // using https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom
+            return NetUtilNetworkInterfacesLazyHolder.NETWORK_INTERFACES;
+        }
+
+        static void set(Collection<NetworkInterface> ignored) {
+            // a no-op setter to avoid exceptions when NetUtil is initialized at run-time
+        }
+    }
+
+    private static final class NetUtilNetworkInterfacesLazyHolder {
+        private static final Collection<NetworkInterface> NETWORK_INTERFACES =
+                NetUtilInitializations.networkInterfaces();
     }
 }
 

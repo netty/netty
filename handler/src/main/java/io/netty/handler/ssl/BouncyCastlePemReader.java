@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.CharsetUtil;
+import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
@@ -44,6 +45,7 @@ import java.security.Provider;
 
 final class BouncyCastlePemReader {
     private static final String BC_PROVIDER = "org.bouncycastle.jce.provider.BouncyCastleProvider";
+    private static final String BC_FIPS_PROVIDER = "org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider";
     private static final String BC_PEMPARSER = "org.bouncycastle.openssl.PEMParser";
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastlePemReader.class);
 
@@ -75,9 +77,18 @@ final class BouncyCastlePemReader {
             public Void run() {
                 try {
                     ClassLoader classLoader = getClass().getClassLoader();
-                    // Check for bcprov-jdk15on:
-                    Class<Provider> bcProviderClass =
-                            (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
+                    // Check for bcprov-jdk15on or bc-fips:
+                    Class<Provider> bcProviderClass;
+                    try {
+                        bcProviderClass = (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
+                    } catch (ClassNotFoundException e) {
+                        try {
+                            bcProviderClass = (Class<Provider>) Class.forName(BC_FIPS_PROVIDER, true, classLoader);
+                        } catch (ClassNotFoundException ex) {
+                            ThrowableUtil.addSuppressed(e, ex);
+                            throw e;
+                        }
+                    }
                     // Check for bcpkix-jdk15on:
                     Class.forName(BC_PEMPARSER, true, classLoader);
                     bcProvider = bcProviderClass.getConstructor().newInstance();

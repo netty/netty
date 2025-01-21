@@ -106,6 +106,14 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
+        // fast-path
+        if (name == HttpMethod.GET.name()) {
+            return HttpMethod.GET;
+        }
+        if (name == HttpMethod.POST.name()) {
+            return HttpMethod.POST;
+        }
+        // "slow"-path
         HttpMethod result = methodMap.get(name);
         return result != null ? result : new HttpMethod(name);
     }
@@ -121,14 +129,11 @@ public class HttpMethod implements Comparable<HttpMethod> {
      */
     public HttpMethod(String name) {
         name = checkNonEmptyAfterTrim(name, "name");
-
-        for (int i = 0; i < name.length(); i ++) {
-            char c = name.charAt(i);
-            if (Character.isISOControl(c) || Character.isWhitespace(c)) {
-                throw new IllegalArgumentException("invalid character in name");
-            }
+        int index = HttpUtil.validateToken(name);
+        if (index != -1) {
+            throw new IllegalArgumentException(
+                    "Illegal character in HTTP Method: 0x" + Integer.toHexString(name.charAt(index)));
         }
-
         this.name = AsciiString.cached(name);
     }
 

@@ -24,7 +24,7 @@ import io.netty.util.internal.StringUtil;
  */
 public final class MqttTopicSubscription {
 
-    private final String topicFilter;
+    private String topicFilter;
     private final MqttSubscriptionOption option;
 
     public MqttTopicSubscription(String topicFilter, MqttQoS qualityOfService) {
@@ -37,8 +37,30 @@ public final class MqttTopicSubscription {
         this.option = option;
     }
 
+    /**
+     * @deprecated use topicFilter
+     */
+    @Deprecated
     public String topicName() {
         return topicFilter;
+    }
+
+    public String topicFilter() {
+        return topicFilter;
+    }
+
+    /**
+     * Rewrite topic filter.
+     * <p>
+     *
+     * Many IoT devices do not support reconfiguration or upgrade, so it is hard to
+     * change their subscribed topics. To resolve this issue, MQTT server may offer
+     * topic rewrite capability.
+     *
+     * @param topicFilter Topic to rewrite to
+     */
+    public void setTopicFilter(String topicFilter) {
+        this.topicFilter = topicFilter;
     }
 
     public MqttQoS qualityOfService() {
@@ -52,10 +74,10 @@ public final class MqttTopicSubscription {
     @Override
     public String toString() {
         return new StringBuilder(StringUtil.simpleClassName(this))
-            .append('[')
-            .append("topicFilter=").append(topicFilter)
-            .append(", option=").append(this.option)
-            .append(']')
-            .toString();
+                .append('[')
+                .append("topicFilter=").append(topicFilter)
+                .append(", option=").append(this.option)
+                .append(']')
+                .toString();
     }
 }

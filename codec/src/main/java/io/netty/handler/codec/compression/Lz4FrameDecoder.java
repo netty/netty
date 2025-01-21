@@ -227,7 +227,7 @@ public class Lz4FrameDecoder extends ByteToMessageDecoder {
                         case BLOCK_TYPE_COMPRESSED:
                             uncompressed = ctx.alloc().buffer(decompressedLength, decompressedLength);
 
-                            decompressor.decompress(CompressionUtil.safeNioBuffer(in),
+                            decompressor.decompress(CompressionUtil.safeReadableNioBuffer(in),
                                     uncompressed.internalNioBuffer(uncompressed.writerIndex(), decompressedLength));
                             // Update the writerIndex now to reflect what we decompressed.
                             uncompressed.writerIndex(uncompressed.writerIndex() + decompressedLength);

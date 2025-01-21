@@ -58,6 +58,15 @@ final class UnixResolverOptions {
         return attempts;
     }
 
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() +
+                "{ndots=" + ndots +
+                ", timeout=" + timeout +
+                ", attempts=" + attempts +
+                '}';
+    }
+
     static final class Builder {
 
         private int ndots = 1;

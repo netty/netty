@@ -17,6 +17,7 @@
 package io.netty.handler.codec.socksx.v5;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
@@ -36,7 +37,7 @@ public interface Socks5AddressDecoder {
         @Override
         public String decodeAddress(Socks5AddressType addrType, ByteBuf in) throws Exception {
             if (addrType == Socks5AddressType.IPv4) {
-                return NetUtil.intToIpAddress(in.readInt());
+                return NetUtil.intToIpAddress(ByteBufUtil.readIntBE(in));
             }
             if (addrType == Socks5AddressType.DOMAIN) {
                 final int length = in.readUnsignedByte();

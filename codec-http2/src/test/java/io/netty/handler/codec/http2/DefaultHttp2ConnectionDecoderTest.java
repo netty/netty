@@ -26,6 +26,8 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -42,12 +44,14 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
 import static io.netty.handler.codec.http2.Http2Stream.State.IDLE;
 import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 
@@ -64,6 +68,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.isNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -218,17 +223,23 @@ public class DefaultHttp2ConnectionDecoderTest {
         when(ctx.write(any())).thenReturn(future);
 
         decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
+        setupCodec(ctx, encoder, decoder, listener);
+    }
+
+    private void setupCodec(
+            ChannelHandlerContext ctx, Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder,
+            Http2FrameListener listener) throws Exception {
         decoder.lifecycleManager(lifecycleManager);
         decoder.frameListener(listener);
 
         // Simulate receiving the initial settings from the remote endpoint.
-        decode().onSettingsRead(ctx, new Http2Settings());
+        decode(decoder).onSettingsRead(ctx, new Http2Settings());
         verify(listener).onSettingsRead(eq(ctx), eq(new Http2Settings()));
         assertTrue(decoder.prefaceReceived());
         verify(encoder).writeSettingsAck(eq(ctx), eq(promise));
 
         // Simulate receiving the SETTINGS ACK for the initial settings.
-        decode().onSettingsAckRead(ctx);
+        decode(decoder).onSettingsAckRead(ctx);
 
         // Disallow any further flushes now that settings ACK has been sent
         when(ctx.flush()).then(new Answer<ChannelHandlerContext>() {
@@ -577,6 +588,23 @@ public class DefaultHttp2ConnectionDecoderTest {
         });
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {":scheme", ":custom-pseudo-header"})
+    public void trailersWithPseudoHeadersThrows(String pseudoHeader) throws Exception {
+        decode().onHeadersRead(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, false);
+
+        final Http2Headers trailers = new DefaultHttp2Headers(false);
+        trailers.add(pseudoHeader, "something");
+        Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                decode().onHeadersRead(ctx, STREAM_ID, trailers, 0, true);
+            }
+        });
+        assertEquals(PROTOCOL_ERROR, ex.error());
+        assertThat(ex.getMessage(), containsString(pseudoHeader));
+    }
+
     @Test
     public void tooManyHeadersEOSThrows() throws Exception {
         tooManyHeaderThrows(true);
@@ -830,6 +858,19 @@ public class DefaultHttp2ConnectionDecoderTest {
     }
 
     @Test
+    public void pingReadShouldRespectNoAutoAck() throws Exception {
+        ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
+        when(ctx.newPromise()).thenReturn(promise);
+        Http2ConnectionEncoder encoder = mock(Http2ConnectionEncoder.class);
+        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, reader,
+                ALWAYS_VERIFY, true, false);
+        Http2FrameListener listener = mock(Http2FrameListener.class);
+        setupCodec(ctx, encoder, decoder, listener);
+        decode(decoder).onPingRead(ctx, 0L);
+        verify(encoder, never()).writePing(eq(ctx), eq(true), eq(0L), eq(promise));
+    }
+
+    @Test
     public void settingsReadWithAckShouldNotifyListener() throws Exception {
         decode().onSettingsAckRead(ctx);
         // Take into account the time this was called during setup().
@@ -1005,6 +1046,10 @@ public class DefaultHttp2ConnectionDecoderTest {
      * Calls the decode method on the handler and gets back the captured internal listener
      */
     private Http2FrameListener decode() throws Exception {
+        return decode(decoder);
+    }
+
+    private Http2FrameListener decode(Http2ConnectionDecoder decoder) throws Exception {
         ArgumentCaptor<Http2FrameListener> internalListener = ArgumentCaptor.forClass(Http2FrameListener.class);
         doNothing().when(reader).readFrame(eq(ctx), any(ByteBuf.class), internalListener.capture());
         decoder.decodeFrame(ctx, EMPTY_BUFFER, Collections.emptyList());

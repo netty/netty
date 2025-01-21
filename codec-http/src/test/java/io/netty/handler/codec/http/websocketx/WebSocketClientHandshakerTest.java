@@ -51,6 +51,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS
 import static io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker13.WEBSOCKET_13_ACCEPT_GUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -59,10 +60,11 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class WebSocketClientHandshakerTest {
     protected abstract WebSocketClientHandshaker newHandshaker(URI uri, String subprotocol, HttpHeaders headers,
-                                                               boolean absoluteUpgradeUrl);
+                                                               boolean absoluteUpgradeUrl,
+                                                               boolean generateOriginHeader);
 
     protected WebSocketClientHandshaker newHandshaker(URI uri) {
-        return newHandshaker(uri, null, null, false);
+        return newHandshaker(uri, null, null, false, true);
     }
 
     protected abstract CharSequence getOriginHeaderName();
@@ -183,13 +185,57 @@ public abstract class WebSocketClientHandshakerTest {
     public void testSetOriginFromCustomHeaders() {
         HttpHeaders customHeaders = new DefaultHttpHeaders().set(getOriginHeaderName(), "http://example.com");
         WebSocketClientHandshaker handshaker = newHandshaker(URI.create("ws://server.example.com/chat"), null,
-                                                             customHeaders, false);
+                                                             customHeaders, false, true);
         FullHttpRequest request = handshaker.newHandshakeRequest();
         try {
             assertEquals("http://example.com", request.headers().get(getOriginHeaderName()));
         } finally {
             request.release();
         }
+    }
+
+    @Test
+    public void testOriginHeaderIsAbsentWhenGeneratingDisable() {
+        URI uri = URI.create("http://example.com/ws");
+        WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, false, false);
+        FullHttpRequest request = handshaker.newHandshakeRequest();
+        try {
+            assertFalse(request.headers().contains(getOriginHeaderName()));
+            assertEquals("/ws", request.uri());
+        } finally {
+            request.release();
+        }
+    }
+
+    @Test
+    public void testInvalidHostWhenIncorrectWebSocketURI() {
+        URI uri = URI.create("/ws");
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpClientCodec());
+        final WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, false, true);
+        final ChannelFuture handshakeFuture = handshaker.handshake(channel);
+
+        assertFalse(handshakeFuture.isSuccess());
+        assertInstanceOf(IllegalArgumentException.class, handshakeFuture.cause());
+        assertEquals("Cannot generate the 'host' header value, webSocketURI should contain host" +
+                     " or passed through customHeaders", handshakeFuture.cause().getMessage());
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testInvalidOriginWhenIncorrectWebSocketURI() {
+        URI uri = URI.create("/ws");
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpClientCodec());
+        HttpHeaders headers = new DefaultHttpHeaders();
+        headers.set(HttpHeaderNames.HOST, "localhost:80");
+        final WebSocketClientHandshaker handshaker = newHandshaker(uri, null, headers, false, true);
+        final ChannelFuture handshakeFuture = handshaker.handshake(channel);
+
+        assertFalse(handshakeFuture.isSuccess());
+        assertInstanceOf(IllegalArgumentException.class, handshakeFuture.cause());
+        assertEquals("Cannot generate the '" + getOriginHeaderName() + "' header value," +
+                     " webSocketURI should contain host or disable generateOriginHeader" +
+                     " or pass value through customHeaders", handshakeFuture.cause().getMessage());
+        assertFalse(channel.finish());
     }
 
     private void testHostHeader(String uri, String expected) {
@@ -262,7 +308,7 @@ public abstract class WebSocketClientHandshakerTest {
     @Test
     public void testAbsoluteUpgradeUrlWithQuery() {
         URI uri = URI.create("ws://localhost:9999/path%20with%20ws?a=b%20c");
-        WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, true);
+        WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, true, true);
         FullHttpRequest request = handshaker.newHandshakeRequest();
         try {
             assertEquals("ws://localhost:9999/path%20with%20ws?a=b%20c", request.uri());
@@ -392,7 +438,7 @@ public abstract class WebSocketClientHandshakerTest {
         inputHeaders.add(getProtocolHeaderName(), bogusSubProtocol);
 
         String realSubProtocol = "realSubProtocol";
-        WebSocketClientHandshaker handshaker = newHandshaker(uri, realSubProtocol, inputHeaders, false);
+        WebSocketClientHandshaker handshaker = newHandshaker(uri, realSubProtocol, inputHeaders, false, true);
         FullHttpRequest request = handshaker.newHandshakeRequest();
         HttpHeaders outputHeaders = request.headers();
 
@@ -412,7 +458,7 @@ public abstract class WebSocketClientHandshakerTest {
     @Test
     public void testWebSocketClientHandshakeException() {
         URI uri = URI.create("ws://localhost:9999/exception");
-        WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, false);
+        WebSocketClientHandshaker handshaker = newHandshaker(uri, null, null, false, true);
         FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.UNAUTHORIZED);
         response.headers().set(HttpHeaderNames.WWW_AUTHENTICATE, "realm = access token required");
 

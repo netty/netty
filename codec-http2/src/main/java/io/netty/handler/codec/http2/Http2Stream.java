@@ -15,12 +15,9 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * A single stream within an HTTP2 connection. Streams are compared to each other by priority.
  */
-@UnstableApi
 public interface Http2Stream {
 
     /**

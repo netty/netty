@@ -15,12 +15,9 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * The default {@link DnsQuery} implementation.
  */
-@UnstableApi
 public class DefaultDnsQuery extends AbstractDnsMessage implements DnsQuery {
 
     /**

@@ -17,6 +17,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -25,10 +26,25 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
@@ -60,13 +76,22 @@ import java.net.InetSocketAddress;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.handler.codec.http2.Http2FrameCodecBuilder.forClient;
+import static io.netty.handler.codec.http2.Http2FrameCodecBuilder.forServer;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class Http2MultiplexTransportTest {
@@ -92,6 +117,49 @@ public class Http2MultiplexTransportTest {
     private Channel clientChannel;
     private Channel serverChannel;
     private Channel serverConnectedChannel;
+
+    private static final class MultiplexInboundStream extends ChannelInboundHandlerAdapter {
+        ChannelFuture responseFuture;
+        final AtomicInteger handlerInactivatedFlushed;
+        final AtomicInteger handleInactivatedNotFlushed;
+        final CountDownLatch latchHandlerInactive;
+        static final String LARGE_STRING = generateLargeString(10240);
+
+        MultiplexInboundStream(AtomicInteger handleInactivatedFlushed,
+                               AtomicInteger handleInactivatedNotFlushed, CountDownLatch latchHandlerInactive) {
+            this.handlerInactivatedFlushed = handleInactivatedFlushed;
+            this.handleInactivatedNotFlushed = handleInactivatedNotFlushed;
+            this.latchHandlerInactive = latchHandlerInactive;
+        }
+
+        @Override
+        public void channelRead(final ChannelHandlerContext ctx, Object msg) {
+            if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
+                ByteBuf response = Unpooled.copiedBuffer(LARGE_STRING, CharsetUtil.US_ASCII);
+                responseFuture = ctx.writeAndFlush(new DefaultHttp2DataFrame(response, true));
+            }
+            ReferenceCountUtil.release(msg);
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            if (responseFuture.isSuccess()) {
+                handlerInactivatedFlushed.incrementAndGet();
+            } else {
+                handleInactivatedNotFlushed.incrementAndGet();
+            }
+            latchHandlerInactive.countDown();
+            ctx.fireChannelInactive();
+        }
+
+        private static String generateLargeString(int sizeInBytes) {
+            StringBuilder sb = new StringBuilder(sizeInBytes);
+            for (int i = 0; i < sizeInBytes; i++) {
+                sb.append('X');
+            }
+            return sb.toString();
+        }
+    }
 
     @BeforeEach
     public void setup() {
@@ -552,7 +620,7 @@ public class Http2MultiplexTransportTest {
                                         (SslHandshakeCompletionEvent) evt;
                                 if (handshakeCompletionEvent.isSuccess()) {
                                     Http2StreamChannelBootstrap h2Bootstrap =
-                                            new Http2StreamChannelBootstrap(clientChannel);
+                                            new Http2StreamChannelBootstrap(ctx.channel());
                                     h2Bootstrap.handler(new ChannelInboundHandlerAdapter() {
                                         @Override
                                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -584,6 +652,225 @@ public class Http2MultiplexTransportTest {
             if (ssc != null) {
                 ssc.delete();
             }
+        }
+    }
+
+    /**
+     * When an HTTP/2 server stream channel receives a frame with EOS flag, and when it responds with a EOS
+     * flag, then the server side stream will be closed, hence the stream handler will be inactivated. This test
+     * verifies that the ChannelFuture of the server response is successful at the time the server stream handler is
+     * inactivated.
+     */
+    @Test
+    @Timeout(value = 120000L, unit = MILLISECONDS)
+    public void streamHandlerInactivatedResponseFlushed() throws InterruptedException {
+        EventLoopGroup serverEventLoopGroup = null;
+        EventLoopGroup clientEventLoopGroup = null;
+
+        try {
+            serverEventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    return new Thread(r, "serverloop");
+                }
+            });
+
+            clientEventLoopGroup = new NioEventLoopGroup(1, new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    return new Thread(r, "clientloop");
+                }
+            });
+
+            final int streams = 10;
+            final CountDownLatch latchClientResponses = new CountDownLatch(streams);
+            final CountDownLatch latchHandlerInactive = new CountDownLatch(streams);
+
+            final AtomicInteger handlerInactivatedFlushed = new AtomicInteger();
+            final AtomicInteger handleInactivatedNotFlushed = new AtomicInteger();
+            final ServerBootstrap sb = new ServerBootstrap();
+
+            sb.group(serverEventLoopGroup);
+            sb.channel(NioServerSocketChannel.class);
+            sb.childHandler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    // using a short sndbuf size will trigger writability events
+                    ch.config().setOption(ChannelOption.SO_SNDBUF, 1);
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(true).build());
+                    ch.pipeline().addLast(new Http2MultiplexHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ch.pipeline().remove(this);
+                            ch.pipeline().addLast(new MultiplexInboundStream(handlerInactivatedFlushed,
+                                    handleInactivatedNotFlushed, latchHandlerInactive));
+                        }
+                    }));
+                }
+            });
+            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
+
+            final Bootstrap bs = new Bootstrap();
+
+            bs.group(clientEventLoopGroup);
+            bs.channel(NioSocketChannel.class);
+            bs.handler(new ChannelInitializer<Channel>() {
+                @Override
+                protected void initChannel(Channel ch) {
+                    ch.pipeline().addLast(new Http2FrameCodecBuilder(false).build());
+                    ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
+                }
+            });
+
+            clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            final Http2StreamChannelBootstrap h2Bootstrap = new Http2StreamChannelBootstrap(clientChannel);
+            h2Bootstrap.handler(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                    if (msg instanceof Http2DataFrame && ((Http2DataFrame) msg).isEndStream()) {
+                        latchClientResponses.countDown();
+                    }
+                    ReferenceCountUtil.release(msg);
+                }
+                @Override
+                public boolean isSharable() {
+                    return true;
+                }
+            });
+
+            List<ChannelFuture> streamFutures = new ArrayList<ChannelFuture>();
+            for (int i = 0; i < streams; i ++) {
+                Http2StreamChannel stream = h2Bootstrap.open().syncUninterruptibly().getNow();
+                streamFutures.add(stream.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)));
+            }
+            for (int i = 0; i < streams; i ++) {
+                streamFutures.get(i).syncUninterruptibly();
+            }
+
+            assertTrue(latchHandlerInactive.await(120000, MILLISECONDS));
+            assertTrue(latchClientResponses.await(120000, MILLISECONDS));
+            assertEquals(0, handleInactivatedNotFlushed.get());
+            assertEquals(streams, handlerInactivatedFlushed.get());
+        } finally {
+            if (serverEventLoopGroup != null) {
+                serverEventLoopGroup.shutdownGracefully(0, 0, MILLISECONDS);
+            }
+            if (clientEventLoopGroup != null) {
+                clientEventLoopGroup.shutdownGracefully(0, 0, MILLISECONDS);
+            }
+        }
+    }
+
+    @Test
+    public void testServerCloseShouldNotSendResetIfClientSentEOS() throws Exception {
+        EventLoopGroup group = null;
+        Channel serverChannel = null;
+        Channel clientChannel = null;
+        Channel clientStreamChannel = null;
+        try {
+            final CountDownLatch clientReceivedResponseLatch = new CountDownLatch(1);
+            final CountDownLatch resetFrameLatch = new CountDownLatch(1);
+            group = new DefaultEventLoop();
+            LocalAddress serverAddress = new LocalAddress(getClass().getName());
+            ServerBootstrap sb = new ServerBootstrap()
+                    .channel(LocalServerChannel.class)
+                    .group(group)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ChannelPipeline pipeline = ch.pipeline();
+                            pipeline.addLast(forServer().build());
+                            pipeline.addLast(new Http2FrameIgnore<Http2SettingsFrame>(Http2SettingsFrame.class));
+                            pipeline.addLast(new Http2FrameIgnore<Http2SettingsAckFrame>(Http2SettingsAckFrame.class));
+                            pipeline.addLast(new Http2MultiplexHandler(new ChannelInitializer<Http2StreamChannel>() {
+                                @Override
+                                protected void initChannel(Http2StreamChannel ch) {
+                                    ChannelPipeline pipeline = ch.pipeline();
+                                    pipeline.addLast(new Http2StreamFrameToHttpObjectCodec(true, true));
+                                    pipeline.addLast(new HttpObjectAggregator(16384));
+                                    pipeline.addLast(new SimpleChannelInboundHandler<FullHttpRequest>() {
+                                        @Override
+                                        protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
+                                            ctx.writeAndFlush(
+                                                    new DefaultFullHttpResponse(
+                                                            msg.protocolVersion(), HttpResponseStatus.OK,
+                                                            Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII)))
+                                                    .addListeners(ChannelFutureListener.CLOSE);
+                                        }
+                                    });
+                                }
+                            }));
+                        }
+                    });
+            serverChannel = sb.bind(serverAddress).sync().channel();
+
+            Bootstrap cb = new Bootstrap()
+                    .channel(LocalChannel.class)
+                    .group(group)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ChannelPipeline pipeline = ch.pipeline();
+                            pipeline.addLast(forClient().build());
+                            pipeline.addLast(new Http2FrameIgnore<Http2SettingsFrame>(Http2SettingsFrame.class));
+                            pipeline.addLast(new Http2FrameIgnore<Http2SettingsAckFrame>(Http2SettingsAckFrame.class));
+                            pipeline.addLast(new Http2MultiplexHandler(new ChannelInitializer<Http2StreamChannel>() {
+                                @Override
+                                protected void initChannel(Http2StreamChannel ch) {
+                                    // noop
+                                }
+                            }));
+                        }
+                    });
+
+            clientChannel = cb.connect(serverAddress).sync().channel();
+            clientStreamChannel = new Http2StreamChannelBootstrap(clientChannel)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ChannelPipeline pipeline = ch.pipeline();
+                            pipeline.addLast(new Http2StreamFrameToHttpObjectCodec(false, true));
+                            pipeline.addLast(new HttpObjectAggregator(16384));
+                            pipeline.addLast(new SimpleChannelInboundHandler<FullHttpResponse>() {
+                                @Override
+                                protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse msg) {
+                                    clientReceivedResponseLatch.countDown();
+                                }
+                            });
+                        }
+                    })
+                    .open().sync().get();
+
+            clientStreamChannel.writeAndFlush(
+                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/test/")).sync();
+
+            assertTrue(clientReceivedResponseLatch.await(3, SECONDS));
+
+            // The server should NOT send any RST_STREAM frame.
+            assertFalse(resetFrameLatch.await(1, SECONDS));
+        } finally {
+            if (clientStreamChannel != null) {
+                clientStreamChannel.close().syncUninterruptibly();
+            }
+            if (clientChannel != null) {
+                clientChannel.close().syncUninterruptibly();
+            }
+            if (serverChannel != null) {
+                serverChannel.close().syncUninterruptibly();
+            }
+            if (group != null) {
+                group.shutdownGracefully(0, 3, SECONDS);
+            }
+        }
+    }
+
+    private static final class Http2FrameIgnore<T extends Http2Frame> extends SimpleChannelInboundHandler<T> {
+        Http2FrameIgnore(Class<? extends T> inboundMessageType) {
+            super(inboundMessageType);
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, T msg) {
         }
     }
 }

@@ -37,7 +37,8 @@ public final class BootstrapConfig extends AbstractBootstrapConfig<Bootstrap, Ch
     }
 
     /**
-     * Returns the configured {@link AddressResolverGroup} or the default if non is configured yet.
+     * Returns the configured {@link AddressResolverGroup}, {@code null} if resolver was disabled
+     * with {@link Bootstrap#disableResolver()}, or the default if not configured yet.
      */
     public AddressResolverGroup<?> resolver() {
         return bootstrap.resolver();
@@ -47,7 +48,11 @@ public final class BootstrapConfig extends AbstractBootstrapConfig<Bootstrap, Ch
     public String toString() {
         StringBuilder buf = new StringBuilder(super.toString());
         buf.setLength(buf.length() - 1);
-        buf.append(", resolver: ").append(resolver());
+        AddressResolverGroup<?> resolver = resolver();
+        if (resolver != null) {
+            buf.append(", resolver: ")
+                    .append(resolver);
+        }
         SocketAddress remoteAddress = remoteAddress();
         if (remoteAddress != null) {
             buf.append(", remoteAddress: ")

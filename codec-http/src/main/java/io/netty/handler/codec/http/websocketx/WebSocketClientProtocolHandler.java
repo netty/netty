@@ -27,6 +27,7 @@ import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolConf
 import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT_DROP_PONG_FRAMES;
 import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT_HANDLE_CLOSE_FRAMES;
 import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT_PERFORM_MASKING;
+import static io.netty.handler.codec.http.websocketx.WebSocketClientProtocolConfig.DEFAULT_WITH_UTF8_VALIDATOR;
 import static io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig.DEFAULT_HANDSHAKE_TIMEOUT_MILLIS;
 import static io.netty.util.internal.ObjectUtil.*;
 
@@ -94,8 +95,26 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
             clientConfig.performMasking(),
             clientConfig.allowMaskMismatch(),
             clientConfig.forceCloseTimeoutMillis(),
-            clientConfig.absoluteUpgradeUrl()
+            clientConfig.absoluteUpgradeUrl(),
+            clientConfig.generateOriginHeader()
         );
+        this.clientConfig = clientConfig;
+    }
+
+    /**
+     * Base constructor
+     *
+     * @param handshaker
+     *            The {@link WebSocketClientHandshaker} which will be used to issue the handshake once the connection
+     *            was established to the remote peer.
+     * @param clientConfig
+     *            Client protocol configuration.
+     */
+    public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker,
+                                          WebSocketClientProtocolConfig clientConfig) {
+        super(checkNotNull(clientConfig, "clientConfig").dropPongFrames(),
+              clientConfig.sendCloseFrame(), clientConfig.forceCloseTimeoutMillis());
+        this.handshaker = handshaker;
         this.clientConfig = clientConfig;
     }
 
@@ -328,11 +347,34 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
      */
     public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
                                           boolean dropPongFrames, long handshakeTimeoutMillis) {
+        this(handshaker, handleCloseFrames, dropPongFrames, handshakeTimeoutMillis, DEFAULT_WITH_UTF8_VALIDATOR);
+    }
+
+    /**
+     * Base constructor
+     *
+     * @param handshaker
+     *            The {@link WebSocketClientHandshaker} which will be used to issue the handshake once the connection
+     *            was established to the remote peer.
+     * @param handleCloseFrames
+     *            {@code true} if close frames should not be forwarded and just close the channel
+     * @param dropPongFrames
+     *            {@code true} if pong frames should not be forwarded
+     * @param handshakeTimeoutMillis
+     *            Handshake timeout in mills, when handshake timeout, will trigger user
+     *            event {@link ClientHandshakeStateEvent#HANDSHAKE_TIMEOUT}
+     * @param withUTF8Validator
+     *            {@code true} if UTF8 validation of text frames should be enabled
+     */
+    public WebSocketClientProtocolHandler(WebSocketClientHandshaker handshaker, boolean handleCloseFrames,
+                                          boolean dropPongFrames, long handshakeTimeoutMillis,
+                                          boolean withUTF8Validator) {
         super(dropPongFrames);
         this.handshaker = handshaker;
         this.clientConfig = WebSocketClientProtocolConfig.newBuilder()
             .handleCloseFrames(handleCloseFrames)
             .handshakeTimeoutMillis(handshakeTimeoutMillis)
+            .withUTF8Validator(withUTF8Validator)
             .build();
     }
 
@@ -383,7 +425,7 @@ public class WebSocketClientProtocolHandler extends WebSocketProtocolHandler {
             ctx.pipeline().addBefore(ctx.name(), WebSocketClientProtocolHandshakeHandler.class.getName(),
                 new WebSocketClientProtocolHandshakeHandler(handshaker, clientConfig.handshakeTimeoutMillis()));
         }
-        if (cp.get(Utf8FrameValidator.class) == null) {
+        if (clientConfig.withUTF8Validator() && cp.get(Utf8FrameValidator.class) == null) {
             // Add the UFT8 checking before this one.
             ctx.pipeline().addBefore(ctx.name(), Utf8FrameValidator.class.getName(),
                     new Utf8FrameValidator());

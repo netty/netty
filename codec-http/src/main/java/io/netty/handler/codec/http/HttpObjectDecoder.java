@@ -15,8 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -25,10 +23,14 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
-import io.netty.util.internal.AppendableCharSequence;
+import io.netty.util.internal.StringUtil;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * Decodes {@link ByteBuf}s into {@link HttpMessage}s and
@@ -127,6 +129,18 @@ import java.util.List;
  * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  * To implement the decoder of such a derived protocol, extend this class and
  * implement all abstract methods properly.
+ *
+ * <h3>Header Validation</h3>
+ *
+ * It is recommended to always enable header validation.
+ * <p>
+ * Without header validation, your system can become vulnerable to
+ * <a href="https://cwe.mitre.org/data/definitions/113.html">
+ *     CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Response Splitting')
+ * </a>.
+ * <p>
+ * This recommendation stands even when both peers in the HTTP exchange are trusted,
+ * as it helps with defence-in-depth.
  */
 public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final int DEFAULT_MAX_INITIAL_LINE_LENGTH = 4096;
@@ -137,27 +151,42 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final boolean DEFAULT_VALIDATE_HEADERS = true;
     public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
     public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
-
-    private static final String EMPTY_VALUE = "";
-
     private final int maxChunkSize;
     private final boolean chunkedSupported;
     private final boolean allowPartialChunks;
+    /**
+     * This field is no longer used. It is only kept around for backwards compatibility purpose.
+     */
+    @Deprecated
     protected final boolean validateHeaders;
+    protected final HttpHeadersFactory headersFactory;
+    protected final HttpHeadersFactory trailersFactory;
     private final boolean allowDuplicateContentLengths;
+    private final ByteBuf parserScratchBuffer;
     private final HeaderParser headerParser;
     private final LineParser lineParser;
 
     private HttpMessage message;
     private long chunkSize;
     private long contentLength = Long.MIN_VALUE;
-    private volatile boolean resetRequested;
+    private boolean chunked;
+    private boolean isSwitchingToNonHttp1Protocol;
+
+    private final AtomicBoolean resetRequested = new AtomicBoolean();
 
     // These will be updated by splitHeader(...)
-    private CharSequence name;
-    private CharSequence value;
-
+    private AsciiString name;
+    private String value;
     private LastHttpContent trailer;
+
+    @Override
+    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+        try {
+            parserScratchBuffer.release();
+        } finally {
+            super.handlerRemoved0(ctx);
+        }
+    }
 
     /**
      * The internal state of {@link HttpObjectDecoder}.
@@ -181,77 +210,133 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     /**
      * Creates a new instance with the default
-     * {@code maxInitialLineLength (4096}}, {@code maxHeaderSize (8192)}, and
+     * {@code maxInitialLineLength (4096)}, {@code maxHeaderSize (8192)}, and
      * {@code maxChunkSize (8192)}.
      */
     protected HttpObjectDecoder() {
-        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_MAX_CHUNK_SIZE,
-             DEFAULT_CHUNKED_SUPPORTED);
+        this(new HttpDecoderConfig());
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize, boolean chunkedSupported) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, DEFAULT_VALIDATE_HEADERS);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders,
-             DEFAULT_INITIAL_BUFFER_SIZE);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, initialBufferSize,
-             DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders)
+                .setInitialBufferSize(initialBufferSize));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
             boolean allowDuplicateContentLengths) {
-        this(maxInitialLineLength, maxHeaderSize, maxChunkSize, chunkedSupported, validateHeaders, initialBufferSize,
-            allowDuplicateContentLengths, DEFAULT_ALLOW_PARTIAL_CHUNKS);
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders)
+                .setInitialBufferSize(initialBufferSize)
+                .setAllowDuplicateContentLengths(allowDuplicateContentLengths));
     }
 
     /**
      * Creates a new instance with the specified parameters.
+     *
+     * @deprecated Use {@link #HttpObjectDecoder(HttpDecoderConfig)} instead.
      */
+    @Deprecated
     protected HttpObjectDecoder(
             int maxInitialLineLength, int maxHeaderSize, int maxChunkSize,
             boolean chunkedSupported, boolean validateHeaders, int initialBufferSize,
             boolean allowDuplicateContentLengths, boolean allowPartialChunks) {
-        checkPositive(maxInitialLineLength, "maxInitialLineLength");
-        checkPositive(maxHeaderSize, "maxHeaderSize");
-        checkPositive(maxChunkSize, "maxChunkSize");
+        this(new HttpDecoderConfig()
+                .setMaxInitialLineLength(maxInitialLineLength)
+                .setMaxHeaderSize(maxHeaderSize)
+                .setMaxChunkSize(maxChunkSize)
+                .setChunkedSupported(chunkedSupported)
+                .setValidateHeaders(validateHeaders)
+                .setInitialBufferSize(initialBufferSize)
+                .setAllowDuplicateContentLengths(allowDuplicateContentLengths)
+                .setAllowPartialChunks(allowPartialChunks));
+    }
 
-        AppendableCharSequence seq = new AppendableCharSequence(initialBufferSize);
-        lineParser = new LineParser(seq, maxInitialLineLength);
-        headerParser = new HeaderParser(seq, maxHeaderSize);
-        this.maxChunkSize = maxChunkSize;
-        this.chunkedSupported = chunkedSupported;
-        this.validateHeaders = validateHeaders;
-        this.allowDuplicateContentLengths = allowDuplicateContentLengths;
-        this.allowPartialChunks = allowPartialChunks;
+    /**
+     * Creates a new instance with the specified configuration.
+     */
+    protected HttpObjectDecoder(HttpDecoderConfig config) {
+        checkNotNull(config, "config");
+
+        parserScratchBuffer = Unpooled.buffer(config.getInitialBufferSize());
+        lineParser = new LineParser(parserScratchBuffer, config.getMaxInitialLineLength());
+        headerParser = new HeaderParser(parserScratchBuffer, config.getMaxHeaderSize());
+        maxChunkSize = config.getMaxChunkSize();
+        chunkedSupported = config.isChunkedSupported();
+        headersFactory = config.getHeadersFactory();
+        trailersFactory = config.getTrailersFactory();
+        validateHeaders = isValidating(headersFactory);
+        allowDuplicateContentLengths = config.isAllowDuplicateContentLengths();
+        allowPartialChunks = config.isAllowPartialChunks();
+    }
+
+    protected boolean isValidating(HttpHeadersFactory headersFactory) {
+        if (headersFactory instanceof DefaultHttpHeadersFactory) {
+            DefaultHttpHeadersFactory builder = (DefaultHttpHeadersFactory) headersFactory;
+            return builder.isValidatingHeaderNames() || builder.isValidatingHeaderValues();
+        }
+        return true; // We can't actually tell in this case, but we assume some validation is taking place.
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
-        if (resetRequested) {
+        if (resetRequested.get()) {
             resetNow();
         }
 
@@ -259,22 +344,18 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         case SKIP_CONTROL_CHARS:
             // Fall-through
         case READ_INITIAL: try {
-            AppendableCharSequence line = lineParser.parse(buffer);
+            ByteBuf line = lineParser.parse(buffer);
             if (line == null) {
                 return;
             }
-            String[] initialLine = splitInitialLine(line);
-            if (initialLine.length < 3) {
-                // Invalid initial line - ignore.
-                currentState = State.SKIP_CONTROL_CHARS;
-                return;
-            }
+            final String[] initialLine = splitInitialLine(line);
+            assert initialLine.length == 3 : "initialLine::length must be 3";
 
             message = createMessage(initialLine);
             currentState = State.READ_HEADER;
             // fall-through
         } catch (Exception e) {
-            out.add(invalidMessage(buffer, e));
+            out.add(invalidMessage(message, buffer, e));
             return;
         }
         case READ_HEADER: try {
@@ -287,7 +368,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             case SKIP_CONTROL_CHARS:
                 // fast-path
                 // No content is expected.
-                out.add(message);
+                addCurrentMessage(out);
                 out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                 resetNow();
                 return;
@@ -296,18 +377,17 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     throw new IllegalArgumentException("Chunked messages not supported");
                 }
                 // Chunked encoding - generate HttpMessage first.  HttpChunks will follow.
-                out.add(message);
+                addCurrentMessage(out);
                 return;
             default:
-                /**
-                 * <a href="https://tools.ietf.org/html/rfc7230#section-3.3.3">RFC 7230, 3.3.3</a> states that if a
+                /*
+                 * RFC 7230, 3.3.3 (https://tools.ietf.org/html/rfc7230#section-3.3.3) states that if a
                  * request does not have either a transfer-encoding or a content-length header then the message body
-                 * length is 0. However for a response the body length is the number of octets received prior to the
+                 * length is 0. However, for a response the body length is the number of octets received prior to the
                  * server closing the connection. So we treat this as variable length chunked encoding.
                  */
-                long contentLength = contentLength();
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
-                    out.add(message);
+                    addCurrentMessage(out);
                     out.add(LastHttpContent.EMPTY_LAST_CONTENT);
                     resetNow();
                     return;
@@ -316,7 +396,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 assert nextState == State.READ_FIXED_LENGTH_CONTENT ||
                         nextState == State.READ_VARIABLE_LENGTH_CONTENT;
 
-                out.add(message);
+                addCurrentMessage(out);
 
                 if (nextState == State.READ_FIXED_LENGTH_CONTENT) {
                     // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT state reads data chunk by chunk.
@@ -327,7 +407,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return;
             }
         } catch (Exception e) {
-            out.add(invalidMessage(buffer, e));
+            out.add(invalidMessage(message, buffer, e));
             return;
         }
         case READ_VARIABLE_LENGTH_CONTENT: {
@@ -361,23 +441,23 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
             if (chunkSize == 0) {
                 // Read all content.
-                out.add(new DefaultLastHttpContent(content, validateHeaders));
+                out.add(new DefaultLastHttpContent(content, trailersFactory));
                 resetNow();
             } else {
                 out.add(new DefaultHttpContent(content));
             }
             return;
         }
-        /**
+        /*
          * everything else after this point takes care of reading chunked content. basically, read chunk size,
          * read chunk, read and ignore the CRLF and repeat until 0
          */
         case READ_CHUNK_SIZE: try {
-            AppendableCharSequence line = lineParser.parse(buffer);
+            ByteBuf line = lineParser.parse(buffer);
             if (line == null) {
                 return;
             }
-            int chunkSize = getChunkSize(line.toString());
+            int chunkSize = getChunkSize(line.array(), line.arrayOffset() + line.readerIndex(), line.readableBytes());
             this.chunkSize = chunkSize;
             if (chunkSize == 0) {
                 currentState = State.READ_CHUNK_FOOTER;
@@ -460,46 +540,57 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         super.decodeLast(ctx, in, out);
 
-        if (resetRequested) {
+        if (resetRequested.get()) {
             // If a reset was requested by decodeLast() we need to do it now otherwise we may produce a
             // LastHttpContent while there was already one.
             resetNow();
         }
-        // Handle the last unfinished message.
-        if (message != null) {
-            boolean chunked = HttpUtil.isTransferEncodingChunked(message);
-            if (currentState == State.READ_VARIABLE_LENGTH_CONTENT && !in.isReadable() && !chunked) {
-                // End of connection.
-                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
-                resetNow();
-                return;
-            }
 
-            if (currentState == State.READ_HEADER) {
+        // Handle the last unfinished message.
+        switch (currentState) {
+            case READ_VARIABLE_LENGTH_CONTENT:
+                if (!chunked && !in.isReadable()) {
+                    // End of connection.
+                    out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                    resetNow();
+                }
+                return;
+            case READ_HEADER:
                 // If we are still in the state of reading headers we need to create a new invalid message that
                 // signals that the connection was closed before we received the headers.
-                out.add(invalidMessage(Unpooled.EMPTY_BUFFER,
+                out.add(invalidMessage(message, Unpooled.EMPTY_BUFFER,
                         new PrematureChannelClosureException("Connection closed before received headers")));
                 resetNow();
                 return;
-            }
-
-            // Check if the closure of the connection signifies the end of the content.
-            boolean prematureClosure;
-            if (isDecodingRequest() || chunked) {
-                // The last request did not wait for a response.
-                prematureClosure = true;
-            } else {
-                // Compare the length of the received content and the 'Content-Length' header.
-                // If the 'Content-Length' header is absent, the length of the content is determined by the end of the
-                // connection, so it is perfectly fine.
-                prematureClosure = contentLength() > 0;
-            }
-
-            if (!prematureClosure) {
-                out.add(LastHttpContent.EMPTY_LAST_CONTENT);
-            }
-            resetNow();
+            case READ_CHUNK_DELIMITER: // fall-trough
+            case READ_CHUNK_FOOTER: // fall-trough
+            case READ_CHUNKED_CONTENT: // fall-trough
+            case READ_CHUNK_SIZE: // fall-trough
+            case READ_FIXED_LENGTH_CONTENT:
+                // Check if the closure of the connection signifies the end of the content.
+                boolean prematureClosure;
+                if (isDecodingRequest() || chunked) {
+                    // The last request did not wait for a response.
+                    prematureClosure = true;
+                } else {
+                    // Compare the length of the received content and the 'Content-Length' header.
+                    // If the 'Content-Length' header is absent, the length of the content is determined by the end of
+                    // the connection, so it is perfectly fine.
+                    prematureClosure = contentLength > 0;
+                }
+                if (!prematureClosure) {
+                    out.add(LastHttpContent.EMPTY_LAST_CONTENT);
+                }
+                resetNow();
+                return;
+            case SKIP_CONTROL_CHARS: // fall-trough
+            case READ_INITIAL:// fall-trough
+            case BAD_MESSAGE: // fall-trough
+            case UPGRADED: // fall-trough
+                // Do nothing
+                break;
+            default:
+                throw new IllegalStateException("Unhandled state " + currentState);
         }
     }
 
@@ -519,17 +610,26 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         super.userEventTriggered(ctx, evt);
     }
 
+    private void addCurrentMessage(List<Object> out) {
+        HttpMessage message = this.message;
+        assert message != null;
+        this.message = null;
+        out.add(message);
+    }
+
     protected boolean isContentAlwaysEmpty(HttpMessage msg) {
         if (msg instanceof HttpResponse) {
             HttpResponse res = (HttpResponse) msg;
-            int code = res.status().code();
+            final HttpResponseStatus status = res.status();
+            final int code = status.code();
+            final HttpStatusClass statusClass = status.codeClass();
 
             // Correctly handle return codes of 1xx.
             //
             // See:
             //     - https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html Section 4.4
             //     - https://github.com/netty/netty/issues/222
-            if (code >= 100 && code < 200) {
+            if (statusClass == HttpStatusClass.INFORMATIONAL) {
                 // One exception: Hixie 76 websocket handshake response
                 return !(code == 101 && !res.headers().contains(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT)
                          && res.headers().contains(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true));
@@ -564,49 +664,49 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
      * This method is useful for handling a rejected request with {@code Expect: 100-continue} header.
      */
     public void reset() {
-        resetRequested = true;
+        resetRequested.lazySet(true);
     }
 
     private void resetNow() {
-        HttpMessage message = this.message;
-        this.message = null;
+        message = null;
         name = null;
         value = null;
         contentLength = Long.MIN_VALUE;
+        chunked = false;
         lineParser.reset();
         headerParser.reset();
         trailer = null;
-        if (!isDecodingRequest()) {
-            HttpResponse res = (HttpResponse) message;
-            if (res != null && isSwitchingToNonHttp1Protocol(res)) {
-                currentState = State.UPGRADED;
-                return;
-            }
+        if (isSwitchingToNonHttp1Protocol) {
+            isSwitchingToNonHttp1Protocol = false;
+            currentState = State.UPGRADED;
+            return;
         }
 
-        resetRequested = false;
+        resetRequested.lazySet(false);
         currentState = State.SKIP_CONTROL_CHARS;
     }
 
-    private HttpMessage invalidMessage(ByteBuf in, Exception cause) {
+    private HttpMessage invalidMessage(HttpMessage current, ByteBuf in, Exception cause) {
         currentState = State.BAD_MESSAGE;
+        message = null;
+        trailer = null;
 
         // Advance the readerIndex so that ByteToMessageDecoder does not complain
         // when we produced an invalid message without consuming anything.
         in.skipBytes(in.readableBytes());
 
-        if (message == null) {
-            message = createInvalidMessage();
+        if (current == null) {
+            current = createInvalidMessage();
         }
-        message.setDecoderResult(DecoderResult.failure(cause));
+        current.setDecoderResult(DecoderResult.failure(cause));
 
-        HttpMessage ret = message;
-        message = null;
-        return ret;
+        return current;
     }
 
     private HttpContent invalidChunk(ByteBuf in, Exception cause) {
         currentState = State.BAD_MESSAGE;
+        message = null;
+        trailer = null;
 
         // Advance the readerIndex so that ByteToMessageDecoder does not complain
         // when we produced an invalid message without consuming anything.
@@ -614,8 +714,6 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         HttpContent chunk = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
         chunk.setDecoderResult(DecoderResult.failure(cause));
-        message = null;
-        trailer = null;
         return chunk;
     }
 
@@ -623,31 +721,35 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         final HttpMessage message = this.message;
         final HttpHeaders headers = message.headers();
 
-        AppendableCharSequence line = headerParser.parse(buffer);
+        final HeaderParser headerParser = this.headerParser;
+
+        ByteBuf line = headerParser.parse(buffer);
         if (line == null) {
             return null;
         }
-        if (line.length() > 0) {
-            do {
-                char firstChar = line.charAtUnsafe(0);
-                if (name != null && (firstChar == ' ' || firstChar == '\t')) {
-                    //please do not make one line from below code
-                    //as it breaks +XX:OptimizeStringConcat optimization
-                    String trimmedLine = line.toString().trim();
-                    String valueStr = String.valueOf(value);
-                    value = valueStr + ' ' + trimmedLine;
-                } else {
-                    if (name != null) {
-                        headers.add(name, value);
-                    }
-                    splitHeader(line);
+        int lineLength = line.readableBytes();
+        while (lineLength > 0) {
+            final byte[] lineContent = line.array();
+            final int startLine = line.arrayOffset() + line.readerIndex();
+            final byte firstChar = lineContent[startLine];
+            if (name != null && (firstChar == ' ' || firstChar == '\t')) {
+                //please do not make one line from below code
+                //as it breaks +XX:OptimizeStringConcat optimization
+                String trimmedLine = langAsciiString(lineContent, startLine, lineLength).trim();
+                String valueStr = value;
+                value = valueStr + ' ' + trimmedLine;
+            } else {
+                if (name != null) {
+                    headers.add(name, value);
                 }
+                splitHeader(lineContent, startLine, lineLength);
+            }
 
-                line = headerParser.parse(buffer);
-                if (line == null) {
-                    return null;
-                }
-            } while (line.length() > 0);
+            line = headerParser.parse(buffer);
+            if (line == null) {
+                return null;
+            }
+            lineLength = line.readableBytes();
         }
 
         // Add the last header.
@@ -679,21 +781,30 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     headers.set(HttpHeaderNames.CONTENT_LENGTH, contentLength);
                 }
             }
+        } else {
+            // We know the content length if it's a Web Socket message even if
+            // Content-Length header is missing.
+            contentLength = HttpUtil.getWebSocketContentLength(message);
         }
-
+        if (!isDecodingRequest() && message instanceof HttpResponse) {
+            HttpResponse res = (HttpResponse) message;
+            this.isSwitchingToNonHttp1Protocol = isSwitchingToNonHttp1Protocol(res);
+        }
         if (isContentAlwaysEmpty(message)) {
             HttpUtil.setTransferEncodingChunked(message, false);
             return State.SKIP_CONTROL_CHARS;
-        } else if (HttpUtil.isTransferEncodingChunked(message)) {
+        }
+        if (HttpUtil.isTransferEncodingChunked(message)) {
+            this.chunked = true;
             if (!contentLengthFields.isEmpty() && message.protocolVersion() == HttpVersion.HTTP_1_1) {
                 handleTransferEncodingChunkedWithContentLength(message);
             }
             return State.READ_CHUNK_SIZE;
-        } else if (contentLength() >= 0) {
-            return State.READ_FIXED_LENGTH_CONTENT;
-        } else {
-            return State.READ_VARIABLE_LENGTH_CONTENT;
         }
+        if (contentLength >= 0) {
+            return State.READ_FIXED_LENGTH_CONTENT;
+        }
+        return State.READ_VARIABLE_LENGTH_CONTENT;
     }
 
     /**
@@ -722,20 +833,15 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         contentLength = Long.MIN_VALUE;
     }
 
-    private long contentLength() {
-        if (contentLength == Long.MIN_VALUE) {
-            contentLength = HttpUtil.getContentLength(message, -1L);
-        }
-        return contentLength;
-    }
-
     private LastHttpContent readTrailingHeaders(ByteBuf buffer) {
-        AppendableCharSequence line = headerParser.parse(buffer);
+        final HeaderParser headerParser = this.headerParser;
+        ByteBuf line = headerParser.parse(buffer);
         if (line == null) {
             return null;
         }
         LastHttpContent trailer = this.trailer;
-        if (line.length() == 0 && trailer == null) {
+        int lineLength = line.readableBytes();
+        if (lineLength == 0 && trailer == null) {
             // We have received the empty line which signals the trailer is complete and did not parse any trailers
             // before. Just return an empty last content to reduce allocations.
             return LastHttpContent.EMPTY_LAST_CONTENT;
@@ -743,23 +849,25 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         CharSequence lastHeader = null;
         if (trailer == null) {
-            trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
+            trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, trailersFactory);
         }
-        while (line.length() > 0) {
-            char firstChar = line.charAtUnsafe(0);
+        while (lineLength > 0) {
+            final byte[] lineContent = line.array();
+            final int startLine = line.arrayOffset() + line.readerIndex();
+            final byte firstChar = lineContent[startLine];
             if (lastHeader != null && (firstChar == ' ' || firstChar == '\t')) {
                 List<String> current = trailer.trailingHeaders().getAll(lastHeader);
                 if (!current.isEmpty()) {
                     int lastPos = current.size() - 1;
                     //please do not make one line from below code
                     //as it breaks +XX:OptimizeStringConcat optimization
-                    String lineTrimmed = line.toString().trim();
+                    String lineTrimmed = langAsciiString(lineContent, startLine, line.readableBytes()).trim();
                     String currentLastPos = current.get(lastPos);
                     current.set(lastPos, currentLastPos + lineTrimmed);
                 }
             } else {
-                splitHeader(line);
-                CharSequence headerName = name;
+                splitHeader(lineContent, startLine, lineLength);
+                AsciiString headerName = name;
                 if (!HttpHeaderNames.CONTENT_LENGTH.contentEqualsIgnoreCase(headerName) &&
                         !HttpHeaderNames.TRANSFER_ENCODING.contentEqualsIgnoreCase(headerName) &&
                         !HttpHeaderNames.TRAILER.contentEqualsIgnoreCase(headerName)) {
@@ -774,6 +882,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             if (line == null) {
                 return null;
             }
+            lineLength = line.readableBytes();
         }
 
         this.trailer = null;
@@ -784,53 +893,126 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected abstract HttpMessage createMessage(String[] initialLine) throws Exception;
     protected abstract HttpMessage createInvalidMessage();
 
-    private static int getChunkSize(String hex) {
-        hex = hex.trim();
-        for (int i = 0; i < hex.length(); i ++) {
-            char c = hex.charAt(i);
-            if (c == ';' || Character.isWhitespace(c) || Character.isISOControl(c)) {
-                hex = hex.substring(0, i);
-                break;
+    /**
+     * It skips any whitespace char and return the number of skipped bytes.
+     */
+    private static int skipWhiteSpaces(byte[] hex, int start, int length) {
+        for (int i = 0; i < length; i++) {
+            if (!isWhitespace(hex[start + i])) {
+                return i;
+            }
+        }
+        return length;
+    }
+
+    private static int getChunkSize(byte[] hex, int start, int length) {
+        // trim the leading bytes if white spaces, if any
+        final int skipped = skipWhiteSpaces(hex, start, length);
+        if (skipped == length) {
+            // empty case
+            throw new NumberFormatException();
+        }
+        start += skipped;
+        length -= skipped;
+        int result = 0;
+        for (int i = 0; i < length; i++) {
+            final int digit = StringUtil.decodeHexNibble(hex[start + i]);
+            if (digit == -1) {
+                // uncommon path
+                final byte b = hex[start + i];
+                if (b == ';' || isControlOrWhitespaceAsciiChar(b)) {
+                    if (i == 0) {
+                        // empty case
+                        throw new NumberFormatException("Empty chunk size");
+                    }
+                    return result;
+                }
+                // non-hex char fail-fast path
+                throw new NumberFormatException("Invalid character in chunk size");
+            }
+            result *= 16;
+            result += digit;
+            if (result < 0) {
+                throw new NumberFormatException("Chunk size overflow: " + result);
+            }
+        }
+        return result;
+    }
+
+    private String[] splitInitialLine(ByteBuf asciiBuffer) {
+        final byte[] asciiBytes = asciiBuffer.array();
+
+        final int arrayOffset = asciiBuffer.arrayOffset();
+
+        final int startContent = arrayOffset + asciiBuffer.readerIndex();
+
+        final int end = startContent + asciiBuffer.readableBytes();
+
+        byte lastByte = asciiBytes[end - 1];
+        if (isControlOrWhitespaceAsciiChar(lastByte)) {
+            if (isDecodingRequest() || !isOWS(lastByte)) {
+                // There should no extra control or whitespace char in case of a request.
+                // In case of a response there might be a SP if there is no reason-phrase given.
+                // See
+                //  - https://datatracker.ietf.org/doc/html/rfc2616#section-5.1
+                //  - https://datatracker.ietf.org/doc/html/rfc9112#name-status-line
+                throw new IllegalArgumentException(
+                        "Illegal character in request line: 0x" + Integer.toHexString(lastByte));
             }
         }
 
-        return Integer.parseInt(hex, 16);
+        final int aStart = findNonSPLenient(asciiBytes, startContent, end);
+        final int aEnd = findSPLenient(asciiBytes, aStart, end);
+
+        final int bStart = findNonSPLenient(asciiBytes, aEnd, end);
+        final int bEnd = findSPLenient(asciiBytes, bStart, end);
+
+        final int cStart = findNonSPLenient(asciiBytes, bEnd, end);
+        final int cEnd = findEndOfString(asciiBytes, Math.max(cStart - 1, startContent), end);
+
+        return new String[]{
+                splitFirstWordInitialLine(asciiBytes, aStart, aEnd - aStart),
+                splitSecondWordInitialLine(asciiBytes, bStart, bEnd - bStart),
+                cStart < cEnd ? splitThirdWordInitialLine(asciiBytes, cStart, cEnd - cStart) : StringUtil.EMPTY_STRING};
     }
 
-    private static String[] splitInitialLine(AppendableCharSequence sb) {
-        int aStart;
-        int aEnd;
-        int bStart;
-        int bEnd;
-        int cStart;
-        int cEnd;
-
-        aStart = findNonSPLenient(sb, 0);
-        aEnd = findSPLenient(sb, aStart);
-
-        bStart = findNonSPLenient(sb, aEnd);
-        bEnd = findSPLenient(sb, bStart);
-
-        cStart = findNonSPLenient(sb, bEnd);
-        cEnd = findEndOfString(sb);
-
-        return new String[] {
-                sb.subStringUnsafe(aStart, aEnd),
-                sb.subStringUnsafe(bStart, bEnd),
-                cStart < cEnd? sb.subStringUnsafe(cStart, cEnd) : "" };
+    protected String splitFirstWordInitialLine(final byte[] asciiContent, int start, int length) {
+        return langAsciiString(asciiContent, start, length);
     }
 
-    private void splitHeader(AppendableCharSequence sb) {
-        final int length = sb.length();
-        int nameStart;
+    protected String splitSecondWordInitialLine(final byte[] asciiContent, int start, int length) {
+        return langAsciiString(asciiContent, start, length);
+    }
+
+    protected String splitThirdWordInitialLine(final byte[] asciiContent, int start, int length) {
+        return langAsciiString(asciiContent, start, length);
+    }
+
+    /**
+     * This method shouldn't exist: look at https://bugs.openjdk.org/browse/JDK-8295496 for more context
+     */
+    private static String langAsciiString(final byte[] asciiContent, int start, int length) {
+        if (length == 0) {
+            return StringUtil.EMPTY_STRING;
+        }
+        // DON'T REMOVE: it helps JIT to use a simpler intrinsic stub for System::arrayCopy based on the call-site
+        if (start == 0) {
+            if (length == asciiContent.length) {
+                return new String(asciiContent, 0, 0, asciiContent.length);
+            }
+            return new String(asciiContent, 0, 0, length);
+        }
+        return new String(asciiContent, 0, start, length);
+    }
+
+    private void splitHeader(byte[] line, int start, int length) {
+        final int end = start + length;
         int nameEnd;
-        int colonEnd;
-        int valueStart;
-        int valueEnd;
-
-        nameStart = findNonWhitespace(sb, 0);
-        for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
-            char ch = sb.charAtUnsafe(nameEnd);
+        final int nameStart = start;
+        // hoist this load out of the loop, because it won't change!
+        final boolean isDecodingRequest = isDecodingRequest();
+        for (nameEnd = nameStart; nameEnd < end; nameEnd ++) {
+            byte ch = line[nameEnd];
             // https://tools.ietf.org/html/rfc7230#section-3.2.4
             //
             // No whitespace is allowed between the header field-name and colon. In
@@ -845,67 +1027,93 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                     // is done in the DefaultHttpHeaders implementation.
                     //
                     // In the case of decoding a response we will "skip" the whitespace.
-                    (!isDecodingRequest() && isOWS(ch))) {
+                    (!isDecodingRequest && isOWS(ch))) {
                 break;
             }
         }
 
-        if (nameEnd == length) {
+        if (nameEnd == end) {
             // There was no colon present at all.
             throw new IllegalArgumentException("No colon found");
         }
-
-        for (colonEnd = nameEnd; colonEnd < length; colonEnd ++) {
-            if (sb.charAtUnsafe(colonEnd) == ':') {
+        int colonEnd;
+        for (colonEnd = nameEnd; colonEnd < end; colonEnd ++) {
+            if (line[colonEnd] == ':') {
                 colonEnd ++;
                 break;
             }
         }
-
-        name = sb.subStringUnsafe(nameStart, nameEnd);
-        valueStart = findNonWhitespace(sb, colonEnd);
-        if (valueStart == length) {
-            value = EMPTY_VALUE;
+        name = splitHeaderName(line, nameStart, nameEnd - nameStart);
+        final int valueStart = findNonWhitespace(line, colonEnd, end);
+        if (valueStart == end) {
+            value = StringUtil.EMPTY_STRING;
         } else {
-            valueEnd = findEndOfString(sb);
-            value = sb.subStringUnsafe(valueStart, valueEnd);
+            final int valueEnd = findEndOfString(line, start, end);
+            // no need to make uses of the ByteBuf's toString ASCII method here, and risk to get JIT confused
+            value = langAsciiString(line, valueStart, valueEnd - valueStart);
         }
     }
 
-    private static int findNonSPLenient(AppendableCharSequence sb, int offset) {
-        for (int result = offset; result < sb.length(); ++result) {
-            char c = sb.charAtUnsafe(result);
+    protected AsciiString splitHeaderName(byte[] sb, int start, int length) {
+        return new AsciiString(sb, start, length, true);
+    }
+
+    private static int findNonSPLenient(byte[] sb, int offset, int end) {
+        for (int result = offset; result < end; ++result) {
+            byte c = sb[result];
             // See https://tools.ietf.org/html/rfc7230#section-3.5
             if (isSPLenient(c)) {
                 continue;
             }
-            if (Character.isWhitespace(c)) {
+            if (isWhitespace(c)) {
                 // Any other whitespace delimiter is invalid
                 throw new IllegalArgumentException("Invalid separator");
             }
             return result;
         }
-        return sb.length();
+        return end;
     }
 
-    private static int findSPLenient(AppendableCharSequence sb, int offset) {
-        for (int result = offset; result < sb.length(); ++result) {
-            if (isSPLenient(sb.charAtUnsafe(result))) {
+    private static int findSPLenient(byte[] sb, int offset, int end) {
+        for (int result = offset; result < end; ++result) {
+            if (isSPLenient(sb[result])) {
                 return result;
             }
         }
-        return sb.length();
+        return end;
     }
 
-    private static boolean isSPLenient(char c) {
+    private static final boolean[] SP_LENIENT_BYTES;
+    private static final boolean[] LATIN_WHITESPACE;
+
+    static {
         // See https://tools.ietf.org/html/rfc7230#section-3.5
-        return c == ' ' || c == (char) 0x09 || c == (char) 0x0B || c == (char) 0x0C || c == (char) 0x0D;
+        SP_LENIENT_BYTES = new boolean[256];
+        SP_LENIENT_BYTES[128 + ' '] = true;
+        SP_LENIENT_BYTES[128 + 0x09] = true;
+        SP_LENIENT_BYTES[128 + 0x0B] = true;
+        SP_LENIENT_BYTES[128 + 0x0C] = true;
+        SP_LENIENT_BYTES[128 + 0x0D] = true;
+        // TO SAVE PERFORMING Character::isWhitespace ceremony
+        LATIN_WHITESPACE = new boolean[256];
+        for (byte b = Byte.MIN_VALUE; b < Byte.MAX_VALUE; b++) {
+            LATIN_WHITESPACE[128 + b] = Character.isWhitespace(b);
+        }
     }
 
-    private static int findNonWhitespace(AppendableCharSequence sb, int offset) {
-        for (int result = offset; result < sb.length(); ++result) {
-            char c = sb.charAtUnsafe(result);
-            if (!Character.isWhitespace(c)) {
+    private static boolean isSPLenient(byte c) {
+        // See https://tools.ietf.org/html/rfc7230#section-3.5
+        return SP_LENIENT_BYTES[c + 128];
+    }
+
+    private static boolean isWhitespace(byte b) {
+        return LATIN_WHITESPACE[b + 128];
+    }
+
+    private static int findNonWhitespace(byte[] sb, int offset, int end) {
+        for (int result = offset; result < end; ++result) {
+            byte c = sb[result];
+            if (!isWhitespace(c)) {
                 return result;
             } else if (!isOWS(c)) {
                 // Only OWS is supported for whitespace
@@ -913,75 +1121,80 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                         " but received a '" + c + "' (0x" + Integer.toHexString(c) + ")");
             }
         }
-        return sb.length();
+        return end;
     }
 
-    private static int findEndOfString(AppendableCharSequence sb) {
-        for (int result = sb.length() - 1; result > 0; --result) {
-            if (!Character.isWhitespace(sb.charAtUnsafe(result))) {
+    private static int findEndOfString(byte[] sb, int start, int end) {
+        for (int result = end - 1; result > start; --result) {
+            if (!isOWS(sb[result])) {
                 return result + 1;
             }
         }
         return 0;
     }
 
-    private static boolean isOWS(char ch) {
-        return ch == ' ' || ch == (char) 0x09;
+    private static boolean isOWS(byte ch) {
+        return ch == ' ' || ch == 0x09;
     }
 
-    private static class HeaderParser implements ByteProcessor {
-        private final AppendableCharSequence seq;
-        private final int maxLength;
+    private static class HeaderParser {
+        protected final ByteBuf seq;
+        protected final int maxLength;
         int size;
 
-        HeaderParser(AppendableCharSequence seq, int maxLength) {
+        HeaderParser(ByteBuf seq, int maxLength) {
             this.seq = seq;
             this.maxLength = maxLength;
         }
 
-        public AppendableCharSequence parse(ByteBuf buffer) {
-            final int oldSize = size;
-            seq.reset();
-            int i = buffer.forEachByte(this);
-            if (i == -1) {
-                size = oldSize;
+        public ByteBuf parse(ByteBuf buffer) {
+            final int readableBytes = buffer.readableBytes();
+            final int readerIndex = buffer.readerIndex();
+            final int maxBodySize = maxLength - size;
+            assert maxBodySize >= 0;
+            // adding 2 to account for both CR (if present) and LF
+            // don't remove 2L: it's key to cover maxLength = Integer.MAX_VALUE
+            final long maxBodySizeWithCRLF = maxBodySize + 2L;
+            final int toProcess = (int) Math.min(maxBodySizeWithCRLF, readableBytes);
+            final int toIndexExclusive = readerIndex + toProcess;
+            assert toIndexExclusive >= readerIndex;
+            final int indexOfLf = buffer.indexOf(readerIndex, toIndexExclusive, HttpConstants.LF);
+            if (indexOfLf == -1) {
+                if (readableBytes > maxBodySize) {
+                    // TODO: Respond with Bad Request and discard the traffic
+                    //    or close the connection.
+                    //       No need to notify the upstream handlers - just log.
+                    //       If decoding a response, just throw an exception.
+                    throw newException(maxLength);
+                }
                 return null;
             }
-            buffer.readerIndex(i + 1);
+            final int endOfSeqIncluded;
+            if (indexOfLf > readerIndex && buffer.getByte(indexOfLf - 1) == HttpConstants.CR) {
+                // Drop CR if we had a CRLF pair
+                endOfSeqIncluded = indexOfLf - 1;
+            } else {
+                endOfSeqIncluded = indexOfLf;
+            }
+            final int newSize = endOfSeqIncluded - readerIndex;
+            if (newSize == 0) {
+                seq.clear();
+                buffer.readerIndex(indexOfLf + 1);
+                return seq;
+            }
+            int size = this.size + newSize;
+            if (size > maxLength) {
+                throw newException(maxLength);
+            }
+            this.size = size;
+            seq.clear();
+            seq.writeBytes(buffer, readerIndex, newSize);
+            buffer.readerIndex(indexOfLf + 1);
             return seq;
         }
 
         public void reset() {
             size = 0;
-        }
-
-        @Override
-        public boolean process(byte value) throws Exception {
-            char nextByte = (char) (value & 0xFF);
-            if (nextByte == HttpConstants.LF) {
-                int len = seq.length();
-                // Drop CR if we had a CRLF pair
-                if (len >= 1 && seq.charAtUnsafe(len - 1) == HttpConstants.CR) {
-                    -- size;
-                    seq.setLength(len - 1);
-                }
-                return false;
-            }
-
-            increaseCount();
-
-            seq.append(nextByte);
-            return true;
-        }
-
-        protected final void increaseCount() {
-            if (++ size > maxLength) {
-                // TODO: Respond with Bad Request and discard the traffic
-                //    or close the connection.
-                //       No need to notify the upstream handlers - just log.
-                //       If decoding a response, just throw an exception.
-                throw newException(maxLength);
-            }
         }
 
         protected TooLongFrameException newException(int maxLength) {
@@ -991,33 +1204,66 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private final class LineParser extends HeaderParser {
 
-        LineParser(AppendableCharSequence seq, int maxLength) {
+        LineParser(ByteBuf seq, int maxLength) {
             super(seq, maxLength);
         }
 
         @Override
-        public AppendableCharSequence parse(ByteBuf buffer) {
+        public ByteBuf parse(ByteBuf buffer) {
             // Suppress a warning because HeaderParser.reset() is supposed to be called
-            reset();    // lgtm[java/subtle-inherited-call]
+            reset();
+            final int readableBytes = buffer.readableBytes();
+            if (readableBytes == 0) {
+                return null;
+            }
+            final int readerIndex = buffer.readerIndex();
+            if (currentState == State.SKIP_CONTROL_CHARS && skipControlChars(buffer, readableBytes, readerIndex)) {
+                return null;
+            }
             return super.parse(buffer);
         }
 
-        @Override
-        public boolean process(byte value) throws Exception {
-            if (currentState == State.SKIP_CONTROL_CHARS) {
-                char c = (char) (value & 0xFF);
-                if (Character.isISOControl(c) || Character.isWhitespace(c)) {
-                    increaseCount();
-                    return true;
+        private boolean skipControlChars(ByteBuf buffer, int readableBytes, int readerIndex) {
+            assert currentState == State.SKIP_CONTROL_CHARS;
+            final int maxToSkip = Math.min(maxLength, readableBytes);
+            final int firstNonControlIndex = buffer.forEachByte(readerIndex, maxToSkip, SKIP_CONTROL_CHARS_BYTES);
+            if (firstNonControlIndex == -1) {
+                buffer.skipBytes(maxToSkip);
+                if (readableBytes > maxLength) {
+                    throw newException(maxLength);
                 }
-                currentState = State.READ_INITIAL;
+                return true;
             }
-            return super.process(value);
+            // from now on we don't care about control chars
+            buffer.readerIndex(firstNonControlIndex);
+            currentState = State.READ_INITIAL;
+            return false;
         }
 
         @Override
         protected TooLongFrameException newException(int maxLength) {
             return new TooLongHttpLineException("An HTTP line is larger than " + maxLength + " bytes.");
         }
+    }
+
+    private static final boolean[] ISO_CONTROL_OR_WHITESPACE;
+
+    static {
+        ISO_CONTROL_OR_WHITESPACE = new boolean[256];
+        for (byte b = Byte.MIN_VALUE; b < Byte.MAX_VALUE; b++) {
+            ISO_CONTROL_OR_WHITESPACE[128 + b] = Character.isISOControl(b) || isWhitespace(b);
+        }
+    }
+
+    private static final ByteProcessor SKIP_CONTROL_CHARS_BYTES = new ByteProcessor() {
+
+        @Override
+        public boolean process(byte value) {
+            return ISO_CONTROL_OR_WHITESPACE[128 + value];
+        }
+    };
+
+    private static boolean isControlOrWhitespaceAsciiChar(byte b) {
+        return ISO_CONTROL_OR_WHITESPACE[128 + b];
     }
 }

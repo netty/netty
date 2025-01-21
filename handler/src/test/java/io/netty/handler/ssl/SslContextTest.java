@@ -174,6 +174,13 @@ public abstract class SslContextTest {
     }
 
     @Test
+    public void testPkcs8Pbes2()  throws Exception {
+        PrivateKey key = SslContext.toPrivateKey(new File(getClass().getResource("rsa_pbes2_enc_pkcs8.key")
+                .getFile()), "12345678", false);
+        assertNotNull(key);
+    }
+
+    @Test
     public void testPkcs1UnencryptedRsaEmptyPassword() throws Exception {
         assertThrows(IOException.class, new Executable() {
             @Override

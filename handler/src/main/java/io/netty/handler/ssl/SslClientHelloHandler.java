@@ -22,8 +22,10 @@ import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -36,13 +38,31 @@ import java.util.List;
  */
 public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder implements ChannelOutboundHandler {
 
+    /**
+     * The maximum length of client hello message as defined by
+     * <a href="https://www.rfc-editor.org/rfc/rfc5246#section-6.2.1">RFC5246</a>.
+     */
+    public static final int MAX_CLIENT_HELLO_LENGTH = 0xFFFFFF;
+
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SslClientHelloHandler.class);
 
+    private final int maxClientHelloLength;
     private boolean handshakeFailed;
     private boolean suppressRead;
     private boolean readPending;
     private ByteBuf handshakeBuffer;
+
+    public SslClientHelloHandler() {
+        this(MAX_CLIENT_HELLO_LENGTH);
+    }
+
+    protected SslClientHelloHandler(int maxClientHelloLength) {
+        // 16MB is the maximum as per RFC:
+        // See https://www.rfc-editor.org/rfc/rfc5246#section-6.2.1
+        this.maxClientHelloLength =
+                ObjectUtil.checkInRange(maxClientHelloLength, 0, MAX_CLIENT_HELLO_LENGTH, "maxClientHelloLength");
+    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
@@ -59,7 +79,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
                         case SslUtils.SSL_CONTENT_TYPE_CHANGE_CIPHER_SPEC:
                             // fall-through
                         case SslUtils.SSL_CONTENT_TYPE_ALERT:
-                            final int len = SslUtils.getEncryptedPacketLength(in, readerIndex);
+                            final int len = SslUtils.getEncryptedPacketLength(in, readerIndex, true);
 
                             // Not an SSL/TLS packet
                             if (len == SslUtils.NOT_ENCRYPTED) {
@@ -117,6 +137,15 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
                                     handshakeLength = in.getUnsignedMedium(readerIndex +
                                             SslUtils.SSL_RECORD_HEADER_LENGTH + 1);
 
+                                    if (handshakeLength > maxClientHelloLength && maxClientHelloLength != 0) {
+                                        TooLongFrameException e = new TooLongFrameException(
+                                                "ClientHello length exceeds " + maxClientHelloLength +
+                                                        ": " + handshakeLength);
+                                        in.skipBytes(in.readableBytes());
+                                        ctx.fireUserEventTriggered(new SniCompletionEvent(e));
+                                        SslUtils.handleHandshakeFailure(ctx, e, true);
+                                        throw e;
+                                    }
                                     // Consume handshakeType and handshakeLength (this sums up as 4 bytes)
                                     readerIndex += 4;
                                     packetLength -= 4;
@@ -160,6 +189,9 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
                 }
             } catch (NotSslRecordException e) {
                 // Just rethrow as in this case we also closed the channel and this is consistent with SslHandler.
+                throw e;
+            } catch (TooLongFrameException e) {
+                // Just rethrow as in this case we also closed the channel
                 throw e;
             } catch (Exception e) {
                 // unexpected encoding, ignore sni and use default

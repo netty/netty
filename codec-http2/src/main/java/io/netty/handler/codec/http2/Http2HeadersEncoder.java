@@ -16,12 +16,10 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Encodes {@link Http2Headers} into HPACK-encoded headers blocks.
  */
-@UnstableApi
 public interface Http2HeadersEncoder {
     /**
      * Configuration related elements for the {@link Http2HeadersEncoder} interface

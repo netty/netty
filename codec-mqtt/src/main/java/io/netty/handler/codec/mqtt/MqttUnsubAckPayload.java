@@ -27,7 +27,7 @@ import java.util.List;
  */
 public final class MqttUnsubAckPayload {
 
-    private final List<Short> unsubscribeReasonCodes;
+    private final List<MqttReasonCodes.UnsubAck> unsubscribeReasonCodes;
 
     private static final MqttUnsubAckPayload EMPTY = new MqttUnsubAckPayload();
 
@@ -42,9 +42,9 @@ public final class MqttUnsubAckPayload {
     public MqttUnsubAckPayload(short... unsubscribeReasonCodes) {
         ObjectUtil.checkNotNull(unsubscribeReasonCodes, "unsubscribeReasonCodes");
 
-        List<Short> list = new ArrayList<Short>(unsubscribeReasonCodes.length);
+        List<MqttReasonCodes.UnsubAck> list = new ArrayList<MqttReasonCodes.UnsubAck>(unsubscribeReasonCodes.length);
         for (Short v: unsubscribeReasonCodes) {
-            list.add(v);
+            list.add(MqttReasonCodes.UnsubAck.valueOf((byte) (v & 0xFF)));
         }
         this.unsubscribeReasonCodes = Collections.unmodifiableList(list);
     }
@@ -52,15 +52,27 @@ public final class MqttUnsubAckPayload {
     public MqttUnsubAckPayload(Iterable<Short> unsubscribeReasonCodes) {
         ObjectUtil.checkNotNull(unsubscribeReasonCodes, "unsubscribeReasonCodes");
 
-        List<Short> list = new ArrayList<Short>();
+        List<MqttReasonCodes.UnsubAck> list = new ArrayList<MqttReasonCodes.UnsubAck>();
         for (Short v: unsubscribeReasonCodes) {
             ObjectUtil.checkNotNull(v, "unsubscribeReasonCode");
-            list.add(v);
+            list.add(MqttReasonCodes.UnsubAck.valueOf(v.byteValue()));
         }
         this.unsubscribeReasonCodes = Collections.unmodifiableList(list);
     }
 
     public List<Short> unsubscribeReasonCodes() {
+        return typedReasonCodesToOrdinal();
+    }
+
+    private List<Short> typedReasonCodesToOrdinal() {
+        List<Short> codes = new ArrayList<Short>(unsubscribeReasonCodes.size());
+        for (MqttReasonCodes.UnsubAck code: unsubscribeReasonCodes) {
+            codes.add((short) (code.byteValue() & 0xFF));
+        }
+        return codes;
+    }
+
+    public List<MqttReasonCodes.UnsubAck> typedReasonCodes() {
         return unsubscribeReasonCodes;
     }
 

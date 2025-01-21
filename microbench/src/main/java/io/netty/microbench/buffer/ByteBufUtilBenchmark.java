@@ -36,9 +36,17 @@ import org.openjdk.jmh.annotations.Warmup;
 public class
     ByteBufUtilBenchmark extends AbstractMicrobenchmark {
 
-    @Param({ "true", "false" })
+    @Param({
+            "true",
+            "false",
+    })
     private boolean direct;
-    @Param({ "8", "16", "64", "128" })
+    @Param({
+            "8",
+            "16",
+            "64",
+            "128",
+    })
     private int length;
     private ByteBuf buffer;
     private ByteBuf wrapped;

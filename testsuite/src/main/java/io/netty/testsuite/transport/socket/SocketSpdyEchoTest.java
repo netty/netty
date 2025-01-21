@@ -220,11 +220,7 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
                 break;
             }
 
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                // Ignore.
-            }
+            Thread.sleep(50);
         }
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {

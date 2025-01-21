@@ -15,14 +15,11 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 /**
  * The DNS {@code RCODE}, as defined in <a href="https://tools.ietf.org/html/rfc2929">RFC2929</a>.
  */
-@UnstableApi
 public class DnsResponseCode implements Comparable<DnsResponseCode> {
 
     /**

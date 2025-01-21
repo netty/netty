@@ -16,12 +16,10 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * The default {@link Http2WindowUpdateFrame} implementation.
  */
-@UnstableApi
 public class DefaultHttp2WindowUpdateFrame extends AbstractHttp2StreamFrame implements Http2WindowUpdateFrame {
 
     private final int windowUpdateIncrement;

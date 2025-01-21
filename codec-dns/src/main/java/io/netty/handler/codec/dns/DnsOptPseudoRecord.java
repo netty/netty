@@ -15,15 +15,12 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * An <a href="https://tools.ietf.org/html/rfc6891#section-6.1">OPT RR</a> record.
  * <p>
  * This is used for <a href="https://tools.ietf.org/html/rfc6891#section-6.1.3">Extension
  * Mechanisms for DNS (EDNS(0))</a>.
  */
-@UnstableApi
 public interface DnsOptPseudoRecord extends DnsRecord {
 
     /**

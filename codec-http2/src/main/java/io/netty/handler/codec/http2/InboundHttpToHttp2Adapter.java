@@ -20,12 +20,10 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpMessage;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpScheme;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Translates HTTP/1.x object reads into HTTP/2 frames.
  */
-@UnstableApi
 public class InboundHttpToHttp2Adapter extends ChannelInboundHandlerAdapter {
     private final Http2Connection connection;
     private final Http2FrameListener listener;

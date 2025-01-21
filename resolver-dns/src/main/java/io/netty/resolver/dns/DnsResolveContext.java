@@ -19,7 +19,8 @@ package io.netty.resolver.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.AddressedEnvelope;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
@@ -40,6 +41,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SuppressJava6Requirement;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThrowableUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -60,11 +62,25 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import static io.netty.handler.codec.dns.DnsResponseCode.NXDOMAIN;
+import static io.netty.handler.codec.dns.DnsResponseCode.SERVFAIL;
 import static io.netty.resolver.dns.DnsAddressDecoder.decodeAddress;
 import static java.lang.Math.min;
 
 abstract class DnsResolveContext<T> {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DnsResolveContext.class);
+    private static final String PROP_TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS =
+            "io.netty.resolver.dns.tryCnameOnAddressLookups";
+    static boolean TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS;
+
+    static {
+        TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS =
+                SystemPropertyUtil.getBoolean(PROP_TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS, false);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("-D{}: {}", PROP_TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS, TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS);
+        }
+    }
 
     private static final RuntimeException NXDOMAIN_QUERY_FAILED_EXCEPTION =
             DnsResolveContextException.newStatic("No answer found and NXDOMAIN response code returned",
@@ -81,8 +97,15 @@ abstract class DnsResolveContext<T> {
     private static final RuntimeException NAME_SERVERS_EXHAUSTED_EXCEPTION =
             DnsResolveContextException.newStatic("No name servers returned an answer",
             DnsResolveContext.class, "tryToFinishResolve(..)");
+    private static final RuntimeException SERVFAIL_QUERY_FAILED_EXCEPTION =
+            DnsErrorCauseException.newStatic("Query failed with SERVFAIL", SERVFAIL,
+                    DnsResolveContext.class, "onResponse(..)");
+    private static final RuntimeException NXDOMAIN_CAUSE_QUERY_FAILED_EXCEPTION =
+            DnsErrorCauseException.newStatic("Query failed with NXDOMAIN", NXDOMAIN,
+                    DnsResolveContext.class, "onResponse(..)");
 
     final DnsNameResolver parent;
+    private final Channel channel;
     private final Promise<?> originalPromise;
     private final DnsServerAddressStream nameServerAddrs;
     private final String hostname;
@@ -99,12 +122,13 @@ abstract class DnsResolveContext<T> {
     private boolean triedCNAME;
     private boolean completeEarly;
 
-    DnsResolveContext(DnsNameResolver parent, Promise<?> originalPromise,
-                      String hostname, int dnsClass, DnsRecordType[] expectedTypes,
+    DnsResolveContext(DnsNameResolver parent, Channel channel,
+                      Promise<?> originalPromise, String hostname, int dnsClass, DnsRecordType[] expectedTypes,
                       DnsRecord[] additionals, DnsServerAddressStream nameServerAddrs, int allowedQueries) {
         assert expectedTypes.length > 0;
 
         this.parent = parent;
+        this.channel = channel;
         this.originalPromise = originalPromise;
         this.hostname = hostname;
         this.dnsClass = dnsClass;
@@ -149,6 +173,13 @@ abstract class DnsResolveContext<T> {
     }
 
     /**
+     * The {@link Channel} used.
+     */
+    Channel channel() {
+        return channel;
+    }
+
+    /**
      * The {@link DnsCache} to use while resolving.
      */
     DnsCache resolveCache() {
@@ -172,7 +203,8 @@ abstract class DnsResolveContext<T> {
     /**
      * Creates a new context with the given parameters.
      */
-    abstract DnsResolveContext<T> newResolverContext(DnsNameResolver parent, Promise<?> originalPromise,
+    abstract DnsResolveContext<T> newResolverContext(DnsNameResolver parent, Channel channel,
+                                                     Promise<?> originalPromise,
                                                      String hostname,
                                                      int dnsClass, DnsRecordType[] expectedTypes,
                                                      DnsRecord[] additionals,
@@ -233,7 +265,8 @@ abstract class DnsResolveContext<T> {
                         }
                     } else {
                         if (DnsNameResolver.isTransportOrTimeoutError(cause)) {
-                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, searchDomains));
+                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, expectedTypes,
+                                    searchDomains));
                         } else if (searchDomainIdx < searchDomains.length) {
                             Promise<List<T>> newPromise = parent.executor().newPromise();
                             newPromise.addListener(this);
@@ -241,7 +274,8 @@ abstract class DnsResolveContext<T> {
                         } else if (!startWithoutSearchDomain) {
                             internalResolve(hostname, promise);
                         } else {
-                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, searchDomains));
+                            promise.tryFailure(new SearchDomainUnknownHostException(cause, hostname, expectedTypes,
+                                    searchDomains));
                         }
                     }
                 }
@@ -262,9 +296,11 @@ abstract class DnsResolveContext<T> {
     private static final class SearchDomainUnknownHostException extends UnknownHostException {
         private static final long serialVersionUID = -8573510133644997085L;
 
-        SearchDomainUnknownHostException(Throwable cause, String originalHostname, String[] searchDomains) {
-            super("Failed to resolve '" + originalHostname + "' and search domain query for configured domains" +
-                    " failed as well: " + Arrays.toString(searchDomains));
+        SearchDomainUnknownHostException(Throwable cause, String originalHostname,
+                DnsRecordType[] queryTypes, String[] searchDomains) {
+            super("Failed to resolve '" + originalHostname + "' " + Arrays.toString(queryTypes) +
+                    " and search domain query for configured domains failed as well: " +
+                    Arrays.toString(searchDomains));
             setStackTrace(cause.getStackTrace());
             // Preserve the cause
             initCause(cause.getCause());
@@ -272,14 +308,15 @@ abstract class DnsResolveContext<T> {
 
         // Suppress a warning since this method doesn't need synchronization
         @Override
-        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+        public Throwable fillInStackTrace() {
             return this;
         }
     }
 
     void doSearchDomainQuery(String hostname, Promise<List<T>> nextPromise) {
-        DnsResolveContext<T> nextContext = newResolverContext(parent, originalPromise, hostname, dnsClass,
-                                                              expectedTypes, additionals, nameServerAddrs,
+        DnsResolveContext<T> nextContext = newResolverContext(parent, channel,
+                originalPromise, hostname, dnsClass,
+                expectedTypes, additionals, nameServerAddrs,
                 parent.maxQueriesPerResolve());
         nextContext.internalResolve(hostname, nextPromise);
     }
@@ -357,8 +394,8 @@ abstract class DnsResolveContext<T> {
             }
             query(name, expectedTypes[end], nameServerAddressStream, false, promise);
         } finally {
-            // Now flush everything we submitted before.
-            parent.flushQueries();
+            // Now flush everything we submitted before for the Channel.
+            channel.flush();
         }
     }
 
@@ -428,16 +465,24 @@ abstract class DnsResolveContext<T> {
                                       queryLifecycleObserver, promise, cause);
             return;
         }
-        final ChannelPromise writePromise = parent.ch.newPromise();
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
-                parent.ch.eventLoop().newPromise();
+                channel.eventLoop().newPromise();
+
+        final long queryStartTimeNanos;
+        final boolean isFeedbackAddressStream;
+        if (nameServerAddrStream instanceof DnsServerResponseFeedbackAddressStream) {
+            queryStartTimeNanos = System.nanoTime();
+            isFeedbackAddressStream = true;
+        } else {
+            queryStartTimeNanos = -1;
+            isFeedbackAddressStream = false;
+        }
 
         final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> f =
-                parent.query0(nameServerAddr, question, additionals, flush, writePromise, queryPromise);
+                parent.doQuery(channel, nameServerAddr, question,
+                        queryLifecycleObserver, additionals, flush, queryPromise);
 
         queriesInProgress.add(f);
-
-        queryLifecycleObserver.queryWritten(nameServerAddr, writePromise);
 
         f.addListener(new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
             @Override
@@ -459,10 +504,22 @@ abstract class DnsResolveContext<T> {
                 final Throwable queryCause = future.cause();
                 try {
                     if (queryCause == null) {
+                        if (isFeedbackAddressStream) {
+                            final DnsServerResponseFeedbackAddressStream feedbackNameServerAddrStream =
+                                    (DnsServerResponseFeedbackAddressStream) nameServerAddrStream;
+                            feedbackNameServerAddrStream.feedbackSuccess(nameServerAddr,
+                                    System.nanoTime() - queryStartTimeNanos);
+                        }
                         onResponse(nameServerAddrStream, nameServerAddrStreamIndex, question, future.getNow(),
                                    queryLifecycleObserver, promise);
                     } else {
                         // Server did not respond or I/O error occurred; try again.
+                        if (isFeedbackAddressStream) {
+                            final DnsServerResponseFeedbackAddressStream feedbackNameServerAddrStream =
+                                    (DnsServerResponseFeedbackAddressStream) nameServerAddrStream;
+                            feedbackNameServerAddrStream.feedbackFailure(nameServerAddr, queryCause,
+                                    System.nanoTime() - queryStartTimeNanos);
+                        }
                         queryLifecycleObserver.queryFailed(queryCause);
                         query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
                               newDnsQueryLifecycleObserver(question), true, promise, queryCause);
@@ -516,15 +573,15 @@ abstract class DnsResolveContext<T> {
         });
         DnsCache resolveCache = resolveCache();
         if (!DnsNameResolver.doResolveAllCached(nameServerName, additionals, resolverPromise, resolveCache,
-                parent.resolvedInternetProtocolFamiliesUnsafe())) {
+                parent.searchDomains(), parent.ndots(), parent.resolvedInternetProtocolFamiliesUnsafe())) {
 
-            new DnsAddressResolveContext(parent, originalPromise, nameServerName, additionals,
-                                         parent.newNameServerAddressStream(nameServerName),
-                                         // Resolving the unresolved nameserver must be limited by allowedQueries
-                                         // so we eventually fail
-                                         allowedQueries,
-                                         resolveCache,
-                                         redirectAuthoritativeDnsServerCache(authoritativeDnsServerCache()), false)
+            new DnsAddressResolveContext(parent, channel,
+                    originalPromise, nameServerName, additionals, parent.newNameServerAddressStream(nameServerName),
+                    // Resolving the unresolved nameserver must be limited by allowedQueries
+                    // so we eventually fail
+                    allowedQueries,
+                    resolveCache,
+                    redirectAuthoritativeDnsServerCache(authoritativeDnsServerCache()), false)
                     .resolve(resolverPromise);
         }
     }
@@ -603,7 +660,7 @@ abstract class DnsResolveContext<T> {
             // Retry with the next server if the server did not tell us that the domain does not exist.
             if (code != DnsResponseCode.NXDOMAIN) {
                 query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
-                      queryLifecycleObserver.queryNoAnswer(code), true, promise, null);
+                      queryLifecycleObserver.queryNoAnswer(code), true, promise, cause(code));
             } else {
                 queryLifecycleObserver.queryFailed(NXDOMAIN_QUERY_FAILED_EXCEPTION);
 
@@ -627,7 +684,11 @@ abstract class DnsResolveContext<T> {
                 //                ....
                 if (!res.isAuthoritativeAnswer()) {
                     query(nameServerAddrStream, nameServerAddrStreamIndex + 1, question,
-                            newDnsQueryLifecycleObserver(question), true, promise, null);
+                            newDnsQueryLifecycleObserver(question), true, promise, cause(code));
+                } else {
+                    // Failed with NX cause - distinction between NXDOMAIN vs a timeout
+                    tryToFinishResolve(nameServerAddrStream, nameServerAddrStreamIndex, question,
+                            queryLifecycleObserver, promise, NXDOMAIN_CAUSE_QUERY_FAILED_EXCEPTION);
                 }
             }
         } finally {
@@ -681,6 +742,17 @@ abstract class DnsResolveContext<T> {
             }
         }
         return false;
+    }
+
+    private static Throwable cause(final DnsResponseCode code) {
+        assert code != null;
+        if (SERVFAIL.intValue() == code.intValue()) {
+            return SERVFAIL_QUERY_FAILED_EXCEPTION;
+        } else if (NXDOMAIN.intValue() == code.intValue()) {
+            return NXDOMAIN_CAUSE_QUERY_FAILED_EXCEPTION;
+        }
+
+        return null;
     }
 
     private static final class DnsAddressStreamList extends AbstractList<InetSocketAddress> {
@@ -765,6 +837,7 @@ abstract class DnsResolveContext<T> {
 
         boolean found = false;
         boolean completeEarly = this.completeEarly;
+        boolean cnameNeedsFollow = !cnames.isEmpty();
         for (int i = 0; i < answerCount; i ++) {
             final DnsRecord r = response.recordAt(DnsSection.ANSWER, i);
             final DnsRecordType type = r.type();
@@ -791,6 +864,8 @@ abstract class DnsResolveContext<T> {
                 do {
                     resolved = cnamesCopy.remove(resolved);
                     if (recordName.equals(resolved)) {
+                        // We followed a CNAME chain that was part of the response without any extra queries.
+                        cnameNeedsFollow = false;
                         break;
                     }
                 } while (resolved != null);
@@ -816,9 +891,10 @@ abstract class DnsResolveContext<T> {
                     }
                     if (resolved == null) {
                         if (logger.isDebugEnabled()) {
-                            logger.debug("Ignoring record {} as it contains a different name than the " +
-                                            "question name [{}]. Cnames: {}, Search domains: {}",
-                                    r.toString(), questionName, cnames, parent.searchDomains());
+                            logger.debug("{} Ignoring record {} for [{}: {}] as it contains a different name than " +
+                                            "the question name [{}]. Cnames: {}, Search domains: {}",
+                                    channel, r.toString(), response.id(), envelope.sender(),
+                                    questionName, cnames, parent.searchDomains());
                         }
                         continue;
                     }
@@ -828,8 +904,10 @@ abstract class DnsResolveContext<T> {
             final T converted = convertRecord(r, hostname, additionals, parent.executor());
             if (converted == null) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Ignoring record {} as the converted record is null. hostname [{}], Additionals: {}",
-                            r.toString(), hostname, additionals);
+                    logger.debug("{} Ignoring record {} for [{}: {}] as the converted record is null. "
+                                    + "Hostname [{}], Additionals: {}",
+                            channel, r.toString(), response.id(),
+                            envelope.sender(), hostname, additionals);
                 }
                 continue;
             }
@@ -841,16 +919,22 @@ abstract class DnsResolveContext<T> {
                 completeEarly = isCompleteEarly(converted);
             }
 
-            // We want to ensure we do not have duplicates in finalResult as this may be unexpected.
-            //
-            // While using a LinkedHashSet or HashSet may sound like the perfect fit for this we will use an
-            // ArrayList here as duplicates should be found quite unfrequently in the wild and we dont want to pay
-            // for the extra memory copy and allocations in this cases later on.
-            if (finalResult == null) {
-                finalResult = new ArrayList<T>(8);
-                finalResult.add(converted);
-            } else if (isDuplicateAllowed() || !finalResult.contains(converted)) {
-                finalResult.add(converted);
+            // Check if the promise was done already, and only if not add things to the finalResult. Otherwise lets
+            // just release things after we cached it.
+            if (!promise.isDone()) {
+                // We want to ensure we do not have duplicates in finalResult as this may be unexpected.
+                //
+                // While using a LinkedHashSet or HashSet may sound like the perfect fit for this we will use an
+                // ArrayList here as duplicates should be found quite unfrequently in the wild and we dont want to pay
+                // for the extra memory copy and allocations in this cases later on.
+                if (finalResult == null) {
+                    finalResult = new ArrayList<T>(8);
+                    finalResult.add(converted);
+                } else if (isDuplicateAllowed() || !finalResult.contains(converted)) {
+                    finalResult.add(converted);
+                } else {
+                    shouldRelease = true;
+                }
             } else {
                 shouldRelease = true;
             }
@@ -864,14 +948,14 @@ abstract class DnsResolveContext<T> {
             // Note that we do not break from the loop here, so we decode/cache all A/AAAA records.
         }
 
-        if (cnames.isEmpty()) {
-            if (found) {
-                if (completeEarly) {
-                    this.completeEarly = true;
-                }
-                queryLifecycleObserver.querySucceed();
-                return;
+        if (found && !cnameNeedsFollow) {
+            // If we found the correct result we can just stop here without following any extra CNAME records in the
+            // response.
+            if (completeEarly) {
+                this.completeEarly = true;
             }
+            queryLifecycleObserver.querySucceed();
+        } else if (cnames.isEmpty()) {
             queryLifecycleObserver.queryFailed(NO_MATCHING_RECORD_QUERY_FAILED_EXCEPTION);
         } else {
             queryLifecycleObserver.querySucceed();
@@ -981,22 +1065,35 @@ abstract class DnsResolveContext<T> {
 
             // .. and we could not find any expected records.
 
-            // If cause != null we know this was caused by a timeout / cancel / transport exception. In this case we
-            // won't try to resolve the CNAME as we only should do this if we could not get the expected records
-            // because they do not exist and the DNS server did probably signal it.
-            if (cause == null && !triedCNAME &&
-                    (question.type() == DnsRecordType.A || question.type() == DnsRecordType.AAAA)) {
-                // As the last resort, try to query CNAME, just in case the name server has it.
-                triedCNAME = true;
+            // The following is of questionable benefit, but has been around for a while that
+            // it may be risky to remove. Reference https://datatracker.ietf.org/doc/html/rfc8020
+            // - If we receive NXDOMAIN we know the domain doesn't exist, any other lookup type is meaningless.
+            // - If we receive SERVFAIL, and we attempt a CNAME that returns NOERROR with 0 answers, it may lead the
+            //   call-site to invalidate previously advertised addresses.
+            // Having said that, there is the case of DNS services that don't respect the protocol either
+            // - An A lookup could result in NXDOMAIN but a CNAME may succeed with answers.
+            // It's an imperfect world. Accept it.
+            // Guarding it with a system property, as an opt-in functionality.
+            if (TRY_FINAL_CNAME_ON_ADDRESS_LOOKUPS) {
+                // If cause != null we know this was caused by a timeout / cancel / transport exception. In this case we
+                // won't try to resolve the CNAME as we only should do this if we could not get the expected records
+                // because they do not exist and the DNS server did probably signal it.
+                final boolean isValidResponse =
+                        cause == NXDOMAIN_CAUSE_QUERY_FAILED_EXCEPTION || cause == SERVFAIL_QUERY_FAILED_EXCEPTION;
+                if ((cause == null || isValidResponse) && !triedCNAME &&
+                        (question.type() == DnsRecordType.A || question.type() == DnsRecordType.AAAA)) {
+                    // As the last resort, try to query CNAME, just in case the name server has it.
+                    triedCNAME = true;
 
-                query(hostname, DnsRecordType.CNAME, getNameServers(hostname), true, promise);
-                return;
+                    query(hostname, DnsRecordType.CNAME, getNameServers(hostname), true, promise);
+                    return;
+                }
             }
         } else {
             queryLifecycleObserver.queryCancelled(allowedQueries);
         }
 
-        // We have at least one resolved record or tried CNAME as the last resort..
+        // We have at least one resolved record or tried CNAME as the last resort.
         finishResolve(promise, cause);
     }
 
@@ -1018,11 +1115,17 @@ abstract class DnsResolveContext<T> {
             if (!promise.isDone()) {
                 // Found at least one resolved record.
                 final List<T> result = filterResults(finalResult);
+                // Lets replace the previous stored result.
+                finalResult = Collections.emptyList();
                 if (!DnsNameResolver.trySuccess(promise, result)) {
                     for (T item : result) {
                         ReferenceCountUtil.safeRelease(item);
                     }
                 }
+            } else {
+                // This should always be the case as we replaced the list once notify the promise with an empty one
+                // and never add to it again.
+                assert finalResult.isEmpty();
             }
             return;
         }
@@ -1032,7 +1135,7 @@ abstract class DnsResolveContext<T> {
         final int tries = maxAllowedQueries - allowedQueries;
         final StringBuilder buf = new StringBuilder(64);
 
-        buf.append("Failed to resolve '").append(hostname).append('\'');
+        buf.append("Failed to resolve '").append(hostname).append("' ").append(Arrays.toString(expectedTypes));
         if (tries > 1) {
             if (tries < maxAllowedQueries) {
                 buf.append(" after ")

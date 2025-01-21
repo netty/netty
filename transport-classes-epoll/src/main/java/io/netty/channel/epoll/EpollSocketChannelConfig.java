@@ -60,7 +60,8 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
                 ALLOW_HALF_CLOSURE, EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_NOTSENT_LOWAT,
                 EpollChannelOption.TCP_KEEPCNT, EpollChannelOption.TCP_KEEPIDLE, EpollChannelOption.TCP_KEEPINTVL,
-                EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK, EpollChannelOption.IP_TRANSPARENT,
+                EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK,
+                EpollChannelOption.IP_BIND_ADDRESS_NO_PORT, EpollChannelOption.IP_TRANSPARENT,
                 ChannelOption.TCP_FASTOPEN_CONNECT, EpollChannelOption.SO_BUSY_POLL);
     }
 
@@ -112,6 +113,9 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         if (option == EpollChannelOption.TCP_QUICKACK) {
             return (T) Boolean.valueOf(isTcpQuickAck());
         }
+        if (option == EpollChannelOption.IP_BIND_ADDRESS_NO_PORT) {
+            return (T) Boolean.valueOf(isIpBindAddressNoPort());
+        }
         if (option == EpollChannelOption.IP_TRANSPARENT) {
             return (T) Boolean.valueOf(isIpTransparent());
         }
@@ -156,6 +160,8 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
             setTcpKeepIntvl((Integer) value);
         } else if (option == EpollChannelOption.TCP_USER_TIMEOUT) {
             setTcpUserTimeout((Integer) value);
+        } else if (option == EpollChannelOption.IP_BIND_ADDRESS_NO_PORT) {
+            setIpBindAddressNoPort((Boolean) value);
         } else if (option == EpollChannelOption.IP_TRANSPARENT) {
             setIpTransparent((Boolean) value);
         } else if (option == EpollChannelOption.TCP_MD5SIG) {
@@ -486,6 +492,32 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         }
     }
 
+    /**
+     * Returns {@code true} if the IP_BIND_ADDRESS_NO_PORT option is set.
+     */
+    public boolean isIpBindAddressNoPort() {
+        try {
+            return ((EpollSocketChannel) channel).socket.isIpBindAddressNoPort();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * Set the IP_BIND_ADDRESS_NO_PORT option on the underlying Channel.
+     *
+     * Be aware this method needs be called before {@link EpollSocketChannel#bind(java.net.SocketAddress)} to have
+     * any affect.
+     */
+    public EpollSocketChannelConfig setIpBindAddressNoPort(boolean ipBindAddressNoPort) {
+        try {
+            ((EpollSocketChannel) channel).socket.setIpBindAddressNoPort(ipBindAddressNoPort);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
      /**
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
@@ -659,7 +691,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
         int newSendBufferSize = getSendBufferSize() << 1;
         if (newSendBufferSize > 0) {
-            setMaxBytesPerGatheringWrite(getSendBufferSize() << 1);
+            setMaxBytesPerGatheringWrite(newSendBufferSize);
         }
     }
 }

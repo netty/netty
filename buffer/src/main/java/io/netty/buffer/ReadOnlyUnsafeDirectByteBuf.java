@@ -61,7 +61,7 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
     }
 
     @Override
-    public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
+    protected ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length, boolean internal) {
         checkIndex(index, length);
         ObjectUtil.checkNotNull(dst, "dst");
         if (dstIndex < 0 || dstIndex > dst.capacity() - length) {
@@ -79,7 +79,7 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
     }
 
     @Override
-    public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
+    protected ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length, boolean internal) {
         checkIndex(index, length);
         ObjectUtil.checkNotNull(dst, "dst");
         if (dstIndex < 0 || dstIndex > dst.length - length) {

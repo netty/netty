@@ -321,6 +321,12 @@ public class ProxyHandlerTest {
                         new Socks5ProxyHandler(socks5Proxy.address())),
 
                 new SuccessTestItem(
+                        "SOCKS5: successful connection to anonymous server, AUTO_READ on",
+                        DESTINATION,
+                        true,
+                        new Socks5ProxyHandler(anonSocks5Proxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
                         "SOCKS5: successful connection, AUTO_READ on",
                         DESTINATION,
                         true,

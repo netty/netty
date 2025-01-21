@@ -20,7 +20,6 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * A {@link ChannelDuplexHandler} providing additional functionality for HTTP/2. Specifically it allows to:
@@ -32,7 +31,6 @@ import io.netty.util.internal.UnstableApi;
  * <p>The {@link Http2FrameCodec} is required to be part of the {@link ChannelPipeline} before this handler is added,
  * or else an {@link IllegalStateException} will be thrown.
  */
-@UnstableApi
 public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
 
     private volatile Http2FrameCodec frameCodec;

@@ -35,9 +35,10 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.resolver.AbstractAddressResolver;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.AbstractAddressResolver;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
@@ -69,6 +70,8 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -300,6 +303,24 @@ public class BootstrapTest {
     }
 
     @Test
+    void testResolverDefault() throws Exception {
+        Bootstrap bootstrap = new Bootstrap();
+
+        assertTrue(bootstrap.config().toString().contains("resolver:"));
+        assertNotNull(bootstrap.config().resolver());
+        assertEquals(DefaultAddressResolverGroup.class, bootstrap.config().resolver().getClass());
+    }
+
+    @Test
+    void testResolverDisabled() throws Exception {
+        Bootstrap bootstrap = new Bootstrap();
+        bootstrap.disableResolver();
+
+        assertFalse(bootstrap.config().toString().contains("resolver:"));
+        assertNull(bootstrap.config().resolver());
+    }
+
+    @Test
     public void testAsyncResolutionSuccess() throws Exception {
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.group(groupA);
@@ -311,6 +332,10 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
+
+        assertTrue(bootstrapA.config().toString().contains("resolver:"));
+        assertThat(bootstrapA.resolver(), is(instanceOf(TestAddressResolverGroup.class)));
+
         SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
 
         // Connect to the server using the asynchronous resolver.
@@ -337,6 +362,7 @@ public class BootstrapTest {
         // Should fail with the UnknownHostException.
         assertThat(connectFuture.await(10000), is(true));
         assertThat(connectFuture.cause(), is(instanceOf(UnknownHostException.class)));
+        connectFuture.channel().closeFuture().await(10000);
         assertThat(connectFuture.channel().isOpen(), is(false));
     }
 
@@ -369,6 +395,7 @@ public class BootstrapTest {
         assertThat(connectFuture.await(10000), is(true));
         assertThat(connectFuture.cause(), instanceOf(IllegalStateException.class));
         assertThat(connectFuture.cause().getCause(), instanceOf(TestException.class));
+        connectFuture.channel().closeFuture().await(10000);
         assertThat(connectFuture.channel().isOpen(), is(false));
     }
 
@@ -442,6 +469,25 @@ public class BootstrapTest {
         // Check the order is the same as what we defined before.
         assertSame(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, options.take());
         assertSame(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, options.take());
+    }
+
+    @Test
+    void mustCallInitializerExtensions() throws Exception {
+        final Bootstrap cb = new Bootstrap();
+        cb.group(groupA);
+        cb.handler(dummyHandler);
+        cb.channel(LocalChannel.class);
+
+        StubChannelInitializerExtension.clearThreadLocals();
+
+        ChannelFuture future = cb.register();
+        future.sync();
+        final Channel expectedChannel = future.channel();
+
+        assertSame(expectedChannel, StubChannelInitializerExtension.lastSeenClientChannel.get());
+        assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
+        assertNull(StubChannelInitializerExtension.lastSeenListenerChannel.get());
+        expectedChannel.close().sync();
     }
 
     private static final class DelayedEventLoopGroup extends DefaultEventLoop {

@@ -35,6 +35,9 @@ import java.util.concurrent.ThreadFactory;
  * it only works on linux.
  */
 public final class EpollEventLoopGroup extends MultithreadEventLoopGroup {
+
+    // This does not use static by design to ensure the class can be loaded and only do the check when its actually
+    // instanced.
     {
         // Ensure JNI is initialized by the time this class is loaded.
         Epoll.ensureAvailability();

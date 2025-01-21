@@ -169,7 +169,8 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
 
     private final SourceCodec sourceCodec;
     private final UpgradeCodecFactory upgradeCodecFactory;
-    private final boolean validateHeaders;
+    private final HttpHeadersFactory headersFactory;
+    private final HttpHeadersFactory trailersFactory;
     private boolean handlingUpgrade;
 
     /**
@@ -187,7 +188,8 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      *                            for one of the requested upgrade protocols
      */
     public HttpServerUpgradeHandler(SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory) {
-        this(sourceCodec, upgradeCodecFactory, 0);
+        this(sourceCodec, upgradeCodecFactory, 0,
+                DefaultHttpHeadersFactory.headersFactory(), DefaultHttpHeadersFactory.trailersFactory());
     }
 
     /**
@@ -200,7 +202,8 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     public HttpServerUpgradeHandler(
             SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength) {
-        this(sourceCodec, upgradeCodecFactory, maxContentLength, true);
+        this(sourceCodec, upgradeCodecFactory, maxContentLength,
+                DefaultHttpHeadersFactory.headersFactory(), DefaultHttpHeadersFactory.trailersFactory());
     }
 
     /**
@@ -214,11 +217,32 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     public HttpServerUpgradeHandler(SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory,
                                     int maxContentLength, boolean validateHeaders) {
+        this(sourceCodec, upgradeCodecFactory, maxContentLength,
+                DefaultHttpHeadersFactory.headersFactory().withValidation(validateHeaders),
+                DefaultHttpHeadersFactory.trailersFactory().withValidation(validateHeaders));
+    }
+
+    /**
+     * Constructs the upgrader with the supported codecs.
+     *
+     * @param sourceCodec the codec that is being used initially
+     * @param upgradeCodecFactory the factory that creates a new upgrade codec
+     *                            for one of the requested upgrade protocols
+     * @param maxContentLength the maximum length of the content of an upgrade request
+     * @param headersFactory The {@link HttpHeadersFactory} to use for headers.
+     * The recommended default factory is {@link DefaultHttpHeadersFactory#headersFactory()}.
+     * @param trailersFactory The {@link HttpHeadersFactory} to use for trailers.
+     * The recommended default factory is {@link DefaultHttpHeadersFactory#trailersFactory()}.
+     */
+    public HttpServerUpgradeHandler(
+            SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength,
+            HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
         super(maxContentLength);
 
         this.sourceCodec = checkNotNull(sourceCodec, "sourceCodec");
         this.upgradeCodecFactory = checkNotNull(upgradeCodecFactory, "upgradeCodecFactory");
-        this.validateHeaders = validateHeaders;
+        this.headersFactory = checkNotNull(headersFactory, "headersFactory");
+        this.trailersFactory = checkNotNull(trailersFactory, "trailersFactory");
     }
 
     @Override
@@ -391,7 +415,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     private FullHttpResponse createUpgradeResponse(CharSequence upgradeProtocol) {
         DefaultFullHttpResponse res = new DefaultFullHttpResponse(
-                HTTP_1_1, SWITCHING_PROTOCOLS, Unpooled.EMPTY_BUFFER, validateHeaders);
+                HTTP_1_1, SWITCHING_PROTOCOLS, Unpooled.EMPTY_BUFFER, headersFactory, trailersFactory);
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
         res.headers().add(HttpHeaderNames.UPGRADE, upgradeProtocol);
         return res;

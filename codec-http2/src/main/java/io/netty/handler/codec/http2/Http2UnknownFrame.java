@@ -17,9 +17,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.util.internal.UnstableApi;
 
-@UnstableApi
 public interface Http2UnknownFrame extends Http2StreamFrame, ByteBufHolder {
 
     @Override

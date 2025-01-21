@@ -1,0 +1,55 @@
+version: "3"
+
+services:
+
+  cross-compile-riscv64-runtime-setup:
+    image: netty:cross_compile_riscv64
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.cross_compile_riscv64
+
+  cross-compile-riscv64-common: &cross-compile-riscv64-common
+    depends_on: [ cross-compile-riscv64-runtime-setup ]
+    image: netty:cross_compile_riscv64
+    environment:
+      - GPG_KEYNAME
+      - GPG_PASSPHRASE
+      - GPG_PRIVATE_KEY
+      - MAVEN_OPTS
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.gnupg:/root/.gnupg
+      - ~/.m2:/root/.m2
+      - ..:/code
+    working_dir: /code
+
+  cross-compile-riscv64-deploy:
+    <<: *cross-compile-riscv64-common
+    command: /bin/bash -cl "./mvnw -B -ntp -Plinux-riscv64 -pl transport-native-unix-common,transport-native-epoll -am clean deploy -DskipTests=true"
+
+  cross-compile-riscv64-stage-snapshot:
+    <<: *cross-compile-riscv64-common
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.gnupg:/root/.gnupg
+      - ~/.m2:/root/.m2
+      - ~/local-staging:/root/local-staging
+      - ..:/code
+    command: /bin/bash -cl "./mvnw -B -ntp -Plinux-riscv64 -pl transport-native-unix-common,transport-native-epoll -am clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true"
+
+  cross-compile-riscv64-stage-release:
+    <<: *cross-compile-riscv64-common
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ~/.m2:/root/.m2
+      - ~/local-staging:/root/local-staging
+      - ..:/code
+    command: /bin/bash -cl "cat <(echo -e \"${GPG_PRIVATE_KEY}\") | gpg --batch --import && ./mvnw -B -ntp -Plinux-riscv64 -pl transport-native-unix-common,transport-native-epoll -am clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true -Dgpg.passphrase=${GPG_PASSPHRASE} -Dgpg.keyname=${GPG_KEYNAME}"
+
+  cross-compile-riscv64-shell:
+    <<: *cross-compile-riscv64-common
+    entrypoint: /bin/bash
+
+  cross-compile-riscv64-build:
+    <<: *cross-compile-riscv64-common
+    command: /bin/bash -cl "./mvnw -B -ntp -Plinux-riscv64 -pl transport-native-unix-common,transport-native-epoll -am clean package -DskipTests=true"

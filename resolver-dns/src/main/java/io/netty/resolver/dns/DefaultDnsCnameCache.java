@@ -92,4 +92,14 @@ public final class DefaultDnsCnameCache implements DnsCnameCache {
     public boolean clear(String hostname) {
         return cache.clear(checkNotNull(hostname, "hostname"));
     }
+
+    // Package visibility for testing purposes
+    int minTtl() {
+        return minTtl;
+    }
+
+    // Package visibility for testing purposes
+    int maxTtl() {
+        return maxTtl;
+    }
 }

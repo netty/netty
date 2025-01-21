@@ -102,8 +102,8 @@ public class SelectedSelectionKeySetTest {
         SelectedSelectionKeySet set = new SelectedSelectionKeySet();
         assertTrue(set.add(mockKey));
         assertTrue(set.add(mockKey2));
-        assertFalse(set.contains(mockKey));
-        assertFalse(set.contains(mockKey2));
+        assertTrue(set.contains(mockKey));
+        assertTrue(set.contains(mockKey2));
         assertFalse(set.contains(mockKey3));
     }
 

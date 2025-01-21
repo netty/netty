@@ -15,14 +15,24 @@
  */
 package io.netty.microbench.util;
 
+import io.netty.util.concurrent.AbstractEventExecutor;
+import io.netty.util.concurrent.AbstractScheduledEventExecutor;
+import io.netty.util.concurrent.DefaultEventExecutor;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
@@ -36,11 +46,60 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
     protected static final int DEFAULT_FORKS = 2;
 
     public static final class HarnessExecutor extends ThreadPoolExecutor {
-        private final  InternalLogger logger = InternalLoggerFactory.getInstance(AbstractMicrobenchmark.class);
+        private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractMicrobenchmark.class);
 
         public HarnessExecutor(int maxThreads, String prefix) {
             super(maxThreads, maxThreads, 0, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<Runnable>(), new DefaultThreadFactory(prefix));
+                    new LinkedBlockingQueue<Runnable>(),
+                    new DefaultThreadFactory(prefix));
+            EventExecutor eventExecutor = new AbstractEventExecutor() {
+                @Override
+                public void shutdown() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean inEventLoop(Thread thread) {
+                    return thread instanceof FastThreadLocalThread;
+                }
+
+                @Override
+                public boolean isShuttingDown() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public Future<?> terminationFuture() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean isShutdown() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean isTerminated() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public void execute(Runnable command) {
+                    throw new UnsupportedOperationException();
+                }
+            };
+            setThreadFactory(ThreadExecutorMap.apply(getThreadFactory(), eventExecutor));
+
             logger.debug("Using harness executor");
         }
     }

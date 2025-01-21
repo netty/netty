@@ -16,14 +16,12 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Encodes a {@link DnsRecord} into binary representation.
  *
  * @see DatagramDnsQueryEncoder
  */
-@UnstableApi
 public interface DnsRecordEncoder {
 
     DnsRecordEncoder DEFAULT = new DefaultDnsRecordEncoder();

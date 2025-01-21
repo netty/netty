@@ -16,8 +16,19 @@
 
 package io.netty.handler.ssl;
 
+import io.netty.util.CharsetUtil;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SuppressJava6Requirement;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
+import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.KeyManager;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -26,9 +37,17 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedTrustManager;
 import java.io.File;
 import java.security.PrivateKey;
+import java.security.SecureRandom;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
+
+import static io.netty.handler.ssl.SslUtils.PROBING_CERT;
+import static io.netty.handler.ssl.SslUtils.PROBING_KEY;
 
 /**
  * A server-side {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -38,6 +57,43 @@ import java.security.cert.X509Certificate;
  */
 @Deprecated
 public final class JdkSslServerContext extends JdkSslContext {
+
+    private static final boolean WRAP_TRUST_MANAGER;
+    static {
+        boolean wrapTrustManager = false;
+        if (PlatformDependent.javaVersion() >= 7) {
+            try {
+                checkIfWrappingTrustManagerIsSupported();
+                wrapTrustManager = true;
+            } catch (Throwable ignore) {
+                // Just don't wrap as we might not be able to do so because of FIPS:
+                // See https://github.com/netty/netty/issues/13840
+            }
+        }
+        WRAP_TRUST_MANAGER = wrapTrustManager;
+    }
+
+    // Package-private for testing.
+    @SuppressJava6Requirement(reason = "Guarded by java version check")
+    static void checkIfWrappingTrustManagerIsSupported() throws CertificateException,
+            InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchAlgorithmException,
+            InvalidKeySpecException, IOException, KeyException, KeyStoreException, UnrecoverableKeyException {
+        X509Certificate[] certs = toX509Certificates(
+                new ByteArrayInputStream(PROBING_CERT.getBytes(CharsetUtil.US_ASCII)));
+        PrivateKey privateKey = toPrivateKey(new ByteArrayInputStream(
+                PROBING_KEY.getBytes(CharsetUtil.UTF_8)), null);
+        char[] keyStorePassword = keyStorePassword(null);
+        KeyStore ks = buildKeyStore(certs, privateKey, keyStorePassword, null);
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(ks, keyStorePassword);
+
+        SSLContext ctx = SSLContext.getInstance(PROTOCOL);
+        TrustManagerFactory tm = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tm.init((KeyStore) null);
+        TrustManager[] managers = tm.getTrustManagers();
+
+        ctx.init(kmf.getKeyManagers(), wrapTrustManagerIfNeeded(managers, null), null);
+    }
 
     /**
      * Creates a new instance.
@@ -152,7 +208,7 @@ public final class JdkSslServerContext extends JdkSslContext {
                         long sessionCacheSize, long sessionTimeout, String keyStore) throws SSLException {
         super(newSSLContext(provider, null, null,
                 toX509CertificatesInternal(certChainFile), toPrivateKeyInternal(keyFile, keyPassword),
-                keyPassword, null, sessionCacheSize, sessionTimeout, keyStore), false,
+                keyPassword, null, sessionCacheSize, sessionTimeout, null, keyStore, null), false,
                 ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
     }
 
@@ -192,7 +248,7 @@ public final class JdkSslServerContext extends JdkSslContext {
                                long sessionCacheSize, long sessionTimeout) throws SSLException {
         super(newSSLContext(null, toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
-                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, null), false,
+                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, null, null, null), false,
                 ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
     }
 
@@ -233,7 +289,8 @@ public final class JdkSslServerContext extends JdkSslContext {
                                long sessionCacheSize, long sessionTimeout) throws SSLException {
         super(newSSLContext(null, toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
-                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, KeyStore.getDefaultType()), false,
+                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout,
+                        null, KeyStore.getDefaultType(), null), false,
                 ciphers, cipherFilter, apn, ClientAuth.NONE, null, false);
     }
 
@@ -243,16 +300,20 @@ public final class JdkSslServerContext extends JdkSslContext {
                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                         ApplicationProtocolConfig apn, long sessionCacheSize, long sessionTimeout,
                         ClientAuth clientAuth, String[] protocols, boolean startTls,
-                        String keyStore) throws SSLException {
+                        SecureRandom secureRandom, String keyStore, ResumptionController resumptionController)
+            throws SSLException {
         super(newSSLContext(provider, trustCertCollection, trustManagerFactory, keyCertChain, key,
-                keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, keyStore), false,
-                ciphers, cipherFilter, toNegotiator(apn, true), clientAuth, protocols, startTls);
+                        keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, secureRandom, keyStore,
+                        resumptionController),
+                false, ciphers, cipherFilter, toNegotiator(apn, true), clientAuth, protocols, startTls, null,
+                resumptionController);
     }
 
     private static SSLContext newSSLContext(Provider sslContextProvider, X509Certificate[] trustCertCollection,
-                                     TrustManagerFactory trustManagerFactory, X509Certificate[] keyCertChain,
-                                     PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
-                                     long sessionCacheSize, long sessionTimeout, String keyStore)
+                                            TrustManagerFactory trustManagerFactory, X509Certificate[] keyCertChain,
+                                            PrivateKey key, String keyPassword, KeyManagerFactory keyManagerFactory,
+                                            long sessionCacheSize, long sessionTimeout, SecureRandom secureRandom,
+                                            String keyStore, ResumptionController resumptionController)
             throws SSLException {
         if (key == null && keyManagerFactory == null) {
             throw new NullPointerException("key, keyManagerFactory");
@@ -261,7 +322,13 @@ public final class JdkSslServerContext extends JdkSslContext {
         try {
             if (trustCertCollection != null) {
                 trustManagerFactory = buildTrustManagerFactory(trustCertCollection, trustManagerFactory, keyStore);
+            } else if (trustManagerFactory == null) {
+                // Mimic the way SSLContext.getInstance(KeyManager[], null, null) works
+                trustManagerFactory = TrustManagerFactory.getInstance(
+                        TrustManagerFactory.getDefaultAlgorithm());
+                trustManagerFactory.init((KeyStore) null);
             }
+
             if (key != null) {
                 keyManagerFactory = buildKeyManagerFactory(keyCertChain, null,
                         key, keyPassword, keyManagerFactory, null);
@@ -271,8 +338,8 @@ public final class JdkSslServerContext extends JdkSslContext {
             SSLContext ctx = sslContextProvider == null ? SSLContext.getInstance(PROTOCOL)
                 : SSLContext.getInstance(PROTOCOL, sslContextProvider);
             ctx.init(keyManagerFactory.getKeyManagers(),
-                     trustManagerFactory == null ? null : trustManagerFactory.getTrustManagers(),
-                     null);
+                    wrapTrustManagerIfNeeded(trustManagerFactory.getTrustManagers(), resumptionController),
+                     secureRandom);
 
             SSLSessionContext sessCtx = ctx.getServerSessionContext();
             if (sessionCacheSize > 0) {
@@ -290,4 +357,22 @@ public final class JdkSslServerContext extends JdkSslContext {
         }
     }
 
+    @SuppressJava6Requirement(reason = "Guarded by java version check")
+    private static TrustManager[] wrapTrustManagerIfNeeded(
+            TrustManager[] trustManagers, ResumptionController resumptionController) {
+        if (WRAP_TRUST_MANAGER && PlatformDependent.javaVersion() >= 7) {
+            for (int i = 0; i < trustManagers.length; i++) {
+                TrustManager tm = trustManagers[i];
+                if (resumptionController != null) {
+                    tm = resumptionController.wrapIfNeeded(tm);
+                }
+                if (tm instanceof X509ExtendedTrustManager) {
+                    // Wrap the TrustManager to provide a better exception message for users to debug hostname
+                    // validation failures.
+                    trustManagers[i] = new EnhancingX509ExtendedTrustManager((X509ExtendedTrustManager) tm);
+                }
+            }
+        }
+        return trustManagers;
+    }
 }

@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.internal.ObjectPool.Handle;
 
 import java.io.IOException;
@@ -28,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
 
 abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
 
-    private final Handle<PooledByteBuf<T>> recyclerHandle;
+    private final EnhancedHandle<PooledByteBuf<T>> recyclerHandle;
 
     protected PoolChunk<T> chunk;
     protected long handle;
@@ -43,7 +44,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     @SuppressWarnings("unchecked")
     protected PooledByteBuf(Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
         super(maxCapacity);
-        this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
+        this.recyclerHandle = (EnhancedHandle<PooledByteBuf<T>>) recyclerHandle;
     }
 
     void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
@@ -59,7 +60,8 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
                        long handle, int offset, int length, int maxLength, PoolThreadCache cache) {
         assert handle >= 0;
         assert chunk != null;
-        assert !PoolChunk.isSubpage(handle) || chunk.arena.size2SizeIdx(maxLength) <= chunk.arena.smallMaxSizeIdx:
+        assert !PoolChunk.isSubpage(handle) ||
+                chunk.arena.sizeClass.size2SizeIdx(maxLength) <= chunk.arena.sizeClass.smallMaxSizeIdx:
                 "Allocated small sub-page handle for a buffer size that isn't \"small.\"";
 
         chunk.incrementPinnedMemory(maxLength);
@@ -118,8 +120,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
         }
 
         // Reallocation required.
-        chunk.decrementPinnedMemory(maxLength);
-        chunk.arena.reallocate(this, newCapacity, true);
+        chunk.arena.reallocate(this, newCapacity);
         return this;
     }
 
@@ -172,17 +173,12 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
             final long handle = this.handle;
             this.handle = -1;
             memory = null;
-            chunk.decrementPinnedMemory(maxLength);
             chunk.arena.free(chunk, tmpNioBuf, handle, maxLength, cache);
             tmpNioBuf = null;
             chunk = null;
             cache = null;
-            recycle();
+            this.recyclerHandle.unguardedRecycle(this);
         }
-    }
-
-    private void recycle() {
-        recyclerHandle.recycle(this);
     }
 
     protected final int idx(int index) {

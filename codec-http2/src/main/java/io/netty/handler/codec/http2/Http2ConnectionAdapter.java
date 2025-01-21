@@ -15,12 +15,10 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Provides empty implementations of all {@link Http2Connection.Listener} methods.
  */
-@UnstableApi
 public class Http2ConnectionAdapter implements Http2Connection.Listener {
     @Override
     public void onStreamAdded(Http2Stream stream) {

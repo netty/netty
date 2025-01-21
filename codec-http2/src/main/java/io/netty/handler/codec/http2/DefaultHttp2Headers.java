@@ -20,17 +20,15 @@ import io.netty.handler.codec.http.HttpHeaderValidationUtil;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.getPseudoHeader;
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
+import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.isPseudoHeader;
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
 import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
 import static io.netty.util.AsciiString.isUpperCase;
 
-@UnstableApi
 public class DefaultHttp2Headers
         extends DefaultHeaders<CharSequence, CharSequence, Http2Headers> implements Http2Headers {
     private static final ByteProcessor HTTP2_NAME_VALIDATOR_PROCESSOR = new ByteProcessor() {
@@ -45,6 +43,15 @@ public class DefaultHttp2Headers
             if (name == null || name.length() == 0) {
                 PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
                         "empty headers are not allowed [%s]", name));
+            }
+
+            if (hasPseudoHeaderFormat(name)) {
+                if (!isPseudoHeader(name)) {
+                    PlatformDependent.throwException(connectionError(
+                            PROTOCOL_ERROR, "Invalid HTTP/2 pseudo-header '%s' encountered.", name));
+                }
+                // no need for lower-case validation, we trust our own pseudo header constants
+                return;
             }
 
             if (name instanceof AsciiString) {
@@ -71,17 +78,6 @@ public class DefaultHttp2Headers
                                 "invalid header name [%s]", name));
                     }
                 }
-            }
-
-            if (hasPseudoHeaderFormat(name)) {
-                final Http2Headers.PseudoHeaderName pseudoHeader = getPseudoHeader(name);
-                if (pseudoHeader == null) {
-                    PlatformDependent.throwException(connectionError(
-                            PROTOCOL_ERROR, "Invalid HTTP/2 pseudo-header '%s' encountered.", name));
-                }
-            } else if (HttpHeaderValidationUtil.isConnectionHeader(name, true)) {
-                PlatformDependent.throwException(connectionError(
-                        PROTOCOL_ERROR, "Illegal connection-specific header '%s' encountered.", name));
             }
         }
     };
@@ -176,13 +172,15 @@ public class DefaultHttp2Headers
 
     @Override
     protected void validateValue(ValueValidator<CharSequence> validator, CharSequence name, CharSequence value) {
-        if (nameValidator() == HTTP2_NAME_VALIDATOR) {
-            if (HttpHeaderValidationUtil.isTeNotTrailers(name, value)) {
-                PlatformDependent.throwException(connectionError(PROTOCOL_ERROR,
-                        "Illegal value specified for the 'TE' header (only 'trailers' is allowed)."));
-            }
-        }
+        // This method has a noop override for backward compatibility, see https://github.com/netty/netty/pull/12975
         super.validateValue(validator, name, value);
+        // https://datatracker.ietf.org/doc/html/rfc9113#section-8.3.1
+        // pseudo headers must not be empty
+        if (nameValidator() == HTTP2_NAME_VALIDATOR && (value == null || value.length() == 0) &&
+                hasPseudoHeaderFormat(name)) {
+            PlatformDependent.throwException(connectionError(
+                    PROTOCOL_ERROR, "HTTP/2 pseudo-header '%s' must not be empty.", name));
+        }
     }
 
     @Override

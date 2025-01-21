@@ -20,7 +20,11 @@ import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MixedTest {
     @Test
@@ -53,5 +57,20 @@ public class MixedTest {
         Assertions.assertEquals(2, upload.refCnt());
 
         upload.release(2);
+    }
+
+    @Test
+    public void testSpecificCustomBaseDir() throws IOException {
+        File baseDir = new File("target/MixedTest/testSpecificCustomBaseDir");
+        baseDir.mkdirs(); // we don't need to clean it since it is in volatile files anyway
+        MixedFileUpload upload = new MixedFileUpload("foo", "foo", "foo", "UTF-8", CharsetUtil.UTF_8, 1000, 100,
+                                                     baseDir.getAbsolutePath(), true);
+
+        upload.addContent(Unpooled.wrappedBuffer(new byte[1000]), true);
+
+        assertTrue(upload.getFile().getAbsolutePath().startsWith(baseDir.getAbsolutePath()));
+        assertTrue(upload.getFile().exists());
+        assertEquals(1000, upload.getFile().length());
+        upload.delete();
     }
 }

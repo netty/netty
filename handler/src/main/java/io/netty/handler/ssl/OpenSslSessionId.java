@@ -20,7 +20,7 @@ import io.netty.util.internal.EmptyArrays;
 import java.util.Arrays;
 
 /**
- * Represent the session ID used by an {@link OpenSslSession}.
+ * Represent the session ID used by an {@link OpenSslInternalSession}.
  */
 final class OpenSslSessionId {
 

@@ -18,14 +18,12 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
 /**
  * Decorator around another {@link Http2ConnectionDecoder} instance.
  */
-@UnstableApi
 public class DecoratingHttp2ConnectionDecoder implements Http2ConnectionDecoder {
     private final Http2ConnectionDecoder delegate;
 

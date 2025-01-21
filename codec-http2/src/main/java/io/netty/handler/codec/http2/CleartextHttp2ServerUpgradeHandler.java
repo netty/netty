@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -37,7 +36,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * And will update pipeline once it detect the connection is starting HTTP/2 by
  * prior knowledge or not.
  */
-@UnstableApi
 public final class CleartextHttp2ServerUpgradeHandler extends ByteToMessageDecoder {
     private static final ByteBuf CONNECTION_PREFACE = unreleasableBuffer(connectionPrefaceBuf()).asReadOnly();
 

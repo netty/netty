@@ -28,7 +28,6 @@ import io.netty.handler.codec.http2.Http2Exception.CompositeStreamException;
 import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.Future;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -62,7 +61,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * This interface enforces inbound flow control functionality through
  * {@link Http2LocalFlowController}
  */
-@UnstableApi
 public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http2LifecycleManager,
                                                                             ChannelOutboundHandler {
 
@@ -625,15 +623,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
     @Override
     public void closeStream(final Http2Stream stream, ChannelFuture future) {
-        stream.close();
-
         if (future.isDone()) {
-            checkCloseConnection(future);
+            doCloseStream(stream, future);
         } else {
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    checkCloseConnection(future);
+                public void operationComplete(ChannelFuture future) {
+                    doCloseStream(stream, future);
                 }
             });
         }
@@ -917,6 +913,11 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         if (!future.isSuccess()) {
             onConnectionError(ctx, true, future.cause(), null);
         }
+    }
+
+    private void doCloseStream(final Http2Stream stream, ChannelFuture future) {
+        stream.close();
+        checkCloseConnection(future);
     }
 
     /**

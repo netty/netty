@@ -20,7 +20,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -37,6 +40,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -106,6 +110,34 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    void testTotalHeaderLimit() throws Exception {
+        String requestStr = "HTTP/1.1 200 OK\r\n" +
+                "Server: X\r\n" + // 9 content bytes
+                "a1: b\r\n" +     // + 5 = 14 bytes,
+                "a2: b\r\n\r\n";  // + 5 = 19 bytes
+
+        // Decoding with a max header size of 18 bytes must fail:
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder(1024, 18, 1024));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isFailure());
+        assertInstanceOf(TooLongHttpHeaderException.class, response.decoderResult().cause());
+        assertFalse(channel.finish());
+
+        // Decoding with a max header size of 19 must pass:
+        channel = new EmbeddedChannel(new HttpResponseDecoder(1024, 19, 1024));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertEquals("X", response.headers().get("Server"));
+        assertEquals("b", response.headers().get("a1"));
+        assertEquals("b", response.headers().get("a2"));
+        channel.close();
+        assertEquals(LastHttpContent.EMPTY_LAST_CONTENT, channel.readInbound());
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void testResponseChunked() {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
@@ -144,6 +176,118 @@ public class HttpResponseDecoderTest {
         content.release();
 
         ch.finish();
+        assertNull(ch.readInbound());
+    }
+
+    @Test
+    public void testResponseChunkedWithValidUncommonPatterns() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
+                                              CharsetUtil.US_ASCII));
+
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
+
+        byte[] data = new byte[1];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = (byte) i;
+        }
+
+        // leading whitespace, trailing whitespace
+
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("  " + Integer.toHexString(data.length) + " \r\n",
+                                                          CharsetUtil.US_ASCII)));
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(data)));
+        HttpContent content = ch.readInbound();
+        assertEquals(data.length, content.content().readableBytes());
+
+        byte[] decodedData = new byte[data.length];
+        content.content().readBytes(decodedData);
+        assertArrayEquals(data, decodedData);
+        content.release();
+
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
+
+        // leading whitespace, trailing control char
+
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("  " + Integer.toHexString(data.length) + "\0\r\n",
+                                                          CharsetUtil.US_ASCII)));
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(data)));
+        content = ch.readInbound();
+        assertEquals(data.length, content.content().readableBytes());
+
+        decodedData = new byte[data.length];
+        content.content().readBytes(decodedData);
+        assertArrayEquals(data, decodedData);
+        content.release();
+
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
+
+        // leading whitespace, trailing semicolon
+
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("  " + Integer.toHexString(data.length) + ";\r\n",
+                                                          CharsetUtil.US_ASCII)));
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(data)));
+        content = ch.readInbound();
+        assertEquals(data.length, content.content().readableBytes());
+
+        decodedData = new byte[data.length];
+        content.content().readBytes(decodedData);
+        assertArrayEquals(data, decodedData);
+        content.release();
+
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
+
+        // Write the last chunk.
+        ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII));
+
+        // Ensure the last chunk was decoded.
+        LastHttpContent lastContent = ch.readInbound();
+        assertFalse(lastContent.content().isReadable());
+        lastContent.release();
+
+        ch.finish();
+        assertNull(ch.readInbound());
+    }
+
+    @Test
+    public void testResponseChunkedWithControlChars() {
+        EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder());
+        ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n",
+                                              CharsetUtil.US_ASCII));
+
+        HttpResponse res = ch.readInbound();
+        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
+        assertThat(res.status(), is(HttpResponseStatus.OK));
+
+        byte[] data = new byte[1];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = (byte) i;
+        }
+
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("  " + Integer.toHexString(data.length) + " \r\n",
+                                                          CharsetUtil.US_ASCII)));
+        assertTrue(ch.writeInbound(Unpooled.copiedBuffer(data)));
+        HttpContent content = ch.readInbound();
+        assertEquals(data.length, content.content().readableBytes());
+
+        byte[] decodedData = new byte[data.length];
+        content.content().readBytes(decodedData);
+        assertArrayEquals(data, decodedData);
+        content.release();
+
+        assertFalse(ch.writeInbound(Unpooled.copiedBuffer("\r\n", CharsetUtil.US_ASCII)));
+
+        // Write the last chunk.
+        ch.writeInbound(Unpooled.copiedBuffer("0\r\n\r\n", CharsetUtil.US_ASCII));
+
+        // Ensure the last chunk was decoded.
+        LastHttpContent lastContent = ch.readInbound();
+        assertFalse(lastContent.content().isReadable());
+        lastContent.release();
+
+        assertFalse(ch.finish());
         assertNull(ch.readInbound());
     }
 
@@ -742,6 +886,121 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void testWhiteSpaceGarbageChunk() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        String responseWithIllegalChunk =
+                "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                " \r\n";
+
+        channel.writeInbound(Unpooled.copiedBuffer(responseWithIllegalChunk, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpResponse.class)));
+
+        // Ensure that the decoder generates the last chunk with correct decoder result.
+        LastHttpContent invalidChunk = channel.readInbound();
+        assertThat(invalidChunk.decoderResult().isFailure(), is(true));
+        invalidChunk.release();
+
+        // And no more messages should be produced by the decoder.
+        assertThat(channel.readInbound(), is(nullValue()));
+
+        // .. even after the connection is closed.
+        assertThat(channel.finish(), is(false));
+    }
+
+    @Test
+    public void testLeadingWhiteSpacesSemiColonGarbageChunk() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        String responseWithIllegalChunk =
+                "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "  ;\r\n";
+
+        channel.writeInbound(Unpooled.copiedBuffer(responseWithIllegalChunk, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpResponse.class)));
+
+        // Ensure that the decoder generates the last chunk with correct decoder result.
+        LastHttpContent invalidChunk = channel.readInbound();
+        assertThat(invalidChunk.decoderResult().isFailure(), is(true));
+        invalidChunk.release();
+
+        // And no more messages should be produced by the decoder.
+        assertThat(channel.readInbound(), is(nullValue()));
+
+        // .. even after the connection is closed.
+        assertThat(channel.finish(), is(false));
+    }
+
+    @Test
+    public void testControlCharGarbageChunk() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        String responseWithIllegalChunk =
+                "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "\0\r\n";
+
+        channel.writeInbound(Unpooled.copiedBuffer(responseWithIllegalChunk, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpResponse.class)));
+
+        // Ensure that the decoder generates the last chunk with correct decoder result.
+        LastHttpContent invalidChunk = channel.readInbound();
+        assertThat(invalidChunk.decoderResult().isFailure(), is(true));
+        invalidChunk.release();
+
+        // And no more messages should be produced by the decoder.
+        assertThat(channel.readInbound(), is(nullValue()));
+
+        // .. even after the connection is closed.
+        assertThat(channel.finish(), is(false));
+    }
+
+    @Test
+    public void testLeadingWhiteSpacesControlCharGarbageChunk() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        String responseWithIllegalChunk =
+                "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "  \0\r\n";
+
+        channel.writeInbound(Unpooled.copiedBuffer(responseWithIllegalChunk, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpResponse.class)));
+
+        // Ensure that the decoder generates the last chunk with correct decoder result.
+        LastHttpContent invalidChunk = channel.readInbound();
+        assertThat(invalidChunk.decoderResult().isFailure(), is(true));
+        invalidChunk.release();
+
+        // And no more messages should be produced by the decoder.
+        assertThat(channel.readInbound(), is(nullValue()));
+
+        // .. even after the connection is closed.
+        assertThat(channel.finish(), is(false));
+    }
+
+    @Test
+    public void testGarbageChunkAfterWhiteSpaces() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        String responseWithIllegalChunk =
+                "HTTP/1.1 200 OK\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "  12345N1 ;\r\n";
+
+        channel.writeInbound(Unpooled.copiedBuffer(responseWithIllegalChunk, CharsetUtil.US_ASCII));
+        assertThat(channel.readInbound(), is(instanceOf(HttpResponse.class)));
+
+        // Ensure that the decoder generates the last chunk with correct decoder result.
+        LastHttpContent invalidChunk = channel.readInbound();
+        assertThat(invalidChunk.decoderResult().isFailure(), is(true));
+        invalidChunk.release();
+
+        // And no more messages should be produced by the decoder.
+        assertThat(channel.readInbound(), is(nullValue()));
+
+        // .. even after the connection is closed.
+        assertThat(channel.finish(), is(false));
+    }
+
+    @Test
     public void testConnectionClosedBeforeHeadersReceived() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         String responseInitialLine =
@@ -819,6 +1078,20 @@ public class HttpResponseDecoderTest {
     }
 
     @Test
+    public void testStatusWithoutReasonPhrase() {
+        String responseStr = "HTTP/1.1 200 \r\n" +
+                "Content-Length: 0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(responseStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertEquals(HttpResponseStatus.OK, response.status());
+        HttpContent c = channel.readInbound();
+        c.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void testHeaderNameStartsWithControlChar1c() {
         testHeaderNameStartsWithControlChar(0x1c);
     }
@@ -887,12 +1160,21 @@ public class HttpResponseDecoderTest {
         testInvalidHeaders0(responseBuffer);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "HTP/1.1", "HTTP", "HTTP/1x", "Something/1.1", "HTTP/1",
+            "HTTP/1.11", "HTTP/11.1", "HTTP/A.1", "HTTP/1.B"})
+    public void testInvalidVersion(String version) {
+        testInvalidHeaders0(Unpooled.copiedBuffer(
+                version + " 200 OK\n\r\nHost: whatever\r\n\r\n", CharsetUtil.US_ASCII));
+    }
+
     private static void testInvalidHeaders0(ByteBuf responseBuffer) {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder());
         assertTrue(channel.writeInbound(responseBuffer));
         HttpResponse response = channel.readInbound();
         assertThat(response.decoderResult().cause(), instanceOf(IllegalArgumentException.class));
         assertTrue(response.decoderResult().isFailure());
+        ReferenceCountUtil.release(response);
         assertFalse(channel.finish());
     }
 }

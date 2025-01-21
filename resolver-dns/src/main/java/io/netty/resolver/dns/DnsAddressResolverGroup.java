@@ -45,21 +45,29 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
     private final ConcurrentMap<String, Promise<List<InetAddress>>> resolveAllsInProgress = newConcurrentHashMap();
 
     public DnsAddressResolverGroup(DnsNameResolverBuilder dnsResolverBuilder) {
-        this.dnsResolverBuilder = dnsResolverBuilder.copy();
+        this.dnsResolverBuilder = withSharedCaches(dnsResolverBuilder.copy());
     }
 
     public DnsAddressResolverGroup(
             Class<? extends DatagramChannel> channelType,
             DnsServerAddressStreamProvider nameServerProvider) {
-        this.dnsResolverBuilder = new DnsNameResolverBuilder();
-        dnsResolverBuilder.channelType(channelType).nameServerProvider(nameServerProvider);
+        this.dnsResolverBuilder = withSharedCaches(new DnsNameResolverBuilder());
+        dnsResolverBuilder.datagramChannelType(channelType).nameServerProvider(nameServerProvider);
     }
 
     public DnsAddressResolverGroup(
             ChannelFactory<? extends DatagramChannel> channelFactory,
             DnsServerAddressStreamProvider nameServerProvider) {
-        this.dnsResolverBuilder = new DnsNameResolverBuilder();
-        dnsResolverBuilder.channelFactory(channelFactory).nameServerProvider(nameServerProvider);
+        this.dnsResolverBuilder = withSharedCaches(new DnsNameResolverBuilder());
+        dnsResolverBuilder.datagramChannelFactory(channelFactory).nameServerProvider(nameServerProvider);
+    }
+
+    private static DnsNameResolverBuilder withSharedCaches(DnsNameResolverBuilder dnsResolverBuilder) {
+        /// To avoid each member of the group having its own cache we either use the configured cache
+        // or create a new one to share among the entire group.
+        return dnsResolverBuilder.resolveCache(dnsResolverBuilder.getOrNewCache())
+                .cnameCache(dnsResolverBuilder.getOrNewCnameCache())
+                .authoritativeDnsServerCache(dnsResolverBuilder.getOrNewAuthoritativeDnsServerCache());
     }
 
     @SuppressWarnings("deprecation")
@@ -75,7 +83,7 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
         // but still keep this to ensure backward compatibility with (potentially) override methods
         EventLoop loop = dnsResolverBuilder.eventLoop;
         return newResolver(loop == null ? (EventLoop) executor : loop,
-                dnsResolverBuilder.channelFactory(),
+                dnsResolverBuilder.datagramChannelFactory(),
                 dnsResolverBuilder.nameServerProvider());
     }
 
@@ -109,7 +117,7 @@ public class DnsAddressResolverGroup extends AddressResolverGroup<InetSocketAddr
         // once again, channelFactory and nameServerProvider are most probably set in builder already,
         // but I do reassign them again to avoid corner cases with override methods
         return builder.eventLoop(eventLoop)
-                .channelFactory(channelFactory)
+                .datagramChannelFactory(channelFactory)
                 .nameServerProvider(nameServerProvider)
                 .build();
     }

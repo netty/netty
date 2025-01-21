@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.util.internal.MacAddressUtil.defaultMachineId;
 import static io.netty.util.internal.MacAddressUtil.parseMAC;
+import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
 
 /**
  * The default {@link ChannelId} implementation.
@@ -52,7 +53,11 @@ public final class DefaultChannelId implements ChannelId {
      * Returns a new {@link DefaultChannelId} instance.
      */
     public static DefaultChannelId newInstance() {
-        return new DefaultChannelId();
+        return new DefaultChannelId(MACHINE_ID,
+                                    PROCESS_ID,
+                                    nextSequence.getAndIncrement(),
+                                    Long.reverse(System.nanoTime()) ^ System.currentTimeMillis(),
+                                    PlatformDependent.threadLocalRandom().nextInt());
     }
 
     static {
@@ -188,49 +193,63 @@ public final class DefaultChannelId implements ChannelId {
     private transient String shortValue;
     private transient String longValue;
 
-    private DefaultChannelId() {
-        data = new byte[MACHINE_ID.length + PROCESS_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + RANDOM_LEN];
+    /**
+     * Visible for testing
+     */
+    DefaultChannelId(final byte[] machineId, final int processId, final int sequence,
+                             final long timestamp, final int random) {
+        final byte[] data = new byte[machineId.length + PROCESS_ID_LEN + SEQUENCE_LEN + TIMESTAMP_LEN + RANDOM_LEN];
         int i = 0;
 
         // machineId
-        System.arraycopy(MACHINE_ID, 0, data, i, MACHINE_ID.length);
-        i += MACHINE_ID.length;
+        System.arraycopy(machineId, 0, data, i, machineId.length);
+        i += machineId.length;
 
         // processId
-        i = writeInt(i, PROCESS_ID);
+        writeInt(data, i, processId);
+        i += Integer.BYTES;
 
         // sequence
-        i = writeInt(i, nextSequence.getAndIncrement());
+        writeInt(data, i, sequence);
+        i += Integer.BYTES;
 
         // timestamp (kind of)
-        i = writeLong(i, Long.reverse(System.nanoTime()) ^ System.currentTimeMillis());
+        writeLong(data, i, timestamp);
+        i += Long.BYTES;
 
         // random
-        int random = PlatformDependent.threadLocalRandom().nextInt();
-        i = writeInt(i, random);
+        writeInt(data, i, random);
+        i += Integer.BYTES;
         assert i == data.length;
 
+        this.data = data;
         hashCode = Arrays.hashCode(data);
     }
 
-    private int writeInt(int i, int value) {
-        data[i ++] = (byte) (value >>> 24);
-        data[i ++] = (byte) (value >>> 16);
-        data[i ++] = (byte) (value >>> 8);
-        data[i ++] = (byte) value;
-        return i;
+    private static void writeInt(byte[] data, int i, int value) {
+        if (PlatformDependent.isUnaligned()) {
+            PlatformDependent.putInt(data, i, BIG_ENDIAN_NATIVE_ORDER ? value : Integer.reverseBytes(value));
+            return;
+        }
+        data[i] = (byte) (value >>> 24);
+        data[i + 1] = (byte) (value >>> 16);
+        data[i + 2] = (byte) (value >>> 8);
+        data[i + 3] = (byte) value;
     }
 
-    private int writeLong(int i, long value) {
-        data[i ++] = (byte) (value >>> 56);
-        data[i ++] = (byte) (value >>> 48);
-        data[i ++] = (byte) (value >>> 40);
-        data[i ++] = (byte) (value >>> 32);
-        data[i ++] = (byte) (value >>> 24);
-        data[i ++] = (byte) (value >>> 16);
-        data[i ++] = (byte) (value >>> 8);
-        data[i ++] = (byte) value;
-        return i;
+    private static void writeLong(byte[] data, int i, long value) {
+        if (PlatformDependent.isUnaligned()) {
+            PlatformDependent.putLong(data, i, BIG_ENDIAN_NATIVE_ORDER ? value : Long.reverseBytes(value));
+            return;
+        }
+        data[i] = (byte) (value >>> 56);
+        data[i + 1] = (byte) (value >>> 48);
+        data[i + 2] = (byte) (value >>> 40);
+        data[i + 3] = (byte) (value >>> 32);
+        data[i + 4] = (byte) (value >>> 24);
+        data[i + 5] = (byte) (value >>> 16);
+        data[i + 6] = (byte) (value >>> 8);
+        data[i + 7] = (byte) value;
     }
 
     @Override
@@ -252,9 +271,10 @@ public final class DefaultChannelId implements ChannelId {
     }
 
     private String newLongValue() {
-        StringBuilder buf = new StringBuilder(2 * data.length + 5);
+        final StringBuilder buf = new StringBuilder(2 * data.length + 5);
+        final int machineIdLen = data.length - PROCESS_ID_LEN - SEQUENCE_LEN - TIMESTAMP_LEN - RANDOM_LEN;
         int i = 0;
-        i = appendHexDumpField(buf, i, MACHINE_ID.length);
+        i = appendHexDumpField(buf, i, machineIdLen);
         i = appendHexDumpField(buf, i, PROCESS_ID_LEN);
         i = appendHexDumpField(buf, i, SEQUENCE_LEN);
         i = appendHexDumpField(buf, i, TIMESTAMP_LEN);

@@ -15,12 +15,10 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.internal.UnstableApi;
 
 /**
  * Base interface for all HTTP/2 flow controllers.
  */
-@UnstableApi
 public interface Http2FlowController {
     /**
      * Set the {@link ChannelHandlerContext} for which to apply flow control on.

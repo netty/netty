@@ -18,9 +18,17 @@ package io.netty.buffer;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
+import java.lang.reflect.Method;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.abort;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllocator> extends ByteBufAllocatorTest {
 
@@ -92,7 +100,15 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
 
     protected static void assertInstanceOf(ByteBuf buffer, Class<? extends ByteBuf> clazz) {
         // Unwrap if needed
-        assertTrue(clazz.isInstance(buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer));
+        if (buffer instanceof SimpleLeakAwareByteBuf) {
+            buffer = buffer.unwrap();
+        }
+        assertThat(buffer).isInstanceOf(clazz);
+    }
+
+    protected static void assertSameBuffer(ByteBuf expected, ByteBuf buffer) {
+        // Unwrap if needed
+        assertSame(expected, buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer);
     }
 
     @Test
@@ -130,6 +146,32 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
 
         buffer.release();
         assertEquals(expectedUsedMemoryAfterRelease(allocator, capacity), metric.usedHeapMemory());
+    }
+
+    @Test
+    public void shouldReuseChunks() throws Exception {
+        int bufSize = 1024 * 1024;
+        ByteBufAllocator allocator = newAllocator(false);
+        allocator.heapBuffer(bufSize, bufSize).release();
+        ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+        Class<?> cls = null;
+        try {
+            cls = Class.forName("com.sun.management.ThreadMXBean");
+        } catch (ClassNotFoundException e) {
+            abort("Internal ThreadMXBean not available");
+        }
+        assumeThat(threadMXBean).isInstanceOf(cls);
+        Method getThreadAllocatedBytes = cls.getDeclaredMethod("getThreadAllocatedBytes", long.class);
+        long allocBefore = (Long) getThreadAllocatedBytes.invoke(threadMXBean, Thread.currentThread().getId());
+        assumeTrue(allocBefore != -1);
+        for (int i = 0; i < 100; ++i) {
+            allocator.heapBuffer(bufSize, bufSize).release();
+        }
+        long allocAfter = (Long) getThreadAllocatedBytes.invoke(threadMXBean, Thread.currentThread().getId());
+        assumeTrue(allocAfter != -1);
+        assertThat(allocAfter - allocBefore)
+                .as("allocated MB: %.3f", (allocAfter - allocBefore) / 1024.0 / 1024.0)
+                .isLessThan(8 * 1024 * 1024);
     }
 
     protected long expectedUsedMemory(T allocator, int capacity) {

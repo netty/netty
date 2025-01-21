@@ -20,8 +20,8 @@ import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
-import org.junit.jupiter.api.Timeout;
 
 import static io.netty.buffer.PoolChunk.runOffset;
 import static io.netty.buffer.PoolChunk.runPages;
@@ -45,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<PooledByteBufAllocator> {
 
@@ -126,7 +126,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
     @Test
     public void testWithoutUseCacheForAllThreads() {
-        assertFalse(Thread.currentThread() instanceof FastThreadLocalThread);
+        assertThat(Thread.currentThread()).isNotInstanceOf(FastThreadLocalThread.class);
 
         PooledByteBufAllocator pool = new PooledByteBufAllocator(
                 /*preferDirect=*/ false,
@@ -154,13 +154,13 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
     @Test
     public void testArenaMetricsNoCacheAlign() {
-        Assumptions.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
+        assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 9, 0, 0, 0, true, 64), 100, 0, 100, 100);
     }
 
     @Test
     public void testArenaMetricsCacheAlign() {
-        Assumptions.assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
+        assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         testArenaMetrics0(new PooledByteBufAllocator(true, 2, 2, 8192, 9, 1000, 1000, 1000, true, 64), 100, 1, 1, 0);
     }
 
@@ -277,7 +277,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     public void testCollapse() {
         int pageSize = 8192;
         //no cache
-        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 0, 1, 8192, 9, 0, 0, 0);
+        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 9, 0, 0, 0);
 
         ByteBuf b1 = allocator.buffer(pageSize * 4);
         ByteBuf b2 = allocator.buffer(pageSize * 5);
@@ -310,7 +310,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     @Test
     public void testAllocateSmallOffset() {
         int pageSize = 8192;
-        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 0, 1, 8192, 9, 0, 0, 0);
+        ByteBufAllocator allocator = new PooledByteBufAllocator(true, 1, 1, 8192, 9, 0, 0, 0);
 
         int size = pageSize * 5;
 
@@ -349,13 +349,13 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    @Timeout(value = 4000, unit = MILLISECONDS)
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     public void testThreadCacheDestroyedByThreadCleaner() throws InterruptedException {
         testThreadCacheDestroyed(false);
     }
 
     @Test
-    @Timeout(value = 4000, unit = MILLISECONDS)
+    @Timeout(value = 10, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     public void testThreadCacheDestroyedAfterExitRun() throws InterruptedException {
         testThreadCacheDestroyed(true);
     }
@@ -422,10 +422,30 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numHeapArenas, 0, 8192, 1);
 
-        ThreadCache tcache0 = createNewThreadCache(allocator);
+        ThreadCache tcache0 = createNewThreadCache(allocator, false);
         assertEquals(1, allocator.metric().numThreadLocalCaches());
 
-        ThreadCache tcache1 = createNewThreadCache(allocator);
+        ThreadCache tcache1 = createNewThreadCache(allocator, false);
+        assertEquals(2, allocator.metric().numThreadLocalCaches());
+
+        tcache0.destroy();
+        assertEquals(1, allocator.metric().numThreadLocalCaches());
+
+        tcache1.destroy();
+        assertEquals(0, allocator.metric().numThreadLocalCaches());
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = MILLISECONDS)
+    public void testNumThreadCachesAccountForDirectAndHeapArenas() throws InterruptedException {
+        int numHeapArenas = 1;
+        final PooledByteBufAllocator allocator =
+                new PooledByteBufAllocator(numHeapArenas, 0, 8192, 1);
+
+        ThreadCache tcache0 = createNewThreadCache(allocator, false);
+        assertEquals(1, allocator.metric().numThreadLocalCaches());
+
+        ThreadCache tcache1 = createNewThreadCache(allocator, true);
         assertEquals(2, allocator.metric().numThreadLocalCaches());
 
         tcache0.destroy();
@@ -442,8 +462,8 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         final PooledByteBufAllocator allocator =
             new PooledByteBufAllocator(numArenas, numArenas, 8192, 1);
 
-        ThreadCache tcache0 = createNewThreadCache(allocator);
-        ThreadCache tcache1 = createNewThreadCache(allocator);
+        ThreadCache tcache0 = createNewThreadCache(allocator, false);
+        ThreadCache tcache1 = createNewThreadCache(allocator, false);
         assertEquals(2, allocator.metric().numThreadLocalCaches());
         assertEquals(1, allocator.metric().heapArenas().get(0).numThreadCaches());
         assertEquals(1, allocator.metric().heapArenas().get(1).numThreadCaches());
@@ -458,7 +478,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         assertEquals(1, allocator.metric().directArenas().get(0).numThreadCaches());
         assertEquals(0, allocator.metric().directArenas().get(1).numThreadCaches());
 
-        ThreadCache tcache2 = createNewThreadCache(allocator);
+        ThreadCache tcache2 = createNewThreadCache(allocator, false);
         assertEquals(2, allocator.metric().numThreadLocalCaches());
         assertEquals(1, allocator.metric().heapArenas().get(0).numThreadCaches());
         assertEquals(1, allocator.metric().heapArenas().get(1).numThreadCaches());
@@ -476,7 +496,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         assertEquals(0, allocator.metric().directArenas().get(1).numThreadCaches());
     }
 
-    private static ThreadCache createNewThreadCache(final PooledByteBufAllocator allocator)
+    private static ThreadCache createNewThreadCache(final PooledByteBufAllocator allocator, final boolean direct)
             throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final CountDownLatch cacheLatch = new CountDownLatch(1);
@@ -484,7 +504,13 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
 
             @Override
             public void run() {
-                ByteBuf buf = allocator.newHeapBuffer(1024, 1024);
+                final ByteBuf buf;
+
+                if (direct) {
+                    buf = allocator.newDirectBuffer(1024, 1024);
+                } else {
+                    buf = allocator.newHeapBuffer(1024, 1024);
+                }
 
                 // Countdown the latch after we allocated a buffer. At this point the cache must exists.
                 cacheLatch.countDown();
@@ -910,5 +936,51 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
             }
         }
         return totalUsed;
+    }
+
+    @Test
+    public void testCapacityChangeDoesntThrowAssertionError() throws Exception {
+        ByteBufAllocator allocator = newAllocator(true);
+        List<ByteBuf> buffers = new ArrayList<ByteBuf>();
+        try {
+            for (int i = 0; i < 31; i++) {
+                buffers.add(allocator.heapBuffer());
+            }
+
+            final ByteBuf buf = allocator.heapBuffer();
+            buffers.add(buf);
+            final AtomicReference<AssertionError> assertionRef = new AtomicReference<AssertionError>();
+            Runnable capacityChangeTask = new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        buf.capacity(512);
+                    } catch (AssertionError e) {
+                        assertionRef.compareAndSet(null, e);
+                        throw e;
+                    }
+                }
+            };
+            Thread thread1 = new Thread(capacityChangeTask);
+            Thread thread2 = new Thread(capacityChangeTask);
+
+            thread1.start();
+            thread2.start();
+
+            thread1.join();
+            thread2.join();
+
+            buffers.add(allocator.heapBuffer());
+            buffers.add(allocator.heapBuffer());
+
+            AssertionError error = assertionRef.get();
+            if (error != null) {
+                throw error;
+            }
+        } finally {
+            for (ByteBuf buffer: buffers) {
+                buffer.release();
+            }
+        }
     }
 }

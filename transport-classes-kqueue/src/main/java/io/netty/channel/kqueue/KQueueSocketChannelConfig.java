@@ -23,7 +23,6 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.util.Map;
@@ -39,7 +38,6 @@ import static io.netty.channel.ChannelOption.TCP_NODELAY;
 import static io.netty.channel.kqueue.KQueueChannelOption.SO_SNDLOWAT;
 import static io.netty.channel.kqueue.KQueueChannelOption.TCP_NOPUSH;
 
-@UnstableApi
 public final class KQueueSocketChannelConfig extends KQueueChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
@@ -409,7 +407,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
         // Multiply by 2 to give some extra space in case the OS can process write data faster than we can provide.
         int newSendBufferSize = getSendBufferSize() << 1;
         if (newSendBufferSize > 0) {
-            setMaxBytesPerGatheringWrite(getSendBufferSize() << 1);
+            setMaxBytesPerGatheringWrite(newSendBufferSize);
         }
     }
 }

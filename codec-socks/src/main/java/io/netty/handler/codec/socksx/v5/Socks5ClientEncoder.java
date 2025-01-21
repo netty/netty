@@ -110,6 +110,6 @@ public class Socks5ClientEncoder extends MessageToByteEncoder<Socks5Message> {
         final Socks5AddressType dstAddrType = msg.dstAddrType();
         out.writeByte(dstAddrType.byteValue());
         addressEncoder.encodeAddress(dstAddrType, msg.dstAddr(), out);
-        out.writeShort(msg.dstPort());
+        ByteBufUtil.writeShortBE(out, msg.dstPort());
     }
 }

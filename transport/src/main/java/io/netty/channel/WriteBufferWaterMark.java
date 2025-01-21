@@ -29,6 +29,9 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  * dropped down below the {@linkplain #low low water mark},
  * {@link Channel#isWritable()} will start to return
  * {@code true} again.
+ * <p>
+ * Note that messages needs to be handled by the {@link MessageSizeEstimator}
+ * used by the channel for {@link Channel#isWritable()} to provide accurate back-pressure.
  */
 public final class WriteBufferWaterMark {
 

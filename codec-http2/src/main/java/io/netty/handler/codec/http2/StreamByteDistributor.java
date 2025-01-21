@@ -15,13 +15,10 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * An object (used by remote flow control) that is responsible for distributing the bytes to be
  * written across the streams in the connection.
  */
-@UnstableApi
 public interface StreamByteDistributor {
 
     /**

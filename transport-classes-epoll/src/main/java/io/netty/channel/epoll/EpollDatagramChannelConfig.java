@@ -36,8 +36,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     private volatile int maxDatagramSize;
 
     EpollDatagramChannelConfig(EpollDatagramChannel channel) {
-        super(channel);
-        setRecvByteBufAllocator(new FixedRecvByteBufAllocator(2048));
+        super(channel, new FixedRecvByteBufAllocator(2048));
     }
 
     @Override

@@ -15,12 +15,9 @@
 
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * All error codes identified by the HTTP/2 spec.
  */
-@UnstableApi
 public enum Http2Error {
     NO_ERROR(0x0),
     PROTOCOL_ERROR(0x1),

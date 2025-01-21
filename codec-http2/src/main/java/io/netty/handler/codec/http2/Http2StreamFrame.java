@@ -15,14 +15,11 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * A frame whose meaning <em>may</em> apply to a particular stream, instead of the entire connection. It is still
  * possible for this frame type to apply to the entire connection. In such cases, the {@link #stream()} must return
  * {@code null}. If the frame applies to a stream, the {@link Http2FrameStream#id()} must be greater than zero.
  */
-@UnstableApi
 public interface Http2StreamFrame extends Http2Frame {
 
     /**

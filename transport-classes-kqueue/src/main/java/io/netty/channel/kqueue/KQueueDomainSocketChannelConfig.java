@@ -24,7 +24,6 @@ import io.netty.channel.socket.DuplexChannelConfig;
 import io.netty.channel.unix.DomainSocketChannelConfig;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.util.Map;
@@ -34,7 +33,6 @@ import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
-@UnstableApi
 public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig
         implements DomainSocketChannelConfig, DuplexChannelConfig {
     private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;

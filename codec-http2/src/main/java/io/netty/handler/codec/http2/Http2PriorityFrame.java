@@ -15,12 +15,9 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.util.internal.UnstableApi;
-
 /**
  * HTTP/2 Priority Frame
  */
-@UnstableApi
 public interface Http2PriorityFrame extends Http2StreamFrame {
 
     /**

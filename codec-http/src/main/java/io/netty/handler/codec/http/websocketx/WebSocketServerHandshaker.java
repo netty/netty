@@ -215,6 +215,7 @@ public abstract class WebSocketServerHandshaker {
             if (ctx == null) {
                 promise.setFailure(
                         new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline"));
+                response.release();
                 return promise;
             }
             p.addBefore(ctx.name(), "wsencoder", newWebSocketEncoder());

@@ -20,19 +20,18 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import javax.net.ssl.SSLSession;
 import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
-import javax.net.ssl.SSLSession;
 
 import static io.netty.buffer.ByteBufUtil.writeAscii;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
@@ -68,7 +67,7 @@ public class CloseNotifyTest {
     }
 
     @ParameterizedTest(name = "{index}: provider={0}, protocol={1}")
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(30)
     @MethodSource("data")
     public void eventsOrder(SslProvider provider, String protocol) throws Exception {
         assumeTrue(provider != SslProvider.OPENSSL || OpenSsl.isAvailable(), "OpenSSL is not available");
@@ -148,7 +147,7 @@ public class CloseNotifyTest {
     private static EmbeddedChannel initChannel(SslProvider provider, String protocol, final boolean useClientMode,
             final BlockingQueue<Object> eventQueue) throws Exception {
 
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         final SslContext sslContext = (useClientMode
                 ? SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
                 : SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()))
@@ -220,7 +219,7 @@ public class CloseNotifyTest {
         }
     }
 
-    static void assertCloseNotify(@Nullable ByteBuf closeNotify) {
+    static void assertCloseNotify(ByteBuf closeNotify) {
         assertThat(closeNotify, notNullValue());
         try {
             assertThat("Doesn't match expected length of close_notify alert",

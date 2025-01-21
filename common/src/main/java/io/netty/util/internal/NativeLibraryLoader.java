@@ -327,6 +327,11 @@ public final class NativeLibraryLoader {
     }
 
     static void tryPatchShadedLibraryIdAndSign(File libraryFile, String originalName) {
+        if (!new File("/Library/Developer/CommandLineTools").exists()) {
+            logger.debug("Can't patch shaded library id as CommandLineTools are not installed." +
+                    " Consider installing CommandLineTools with 'xcode-select --install'");
+            return;
+        }
         String newId = new String(generateUniqueId(originalName.length()), CharsetUtil.UTF_8);
         if (!tryExec("install_name_tool -id " + newId + " " + libraryFile.getAbsolutePath())) {
             return;

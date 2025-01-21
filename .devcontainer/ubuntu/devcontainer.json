@@ -1,0 +1,13 @@
+{
+  name: "netty-on-ubuntu",
+  containerEnv: {
+    CPATH: "/usr/lib/jvm/java-21-openjdk-arm64/include/:/usr/lib/jvm/java-21-openjdk-arm64/include/linux/"
+  },
+  build: {
+    dockerfile: "Dockerfile"
+  },
+  "runArgs": [
+    "--privileged"
+  ],
+  "postCreateCommand": "apt-get update && apt-get install -y procps && sysctl -w kernel.perf_event_paranoid=1"
+}

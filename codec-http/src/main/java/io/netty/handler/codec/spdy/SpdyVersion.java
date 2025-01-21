@@ -26,11 +26,11 @@ public enum SpdyVersion {
         this.minorVersion = minorVersion;
     }
 
-    int getVersion() {
+    public int version() {
         return version;
     }
 
-    int getMinorVersion() {
+    public int minorVersion() {
         return minorVersion;
     }
 }

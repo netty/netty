@@ -44,7 +44,7 @@ public class SocketRstTest extends AbstractSocketTest {
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 30)
     public void testSoLingerZeroCausesOnlyRstOnClose(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
@@ -105,7 +105,7 @@ public class SocketRstTest extends AbstractSocketTest {
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 30)
     public void testNoRstIfSoLingerOnClose(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override

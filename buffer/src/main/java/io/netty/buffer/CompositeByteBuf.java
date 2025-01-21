@@ -1720,7 +1720,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
                 i ++;
             }
 
-            return buffers.toArray(new ByteBuffer[0]);
+            return buffers.toArray(EmptyArrays.EMPTY_BYTE_BUFFERS);
         } finally {
             buffers.recycle();
         }

@@ -37,7 +37,6 @@ import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -96,7 +95,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         flags |= Native.EPOLLRDHUP;
     }
 
-    AbstractEpollStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
+    protected AbstractEpollStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
         super(parent, fd, remote);
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
         flags |= Native.EPOLLRDHUP;
@@ -223,14 +222,17 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         if (!isOpen()) {
             // Seems like the Channel was closed in the meantime try to fail the promise to prevent any
             // cases where a future may not be notified otherwise.
-            if (promise.tryFailure(new ClosedChannelException())) {
-                eventLoop().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Call this via the EventLoop as it is a MPSC queue.
-                        clearSpliceQueue();
-                    }
-                });
+            if (!promise.isDone()) {
+                final ClosedChannelException ex = new ClosedChannelException();
+                if (promise.tryFailure(ex)) {
+                    eventLoop().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Call this via the EventLoop as it is a MPSC queue.
+                            clearSpliceQueue(ex);
+                        }
+                    });
+                }
             }
         }
     }
@@ -529,7 +531,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
-    @UnstableApi
     @Override
     protected final void doShutdownOutput() throws Exception {
         socket.shutdown(false, true);
@@ -673,17 +674,15 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         } finally {
             safeClosePipe(pipeIn);
             safeClosePipe(pipeOut);
-            clearSpliceQueue();
+            clearSpliceQueue(null);
         }
     }
 
-    private void clearSpliceQueue() {
+    private void clearSpliceQueue(ClosedChannelException exception) {
         Queue<SpliceInTask> sQueue = spliceQueue;
         if (sQueue == null) {
             return;
         }
-        ClosedChannelException exception = null;
-
         for (;;) {
             SpliceInTask task = sQueue.poll();
             if (task == null) {
@@ -891,7 +890,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (!future.isSuccess()) {
-                promise.setFailure(future.cause());
+                // Use tryFailure(...) as the promise might already be closed by spliceTo(...)
+                promise.tryFailure(future.cause());
             }
         }
 
@@ -899,7 +899,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         public boolean spliceIn(RecvByteBufAllocator.Handle handle) {
             assert ch.eventLoop().inEventLoop();
             if (len == 0) {
-                promise.setSuccess();
+                // Use trySuccess() as the promise might already be closed by spliceTo(...)
+                promise.trySuccess();
                 return true;
             }
             try {
@@ -940,14 +941,15 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                         // Write was not done which means the target channel was not writable. In this case we need to
                         // disable reading until we are done with splicing to the target channel because:
                         //
-                        // - The user may want to to trigger another splice operation once the splicing was complete.
+                        // - The user may want to trigger another splice operation once the splicing was complete.
                         config().setAutoRead(false);
                     }
                 }
 
                 return len == 0;
             } catch (Throwable cause) {
-                promise.setFailure(cause);
+                // Use tryFailure(...) as the promise might already be closed by spliceTo(...)
+                promise.tryFailure(cause);
                 return true;
             }
         }
@@ -1003,7 +1005,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         public boolean spliceIn(RecvByteBufAllocator.Handle handle) {
             assert eventLoop().inEventLoop();
             if (len == 0) {
-                promise.setSuccess();
+                // Use trySuccess() as the promise might already be failed by spliceTo(...)
+                promise.trySuccess();
                 return true;
             }
 
@@ -1024,7 +1027,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                             splicedIn -= splicedOut;
                         } while (splicedIn > 0);
                         if (len == 0) {
-                            promise.setSuccess();
+                            // Use trySuccess() as the promise might already be failed by spliceTo(...)
+                            promise.trySuccess();
                             return true;
                         }
                     }
@@ -1034,7 +1038,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                     safeClosePipe(pipeOut);
                 }
             } catch (Throwable cause) {
-                promise.setFailure(cause);
+                // Use tryFailure(...) as the promise might already be failed by spliceTo(...)
+                promise.tryFailure(cause);
                 return true;
             }
         }
