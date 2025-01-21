@@ -72,6 +72,7 @@ public final class IoUringIoHandler implements IoHandler {
     private boolean closeCompleted;
     private int nextRegistrationId = Integer.MIN_VALUE;
     private int processedPerRun;
+    private boolean enabled;
 
     // these two ids are used internally any so can't be used by nextRegistrationId().
     private static final int EVENTFD_ID = Integer.MAX_VALUE;
@@ -106,6 +107,11 @@ public final class IoUringIoHandler implements IoHandler {
 
     @Override
     public int run(IoExecutionContext context) {
+        if (!enabled) {
+            enabled = true;
+            // We create our ring in disabled mode and so need to enable it first.
+            Native.ioUringRegisterEnableRings(ringBuffer.fd());
+        }
         processedPerRun = 0;
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();

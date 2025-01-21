@@ -194,7 +194,11 @@ final class Native {
     static final byte IORING_OP_BIND = 56;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
 
+    static final int IORING_SETUP_R_DISABLED = 1 << 6;
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
+    static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
+    static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
+
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;
     static final short IORING_ACCEPT_POLL_FIRST = 1 << 2;
@@ -291,7 +295,19 @@ final class Native {
     };
 
     static int setupFlags() {
-        return IoUring.isIOUringSetupSubmitAllSupported() ? Native.IORING_SETUP_SUBMIT_ALL : 0;
+        int flags = Native.IORING_SETUP_R_DISABLED;
+        if (IoUring.isIOUringSetupSubmitAllSupported()) {
+            flags |= Native.IORING_SETUP_SUBMIT_ALL;
+        }
+
+        // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#task-work
+        if (IoUring.isIOUringSetupSingleIssuerSupported()) {
+            flags |= Native.IORING_SETUP_SINGLE_ISSUER;
+        }
+        if (IoUring.isIOUringSetupDeferTaskrunSupported()) {
+            flags |= Native.IORING_SETUP_DEFER_TASKRUN;
+        }
+        return flags;
     }
 
     static RingBuffer createRingBuffer(int ringSize, int setupFlags) {
@@ -405,6 +421,8 @@ final class Native {
     private static native long[] ioUringSetup(int entries, int setupFlags);
 
     static native int ioUringRegisterIoWqMaxWorkers(int ringFd, int maxBoundedValue, int maxUnboundedValue);
+
+    static native int ioUringRegisterEnableRings(int ringFd);
 
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 

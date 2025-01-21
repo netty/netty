@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.IoExecutionContext;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,6 +37,22 @@ public class IoUringIoHandlerTest {
                 .setMaxUnboundedWorker(2);
         IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory(config);
         IoHandler handler = ioHandlerFactory.newHandler();
+        handler.run(new IoExecutionContext() {
+            @Override
+            public boolean canBlock() {
+                return false;
+            }
+
+            @Override
+            public long delayNanos(long currentTimeNanos) {
+                return 0;
+            }
+
+            @Override
+            public long deadlineNanos() {
+                return 0;
+            }
+        });
         handler.destroy();
     }
 }
