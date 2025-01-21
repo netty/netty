@@ -30,11 +30,6 @@ package io.netty.channel;
 public interface IoHandler {
 
     /**
-     * Will be called as part of the initialization of the {@link IoHandler}.
-     */
-    default void initalize() { }
-
-    /**
      * Run the IO handled by this {@link IoHandler}. The {@link IoExecutionContext} should be used
      * to ensure we not execute too long and so block the processing of other task that are
      * scheduled on the {@link EventLoop}. This is done by taking {@link IoExecutionContext#delayNanos(long)} or
