@@ -17,6 +17,8 @@ package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.Tun4Packet;
@@ -41,7 +43,8 @@ import static io.netty.channel.socket.TunChannelOption.TUN_MTU;
  * {@link DatagramChannel} implementation that uses linux kqueue edge-triggered mode for
  * maximal performance.
  */
-public class KQueueTunChannel extends AbstractKQueueMessageChannel implements TunChannel {
+public class KQueueTunChannel extends AbstractKQueueChannel implements TunChannel {
+    private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(TunPacket.class) + ", " +
                     StringUtil.simpleClassName(ByteBuf.class) + ')';
@@ -56,42 +59,8 @@ public class KQueueTunChannel extends AbstractKQueueMessageChannel implements Tu
     }
 
     @Override
-    protected boolean doWriteMessage(final Object msg) throws Exception {
-        ByteBuf data;
-        int addressFamily;
-        if (msg instanceof Tun4Packet) {
-            TunPacket packet = (Tun4Packet) msg;
-            data = packet.content();
-            addressFamily = AF_INET;
-        } else if (msg instanceof Tun6Packet) {
-            TunPacket packet = (Tun6Packet) msg;
-            data = packet.content();
-            addressFamily = AF_INET6;
-        } else {
-            data = (ByteBuf) msg;
-            addressFamily = data.getUnsignedByte(0) >> 4 == 4 ? AF_INET : AF_INET6;
-        }
-
-        final int dataLen = data.readableBytes();
-        if (dataLen == 0) {
-            return true;
-        }
-
-        // add address family header
-        ByteBuf familyHeader = alloc().directBuffer(AF_HEADER_LENGTH).writeInt(addressFamily);
-        data = alloc().compositeDirectBuffer(2).addComponents(true, familyHeader, data.retain());
-
-        try {
-            IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
-            array.add(data, data.readerIndex(), data.readableBytes());
-            int cnt = array.count();
-            assert cnt != 0;
-
-            final long writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
-            return writtenBytes > 0;
-        } finally {
-            data.release();
-        }
+    public ChannelMetadata metadata() {
+        return METADATA;
     }
 
     @Override
@@ -148,6 +117,82 @@ public class KQueueTunChannel extends AbstractKQueueMessageChannel implements Tu
         final int mtu = config.getOption(TUN_MTU);
         if (mtu > 0) {
             socket.setMtu(((TunAddress) this.local).ifName(), mtu);
+        }
+    }
+
+    @Override
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        int maxMessagesPerWrite = maxMessagesPerWrite();
+        while (maxMessagesPerWrite > 0) {
+            Object msg = in.current();
+            if (msg == null) {
+                break;
+            }
+
+            try {
+                boolean done = false;
+                for (int i = config().getWriteSpinCount(); i > 0; --i) {
+                    if (doWriteMessage(msg)) {
+                        done = true;
+                        break;
+                    }
+                }
+
+                if (done) {
+                    in.remove();
+                    maxMessagesPerWrite--;
+                } else {
+                    break;
+                }
+            } catch (IOException e) {
+                maxMessagesPerWrite--;
+
+                // Continue on write error as a DatagramChannel can write to multiple remote peers
+                //
+                // See https://github.com/netty/netty/issues/2665
+                in.remove(e);
+            }
+        }
+
+        // Whether all messages were written or not.
+        writeFilter(!in.isEmpty());
+    }
+
+    protected boolean doWriteMessage(final Object msg) throws Exception {
+        ByteBuf data;
+        int addressFamily;
+        if (msg instanceof Tun4Packet) {
+            TunPacket packet = (Tun4Packet) msg;
+            data = packet.content();
+            addressFamily = AF_INET;
+        } else if (msg instanceof Tun6Packet) {
+            TunPacket packet = (Tun6Packet) msg;
+            data = packet.content();
+            addressFamily = AF_INET6;
+        } else {
+            data = (ByteBuf) msg;
+            addressFamily = data.getUnsignedByte(0) >> 4 == 4 ? AF_INET : AF_INET6;
+        }
+
+        final int dataLen = data.readableBytes();
+        if (dataLen == 0) {
+            return true;
+        }
+
+        // add address family header
+        ByteBuf familyHeader = alloc().directBuffer(AF_HEADER_LENGTH).writeInt(addressFamily);
+        data = alloc().compositeDirectBuffer(2).addComponents(true, familyHeader, data.retain());
+
+        try {
+            IovArray array = ((KQueueEventLoop) eventLoop()).cleanArray();
+            array.add(data, data.readerIndex(), data.readableBytes());
+            int cnt = array.count();
+            assert cnt != 0;
+
+            final long writtenBytes = socket.writevAddresses(array.memoryAddress(0), cnt);
+            return writtenBytes > 0;
+        } finally {
+            data.release();
         }
     }
 
