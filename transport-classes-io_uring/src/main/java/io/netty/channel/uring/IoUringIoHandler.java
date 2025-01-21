@@ -211,6 +211,11 @@ public final class IoUringIoHandler implements IoHandler {
                 bufferRingSize, bufferGroupId, chunkSize,
                 this, bufferRingConfig.allocator()
         );
+
+        if (bufferRingConfig.initSize() != 0) {
+            ioUringBufferRing.appendBuffer(bufferRingConfig.initSize());
+        }
+
         registeredIoUringBufferRing.put(bufferGroupId, ioUringBufferRing);
         return ioUringBufferRing;
     }

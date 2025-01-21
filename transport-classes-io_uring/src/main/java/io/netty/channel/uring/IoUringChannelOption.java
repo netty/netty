@@ -59,6 +59,10 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
      */
     public static final ChannelOption<Boolean> IOSQE_ASYNC = valueOf("IOSQE_ASYNC");
 
+    /**
+     * The buffer group id to use when submitting recv {@link IoUringIoOps}.
+     * If it is set to -1, then this function will be disabled.
+     */
     public static final ChannelOption<Short> IO_URING_BUFFER_GROUP_ID =
             ChannelOption.valueOf(IoUringChannelOption.class, "IOURING_BUFFER_GROUP_ID");
 

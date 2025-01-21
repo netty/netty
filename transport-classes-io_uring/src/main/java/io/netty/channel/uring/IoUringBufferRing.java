@@ -15,10 +15,12 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.buffer.AbstractByteBuf;
 import io.netty.buffer.AbstractReferenceCountedByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +32,11 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
 final class IoUringBufferRing {
+
+    // todo 8 doesn't have any particular meaning. It's just my intuition.
+    // Maybe we can find a more appropriate value.
+    private static final int BATCH_ALLOCATE_SIZE =
+            SystemPropertyUtil.getInt("io.netty.iouring.bufferRing.allocate.batch.size", 8);
 
     private final long ioUringBufRingAddr;
 
@@ -50,7 +57,7 @@ final class IoUringBufferRing {
     private short nextIndex;
     private boolean hasSpareBuffer;
 
-    private BufferRingExhaustedEvent exhaustedEvent;
+    private final BufferRingExhaustedEvent exhaustedEvent;
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
                       short entries, short bufferGroupId,
@@ -69,6 +76,7 @@ final class IoUringBufferRing {
         this.source = ioUringIoHandler;
         this.byteBufAllocator = byteBufAllocator;
         this.recycleBufferTasks = new Runnable[entries];
+        this.exhaustedEvent = new BufferRingExhaustedEvent(bufferGroupId);
     }
 
     void markReadFail() {
@@ -80,16 +88,10 @@ final class IoUringBufferRing {
     }
 
     /**
-     * lazy get the event, if the event is null, create a new one
      * @return a BufferRingExhaustedEvent Instance
      */
     BufferRingExhaustedEvent getExhaustedEvent() {
-        BufferRingExhaustedEvent res = exhaustedEvent;
-        if (res == null) {
-            res = new BufferRingExhaustedEvent(bufferGroupId);
-            exhaustedEvent = res;
-        }
-        return res;
+        return exhaustedEvent;
     }
 
     void recycleBuffer(short bid) {
@@ -122,20 +124,43 @@ final class IoUringBufferRing {
             );
         }
 
-        for (int i = 0; i < count; i++) {
-            ByteBuf buffer = byteBufAllocator.ioBuffer(chunkSize);
-            short bid = nextIndex;
-            userspaceBufferHolder[bid] = buffer;
-            addToRing(nextIndex, false);
-            recycleBufferTasks[bid] = new Runnable() {
-                @Override
-                public void run() {
-                    addToRing(bid, true);
-                }
-            };
-            nextIndex++;
+        int batch = BATCH_ALLOCATE_SIZE;
+
+        int batchAllocateCount = count / batch;
+        for (int i = 0; i < batchAllocateCount; i++) {
+            ByteBuf bigChunk = byteBufAllocator.ioBuffer(batch * chunkSize);
+            for (int j = 0; j < batch; j++) {
+                ByteBuf byteBuf = bigChunk.retainedSlice(j * chunkSize, chunkSize);
+                initBuffer(byteBuf);
+            }
+            // when all slice is released, the bigChunk will be released
+            bigChunk.release();
         }
+
+        int countRemain = count % batch;
+        if (countRemain != 0) {
+            ByteBuf bigChunk = byteBufAllocator.ioBuffer(countRemain * chunkSize);
+            for (int j = 0; j < countRemain; j++) {
+                ByteBuf byteBuf = bigChunk.retainedSlice(j * chunkSize, chunkSize);
+                initBuffer(byteBuf);
+            }
+            bigChunk.release();
+        }
+
         advanceTail(count);
+    }
+
+    private void initBuffer(ByteBuf byteBuf) {
+        short bid = nextIndex;
+        userspaceBufferHolder[bid] = byteBuf;
+        addToRing(nextIndex, false);
+        recycleBufferTasks[bid] = new Runnable() {
+            @Override
+            public void run() {
+                addToRing(bid, true);
+            }
+        };
+        nextIndex++;
     }
 
     ByteBuf borrowBuffer(int bid, int maxCap) {
@@ -173,7 +198,7 @@ final class IoUringBufferRing {
     }
 
     void close() {
-        Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, 4, 1);
+        Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, entries, bufferGroupId);
         for (ByteBuf byteBuf : userspaceBufferHolder) {
             if (byteBuf != null) {
                 byteBuf.release();
@@ -190,7 +215,7 @@ final class IoUringBufferRing {
         protected UserspaceIoUringBuffer(int maxCapacity, short bid, ByteBuf userspaceBuffer) {
             super(maxCapacity);
             this.bid = bid;
-            this.userspaceBuffer = userspaceBuffer;
+            this.userspaceBuffer = userspaceBuffer.unwrap();
         }
 
         @Override
@@ -300,10 +325,13 @@ final class IoUringBufferRing {
                 this.maxCapacity(newCapacity);
                 return this;
             }
-            ByteBuf newByteBuffer = byteBufAllocator.directBuffer(newCapacity);
-            newByteBuffer.writeBytes(userspaceBuffer, 0, maxCapacity());
-            userspaceBuffer.release();
-            return newByteBuffer;
+
+            throw new IllegalArgumentException(
+                    String.format(
+                        "minNewCapacity: %d (expected: not greater than maxCapacity(%d)",
+                        newCapacity, maxCapacity()
+                    )
+            );
         }
 
         @Override

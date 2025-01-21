@@ -69,7 +69,7 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
     /**
      * enable provider buffer, See this <a href="https://lwn.net/Articles/815491/">LWN article</a> for more info
      */
-    public IOUringStreamChannelConfig disableBufferSelectRead() {
+    IOUringStreamChannelConfig disableBufferSelectRead() {
         setBufferGroupId(DISABLE_BUFFER_SELECT_READ);
         return this;
     }
@@ -79,7 +79,7 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
      *
      * @return the buffer ring config.
      */
-    public short getBufferRingConfig() {
+    short getBufferRingConfig() {
         return bufferGroupId;
     }
 
@@ -89,7 +89,7 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
      * @param bufferGroupId the buffer group id.
      * @return
      */
-    public IOUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
+    IOUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
         this.bufferGroupId = bufferGroupId;
         return this;
     }

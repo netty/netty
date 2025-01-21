@@ -626,15 +626,4 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
         return this;
     }
 
-    @Override
-    public IOUringSocketChannelConfig disableBufferSelectRead() {
-        super.disableBufferSelectRead();
-        return this;
-    }
-
-    @Override
-    public IOUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
-        super.setBufferGroupId(bufferGroupId);
-        return this;
-    }
 }

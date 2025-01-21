@@ -28,12 +28,18 @@ public final class BufferRingConfig {
     private final short bufferRingSize;
     private final int chunkSize;
     private final ByteBufAllocator allocator;
+    private final int initSize;
 
     public BufferRingConfig(short bgId, short bufferRingSize, int chunkSize, ByteBufAllocator allocator) {
+        this(bgId, bufferRingSize, chunkSize, allocator, 0);
+    }
+
+    public BufferRingConfig(short bgId, short bufferRingSize, int chunkSize, ByteBufAllocator allocator, int initSize) {
         this.bgId = ObjectUtil.checkPositive(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
         this.chunkSize = ObjectUtil.checkPositive(chunkSize, "chunkSize");
         this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
+        this.initSize = checkInitSize(initSize, bufferRingSize);
     }
 
     public short bufferGroupId() {
@@ -52,6 +58,10 @@ public final class BufferRingConfig {
         return allocator;
     }
 
+    public int initSize() {
+        return initSize;
+    }
+
     private static short checkBufferRingSize(short bufferRingSize) {
         if (bufferRingSize < 1) {
             throw new IllegalArgumentException("bufferRingSize: " + bufferRingSize + " (expected: > 0)");
@@ -62,5 +72,15 @@ public final class BufferRingConfig {
             throw new IllegalArgumentException("bufferRingSize: " + bufferRingSize + " (expected: power of 2)");
         }
         return bufferRingSize;
+    }
+
+    private static int checkInitSize(int initSize, short bufferRingSize) {
+        initSize = ObjectUtil.checkPositiveOrZero(initSize, "initSize");
+        if (initSize > bufferRingSize) {
+            throw new IllegalArgumentException(
+                    "initSize: " + initSize + " (expected: <= bufferRingSize: " + bufferRingSize + ')'
+            );
+        }
+        return initSize;
     }
 }

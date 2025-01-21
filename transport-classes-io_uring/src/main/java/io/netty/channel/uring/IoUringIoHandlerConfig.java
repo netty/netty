@@ -64,7 +64,7 @@ public final class IoUringIoHandlerConfig {
 
     private int maxUnboundedWorker;
 
-    private List<BufferRingConfig> bufferRingConfigs = new ArrayList<>(0);
+    private final List<BufferRingConfig> bufferRingConfigs = new ArrayList<>(0);
 
     /**
      * Return the ring size of the io_uring instance.

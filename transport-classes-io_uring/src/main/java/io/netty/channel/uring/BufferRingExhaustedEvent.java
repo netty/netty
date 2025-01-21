@@ -21,12 +21,19 @@ package io.netty.channel.uring;
 public final class BufferRingExhaustedEvent {
     private short bufferGroupId;
 
-    public BufferRingExhaustedEvent(short bufferGroupId) {
+    BufferRingExhaustedEvent(short bufferGroupId) {
         this.bufferGroupId = bufferGroupId;
     }
 
     public short bufferGroupId() {
         return bufferGroupId;
+    }
+
+    @Override
+    public String toString() {
+        return "BufferRingExhaustedEvent{" +
+               "bufferGroupId=" + bufferGroupId +
+               '}';
     }
 
     @Override
