@@ -48,11 +48,6 @@ import static java.util.Objects.requireNonNull;
  * {@link IoHandler} which is implemented in terms of the Linux-specific {@code io_uring} API.
  */
 public final class IoUringIoHandler implements IoHandler {
-
-    // Special IoUringIoOps that will cause a submission and running of all completions.
-    static final IoUringIoOps SUBMIT_AND_RUN_ALL = new IoUringIoOps(
-            (byte) -1, (byte) -1, (short) -1, -1, -1, -1, -1, -1, (short) -1, (short) -1, (short) -1, -1, -1);
-
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringIoHandler.class);
     private static final short RING_CLOSE = 1;
 
@@ -141,6 +136,15 @@ public final class IoUringIoHandler implements IoHandler {
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         if (submissionQueue.submit() > 0) {
             processedPerRun += drainAndProcessAll(completionQueue, this::handle);
+        }
+    }
+
+    void submitAndRunNow(long udata) {
+        SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+        if (submissionQueue.submit() > 0) {
+            completionBuffer.drain(completionQueue);
+            completionBuffer.processOneNow(this::handle, udata);
         }
     }
 
@@ -402,15 +406,11 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         private void submit0(IoUringIoOps ioOps, long udata) {
-            if (ioOps == SUBMIT_AND_RUN_ALL) {
-                submitAndRunNow();
-            } else {
-                ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
-                        ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), udata,
-                        ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
-                );
-                outstandingCompletions++;
-            }
+            ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
+                    ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), udata,
+                    ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
+            );
+            outstandingCompletions++;
         }
 
         @Override
