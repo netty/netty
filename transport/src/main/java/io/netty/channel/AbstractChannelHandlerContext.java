@@ -712,7 +712,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     public ChannelHandlerContext read() {
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_READ);
         if (next.executor().inEventLoop()) {
-            if (invokeHandler()) {
+            if (next.invokeHandler()) {
                 try {
                     // DON'T CHANGE
                     // Duplex handlers implements both out/in interfaces causing a scalability issue
