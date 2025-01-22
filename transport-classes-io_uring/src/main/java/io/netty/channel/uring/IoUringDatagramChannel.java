@@ -660,7 +660,6 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
     private int cancel(IoUringIoRegistration registration, byte op, MsgHdrMemoryArray array) {
         int cancelled = 0;
-        int fd = fd().intValue();
         for (int idx = 0; idx < array.length(); idx++) {
             long id = array.id(idx);
             if (id == MsgHdrMemoryArray.NO_ID) {
@@ -668,7 +667,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             }
             // Let's try to cancel outstanding op as these might be submitted and waiting for data
             // (via fastpoll).
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(fd, flags((byte) 0), id, op);
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(flags((byte) 0), id, op);
             registration.submit(ops);
             cancelled++;
         }

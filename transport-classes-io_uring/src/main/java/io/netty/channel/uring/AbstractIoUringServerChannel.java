@@ -78,9 +78,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     protected final void cancelOutstandingReads(IoUringIoRegistration registration, int numOutstandingReads) {
         if (acceptId != 0) {
             assert numOutstandingReads == 1;
-            int fd = fd().intValue();
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(
-                    fd, flags((byte) 0), acceptId, Native.IORING_OP_ACCEPT);
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(flags((byte) 0), acceptId, Native.IORING_OP_ACCEPT);
             registration.submit(ops);
         } else {
             assert numOutstandingReads == 0;

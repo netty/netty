@@ -171,7 +171,9 @@ final class SubmissionQueue {
     }
 
     long addNop(byte flags, long udata) {
-        return enqueueSqe0(Native.IORING_OP_NOP, flags, (short) 0, 0, 0, 0, 0, 0, udata,
+        // Mimic what liburing does. We want to use a count of 1:
+        // https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L592
+        return enqueueSqe0(Native.IORING_OP_NOP, flags, (short) 0, -1, 0, 0, 0, 0, udata,
                 (short) 0, (short) 0, 0, 0);
     }
 
@@ -196,8 +198,10 @@ final class SubmissionQueue {
                 0, udata, (short) 0, (short) 0, 0, 0);
     }
 
+    // Mimic what liburing does:
+    // https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L673
     long addCancel(long sqeToCancel, long udata) {
-        return enqueueSqe0(Native.IORING_OP_ASYNC_CANCEL, (byte) 0, (short) 0, 0, 0, sqeToCancel, 0, 0,
+        return enqueueSqe0(Native.IORING_OP_ASYNC_CANCEL, (byte) 0, (short) 0, -1, 0, sqeToCancel, 0, 0,
                 udata, (short) 0, (short) 0, 0, 0);
     }
 
