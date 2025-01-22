@@ -20,7 +20,7 @@ import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.IoEventLoop;
-import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.SingleThreadEventLoop;
@@ -188,7 +188,7 @@ public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
     }
 
     @Override
-    protected IoEventLoop newChild(Executor executor, IoHandler handler, Object... args) {
+    protected IoEventLoop newChild(Executor executor, IoHandlerFactory ioHandlerFactory, Object... args) {
         RejectedExecutionHandler rejectedExecutionHandler = null;
         EventLoopTaskQueueFactory taskQueueFactory = null;
         EventLoopTaskQueueFactory tailTaskQueueFactory = null;
@@ -202,17 +202,17 @@ public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
         if (argsLength > 2) {
             tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[1];
         }
-        return new KQueueEventLoop(this, executor, handler,
+        return new KQueueEventLoop(this, executor, ioHandlerFactory,
                 KQueueEventLoop.newTaskQueue(taskQueueFactory),
                 KQueueEventLoop.newTaskQueue(tailTaskQueueFactory),
                 rejectedExecutionHandler);
     }
 
     private static final class KQueueEventLoop extends SingleThreadIoEventLoop {
-        KQueueEventLoop(IoEventLoopGroup parent, Executor executor, IoHandler ioHandler,
+        KQueueEventLoop(IoEventLoopGroup parent, Executor executor, IoHandlerFactory ioHandlerFactory,
                         Queue<Runnable> taskQueue, Queue<Runnable> tailTaskQueue,
                         RejectedExecutionHandler rejectedExecutionHandler) {
-            super(parent, executor, ioHandler, taskQueue, tailTaskQueue, rejectedExecutionHandler);
+            super(parent, executor, ioHandlerFactory, taskQueue, tailTaskQueue, rejectedExecutionHandler);
         }
 
         static Queue<Runnable> newTaskQueue(

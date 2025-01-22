@@ -15,8 +15,8 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.IoEventLoop;
-import io.netty.channel.IoExecutionContext;
+import io.netty.channel.IoExecutorContext;
+import io.netty.channel.IoExecutor;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
@@ -72,7 +72,6 @@ public final class IoUringIoHandler implements IoHandler {
     private boolean closeCompleted;
     private int nextRegistrationId = Integer.MIN_VALUE;
     private int processedPerRun;
-    private boolean enabled;
 
     // these two ids are used internally any so can't be used by nextRegistrationId().
     private static final int EVENTFD_ID = Integer.MAX_VALUE;
@@ -80,10 +79,12 @@ public final class IoUringIoHandler implements IoHandler {
     private static final int INVALID_ID = 0;
 
     private final CompletionBuffer completionBuffer;
+    private final IoExecutor executor;
 
-    IoUringIoHandler(IoUringIoHandlerConfiguration config) {
+    IoUringIoHandler(IoExecutor executor, IoUringIoHandlerConfiguration config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IoUring.ensureAvailability();
+        this.executor = requireNonNull(executor, "executor");
         requireNonNull(config, "config");
         this.ringBuffer = Native.createRingBuffer(config.getRingSize(), Native.setupFlags());
         if (IoUring.isRegisterIowqMaxWorkersSupported() && config.needRegisterIowqMaxWorker()) {
@@ -106,12 +107,13 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     @Override
-    public int run(IoExecutionContext context) {
-        if (!enabled) {
-            enabled = true;
-            // We create our ring in disabled mode and so need to enable it first.
-            Native.ioUringRegisterEnableRings(ringBuffer.fd());
-        }
+    public void initialize() {
+        // We create our ring in disabled mode and so need to enable it first.
+        Native.ioUringRegisterEnableRings(ringBuffer.fd());
+    }
+
+    @Override
+    public int run(IoExecutorContext context) {
         processedPerRun = 0;
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
@@ -220,7 +222,7 @@ public final class IoUringIoHandler implements IoHandler {
                 eventfd.intValue(), eventfdReadBuf, 0, 8, udata);
     }
 
-    private void submitTimeout(IoExecutionContext context) {
+    private void submitTimeout(IoExecutorContext context) {
         long delayNanos = context.delayNanos(System.nanoTime());
         long udata = UserData.encode(RINGFD_ID, Native.IORING_OP_TIMEOUT, (short) 0);
 
@@ -337,12 +339,12 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     @Override
-    public IoRegistration register(IoEventLoop eventLoop, IoHandle handle) throws Exception {
+    public IoRegistration register(IoHandle handle) throws Exception {
         IoUringIoHandle ioHandle = cast(handle);
         if (shuttingDown) {
             throw new RejectedExecutionException("IoEventLoop is shutting down");
         }
-        DefaultIoUringIoRegistration registration = new DefaultIoUringIoRegistration(eventLoop, ioHandle);
+        DefaultIoUringIoRegistration registration = new DefaultIoUringIoRegistration(executor, ioHandle);
         for (;;) {
             int id = nextRegistrationId();
             DefaultIoUringIoRegistration old = registrations.put(id, registration);
@@ -368,7 +370,7 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final class DefaultIoUringIoRegistration implements IoUringIoRegistration {
         private final Promise<?> cancellationPromise;
-        private final IoEventLoop eventLoop;
+        private final IoExecutor executor;
         private final IoUringIoEvent event = new IoUringIoEvent(0, 0, (byte) 0, (short) 0);
         final IoUringIoHandle handle;
 
@@ -376,10 +378,10 @@ public final class IoUringIoHandler implements IoHandler {
         private int outstandingCompletions;
         private int id;
 
-        DefaultIoUringIoRegistration(IoEventLoop eventLoop, IoUringIoHandle handle) {
-            this.eventLoop = eventLoop;
+        DefaultIoUringIoRegistration(IoExecutor executor, IoUringIoHandle handle) {
+            this.executor = executor;
             this.handle = handle;
-            this.cancellationPromise = eventLoop.newPromise();
+            this.cancellationPromise = executor.newPromise();
         }
 
         void setId(int id) {
@@ -393,10 +395,10 @@ public final class IoUringIoHandler implements IoHandler {
                 return INVALID_ID;
             }
             long udata = UserData.encode(id, ioOps.opcode(), ioOps.data());
-            if (eventLoop.inEventLoop()) {
+            if (executor.inExecutorThread(Thread.currentThread())) {
                 submit0(ioOps, udata);
             } else {
-                eventLoop.execute(() -> submit0(ioOps, udata));
+                executor.execute(() -> submit0(ioOps, udata));
             }
             return udata;
         }
@@ -424,10 +426,10 @@ public final class IoUringIoHandler implements IoHandler {
                 // Already cancelled.
                 return;
             }
-            if (eventLoop.inEventLoop()) {
+            if (executor.inExecutorThread(Thread.currentThread())) {
                 tryRemove();
             } else {
-                eventLoop.execute(this::tryRemove);
+                executor.execute(this::tryRemove);
             }
         }
 
@@ -454,7 +456,7 @@ public final class IoUringIoHandler implements IoHandler {
         void close() {
             // Closing the handle will also cancel the registration.
             // It's important that we not manually cancel as close() might need to submit some work to the ring.
-            assert eventLoop.inEventLoop();
+            assert executor.inExecutorThread(Thread.currentThread());
             try {
                 handle.close();
             } catch (Exception e) {
@@ -481,8 +483,9 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     @Override
-    public void wakeup(IoEventLoop eventLoop) {
-        if (!eventLoop.inEventLoop() && !eventfdAsyncNotify.getAndSet(true)) {
+    public void wakeup() {
+        if (!executor.inExecutorThread(Thread.currentThread()) &&
+                !eventfdAsyncNotify.getAndSet(true)) {
             // write to the eventfd which will then trigger an eventfd read completion.
             Native.eventFdWrite(eventfd.intValue(), 1L);
         }
@@ -526,7 +529,7 @@ public final class IoUringIoHandler implements IoHandler {
     public static IoHandlerFactory newFactory(int ringSize) {
         IoUringIoHandlerConfiguration configuration = new IoUringIoHandlerConfiguration();
         configuration.setRingSize(ringSize);
-        return () -> new IoUringIoHandler(configuration);
+        return eventLoop -> new IoUringIoHandler(eventLoop, configuration);
     }
 
     /**
@@ -538,7 +541,6 @@ public final class IoUringIoHandler implements IoHandler {
     public static IoHandlerFactory newFactory(IoUringIoHandlerConfiguration config) {
         IoUring.ensureAvailability();
         ObjectUtil.checkNotNull(config, "config");
-        return () -> new IoUringIoHandler(config);
+        return eventLoop -> new IoUringIoHandler(eventLoop, config);
     }
-
 }

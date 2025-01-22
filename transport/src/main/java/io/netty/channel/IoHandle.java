@@ -16,8 +16,9 @@
 package io.netty.channel;
 
 /**
- * A handle that can be registered to a {@link IoEventLoop}.
- * All methods must be called from the {@link IoEventLoop} thread.
+ * A handle that can be registered to a {@link IoHandler}.
+ * All methods must be called from the {@link IoExecutor} threa (which means
+ * {@link IoExecutor#inExecutorThread(Thread)} must return {@code true})
  */
 public interface IoHandle extends AutoCloseable {
 

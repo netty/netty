@@ -19,7 +19,7 @@ import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.IoEventLoop;
-import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.SingleThreadEventLoop;
@@ -183,7 +183,7 @@ public final class EpollEventLoopGroup extends MultiThreadIoEventLoopGroup {
     }
 
     @Override
-    protected IoEventLoop newChild(Executor executor, IoHandler handler, Object... args) {
+    protected IoEventLoop newChild(Executor executor, IoHandlerFactory ioHandlerFactory, Object... args) {
         RejectedExecutionHandler rejectedExecutionHandler = (RejectedExecutionHandler) args[0];
         EventLoopTaskQueueFactory taskQueueFactory = null;
         EventLoopTaskQueueFactory tailTaskQueueFactory = null;
@@ -195,7 +195,7 @@ public final class EpollEventLoopGroup extends MultiThreadIoEventLoopGroup {
         if (argsLength > 2) {
             tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[2];
         }
-        return new EpollEventLoop(this, executor, handler, taskQueueFactory, tailTaskQueueFactory,
+        return new EpollEventLoop(this, executor, ioHandlerFactory, taskQueueFactory, tailTaskQueueFactory,
                 rejectedExecutionHandler);
     }
 }

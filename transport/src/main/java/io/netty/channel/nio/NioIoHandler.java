@@ -17,8 +17,8 @@ package io.netty.channel.nio;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.IoEventLoop;
-import io.netty.channel.IoExecutionContext;
+import io.netty.channel.IoExecutorContext;
+import io.netty.channel.IoExecutor;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
@@ -112,11 +112,13 @@ public final class NioIoHandler implements IoHandler {
     private final AtomicBoolean wakenUp = new AtomicBoolean();
 
     private final SelectStrategy selectStrategy;
+    private final IoExecutor executor;
     private int cancelledKeys;
     private boolean needsToSelectAgain;
 
-    private NioIoHandler(SelectorProvider selectorProvider,
+    private NioIoHandler(IoExecutor executor, SelectorProvider selectorProvider,
                          SelectStrategy strategy) {
+        this.executor = ObjectUtil.checkNotNull(executor, "executionContext");
         this.provider = ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
         this.selectStrategy = ObjectUtil.checkNotNull(strategy, "selectStrategy");
         final SelectorTuple selectorTuple = openSelector();
@@ -321,11 +323,11 @@ public final class NioIoHandler implements IoHandler {
         private final NioIoHandle handle;
         private volatile SelectionKey key;
 
-        DefaultNioRegistration(IoEventLoop eventLoop, NioIoHandle handle, NioIoOps initialOps, Selector selector)
+        DefaultNioRegistration(IoExecutor executor, NioIoHandle handle, NioIoOps initialOps, Selector selector)
                 throws IOException {
             this.handle = handle;
             key = handle.selectableChannel().register(selector, initialOps.value, this);
-            this.cancellationPromise = eventLoop.newPromise();
+            this.cancellationPromise = executor.newPromise();
         }
 
         NioIoHandle handle() {
@@ -393,14 +395,14 @@ public final class NioIoHandler implements IoHandler {
     }
 
     @Override
-    public NioIoRegistration register(IoEventLoop eventLoop, IoHandle handle)
+    public NioIoRegistration register(IoHandle handle)
             throws Exception {
         NioIoHandle nioHandle = nioHandle(handle);
         NioIoOps ops = NioIoOps.NONE;
         boolean selected = false;
         for (;;) {
             try {
-                return new DefaultNioRegistration(eventLoop, nioHandle, ops, unwrappedSelector());
+                return new DefaultNioRegistration(executor, nioHandle, ops, unwrappedSelector());
             } catch (CancelledKeyException e) {
                 if (!selected) {
                     // Force the Selector to select now as the "canceled" SelectionKey may still be
@@ -417,11 +419,11 @@ public final class NioIoHandler implements IoHandler {
     }
 
     @Override
-    public int run(IoExecutionContext runner) {
+    public int run(IoExecutorContext context) {
         int handled = 0;
         try {
             try {
-                switch (selectStrategy.calculateStrategy(selectNowSupplier, !runner.canBlock())) {
+                switch (selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock())) {
                     case SelectStrategy.CONTINUE:
                         return 0;
 
@@ -429,7 +431,7 @@ public final class NioIoHandler implements IoHandler {
                         // fall-through to SELECT since the busy-wait is not supported with NIO
 
                     case SelectStrategy.SELECT:
-                        select(runner, wakenUp.getAndSet(false));
+                        select(context, wakenUp.getAndSet(false));
 
                         // 'wakenUp.compareAndSet(false, true)' is always evaluated
                         // before calling 'selector.wakeup()' to reduce the wake-up
@@ -601,8 +603,8 @@ public final class NioIoHandler implements IoHandler {
     }
 
     @Override
-    public void wakeup(IoEventLoop eventLoop) {
-        if (!eventLoop.inEventLoop() && wakenUp.compareAndSet(false, true)) {
+    public void wakeup() {
+        if (!executor.inExecutorThread(Thread.currentThread()) && wakenUp.compareAndSet(false, true)) {
             selector.wakeup();
         }
     }
@@ -616,7 +618,7 @@ public final class NioIoHandler implements IoHandler {
         return unwrappedSelector;
     }
 
-    private void select(IoExecutionContext runner, boolean oldWakenUp) throws IOException {
+    private void select(IoExecutorContext runner, boolean oldWakenUp) throws IOException {
         Selector selector = this.selector;
         try {
             int selectCnt = 0;
@@ -764,11 +766,6 @@ public final class NioIoHandler implements IoHandler {
                                               final SelectStrategyFactory selectStrategyFactory) {
         ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
-        return new IoHandlerFactory() {
-            @Override
-            public IoHandler newHandler() {
-                return new NioIoHandler(selectorProvider, selectStrategyFactory.newSelectStrategy());
-            }
-        };
+        return context ->  new NioIoHandler(context, selectorProvider, selectStrategyFactory.newSelectStrategy());
     }
 }

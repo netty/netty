@@ -64,8 +64,8 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
         final AtomicReference<Throwable> capture = new AtomicReference<Throwable>();
 
         final EventLoopGroup group = new EpollEventLoop(null,
-                new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())), new EpollIoHandler(0,
-                DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy()) {
+                new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())), eventLoop -> new EpollIoHandler(
+                        eventLoop, 0, DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy()) {
             @Override
             void handleLoopException(Throwable t) {
                 capture.set(t);

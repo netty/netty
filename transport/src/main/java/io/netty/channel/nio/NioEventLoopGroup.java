@@ -20,7 +20,7 @@ import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoEventLoopGroup;
-import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.SingleThreadEventLoop;
@@ -177,7 +177,7 @@ public class NioEventLoopGroup extends MultiThreadIoEventLoopGroup implements Io
     }
 
     @Override
-    protected IoEventLoop newChild(Executor executor, IoHandler ioHandler, Object... args) {
+    protected IoEventLoop newChild(Executor executor, IoHandlerFactory ioHandlerFactory, Object... args) {
         RejectedExecutionHandler rejectedExecutionHandler = (RejectedExecutionHandler) args[0];
         EventLoopTaskQueueFactory taskQueueFactory = null;
         EventLoopTaskQueueFactory tailTaskQueueFactory = null;
@@ -190,6 +190,6 @@ public class NioEventLoopGroup extends MultiThreadIoEventLoopGroup implements Io
             tailTaskQueueFactory = (EventLoopTaskQueueFactory) args[2];
         }
         return new NioEventLoop(
-                this, executor, ioHandler, taskQueueFactory, tailTaskQueueFactory, rejectedExecutionHandler);
+                this, executor, ioHandlerFactory, taskQueueFactory, tailTaskQueueFactory, rejectedExecutionHandler);
     }
 }

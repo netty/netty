@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,16 +15,21 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.Promise;
+
+import java.util.concurrent.Executor;
+
 /**
- * Factory for {@link IoHandler} instances.
+ * An {@link Executor} that is used to drive IO of an {@link IoHandler}.
  */
-public interface IoHandlerFactory {
+public interface IoExecutor extends Executor {
+    /**
+     * Return {@code true} if the given {@link Thread} is used by this {@link IoExecutor}.
+     */
+    boolean inExecutorThread(Thread thread);
 
     /**
-     * Creates a new {@link IoHandler} instance.
-     *
-     * @param ioExecutor        the {@link IoExecutor} for the {@link IoHandler}.
-     * @return                  a new {@link IoHandler} instance.
+     * Return a new {@link Promise}.
      */
-    IoHandler newHandler(IoExecutor ioExecutor);
+    <V> Promise<V> newPromise();
 }

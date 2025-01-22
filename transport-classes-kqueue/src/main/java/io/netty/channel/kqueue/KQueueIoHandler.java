@@ -18,8 +18,8 @@ package io.netty.channel.kqueue;
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
-import io.netty.channel.IoEventLoop;
-import io.netty.channel.IoExecutionContext;
+import io.netty.channel.IoExecutorContext;
+import io.netty.channel.IoExecutor;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
@@ -77,6 +77,7 @@ public final class KQueueIoHandler implements IoHandler {
             return kqueueWaitNow();
         }
     };
+    private final IoExecutor executor;
     private final IntObjectMap<DefaultKqueueIoRegistration> registrations = new IntObjectHashMap<>(4096);
     private int numChannels;
 
@@ -96,15 +97,11 @@ public final class KQueueIoHandler implements IoHandler {
                                               final SelectStrategyFactory selectStrategyFactory) {
         ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
-        return new IoHandlerFactory() {
-            @Override
-            public IoHandler newHandler() {
-                return new KQueueIoHandler(maxEvents, selectStrategyFactory.newSelectStrategy());
-            }
-        };
+        return executor -> new KQueueIoHandler(executor, maxEvents, selectStrategyFactory.newSelectStrategy());
     }
 
-    private KQueueIoHandler(int maxEvents, SelectStrategy strategy) {
+    private KQueueIoHandler(IoExecutor executor, int maxEvents, SelectStrategy strategy) {
+        this.executor = ObjectUtil.checkNotNull(executor, "executor");
         this.selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
         this.kqueueFd = Native.newKQueue();
         if (maxEvents == 0) {
@@ -131,19 +128,20 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     @Override
-    public void wakeup(IoEventLoop eventLoop) {
-        if (!eventLoop.inEventLoop() && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
-            wakeup();
+    public void wakeup() {
+        if (!executor.inExecutorThread(Thread.currentThread())
+                && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
+            wakeup0();
         }
     }
 
-    private void wakeup() {
+    private void wakeup0() {
         Native.keventTriggerUserEvent(kqueueFd.intValue(), KQUEUE_WAKE_UP_IDENT);
         // Note that the result may return an error (e.g. errno = EBADF after the event loop has been shutdown).
         // So it is not very practical to assert the return value is always >= 0.
     }
 
-    private int kqueueWait(IoExecutionContext context, boolean oldWakeup) throws IOException {
+    private int kqueueWait(IoExecutorContext context, boolean oldWakeup) throws IOException {
         // If a task was submitted when wakenUp value was 1, the task didn't get a chance to produce wakeup event.
         // So we need to check task queue again before calling kqueueWait. If we don't, the task might be pended
         // until kqueueWait was timed out. It might be pended until idle timeout if IdleStateHandler existed
@@ -194,7 +192,7 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     @Override
-    public int run(IoExecutionContext context) {
+    public int run(IoExecutorContext context) {
         int handled = 0;
         try {
             int strategy = selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock());
@@ -237,7 +235,7 @@ public final class KQueueIoHandler implements IoHandler {
                     // (OK - no wake-up required).
 
                     if (wakenUp == 1) {
-                        wakeup();
+                        wakeup0();
                     }
                     // fall-through
                 default:
@@ -325,14 +323,14 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     @Override
-    public KQueueIoRegistration register(IoEventLoop eventLoop, IoHandle handle) {
+    public KQueueIoRegistration register(IoHandle handle) {
         final KQueueIoHandle kqueueHandle = cast(handle);
         if (kqueueHandle.ident() == KQUEUE_WAKE_UP_IDENT) {
             throw new IllegalArgumentException("ident " + KQUEUE_WAKE_UP_IDENT + " is reserved for internal usage");
         }
 
         DefaultKqueueIoRegistration registration = new DefaultKqueueIoRegistration(
-                eventLoop, kqueueHandle);
+                executor, kqueueHandle);
         DefaultKqueueIoRegistration old = registrations.put(kqueueHandle.ident(), registration);
         if (old != null) {
             // restore old mapping and throw exception
@@ -371,12 +369,12 @@ public final class KQueueIoHandler implements IoHandler {
 
         final KQueueIoHandle handle;
 
-        private final IoEventLoop eventLoop;
+        private final IoExecutor executor;
 
-        DefaultKqueueIoRegistration(IoEventLoop eventLoop, KQueueIoHandle handle) {
-            this.eventLoop = eventLoop;
+        DefaultKqueueIoRegistration(IoExecutor executor, KQueueIoHandle handle) {
+            this.executor = executor;
             this.handle = handle;
-            this.cancellationPromise = eventLoop.newPromise();
+            this.cancellationPromise = executor.newPromise();
         }
 
         @Override
@@ -388,10 +386,10 @@ public final class KQueueIoHandler implements IoHandler {
             short filter = kQueueIoOps.filter();
             short flags = kQueueIoOps.flags();
             int fflags = kQueueIoOps.fflags();
-            if (eventLoop.inEventLoop()) {
+            if (executor.inExecutorThread(Thread.currentThread())) {
                 evSet(filter, flags, fflags);
             } else {
-                eventLoop.execute(() -> evSet(filter, flags, fflags));
+                executor.execute(() -> evSet(filter, flags, fflags));
             }
             return 0;
         }
@@ -415,10 +413,10 @@ public final class KQueueIoHandler implements IoHandler {
             if (!cancellationPromise.trySuccess(null)) {
                 return;
             }
-            if (eventLoop.inEventLoop()) {
+            if (executor.inExecutorThread(Thread.currentThread())) {
                 cancel0();
             } else {
-                eventLoop.execute(this::cancel0);
+                executor.execute(this::cancel0);
             }
         }
 

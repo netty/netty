@@ -18,6 +18,7 @@ package io.netty.channel.nio;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopTaskQueueFactory;
 import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.SingleThreadIoEventLoop;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
@@ -46,10 +47,10 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioEventLoop.class);
 
-    NioEventLoop(NioEventLoopGroup parent, Executor executor, IoHandler ioHandler,
+    NioEventLoop(NioEventLoopGroup parent, Executor executor, IoHandlerFactory ioHandlerFactory,
                  EventLoopTaskQueueFactory taskQueueFactory,
                  EventLoopTaskQueueFactory tailTaskQueueFactory, RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, ioHandler, newTaskQueue(taskQueueFactory), newTaskQueue(tailTaskQueueFactory),
+        super(parent, executor, ioHandlerFactory, newTaskQueue(taskQueueFactory), newTaskQueue(tailTaskQueueFactory),
                 rejectedExecutionHandler);
     }
 
