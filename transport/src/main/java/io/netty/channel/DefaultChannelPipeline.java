@@ -673,7 +673,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return null;
             }
 
-            if (ctx.handler() == handler) {
+            if (ctx.handler() == handler && !ctx.isRemoved()) {
                 return ctx;
             }
 
@@ -690,7 +690,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (ctx == null) {
                 return null;
             }
-            if (handlerType.isAssignableFrom(ctx.handler().getClass())) {
+            if (handlerType.isAssignableFrom(ctx.handler().getClass()) && !ctx.isRemoved()) {
                 return ctx;
             }
             ctx = ctx.next;
@@ -705,7 +705,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (ctx == null) {
                 return list;
             }
-            list.add(ctx.name());
+            if (!ctx.isRemoved()) {
+                list.add(ctx.name());
+            }
             ctx = ctx.next;
         }
     }
@@ -718,7 +720,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (ctx == tail) {
                 return map;
             }
-            map.put(ctx.name(), ctx.handler());
+            if (!ctx.isRemoved()) {
+                map.put(ctx.name(), ctx.handler());
+            }
             ctx = ctx.next;
         }
     }
@@ -742,12 +746,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 break;
             }
 
-            buf.append('(')
-               .append(ctx.name())
-               .append(" = ")
-               .append(ctx.handler().getClass().getName())
-               .append(')');
-
+            if (!ctx.isRemoved()) {
+                buf.append('(')
+                        .append(ctx.name())
+                        .append(" = ")
+                        .append(ctx.handler().getClass().getName())
+                        .append(')');
+            }
             ctx = ctx.next;
             if (ctx == tail) {
                 break;
