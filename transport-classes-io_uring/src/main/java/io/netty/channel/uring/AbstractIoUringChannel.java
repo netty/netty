@@ -322,13 +322,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         if (scheduleWrite(in) > 0) {
             ioState |= WRITE_SCHEDULED;
             if (submitAndRunNow && !isWritable() && !((IOUringChannelConfig) config()).getIoseqAsync()) {
-                submitAndRunNow();
+                // Force a submit and processing of the completions to ensure we drain the outbound buffer and
+                // send the data to the remote peer.
+                // We only do this if IOSEQ_ASYNC is not used as if its used it's impossible that the
+                // write is executed inline.
+                registration().submit(IoUringIoHandler.SUBMIT_AND_RUN_ALL);
             }
         }
-    }
-
-    protected void submitAndRunNow() {
-        // NOOP
     }
 
     private int scheduleWrite(ChannelOutboundBuffer in) {
