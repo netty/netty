@@ -177,13 +177,17 @@ final class SubmissionQueue {
 
     long addTimeout(long nanoSeconds, long udata) {
         setTimeout(nanoSeconds);
-        return enqueueSqe0(Native.IORING_OP_TIMEOUT, (byte) 0, (short) 0, 0, 0, timeoutMemoryAddress, 1,
+        // Mimic what liburing does. We want to use a count of 1:
+        // https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L599
+        return enqueueSqe0(Native.IORING_OP_TIMEOUT, (byte) 0, (short) 0, -1, 1, timeoutMemoryAddress, 1,
                 0, udata, (short) 0, (short) 0, 0, 0);
     }
 
     long addLinkTimeout(long nanoSeconds, long extraData) {
         setTimeout(nanoSeconds);
-        return enqueueSqe0(Native.IORING_OP_LINK_TIMEOUT, (byte) 0, (short) 0, 0, 0, timeoutMemoryAddress, 1,
+        // Mimic what liburing does:
+        // https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L687
+        return enqueueSqe0(Native.IORING_OP_LINK_TIMEOUT, (byte) 0, (short) 0, -1, 1, timeoutMemoryAddress, 1,
                 0, extraData, (short) 0, (short) 0, 0, 0);
     }
 
