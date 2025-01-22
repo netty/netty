@@ -97,27 +97,6 @@ final class CompletionBuffer {
         return i;
     }
 
-    boolean processOneNow(CompletionCallback callback, long udata) {
-        // We basically just scan over the whole array, if this turns out to be a performance problem
-        // (we actually don't expect too many outstanding completions) it's possible to be a bit smarter.
-        //
-        // We could make the udata generation shared across channels and always increase it. Then we could use
-        // a binarySearch to find the right completion to handle. This only downside would be that this will not
-        // work once we overflow so we would need to handle this somehow.
-        int idx = head;
-        for (int i = 0; i < size; i++, idx += 2) {
-            int udataIdx = udataIdx(idx);
-            long data = array[udataIdx];
-            if (udata != data) {
-                continue;
-            }
-            long combined = array[combinedIdx(idx)];
-            array[udataIdx] = tombstone;
-            return handle(callback, combined, udata);
-        }
-        return false;
-    }
-
     private int combinedIdx(int idx) {
         return idx & mask;
     }
