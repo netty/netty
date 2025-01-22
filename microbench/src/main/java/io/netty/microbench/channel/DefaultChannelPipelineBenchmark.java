@@ -297,6 +297,8 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
                 }
             },
     };
+    private static final int CALL_TYPE_ARRAY_SIZE = 1024;
+    private static final int CALL_TYPE_ARRAY_MASK = CALL_TYPE_ARRAY_SIZE - 1;
 
     @Param({ "1024" })
     private int pipelineArrayLength;
@@ -308,6 +310,9 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
     private ChannelPipeline[] pipelines;
     private ChannelPromise[] promises;
     private int pipelineCounter;
+
+    private int[] callTypes;
+    private int callTypeCounter;
 
     @Setup(Level.Iteration)
     public void setup() {
