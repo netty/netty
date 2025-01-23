@@ -93,6 +93,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     // Will be set to null if no child executor should be used, otherwise it will be set to the
     // child executor.
     final EventExecutor childExecutor;
+    // Cache the concrete value for the executor() method. This method is in the hot-path,
+    // and it's a profitable optimisation to avoid as many dependent-loads as possible.
+    // It does not need to be volatile, because it's always the same value for a given context,
+    // within the lifetime of its registration with an event loop, and deregistering will clear it.
     EventExecutor contextExecutor;
     private ChannelFuture succeededFuture;
 
