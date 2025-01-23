@@ -49,7 +49,7 @@ public class IoUringBufferRingTest {
 
     @Test
     public void testRegister() {
-        RingBuffer ringBuffer = Native.createRingBuffer();
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
         try {
             int ringFd = ringBuffer.fd();
             long ioUringBufRingAddr = Native.ioUringRegisterBuffRing(ringFd, 4, (short) 1, 0);

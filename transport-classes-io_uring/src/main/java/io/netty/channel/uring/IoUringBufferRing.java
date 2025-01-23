@@ -323,6 +323,7 @@ final class IoUringBufferRing {
         public ByteBuf capacity(int newCapacity) {
             if (newCapacity <= maxCapacity()) {
                 this.maxCapacity(newCapacity);
+                setIndex0(Math.min(readerIndex(), newCapacity), Math.min(writerIndex(), newCapacity));
                 return this;
             }
 

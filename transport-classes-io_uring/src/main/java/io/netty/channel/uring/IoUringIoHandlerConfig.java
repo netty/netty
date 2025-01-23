@@ -53,6 +53,13 @@ import java.util.List;
  *       <td>{@link IoUringIoHandlerConfig#setMaxUnboundedWorker}</td>
  *       <td>Defines the maximum number of unbounded io_uring worker threads.</td>
  *     </tr>
+ *     <tr>
+ *         <td>{@link IoUringIoHandlerConfiguration#appendBufferRingConfig}</td>
+ *         <td>
+ *             Adds a buffer ring configuration to the list of buffer ring configurations.
+ *             It will be used to register the buffer ring for the io_uring instance.
+ *         </td>
+ *     </tr>
  *   </tbody>
  * </table>
  */

@@ -192,9 +192,18 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     void submitBeforeIO(Runnable runnable) {
-        beforeIOHook.add(runnable);
-        //wakeup ioHandler to process the runnable as soon as possible
-        Native.eventFdWrite(eventfd.intValue(), 1L);
+        //if we are in the executor thread we can run the runnable directly
+        if (this.executor.inExecutorThread(Thread.currentThread())) {
+            try {
+                runnable.run();
+            } catch (Throwable t) {
+                logger.error("Failed to run before io task", t);
+            }
+        } else {
+            beforeIOHook.add(runnable);
+            //wakeup ioHandler to process the runnable as soon as possible
+            Native.eventFdWrite(eventfd.intValue(), 1L);
+        }
     }
 
     IoUringBufferRing registerBufferRing(BufferRingConfig bufferRingConfig) throws Errors.NativeIoException {
