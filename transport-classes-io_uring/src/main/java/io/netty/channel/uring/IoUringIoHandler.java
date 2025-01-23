@@ -42,6 +42,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -65,6 +67,7 @@ public final class IoUringIoHandler implements IoHandler {
     private final AtomicBoolean eventfdAsyncNotify = new AtomicBoolean();
     private final FileDescriptor eventfd;
     private final long eventfdReadBuf;
+    private final long timeoutMemoryAddress;
 
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
@@ -77,6 +80,11 @@ public final class IoUringIoHandler implements IoHandler {
     private static final int EVENTFD_ID = Integer.MAX_VALUE;
     private static final int RINGFD_ID = EVENTFD_ID - 1;
     private static final int INVALID_ID = 0;
+
+    private static final int KERNEL_TIMESPEC_SIZE = 16; //__kernel_timespec
+
+    private static final int KERNEL_TIMESPEC_TV_SEC_FIELD = 0;
+    private static final int KERNEL_TIMESPEC_TV_NSEC_FIELD = 8;
 
     private final CompletionBuffer completionBuffer;
     private final IoExecutor executor;
@@ -100,6 +108,7 @@ public final class IoUringIoHandler implements IoHandler {
         registrations = new IntObjectHashMap<>();
         eventfd = Native.newBlockingEventFd();
         eventfdReadBuf = PlatformDependent.allocateMemory(8);
+        this.timeoutMemoryAddress = PlatformDependent.allocateMemory(KERNEL_TIMESPEC_SIZE);
 
         // We buffer a maximum of 2 * CompletionQueue.ringSize completions before we drain them in batches.
         // Also as we never submit an udata which is 0L we use this as the tombstone marker.
@@ -120,10 +129,8 @@ public final class IoUringIoHandler implements IoHandler {
             if (eventfdReadSubmitted == 0) {
                 submitEventFdRead();
             }
-            if (context.deadlineNanos() != -1) {
-                submitTimeout(context);
-            }
-            submissionQueue.submitAndWait();
+            long timeoutNanos = context.deadlineNanos() == -1 ? -1 : context.delayNanos(System.nanoTime());
+            submitAndWaitWithTimeout(submissionQueue, false, timeoutNanos);
         } else {
             submissionQueue.submit();
         }
@@ -221,11 +228,32 @@ public final class IoUringIoHandler implements IoHandler {
                 eventfd.intValue(), eventfdReadBuf, 0, 8, udata);
     }
 
-    private void submitTimeout(IoExecutorContext context) {
-        long delayNanos = context.delayNanos(System.nanoTime());
-        long udata = UserData.encode(RINGFD_ID, Native.IORING_OP_TIMEOUT, (short) 0);
+    private int submitAndWaitWithTimeout(SubmissionQueue submissionQueue,
+                                         boolean linkTimeout, long timeoutNanoSeconds) {
+        if (timeoutNanoSeconds != -1) {
+            long udata = UserData.encode(RINGFD_ID,
+                    linkTimeout ? Native.IORING_OP_LINK_TIMEOUT : Native.IORING_OP_TIMEOUT, (short) 0);
+            // We use the same timespec pointer for all add*Timeout operations. This only works because we call
+            // submit directly after it. This ensures the submitted timeout is considered "stable" and so can be reused.
+            long seconds, nanoSeconds;
+            if (timeoutNanoSeconds == 0) {
+                seconds = 0;
+                nanoSeconds = 0;
+            } else {
+                seconds = (int) min(timeoutNanoSeconds / 1000000000L, Integer.MAX_VALUE);
+                nanoSeconds = (int) max(timeoutNanoSeconds - seconds * 1000000000L, 0);
+            }
 
-        ringBuffer.ioUringSubmissionQueue().addTimeout(delayNanos, udata);
+            PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_SEC_FIELD, seconds);
+            PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_NSEC_FIELD, nanoSeconds);
+
+            if (linkTimeout) {
+                submissionQueue.addLinkTimeout(timeoutMemoryAddress, udata);
+            } else {
+                submissionQueue.addTimeout(timeoutMemoryAddress, udata);
+            }
+        }
+        return submissionQueue.submitAndWait();
     }
 
     @Override
@@ -272,9 +300,7 @@ public final class IoUringIoHandler implements IoHandler {
         // - https://git.kernel.dk/cgit/liburing/commit/?h=link-timeout&id=bc1bd5e97e2c758d6fd975bd35843b9b2c770c5a
         submissionQueue.addNop((byte) (Native.IOSQE_IO_DRAIN | Native.IOSQE_LINK), udata);
         // ... but only wait for 200 milliseconds on this
-        udata = UserData.encode(RINGFD_ID, Native.IORING_OP_LINK_TIMEOUT, (short) 0);
-        submissionQueue.addLinkTimeout(TimeUnit.MILLISECONDS.toNanos(200), udata);
-        submissionQueue.submitAndWait();
+        submitAndWaitWithTimeout(submissionQueue, true, TimeUnit.MILLISECONDS.toNanos(200));
         completionQueue.process(this::handle);
         completeRingClose();
     }
@@ -340,6 +366,7 @@ public final class IoUringIoHandler implements IoHandler {
             logger.warn("Failed to close eventfd", e);
         }
         PlatformDependent.freeMemory(eventfdReadBuf);
+        PlatformDependent.freeMemory(timeoutMemoryAddress);
     }
 
     @Override

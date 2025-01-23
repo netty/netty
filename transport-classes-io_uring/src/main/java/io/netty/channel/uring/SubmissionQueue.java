@@ -21,15 +21,11 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.StringJoiner;
 
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-
 final class SubmissionQueue {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SubmissionQueue.class);
 
     private static final long SQE_SIZE = 64;
     private static final int INT_SIZE = Integer.BYTES; //no 32 Bit support?
-    private static final int KERNEL_TIMESPEC_SIZE = 16; //__kernel_timespec
 
     //these offsets are used to access specific properties
     //SQE https://github.com/axboe/liburing/blob/liburing-2.6/src/include/liburing/io_uring.h#L30
@@ -47,9 +43,6 @@ final class SubmissionQueue {
     private static final int SQE_UNION5_FIELD = 44;
     private static final int SQE_UNION6_FIELD = 48;
 
-    private static final int KERNEL_TIMESPEC_TV_SEC_FIELD = 0;
-    private static final int KERNEL_TIMESPEC_TV_NSEC_FIELD = 8;
-
     //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
     private final long kHeadAddress;
     private final long kTailAddress;
@@ -66,7 +59,6 @@ final class SubmissionQueue {
     final int ringFd;
     int enterRingFd;
     private int enterFlags;
-    private final long timeoutMemoryAddress;
     private int head;
     private int tail;
 
@@ -88,8 +80,6 @@ final class SubmissionQueue {
         this.ringMask = PlatformDependent.getIntVolatile(kRingMaskAddress);
         this.head = PlatformDependent.getIntVolatile(kHeadAddress);
         this.tail = PlatformDependent.getIntVolatile(kTailAddress);
-
-        this.timeoutMemoryAddress = PlatformDependent.allocateMemory(KERNEL_TIMESPEC_SIZE);
 
         // Zero the whole SQE array first
         PlatformDependent.setMemory(submissionQueueArrayAddress, ringEntries * SQE_SIZE, (byte) 0);
@@ -197,16 +187,14 @@ final class SubmissionQueue {
                 (short) 0, (short) 0, 0, 0);
     }
 
-    long addTimeout(long nanoSeconds, long udata) {
-        setTimeout(nanoSeconds);
+    long addTimeout(long timeoutMemoryAddress, long udata) {
         // Mimic what liburing does. We want to use a count of 1:
         // https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L599
         return enqueueSqe0(Native.IORING_OP_TIMEOUT, (byte) 0, (short) 0, -1, 1, timeoutMemoryAddress, 1,
                 0, udata, (short) 0, (short) 0, 0, 0);
     }
 
-    long addLinkTimeout(long nanoSeconds, long extraData) {
-        setTimeout(nanoSeconds);
+    long addLinkTimeout(long timeoutMemoryAddress, long extraData) {
         // Mimic what liburing does:
         // https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L687
         return enqueueSqe0(Native.IORING_OP_LINK_TIMEOUT, (byte) 0, (short) 0, -1, 1, timeoutMemoryAddress, 1,
@@ -289,31 +277,11 @@ final class SubmissionQueue {
         return Native.ioUringEnter(enterRingFd, toSubmit, minComplete, f);
     }
 
-    private void setTimeout(long timeoutNanoSeconds) {
-        long seconds, nanoSeconds;
-
-        if (timeoutNanoSeconds == 0) {
-            seconds = 0;
-            nanoSeconds = 0;
-        } else {
-            seconds = (int) min(timeoutNanoSeconds / 1000000000L, Integer.MAX_VALUE);
-            nanoSeconds = (int) max(timeoutNanoSeconds - seconds * 1000000000L, 0);
-        }
-
-        PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_SEC_FIELD, seconds);
-        PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_NSEC_FIELD, nanoSeconds);
-    }
-
     public int count() {
         return tail - head;
     }
 
     public int remaining() {
         return ringEntries - count();
-    }
-
-    //delete memory
-    public void release() {
-        PlatformDependent.freeMemory(timeoutMemoryAddress);
     }
 }
