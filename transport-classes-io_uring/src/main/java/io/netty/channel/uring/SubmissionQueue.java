@@ -251,14 +251,36 @@ final class SubmissionQueue {
             if (ret < 0) {
                 throw new RuntimeException("ioUringEnter syscall returned " + ret);
             }
-            // some submission might fail if these are done inline and failed.
-            logger.trace("Not all submissions succeeded. Only {} of {} SQEs were submitted.", ret, toSubmit);
         }
         return ret;
     }
 
     private int ioUringEnter(int toSubmit, int minComplete, int flags) {
         int f = enterFlags | flags;
+
+        if (IoUring.isIOUringSetupSubmitAllSupported()) {
+            return ioUringEnter0(toSubmit, minComplete, f);
+        }
+        // If IORING_SETUP_SUBMIT_ALL is not supported we need to loop until we submitted everything as
+        // io_uring_enter(...) will stop submitting once the first inline executed submission fails.
+        int submitted = 0;
+        for (;;) {
+            int ret = ioUringEnter0(toSubmit, minComplete, f);
+            if (ret < 0) {
+                return ret;
+            }
+            submitted += ret;
+            if (ret == toSubmit) {
+                return submitted;
+            }
+            // some submission might fail if these are done inline and failed.
+            logger.trace("Not all submissions succeeded. Only {} of {} SQEs were submitted.", ret, toSubmit);
+
+            toSubmit -= ret;
+        }
+    }
+
+    private int ioUringEnter0(int toSubmit, int minComplete, int f) {
         if (logger.isTraceEnabled()) {
             logger.trace("io_uring_enter(ring={}, enterRing={}, toSubmit={}, minComplete={}, flags={}): {}",
                     ringFd, enterRingFd, toSubmit, minComplete, f, toString());
