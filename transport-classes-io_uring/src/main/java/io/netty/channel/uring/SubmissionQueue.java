@@ -273,9 +273,10 @@ final class SubmissionQueue {
             if (ret == toSubmit) {
                 return submitted;
             }
-            // some submission might fail if these are done inline and failed.
-            logger.trace("Not all submissions succeeded. Only {} of {} SQEs were submitted.", ret, toSubmit);
-
+            if (logger.isTraceEnabled()) {
+                // some submission might fail if these are done inline and failed.
+                logger.trace("Not all submissions succeeded. Only {} of {} SQEs were submitted.", ret, toSubmit);
+            }
             toSubmit -= ret;
         }
     }
