@@ -71,7 +71,6 @@ public class IoUringBufferRingTest {
 
     @Test
     public void testProviderBufferRead() throws InterruptedException {
-
         IoUringIoHandlerConfiguration ioUringIoHandlerConfiguration = new IoUringIoHandlerConfiguration();
         BufferRingConfig bufferRingConfig = new BufferRingConfig((short) 1, (short) 2, 1024, ByteBufAllocator.DEFAULT);
         ioUringIoHandlerConfiguration.appendBufferRingConfig(bufferRingConfig);

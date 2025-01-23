@@ -15,12 +15,13 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.AbstractByteBuf;
 import io.netty.buffer.AbstractReferenceCountedByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,22 +33,17 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 
 final class IoUringBufferRing {
-
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringBufferRing.class);
     // todo 8 doesn't have any particular meaning. It's just my intuition.
     // Maybe we can find a more appropriate value.
     private static final int BATCH_ALLOCATE_SIZE =
             SystemPropertyUtil.getInt("io.netty.iouring.bufferRing.allocate.batch.size", 8);
 
     private final long ioUringBufRingAddr;
-
     private final short entries;
-
     private final short mask;
-
     private final short bufferGroupId;
-
     private final int ringFd;
-
     private final ByteBuf[] userspaceBufferHolder;
     private final int chunkSize;
     private final IoUringIoHandler source;
@@ -57,7 +53,6 @@ final class IoUringBufferRing {
 
     private short nextIndex;
     private boolean hasSpareBuffer;
-
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
                       short entries, short bufferGroupId,
@@ -74,7 +69,18 @@ final class IoUringBufferRing {
         this.hasSpareBuffer = false;
         this.source = ioUringIoHandler;
         this.byteBufAllocator = byteBufAllocator;
+        // Pre-fill the tasks to reduce GC.
         this.recycleBufferTasks = new Runnable[entries];
+        for (short i = 0; i < entries; i++) {
+            final short bid = i;
+            recycleBufferTasks[i] = () -> {
+                try {
+                    addToRing(bid, true);
+                } catch (Throwable t) {
+                    logger.error("Failed to recycle buffer for bid " + bid, t);
+                }
+            };
+        }
         this.exhaustedEvent = new BufferRingExhaustedEvent(bufferGroupId);
     }
 
@@ -153,12 +159,6 @@ final class IoUringBufferRing {
         short bid = nextIndex;
         userspaceBufferHolder[bid] = byteBuf;
         addToRing(nextIndex, false);
-        recycleBufferTasks[bid] = new Runnable() {
-            @Override
-            public void run() {
-                addToRing(bid, true);
-            }
-        };
         nextIndex++;
     }
 
