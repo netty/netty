@@ -265,7 +265,12 @@ public final class IoUringIoHandler implements IoHandler {
         }
         // Try to drain all the IO from the queue first...
         long udata = UserData.encode(RINGFD_ID, Native.IORING_OP_NOP, (short) 0);
-        submissionQueue.addNop((byte) Native.IOSQE_IO_DRAIN, udata);
+        // We need to also specify the Native.IOSQE_LINK flag for it to work as otherwise it is not correctly linked
+        // with the timeout.
+        // See:
+        // - https://man7.org/linux/man-pages/man2/io_uring_enter.2.html
+        // - https://git.kernel.dk/cgit/liburing/commit/?h=link-timeout&id=bc1bd5e97e2c758d6fd975bd35843b9b2c770c5a
+        submissionQueue.addNop((byte) (Native.IOSQE_IO_DRAIN | Native.IOSQE_LINK), udata);
         // ... but only wait for 200 milliseconds on this
         udata = UserData.encode(RINGFD_ID, Native.IORING_OP_LINK_TIMEOUT, (short) 0);
         submissionQueue.addLinkTimeout(TimeUnit.MILLISECONDS.toNanos(200), udata);
