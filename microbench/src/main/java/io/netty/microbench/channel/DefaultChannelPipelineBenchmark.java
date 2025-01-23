@@ -298,8 +298,9 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
             },
     };
 
-    private static final int PIPELINE_ARRAY_LENGTH = 2048;
-    private static final int PIPELINE_ARRAY_MASK = PIPELINE_ARRAY_LENGTH - 1;
+    @Param({ "1024" })
+    private int pipelineArrayLength;
+    private int pipelineArrayMask;
 
     @Param({ "16" })
     public int extraHandlers;
@@ -311,9 +312,10 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
     @Setup(Level.Iteration)
     public void setup() {
         SplittableRandom rng = new SplittableRandom();
-        pipelines = new ChannelPipeline[PIPELINE_ARRAY_LENGTH];
-        promises = new ChannelPromise[PIPELINE_ARRAY_LENGTH];
-        for (int i = 0; i < PIPELINE_ARRAY_LENGTH; i++) {
+        pipelineArrayMask = pipelineArrayLength - 1;
+        pipelines = new ChannelPipeline[pipelineArrayLength];
+        promises = new ChannelPromise[pipelineArrayLength];
+        for (int i = 0; i < pipelineArrayLength; i++) {
             EmbeddedChannel channel = new EmbeddedChannel();
             channel.config().setAutoRead(false);
             ChannelPipeline pipeline = channel.pipeline();
@@ -337,7 +339,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     public void propagateEvent(Blackhole hole) {
-        ChannelPipeline pipeline = pipelines[pipelineCounter++ & PIPELINE_ARRAY_MASK];
+        ChannelPipeline pipeline = pipelines[pipelineCounter++ & pipelineArrayMask];
         hole.consume(pipeline.fireChannelReadComplete());
     }
 
@@ -345,7 +347,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark()
     public void propagateVariety(Blackhole hole) {
-        int index = pipelineCounter++ & PIPELINE_ARRAY_MASK;
+        int index = pipelineCounter++ & pipelineArrayMask;
         ChannelPipeline pipeline = pipelines[index];
         hole.consume(pipeline.fireChannelActive());             // 1
         hole.consume(pipeline.fireChannelRead(MESSAGE));        // 2
