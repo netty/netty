@@ -1455,7 +1455,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
-    protected final void setIndex0(int readerIndex, int writerIndex) {
+    final void setIndex0(int readerIndex, int writerIndex) {
         this.readerIndex = readerIndex;
         this.writerIndex = writerIndex;
     }
