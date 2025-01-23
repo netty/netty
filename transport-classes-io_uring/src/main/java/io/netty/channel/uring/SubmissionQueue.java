@@ -57,12 +57,15 @@ final class SubmissionQueue {
     final int ringSize;
     final long ringAddress;
     final int ringFd;
+    int enterRingFd;
+    private int enterFlags;
     private int head;
     private int tail;
 
     SubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
                     long kFlagsAddress, long kDroppedAddress, long kArrayAddress,
-                    long submissionQueueArrayAddress, int ringSize, long ringAddress, int ringFd) {
+                    long submissionQueueArrayAddress, int ringSize, long ringAddress,
+                    int ringFd) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
         this.kFlagsAddress = kFlagsAddress;
@@ -72,6 +75,7 @@ final class SubmissionQueue {
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
+        this.enterRingFd = ringFd;
         this.ringEntries = PlatformDependent.getIntVolatile(kRingEntriesAddress);
         this.ringMask = PlatformDependent.getIntVolatile(kRingMaskAddress);
         this.head = PlatformDependent.getIntVolatile(kHeadAddress);
@@ -85,6 +89,22 @@ final class SubmissionQueue {
         for (int i = 0; i < ringEntries; i++, address += INT_SIZE) {
             PlatformDependent.putInt(address, i);
         }
+    }
+
+    void tryRegisterRingFd() {
+        // Try to use IORING_REGISTER_RING_FDS.
+        // See https://manpages.debian.org/unstable/liburing-dev/io_uring_register.2.en.html#IORING_REGISTER_RING_FDS
+        int enterRingFd = Native.ioUringRegisterRingFds(ringFd);
+        final int enterFlags;
+        if (enterRingFd < 0) {
+            // Use of IORING_REGISTER_RING_FDS failed, just use the ring fd directly.
+            enterRingFd = ringFd;
+            enterFlags = 0;
+        } else {
+            enterFlags = Native.IORING_ENTER_REGISTERED_RING;
+        }
+        this.enterRingFd = enterRingFd;
+        this.enterFlags = enterFlags;
     }
 
     private long enqueueSqe0(byte opcode, byte flags, short ioPrio, int fd, long union1, long union2, int len,
@@ -139,11 +159,11 @@ final class SubmissionQueue {
 
         if (logger.isTraceEnabled()) {
             if (opcode == Native.IORING_OP_WRITEV || opcode == Native.IORING_OP_READV) {
-                logger.trace("add(ring {}): {}(fd={}, len={} ({} bytes), off={}, data={})",
-                        ringFd, Native.opToStr(opcode), fd, len, Iov.sumSize(union2, len), union1, udata);
+                logger.trace("add(ring={}, enterRing:{} ): {}(fd={}, len={} ({} bytes), off={}, data={})",
+                        ringFd, enterRingFd, Native.opToStr(opcode), fd, len, Iov.sumSize(union2, len), union1, udata);
             } else {
-                logger.trace("add(ring {}): {}(fd={}, len={}, off={}, data={})",
-                        ringFd, Native.opToStr(opcode), fd, len, union1, udata);
+                logger.trace("add(ring={}, enterRing:{}): {}(fd={}, len={}, off={}, data={})",
+                        ringFd, enterRingFd, Native.opToStr(opcode), fd, len, union1, udata);
             }
         }
     }
@@ -161,7 +181,9 @@ final class SubmissionQueue {
     }
 
     long addNop(byte flags, long udata) {
-        return enqueueSqe0(Native.IORING_OP_NOP, flags, (short) 0, 0, 0, 0, 0, 0, udata,
+        // Mimic what liburing does:
+        // https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L592
+        return enqueueSqe0(Native.IORING_OP_NOP, flags, (short) 0, -1, 0, 0, 0, 0, udata,
                 (short) 0, (short) 0, 0, 0);
     }
 
@@ -184,8 +206,10 @@ final class SubmissionQueue {
                 0, udata, (short) 0, (short) 0, 0, 0);
     }
 
+    // Mimic what liburing does:
+    // https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L673
     long addCancel(long sqeToCancel, long udata) {
-        return enqueueSqe0(Native.IORING_OP_ASYNC_CANCEL, (byte) 0, (short) 0, 0, 0, sqeToCancel, 0, 0,
+        return enqueueSqe0(Native.IORING_OP_ASYNC_CANCEL, (byte) 0, (short) 0, -1, 0, sqeToCancel, 0, 0,
                 udata, (short) 0, (short) 0, 0, 0);
     }
 
@@ -200,7 +224,7 @@ final class SubmissionQueue {
             return submit(submit, 1, Native.IORING_ENTER_GETEVENTS);
         }
         assert submit == 0;
-        int ret = Native.ioUringEnter(ringFd, 0, 1, Native.IORING_ENTER_GETEVENTS);
+        int ret = ioUringEnter(0, 1, Native.IORING_ENTER_GETEVENTS);
         if (ret < 0) {
             throw new RuntimeException("ioUringEnter syscall returned " + ret);
         }
@@ -208,11 +232,8 @@ final class SubmissionQueue {
     }
 
     private int submit(int toSubmit, int minComplete, int flags) {
-        if (logger.isTraceEnabled()) {
-            logger.trace("submit(ring {}): {}", ringFd, toString());
-        }
         PlatformDependent.putIntOrdered(kTailAddress, tail); // release memory barrier
-        int ret = Native.ioUringEnter(ringFd, toSubmit, minComplete, flags);
+        int ret = ioUringEnter(toSubmit, minComplete, flags);
         head = PlatformDependent.getIntVolatile(kHeadAddress); // acquire memory barrier
         if (ret != toSubmit) {
             if (ret < 0) {
@@ -222,6 +243,15 @@ final class SubmissionQueue {
             logger.trace("Not all submissions succeeded. Only {} of {} SQEs were submitted.", ret, toSubmit);
         }
         return ret;
+    }
+
+    private int ioUringEnter(int toSubmit, int minComplete, int flags) {
+        int f = enterFlags | flags;
+        if (logger.isTraceEnabled()) {
+            logger.trace("io_uring_enter(ring={}, enterRing={}, toSubmit={}, minComplete={}, flags={}): {}",
+                    ringFd, enterRingFd, toSubmit, minComplete, f, toString());
+        }
+        return Native.ioUringEnter(enterRingFd, toSubmit, minComplete, f);
     }
 
     public int count() {

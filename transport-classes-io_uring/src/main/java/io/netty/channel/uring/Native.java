@@ -252,6 +252,7 @@ final class Native {
     }
 
     static final int IORING_ENTER_GETEVENTS = NativeStaticallyReferencedJniMethods.ioringEnterGetevents();
+    static final int IORING_ENTER_REGISTERED_RING = 1 << 4;
     static final int IOSQE_ASYNC = NativeStaticallyReferencedJniMethods.iosqeAsync();
     static final int IOSQE_LINK = NativeStaticallyReferencedJniMethods.iosqeLink();
     static final int IOSQE_IO_DRAIN = NativeStaticallyReferencedJniMethods.iosqeDrain();
@@ -421,9 +422,8 @@ final class Native {
     private static native long[] ioUringSetup(int entries, int setupFlags);
 
     static native int ioUringRegisterIoWqMaxWorkers(int ringFd, int maxBoundedValue, int maxUnboundedValue);
-
     static native int ioUringRegisterEnableRings(int ringFd);
-
+    static native int ioUringRegisterRingFds(int ringFds);
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
     static native void eventFdWrite(int fd, long value);
@@ -441,7 +441,7 @@ final class Native {
     static native void ioUringExit(long submissionQueueArrayAddress, int submissionQueueRingEntries,
                                           long submissionQueueRingAddress, int submissionQueueRingSize,
                                           long completionQueueRingAddress, int completionQueueRingSize,
-                                          int ringFd);
+                                          int ringFd, int enterRingFd);
 
     private static native int blockingEventFd();
 

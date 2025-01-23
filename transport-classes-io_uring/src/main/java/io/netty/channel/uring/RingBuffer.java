@@ -20,10 +20,24 @@ final class RingBuffer {
     private final SubmissionQueue ioUringSubmissionQueue;
     private final CompletionQueue ioUringCompletionQueue;
     private final int features;
-    RingBuffer(SubmissionQueue ioUringSubmissionQueue, CompletionQueue ioUringCompletionQueue, int features) {
+
+    RingBuffer(SubmissionQueue ioUringSubmissionQueue,
+               CompletionQueue ioUringCompletionQueue, int features) {
         this.ioUringSubmissionQueue = ioUringSubmissionQueue;
         this.ioUringCompletionQueue = ioUringCompletionQueue;
         this.features = features;
+    }
+
+    /**
+     * Enable ring. This method must be called from the same method that will call {@link SubmissionQueue#submit()} and
+     * {@link SubmissionQueue#submitAndWait()}.
+     */
+    void enable() {
+        // We create our ring in disabled mode and so need to enable it first.
+        Native.ioUringRegisterEnableRings(fd());
+        // Now also register the ring filedescriptor itself. This needs to happen in the same thread
+        // that will also call the io_uring_enter(...)
+        ioUringSubmissionQueue.tryRegisterRingFd();
     }
 
     int fd() {
@@ -50,6 +64,7 @@ final class RingBuffer {
                 ioUringSubmissionQueue.ringSize,
                 ioUringCompletionQueue.ringAddress,
                 ioUringCompletionQueue.ringSize,
-                ioUringCompletionQueue.ringFd);
+                ioUringSubmissionQueue.ringFd,
+                ioUringSubmissionQueue.enterRingFd);
     }
 }

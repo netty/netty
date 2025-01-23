@@ -117,8 +117,7 @@ public final class IoUringIoHandler implements IoHandler {
 
     @Override
     public void initialize() {
-        // We create our ring in disabled mode and so need to enable it first.
-        Native.ioUringRegisterEnableRings(ringBuffer.fd());
+        ringBuffer.enable();
     }
 
     @Override
