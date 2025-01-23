@@ -31,8 +31,10 @@ public final class IoUring {
     private static final boolean IORING_SETUP_SUBMIT_ALL_SUPPORTED;
     private static final boolean IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
     private static final boolean IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
+    private static final InternalLogger logger;
 
     static {
+        logger = InternalLoggerFactory.getInstance(IoUring.class);
         Throwable cause = null;
         boolean socketNonEmptySupported = false;
         boolean spliceSupported = false;
@@ -82,11 +84,23 @@ public final class IoUring {
             cause = t;
         }
         if (cause != null) {
-            InternalLogger logger = InternalLoggerFactory.getInstance(IoUring.class);
             if (logger.isTraceEnabled()) {
                 logger.debug("IoUring support is not available", cause);
             } else if (logger.isDebugEnabled()) {
                 logger.debug("IoUring support is not available: {}", cause.getMessage());
+            }
+        } else {
+            if (logger.isDebugEnabled()) {
+                logger.debug("IoUring support is available (" +
+                        "IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED={}, " +
+                        "IORING_SPLICE_SUPPORTED={}, " +
+                        "IORING_ACCEPT_NO_WAIT_SUPPORTED={}, " +
+                        "IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED={}, " +
+                        "IORING_SETUP_SUBMIT_ALL_SUPPORTED={}, " +
+                        "IORING_SETUP_SINGLE_ISSUER_SUPPORTED={}, " +
+                        "IORING_SETUP_DEFER_TASKRUN_SUPPORTED={}" +
+                        ")", socketNonEmptySupported, spliceSupported, acceptSupportNoWait,
+                        registerIowqWorkersSupported, submitAllSupported, singleIssuerSupported, deferTaskrunSupported);
             }
         }
         UNAVAILABILITY_CAUSE = cause;
