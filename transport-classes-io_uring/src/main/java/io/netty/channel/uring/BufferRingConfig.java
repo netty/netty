@@ -75,7 +75,7 @@ public final class BufferRingConfig {
     }
 
     private static int checkInitSize(int initSize, short bufferRingSize) {
-        initSize = ObjectUtil.checkPositiveOrZero(initSize, "initSize");
+        ObjectUtil.checkPositiveOrZero(initSize, "initSize");
         if (initSize > bufferRingSize) {
             throw new IllegalArgumentException(
                     "initSize: " + initSize + " (expected: <= bufferRingSize: " + bufferRingSize + ')'

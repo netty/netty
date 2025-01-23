@@ -38,7 +38,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -70,8 +69,6 @@ public final class IoUringIoHandler implements IoHandler {
     private final FileDescriptor eventfd;
     private final long eventfdReadBuf;
     private final long timeoutMemoryAddress;
-
-    private final Queue<Runnable> beforeIOHook;
 
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
@@ -151,17 +148,6 @@ public final class IoUringIoHandler implements IoHandler {
     @Override
     public int run(IoExecutorContext context) {
         processedPerRun = 0;
-        for (;;) {
-            Runnable poll = beforeIOHook.poll();
-            if (poll == null) {
-                break;
-            }
-            try {
-                poll.run();
-            } catch (Throwable t) {
-                logger.error("Failed to run before io task", t);
-            }
-        }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         if (!completionQueue.hasCompletions() && context.canBlock()) {
@@ -191,18 +177,14 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    void submitBeforeIO(Runnable runnable) {
+    void runInExecutorThread(Runnable runnable) {
         //if we are in the executor thread we can run the runnable directly
-        if (this.executor.inExecutorThread(Thread.currentThread())) {
-            try {
-                runnable.run();
-            } catch (Throwable t) {
-                logger.error("Failed to run before io task", t);
-            }
+        if (executor.inExecutorThread(Thread.currentThread())) {
+            // Just directly run.
+            runnable.run();
         } else {
-            beforeIOHook.add(runnable);
-            //wakeup ioHandler to process the runnable as soon as possible
-            Native.eventFdWrite(eventfd.intValue(), 1L);
+            // This will also wakeup the blocked run(...) method if needed.
+            executor.execute(runnable);
         }
     }
 

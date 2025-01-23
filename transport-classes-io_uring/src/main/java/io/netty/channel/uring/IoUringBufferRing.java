@@ -53,17 +53,16 @@ final class IoUringBufferRing {
     private final IoUringIoHandler source;
     private final ByteBufAllocator byteBufAllocator;
     private final Runnable[] recycleBufferTasks;
+    private final BufferRingExhaustedEvent exhaustedEvent;
 
     private short nextIndex;
     private boolean hasSpareBuffer;
 
-    private final BufferRingExhaustedEvent exhaustedEvent;
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
                       short entries, short bufferGroupId,
                       int chunkSize, IoUringIoHandler ioUringIoHandler,
-                      ByteBufAllocator byteBufAllocator
-    ) {
+                      ByteBufAllocator byteBufAllocator) {
         this.ioUringBufRingAddr = ioUringBufRingAddr;
         this.entries = entries;
         this.mask = (short) (entries - 1);
@@ -95,7 +94,7 @@ final class IoUringBufferRing {
     }
 
     void recycleBuffer(short bid) {
-        source.submitBeforeIO(recycleBufferTasks[bid]);
+        source.runInExecutorThread(recycleBufferTasks[bid]);
     }
 
     void addToRing(short bid, boolean needAdvance) {
@@ -209,7 +208,6 @@ final class IoUringBufferRing {
     class UserspaceIoUringBuffer extends AbstractReferenceCountedByteBuf {
 
         private final short bid;
-
         private final ByteBuf userspaceBuffer;
 
         protected UserspaceIoUringBuffer(int maxCapacity, short bid, ByteBuf userspaceBuffer) {

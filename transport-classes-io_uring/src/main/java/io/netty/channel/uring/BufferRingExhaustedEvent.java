@@ -19,7 +19,7 @@ package io.netty.channel.uring;
  * Event that is fired when a cqe`s res is NO_BUFFER
  */
 public final class BufferRingExhaustedEvent {
-    private short bufferGroupId;
+    private final short bufferGroupId;
 
     BufferRingExhaustedEvent(short bufferGroupId) {
         this.bufferGroupId = bufferGroupId;
