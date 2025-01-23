@@ -222,16 +222,16 @@ public final class IoUringIoOps implements IoOps {
     /**
      * Returns a new {@code OP_ASYNC_CANCEL} {@link IoUringIoOps}.
      *
-     * @param fd        the filedescriptor
      * @param flags     the flags.
      * @param userData  the user data that identify a previous submitted {@link IoUringIoOps} that should be cancelled.
      *                  The value to use here is returned by {@link IoUringIoRegistration#submit(IoOps)}.
      * @param data      the data
      * @return          ops.
      */
-    static IoUringIoOps newAsyncCancel(int fd, byte flags, long userData, short data) {
+    static IoUringIoOps newAsyncCancel(byte flags, long userData, short data) {
         // Best effort to cancel the
-        return new IoUringIoOps(Native.IORING_OP_ASYNC_CANCEL, flags, (short) 0, fd, 0, userData, 0, 0,
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L679
+        return new IoUringIoOps(Native.IORING_OP_ASYNC_CANCEL, flags, (short) 0, -1, 0, userData, 0, 0,
                 data, (short) 0, (short) 0, 0, 0);
     }
 
@@ -244,6 +244,7 @@ public final class IoUringIoOps implements IoOps {
      * @return          ops.
      */
     static IoUringIoOps newClose(int fd, byte flags, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L764
         return new IoUringIoOps(Native.IORING_OP_CLOSE, flags, (short) 0, fd, 0L, 0L, 0, 0, data,
                 (short) 0, (short) 0, 0, 0);
     }
@@ -258,6 +259,7 @@ public final class IoUringIoOps implements IoOps {
      * @return          ops.
      */
     static IoUringIoOps newPollAdd(int fd, byte flags, int mask, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L554
         return new IoUringIoOps(Native.IORING_OP_POLL_ADD, flags, (short) 0, fd, 0L, 0L, 0, mask, data,
                 (short) 0, (short) 0, 0, 0);
     }
@@ -272,6 +274,7 @@ public final class IoUringIoOps implements IoOps {
      * @return          ops.
      */
     static IoUringIoOps newSendmsg(int fd, byte flags, int msgFlags, long address, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L539
         return new IoUringIoOps(Native.IORING_OP_SENDMSG, flags, (short) 0, fd, 0L, address, 1, msgFlags, data,
                 (short) 0, (short) 0, 0, 0);
     }
@@ -286,6 +289,7 @@ public final class IoUringIoOps implements IoOps {
      * @return                      ops.
      */
     static IoUringIoOps newConnect(int fd, byte flags, long remoteMemoryAddress, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L695
         return new IoUringIoOps(Native.IORING_OP_CONNECT, flags, (short) 0, fd, Native.SIZEOF_SOCKADDR_STORAGE,
                 remoteMemoryAddress, 0, 0, data, (short) 0, (short) 0, 0, 0);
     }
@@ -293,15 +297,15 @@ public final class IoUringIoOps implements IoOps {
     /**
      * Returns a new {@code OP_POLL_REMOVE} {@link IoUringIoOps}.
      *
-     * @param fd        the filedescriptor
      * @param flags     the flags.
      * @param userData  the user data that identify a previous submitted {@link IoUringIoOps} that should be cancelled.
      *                  The value to use here is returned by {@link IoUringIoRegistration#submit(IoOps)}.
      * @param data      the data
      * @return          ops.
      */
-    static IoUringIoOps newPollRemove(int fd, byte flags, long userData, short data) {
-        return new IoUringIoOps(Native.IORING_OP_POLL_REMOVE, flags, (short) 0, fd, 0, userData, 0, 0, data,
+    static IoUringIoOps newPollRemove(byte flags, long userData, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L568
+        return new IoUringIoOps(Native.IORING_OP_POLL_REMOVE, flags, (short) 0, -1, 0, userData, 0, 0, data,
                 (short) 0, (short) 0, 0, 0);
     }
 
@@ -320,7 +324,7 @@ public final class IoUringIoOps implements IoOps {
      */
     static IoUringIoOps newAccept(int fd, byte flags, int acceptFlags, short ioPrio, long acceptedAddressMemoryAddress,
                                          long acceptedAddressLengthMemoryAddress, short data) {
-
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L625
         return new IoUringIoOps(Native.IORING_OP_ACCEPT, flags, ioPrio, fd, acceptedAddressLengthMemoryAddress,
                 acceptedAddressMemoryAddress, 0, acceptFlags, data, (short) 0, (short) 0, 0, 0);
     }
@@ -338,6 +342,7 @@ public final class IoUringIoOps implements IoOps {
      */
     static IoUringIoOps newWritev(int fd, byte flags, int writevFlags, long memoryAddress,
                                          int length, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L500
         return new IoUringIoOps(Native.IORING_OP_WRITEV, flags, (short) 0, fd,
                 0, memoryAddress, length, writevFlags, data, (short) 0, (short) 0, 0, 0);
     }
@@ -355,6 +360,7 @@ public final class IoUringIoOps implements IoOps {
      */
     static IoUringIoOps newWrite(
             int fd, byte flags, int writeFlags, long memoryAddress, int length, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L794
         return new IoUringIoOps(Native.IORING_OP_WRITE, flags, (short) 0, fd,
                 0, memoryAddress, length, writeFlags, data, (short) 0, (short) 0, 0, 0);
     }
@@ -373,6 +379,7 @@ public final class IoUringIoOps implements IoOps {
      */
     static IoUringIoOps newRecv(
             int fd, byte flags, short ioPrio, int recvFlags, long memoryAddress, int length, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L898
         return new IoUringIoOps(Native.IORING_OP_RECV, flags, ioPrio, fd,
                 0, memoryAddress, length, recvFlags, data, (short) 0, (short) 0, 0, 0);
     }
@@ -388,6 +395,7 @@ public final class IoUringIoOps implements IoOps {
      * @return                                      ops.
      */
     static IoUringIoOps newRecvmsg(int fd, byte flags, int msgFlags, long memoryAddress, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L523
         return new IoUringIoOps(
                 Native.IORING_OP_RECVMSG, flags, (short) 0, fd, 0L, memoryAddress, 1, msgFlags, data,
                 (short) 0, (short) 0, 0, 0);
@@ -406,6 +414,7 @@ public final class IoUringIoOps implements IoOps {
      */
     static IoUringIoOps newSend(
             int fd, byte flags, int sendFlags, long memoryAddress, int length, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L839
         return new IoUringIoOps(Native.IORING_OP_SEND, flags, (short) 0, fd,
                 0, memoryAddress, length, sendFlags, data, (short) 0, (short) 0, 0, 0);
     }
@@ -420,6 +429,7 @@ public final class IoUringIoOps implements IoOps {
      * @return                                      ops.
      */
     static IoUringIoOps newShutdown(int fd, byte flags, int how, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L1023
         return new IoUringIoOps(Native.IORING_OP_SHUTDOWN, flags, (short) 0, fd, 0, 0, how, 0, data,
                 (short) 0, (short) 0, 0, 0);
     }
@@ -442,6 +452,7 @@ public final class IoUringIoOps implements IoOps {
                                          int nbytes,
                                          int splice_flags,
                                          short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L454
         return new IoUringIoOps(
                 Native.IORING_OP_SPLICE, (byte) 0, (short) 0, fd_out, off_out, off_in,
                 nbytes, splice_flags, data, (short) 0, (short) 0, fd_in, 0
