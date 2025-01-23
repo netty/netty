@@ -18,12 +18,17 @@ package io.netty.microbench.channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.CompilerControl;
+import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.OperationsPerInvocation;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -32,53 +37,327 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-@Warmup(iterations = 5)
-@Measurement(iterations = 5)
-@State(Scope.Benchmark)
-public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
+import java.util.SplittableRandom;
 
-    private static final ChannelHandler NOOP_HANDLER = new ChannelInboundHandlerAdapter() {
+@Warmup(iterations = 10)
+@Measurement(iterations = 10)
+@Fork(0)
+@State(Scope.Thread)
+public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
+    private static final Object MESSAGE = new Object();
+
+    private abstract static class SharableInboundHandlerAdapter extends ChannelInboundHandlerAdapter {
         @Override
-        public boolean isSharable() {
+        public final boolean isSharable() {
             return true;
         }
-    };
+    }
 
-    private static final ChannelHandler CONSUMING_HANDLER = new ChannelInboundHandlerAdapter() {
+    private abstract static class SharableOutboundHandlerAdapter extends ChannelOutboundHandlerAdapter {
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) {
+        public final boolean isSharable() {
+            return true;
+        }
+    }
+
+    private static final ChannelHandler INBOUND_CONSUMING_HANDLER = new SharableInboundHandlerAdapter() {
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
             // NOOP
         }
 
         @Override
-        public boolean isSharable() {
-            return true;
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            // NOOP
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            // NOOP
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            // NOOP
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) {
+            // NOOP
         }
     };
 
-    @Param({ "4" })
+    private static final ChannelHandler OUTBOUND_CONSUMING_HANDLER = new SharableOutboundHandlerAdapter() {
+        @Override
+        public void read(ChannelHandlerContext ctx) throws Exception {
+            // NOOP
+        }
+
+        @Override
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            // NOOP
+        }
+
+        @Override
+        public void flush(ChannelHandlerContext ctx) throws Exception {
+            // NOOP
+        }
+    };
+
+    private static final ChannelHandler[] HANDLERS = {
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.fireChannelActive();
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.fireChannelInactive();
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    ctx.fireChannelRead(msg);
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    ctx.fireUserEventTriggered(evt);
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) {
+                    ctx.fireChannelReadComplete();
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.fireChannelActive();
+                }
+
+                @Override
+                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.fireChannelInactive();
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.fireChannelActive();
+                }
+
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    ctx.fireChannelRead(msg);
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.fireChannelActive();
+                }
+
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    ctx.fireUserEventTriggered(evt);
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.fireChannelActive();
+                }
+
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) {
+                    ctx.fireChannelReadComplete();
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.fireChannelInactive();
+                }
+
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    ctx.fireChannelRead(msg);
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.fireChannelInactive();
+                }
+
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    ctx.fireUserEventTriggered(evt);
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+                    ctx.fireChannelInactive();
+                }
+
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) {
+                    ctx.fireChannelReadComplete();
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    ctx.fireChannelRead(msg);
+                }
+
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    ctx.fireUserEventTriggered(evt);
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    ctx.fireChannelRead(msg);
+                }
+
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) {
+                    ctx.fireChannelReadComplete();
+                }
+            },
+            new SharableInboundHandlerAdapter() {
+                @Override
+                public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    ctx.fireUserEventTriggered(evt);
+                }
+
+                @Override
+                public void channelReadComplete(ChannelHandlerContext ctx) {
+                    ctx.fireChannelReadComplete();
+                }
+            },
+            new SharableOutboundHandlerAdapter() {
+                @Override
+                public void read(ChannelHandlerContext ctx) throws Exception {
+                    ctx.read();
+                }
+            },
+            new SharableOutboundHandlerAdapter() {
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                    ctx.write(msg, promise);
+                }
+            },
+            new SharableOutboundHandlerAdapter() {
+                @Override
+                public void flush(ChannelHandlerContext ctx) throws Exception {
+                    ctx.flush();
+                }
+            },
+            new SharableOutboundHandlerAdapter() {
+                @Override
+                public void read(ChannelHandlerContext ctx) throws Exception {
+                    ctx.read();
+                }
+
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                    ctx.write(msg, promise);
+                }
+            },
+            new SharableOutboundHandlerAdapter() {
+                @Override
+                public void read(ChannelHandlerContext ctx) throws Exception {
+                    ctx.read();
+                }
+
+                @Override
+                public void flush(ChannelHandlerContext ctx) throws Exception {
+                    ctx.flush();
+                }
+            },
+            new SharableOutboundHandlerAdapter() {
+                @Override
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                    ctx.write(msg, promise);
+                }
+
+                @Override
+                public void flush(ChannelHandlerContext ctx) throws Exception {
+                    ctx.flush();
+                }
+            },
+    };
+
+    private static final int PIPELINE_ARRAY_LENGTH = 2048;
+    private static final int PIPELINE_ARRAY_MASK = PIPELINE_ARRAY_LENGTH - 1;
+
+    @Param({ "16" })
     public int extraHandlers;
 
-    private ChannelPipeline pipeline;
+    private ChannelPipeline[] pipelines;
+    private ChannelPromise[] promises;
+    private int pipelineCounter;
 
     @Setup(Level.Iteration)
     public void setup() {
-        pipeline = new EmbeddedChannel().pipeline();
-        for (int i = 0; i < extraHandlers; i++) {
-            pipeline.addLast(NOOP_HANDLER);
+        SplittableRandom rng = new SplittableRandom();
+        pipelines = new ChannelPipeline[PIPELINE_ARRAY_LENGTH];
+        promises = new ChannelPromise[PIPELINE_ARRAY_LENGTH];
+        for (int i = 0; i < PIPELINE_ARRAY_LENGTH; i++) {
+            EmbeddedChannel channel = new EmbeddedChannel();
+            channel.config().setAutoRead(false);
+            ChannelPipeline pipeline = channel.pipeline();
+            pipeline.addLast(OUTBOUND_CONSUMING_HANDLER);
+            for (int j = 0; j < extraHandlers; j++) {
+                pipeline.addLast(HANDLERS[rng.nextInt(0, HANDLERS.length)]);
+            }
+            pipeline.addLast(INBOUND_CONSUMING_HANDLER);
+            pipelines[i] = pipeline;
+            promises[i] = pipeline.newPromise();
         }
-        pipeline.addLast(CONSUMING_HANDLER);
     }
 
     @TearDown
     public void tearDown() {
-        pipeline.channel().close();
+        for (ChannelPipeline pipeline : pipelines) {
+            pipeline.channel().close();
+        }
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     public void propagateEvent(Blackhole hole) {
-        for (int i = 0; i < 100; i++) {
-            hole.consume(pipeline.fireChannelReadComplete());
-        }
+        ChannelPipeline pipeline = pipelines[pipelineCounter++ & PIPELINE_ARRAY_MASK];
+        hole.consume(pipeline.fireChannelReadComplete());
+    }
+
+    @OperationsPerInvocation(12)
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+    @Benchmark()
+    public void propagateVariety(Blackhole hole) {
+        int index = pipelineCounter++ & PIPELINE_ARRAY_MASK;
+        ChannelPipeline pipeline = pipelines[index];
+        hole.consume(pipeline.fireChannelActive());             // 1
+        hole.consume(pipeline.fireChannelRead(MESSAGE));        // 2
+        hole.consume(pipeline.fireChannelRead(MESSAGE));        // 3
+        hole.consume(pipeline.write(MESSAGE, promises[index])); // 4
+        hole.consume(pipeline.fireChannelRead(MESSAGE));        // 5
+        hole.consume(pipeline.fireChannelRead(MESSAGE));        // 6
+        hole.consume(pipeline.write(MESSAGE, promises[index])); // 7
+        hole.consume(pipeline.fireChannelReadComplete());       // 8
+        hole.consume(pipeline.fireUserEventTriggered(MESSAGE)); // 9
+        hole.consume(pipeline.fireChannelWritabilityChanged()); // 10
+        hole.consume(pipeline.flush());                         // 11
+        hole.consume(pipeline.fireChannelInactive());           // 12
     }
 }
