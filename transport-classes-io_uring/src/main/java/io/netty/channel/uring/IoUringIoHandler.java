@@ -89,7 +89,7 @@ public final class IoUringIoHandler implements IoHandler {
     private final CompletionBuffer completionBuffer;
     private final IoExecutor executor;
 
-    IoUringIoHandler(IoExecutor executor, IoUringIoHandlerConfiguration config) {
+    IoUringIoHandler(IoExecutor executor, IoUringIoHandlerConfig config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IoUring.ensureAvailability();
         this.executor = requireNonNull(executor, "executor");
@@ -547,7 +547,7 @@ public final class IoUringIoHandler implements IoHandler {
      * @return factory
      */
     public static IoHandlerFactory newFactory() {
-        return newFactory(new IoUringIoHandlerConfiguration());
+        return newFactory(new IoUringIoHandlerConfig());
     }
 
     /**
@@ -558,7 +558,7 @@ public final class IoUringIoHandler implements IoHandler {
      * @return              factory
      */
     public static IoHandlerFactory newFactory(int ringSize) {
-        IoUringIoHandlerConfiguration configuration = new IoUringIoHandlerConfiguration();
+        IoUringIoHandlerConfig configuration = new IoUringIoHandlerConfig();
         configuration.setRingSize(ringSize);
         return eventLoop -> new IoUringIoHandler(eventLoop, configuration);
     }
@@ -569,7 +569,7 @@ public final class IoUringIoHandler implements IoHandler {
      * @param config the io_uring configuration
      * @return factory
      */
-    public static IoHandlerFactory newFactory(IoUringIoHandlerConfiguration config) {
+    public static IoHandlerFactory newFactory(IoUringIoHandlerConfig config) {
         IoUring.ensureAvailability();
         ObjectUtil.checkNotNull(config, "config");
         return eventLoop -> new IoUringIoHandler(eventLoop, config);
