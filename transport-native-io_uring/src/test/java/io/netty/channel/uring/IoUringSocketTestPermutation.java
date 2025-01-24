@@ -47,7 +47,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
             WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true),
             IoUringIoHandler.newFactory(new IoUringIoHandlerConfig()
                     // Configure a buffer ring that we can easily enable by setting the correct IoUringChannelOption.
-                    .appendBufferRingConfig(
+                    .addBufferRingConfig(
                             new IoUringBufferRingConfig(BGID, (short) 16, 1024, ByteBufAllocator.DEFAULT))));
 
     @Override

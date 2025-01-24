@@ -74,14 +74,14 @@ public class IoUringBufferRingTest {
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
                 (short) 1, (short) 2, 1024, ByteBufAllocator.DEFAULT);
-        ioUringIoHandlerConfiguration.appendBufferRingConfig(bufferRingConfig);
+        ioUringIoHandlerConfiguration.addBufferRingConfig(bufferRingConfig);
 
         IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
                 (short) 2, (short) 16,
                 1024, ByteBufAllocator.DEFAULT,
                 12
         );
-        ioUringIoHandlerConfiguration.appendBufferRingConfig(bufferRingConfig1);
+        ioUringIoHandlerConfiguration.addBufferRingConfig(bufferRingConfig1);
 
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1,
                 IoUringIoHandler.newFactory(ioUringIoHandlerConfiguration)
