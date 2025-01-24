@@ -28,6 +28,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -550,7 +551,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private void clearHandlerContextCache() {
         AbstractChannelHandlerContext ctx = head;
         do {
-            ctx.contextCache = null;
+            Arrays.fill(ctx.contextCache, null);
+            ctx.contextCacheOutboundMasks = 0;
+            ctx.contextCacheInboundMasks = 0;
             ctx = ctx.next;
         } while (ctx != null);
     }

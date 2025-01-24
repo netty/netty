@@ -103,7 +103,9 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
     private Tasks invokeTasks;
-    volatile ContextCache contextCache;
+    volatile long contextCacheOutboundMasks;
+    volatile long contextCacheInboundMasks;
+    final AbstractChannelHandlerContext[] contextCache;
 
     private volatile int handlerState = INIT;
 
@@ -113,6 +115,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         this.pipeline = pipeline;
         childExecutor = executor;
         executionMask = mask(handlerClass);
+        contextCache = ChannelHandlerMask.initContextCache();
         // Its ordered if its driven by the EventLoop or the given Executor is an instanceof OrderedEventExecutor.
         ordered = executor == null || executor instanceof OrderedEventExecutor;
     }
@@ -939,41 +942,35 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private AbstractChannelHandlerContext findContextInbound(int mask) {
-        ContextCache cache = getContextCache();
-        AbstractChannelHandlerContext ctx = cache.getInbound(mask);
-        if (ctx != null) {
-            return ctx;
+        long inboundMasks = contextCacheInboundMasks; // Load masks before contextCache array.
+        int index = ChannelHandlerMask.packedMaskIndexOf(mask, inboundMasks);
+        if (ChannelHandlerMask.packedMaskIndexFound(index)) {
+            return ChannelHandlerMask.getFoundInbound(contextCache, index);
         }
-        ctx = this;
+        AbstractChannelHandlerContext ctx = this;
         EventExecutor currentExecutor = executor();
         do {
             ctx = ctx.next;
         } while (skipContext(ctx, currentExecutor, mask, MASK_ONLY_INBOUND));
-        cache.storeInbound(mask, ctx);
+        // Store updated masks after storing in contextCache array.
+        contextCacheInboundMasks = ChannelHandlerMask.storeInbound(contextCache, inboundMasks, ctx, mask);
         return ctx;
     }
 
     private AbstractChannelHandlerContext findContextOutbound(int mask) {
-        ContextCache cache = getContextCache();
-        AbstractChannelHandlerContext ctx = cache.getOutbound(mask);
-        if (ctx != null) {
-            return ctx;
+        long outboundMasks = contextCacheOutboundMasks; // Load masks before contextCache array.
+        int index = ChannelHandlerMask.packedMaskIndexOf(mask, outboundMasks);
+        if (ChannelHandlerMask.packedMaskIndexFound(index)) {
+            return ChannelHandlerMask.getFoundOutbound(contextCache, index);
         }
-        ctx = this;
+        AbstractChannelHandlerContext ctx = this;
         EventExecutor currentExecutor = executor();
         do {
             ctx = ctx.prev;
         } while (skipContext(ctx, currentExecutor, mask, MASK_ONLY_OUTBOUND));
-        cache.storeOutbound(mask, ctx);
+        // Store updated masks after storing in contextCache array.
+        contextCacheOutboundMasks = ChannelHandlerMask.storeOutbound(contextCache, outboundMasks, ctx, mask);
         return ctx;
-    }
-
-    private ContextCache getContextCache() {
-        ContextCache cache = contextCache;
-        if (cache == null) {
-            contextCache = cache = new ContextCache();
-        }
-        return cache;
     }
 
     private static boolean skipContext(
@@ -1197,58 +1194,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             invokeReadTask = ctx::read;
             invokeChannelWritableStateChangedTask = ctx::fireChannelWritabilityChanged;
             invokeFlushTask = ctx::invokeFlush;
-        }
-    }
-
-    static final class ContextCache {
-        private int maskOutbound1;
-        private AbstractChannelHandlerContext ctxOutbound1;
-        private int maskOutbound2;
-        private AbstractChannelHandlerContext ctxOutbound2;
-        private int maskInbound1;
-        private AbstractChannelHandlerContext ctxInbound1;
-        private int maskInbound2;
-        private AbstractChannelHandlerContext ctxInbound2;
-        private int maskInbound3;
-        private AbstractChannelHandlerContext ctxInbound3;
-
-        public AbstractChannelHandlerContext getOutbound(int mask) {
-            if (maskOutbound1 == mask) {
-                return ctxOutbound1;
-            }
-            if (maskOutbound2 == mask) {
-                return ctxOutbound2;
-            }
-            return null;
-        }
-
-        public void storeOutbound(int mask, AbstractChannelHandlerContext ctx) {
-            maskOutbound2 = maskOutbound1;
-            ctxOutbound2 = ctxOutbound1;
-            maskOutbound1 = mask;
-            ctxOutbound1 = ctx;
-        }
-
-        public AbstractChannelHandlerContext getInbound(int mask) {
-            if (maskInbound1 == mask) {
-                return ctxInbound1;
-            }
-            if (maskInbound2 == mask) {
-                return ctxInbound2;
-            }
-            if (maskInbound3 == mask) {
-                return ctxInbound3;
-            }
-            return null;
-        }
-
-        public void storeInbound(int mask, AbstractChannelHandlerContext ctx) {
-            maskInbound3 = maskInbound2;
-            ctxInbound3 = ctxInbound2;
-            maskInbound2 = maskInbound1;
-            ctxInbound2 = ctxInbound1;
-            maskInbound1 = mask;
-            ctxInbound1 = ctx;
         }
     }
 }
