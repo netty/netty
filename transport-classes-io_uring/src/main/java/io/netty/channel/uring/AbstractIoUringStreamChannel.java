@@ -16,7 +16,6 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -298,11 +297,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             // we still check it again here.
             // When the kernel does not support this feature, it helps the JIT to delete this branch.
             // only `first` value is true, we will recv with the buffer ring;
-            if (IoUring.isRegisterBufferRingSupported() && first && channelConfig.isEnableBufferSelectRead()) {
+            if (IoUring.isRegisterBufferRingSupported() && first) {
+
                 short bgId = channelConfig.getBufferRingConfig();
-                IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(bgId);
-                if (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull()) {
-                    return scheduleReadProviderBuffer(ioUringBufferRing);
+                if (bgId != IOUringStreamChannelConfig.DISABLE_BUFFER_SELECT_READ) {
+                    IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(bgId);
+                    if (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull()) {
+                        return scheduleReadProviderBuffer(ioUringBufferRing);
+                    }
                 }
             }
 

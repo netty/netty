@@ -18,12 +18,13 @@ package io.netty.channel.uring;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.Map;
 
 abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
 
-    private static final short DISABLE_BUFFER_SELECT_READ = -1;
+    static final short DISABLE_BUFFER_SELECT_READ = 0;
 
     private volatile short bufferGroupId = DISABLE_BUFFER_SELECT_READ;
 
@@ -57,24 +58,6 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
     }
 
     /**
-     * Returns {@code true}
-     * if <a href="https://man7.org/linux/man-pages/man3/io_uring_setup_buf_ring.3.html">Provider Buffer Read</a>
-     * is enabled, {@code false}
-     * otherwise.
-     */
-    boolean isEnableBufferSelectRead() {
-        return bufferGroupId != DISABLE_BUFFER_SELECT_READ;
-    }
-
-    /**
-     * enable provider buffer, See this <a href="https://lwn.net/Articles/815491/">LWN article</a> for more info
-     */
-    IOUringStreamChannelConfig disableBufferSelectRead() {
-        setBufferGroupId(DISABLE_BUFFER_SELECT_READ);
-        return this;
-    }
-
-    /**
      * Returns the buffer ring config.
      *
      * @return the buffer ring config.
@@ -84,13 +67,14 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
     }
 
     /**
-     * Set the buffer ring config.
+     * Set the buffer group id that will be used to select the correct ring buffer. This must have been configured
+     * via {@link BufferRingConfig}.
      *
      * @param bufferGroupId the buffer group id.
-     * @return
+     * @return              itself.
      */
     IOUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
-        this.bufferGroupId = bufferGroupId;
+        this.bufferGroupId = (short) ObjectUtil.checkPositiveOrZero(bufferGroupId, "bufferGroupId");
         return this;
     }
 }
