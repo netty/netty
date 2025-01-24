@@ -30,10 +30,29 @@ public final class IoUringBufferRingConfig {
     private final ByteBufAllocator allocator;
     private final int initSize;
 
+    /**
+     * Create a new configuration.
+     *
+     * @param bgId              the buffer group id to use.
+     * @param bufferRingSize    the size of the ring
+     * @param chunkSize         the chunk size of each {@link io.netty.buffer.ByteBuf} that is allocated out of the
+     *                          {@link ByteBufAllocator} to fill the ring.
+     * @param allocator         the {@link ByteBufAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
+     */
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize, ByteBufAllocator allocator) {
         this(bgId, bufferRingSize, chunkSize, allocator, 0);
     }
 
+    /**
+     * Create a new configuration.
+     *
+     * @param bgId              the buffer group id to use.
+     * @param bufferRingSize    the size of the ring
+     * @param chunkSize         the chunk size of each {@link io.netty.buffer.ByteBuf} that is allocated out of the
+     *                          {@link ByteBufAllocator} to fill the ring.
+     * @param allocator         the {@link ByteBufAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
+     * @param initSize          the number of buffers that are created during initialization.
+     */
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize,
                                    ByteBufAllocator allocator, int initSize) {
         this.bgId = ObjectUtil.checkPositive(bgId, "bgId");
@@ -43,22 +62,48 @@ public final class IoUringBufferRingConfig {
         this.initSize = checkInitSize(initSize, bufferRingSize);
     }
 
+    /**
+     * Returns the buffer group id to use.
+     *
+     * @return the buffer group id to use.
+     */
     public short bufferGroupId() {
         return bgId;
     }
 
+    /**
+     * Returns the size of the ring.
+     *
+     * @return the size of the ring.
+     */
     public short bufferRingSize() {
         return bufferRingSize;
     }
 
+    /**
+     * Returns the chunk size of each {@link io.netty.buffer.ByteBuf} that is allocated out of the
+     * {@link ByteBufAllocator} to fill the ring.
+     *
+     * @return  the chunksize.
+     */
     public int chunkSize() {
         return chunkSize;
     }
 
+    /**
+     * Returns the {@link ByteBufAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
+     *
+     * @return  the allocator.
+     */
     public ByteBufAllocator allocator() {
         return allocator;
     }
 
+    /**
+     * Returns the number of buffers that are created during initialization.
+     *
+     * @return  init size.
+     */
     public int initSize() {
         return initSize;
     }
