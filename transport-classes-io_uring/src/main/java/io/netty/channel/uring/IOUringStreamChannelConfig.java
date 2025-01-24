@@ -25,7 +25,7 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
 
     private static final short DISABLE_BUFFER_SELECT_READ = -1;
 
-    private volatile short bufferGroupId;
+    private volatile short bufferGroupId = DISABLE_BUFFER_SELECT_READ;
 
     IOUringStreamChannelConfig(Channel channel) {
         super(channel);
