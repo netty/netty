@@ -57,15 +57,14 @@ final class IoUringBufferRing {
                       short entries, short bufferGroupId,
                       int chunkSize, IoUringIoHandler ioUringIoHandler,
                       ByteBufAllocator byteBufAllocator) {
+        assert entries % 2 == 0;
         this.ioUringBufRingAddr = ioUringBufRingAddr;
         this.entries = entries;
         this.mask = (short) (entries - 1);
         this.bufferGroupId = bufferGroupId;
         this.ringFd = ringFd;
         this.userspaceBufferHolder = new ByteBuf[entries];
-        this.nextIndex = 0;
         this.chunkSize = chunkSize;
-        this.hasSpareBuffer = false;
         this.source = ioUringIoHandler;
         this.byteBufAllocator = byteBufAllocator;
         this.exhaustedEvent = new BufferRingExhaustedEvent(bufferGroupId);
@@ -88,6 +87,7 @@ final class IoUringBufferRing {
 
     void addToRing(short bid, boolean needAdvance) {
         ByteBuf byteBuf = userspaceBufferHolder[bid];
+
         long tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
         int ringIndex = oldTail & mask;
@@ -128,7 +128,7 @@ final class IoUringBufferRing {
             ByteBuf byteBuf = bigChunk.retainedSlice(j * chunkSize, chunkSize);
             short bid = nextIndex;
             userspaceBufferHolder[bid] = byteBuf;
-            addToRing(nextIndex, false);
+            addToRing(bid, false);
             nextIndex++;
         }
         bigChunk.release();
@@ -137,7 +137,7 @@ final class IoUringBufferRing {
     ByteBuf borrowBuffer(int bid, int maxCap) {
         ByteBuf byteBuf = userspaceBufferHolder[bid];
         ByteBuf slice = byteBuf.retainedSlice(0, maxCap);
-        return new UserspaceIoUringBuffer(maxCap, (short) bid, slice);
+        return new UserspaceIoUringBuffer(this, (short) bid, slice);
     }
 
     private void advanceTail(int count) {
@@ -177,13 +177,14 @@ final class IoUringBufferRing {
         }
     }
 
-    class UserspaceIoUringBuffer extends AbstractReferenceCountedByteBuf implements Runnable {
-
+    static final class UserspaceIoUringBuffer extends AbstractReferenceCountedByteBuf implements Runnable {
+        private final IoUringBufferRing ring;
         private final short bid;
         private final ByteBuf userspaceBuffer;
 
-        protected UserspaceIoUringBuffer(int maxCapacity, short bid, ByteBuf userspaceBuffer) {
-            super(maxCapacity);
+        UserspaceIoUringBuffer(IoUringBufferRing ring, short bid, ByteBuf userspaceBuffer) {
+            super(userspaceBuffer.capacity());
+            this.ring = ring;
             this.bid = bid;
             this.userspaceBuffer = userspaceBuffer;
         }
@@ -193,14 +194,14 @@ final class IoUringBufferRing {
             // Hand of to the IoExecutorThread to release and recycle.
             // As we already need to schedule it to the IoExecutorThread we will also just call release there
             // to reduce overhead. We can't reuse the buffer anyway till it was added back to the ring.
-            source.runInExecutorThread(this);
+            ring.source.runInExecutorThread(this);
         }
 
         @Override
         public void run() {
             try {
                 userspaceBuffer.release();
-                addToRing(bid, true);
+                ring.addToRing(bid, true);
             } catch (Throwable t) {
                 logger.error("Failed to recycle buffer for bid " + bid, t);
             }
