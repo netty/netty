@@ -289,7 +289,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             verifyWeight(weight);
 
             ByteBuf buf = ctx.alloc().buffer(PRIORITY_FRAME_LENGTH);
-            writeFrameHeaderInternal(buf, PRIORITY_ENTRY_LENGTH, PRIORITY, new Http2Flags(), streamId);
+            writeFrameHeaderInternal(buf, PRIORITY_ENTRY_LENGTH, PRIORITY, Http2Flags.IMMUTABLE_DEFAULT, streamId);
             buf.writeInt(exclusive ? (int) (0x80000000L | streamDependency) : streamDependency);
             // Adjust the weight so that it fits into a single byte on the wire.
             buf.writeByte(weight - 1);
@@ -307,7 +307,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             verifyErrorCode(errorCode);
 
             ByteBuf buf = ctx.alloc().buffer(RST_STREAM_FRAME_LENGTH);
-            writeFrameHeaderInternal(buf, INT_FIELD_LENGTH, RST_STREAM, new Http2Flags(), streamId);
+            writeFrameHeaderInternal(buf, INT_FIELD_LENGTH, RST_STREAM, Http2Flags.IMMUTABLE_DEFAULT, streamId);
             buf.writeInt((int) errorCode);
             return ctx.write(buf, promise);
         } catch (Throwable t) {
@@ -322,7 +322,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             checkNotNull(settings, "settings");
             int payloadLength = SETTING_ENTRY_LENGTH * settings.size();
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH + payloadLength);
-            writeFrameHeaderInternal(buf, payloadLength, SETTINGS, new Http2Flags(), 0);
+            writeFrameHeaderInternal(buf, payloadLength, SETTINGS, Http2Flags.IMMUTABLE_DEFAULT, 0);
             for (Http2Settings.PrimitiveEntry<Long> entry : settings.entries()) {
                 buf.writeChar(entry.key());
                 buf.writeInt(entry.value().intValue());
@@ -337,7 +337,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
     public ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise) {
         try {
             ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH);
-            writeFrameHeaderInternal(buf, 0, SETTINGS, new Http2Flags().ack(true), 0);
+            writeFrameHeaderInternal(buf, 0, SETTINGS, Http2Flags.IMMUTABLE_ACK, 0);
             return ctx.write(buf, promise);
         } catch (Throwable t) {
             return promise.setFailure(t);
@@ -346,7 +346,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
     @Override
     public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, long data, ChannelPromise promise) {
-        Http2Flags flags = ack ? new Http2Flags().ack(true) : new Http2Flags();
+        Http2Flags flags = ack ? Http2Flags.IMMUTABLE_ACK : Http2Flags.IMMUTABLE_DEFAULT;
         ByteBuf buf = ctx.alloc().buffer(FRAME_HEADER_LENGTH + PING_FRAME_PAYLOAD_LENGTH);
         // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
         // in the catch block.
@@ -426,7 +426,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             ByteBuf buf = ctx.alloc().buffer(GO_AWAY_FRAME_HEADER_LENGTH);
             // Assume nothing below will throw until buf is written. That way we don't have to take care of ownership
             // in the catch block.
-            writeFrameHeaderInternal(buf, payloadLength, GO_AWAY, new Http2Flags(), 0);
+            writeFrameHeaderInternal(buf, payloadLength, GO_AWAY, Http2Flags.IMMUTABLE_DEFAULT, 0);
             buf.writeInt(lastStreamId);
             buf.writeInt((int) errorCode);
             ctx.write(buf, promiseAggregator.newPromise());
@@ -456,7 +456,7 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
             verifyWindowSizeIncrement(windowSizeIncrement);
 
             ByteBuf buf = ctx.alloc().buffer(WINDOW_UPDATE_FRAME_LENGTH);
-            writeFrameHeaderInternal(buf, INT_FIELD_LENGTH, WINDOW_UPDATE, new Http2Flags(), streamId);
+            writeFrameHeaderInternal(buf, INT_FIELD_LENGTH, WINDOW_UPDATE, Http2Flags.IMMUTABLE_DEFAULT, streamId);
             buf.writeInt(windowSizeIncrement);
             return ctx.write(buf, promise);
         } catch (Throwable t) {
@@ -565,7 +565,6 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
      */
     private ChannelFuture writeContinuationFrames(ChannelHandlerContext ctx, int streamId,
             ByteBuf headerBlock, SimpleChannelPromiseAggregator promiseAggregator) {
-        Http2Flags flags = new Http2Flags();
 
         if (headerBlock.isReadable()) {
 
@@ -579,7 +578,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                 if (headerBlock.isReadable()) {
                     if (buf == null) {
                         buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
-                        writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
+                        writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION,
+                            Http2Flags.IMMUTABLE_DEFAULT, streamId);
                     }
                     ctx.write(buf.retainedSlice(), promiseAggregator.newPromise());
                 } else {
@@ -587,9 +587,9 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
                     if (buf != null) {
                        buf.release();
                     }
-                    flags = flags.endOfHeaders(true);
                     buf = ctx.alloc().buffer(CONTINUATION_FRAME_HEADER_LENGTH);
-                    writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION, flags, streamId);
+                    writeFrameHeaderInternal(buf, fragmentReadableBytes, CONTINUATION,
+                        Http2Flags.IMMUTABLE_END_OF_HEADERS, streamId);
                     ctx.write(buf, promiseAggregator.newPromise());
                 }
                 ctx.write(fragment, promiseAggregator.newPromise());
