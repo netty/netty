@@ -167,8 +167,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     private final IntObjectMap<DefaultHttp2FrameStream> frameStreamToInitializeMap =
             new IntObjectHashMap<DefaultHttp2FrameStream>(8);
 
-    Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder, Http2Settings initialSettings,
-                    boolean decoupleCloseAndGoAway, boolean flushPreface) {
+    protected Http2FrameCodec(Http2ConnectionEncoder encoder, Http2ConnectionDecoder decoder,
+                              Http2Settings initialSettings, boolean decoupleCloseAndGoAway, boolean flushPreface) {
         super(decoder, encoder, initialSettings, decoupleCloseAndGoAway, flushPreface);
 
         decoder.frameListener(new FrameListener());
