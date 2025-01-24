@@ -430,9 +430,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     allocHandle.lastBytesRead(-1);
                 }
                 if (allocHandle.lastBytesRead() <= 0) {
-                    // nothing was read, release the buffer.
-                    byteBuf.release();
-                    byteBuf = null;
+                    // byteBuf might be null if we used a buffer ring.
+                    if (byteBuf != null) {
+                        // nothing was read, release the buffer.
+                        byteBuf.release();
+                        byteBuf = null;
+                    }
                     allDataRead = allocHandle.lastBytesRead() < 0;
                     if (allDataRead) {
                         // There is nothing left to read as we received an EOF.
