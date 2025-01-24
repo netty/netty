@@ -24,6 +24,7 @@ import io.netty.handler.codec.base64.Base64Dialect;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -60,6 +61,20 @@ final class SslUtils {
     static final short DTLS_1_2 = (short) 0xFEFD;
     static final short DTLS_1_3 = (short) 0xFEFC;
     static final short DTLS_RECORD_HEADER_LENGTH = 13;
+
+    private static final String DEFAULT_ENDPOINT_VERIFICATION_ALGORITHM_PROPERTY =
+            "io.netty.handler.ssl.defaultEndpointVerificationAlgorithm";
+    /**
+     * Endpoint verification is enabled by default from Netty 4.2 onward, but it wasn't in Netty 4.1 and earlier.
+     * The {@value #DEFAULT_ENDPOINT_VERIFICATION_ALGORITHM_PROPERTY} can be set to one of the following
+     * values to control this behavior:
+     * <ul>
+     *     <li>{@code "HTTPS"} — verify subject by DNS hostnames; this is the Netty 4.2 default.</li>
+     *     <li>{@code "LDAP"} — verify subject by LDAP identity.</li>
+     *     <li>{@code "NONE"} — don't enable endpoint verification by default; this is the Netty 4.1 behavior.</li>
+     * </ul>
+     */
+    static final String defaultEndpointVerificationAlgorithm;
 
     /**
      * GMSSL Protocol Version
@@ -183,6 +198,22 @@ final class SslUtils {
         Collections.addAll(defaultCiphers, DEFAULT_TLSV13_CIPHER_SUITES);
 
         DEFAULT_CIPHER_SUITES = defaultCiphers.toArray(EmptyArrays.EMPTY_STRINGS);
+
+        String defaultEndpointVerification = SystemPropertyUtil.get(DEFAULT_ENDPOINT_VERIFICATION_ALGORITHM_PROPERTY);
+        if ("LDAP".equalsIgnoreCase(defaultEndpointVerification)) {
+            defaultEndpointVerificationAlgorithm = "LDAP";
+        } else if ("NONE".equalsIgnoreCase(defaultEndpointVerification)) {
+            logger.info("Default SSL endpoint verification has been disabled:  -D{}=\"{}\"",
+                    DEFAULT_ENDPOINT_VERIFICATION_ALGORITHM_PROPERTY, defaultEndpointVerification);
+            defaultEndpointVerificationAlgorithm = null;
+        } else {
+            if (defaultEndpointVerification != null && !"HTTPS".equalsIgnoreCase(defaultEndpointVerification)) {
+                logger.warn("Unknown default SSL endpoint verification algorithm: -D{}=\"{}\", " +
+                                "will use \"HTTPS\" instead.",
+                        DEFAULT_ENDPOINT_VERIFICATION_ALGORITHM_PROPERTY, defaultEndpointVerification);
+            }
+            defaultEndpointVerificationAlgorithm = "HTTPS";
+        }
     }
 
     /**
