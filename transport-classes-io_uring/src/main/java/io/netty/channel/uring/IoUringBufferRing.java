@@ -48,7 +48,6 @@ final class IoUringBufferRing {
     private final int chunkSize;
     private final IoUringIoHandler source;
     private final ByteBufAllocator byteBufAllocator;
-    private final Runnable[] recycleBufferTasks;
     private final BufferRingExhaustedEvent exhaustedEvent;
 
     private short nextIndex;
@@ -69,18 +68,6 @@ final class IoUringBufferRing {
         this.hasSpareBuffer = false;
         this.source = ioUringIoHandler;
         this.byteBufAllocator = byteBufAllocator;
-        // Pre-fill the tasks to reduce GC.
-        this.recycleBufferTasks = new Runnable[entries];
-        for (short i = 0; i < entries; i++) {
-            final short bid = i;
-            recycleBufferTasks[i] = () -> {
-                try {
-                    addToRing(bid, true);
-                } catch (Throwable t) {
-                    logger.error("Failed to recycle buffer for bid " + bid, t);
-                }
-            };
-        }
         this.exhaustedEvent = new BufferRingExhaustedEvent(bufferGroupId);
     }
 
@@ -97,10 +84,6 @@ final class IoUringBufferRing {
      */
     BufferRingExhaustedEvent getExhaustedEvent() {
         return exhaustedEvent;
-    }
-
-    void recycleBuffer(short bid) {
-        source.runInExecutorThread(recycleBufferTasks[bid]);
     }
 
     void addToRing(short bid, boolean needAdvance) {
@@ -129,37 +112,26 @@ final class IoUringBufferRing {
             );
         }
 
-        int batch = BATCH_ALLOCATE_SIZE;
-
-        int batchAllocateCount = count / batch;
-        for (int i = 0; i < batchAllocateCount; i++) {
-            ByteBuf bigChunk = byteBufAllocator.ioBuffer(batch * chunkSize);
-            for (int j = 0; j < batch; j++) {
-                ByteBuf byteBuf = bigChunk.retainedSlice(j * chunkSize, chunkSize);
-                initBuffer(byteBuf);
-            }
-            // when all slice is released, the bigChunk will be released
-            bigChunk.release();
-        }
-
-        int countRemain = count % batch;
+        int batchAllocateCount = count / BATCH_ALLOCATE_SIZE;
+        initBuffers(batchAllocateCount, BATCH_ALLOCATE_SIZE);
+        int countRemain = count % BATCH_ALLOCATE_SIZE;
         if (countRemain != 0) {
-            ByteBuf bigChunk = byteBufAllocator.ioBuffer(countRemain * chunkSize);
-            for (int j = 0; j < countRemain; j++) {
-                ByteBuf byteBuf = bigChunk.retainedSlice(j * chunkSize, chunkSize);
-                initBuffer(byteBuf);
-            }
-            bigChunk.release();
+            initBuffers(countRemain, countRemain);
         }
 
         advanceTail(count);
     }
 
-    private void initBuffer(ByteBuf byteBuf) {
-        short bid = nextIndex;
-        userspaceBufferHolder[bid] = byteBuf;
-        addToRing(nextIndex, false);
-        nextIndex++;
+    private void initBuffers(int numBuffers, int multiplier) {
+        ByteBuf bigChunk = byteBufAllocator.ioBuffer(multiplier * chunkSize);
+        for (int j = 0; j < numBuffers; j++) {
+            ByteBuf byteBuf = bigChunk.retainedSlice(j * chunkSize, chunkSize);
+            short bid = nextIndex;
+            userspaceBufferHolder[bid] = byteBuf;
+            addToRing(nextIndex, false);
+            nextIndex++;
+        }
+        bigChunk.release();
     }
 
     ByteBuf borrowBuffer(int bid, int maxCap) {
@@ -205,7 +177,7 @@ final class IoUringBufferRing {
         }
     }
 
-    class UserspaceIoUringBuffer extends AbstractReferenceCountedByteBuf {
+    class UserspaceIoUringBuffer extends AbstractReferenceCountedByteBuf implements Runnable {
 
         private final short bid;
         private final ByteBuf userspaceBuffer;
@@ -213,13 +185,25 @@ final class IoUringBufferRing {
         protected UserspaceIoUringBuffer(int maxCapacity, short bid, ByteBuf userspaceBuffer) {
             super(maxCapacity);
             this.bid = bid;
-            this.userspaceBuffer = userspaceBuffer.unwrap();
+            this.userspaceBuffer = userspaceBuffer;
         }
 
         @Override
         protected void deallocate() {
-            userspaceBufferHolder[bid].release();
-            recycleBuffer(bid);
+            // Hand of to the IoExecutorThread to release and recycle.
+            // As we already need to schedule it to the IoExecutorThread we will also just call release there
+            // to reduce overhead. We can't reuse the buffer anyway till it was added back to the ring.
+            source.runInExecutorThread(this);
+        }
+
+        @Override
+        public void run() {
+            try {
+                userspaceBuffer.release();
+                addToRing(bid, true);
+            } catch (Throwable t) {
+                logger.error("Failed to recycle buffer for bid " + bid, t);
+            }
         }
 
         @Override
@@ -475,5 +459,4 @@ final class IoUringBufferRing {
             return userspaceBuffer.memoryAddress();
         }
     }
-
 }
