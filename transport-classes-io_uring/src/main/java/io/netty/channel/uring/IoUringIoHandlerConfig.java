@@ -26,7 +26,7 @@ import io.netty.util.internal.ObjectUtil;
  * to configure the associated io_uring instance.
  *
  * <p>
- * The {@link IoUringIoHandlerConfiguration} class provides the following configurable options:
+ * The {@link IoUringIoHandlerConfig} class provides the following configurable options:
  * </p>
  *
  * <table border="1" cellspacing="0" cellpadding="6">
@@ -39,22 +39,22 @@ import io.netty.util.internal.ObjectUtil;
  *   </thead>
  *   <tbody>
  *     <tr>
- *       <td>{@link IoUringIoHandlerConfiguration#setRingSize}</td>
+ *       <td>{@link IoUringIoHandlerConfig#setRingSize}</td>
  *       <td>Sets the size of the submission queue for the io_uring instance.</td>
  *     </tr>
  *     <tr>
- *       <td>{@link IoUringIoHandlerConfiguration#setMaxBoundedWorker}</td>
+ *       <td>{@link IoUringIoHandlerConfig#setMaxBoundedWorker}</td>
  *       <td>Defines the maximum number of bounded io_uring worker threads.</td>
  *     </tr>
  *     <tr>
- *       <td>{@link IoUringIoHandlerConfiguration#setMaxUnboundedWorker}</td>
+ *       <td>{@link IoUringIoHandlerConfig#setMaxUnboundedWorker}</td>
  *       <td>Defines the maximum number of unbounded io_uring worker threads.</td>
  *     </tr>
  *   </tbody>
  * </table>
  */
 
-public final class IoUringIoHandlerConfiguration {
+public final class IoUringIoHandlerConfig {
     private int ringSize = Native.DEFAULT_RING_SIZE;
 
     private int maxBoundedWorker;
@@ -90,7 +90,7 @@ public final class IoUringIoHandlerConfiguration {
      * @param ringSize the ring size of the io_uring instance.
      * @return reference to this, so the API can be used fluently
      */
-    public IoUringIoHandlerConfiguration setRingSize(int ringSize) {
+    public IoUringIoHandlerConfig setRingSize(int ringSize) {
         this.ringSize = ObjectUtil.checkPositive(ringSize, "ringSize");
         return this;
     }
@@ -101,7 +101,7 @@ public final class IoUringIoHandlerConfiguration {
      *                         or 0 for the Linux kernel default
      * @return reference to this, so the API can be used fluently
      */
-    public IoUringIoHandlerConfiguration setMaxBoundedWorker(int maxBoundedWorker) {
+    public IoUringIoHandlerConfig setMaxBoundedWorker(int maxBoundedWorker) {
         this.maxBoundedWorker = ObjectUtil.checkPositiveOrZero(maxBoundedWorker, "maxBoundedWorker");
         return this;
     }
@@ -112,7 +112,7 @@ public final class IoUringIoHandlerConfiguration {
      *                           of 0 for the Linux kernel default
      * @return reference to this, so the API can be used fluently
      */
-    public IoUringIoHandlerConfiguration setMaxUnboundedWorker(int maxUnboundedWorker) {
+    public IoUringIoHandlerConfig setMaxUnboundedWorker(int maxUnboundedWorker) {
         this.maxUnboundedWorker = ObjectUtil.checkPositiveOrZero(maxUnboundedWorker, "maxUnboundedWorker");
         return this;
     }
