@@ -7626,6 +7626,15 @@
                   <old>class io.netty.handler.codec.string.StringEncoder</old>
                   <justification>Move netty-codec classes to netty-codec-base</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method void io.netty.handler.codec.http2.Http2FrameCodec::&lt;init&gt;(io.netty.handler.codec.http2.Http2ConnectionEncoder, io.netty.handler.codec.http2.Http2ConnectionDecoder, io.netty.handler.codec.http2.Http2Settings, boolean, boolean)</old>
+                  <new>method void io.netty.handler.codec.http2.Http2FrameCodec::&lt;init&gt;(io.netty.handler.codec.http2.Http2ConnectionEncoder, io.netty.handler.codec.http2.Http2ConnectionDecoder, io.netty.handler.codec.http2.Http2Settings, boolean, boolean)</new>
+                  <oldVisibility>package</oldVisibility>
+                  <newVisibility>protected</newVisibility>
+                  <justification>Also done in Netty 4.1.118 as part of https://github.com/netty/netty/pull/14722</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
