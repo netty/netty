@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import static io.netty.channel.ChannelHandlerMask.MASK_ONLY_INBOUND;
 import static io.netty.channel.ChannelHandlerMask.MASK_ONLY_OUTBOUND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -42,40 +43,26 @@ class ChannelHandlerMaskTest {
     private static void indexOfMustFindGivenMask(int mask) {
         int notThisMask = mask == 1 ? 2 : 1;
         long inMasks;
-        inMasks = ChannelHandlerMask.packInboundMasks(mask, 0, 0);
+        inMasks = ChannelHandlerMask.packMasks(mask, 0);
         assertEquals(0, ChannelHandlerMask.packedMaskIndexOf(mask, inMasks));
-        inMasks = ChannelHandlerMask.packInboundMasks(0, mask, 0);
+        inMasks = ChannelHandlerMask.packMasks(0, mask);
         assertEquals(1, ChannelHandlerMask.packedMaskIndexOf(mask, inMasks));
-        inMasks = ChannelHandlerMask.packInboundMasks(0, 0, mask);
-        assertEquals(2, ChannelHandlerMask.packedMaskIndexOf(mask, inMasks));
 
-        inMasks = ChannelHandlerMask.packInboundMasks(mask, notThisMask, notThisMask);
+        inMasks = ChannelHandlerMask.packMasks(mask, notThisMask);
         assertEquals(0, ChannelHandlerMask.packedMaskIndexOf(mask, inMasks));
-        inMasks = ChannelHandlerMask.packInboundMasks(notThisMask, mask, notThisMask);
+        inMasks = ChannelHandlerMask.packMasks(notThisMask, mask);
         assertEquals(1, ChannelHandlerMask.packedMaskIndexOf(mask, inMasks));
-        inMasks = ChannelHandlerMask.packInboundMasks(notThisMask, notThisMask, mask);
-        assertEquals(2, ChannelHandlerMask.packedMaskIndexOf(mask, inMasks));
-
-        inMasks = ChannelHandlerMask.packInboundMasks(mask, 0, 0);
-        assertEquals(3, ChannelHandlerMask.packedMaskIndexOf(notThisMask, inMasks));
-        inMasks = ChannelHandlerMask.packInboundMasks(0, mask, 0);
-        assertEquals(3, ChannelHandlerMask.packedMaskIndexOf(notThisMask, inMasks));
-        inMasks = ChannelHandlerMask.packInboundMasks(0, 0, mask);
-        assertEquals(3, ChannelHandlerMask.packedMaskIndexOf(notThisMask, inMasks));
-
-        inMasks = ChannelHandlerMask.packOutboundMasks(mask, 0);
-        assertEquals(3, ChannelHandlerMask.packedMaskIndexOf(notThisMask, inMasks));
-        inMasks = ChannelHandlerMask.packOutboundMasks(0, mask);
-        assertEquals(3, ChannelHandlerMask.packedMaskIndexOf(notThisMask, inMasks));
     }
 
     @Test
-    void storingAndRetreivingOutboundContexts() throws Exception {
+    void storingAndRetreivingContexts() throws Exception {
         AbstractChannelHandlerContext[] cache = ChannelHandlerMask.initContextCache();
 
         DefaultChannelHandlerContext ctx1 = new DefaultChannelHandlerContext(
                 null, null, "", new ChannelInboundHandlerAdapter());
         DefaultChannelHandlerContext ctx2 = new DefaultChannelHandlerContext(
+                null, null, "", new ChannelInboundHandlerAdapter());
+        DefaultChannelHandlerContext ctx3 = new DefaultChannelHandlerContext(
                 null, null, "", new ChannelInboundHandlerAdapter());
 
         long masks = 0;
@@ -94,21 +81,6 @@ class ChannelHandlerMaskTest {
         index = ChannelHandlerMask.packedMaskIndexOf(ChannelHandlerMask.MASK_CLOSE, masks);
         assertTrue(ChannelHandlerMask.packedMaskIndexFound(index));
         assertSame(ctx1, ChannelHandlerMask.getFoundOutbound(cache, index));
-    }
-
-    @Test
-    void storingAndRetreivingInboundContexts() throws Exception {
-        AbstractChannelHandlerContext[] cache = ChannelHandlerMask.initContextCache();
-
-        DefaultChannelHandlerContext ctx1 = new DefaultChannelHandlerContext(
-                null, null, "", new ChannelInboundHandlerAdapter());
-        DefaultChannelHandlerContext ctx2 = new DefaultChannelHandlerContext(
-                null, null, "", new ChannelInboundHandlerAdapter());
-        DefaultChannelHandlerContext ctx3 = new DefaultChannelHandlerContext(
-                null, null, "", new ChannelInboundHandlerAdapter());
-
-        long masks = 0;
-        int index;
 
         masks = ChannelHandlerMask.storeInbound(cache, masks, ctx1, ChannelHandlerMask.MASK_CHANNEL_ACTIVE);
         index = ChannelHandlerMask.packedMaskIndexOf(ChannelHandlerMask.MASK_CHANNEL_ACTIVE, masks);
@@ -125,8 +97,11 @@ class ChannelHandlerMaskTest {
         assertTrue(ChannelHandlerMask.packedMaskIndexFound(index));
         assertSame(ctx3, ChannelHandlerMask.getFoundInbound(cache, index));
 
-        index = ChannelHandlerMask.packedMaskIndexOf(ChannelHandlerMask.MASK_CHANNEL_ACTIVE, masks);
+        index = ChannelHandlerMask.packedMaskIndexOf(ChannelHandlerMask.MASK_CHANNEL_READ, masks);
         assertTrue(ChannelHandlerMask.packedMaskIndexFound(index));
-        assertSame(ctx1, ChannelHandlerMask.getFoundInbound(cache, index));
+        assertSame(ctx2, ChannelHandlerMask.getFoundInbound(cache, index));
+
+        index = ChannelHandlerMask.packedMaskIndexOf(ChannelHandlerMask.MASK_CHANNEL_ACTIVE, masks);
+        assertFalse(ChannelHandlerMask.packedMaskIndexFound(index));
     }
 }
