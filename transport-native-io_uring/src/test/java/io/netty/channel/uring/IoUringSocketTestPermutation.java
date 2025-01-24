@@ -17,12 +17,12 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -40,11 +40,15 @@ import java.util.List;
 public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
     static final IoUringSocketTestPermutation INSTANCE = new IoUringSocketTestPermutation();
-
+    static final short BGID = 1;
     static final EventLoopGroup IO_URING_BOSS_GROUP = new MultiThreadIoEventLoopGroup(
             BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());
     static final EventLoopGroup IO_URING_WORKER_GROUP = new MultiThreadIoEventLoopGroup(
-            WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true), IoUringIoHandler.newFactory());
+            WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true),
+            IoUringIoHandler.newFactory(new IoUringIoHandlerConfiguration()
+                    // Configure a buffer ring that we can easily enable by setting the correct IoUringChannelOption.
+                    .appendBufferRingConfig(
+                            new BufferRingConfig(BGID, (short) 16, 1024, ByteBufAllocator.DEFAULT))));
 
     @Override
     public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
