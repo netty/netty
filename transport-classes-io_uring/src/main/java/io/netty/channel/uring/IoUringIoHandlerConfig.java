@@ -54,7 +54,7 @@ import java.util.List;
  *       <td>Defines the maximum number of unbounded io_uring worker threads.</td>
  *     </tr>
  *     <tr>
- *       <td>{@link IoUringIoHandlerConfig#appendBufferRingConfig}</td>
+ *       <td>{@link IoUringIoHandlerConfig#addBufferRingConfig}</td>
  *       <td>
  *         Adds a buffer ring configuration to the list of buffer ring configurations.
  *         It will be used to register the buffer ring for the io_uring instance.
@@ -136,7 +136,7 @@ public final class IoUringIoHandlerConfig {
      * @param ringConfig the buffer ring configuration to append.
      * @return reference to this, so the API can be used fluently
      */
-    public IoUringIoHandlerConfig appendBufferRingConfig(IoUringBufferRingConfig ringConfig) {
+    public IoUringIoHandlerConfig addBufferRingConfig(IoUringBufferRingConfig ringConfig) {
         for (IoUringBufferRingConfig bufferRingConfig : bufferRingConfigs) {
             if (bufferRingConfig.bufferGroupId() == ringConfig.bufferGroupId()) {
                 throw new IllegalArgumentException("Duplicated buffer group id: " + ringConfig.bufferGroupId());

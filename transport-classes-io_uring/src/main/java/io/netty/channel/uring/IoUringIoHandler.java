@@ -113,11 +113,12 @@ public final class IoUringIoHandler implements IoHandler {
             if (!IoUring.isRegisterBufferRingSupported()) {
                 // Close ringBuffer before throwing to ensure we release all memory on failure.
                 ringBuffer.close();
-                throw new UnsupportedOperationException("io_uring_register_buffer_ring is not supported");
+                throw new UnsupportedOperationException("IORING_REGISTER_PBUF_RING is not supported");
             }
             for (IoUringBufferRingConfig bufferRingConfig : bufferRingConfigs) {
                 try {
-                    registerBufferRing(bufferRingConfig);
+                    IoUringBufferRing ring = newBufferRing(bufferRingConfig);
+                    registeredIoUringBufferRing.put(bufferRingConfig.bufferGroupId(), ring);
                 } catch (Errors.NativeIoException e) {
                     for (IoUringBufferRing bufferRing : registeredIoUringBufferRing.values()) {
                         bufferRing.close();
@@ -187,7 +188,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    IoUringBufferRing registerBufferRing(IoUringBufferRingConfig bufferRingConfig) throws Errors.NativeIoException {
+    IoUringBufferRing newBufferRing(IoUringBufferRingConfig bufferRingConfig) throws Errors.NativeIoException {
         int ringFd = ringBuffer.fd();
         short bufferRingSize = bufferRingConfig.bufferRingSize();
         short bufferGroupId = bufferRingConfig.bufferGroupId();
@@ -206,7 +207,6 @@ public final class IoUringIoHandler implements IoHandler {
             ioUringBufferRing.appendBuffer(bufferRingConfig.initSize());
         }
 
-        registeredIoUringBufferRing.put(bufferGroupId, ioUringBufferRing);
         return ioUringBufferRing;
     }
 
