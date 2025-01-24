@@ -22,7 +22,7 @@ import io.netty.util.internal.ObjectUtil;
  * Configuration class for an {@link IoUringBufferRing}.
  * It will configure the buffer ring size, buffer group id and the chunk size.
  */
-public final class BufferRingConfig {
+public final class IoUringBufferRingConfig {
 
     private final short bgId;
     private final short bufferRingSize;
@@ -30,11 +30,12 @@ public final class BufferRingConfig {
     private final ByteBufAllocator allocator;
     private final int initSize;
 
-    public BufferRingConfig(short bgId, short bufferRingSize, int chunkSize, ByteBufAllocator allocator) {
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize, ByteBufAllocator allocator) {
         this(bgId, bufferRingSize, chunkSize, allocator, 0);
     }
 
-    public BufferRingConfig(short bgId, short bufferRingSize, int chunkSize, ByteBufAllocator allocator, int initSize) {
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize,
+                                   ByteBufAllocator allocator, int initSize) {
         this.bgId = ObjectUtil.checkPositive(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
         this.chunkSize = ObjectUtil.checkPositive(chunkSize, "chunkSize");

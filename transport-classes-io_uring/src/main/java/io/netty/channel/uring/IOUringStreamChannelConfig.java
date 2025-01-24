@@ -68,7 +68,7 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
 
     /**
      * Set the buffer group id that will be used to select the correct ring buffer. This must have been configured
-     * via {@link BufferRingConfig}.
+     * via {@link IoUringBufferRingConfig}.
      *
      * @param bufferGroupId the buffer group id.
      * @return              itself.

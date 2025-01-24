@@ -45,10 +45,10 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
             BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());
     static final EventLoopGroup IO_URING_WORKER_GROUP = new MultiThreadIoEventLoopGroup(
             WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true),
-            IoUringIoHandler.newFactory(new IoUringIoHandlerConfiguration()
+            IoUringIoHandler.newFactory(new IoUringIoHandlerConfig()
                     // Configure a buffer ring that we can easily enable by setting the correct IoUringChannelOption.
                     .appendBufferRingConfig(
-                            new BufferRingConfig(BGID, (short) 16, 1024, ByteBufAllocator.DEFAULT))));
+                            new IoUringBufferRingConfig(BGID, (short) 16, 1024, ByteBufAllocator.DEFAULT))));
 
     @Override
     public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {

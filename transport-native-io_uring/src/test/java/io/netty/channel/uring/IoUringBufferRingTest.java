@@ -71,11 +71,12 @@ public class IoUringBufferRingTest {
 
     @Test
     public void testProviderBufferRead() throws InterruptedException {
-        IoUringIoHandlerConfiguration ioUringIoHandlerConfiguration = new IoUringIoHandlerConfiguration();
-        BufferRingConfig bufferRingConfig = new BufferRingConfig((short) 1, (short) 2, 1024, ByteBufAllocator.DEFAULT);
+        IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
+        IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
+                (short) 1, (short) 2, 1024, ByteBufAllocator.DEFAULT);
         ioUringIoHandlerConfiguration.appendBufferRingConfig(bufferRingConfig);
 
-        BufferRingConfig bufferRingConfig1 = new BufferRingConfig(
+        IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
                 (short) 2, (short) 16,
                 1024, ByteBufAllocator.DEFAULT,
                 12
@@ -91,7 +92,7 @@ public class IoUringBufferRingTest {
         String randomString = UUID.randomUUID().toString();
         int randomStringLength = randomString.length();
 
-        ArrayBlockingQueue<BufferRingExhaustedEvent> eventSyncer = new ArrayBlockingQueue<>(1);
+        ArrayBlockingQueue<IoUringBufferRingExhaustedEvent> eventSyncer = new ArrayBlockingQueue<>(1);
 
         Channel serverChannel = serverBootstrap.group(group)
                 .childHandler(new ChannelInboundHandlerAdapter() {
@@ -102,8 +103,8 @@ public class IoUringBufferRingTest {
 
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt instanceof BufferRingExhaustedEvent) {
-                            eventSyncer.add((BufferRingExhaustedEvent) evt);
+                        if (evt instanceof IoUringBufferRingExhaustedEvent) {
+                            eventSyncer.add((IoUringBufferRingExhaustedEvent) evt);
                         }
                     }
                 })

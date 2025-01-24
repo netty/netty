@@ -48,7 +48,7 @@ final class IoUringBufferRing {
     private final int chunkSize;
     private final IoUringIoHandler source;
     private final ByteBufAllocator byteBufAllocator;
-    private final BufferRingExhaustedEvent exhaustedEvent;
+    private final IoUringBufferRingExhaustedEvent exhaustedEvent;
 
     private short nextIndex;
     private boolean hasSpareBuffer;
@@ -67,7 +67,7 @@ final class IoUringBufferRing {
         this.chunkSize = chunkSize;
         this.source = ioUringIoHandler;
         this.byteBufAllocator = byteBufAllocator;
-        this.exhaustedEvent = new BufferRingExhaustedEvent(bufferGroupId);
+        this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
     }
 
     void markReadFail() {
@@ -81,7 +81,7 @@ final class IoUringBufferRing {
     /**
      * @return a BufferRingExhaustedEvent Instance
      */
-    BufferRingExhaustedEvent getExhaustedEvent() {
+    IoUringBufferRingExhaustedEvent getExhaustedEvent() {
         return exhaustedEvent;
     }
 

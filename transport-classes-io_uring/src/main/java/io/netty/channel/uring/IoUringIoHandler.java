@@ -108,14 +108,14 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         registeredIoUringBufferRing = new IntObjectHashMap<>();
-        List<BufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
+        List<IoUringBufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
         if (!bufferRingConfigs.isEmpty()) {
             if (!IoUring.isRegisterBufferRingSupported()) {
                 // Close ringBuffer before throwing to ensure we release all memory on failure.
                 ringBuffer.close();
                 throw new UnsupportedOperationException("io_uring_register_buffer_ring is not supported");
             }
-            for (BufferRingConfig bufferRingConfig : bufferRingConfigs) {
+            for (IoUringBufferRingConfig bufferRingConfig : bufferRingConfigs) {
                 try {
                     registerBufferRing(bufferRingConfig);
                 } catch (Errors.NativeIoException e) {
@@ -132,7 +132,6 @@ public final class IoUringIoHandler implements IoHandler {
         registrations = new IntObjectHashMap<>();
         eventfd = Native.newBlockingEventFd();
         eventfdReadBuf = PlatformDependent.allocateMemory(8);
-        beforeIOHook = PlatformDependent.newMpscQueue();
         this.timeoutMemoryAddress = PlatformDependent.allocateMemory(KERNEL_TIMESPEC_SIZE);
 
         // We buffer a maximum of 2 * CompletionQueue.ringSize completions before we drain them in batches.
@@ -188,7 +187,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    IoUringBufferRing registerBufferRing(BufferRingConfig bufferRingConfig) throws Errors.NativeIoException {
+    IoUringBufferRing registerBufferRing(IoUringBufferRingConfig bufferRingConfig) throws Errors.NativeIoException {
         int ringFd = ringBuffer.fd();
         short bufferRingSize = bufferRingConfig.bufferRingSize();
         short bufferGroupId = bufferRingConfig.bufferGroupId();

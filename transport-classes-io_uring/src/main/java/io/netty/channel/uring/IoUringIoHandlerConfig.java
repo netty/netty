@@ -54,7 +54,7 @@ import java.util.List;
  *       <td>Defines the maximum number of unbounded io_uring worker threads.</td>
  *     </tr>
  *     <tr>
- *         <td>{@link IoUringIoHandlerConfiguration#appendBufferRingConfig}</td>
+ *         <td>{@link IoUringIoHandlerConfig#appendBufferRingConfig}</td>
  *         <td>
  *             Adds a buffer ring configuration to the list of buffer ring configurations.
  *             It will be used to register the buffer ring for the io_uring instance.
@@ -71,7 +71,7 @@ public final class IoUringIoHandlerConfig {
 
     private int maxUnboundedWorker;
 
-    private final List<BufferRingConfig> bufferRingConfigs = new ArrayList<>(0);
+    private final List<IoUringBufferRingConfig> bufferRingConfigs = new ArrayList<>(0);
 
     /**
      * Return the ring size of the io_uring instance.
@@ -134,8 +134,8 @@ public final class IoUringIoHandlerConfig {
      * @param ringConfig the buffer ring configuration to append.
      * @return reference to this, so the API can be used fluently
      */
-    public IoUringIoHandlerConfig appendBufferRingConfig(BufferRingConfig ringConfig) {
-        for (BufferRingConfig bufferRingConfig : bufferRingConfigs) {
+    public IoUringIoHandlerConfig appendBufferRingConfig(IoUringBufferRingConfig ringConfig) {
+        for (IoUringBufferRingConfig bufferRingConfig : bufferRingConfigs) {
             if (bufferRingConfig.bufferGroupId() == ringConfig.bufferGroupId()) {
                 throw new IllegalArgumentException("Duplicated buffer group id: " + ringConfig.bufferGroupId());
             }
@@ -148,7 +148,7 @@ public final class IoUringIoHandlerConfig {
      * Get the list of buffer ring configurations.
      * @return the copy of buffer ring configurations.
      */
-    public List<BufferRingConfig> getBufferRingConfigs() {
+    public List<IoUringBufferRingConfig> getBufferRingConfigs() {
         return new ArrayList<>(bufferRingConfigs);
     }
 
@@ -156,7 +156,7 @@ public final class IoUringIoHandlerConfig {
         return maxBoundedWorker > 0 || maxUnboundedWorker > 0;
     }
 
-    List<BufferRingConfig> getInternBufferRingConfigs() {
+    List<IoUringBufferRingConfig> getInternBufferRingConfigs() {
         return bufferRingConfigs;
     }
 }
