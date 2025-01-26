@@ -18,6 +18,7 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -25,9 +26,10 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.Tun4Packet;
 import io.netty.channel.socket.TunAddress;
 import io.netty.channel.socket.TunChannel;
-import io.netty.example.tun.Echo4Handler;
+import io.netty.channel.socket.TunPacket;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +41,8 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.channel.socket.Tun4Packet.INET4_DESTINATION_ADDRESS;
+import static io.netty.channel.socket.Tun4Packet.INET4_SOURCE_ADDRESS;
 
 /**
  * This test creates a TUN device that echoes back all received IPv4 packets and a {@link DatagramChannel}
@@ -169,6 +173,31 @@ public abstract class TunChannelTest {
             rand.nextBytes(bytes);
             buf = wrappedBuffer(bytes);
             ctx.writeAndFlush(new DatagramPacket(buf.retain(), recipient));
+        }
+    }
+
+    @Sharable
+    private static final class Echo4Handler extends SimpleChannelInboundHandler<Tun4Packet> {
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx,
+                                    Tun4Packet packet) throws Exception {
+            // swap source and destination addresses. Depending on the layer 4 protocol used, this may
+            // require recalculation of existing checksums. However, UDP and TCP work without
+            // recalculation.
+            ByteBuf buf = packet.content();
+            int sourceAddress = buf.getInt(INET4_SOURCE_ADDRESS);
+            int destinationAddress = buf.getInt(INET4_DESTINATION_ADDRESS);
+            buf.setInt(INET4_SOURCE_ADDRESS, destinationAddress);
+            buf.setInt(INET4_DESTINATION_ADDRESS, sourceAddress);
+
+            TunPacket response = new Tun4Packet(buf.retain());
+            ctx.write(response);
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) {
+            ctx.fireChannelReadComplete();
+            ctx.flush();
         }
     }
 }
