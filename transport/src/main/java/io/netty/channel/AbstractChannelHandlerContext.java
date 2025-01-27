@@ -36,6 +36,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.locks.StampedLock;
 
 import static io.netty.channel.ChannelHandlerMask.MASK_BIND;
 import static io.netty.channel.ChannelHandlerMask.MASK_CHANNEL_ACTIVE;
@@ -61,8 +62,6 @@ import static io.netty.channel.ChannelHandlerMask.mask;
 abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannelHandlerContext.class);
-    volatile AbstractChannelHandlerContext next;
-    volatile AbstractChannelHandlerContext prev;
 
     private static final AtomicIntegerFieldUpdater<AbstractChannelHandlerContext> HANDLER_STATE_UPDATER =
             AtomicIntegerFieldUpdater.newUpdater(AbstractChannelHandlerContext.class, "handlerState");
@@ -88,7 +87,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private final boolean ordered;
-    private final int executionMask;
+    final int executionMask;
+    int[] handlerMasks;
+    AbstractChannelHandlerContext[] handlerContexts;
+    int pipelineIndex;
 
     // Will be set to null if no child executor should be used, otherwise it will be set to the
     // child executor.
@@ -103,9 +105,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
     private Tasks invokeTasks;
-    volatile long contextCacheOutboundMasks;
-    volatile long contextCacheInboundMasks;
-    final AbstractChannelHandlerContext[] contextCache;
 
     private volatile int handlerState = INIT;
 
@@ -115,7 +114,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         this.pipeline = pipeline;
         childExecutor = executor;
         executionMask = mask(handlerClass);
-        contextCache = ChannelHandlerMask.initContextCache();
         // Its ordered if its driven by the EventLoop or the given Executor is an instanceof OrderedEventExecutor.
         ordered = executor == null || executor instanceof OrderedEventExecutor;
     }
@@ -942,46 +940,92 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private AbstractChannelHandlerContext findContextInbound(int mask) {
-        long inboundMasks = contextCacheInboundMasks; // Load masks before contextCache array.
-        int index = ChannelHandlerMask.packedMaskIndexOf(mask, inboundMasks);
-        if (ChannelHandlerMask.packedMaskIndexFound(index)) {
-            return ChannelHandlerMask.getFoundInbound(contextCache, index);
-        }
-        AbstractChannelHandlerContext ctx = this;
+        StampedLock lock = pipeline.pipelineLock;
+        long stamp = lock.tryOptimisticRead();
         EventExecutor currentExecutor = executor();
-        do {
-            ctx = ctx.next;
-        } while (skipContext(ctx, currentExecutor, mask, MASK_ONLY_INBOUND));
-        // Store updated masks after storing in contextCache array.
-        contextCacheInboundMasks = ChannelHandlerMask.storeInbound(contextCache, inboundMasks, ctx, mask);
-        return ctx;
+        int index = pipelineIndex;
+        int[] masks = handlerMasks;
+        AbstractChannelHandlerContext[] ctxs = handlerContexts;
+        if (lock.validate(stamp)) {
+            for (int i = index + 1, len = masks.length; i < len; i++) {
+                int ctxMask = masks[i];
+                AbstractChannelHandlerContext ctx = ctxs[i];
+                if (!skipContext(ctx, currentExecutor, mask, MASK_ONLY_INBOUND, ctxMask)) {
+                    return ctx;
+                }
+            }
+        }
+
+        // Optimistic lock failed.
+        stamp = lock.readLock();
+        try {
+            // Need to re-read all fields.
+            currentExecutor = executor();
+            index = pipelineIndex;
+            masks = handlerMasks;
+            ctxs = handlerContexts;
+
+            for (int i = index + 1; i < masks.length; i++) {
+                int ctxMask = masks[i];
+                AbstractChannelHandlerContext ctx = ctxs[i];
+                if (!skipContext(ctx, currentExecutor, mask, MASK_ONLY_INBOUND, ctxMask)) {
+                    return ctx;
+                }
+            }
+        } finally {
+            lock.unlockRead(stamp);
+        }
+        return null; // Should never happen.
     }
 
     private AbstractChannelHandlerContext findContextOutbound(int mask) {
-        long outboundMasks = contextCacheOutboundMasks; // Load masks before contextCache array.
-        int index = ChannelHandlerMask.packedMaskIndexOf(mask, outboundMasks);
-        if (ChannelHandlerMask.packedMaskIndexFound(index)) {
-            return ChannelHandlerMask.getFoundOutbound(contextCache, index);
-        }
-        AbstractChannelHandlerContext ctx = this;
+        StampedLock lock = pipeline.pipelineLock;
+        long stamp = lock.tryOptimisticRead();
         EventExecutor currentExecutor = executor();
-        do {
-            ctx = ctx.prev;
-        } while (skipContext(ctx, currentExecutor, mask, MASK_ONLY_OUTBOUND));
-        // Store updated masks after storing in contextCache array.
-        contextCacheOutboundMasks = ChannelHandlerMask.storeOutbound(contextCache, outboundMasks, ctx, mask);
-        return ctx;
+        int index = pipelineIndex;
+        int[] masks = handlerMasks;
+        AbstractChannelHandlerContext[] ctxs = handlerContexts;
+        if (lock.validate(stamp)) {
+            for (int i = index - 1; i >= 0; i--) {
+                int ctxMask = masks[i];
+                AbstractChannelHandlerContext ctx = ctxs[i];
+                if (!skipContext(ctx, currentExecutor, mask, MASK_ONLY_OUTBOUND, ctxMask)) {
+                    return ctx;
+                }
+            }
+        }
+
+        // Optimistic lock failed.
+        stamp = lock.readLock();
+        try {
+            // Need to re-read all fields.
+            currentExecutor = executor();
+            index = pipelineIndex;
+            masks = handlerMasks;
+            ctxs = handlerContexts;
+
+            for (int i = index - 1; i >= 0; i--) {
+                int ctxMask = masks[i];
+                AbstractChannelHandlerContext ctx = ctxs[i];
+                if (!skipContext(ctx, currentExecutor, mask, MASK_ONLY_OUTBOUND, ctxMask)) {
+                    return ctx;
+                }
+            }
+        } finally {
+            lock.unlockRead(stamp);
+        }
+        return null; // Should never happen.
     }
 
     private static boolean skipContext(
-            AbstractChannelHandlerContext ctx, EventExecutor currentExecutor, int mask, int onlyMask) {
+            AbstractChannelHandlerContext ctx, EventExecutor currentExecutor, int mask, int onlyMask, int ctxMask) {
         // Ensure we correctly handle MASK_EXCEPTION_CAUGHT which is not included in the MASK_EXCEPTION_CAUGHT
-        return (ctx.executionMask & (onlyMask | mask)) == 0 ||
+        return (ctxMask & (onlyMask | mask)) == 0 ||
                 // We can only skip if the EventExecutor is the same as otherwise we need to ensure we offload
                 // everything to preserve ordering.
                 //
                 // See https://github.com/netty/netty/issues/10067
-                (ctx.executor() == currentExecutor && (ctx.executionMask & mask) == 0);
+                (ctx.executor() == currentExecutor && (ctxMask & mask) == 0);
     }
 
     @Override

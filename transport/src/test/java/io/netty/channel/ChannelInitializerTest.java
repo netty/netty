@@ -270,6 +270,7 @@ public class ChannelInitializerTest {
 
         final EventExecutor executor = new DefaultEventLoop() {
             private final ScheduledExecutorService execService = Executors.newSingleThreadScheduledExecutor();
+            private Thread thread;
 
             @Override
             public void shutdown() {
@@ -277,9 +278,16 @@ public class ChannelInitializerTest {
             }
 
             @Override
-            public boolean inEventLoop(Thread thread) {
-                // Always return false which will ensure we always call execute(...)
-                return false;
+            public synchronized boolean inEventLoop(Thread thread) {
+                // Return false every other time which will ensure we hit the execute(...) path
+                if (thread == null) {
+                    thread = Thread.currentThread();
+                    return false;
+                } else {
+                    boolean result = thread == Thread.currentThread();
+                    thread = null;
+                    return result;
+                }
             }
 
             @Override
