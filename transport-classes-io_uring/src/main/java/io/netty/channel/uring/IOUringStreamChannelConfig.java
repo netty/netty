@@ -48,6 +48,7 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
             setBufferGroupId((Short) value);
+            return true;
         }
         return super.setOption(option, value);
     }
