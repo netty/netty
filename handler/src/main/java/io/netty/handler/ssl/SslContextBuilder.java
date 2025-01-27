@@ -215,7 +215,7 @@ public final class SslContextBuilder {
     private SslContextBuilder(boolean forServer) {
         this.forServer = forServer;
         if (!forServer) {
-            endpointIdentificationAlgorithm = "HTTPS";
+            endpointIdentificationAlgorithm = SslUtils.defaultEndpointVerificationAlgorithm;
         }
     }
 
