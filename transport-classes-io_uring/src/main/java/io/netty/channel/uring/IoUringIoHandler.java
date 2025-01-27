@@ -50,11 +50,6 @@ import static java.util.Objects.requireNonNull;
  * {@link IoHandler} which is implemented in terms of the Linux-specific {@code io_uring} API.
  */
 public final class IoUringIoHandler implements IoHandler {
-
-    // Special IoUringIoOps that will cause a submission and running of all completions.
-    static final IoUringIoOps SUBMIT_AND_RUN_ALL = new IoUringIoOps(
-            (byte) -1, (byte) -1, (short) -1, -1, -1, -1, -1, -1, (short) -1, (short) -1, (short) -1, -1, -1);
-
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringIoHandler.class);
     private static final short RING_CLOSE = 1;
 
@@ -74,7 +69,6 @@ public final class IoUringIoHandler implements IoHandler {
     private volatile boolean shuttingDown;
     private boolean closeCompleted;
     private int nextRegistrationId = Integer.MIN_VALUE;
-    private int processedPerRun;
 
     // these two ids are used internally any so can't be used by nextRegistrationId().
     private static final int EVENTFD_ID = Integer.MAX_VALUE;
@@ -122,7 +116,7 @@ public final class IoUringIoHandler implements IoHandler {
 
     @Override
     public int run(IoExecutorContext context) {
-        processedPerRun = 0;
+        int processedPerRun = 0;
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         if (!completionQueue.hasCompletions() && context.canBlock()) {
@@ -134,21 +128,29 @@ public final class IoUringIoHandler implements IoHandler {
         } else {
             submissionQueue.submit();
         }
-        // we might call submitAndRunNow() while processing stuff in the completionArray we need to
-        // add the processed completions to processedPerRun as this might also be updated by submitAndRunNow()
-        processedPerRun += drainAndProcessAll(completionQueue, this::handle);
+        for (;;) {
+            // we might call submitAndRunNow() while processing stuff in the completionArray we need to
+            // add the processed completions to processedPerRun.
+            int processed = drainAndProcessAll(completionQueue, this::handle);
+            processedPerRun += processed;
 
-        // Let's submit one more time as the completions might have added things to the submission queue.
-        submissionQueue.submit();
+            // Let's submit again.
+            // If we were not able to submit anything and there was nothing left in the completionBuffer we will
+            // break out of the loop and return to the caller.
+            if (submissionQueue.submit() == 0 && processed == 0) {
+                break;
+            }
+        }
 
         return processedPerRun;
     }
 
-    private void submitAndRunNow() {
+    void submitAndRunNow(long udata) {
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         if (submissionQueue.submit() > 0) {
-            processedPerRun += drainAndProcessAll(completionQueue, this::handle);
+            completionBuffer.drain(completionQueue);
+            completionBuffer.processOneNow(this::handle, udata);
         }
     }
 
@@ -435,15 +437,11 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         private void submit0(IoUringIoOps ioOps, long udata) {
-            if (ioOps == SUBMIT_AND_RUN_ALL) {
-                submitAndRunNow();
-            } else {
-                ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
-                        ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), udata,
-                        ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
-                );
-                outstandingCompletions++;
-            }
+            ringBuffer.ioUringSubmissionQueue().enqueueSqe(ioOps.opcode(), ioOps.flags(), ioOps.ioPrio(),
+                    ioOps.fd(), ioOps.union1(), ioOps.union2(), ioOps.len(), ioOps.union3(), udata,
+                    ioOps.union4(), ioOps.personality(), ioOps.union5(), ioOps.union6()
+            );
+            outstandingCompletions++;
         }
 
         @Override
