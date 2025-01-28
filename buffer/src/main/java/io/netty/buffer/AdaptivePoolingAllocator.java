@@ -568,7 +568,37 @@ final class AdaptivePoolingAllocator {
                     allocationLock.unlockWrite(writeLock);
                 }
             }
-            return false;
+            return allocateWithoutLock(size, sizeBucket, maxCapacity, buf);
+        }
+
+        private boolean allocateWithoutLock(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+            Chunk curr = NEXT_IN_LINE.getAndSet(this, null);
+            if (curr == MAGAZINE_FREED) {
+                // Allocation raced with a stripe-resize that freed this magazine.
+                restoreMagazineFreed();
+                return false;
+            }
+            if (curr == null) {
+                curr = parent.centralQueue.poll();
+                if (curr == null) {
+                    return false;
+                }
+                curr.attachToMagazine(this);
+            }
+            if (curr.remainingCapacity() >= size) {
+                curr.readInitInto(buf, size, maxCapacity);
+            }
+            try {
+                if (curr.remainingCapacity() >= RETIRE_CAPACITY) {
+                    transferToNextInLineOrRelease(curr);
+                    curr = null;
+                }
+            } finally {
+                if (curr != null) {
+                    curr.release();
+                }
+            }
+            return true;
         }
 
         private boolean allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
@@ -612,8 +642,8 @@ final class AdaptivePoolingAllocator {
             //
             // In any case we will store the Chunk as the current so it will be used again for the next allocation and
             // so be "reserved" by this Magazine for exclusive usage.
-            if (nextInLine != null) {
-                curr = NEXT_IN_LINE.getAndSet(this, null);
+            curr = NEXT_IN_LINE.getAndSet(this, null);
+            if (curr != null) {
                 if (curr == MAGAZINE_FREED) {
                     // Allocation raced with a stripe-resize that freed this magazine.
                     restoreMagazineFreed();
