@@ -236,7 +236,7 @@ public class Http2FrameCodecTest {
         Http2ConnectionDecoder dec = new DefaultHttp2ConnectionDecoder(conn, enc, new DefaultHttp2FrameReader());
         new Http2FrameCodec(enc, dec, new Http2Settings(), false, true) {
             @Override
-            protected Http2Frame newHttp2UnknownFrame(byte frameType,
+            protected Http2UnknownFrame newHttp2UnknownFrame(byte frameType,
                                                       int streamId,
                                                       Http2Flags flags,
                                                       ByteBuf payload) {
