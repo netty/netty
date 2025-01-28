@@ -794,7 +794,7 @@
       <dependency>
         <groupId>com.google.protobuf</groupId>
         <artifactId>protobuf-java</artifactId>
-        <version>3.16.3</version>
+        <version>3.25.5</version>
       </dependency>
       <dependency>
         <groupId>com.google.protobuf.nano</groupId>
@@ -1945,7 +1945,37 @@
                   <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "guarded by version check")</annotation>
                   <justification>Java baseline version changed.</justification>
                 </item>
-                <!-- Changes necessary for upgrading com.google.protobuf:protobuf-java from 2.6.1 to 3.16.3 -->
+                <!-- Changes necessary for upgrading com.google.protobuf:protobuf-java from 2.x to 3.x -->
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>enum com.google.protobuf.DescriptorProtos.Edition</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.DescriptorProtos.FeatureSet</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.DescriptorProtos.FeatureSetOrBuilder</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>interface com.google.protobuf.Internal.ProtobufList&lt;E></new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class com.google.protobuf.MapFieldReflectionAccessor</new>
+                  <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
                 <item>
                   <ignore>true</ignore>
                   <code>java.class.externalClassExposedInAPI</code>
