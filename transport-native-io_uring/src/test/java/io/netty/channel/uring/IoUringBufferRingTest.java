@@ -67,10 +67,9 @@ public class IoUringBufferRingTest {
         }
     }
 
-    private final BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
-
     @Test
     public void testProviderBufferRead() throws InterruptedException {
+        final BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
                 (short) 1, (short) 2, 1024, ByteBufAllocator.DEFAULT);
@@ -122,36 +121,38 @@ public class IoUringBufferRingTest {
 
         //is provider buffer read?
         ByteBuf writeBuffer = Unpooled.directBuffer(randomStringLength);
-        writeBuffer.retain();
         ByteBufUtil.writeAscii(writeBuffer, randomString);
-        ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer);
-        assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, readBuffer);
-        ByteBuf userspaceIoUringBufferElement1 = readBuffer;
-        ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer);
-        assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, readBuffer);
+        ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
+        assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, userspaceIoUringBufferElement1);
+        ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
+        assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, userspaceIoUringBufferElement2);
         assertEquals(0, eventSyncer.size());
 
         //now we run out of buffer ring buffer
-        readBuffer = sendAndRecvMessage(clientChannel, writeBuffer);
+        ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         assertFalse(readBuffer instanceof IoUringBufferRing.UserspaceIoUringBuffer);
+        readBuffer.release();
         assertEquals(1, eventSyncer.size());
         assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take().bufferGroupId());
 
         //now we release the buffer ring buffer
         userspaceIoUringBufferElement1.release();
-        readBuffer = sendAndRecvMessage(clientChannel, writeBuffer);
+        readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, readBuffer);
 
+        userspaceIoUringBufferElement2.release();
+        readBuffer.release();
         writeBuffer.release();
+
         serverChannel.close();
         clientChannel.close();
         group.shutdownGracefully();
     }
 
-    private ByteBuf sendAndRecvMessage(Channel clientChannel, ByteBuf writeBuffer) throws InterruptedException {
+    private ByteBuf sendAndRecvMessage(Channel clientChannel, ByteBuf writeBuffer, BlockingQueue<ByteBuf> bufferSyncer)
+            throws InterruptedException {
         //retain the buffer to assert
-        writeBuffer.retain();
-        clientChannel.writeAndFlush(writeBuffer).sync();
+        clientChannel.writeAndFlush(writeBuffer.retainedDuplicate()).sync();
         ByteBuf readBuffer = bufferSyncer.take();
         assertEquals(writeBuffer.readableBytes(), readBuffer.readableBytes());
         assertTrue(ByteBufUtil.equals(writeBuffer, readBuffer));
