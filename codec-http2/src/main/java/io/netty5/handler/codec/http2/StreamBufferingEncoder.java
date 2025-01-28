@@ -157,22 +157,32 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     @Override
-    public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                     int padding, boolean endStream) {
-        return writeHeaders(ctx, streamId, headers, 0, Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT,
-                false, padding, endStream);
+    public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
+                                      boolean endStream) {
+        return writeHeaders0(ctx, streamId, headers, false, 0, (short) 0,
+                             false, padding, endStream);
     }
 
     @Override
     public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                     int streamDependency, short weight, boolean exclusive,
-                                     int padding, boolean endOfStream) {
+                                      int streamDependency, short weight, boolean exclusive, int padding,
+                                      boolean endOfStream) {
+        return writeHeaders0(ctx, streamId, headers, true, streamDependency, weight, exclusive, padding,
+                             endOfStream);
+    }
+
+    private Future<Void> writeHeaders0(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+                                        boolean hasPriority, int streamDependency, short weight, boolean exclusive,
+                                        int padding, boolean endOfStream) {
         if (closed) {
             return ctx.newFailedFuture(new Http2ChannelClosedException());
         }
         if (isExistingStream(streamId) || canCreateStream()) {
-            return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
-                    exclusive, padding, endOfStream);
+            if (hasPriority) {
+                return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
+                                          exclusive, padding, endOfStream);
+            }
+            return super.writeHeaders(ctx, streamId, headers, padding, endOfStream);
         }
         if (goAwayDetail != null) {
             return ctx.newFailedFuture(new Http2GoAwayException(goAwayDetail));
@@ -183,8 +193,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             pendingStreams.put(streamId, pendingStream);
         }
         Promise<Void> promise = ctx.newPromise();
-
-        pendingStream.frames.add(new HeadersFrame(headers, streamDependency, weight, exclusive,
+        pendingStream.frames.add(new HeadersFrame(headers, hasPriority, streamDependency, weight, exclusive,
                 padding, endOfStream, promise));
         return promise.asFuture();
     }
@@ -339,15 +348,17 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     private final class HeadersFrame extends Frame {
         final Http2Headers headers;
         final int streamDependency;
+        final boolean hasPriority;
         final short weight;
         final boolean exclusive;
         final int padding;
         final boolean endOfStream;
 
-        HeadersFrame(Http2Headers headers, int streamDependency, short weight, boolean exclusive,
+        HeadersFrame(Http2Headers headers, boolean hasPriority, int streamDependency, short weight, boolean exclusive,
                      int padding, boolean endOfStream, Promise<Void> promise) {
             super(promise);
             this.headers = headers;
+            this.hasPriority = hasPriority;
             this.streamDependency = streamDependency;
             this.weight = weight;
             this.exclusive = exclusive;
@@ -357,8 +368,8 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
         @Override
         void send(ChannelHandlerContext ctx, int streamId) {
-            writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endOfStream)
-                    .cascadeTo(promise);
+            writeHeaders0(ctx, streamId, headers, hasPriority, streamDependency, weight, exclusive, padding,
+                          endOfStream).cascadeTo(promise);
         }
     }
 

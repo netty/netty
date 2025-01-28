@@ -54,7 +54,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
@@ -155,7 +154,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void multipleWritesToActiveStream() {
         encoder.writeSettingsAck(ctx);
-        encoderWriteHeaders(3);
+        encoderWriteHeaders(3, false);
         assertEquals(0, encoder.numBufferedStreams());
         Buffer data = data();
         final int expectedBytes = data.readableBytes() * 3;
@@ -171,7 +170,7 @@ public class StreamBufferingEncoderTest {
                 });
         encoderWriteHeaders(3);
 
-        writeVerifyWriteHeaders(times(1), 3);
+        writeVerifyWriteHeaders(times(1), 3, false);
         // Contiguous data writes are coalesced
         ArgumentCaptor<Buffer> bufCaptor = ArgumentCaptor.forClass(Buffer.class);
         verify(writer, times(1)).writeData(any(ChannelHandlerContext.class), eq(3),
@@ -541,21 +540,38 @@ public class StreamBufferingEncoderTest {
     }
 
     private Future<Void> encoderWriteHeaders(int streamId) {
-        Future<Void> future =
-                encoder.writeHeaders(ctx, streamId, Http2Headers.newHeaders(), 0, DEFAULT_PRIORITY_WEIGHT,
-                             false, 0, false);
+        return encoderWriteHeaders(streamId, true);
+    }
+
+    private Future<Void> encoderWriteHeaders(int streamId, boolean hasPriority) {
+        final Future<Void> f;
+        if (hasPriority) {
+            f = encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, DEFAULT_PRIORITY_WEIGHT,
+                                 false, 0, false);
+        } else {
+            f = encoder.writeHeaders(ctx, streamId, Http2Headers.emptyHeaders(), 0, false);
+        }
         try {
             encoder.flowController().writePendingBytes();
-            return future;
+            return f;
         } catch (Http2Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     private void writeVerifyWriteHeaders(VerificationMode mode, int streamId) {
-        verify(writer, mode).writeHeaders(eq(ctx), eq(streamId), any(Http2Headers.class), eq(0),
-                                          eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0),
-                                          eq(false));
+        writeVerifyWriteHeaders(mode, streamId, true);
+    }
+
+    private void writeVerifyWriteHeaders(VerificationMode mode, int streamId, boolean hasPriority) {
+        if (hasPriority) {
+            verify(writer, mode).writeHeaders(eq(ctx), eq(streamId), any(Http2Headers.class), eq(0),
+                                              eq(DEFAULT_PRIORITY_WEIGHT), eq(false), eq(0),
+                                              eq(false));
+        } else {
+            verify(writer, mode).writeHeaders(eq(ctx), eq(streamId), any(Http2Headers.class), eq(0),
+                                              eq(false));
+        }
     }
 
     private static Answer<Future<Void>> successAnswer() {
