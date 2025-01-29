@@ -976,6 +976,26 @@ public final class CertificateBuilder {
             if (parameterSpec == UNSUPPORTED_SPEC) {
                 throw new UnsupportedOperationException("This algorithm is not supported: " + this);
             }
+            if (this == mlDsa44 || this == mlDsa65 || this == mlDsa87) {
+                return genMlDsaKeyPair(secureRandom);
+            }
+            return genKeyPair(secureRandom);
+        }
+
+        private KeyPair genMlDsaKeyPair(SecureRandom secureRandom) throws GeneralSecurityException {
+            final byte[] seed = new byte[32];
+            KeyPair keyPair = genKeyPair(new SecureRandom() {
+                @Override
+                public void nextBytes(byte[] bytes) {
+                    assert bytes.length == 32;
+                    secureRandom.nextBytes(bytes);
+                    System.arraycopy(bytes, 0, seed, 0, seed.length);
+                }
+            });
+            return new KeyPair(keyPair.getPublic(), new MLDSASeedPrivateKey(keyPair.getPrivate(), this, seed));
+        }
+
+        private KeyPair genKeyPair(SecureRandom secureRandom) throws GeneralSecurityException {
             KeyPairGenerator keyGen = Algorithms.keyPairGenerator(keyType, parameterSpec, secureRandom);
             return keyGen.generateKeyPair();
         }
