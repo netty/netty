@@ -470,10 +470,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * @return The executor used to notify listeners when this promise is complete.
      */
     protected EventExecutor executor() {
-        if (!(executor instanceof EventExecutor)) {
-            throw new UnsupportedOperationException();
+        try {
+            return (EventExecutor) executor;
+        } catch (ClassCastException e) {
+            throw new UnsupportedOperationException(e);
         }
-        return (EventExecutor) executor;
     }
 
     protected void checkDeadLock() {
