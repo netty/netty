@@ -67,6 +67,7 @@ class CertificateBuilderTest {
         // Assume that RSA 4096 and RSA 8192 work if the other RSA bit-widths work.
         // These big keys just take too long to test with.
         assumeTrue(algorithm != Algorithm.rsa4096 && algorithm != Algorithm.rsa8192);
+        assumeTrue(algorithm.isSupported());
 
         X509Bundle bundle = BASE.copy()
                 .algorithm(algorithm)
