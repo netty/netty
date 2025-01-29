@@ -23,6 +23,7 @@ import org.bouncycastle.asn1.DERSequence;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.reflect.InvocationTargetException;
 import java.security.PrivateKey;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.Arrays;
@@ -55,9 +56,12 @@ final class MLDSASeedPrivateKey implements PrivateKey {
         }
     }
 
-    @Override
     public AlgorithmParameterSpec getParams() {
-        return key.getParams();
+        try {
+            return (AlgorithmParameterSpec) key.getClass().getMethod("getParams").invoke(key);
+        } catch (Exception e) {
+            throw new UnsupportedOperationException(e);
+        }
     }
 
     @Override
