@@ -17,6 +17,9 @@ package io.netty.channel.uring;
 
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Configuration class for an {@link IoUringIoHandler},
  * managing the settings for a {@link RingBuffer} and its io_uring file descriptor.
@@ -50,6 +53,13 @@ import io.netty.util.internal.ObjectUtil;
  *       <td>{@link IoUringIoHandlerConfig#setMaxUnboundedWorker}</td>
  *       <td>Defines the maximum number of unbounded io_uring worker threads.</td>
  *     </tr>
+ *     <tr>
+ *       <td>{@link IoUringIoHandlerConfig#addBufferRingConfig}</td>
+ *       <td>
+ *         Adds a buffer ring configuration to the list of buffer ring configurations.
+ *         It will be used to register the buffer ring for the io_uring instance.
+ *       </td>
+ *     </tr>
  *   </tbody>
  * </table>
  */
@@ -60,6 +70,8 @@ public final class IoUringIoHandlerConfig {
     private int maxBoundedWorker;
 
     private int maxUnboundedWorker;
+
+    private final List<IoUringBufferRingConfig> bufferRingConfigs = new ArrayList<>(0);
 
     /**
      * Return the ring size of the io_uring instance.
@@ -117,7 +129,36 @@ public final class IoUringIoHandlerConfig {
         return this;
     }
 
+    /**
+     * Add a buffer ring configuration to the list of buffer ring configurations.
+     * Each {@link IoUringBufferRingConfig} must have a different {@link IoUringBufferRingConfig#bufferGroupId()}.
+     *
+     * @param ringConfig the buffer ring configuration to append.
+     * @return reference to this, so the API can be used fluently
+     */
+    public IoUringIoHandlerConfig addBufferRingConfig(IoUringBufferRingConfig ringConfig) {
+        for (IoUringBufferRingConfig bufferRingConfig : bufferRingConfigs) {
+            if (bufferRingConfig.bufferGroupId() == ringConfig.bufferGroupId()) {
+                throw new IllegalArgumentException("Duplicated buffer group id: " + ringConfig.bufferGroupId());
+            }
+        }
+        bufferRingConfigs.add(ringConfig);
+        return this;
+    }
+
+    /**
+     * Get the list of buffer ring configurations.
+     * @return the copy of buffer ring configurations.
+     */
+    public List<IoUringBufferRingConfig> getBufferRingConfigs() {
+        return new ArrayList<>(bufferRingConfigs);
+    }
+
     boolean needRegisterIowqMaxWorker() {
         return maxBoundedWorker > 0 || maxUnboundedWorker > 0;
+    }
+
+    List<IoUringBufferRingConfig> getInternBufferRingConfigs() {
+        return bufferRingConfigs;
     }
 }

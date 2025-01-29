@@ -31,6 +31,8 @@ public final class IoUring {
     private static final boolean IORING_SETUP_SUBMIT_ALL_SUPPORTED;
     private static final boolean IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
     private static final boolean IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
+    private static final boolean IO_URING_REGISTER_BUFFER_RING_SUPPORTED;
+
     private static final InternalLogger logger;
 
     static {
@@ -43,6 +45,7 @@ public final class IoUring {
         boolean submitAllSupported = false;
         boolean singleIssuerSupported = false;
         boolean deferTaskrunSupported = false;
+        boolean registerBufferRingSupported = false;
         try {
             if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
                 cause = new UnsupportedOperationException(
@@ -67,6 +70,7 @@ public final class IoUring {
                         // See https://manpages.debian.org/unstable/liburing-dev/io_uring_setup.2.en.html
                         deferTaskrunSupported = Native.ioUringSetupSupportsFlags(
                                 Native.IORING_SETUP_SINGLE_ISSUER | Native.IORING_SETUP_DEFER_TASKRUN);
+                        registerBufferRingSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd());
                     } finally {
                         if (ringBuffer != null) {
                             try {
@@ -98,9 +102,11 @@ public final class IoUring {
                         "IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED={}, " +
                         "IORING_SETUP_SUBMIT_ALL_SUPPORTED={}, " +
                         "IORING_SETUP_SINGLE_ISSUER_SUPPORTED={}, " +
-                        "IORING_SETUP_DEFER_TASKRUN_SUPPORTED={}" +
+                        "IORING_SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
+                        "IO_URING_REGISTER_BUFFER_RING_SUPPORTED={}" +
                         ")", socketNonEmptySupported, spliceSupported, acceptSupportNoWait,
-                        registerIowqWorkersSupported, submitAllSupported, singleIssuerSupported, deferTaskrunSupported);
+                        registerIowqWorkersSupported, submitAllSupported, singleIssuerSupported,
+                        deferTaskrunSupported, registerBufferRingSupported);
             }
         }
         UNAVAILABILITY_CAUSE = cause;
@@ -111,6 +117,7 @@ public final class IoUring {
         IORING_SETUP_SUBMIT_ALL_SUPPORTED = submitAllSupported;
         IORING_SETUP_SINGLE_ISSUER_SUPPORTED = singleIssuerSupported;
         IORING_SETUP_DEFER_TASKRUN_SUPPORTED = deferTaskrunSupported;
+        IO_URING_REGISTER_BUFFER_RING_SUPPORTED = registerBufferRingSupported;
     }
 
     public static boolean isAvailable() {
@@ -163,6 +170,10 @@ public final class IoUring {
 
     static boolean isIOUringSetupDeferTaskrunSupported() {
         return IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
+    }
+
+    public static boolean isRegisterBufferRingSupported() {
+        return IO_URING_REGISTER_BUFFER_RING_SUPPORTED;
     }
 
     public static void ensureAvailability() {

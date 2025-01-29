@@ -41,5 +41,6 @@ public class IoUringWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest 
     protected void configure(Bootstrap bootstrap, ByteBufAllocator allocator) {
         super.configure(bootstrap, allocator);
         bootstrap.option(IoUringChannelOption.POLLIN_FIRST, false);
+        bootstrap.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
     }
 }

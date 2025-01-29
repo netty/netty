@@ -42,6 +42,7 @@ public class IoUringSocketReadPendingTest extends SocketReadPendingTest {
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
         sb.option(IoUringChannelOption.POLLIN_FIRST, false);
+        // Don't use buffer group as the test wants to limit the number of bytes we read to 1.
         sb.childOption(IoUringChannelOption.POLLIN_FIRST, false);
         cb.option(IoUringChannelOption.POLLIN_FIRST, false);
     }

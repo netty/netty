@@ -62,4 +62,35 @@ struct io_uring {
     int ring_fd;
 };
 
+struct io_uring_buf {
+	__u64	addr;
+	__u32	len;
+	__u16	bid;
+	__u16	resv;
+};
+
+struct io_uring_buf_reg {
+	__u64	ring_addr;
+	__u32	ring_entries;
+	__u16	bgid;
+	__u16	flags;
+	__u64	resv[3];
+};
+
+struct io_uring_buf_ring {
+	union {
+		/*
+		 * To avoid spilling into more pages than we need to, the
+		 * ring tail is overlaid with the io_uring_buf->resv field.
+		 */
+		struct {
+			__u64	resv1;
+			__u32	resv2;
+			__u16	resv3;
+			__u16	tail;
+		};
+		struct io_uring_buf	bufs[0];
+	};
+};
+
 #endif

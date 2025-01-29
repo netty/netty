@@ -58,4 +58,16 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
      * Use {@code IOSQE_ASYNC} when submitting {@link IoUringIoOps}.
      */
     public static final ChannelOption<Boolean> IOSQE_ASYNC = valueOf("IOSQE_ASYNC");
+
+    /**
+     * The buffer group id to use when submitting recv / read / readv {@link IoUringIoOps}.
+     * If it is set to {@code 0}, then this function will be disabled.
+     * <p>
+     * Check
+     * <a href="https://man7.org/linux/man-pages/man3/io_uring_setup_buf_ring.3.html"> man io_uring_setup_buf_ring</a>
+     * an this <a href="https://lwn.net/Articles/815491/">LWN article</a> for more details.
+     */
+    public static final ChannelOption<Short> IO_URING_BUFFER_GROUP_ID =
+            ChannelOption.valueOf(IoUringChannelOption.class, "IOURING_BUFFER_GROUP_ID");
+
 }

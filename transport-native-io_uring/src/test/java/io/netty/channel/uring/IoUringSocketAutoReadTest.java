@@ -42,6 +42,9 @@ public class IoUringSocketAutoReadTest extends SocketAutoReadTest {
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
         sb.option(IoUringChannelOption.POLLIN_FIRST, false);
+        // This test does not enalbe IoUringChannelOption.IO_URING_BUFFER_GROUP_ID as it will not work because
+        // We want to use a custom RecvBytBufAllocator that limit the number of bytes that we can read per read
+        // operation to 1.
         sb.childOption(IoUringChannelOption.POLLIN_FIRST, false);
         cb.option(IoUringChannelOption.POLLIN_FIRST, false);
     }
