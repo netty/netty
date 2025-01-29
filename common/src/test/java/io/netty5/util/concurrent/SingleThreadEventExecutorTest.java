@@ -16,6 +16,7 @@
 package io.netty5.util.concurrent;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Queue;
 import java.util.concurrent.CompletionException;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -251,4 +253,30 @@ public class SingleThreadEventExecutorTest {
             ran.set(true);
         }
     }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void testExceptionIsPropagatedToTerminationFuture() throws Exception {
+        final IllegalStateException exception = new IllegalStateException();
+        final SingleThreadEventExecutor executor =
+                new SingleThreadEventExecutor() {
+                    @Override
+                    protected void run() {
+                        throw exception;
+                    }
+                };
+
+        // Schedule something so we are sure the run() method will be called.
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                // Noop.
+            }
+        });
+
+        executor.terminationFuture().asStage().await();
+
+        assertSame(exception, executor.terminationFuture().cause());
+    }
+
 }
