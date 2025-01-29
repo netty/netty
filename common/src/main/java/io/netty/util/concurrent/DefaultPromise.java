@@ -25,6 +25,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -48,7 +49,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final StackTraceElement[] CANCELLATION_STACK = CANCELLATION_CAUSE_HOLDER.cause.getStackTrace();
 
     private volatile Object result;
-    private final EventExecutor executor;
+    private final Executor executor;
     /**
      * One or more listeners. Can be a {@link GenericFutureListener} or a {@link DefaultFutureListeners}.
      * If {@code null}, it means either 1) no listeners were added yet or 2) all listeners were notified.
@@ -81,6 +82,21 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      *
      */
     public DefaultPromise(EventExecutor executor) {
+        this.executor = checkNotNull(executor, "executor");
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param executor
+     *        the {@link Executor} which is used to notify the promise once it is complete.
+     *        It is assumed this executor will protect against {@link StackOverflowError} exceptions.
+     *        The executor may be used to avoid {@link StackOverflowError} by executing a {@link Runnable} if the stack
+     *        depth exceeds a threshold.
+     *
+     */
+    protected DefaultPromise(Executor executor) {
+        // This constructor is protected as we don't encourage people to use it without a special need.
         this.executor = checkNotNull(executor, "executor");
     }
 
@@ -454,7 +470,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * @return The executor used to notify listeners when this promise is complete.
      */
     protected EventExecutor executor() {
-        return executor;
+        if (!(executor instanceof EventExecutor)) {
+            throw new UnsupportedOperationException();
+        }
+        return (EventExecutor) executor;
     }
 
     protected void checkDeadLock() {
