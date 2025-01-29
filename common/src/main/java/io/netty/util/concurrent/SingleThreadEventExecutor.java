@@ -1116,6 +1116,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     interrupted = false;
                 }
                 boolean success = false;
+                Throwable unexpectedException = null;
                 updateLastExecutionTime();
                 boolean suspend = false;
                 try {
@@ -1142,6 +1143,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                         break;
                     }
                 } catch (Throwable t) {
+                    unexpectedException = t;
                     logger.warn("Unexpected exception from an event executor: ", t);
                 } finally {
                     boolean shutdown = !suspend;
@@ -1208,7 +1210,11 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                         logger.warn("An event executor terminated with " +
                                                 "non-empty task queue (" + numUserTasks + ')');
                                     }
-                                    terminationFuture.setSuccess(null);
+                                    if (unexpectedException == null) {
+                                        terminationFuture.setSuccess(null);
+                                    } else {
+                                        terminationFuture.setFailure(unexpectedException);
+                                    }
                                 }
                             } else {
                                 // Lets remove all FastThreadLocals for the Thread as we are about to terminate it.

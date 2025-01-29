@@ -40,6 +40,7 @@ import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -603,5 +604,30 @@ public class SingleThreadEventExecutorTest {
         public void run() {
             ran.set(true);
         }
+    }
+
+    @Test
+    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    public void testExceptionIsPropagatedToTerminationFuture() throws Exception {
+        final IllegalStateException exception = new IllegalStateException();
+        final SingleThreadEventExecutor executor =
+                new SingleThreadEventExecutor(null, Executors.defaultThreadFactory(), true) {
+                    @Override
+                    protected void run() {
+                        throw exception;
+                    }
+                };
+
+        // Schedule something so we are sure the run() method will be called.
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                // Noop.
+            }
+        });
+
+        executor.terminationFuture().await();
+
+        assertSame(exception, executor.terminationFuture().cause());
     }
 }
