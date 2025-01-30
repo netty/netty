@@ -48,6 +48,12 @@ final class Algorithms {
                 return "1.3.101.112";
             case "ed448":
                 return "1.3.101.113";
+            case "ml-dsa-44":
+                return "2.16.840.1.101.3.4.3.17";
+            case "ml-dsa-65":
+                return "2.16.840.1.101.3.4.3.18";
+            case "ml-dsa-87":
+                return "2.16.840.1.101.3.4.3.19";
             default:
                 throw new UnsupportedOperationException("Algorithm not supported: " + algorithmIdentifier);
         }

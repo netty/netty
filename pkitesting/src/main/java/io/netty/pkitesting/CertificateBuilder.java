@@ -114,6 +114,8 @@ public final class CertificateBuilder {
     static final String OID_MICROSOFT_SMARTCARD_LOGIN = "1.3.6.1.4.1.311.20.2.2";
     private static final GeneralName[] EMPTY_GENERAL_NAMES = new GeneralName[0];
     private static final DistributionPoint[] EMPTY_DIST_POINTS = new DistributionPoint[0];
+    private static final AlgorithmParameterSpec UNSUPPORTED_SPEC = new AlgorithmParameterSpec() {
+    };
 
     SecureRandom random;
     Algorithm algorithm = Algorithm.ecp256;
@@ -399,7 +401,7 @@ public final class CertificateBuilder {
      */
     public CertificateBuilder algorithm(Algorithm algorithm) {
         requireNonNull(algorithm, "algorithm");
-        if (algorithm.parameterSpec == Algorithm.UNSUPPORTED) {
+        if (algorithm.parameterSpec == UNSUPPORTED_SPEC) {
             throw new UnsupportedOperationException("This algorithm is not supported: " + algorithm);
         }
         this.algorithm = algorithm;
@@ -900,16 +902,40 @@ public final class CertificateBuilder {
          * The Ed25519 algorithm offer fast key generation, signing, and verification,
          * with very small keys and signatures, at 128-bits of security strength.
          * <p>
-         * This algorithm is relatively new, require Java 15 or newer, and may not be supported everywhere.
+         * This algorithm was added in Java 15, and may not be supported everywhere.
          */
         ed25519("Ed25519", namedParameterSpec("Ed25519"), "Ed25519"),
         /**
          * The Ed448 algorithm offer fast key generation, signing, and verification,
          * with small keys and signatures, at 224-bits of security strength.
          * <p>
-         * This algorithm is relatively new, require Java 15 or newer, and may not be supported everywhere.
+         * This algorithm was added in Java 15, and may not be supported everywhere.
          */
-        ed448("Ed448", namedParameterSpec("Ed448"), "Ed448");
+        ed448("Ed448", namedParameterSpec("Ed448"), "Ed448"),
+        /**
+         * The ML-DSA-44 algorithm is the NIST FIPS 204 version of the post-quantum Dilithium algorithm.
+         * It has 128-bits of classical security strength, and is claimed to meet NIST Level 2
+         * quantum security strength (equivalent to finding a SHA-256 collision).
+         * <p>
+         * This algorithm was added in Java 24, and may not be supported everywhere.
+         */
+        mlDsa44("ML-DSA", namedParameterSpec("ML-DSA-44"), "ML-DSA-44"),
+        /**
+         * The ML-DSA-65 algorithm is the NIST FIPS 204 version of the post-quantum Dilithium algorithm.
+         * It has 192-bits of classical security strength, and is claimed to meet NIST Level 3
+         * quantum security strength (equivalent to finding the key for an AES-192 block).
+         * <p>
+         * This algorithm was added in Java 24, and may not be supported everywhere.
+         */
+        mlDsa65("ML-DSA", namedParameterSpec("ML-DSA-65"), "ML-DSA-65"),
+        /**
+         * The ML-DSA-87 algorithm is the NIST FIPS 204 version of the post-quantum Dilithium algorithm.
+         * It has 256-bits of classical security strength, and is claimed to meet NIST Level 5
+         * quantum security strength (equivalent to finding the key for an AES-256 block).
+         * <p>
+         * This algorithm was added in Java 24, and may not be supported everywhere.
+         */
+        mlDsa87("ML-DSA", namedParameterSpec("ML-DSA-87"), "ML-DSA-87");
 
         final String keyType;
         final AlgorithmParameterSpec parameterSpec;
@@ -920,9 +946,6 @@ public final class CertificateBuilder {
             this.parameterSpec = parameterSpec;
             this.signatureType = signatureType;
         }
-
-        static final AlgorithmParameterSpec UNSUPPORTED = new AlgorithmParameterSpec() {
-        };
 
         private static AlgorithmParameterSpec namedParameterSpec(String name) {
             try {
@@ -935,19 +958,54 @@ public final class CertificateBuilder {
                 if ("Ed448".equals(name)) {
                     return new EdDSAParameterSpec(EdDSAParameterSpec.Ed448);
                 }
-                return UNSUPPORTED;
+                return UNSUPPORTED_SPEC;
             }
         }
 
+        /**
+         * Generate a new {@link KeyPair} using this algorithm, and the given {@link SecureRandom} generator.
+         * @param secureRandom The {@link SecureRandom} generator to use, not {@code null}.
+         * @return The generated {@link KeyPair}.
+         * @throws GeneralSecurityException if the key pair cannot be generated using this algorithm for some reason.
+         * @throws UnsupportedOperationException if this algorithm is not support in the current JVM.
+         */
         public KeyPair generateKeyPair(SecureRandom secureRandom)
                 throws GeneralSecurityException {
             requireNonNull(secureRandom, "secureRandom");
 
-            if (parameterSpec == UNSUPPORTED) {
+            if (parameterSpec == UNSUPPORTED_SPEC) {
                 throw new UnsupportedOperationException("This algorithm is not supported: " + this);
             }
+            if (this == mlDsa44 || this == mlDsa65 || this == mlDsa87) {
+                return genMlDsaKeyPair(secureRandom);
+            }
+            return genKeyPair(secureRandom);
+        }
+
+        private KeyPair genMlDsaKeyPair(SecureRandom secureRandom) throws GeneralSecurityException {
+            final byte[] seed = new byte[32];
+            KeyPair keyPair = genKeyPair(new SecureRandom() {
+                @Override
+                public void nextBytes(byte[] bytes) {
+                    assert bytes.length == 32;
+                    secureRandom.nextBytes(bytes);
+                    System.arraycopy(bytes, 0, seed, 0, seed.length);
+                }
+            });
+            return new KeyPair(keyPair.getPublic(), new MLDSASeedPrivateKey(keyPair.getPrivate(), this, seed));
+        }
+
+        private KeyPair genKeyPair(SecureRandom secureRandom) throws GeneralSecurityException {
             KeyPairGenerator keyGen = Algorithms.keyPairGenerator(keyType, parameterSpec, secureRandom);
             return keyGen.generateKeyPair();
+        }
+
+        /**
+         * Tell whether this algorithm is supported in the current JVM.
+         * @return {@code true} if this algorithm is supported.
+         */
+        public boolean isSupported() {
+            return parameterSpec != UNSUPPORTED_SPEC;
         }
     }
 
