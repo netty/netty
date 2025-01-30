@@ -15,8 +15,7 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.IoExecutorContext;
-import io.netty.channel.IoExecutor;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
@@ -26,6 +25,7 @@ import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.ThreadAwareExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -80,9 +80,9 @@ public final class IoUringIoHandler implements IoHandler {
     private static final int KERNEL_TIMESPEC_TV_NSEC_FIELD = 8;
 
     private final CompletionBuffer completionBuffer;
-    private final IoExecutor executor;
+    private final ThreadAwareExecutor executor;
 
-    IoUringIoHandler(IoExecutor executor, IoUringIoHandlerConfig config) {
+    IoUringIoHandler(ThreadAwareExecutor executor, IoUringIoHandlerConfig config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
         IoUring.ensureAvailability();
         this.executor = requireNonNull(executor, "executor");
@@ -138,7 +138,7 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     @Override
-    public int run(IoExecutorContext context) {
+    public int run(IoHandlerContext context) {
         int processedPerRun = 0;
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
@@ -179,7 +179,7 @@ public final class IoUringIoHandler implements IoHandler {
 
     void runInExecutorThread(Runnable runnable) {
         //if we are in the executor thread we can run the runnable directly
-        if (executor.inExecutorThread(Thread.currentThread())) {
+        if (executor.isExecutorThread(Thread.currentThread())) {
             // Just directly run.
             runnable.run();
         } else {
@@ -472,7 +472,7 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final class DefaultIoUringIoRegistration implements IoRegistration {
         private final AtomicBoolean canceled = new AtomicBoolean();
-        private final IoExecutor executor;
+        private final ThreadAwareExecutor executor;
         private final IoUringIoEvent event = new IoUringIoEvent(0, 0, (byte) 0, (short) 0);
         final IoUringIoHandle handle;
 
@@ -480,7 +480,7 @@ public final class IoUringIoHandler implements IoHandler {
         private int outstandingCompletions;
         private int id;
 
-        DefaultIoUringIoRegistration(IoExecutor executor, IoUringIoHandle handle) {
+        DefaultIoUringIoRegistration(ThreadAwareExecutor executor, IoUringIoHandle handle) {
             this.executor = executor;
             this.handle = handle;
         }
@@ -496,7 +496,7 @@ public final class IoUringIoHandler implements IoHandler {
                 return INVALID_ID;
             }
             long udata = UserData.encode(id, ioOps.opcode(), ioOps.data());
-            if (executor.inExecutorThread(Thread.currentThread())) {
+            if (executor.isExecutorThread(Thread.currentThread())) {
                 submit0(ioOps, udata);
             } else {
                 executor.execute(() -> submit0(ioOps, udata));
@@ -529,7 +529,7 @@ public final class IoUringIoHandler implements IoHandler {
                 // Already cancelled.
                 return false;
             }
-            if (executor.inExecutorThread(Thread.currentThread())) {
+            if (executor.isExecutorThread(Thread.currentThread())) {
                 tryRemove();
             } else {
                 executor.execute(this::tryRemove);
@@ -555,7 +555,7 @@ public final class IoUringIoHandler implements IoHandler {
         void close() {
             // Closing the handle will also cancel the registration.
             // It's important that we not manually cancel as close() might need to submit some work to the ring.
-            assert executor.inExecutorThread(Thread.currentThread());
+            assert executor.isExecutorThread(Thread.currentThread());
             try {
                 handle.close();
             } catch (Exception e) {
@@ -583,7 +583,7 @@ public final class IoUringIoHandler implements IoHandler {
 
     @Override
     public void wakeup() {
-        if (!executor.inExecutorThread(Thread.currentThread()) &&
+        if (!executor.isExecutorThread(Thread.currentThread()) &&
                 !eventfdAsyncNotify.getAndSet(true)) {
             // write to the eventfd which will then trigger an eventfd read completion.
             Native.eventFdWrite(eventfd.intValue(), 1L);

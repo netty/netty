@@ -13,16 +13,17 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel;
+package io.netty.util.concurrent;
 
 import java.util.concurrent.Executor;
 
 /**
- * An {@link Executor} that is used to drive IO of an {@link IoHandler}.
+ * Executor that is aware its execution thread.
  */
-public interface IoExecutor extends Executor {
+public interface ThreadAwareExecutor extends Executor {
     /**
-     * Return {@code true} if the given {@link Thread} is used by this {@link IoExecutor}.
+     * Return {@code true} if the given {@link Thread} is used by this {@link ThreadAwareExecutor} to execute
+     * work.
      */
-    boolean inExecutorThread(Thread thread);
+    boolean isExecutorThread(Thread thread);
 }

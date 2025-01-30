@@ -15,12 +15,14 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.ThreadAwareExecutor;
+
 /**
- * The execution context for an {@link IoExecutor}.
- * All methods  <strong>MUST</strong> be executed on the {@link IoExecutor} thread
- * (which means {@link IoExecutor#inExecutorThread(Thread)} must return {@code true}).
+ * The context for an {@link IoHandler} that is run by an {@link ThreadAwareExecutor}.
+ * All methods  <strong>MUST</strong> be executed on the {@link ThreadAwareExecutor} thread
+ * (which means {@link ThreadAwareExecutor#isExecutorThread(Thread)} (Thread)} must return {@code true}).
  */
-public interface IoExecutorContext {
+public interface IoHandlerContext {
     /**
      * Returns {@code true} if blocking for IO is allowed or if we should try to do a non-blocking request for IO to be
      * ready.

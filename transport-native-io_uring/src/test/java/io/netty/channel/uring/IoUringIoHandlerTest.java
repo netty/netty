@@ -15,10 +15,9 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.IoExecutor;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
-import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.ThreadAwareExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -38,15 +37,16 @@ public class IoUringIoHandlerTest {
         config.setMaxBoundedWorker(2)
                 .setMaxUnboundedWorker(2);
         IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory(config);
-        IoHandler handler = ioHandlerFactory.newHandler(new IoExecutor() {
+        IoHandler handler = ioHandlerFactory.newHandler(new ThreadAwareExecutor() {
+
             @Override
-            public boolean inExecutorThread(Thread thread) {
-                return ImmediateEventExecutor.INSTANCE.inEventLoop(thread);
+            public boolean isExecutorThread(Thread thread) {
+                return false;
             }
 
             @Override
             public void execute(Runnable command) {
-                ImmediateEventExecutor.INSTANCE.execute(command);
+                command.run();
             }
         });
         handler.initialize();

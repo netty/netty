@@ -17,8 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.IoExecutorContext;
-import io.netty.channel.IoExecutor;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
@@ -30,6 +29,7 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.ThreadAwareExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -79,7 +79,7 @@ public class EpollIoHandler implements IoHandler {
             return epollWaitNow();
         }
     };
-    private final IoExecutor executor;
+    private final ThreadAwareExecutor executor;
 
     private static final long AWAKE = -1L;
     private static final long NONE = Long.MAX_VALUE;
@@ -114,7 +114,7 @@ public class EpollIoHandler implements IoHandler {
     }
 
     // Package-private for testing
-    EpollIoHandler(IoExecutor executor, int maxEvents, SelectStrategy strategy) {
+    EpollIoHandler(ThreadAwareExecutor executor, int maxEvents, SelectStrategy strategy) {
         this.executor = ObjectUtil.checkNotNull(executor, "executor");
         selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
         if (maxEvents == 0) {
@@ -192,7 +192,7 @@ public class EpollIoHandler implements IoHandler {
 
     @Override
     public void wakeup() {
-        if (!executor.inExecutorThread(Thread.currentThread()) && nextWakeupNanos.getAndSet(AWAKE) != AWAKE) {
+        if (!executor.isExecutorThread(Thread.currentThread()) && nextWakeupNanos.getAndSet(AWAKE) != AWAKE) {
             // write to the evfd which will then wake-up epoll_wait(...)
             Native.eventFdWrite(eventFd.intValue(), 1L);
         }
@@ -220,11 +220,11 @@ public class EpollIoHandler implements IoHandler {
     }
 
     private final class DefaultEpollIoRegistration implements IoRegistration {
-        private final IoExecutor executor;
+        private final ThreadAwareExecutor executor;
         private final AtomicBoolean canceled = new AtomicBoolean();
         final EpollIoHandle handle;
 
-        DefaultEpollIoRegistration(IoExecutor executor, EpollIoHandle handle) {
+        DefaultEpollIoRegistration(ThreadAwareExecutor executor, EpollIoHandle handle) {
             this.executor = executor;
             this.handle = handle;
         }
@@ -259,7 +259,7 @@ public class EpollIoHandler implements IoHandler {
             if (!canceled.compareAndSet(false, true)) {
                 return false;
             }
-            if (executor.inExecutorThread(Thread.currentThread())) {
+            if (executor.isExecutorThread(Thread.currentThread())) {
                 cancel0();
             } else {
                 executor.execute(this::cancel0);
@@ -351,7 +351,7 @@ public class EpollIoHandler implements IoHandler {
         return Collections.unmodifiableList(channels);
     }
 
-    private long epollWait(IoExecutorContext context, long deadlineNanos) throws IOException {
+    private long epollWait(IoHandlerContext context, long deadlineNanos) throws IOException {
         if (deadlineNanos == NONE) {
             return Native.epollWait(epollFd, events, timerFd,
                     Integer.MAX_VALUE, 0, EPOLL_WAIT_MILLIS_THRESHOLD); // disarm timer
@@ -380,7 +380,7 @@ public class EpollIoHandler implements IoHandler {
     }
 
     @Override
-    public int run(IoExecutorContext context) {
+    public int run(IoHandlerContext context) {
         int handled = 0;
         try {
             int strategy = selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock());

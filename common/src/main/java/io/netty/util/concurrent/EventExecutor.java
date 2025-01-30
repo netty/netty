@@ -24,12 +24,17 @@ import java.util.concurrent.TimeUnit;
  * Besides this, it also extends the {@link EventExecutorGroup} to allow for a generic
  * way to access methods.
  */
-public interface EventExecutor extends EventExecutorGroup {
+public interface EventExecutor extends EventExecutorGroup, ThreadAwareExecutor {
 
     /**
      * Return the {@link EventExecutorGroup} which is the parent of this {@link EventExecutor},
      */
     EventExecutorGroup parent();
+
+    @Override
+    default boolean isExecutorThread(Thread thread) {
+        return inEventLoop(thread);
+    }
 
     /**
      * Calls {@link #inEventLoop(Thread)} with {@link Thread#currentThread()} as argument
