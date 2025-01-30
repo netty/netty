@@ -137,7 +137,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
  * reference counted objects (e.g. {@link Buffer}s). The frame codec will call {@link ReferenceCounted#retain()} before
  * propagating a reference counted object through the pipeline, and thus an application handler needs to release such
  * an object after having consumed it. For more information on reference counting take a look at
- * https://netty.io/wiki/reference-counted-objects.html
+ * <a href="https://netty.io/wiki/reference-counted-objects.html">Reference counted objects</a>
  *
  * <h3>HTTP Upgrade</h3>
  * <p>
@@ -587,8 +587,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 // Ignore unknown frames on connection stream, for example: HTTP/2 GREASE testing
                 return;
             }
-            onHttp2Frame(ctx, new DefaultHttp2UnknownFrame(frameType, flags, payload.split())
-                    .stream(requireStream(streamId)));
+            onHttp2Frame(ctx, newHttp2UnknownFrame(frameType, streamId, flags, payload.split())
+                .stream(requireStream(streamId)));
         }
 
         @Override
@@ -695,6 +695,13 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
     void onHttp2Frame(ChannelHandlerContext ctx, Http2Frame frame) {
         ctx.fireChannelRead(frame);
+    }
+
+    /**
+     * Create a Http2UnknownFrame. The ownership of the {@link Buffer} is transferred.
+     * */
+    protected Http2StreamFrame newHttp2UnknownFrame(byte frameType, int streamId, Http2Flags flags, Buffer payload) {
+        return new DefaultHttp2UnknownFrame(frameType, flags, payload);
     }
 
     void onHttp2FrameStreamException(ChannelHandlerContext ctx, Http2FrameStreamException cause) {

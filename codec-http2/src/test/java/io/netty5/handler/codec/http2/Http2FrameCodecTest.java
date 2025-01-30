@@ -237,6 +237,22 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void canCreateCustomUnknownFrame() {
+        Http2Connection conn = new DefaultHttp2Connection(true);
+        Http2ConnectionEncoder enc = new DefaultHttp2ConnectionEncoder(conn, new DefaultHttp2FrameWriter());
+        Http2ConnectionDecoder dec = new DefaultHttp2ConnectionDecoder(conn, enc, new DefaultHttp2FrameReader());
+        new Http2FrameCodec(enc, dec, new Http2Settings(), false, true) {
+            @Override
+            protected Http2StreamFrame newHttp2UnknownFrame(byte frameType,
+                                                      int streamId,
+                                                      Http2Flags flags,
+                                                      Buffer payload) {
+                return super.newHttp2UnknownFrame(frameType, streamId, flags, payload);
+            }
+        };
+    }
+
+    @Test
     public void entityRequestEntityResponse() throws Exception {
         setUp();
         frameInboundWriter.writeInboundHeaders(1, request, 0, false);
