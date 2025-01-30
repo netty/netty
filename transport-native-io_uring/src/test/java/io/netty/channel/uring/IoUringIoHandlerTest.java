@@ -19,7 +19,6 @@ import io.netty.channel.IoExecutor;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -43,11 +42,6 @@ public class IoUringIoHandlerTest {
             @Override
             public boolean inExecutorThread(Thread thread) {
                 return ImmediateEventExecutor.INSTANCE.inEventLoop(thread);
-            }
-
-            @Override
-            public <V> Promise<V> newPromise() {
-                return ImmediateEventExecutor.INSTANCE.newPromise();
             }
 
             @Override

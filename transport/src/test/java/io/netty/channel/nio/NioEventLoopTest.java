@@ -21,6 +21,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
@@ -174,8 +175,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
             final CountDownLatch latch = new CountDownLatch(1);
 
-            NioIoRegistration registration =
-                    (NioIoRegistration) loop.register(
+            IoRegistration registration = loop.register(
                             new NioSelectableChannelIoHandle<SocketChannel>(selectableChannel) {
                 @Override
                 protected void handle(SocketChannel channel, SelectionKey key) {

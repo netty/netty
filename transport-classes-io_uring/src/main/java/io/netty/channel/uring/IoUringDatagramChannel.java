@@ -23,6 +23,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -411,7 +412,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 if (hdr.hasPort(IoUringDatagramChannel.this)) {
                     allocHandle.incMessagesRead(1);
                     DatagramPacket packet = hdr.read(
-                            IoUringDatagramChannel.this, (IoUringIoHandler) registration().ioHandler(), byteBuf, res);
+                            IoUringDatagramChannel.this, registration().attachment(), byteBuf, res);
                     pipeline.fireChannelRead(packet);
                 }
             }
@@ -496,7 +497,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
-            IoUringIoRegistration registration = registration();
+            IoRegistration registration = registration();
             // We always use idx here so we can detect if no idx was used by checking if data < 0 in
             // readComplete0(...)
             IoUringIoOps ops = IoUringIoOps.newRecvmsg(
@@ -603,7 +604,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
-            IoUringIoRegistration registration = registration();
+            IoRegistration registration = registration();
             IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, flags((byte) 0), msgFlags, hdr.address(), hdr.idx());
             long id = registration.submit(ops);
             if (id == 0) {
@@ -616,7 +617,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        protected void freeResourcesNow(IoUringIoRegistration reg) {
+        protected void freeResourcesNow(IoRegistration reg) {
             sendmsgHdrs.release();
             recvmsgHdrs.release();
             super.freeResourcesNow(reg);
@@ -643,7 +644,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    protected void cancelOutstandingReads(IoUringIoRegistration registration, int numOutstandingReads) {
+    protected void cancelOutstandingReads(IoRegistration registration, int numOutstandingReads) {
         if (numOutstandingReads > 0) {
             int canceled = cancel(registration, Native.IORING_OP_RECVMSG, recvmsgHdrs);
             assert canceled == numOutstandingReads;
@@ -651,14 +652,14 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    protected void cancelOutstandingWrites(IoUringIoRegistration registration, int numOutstandingWrites) {
+    protected void cancelOutstandingWrites(IoRegistration registration, int numOutstandingWrites) {
         if (numOutstandingWrites > 0) {
             int canceled = cancel(registration, Native.IORING_OP_SENDMSG, sendmsgHdrs);
             assert canceled == numOutstandingWrites;
         }
     }
 
-    private int cancel(IoUringIoRegistration registration, byte op, MsgHdrMemoryArray array) {
+    private int cancel(IoRegistration registration, byte op, MsgHdrMemoryArray array) {
         int cancelled = 0;
         for (int idx = 0; idx < array.length(); idx++) {
             long id = array.id(idx);

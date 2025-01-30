@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.Future;
-
 /**
  * A registration for IO.
  *
@@ -24,12 +22,19 @@ import io.netty.util.concurrent.Future;
 public interface IoRegistration {
 
     /**
+     * Implementation specific attachment, which might be {@code null}.
+     *
+     * @return  attachment.
+     */
+    <T> T attachment();
+
+    /**
      * Submit the {@link IoOps} to the registration.
      *
      * @param   ops ops.
      * @return  an identifier for the operation, which might be unique or not (depending on the implementation).
      */
-    long submit(IoOps ops) throws Exception;
+    long submit(IoOps ops);
 
     /**
      * Returns {@code true} if the registration is still valid. Once {@link #cancel()} is called this
@@ -37,26 +42,12 @@ public interface IoRegistration {
      *
      * @return  valid.
      */
-    default boolean isValid() {
-        return !cancelFuture().isDone();
-    }
+    boolean isValid();
 
     /**
      * Cancel the registration.
-     */
-    void cancel() throws Exception;
-
-    /**
-     * The {@link IoHandler} to which this {@link IoRegistration} belongs too.
      *
-     * @return  ioHandler.
+     * @return {@code true} if cancellation was successful, {@code false} otherwise.
      */
-    IoHandler ioHandler();
-
-    /**
-     * Returns a {@link Future} that is notified once this {@link IoRegistration} was cancelled.
-     *
-     * @return future that is notified once registration is cancelled.
-     */
-    Future<?> cancelFuture();
+    boolean cancel();
 }

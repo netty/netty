@@ -23,11 +23,10 @@ import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.IntSupplier;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReflectionUtil;
@@ -318,8 +317,8 @@ public final class NioIoHandler implements IoHandler {
         throw new IllegalArgumentException("IoOps of type " + StringUtil.simpleClassName(ops) + " not supported");
     }
 
-    final class DefaultNioRegistration implements NioIoRegistration {
-        private final Promise<?> cancellationPromise;
+    final class DefaultNioRegistration implements IoRegistration {
+        private final AtomicBoolean canceled = new AtomicBoolean();
         private final NioIoHandle handle;
         private volatile SelectionKey key;
 
@@ -327,7 +326,6 @@ public final class NioIoHandler implements IoHandler {
                 throws IOException {
             this.handle = handle;
             key = handle.selectableChannel().register(selector, initialOps.value, this);
-            this.cancellationPromise = executor.newPromise();
         }
 
         NioIoHandle handle() {
@@ -340,14 +338,15 @@ public final class NioIoHandler implements IoHandler {
             key = newKey;
         }
 
+        @SuppressWarnings("unchecked")
         @Override
-        public SelectionKey selectionKey() {
-            return key;
+        public <T> T attachment() {
+            return (T) key;
         }
 
         @Override
         public boolean isValid() {
-            return key.isValid();
+            return !canceled.get() && key.isValid();
         }
 
         @Override
@@ -358,9 +357,9 @@ public final class NioIoHandler implements IoHandler {
         }
 
         @Override
-        public void cancel() {
-            if (!cancellationPromise.trySuccess(null)) {
-                return;
+        public boolean cancel() {
+            if (!canceled.compareAndSet(false, true)) {
+                return false;
             }
             key.cancel();
             cancelledKeys++;
@@ -368,11 +367,7 @@ public final class NioIoHandler implements IoHandler {
                 cancelledKeys = 0;
                 needsToSelectAgain = true;
             }
-        }
-
-        @Override
-        public Future<?> cancelFuture() {
-            return cancellationPromise;
+            return true;
         }
 
         void close() {
@@ -387,15 +382,10 @@ public final class NioIoHandler implements IoHandler {
         void handle(int ready) {
             handle.handle(this, NioIoOps.eventOf(ready));
         }
-
-        @Override
-        public NioIoHandler ioHandler() {
-            return NioIoHandler.this;
-        }
     }
 
     @Override
-    public NioIoRegistration register(IoHandle handle)
+    public IoRegistration register(IoHandle handle)
             throws Exception {
         NioIoHandle nioHandle = nioHandle(handle);
         NioIoOps ops = NioIoOps.NONE;

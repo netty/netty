@@ -45,6 +45,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -72,7 +73,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    private EpollIoRegistration registration;
+    private IoRegistration registration;
     boolean inputClosedSeenErrorOnRead;
     private EpollIoOps ops;
     private EpollIoOps inital;
@@ -114,32 +115,20 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected void setFlag(int flag) throws IOException {
         ops = ops.with(EpollIoOps.valueOf(flag));
         if (isRegistered()) {
-            EpollIoRegistration registration = registration();
-            try {
-                registration.submit(ops);
-            } catch (IOException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new IllegalStateException(e);
-            }
+            IoRegistration registration = registration();
+            registration.submit(ops);
         } else {
             ops = ops.with(EpollIoOps.valueOf(flag));
         }
     }
 
     void clearFlag(int flag) throws IOException {
-        EpollIoRegistration registration = registration();
+        IoRegistration registration = registration();
         ops = ops.without(EpollIoOps.valueOf(flag));
-        try {
-            registration.submit(ops);
-        } catch (IOException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
+        registration.submit(ops);
     }
 
-    protected final EpollIoRegistration registration() {
+    protected final IoRegistration registration() {
         assert registration != null;
         return registration;
     }
@@ -229,7 +218,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doDeregister() throws Exception {
-        EpollIoRegistration registration = this.registration;
+        IoRegistration registration = this.registration;
         if (registration != null) {
             ops = inital;
             registration.cancel();
@@ -295,7 +284,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     protected void doRegister(ChannelPromise promise) {
         ((IoEventLoop) eventLoop()).register((AbstractEpollUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
-                registration = (EpollIoRegistration) f.getNow();
+                registration = (IoRegistration) f.getNow();
                 registration.submit(ops);
                 inital = ops;
                 promise.setSuccess();
@@ -411,7 +400,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         if (data.nioBufferCount() > 1) {
-            IovArray array = registration().ioHandler().cleanIovArray();
+            IovArray array = ((NativeArrays) registration.attachment()).cleanIovArray();
             array.add(data, data.readerIndex(), data.readableBytes());
             int cnt = array.count();
             assert cnt != 0;
@@ -620,9 +609,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             try {
                 readPending = false;
                 ops = ops.without(EpollIoOps.EPOLLIN);
-                EpollIoRegistration registration = registration();
+                IoRegistration registration = registration();
                 registration.submit(ops);
-            } catch (Exception e) {
+            } catch (UncheckedIOException e) {
                 // When this happens there is something completely wrong with either the filedescriptor or epoll,
                 // so fire the exception through the pipeline and close the Channel.
                 pipeline().fireExceptionCaught(e);

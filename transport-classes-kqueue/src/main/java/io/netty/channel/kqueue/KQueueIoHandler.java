@@ -17,22 +17,19 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.EventLoop;
 import io.netty.channel.IoExecutorContext;
 import io.netty.channel.IoExecutor;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -42,6 +39,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static java.lang.Math.min;
@@ -70,7 +68,7 @@ public final class KQueueIoHandler implements IoHandler {
     private final KQueueEventArray changeList;
     private final KQueueEventArray eventList;
     private final SelectStrategy selectStrategy;
-    private final IovArray iovArray = new IovArray();
+    private final NativeArrays nativeArrays;
     private final IntSupplier selectNowSupplier = new IntSupplier() {
         @Override
         public int get() throws Exception {
@@ -112,19 +110,12 @@ public final class KQueueIoHandler implements IoHandler {
         }
         this.changeList = new KQueueEventArray(maxEvents);
         this.eventList = new KQueueEventArray(maxEvents);
+        nativeArrays = new NativeArrays();
         int result = Native.keventAddUserEvent(kqueueFd.intValue(), KQUEUE_WAKE_UP_IDENT);
         if (result < 0) {
             destroy();
             throw new IllegalStateException("kevent failed to add user event with errno: " + (-result));
         }
-    }
-
-    /**
-     * Return a cleared {@link IovArray} that can be used for writes in this {@link EventLoop}.
-     */
-    IovArray cleanArray() {
-        iovArray.clear();
-        return iovArray;
     }
 
     @Override
@@ -317,13 +308,14 @@ public final class KQueueIoHandler implements IoHandler {
             }
         } finally {
             // Cleanup all native memory!
+            nativeArrays.free();
             changeList.free();
             eventList.free();
         }
     }
 
     @Override
-    public KQueueIoRegistration register(IoHandle handle) {
+    public IoRegistration register(IoHandle handle) {
         final KQueueIoHandle kqueueHandle = cast(handle);
         if (kqueueHandle.ident() == KQUEUE_WAKE_UP_IDENT) {
             throw new IllegalArgumentException("ident " + KQUEUE_WAKE_UP_IDENT + " is reserved for internal usage");
@@ -363,8 +355,8 @@ public final class KQueueIoHandler implements IoHandler {
         return KQueueIoHandle.class.isAssignableFrom(handleType);
     }
 
-    private final class DefaultKqueueIoRegistration implements KQueueIoRegistration {
-        private final Promise<?> cancellationPromise;
+    private final class DefaultKqueueIoRegistration implements IoRegistration {
+        private final AtomicBoolean canceled = new AtomicBoolean();
         private final KQueueIoEvent event = new KQueueIoEvent();
 
         final KQueueIoHandle handle;
@@ -374,7 +366,12 @@ public final class KQueueIoHandler implements IoHandler {
         DefaultKqueueIoRegistration(IoExecutor executor, KQueueIoHandle handle) {
             this.executor = executor;
             this.handle = handle;
-            this.cancellationPromise = executor.newPromise();
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> T attachment() {
+            return (T) nativeArrays;
         }
 
         @Override
@@ -394,11 +391,6 @@ public final class KQueueIoHandler implements IoHandler {
             return 0;
         }
 
-        @Override
-        public KQueueIoHandler ioHandler() {
-            return KQueueIoHandler.this;
-        }
-
         void handle(int ident, short filter, short flags, int fflags, long data) {
             event.update(ident, filter, flags, fflags, data);
             handle.handle(this, event);
@@ -409,20 +401,21 @@ public final class KQueueIoHandler implements IoHandler {
         }
 
         @Override
-        public void cancel() {
-            if (!cancellationPromise.trySuccess(null)) {
-                return;
+        public boolean isValid() {
+            return !canceled.get();
+        }
+
+        @Override
+        public boolean cancel() {
+            if (!canceled.compareAndSet(false, true)) {
+                return false;
             }
             if (executor.inExecutorThread(Thread.currentThread())) {
                 cancel0();
             } else {
                 executor.execute(this::cancel0);
             }
-        }
-
-        @Override
-        public Future<?> cancelFuture() {
-            return cancellationPromise;
+            return true;
         }
 
         private void cancel0() {

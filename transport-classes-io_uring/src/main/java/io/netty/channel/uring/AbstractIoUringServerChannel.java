@@ -21,6 +21,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Errors;
@@ -75,7 +76,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     }
 
     @Override
-    protected final void cancelOutstandingReads(IoUringIoRegistration registration, int numOutstandingReads) {
+    protected final void cancelOutstandingReads(IoRegistration registration, int numOutstandingReads) {
         if (acceptId != 0) {
             assert numOutstandingReads == 1;
             IoUringIoOps ops = IoUringIoOps.newAsyncCancel(flags((byte) 0), acceptId, Native.IORING_OP_ACCEPT);
@@ -86,7 +87,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     }
 
     @Override
-    protected final void cancelOutstandingWrites(IoUringIoRegistration registration, int numOutstandingWrites) {
+    protected final void cancelOutstandingWrites(IoRegistration registration, int numOutstandingWrites) {
         assert numOutstandingWrites == 0;
     }
 
@@ -117,7 +118,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             allocHandle.attemptedBytesRead(1);
 
             int fd = fd().intValue();
-            IoUringIoRegistration registration = registration();
+            IoRegistration registration = registration();
 
             // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
             // attempt.
@@ -205,7 +206,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected void freeResourcesNow(IoUringIoRegistration reg) {
+        protected void freeResourcesNow(IoRegistration reg) {
             super.freeResourcesNow(reg);
             Buffer.free(acceptedAddressMemory);
             Buffer.free(acceptedAddressLengthMemory);

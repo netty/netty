@@ -14,14 +14,13 @@
  * under the License.
  */
 package io.netty.channel;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -95,7 +94,7 @@ public class SingleThreadIoEventLoopTest {
         assertTrue(currentThread.isAlive());
 
         registration.cancel();
-        registration.cancelFuture().sync();
+        assertFalse(registration.isValid());
 
         // The current thread should be able to die now.
         currentThread.join();
@@ -125,25 +124,26 @@ public class SingleThreadIoEventLoopTest {
         @Override
         public IoRegistration register(final IoHandle handle) {
             return new IoRegistration() {
-                private final Promise<?> cancellationPromise = executor.newPromise();
+                private final AtomicBoolean canceled = new AtomicBoolean();
+
+                @Override
+                public <T> T attachment() {
+                    return null;
+                }
+
                 @Override
                 public long submit(IoOps ops) {
                     return 0;
                 }
 
                 @Override
-                public void cancel() {
-                    cancellationPromise.trySuccess(null);
+                public boolean cancel() {
+                    return canceled.compareAndSet(false, true);
                 }
 
                 @Override
-                public IoHandler ioHandler() {
-                    return TestIoHandler.this;
-                }
-
-                @Override
-                public Future<?> cancelFuture() {
-                    return cancellationPromise;
+                public boolean isValid() {
+                    return !canceled.get();
                 }
             };
         }

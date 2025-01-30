@@ -34,6 +34,8 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class NioIoHandlerTest {
 
     @Test
@@ -46,11 +48,6 @@ public class NioIoHandlerTest {
             @Override
             public boolean inExecutorThread(Thread thread) {
                 return current == thread;
-            }
-
-            @Override
-            public <V> Promise<V> newPromise() {
-                return new DefaultPromise<V>(this) { };
             }
 
             @Override
@@ -126,13 +123,11 @@ public class NioIoHandlerTest {
             }
             if (acceptedConnection.get()) {
                 // We accepted the connection, let's cancel the registration.
-                registration.cancel();
+                assertTrue(registration.cancel());
             }
         }
         // Wait until the connect thread is done.
         t.join();
-        // The future that is tied to the cancellation of the registration should be done as well.
-        registration.cancelFuture().sync();
 
         // Let's now close the ServerSocketChannel and after that destroy the IoHandler.
         channel.close();

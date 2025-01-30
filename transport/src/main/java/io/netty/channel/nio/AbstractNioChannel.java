@@ -58,7 +58,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final SelectableChannel ch;
     protected final int readInterestOp;
     protected final NioIoOps readOps;
-    volatile NioIoRegistration registration;
+    volatile IoRegistration registration;
     boolean readPending;
     private final Runnable clearReadPendingRunnable = new Runnable() {
         @Override
@@ -148,11 +148,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      */
     @Deprecated
     protected SelectionKey selectionKey() {
-        return registration().selectionKey();
+        return registration().attachment();
     }
 
     @SuppressWarnings("unchecked")
-    protected NioIoRegistration registration() {
+    protected IoRegistration registration() {
         assert registration != null;
         return registration;
     }
@@ -261,7 +261,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         protected final void removeReadOp() {
-            NioIoRegistration registration = registration();
+            IoRegistration registration = registration();
             // Check first if the key is still valid as it may be canceled as part of the deregistration
             // from the EventLoop
             // See https://github.com/netty/netty/issues/2104
@@ -412,8 +412,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         private boolean isFlushPending() {
-            NioIoRegistration registration = registration();
-            return registration.isValid() && NioIoOps.WRITE.isIncludedIn(registration.selectionKey().interestOps());
+            IoRegistration registration = registration();
+            return registration.isValid() && NioIoOps.WRITE.isIncludedIn((
+                    (SelectionKey) registration.attachment()).interestOps());
         }
 
         @Override
@@ -460,7 +461,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         assert registration == null;
         ((IoEventLoop) eventLoop()).register((AbstractNioUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
-                registration = (NioIoRegistration) f.getNow();
+                registration = (IoRegistration) f.getNow();
                 promise.setSuccess();
             } else {
                 promise.setFailure(f.cause());
@@ -470,7 +471,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        NioIoRegistration registration = this.registration;
+        IoRegistration registration = this.registration;
         if (registration != null) {
             this.registration = null;
             registration.cancel();
@@ -480,7 +481,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     protected void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
-        NioIoRegistration registration = this.registration;
+        IoRegistration registration = this.registration;
         if (registration == null || !registration.isValid()) {
             return;
         }

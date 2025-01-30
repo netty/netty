@@ -17,8 +17,8 @@ package io.netty.channel.nio;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopTaskQueueFactory;
-import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.SingleThreadIoEventLoop;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
@@ -123,7 +123,7 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
 
     private void register0(final SelectableChannel ch, int interestOps, final NioTask<SelectableChannel> task) {
         try {
-            NioIoRegistration registration = (NioIoRegistration) register(
+            IoRegistration registration = register(
                     new NioSelectableChannelIoHandle<SelectableChannel>(ch) {
                         @Override
                         protected void handle(SelectableChannel channel, SelectionKey key) {

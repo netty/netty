@@ -16,7 +16,6 @@
 package io.netty.channel;
 
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -27,6 +26,7 @@ import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * {@link IoEventLoop} implementation that execute all its submitted tasks in a single thread using the provided
@@ -67,11 +67,6 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         }
 
         @Override
-        public <V> Promise<V> newPromise() {
-            return SingleThreadIoEventLoop.this.newPromise();
-        }
-
-        @Override
         public void execute(Runnable command) {
             SingleThreadIoEventLoop.this.execute(command);
         }
@@ -79,11 +74,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
 
     private final IoHandler ioHandler;
 
-    private int numRegistrations;
-    private final FutureListener<Object> decrementRegistrationListener = f -> {
-        assert inEventLoop();
-        numRegistrations--;
-    };
+    private final AtomicInteger numRegistrations = new AtomicInteger();
 
     /**
      *  Creates a new instance
@@ -212,7 +203,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     @Override
     protected boolean canSuspend(int state) {
         // We should only allow to suspend if there are no registrations on this loop atm.
-        return super.canSuspend(state) && numRegistrations == 0;
+        return super.canSuspend(state) && numRegistrations.get() == 0;
     }
 
     /**
@@ -252,9 +243,8 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             promise.setFailure(e);
             return;
         }
-        registration.cancelFuture().addListener(decrementRegistrationListener);
-        numRegistrations++;
-        promise.setSuccess(registration);
+        numRegistrations.incrementAndGet();
+        promise.setSuccess(new IoRegistrationWrapper(registration));
     }
 
     @Override
@@ -276,5 +266,36 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     @Override
     public boolean isIoType(Class<? extends IoHandler> handlerType) {
         return ioHandler.getClass().equals(handlerType);
+    }
+
+    private final class IoRegistrationWrapper implements IoRegistration {
+        private final IoRegistration registration;
+        IoRegistrationWrapper(IoRegistration registration) {
+            this.registration = registration;
+        }
+
+        @Override
+        public <T> T attachment() {
+            return registration.attachment();
+        }
+
+        @Override
+        public long submit(IoOps ops) {
+            return registration.submit(ops);
+        }
+
+        @Override
+        public boolean isValid() {
+            return registration.isValid();
+        }
+
+        @Override
+        public boolean cancel() {
+            if (registration.cancel()) {
+                numRegistrations.decrementAndGet();
+                return true;
+            }
+            return false;
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,13 +15,30 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.channel.IoRegistration;
+import io.netty.channel.unix.IovArray;
 
-/**
- * Registration with an {@link KQueueIoHandler}.
- */
-public interface KQueueIoRegistration extends IoRegistration {
+final class NativeArrays {
 
-    @Override
-    KQueueIoHandler ioHandler();
+    // These are initialized on first use
+    private IovArray iovArray;
+
+    /**
+     * Return a cleared {@link IovArray} that can be used for writes.
+     */
+    IovArray cleanIovArray() {
+        if (iovArray == null) {
+            iovArray = new IovArray();
+        } else {
+            iovArray.clear();
+        }
+        return iovArray;
+    }
+
+    void free() {
+        // release native memory
+        if (iovArray != null) {
+            iovArray.release();
+            iovArray = null;
+        }
+    }
 }

@@ -121,7 +121,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private ByteBuffer remoteAddressMemory;
     private MsgHdrMemoryArray msgHdrMemoryArray;
 
-    private IoUringIoRegistration registration;
+    private IoRegistration registration;
 
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
@@ -226,18 +226,18 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     /**
      * Cancel all outstanding reads
      *
-     * @param registration          the {@link IoUringIoRegistration}.
+     * @param registration          the {@link IoRegistration}.
      * @param numOutstandingReads   the number of outstanding reads.
      */
-    protected abstract void cancelOutstandingReads(IoUringIoRegistration registration, int numOutstandingReads);
+    protected abstract void cancelOutstandingReads(IoRegistration registration, int numOutstandingReads);
 
     /**
      * Cancel all outstanding writes
      *
-     * @param registration          the {@link IoUringIoRegistration}.
+     * @param registration          the {@link IoRegistration}.
      * @param numOutstandingWrites  the number of outstanding writes.
      */
-    protected abstract void cancelOutstandingWrites(IoUringIoRegistration registration, int numOutstandingWrites);
+    protected abstract void cancelOutstandingWrites(IoRegistration registration, int numOutstandingWrites);
 
     @Override
     protected void doDisconnect() throws Exception {
@@ -359,7 +359,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         return numOutstandingWrites;
     }
 
-    protected final IoUringIoRegistration registration() {
+    protected final IoRegistration registration() {
         assert registration != null;
         return registration;
     }
@@ -375,7 +375,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private long schedulePollAdd(int ioMask, int mask) {
         assert (ioState & ioMask) == 0;
         int fd = fd().intValue();
-        IoUringIoRegistration registration = registration();
+        IoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
                 fd, flags((byte) 0), mask, (short) mask);
         long id = registration.submit(ops);
@@ -411,7 +411,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         @Override
         public final void handle(IoRegistration registration, IoEvent ioEvent) {
-            IoUringIoRegistration reg = (IoUringIoRegistration) registration;
             IoUringIoEvent event = (IoUringIoEvent) ioEvent;
             byte op = event.opcode();
             int res = event.res();
@@ -474,11 +473,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             }
 
             if (ioState == 0 && closed) {
-                freeResourcesNowIfNeeded(reg);
+                freeResourcesNowIfNeeded(registration);
             }
         }
 
-        private void freeResourcesNowIfNeeded(IoUringIoRegistration reg) {
+        private void freeResourcesNowIfNeeded(IoRegistration reg) {
             if (!freed) {
                 freed = true;
                 freeResourcesNow(reg);
@@ -488,9 +487,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         /**
          * Free all resources now. No new IO will be submitted for this channel via io_uring
          *
-         * @param reg   the {@link IoUringIoRegistration} or {@code null} if it was never registered
+         * @param reg   the {@link IoRegistration} or {@code null} if it was never registered
          */
-        protected void freeResourcesNow(IoUringIoRegistration reg) {
+        protected void freeResourcesNow(IoRegistration reg) {
             freeMsgHdrArray();
             freeRemoteAddressMemory();
             if (reg != null) {
@@ -1005,7 +1004,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                             initialData.readableBytes(), (short) 0);
 
                     int fd = fd().intValue();
-                    IoUringIoRegistration registration = registration();
+                    IoRegistration registration = registration();
                     IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, flags((byte) 0), Native.MSG_FASTOPEN,
                             hdr.address(), hdr.idx());
                     connectId = registration.submit(ops);
@@ -1064,7 +1063,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         SockaddrIn.write(socket.isIpv6(), remoteAddressMemoryAddress, inetSocketAddress);
 
         int fd = fd().intValue();
-        IoUringIoRegistration registration = registration();
+        IoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newConnect(
                 fd, flags((byte) 0), remoteAddressMemoryAddress, nextOpsId());
         connectId = registration.submit(ops);
@@ -1088,7 +1087,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         IoEventLoop eventLoop = (IoEventLoop) eventLoop();
         eventLoop.register(ioUringUnsafe()).addListener(f -> {
             if (f.isSuccess()) {
-                registration = (IoUringIoRegistration) f.getNow();
+                registration = (IoRegistration) f.getNow();
                 promise.setSuccess();
             } else {
                 promise.setFailure(f.cause());

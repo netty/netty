@@ -26,8 +26,6 @@ import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -472,8 +470,8 @@ public final class IoUringIoHandler implements IoHandler {
         return id;
     }
 
-    private final class DefaultIoUringIoRegistration implements IoUringIoRegistration {
-        private final Promise<?> cancellationPromise;
+    private final class DefaultIoUringIoRegistration implements IoRegistration {
+        private final AtomicBoolean canceled = new AtomicBoolean();
         private final IoExecutor executor;
         private final IoUringIoEvent event = new IoUringIoEvent(0, 0, (byte) 0, (short) 0);
         final IoUringIoHandle handle;
@@ -485,7 +483,6 @@ public final class IoUringIoHandler implements IoHandler {
         DefaultIoUringIoRegistration(IoExecutor executor, IoUringIoHandle handle) {
             this.executor = executor;
             this.handle = handle;
-            this.cancellationPromise = executor.newPromise();
         }
 
         void setId(int id) {
@@ -515,27 +512,29 @@ public final class IoUringIoHandler implements IoHandler {
             outstandingCompletions++;
         }
 
+        @SuppressWarnings("unchecked")
         @Override
-        public IoUringIoHandler ioHandler() {
-            return IoUringIoHandler.this;
+        public <T> T attachment() {
+            return (T) IoUringIoHandler.this;
         }
 
         @Override
-        public void cancel() {
-            if (!cancellationPromise.trySuccess(null)) {
+        public boolean isValid() {
+            return !canceled.get();
+        }
+
+        @Override
+        public boolean cancel() {
+            if (!canceled.compareAndSet(false, true)) {
                 // Already cancelled.
-                return;
+                return false;
             }
             if (executor.inExecutorThread(Thread.currentThread())) {
                 tryRemove();
             } else {
                 executor.execute(this::tryRemove);
             }
-        }
-
-        @Override
-        public Future<?> cancelFuture() {
-            return cancellationPromise;
+            return true;
         }
 
         private void tryRemove() {

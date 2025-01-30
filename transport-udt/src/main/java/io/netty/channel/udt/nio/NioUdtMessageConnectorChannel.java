@@ -22,8 +22,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.nio.NioIoOps;
-import io.netty.channel.nio.NioIoRegistration;
 import io.netty.util.internal.SocketUtils;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.udt.DefaultUdtChannelConfig;
@@ -135,7 +135,7 @@ public class NioUdtMessageConnectorChannel extends AbstractNioMessageChannel imp
     @Override
     protected void doFinishConnect() throws Exception {
         if (javaChannel().finishConnect()) {
-            NioIoRegistration registration = registration();
+            IoRegistration registration = registration();
             removeAndSubmit(NioIoOps.CONNECT);
         } else {
             throw new Error(
