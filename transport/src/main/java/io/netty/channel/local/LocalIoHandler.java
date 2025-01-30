@@ -115,6 +115,11 @@ public final class LocalIoHandler implements IoHandler {
         }
 
         @Override
+        public <T> T attachment() {
+            return null;
+        }
+
+        @Override
         public long submit(IoOps ops) {
             throw new UnsupportedOperationException();
         }
@@ -141,11 +146,6 @@ public final class LocalIoHandler implements IoHandler {
             if (registeredChannels.remove(handle)) {
                 handle.deregisterNow();
             }
-        }
-
-        @Override
-        public IoHandler ioHandler() {
-            return LocalIoHandler.this;
         }
     }
 }

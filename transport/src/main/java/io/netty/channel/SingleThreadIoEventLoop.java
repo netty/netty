@@ -297,10 +297,5 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             }
             return false;
         }
-
-        @Override
-        public IoHandler ioHandler() {
-            return registration.ioHandler();
-        }
     }
 }

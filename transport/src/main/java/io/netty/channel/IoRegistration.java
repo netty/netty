@@ -26,9 +26,7 @@ public interface IoRegistration {
      *
      * @return  attachment.
      */
-    default <T> T attachment() {
-        return null;
-    }
+    <T> T attachment();
 
     /**
      * Submit the {@link IoOps} to the registration.
@@ -52,11 +50,4 @@ public interface IoRegistration {
      * @return {@code true} if cancellation was successful, {@code false} otherwise.
      */
     boolean cancel();
-
-    /**
-     * The {@link IoHandler} to which this {@link IoRegistration} belongs too.
-     *
-     * @return  ioHandler.
-     */
-    IoHandler ioHandler();
 }

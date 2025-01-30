@@ -292,7 +292,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert readId == 0;
 
             final IOUringStreamChannelConfig channelConfig = (IOUringStreamChannelConfig) config();
-            final IoUringIoHandler ioUringIoHandler = (IoUringIoHandler) registration().ioHandler();
+            final IoUringIoHandler ioUringIoHandler = registration().attachment();
             // Although we checked whether the current kernel supports `register_buffer_ring`
             // during the initialization of IoUringIoHandler
             // we still check it again here.
@@ -360,7 +360,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             try {
                 int chunkSize = bufferRing.chunkSize();
                 IoRegistration registration = registration();
-                IoUringBufferRing ioUringBufferRing = ((IoUringIoHandler) registration.ioHandler())
+                IoUringBufferRing ioUringBufferRing = ((IoUringIoHandler) registration.attachment())
                         .findBufferRing(bgId);
 
                 if (!ioUringBufferRing.isFull()) {
@@ -581,7 +581,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         if (writeId != 0) {
             // Force a submit and processing of the completions to ensure we drain the outbound buffer and
             // send the data to the remote peer.
-            ((IoUringIoHandler) registration().ioHandler()).submitAndRunNow(writeId);
+            ((IoUringIoHandler) registration().attachment()).submitAndRunNow(writeId);
         }
         super.submitAndRunNow();
     }

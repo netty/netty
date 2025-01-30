@@ -412,7 +412,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 if (hdr.hasPort(IoUringDatagramChannel.this)) {
                     allocHandle.incMessagesRead(1);
                     DatagramPacket packet = hdr.read(
-                            IoUringDatagramChannel.this, (IoUringIoHandler) registration().ioHandler(), byteBuf, res);
+                            IoUringDatagramChannel.this, registration().attachment(), byteBuf, res);
                     pipeline.fireChannelRead(packet);
                 }
             }

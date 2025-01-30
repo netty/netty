@@ -391,11 +391,6 @@ public final class KQueueIoHandler implements IoHandler {
             return 0;
         }
 
-        @Override
-        public KQueueIoHandler ioHandler() {
-            return KQueueIoHandler.this;
-        }
-
         void handle(int ident, short filter, short flags, int fflags, long data) {
             event.update(ident, filter, flags, fflags, data);
             handle.handle(this, event);

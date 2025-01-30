@@ -250,11 +250,6 @@ public class EpollIoHandler implements IoHandler {
         }
 
         @Override
-        public EpollIoHandler ioHandler() {
-            return EpollIoHandler.this;
-        }
-
-        @Override
         public boolean isValid() {
             return !canceled.get();
         }

@@ -47,7 +47,7 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
     @Override
     Channel newChildChannel(int fd, long acceptedAddressMemoryAddress, long acceptedAddressLengthMemoryAddress) {
         final InetSocketAddress address;
-        IoUringIoHandler handler = (IoUringIoHandler) registration().ioHandler();
+        IoUringIoHandler handler = registration().attachment();
         if (socket.isIpv6()) {
             byte[] ipv6Array = handler.inet6AddressArray();
             byte[] ipv4Array = handler.inet4AddressArray();

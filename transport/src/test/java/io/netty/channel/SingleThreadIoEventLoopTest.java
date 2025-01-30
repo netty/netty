@@ -125,6 +125,12 @@ public class SingleThreadIoEventLoopTest {
         public IoRegistration register(final IoHandle handle) {
             return new IoRegistration() {
                 private final AtomicBoolean canceled = new AtomicBoolean();
+
+                @Override
+                public <T> T attachment() {
+                    return null;
+                }
+
                 @Override
                 public long submit(IoOps ops) {
                     return 0;
@@ -138,11 +144,6 @@ public class SingleThreadIoEventLoopTest {
                 @Override
                 public boolean isValid() {
                     return !canceled.get();
-                }
-
-                @Override
-                public IoHandler ioHandler() {
-                    return TestIoHandler.this;
                 }
             };
         }

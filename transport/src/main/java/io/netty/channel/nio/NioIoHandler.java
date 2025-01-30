@@ -382,11 +382,6 @@ public final class NioIoHandler implements IoHandler {
         void handle(int ready) {
             handle.handle(this, NioIoOps.eventOf(ready));
         }
-
-        @Override
-        public NioIoHandler ioHandler() {
-            return NioIoHandler.this;
-        }
     }
 
     @Override

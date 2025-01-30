@@ -512,9 +512,10 @@ public final class IoUringIoHandler implements IoHandler {
             outstandingCompletions++;
         }
 
+        @SuppressWarnings("unchecked")
         @Override
-        public IoUringIoHandler ioHandler() {
-            return IoUringIoHandler.this;
+        public <T> T attachment() {
+            return (T) IoUringIoHandler.this;
         }
 
         @Override
