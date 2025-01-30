@@ -89,13 +89,6 @@ final class MLDSASeedPrivateKey implements PrivateKey {
         return key.isDestroyed();
     }
 
-    static byte[] getEncoded(PrivateKey key) {
-        if (key instanceof MLDSASeedPrivateKey) {
-            return ((MLDSASeedPrivateKey) key).seedFormat.clone();
-        }
-        return key.getEncoded();
-    }
-
     static PrivateKey unwrap(PrivateKey key) {
         if (key instanceof MLDSASeedPrivateKey) {
             return ((MLDSASeedPrivateKey) key).key;

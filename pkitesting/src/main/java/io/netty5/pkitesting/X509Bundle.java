@@ -199,7 +199,7 @@ public final class X509Bundle {
         StringBuilder sb = new StringBuilder();
         sb.append("-----BEGIN PRIVATE KEY-----\r\n");
         PrivateKey privateKey = keyPair.getPrivate();
-        sb.append(encoder.encodeToString(MLDSASeedPrivateKey.getEncoded(privateKey)));
+        sb.append(encoder.encodeToString(privateKey.getEncoded()));
         sb.append("\r\n-----END PRIVATE KEY-----\r\n");
         return sb.toString();
     }
