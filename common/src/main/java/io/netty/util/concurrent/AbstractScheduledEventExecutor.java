@@ -97,6 +97,20 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     }
 
     /**
+     * Returns the amount of time left until the scheduled task with the closest dead line is executed.
+     */
+    protected long delayNanos(long currentTimeNanos, long scheduledPurgeInterval) {
+        currentTimeNanos -= initialNanoTime();
+
+        ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
+        if (scheduledTask == null) {
+            return scheduledPurgeInterval;
+        }
+
+        return scheduledTask.delayNanos(currentTimeNanos);
+    }
+
+    /**
      * The initial value used for delay and computations based upon a monatomic time source.
      * @return initial value used for delay and computations based upon a monatomic time source.
      */
@@ -145,6 +159,24 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      */
     protected final Runnable pollScheduledTask() {
         return pollScheduledTask(getCurrentTimeNanos());
+    }
+
+    protected boolean fetchFromScheduledTaskQueue(Queue<Runnable> taskQueue) {
+        if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
+            return true;
+        }
+        long nanoTime = getCurrentTimeNanos();
+        for (;;) {
+            Runnable scheduledTask = pollScheduledTask(nanoTime);
+            if (scheduledTask == null) {
+                return true;
+            }
+            if (!taskQueue.offer(scheduledTask)) {
+                // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
+                scheduledTaskQueue.add((ScheduledFutureTask<?>) scheduledTask);
+                return false;
+            }
+        }
     }
 
     /**
