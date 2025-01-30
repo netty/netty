@@ -1273,6 +1273,16 @@
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.visibilityIncreased</code>
+                  <classQualifiedName>"io.netty.util.concurrent.SingleThreadEventExecutor</classQualifiedName>
+                  <old>method boolean io.netty.util.concurrent.SingleThreadEventExecutor::fetchFromScheduledTaskQueue()</old>
+                  <new>method boolean io.netty.util.concurrent.AbstractScheduledEventExecutor::fetchFromScheduledTaskQueue(java.util.Queue&lt;java.lang.Runnable&gt;) @ io.netty.util.concurrent.SingleThreadEventExecutor</new>
+                  <oldVisibility>private</oldVisibility>
+                  <newVisibility>protected</newVisibility>
+                  <justification>Was private before and is needed for sub-classes</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
                   <classQualifiedName>io.netty.channel.AbstractChannel.AbstractUnsafe</classQualifiedName>
                   <old>method void io.netty.channel.AbstractChannel.AbstractUnsafe::close(io.netty.channel.ChannelPromise, java.lang.Throwable, java.nio.channels.ClosedChannelException, boolean)</old>
                   <new>method void io.netty.channel.AbstractChannel.AbstractUnsafe::close(io.netty.channel.ChannelPromise, java.lang.Throwable, java.nio.channels.ClosedChannelException)</new>
