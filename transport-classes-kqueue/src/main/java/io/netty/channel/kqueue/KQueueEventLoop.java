@@ -380,6 +380,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
             }
         } finally {
             // Cleanup all native memory!
+            iovArray.release();
             changeList.free();
             eventList.free();
         }
