@@ -28,7 +28,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -38,7 +37,6 @@ import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.concurrent.locks.StampedLock;
 
 /**
  * The default {@link ChannelPipeline} implementation.  It is usually created
@@ -64,10 +62,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     DefaultChannelPipeline.class, MessageSizeEstimator.Handle.class, "estimatorHandle");
     final HeadContext head;
     final TailContext tail;
-
-    final StampedLock pipelineLock;
-    int[] handlerMasks;
-    AbstractChannelHandlerContext[] handlerContexts;
 
     private final Channel channel;
     private final ChannelFuture succeededFuture;
@@ -99,21 +93,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         succeededFuture = new SucceededChannelFuture(channel, null);
         voidPromise = new VoidChannelPromise(channel, true);
 
-        pipelineLock = new StampedLock();
-        handlerMasks = new int[2];
-        handlerContexts = new AbstractChannelHandlerContext[2];
         tail = new TailContext(this);
         head = new HeadContext(this);
-        handlerContexts[0] = head;
-        handlerContexts[1] = tail;
-        handlerMasks[0] = head.executionMask;
-        handlerMasks[1] = tail.executionMask;
-        head.pipelineIndex = 0;
-        head.handlerMasks = handlerMasks;
-        head.handlerContexts = handlerContexts;
-        tail.pipelineIndex = 1;
-        tail.handlerMasks = handlerMasks;
-        tail.handlerContexts = handlerContexts;
+
+        head.next = tail;
+        tail.prev = head;
     }
 
     final MessageSizeEstimator.Handle estimatorHandle() {
@@ -171,20 +155,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         ADD_FIRST,
         ADD_LAST,
         ADD_BEFORE,
-        ADD_AFTER
-    }
-
-    private enum RemoveStrategy {
-        REMOVE_FIRST,
-        REMOVE_LAST
+        ADD_AFTER;
     }
 
     private ChannelPipeline internalAdd(EventExecutorGroup group, String name,
                                         ChannelHandler handler, String baseName,
                                         AddStrategy addStrategy) {
         final AbstractChannelHandlerContext newCtx;
-        final long stamp = pipelineLock.writeLock();
-        try {
+        synchronized (this) {
             checkMultiplicity(handler);
             name = filterName(name, handler);
 
@@ -192,16 +170,16 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             switch (addStrategy) {
                 case ADD_FIRST:
-                    insertIndex(1, newCtx);
+                    addFirst0(newCtx);
                     break;
                 case ADD_LAST:
-                    insertIndex(handlerMasks.length - 1, newCtx);
+                    addLast0(newCtx);
                     break;
                 case ADD_BEFORE:
-                    insertIndex(indexOfOrDie(baseName), newCtx);
+                    addBefore0(getContextOrDie(baseName), newCtx);
                     break;
                 case ADD_AFTER:
-                    insertIndex(indexOfOrDie(baseName) + 1, newCtx);
+                    addAfter0(getContextOrDie(baseName), newCtx);
                     break;
                 default:
                     throw new IllegalArgumentException("unknown add strategy: " + addStrategy);
@@ -221,8 +199,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 callHandlerAddedInEventLoop(newCtx, executor);
                 return this;
             }
-        } finally {
-            pipelineLock.unlockWrite(stamp);
         }
         callHandlerAdded0(newCtx);
         return this;
@@ -233,20 +209,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return internalAdd(group, name, handler, null, AddStrategy.ADD_FIRST);
     }
 
-    private void insertIndex(int index, AbstractChannelHandlerContext newCtx) {
-        assert pipelineLock.isWriteLocked();
-        int newLength = handlerMasks.length + 1;
-        handlerMasks = Arrays.copyOf(handlerMasks, newLength);
-        handlerContexts = Arrays.copyOf(handlerContexts, newLength);
-        System.arraycopy(handlerMasks, index, handlerMasks, index + 1, newLength - index - 1);
-        System.arraycopy(handlerContexts, index, handlerContexts, index + 1, newLength - index - 1);
-        handlerMasks[index] = newCtx.executionMask;
-        handlerContexts[index] = newCtx;
-        for (int i = 0; i < handlerContexts.length; i++) {
-            handlerContexts[i].pipelineIndex = i;
-            handlerContexts[i].handlerMasks = handlerMasks;
-            handlerContexts[i].handlerContexts = handlerContexts;
-        }
+    private void addFirst0(AbstractChannelHandlerContext newCtx) {
+        AbstractChannelHandlerContext nextCtx = head.next;
+        newCtx.prev = head;
+        newCtx.next = nextCtx;
+        head.next = newCtx;
+        nextCtx.prev = newCtx;
     }
 
     @Override
@@ -259,6 +227,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return internalAdd(group, name, handler, null, AddStrategy.ADD_LAST);
     }
 
+    private void addLast0(AbstractChannelHandlerContext newCtx) {
+        AbstractChannelHandlerContext prev = tail.prev;
+        newCtx.prev = prev;
+        newCtx.next = tail;
+        prev.next = newCtx;
+        tail.prev = newCtx;
+    }
+
     @Override
     public final ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler) {
         return addBefore(null, baseName, name, handler);
@@ -268,6 +244,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addBefore(
             EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
         return internalAdd(group, name, handler, baseName, AddStrategy.ADD_BEFORE);
+    }
+
+    private static void addBefore0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
+        newCtx.prev = ctx.prev;
+        newCtx.next = ctx;
+        ctx.prev.next = newCtx;
+        ctx.prev = newCtx;
     }
 
     private String filterName(String name, ChannelHandler handler) {
@@ -287,6 +270,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addAfter(
             EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
         return internalAdd(group, name, handler, baseName, AddStrategy.ADD_AFTER);
+    }
+
+    private static void addAfter0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
+        newCtx.prev = ctx;
+        newCtx.next = ctx.next;
+        ctx.next.prev = newCtx;
+        ctx.next = newCtx;
     }
 
     public final ChannelPipeline addFirst(ChannelHandler handler) {
@@ -373,67 +363,46 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline remove(ChannelHandler handler) {
-        remove(handler, null, null, null, false);
+        remove(getContextOrDie(handler));
         return this;
     }
 
     @Override
     public final ChannelHandler remove(String name) {
-        return remove(null, null, name, null, false).handler();
+        return remove(getContextOrDie(name)).handler();
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public final <T extends ChannelHandler> T remove(Class<T> handlerType) {
-        return (T) remove(null, handlerType, null, null, false).handler();
+        return (T) remove(getContextOrDie(handlerType)).handler();
     }
 
-    @SuppressWarnings("unchecked")
     public final <T extends ChannelHandler> T removeIfExists(String name) {
-        AbstractChannelHandlerContext ctx = remove(null, null, name, null, true);
-        return ctx == null ? null : (T) ctx.handler();
+        return removeIfExists(context(name));
     }
 
-    @SuppressWarnings("unchecked")
     public final <T extends ChannelHandler> T removeIfExists(Class<T> handlerType) {
-        AbstractChannelHandlerContext ctx = remove(null, handlerType, null, null, true);
-        return ctx == null ? null : (T) ctx.handler();
+        return removeIfExists(context(handlerType));
+    }
+
+    public final <T extends ChannelHandler> T removeIfExists(ChannelHandler handler) {
+        return removeIfExists(context(handler));
     }
 
     @SuppressWarnings("unchecked")
-    public final <T extends ChannelHandler> T removeIfExists(ChannelHandler handler) {
-        AbstractChannelHandlerContext ctx = remove(handler, null, null, null, true);
-        return ctx == null ? null : (T) ctx.handler();
+    private <T extends ChannelHandler> T removeIfExists(ChannelHandlerContext ctx) {
+        if (ctx == null) {
+            return null;
+        }
+        return (T) remove((AbstractChannelHandlerContext) ctx).handler();
     }
 
-    private <T extends ChannelHandler> AbstractChannelHandlerContext remove(
-            final ChannelHandler handler, final Class<T> handlerType, final String name, final RemoveStrategy strategy,
-            final boolean ignoreMissing) {
-        final AbstractChannelHandlerContext ctx;
-        final long stamp = pipelineLock.writeLock();
-        try {
-            if (handler != null) {
-                ctx = ignoreMissing ? context0(handler) : getContextOrDie(handler);
-            } else if (handlerType != null) {
-                ctx = ignoreMissing ? context0(handlerType) : getContextOrDie(handlerType);
-            } else if (name != null) {
-                ctx = ignoreMissing ? context0(name) : getContextOrDie(name);
-            } else if (strategy != null) {
-                if (handlerContexts.length == 2) {
-                    if (!ignoreMissing) {
-                        throw new NoSuchElementException();
-                    }
-                    return null;
-                }
-                ctx = strategy == RemoveStrategy.REMOVE_FIRST ? handlerContexts[1] :
-                        handlerContexts[handlerContexts.length - 2];
-            } else {
-                throw new IllegalArgumentException("No context specified");
-            }
-            if (ctx == null) {
-                return null;
-            }
-            removeIndex(ctx.pipelineIndex);
+    private AbstractChannelHandlerContext remove(final AbstractChannelHandlerContext ctx) {
+        assert ctx != head && ctx != tail;
+
+        synchronized (this) {
+            atomicRemoveFromHandlerList(ctx);
 
             // If the registered is false it means that the channel was not registered on an eventloop yet.
             // In this case we remove the context from the pipeline and add a task that will call
@@ -453,88 +422,74 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 });
                 return ctx;
             }
-        } finally {
-            pipelineLock.unlockWrite(stamp);
         }
         callHandlerRemoved0(ctx);
         return ctx;
     }
 
-    private void removeIndex(int index) {
-        assert pipelineLock.isWriteLocked();
-        assert handlerMasks.length > 2;
-        int newLength = handlerMasks.length - 1;
-        int[] oldMasks = handlerMasks;
-        AbstractChannelHandlerContext[] oldContexts = handlerContexts;
-        handlerMasks = Arrays.copyOf(handlerMasks, newLength);
-        handlerContexts = Arrays.copyOf(handlerContexts, newLength);
-        System.arraycopy(oldMasks, index + 1, handlerMasks, index, newLength - index);
-        System.arraycopy(oldContexts, index + 1, handlerContexts, index, newLength - index);
-        for (int i = 0; i < newLength; i++) {
-            handlerContexts[i].pipelineIndex = i;
-            handlerContexts[i].handlerMasks = handlerMasks;
-            handlerContexts[i].handlerContexts = handlerContexts;
-        }
+    /**
+     * Method is synchronized to make the handler removal from the double linked list atomic.
+     */
+    private synchronized void atomicRemoveFromHandlerList(AbstractChannelHandlerContext ctx) {
+        AbstractChannelHandlerContext prev = ctx.prev;
+        AbstractChannelHandlerContext next = ctx.next;
+        prev.next = next;
+        next.prev = prev;
     }
 
     @Override
     public final ChannelHandler removeFirst() {
-        return remove(null, null, null, RemoveStrategy.REMOVE_FIRST, false).handler();
+        if (head.next == tail) {
+            throw new NoSuchElementException();
+        }
+        return remove(head.next).handler();
     }
 
     @Override
     public final ChannelHandler removeLast() {
-        return remove(null, null, null, RemoveStrategy.REMOVE_LAST, false).handler();
+        if (head.next == tail) {
+            throw new NoSuchElementException();
+        }
+        return remove(tail.prev).handler();
     }
 
     @Override
     public final ChannelPipeline replace(ChannelHandler oldHandler, String newName, ChannelHandler newHandler) {
-        replace(oldHandler, null, null, newName, newHandler);
+        replace(getContextOrDie(oldHandler), newName, newHandler);
         return this;
     }
 
     @Override
     public final ChannelHandler replace(String oldName, String newName, ChannelHandler newHandler) {
-        return replace(null, null, oldName, newName, newHandler);
+        return replace(getContextOrDie(oldName), newName, newHandler);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public final <T extends ChannelHandler> T replace(
             Class<T> oldHandlerType, String newName, ChannelHandler newHandler) {
-        return (T) replace(null, oldHandlerType, null, newName, newHandler);
+        return (T) replace(getContextOrDie(oldHandlerType), newName, newHandler);
     }
 
-    private <T extends ChannelHandler> ChannelHandler replace(
-            final ChannelHandler oldHandler, final Class<T> oldHandlerType, final String oldName,
-            String newName, ChannelHandler newHandler) {
-        final AbstractChannelHandlerContext oldCtx;
-        final AbstractChannelHandlerContext newCtx;
-        long stamp = pipelineLock.writeLock();
-        try {
-            if (oldHandler != null) {
-                oldCtx = getContextOrDie(oldHandler);
-            } else if (oldHandlerType != null) {
-                oldCtx = getContextOrDie(oldHandlerType);
-            } else if (oldName != null) {
-                oldCtx = getContextOrDie(oldName);
-            } else {
-                throw new IllegalArgumentException("No context specified");
-            }
+    private ChannelHandler replace(
+            final AbstractChannelHandlerContext ctx, String newName, ChannelHandler newHandler) {
+        assert ctx != head && ctx != tail;
 
+        final AbstractChannelHandlerContext newCtx;
+        synchronized (this) {
             checkMultiplicity(newHandler);
             if (newName == null) {
                 newName = generateName(newHandler);
             } else {
-                boolean sameName = oldCtx.name().equals(newName);
+                boolean sameName = ctx.name().equals(newName);
                 if (!sameName) {
                     checkDuplicateName(newName);
                 }
             }
 
-            newCtx = newContext(oldCtx.childExecutor, newName, newHandler);
+            newCtx = newContext(ctx.childExecutor, newName, newHandler);
 
-            replaceIndex(oldCtx, newCtx);
+            replace0(ctx, newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventloop yet.
             // In this case we replace the context in the pipeline
@@ -542,10 +497,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             // ChannelHandler.handlerRemoved(...) once the channel is registered.
             if (!registered) {
                 callHandlerCallbackLater(newCtx, true);
-                callHandlerCallbackLater(oldCtx, false);
-                return oldCtx.handler();
+                callHandlerCallbackLater(ctx, false);
+                return ctx.handler();
             }
-            EventExecutor executor = oldCtx.executor();
+            EventExecutor executor = ctx.executor();
             if (!executor.inEventLoop()) {
                 executor.execute(new Runnable() {
                     @Override
@@ -554,52 +509,36 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                         // because callHandlerRemoved() will trigger channelRead() or flush() on newHandler and
                         // those event handlers must be called after handlerAdded().
                         callHandlerAdded0(newCtx);
-                        callHandlerRemoved0(oldCtx);
+                        callHandlerRemoved0(ctx);
                     }
                 });
-                return oldCtx.handler();
+                return ctx.handler();
             }
-        } finally {
-            pipelineLock.unlockWrite(stamp);
         }
         // Invoke newHandler.handlerAdded() first (i.e. before oldHandler.handlerRemoved() is invoked)
         // because callHandlerRemoved() will trigger channelRead() or flush() on newHandler and those
         // event handlers must be called after handlerAdded().
         callHandlerAdded0(newCtx);
-        callHandlerRemoved0(oldCtx);
-        return oldCtx.handler();
+        callHandlerRemoved0(ctx);
+        return ctx.handler();
     }
 
-    private void replaceIndex(AbstractChannelHandlerContext oldCtx, AbstractChannelHandlerContext newCtx) {
-        assert pipelineLock.isWriteLocked();
-        int index = oldCtx.pipelineIndex;
-        // The arrays are copy-on-write
-        int[] newMasks = Arrays.copyOf(handlerMasks, handlerMasks.length);
-        AbstractChannelHandlerContext[]newContexts = Arrays.copyOf(handlerContexts, handlerContexts.length);
-        newMasks[index] = newCtx.executionMask;
-        newContexts[index] = newCtx;
-        newCtx.pipelineIndex = index;
-        handlerMasks = newMasks;
-        handlerContexts = newContexts;
-        for (AbstractChannelHandlerContext ctx : newContexts) {
-            ctx.handlerMasks = newMasks;
-            ctx.handlerContexts = newContexts;
-        }
+    private static void replace0(AbstractChannelHandlerContext oldCtx, AbstractChannelHandlerContext newCtx) {
+        AbstractChannelHandlerContext prev = oldCtx.prev;
+        AbstractChannelHandlerContext next = oldCtx.next;
+        newCtx.prev = prev;
+        newCtx.next = next;
 
-        // Bracket the replaced context so it can forward messages into the new pipeline:
-        int[] bracketMasks = Arrays.copyOf(handlerMasks, handlerMasks.length + 2);
-        AbstractChannelHandlerContext[] bracketContexts = Arrays.copyOf(handlerContexts, handlerContexts.length + 2);
-        System.arraycopy(bracketMasks, index, bracketMasks, index + 2, bracketMasks.length - index - 2);
-        System.arraycopy(bracketContexts, index, bracketContexts, index + 2, bracketContexts.length - index - 2);
-        bracketMasks[index] = newCtx.executionMask;
-        bracketMasks[index + 1] = oldCtx.executionMask;
-        bracketMasks[index + 2] = newCtx.executionMask;
-        bracketContexts[index] = newCtx;
-        bracketContexts[index + 1] = oldCtx;
-        bracketContexts[index + 2] = newCtx;
-        oldCtx.handlerMasks = bracketMasks;
-        oldCtx.handlerContexts = bracketContexts;
-        oldCtx.pipelineIndex += 1;
+        // Finish the replacement of oldCtx with newCtx in the linked list.
+        // Note that this doesn't mean events will be sent to the new handler immediately
+        // because we are currently at the event handler thread and no more than one handler methods can be invoked
+        // at the same time (we ensured that in replace().)
+        prev.next = newCtx;
+        next.prev = newCtx;
+
+        // update the reference to the replacement so forward of buffered content will work correctly
+        oldCtx.prev = newCtx;
+        oldCtx.next = newCtx;
     }
 
     private static void checkMultiplicity(ChannelHandler handler) {
@@ -620,12 +559,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             boolean removed = false;
             try {
-                final long stamp = pipelineLock.writeLock();
-                try {
-                    removeIndex(ctx.pipelineIndex);
-                } finally {
-                    pipelineLock.unlockWrite(stamp);
-                }
+                atomicRemoveFromHandlerList(ctx);
                 ctx.callHandlerRemoved();
                 removed = true;
             } catch (Throwable t2) {
@@ -677,32 +611,17 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelHandlerContext firstContext() {
-        AbstractChannelHandlerContext first;
-        StampedLock lock = pipelineLock;
-        long stamp = lock.tryOptimisticRead();
-        first = handlerContexts[1];
-        if (lock.validate(stamp)) {
-            if (first == tail) {
-                return null;
-            }
-            return first;
+        AbstractChannelHandlerContext first = head.next;
+        if (first == tail) {
+            return null;
         }
-        stamp = lock.readLock();
-        try {
-            first = handlerContexts[1];
-            if (first == tail) {
-                return null;
-            }
-            return first;
-        } finally {
-            lock.unlockRead(stamp);
-        }
+        return head.next;
     }
 
     @Override
     public final ChannelHandler last() {
-        ChannelHandlerContext last = lastContext();
-        if (last == null) {
+        AbstractChannelHandlerContext last = tail.prev;
+        if (last == head) {
             return null;
         }
         return last.handler();
@@ -710,26 +629,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelHandlerContext lastContext() {
-        AbstractChannelHandlerContext last;
-        StampedLock lock = pipelineLock;
-        long stamp = lock.tryOptimisticRead();
-        last = handlerContexts[handlerContexts.length - 2];
-        if (lock.validate(stamp)) {
-            if (last == head) {
-                return null;
-            }
-            return last;
+        AbstractChannelHandlerContext last = tail.prev;
+        if (last == head) {
+            return null;
         }
-        stamp = lock.readLock();
-        try {
-            last = handlerContexts[handlerContexts.length - 2];
-            if (last == head) {
-                return null;
-            }
-            return last;
-        } finally {
-            lock.unlockRead(stamp);
-        }
+        return last;
     }
 
     @Override
@@ -762,89 +666,60 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelHandlerContext context(ChannelHandler handler) {
         ObjectUtil.checkNotNull(handler, "handler");
 
-        StampedLock lock = pipelineLock;
-        long stamp = lock.tryOptimisticRead();
-        AbstractChannelHandlerContext ctx = context0(handler);
-        if (lock.validate(stamp)) {
-            return ctx;
-        }
-        stamp = lock.readLock();
-        try {
-            return context0(handler);
-        } finally {
-            lock.unlockRead(stamp);
-        }
-    }
+        AbstractChannelHandlerContext ctx = head.next;
+        for (;;) {
 
-    private AbstractChannelHandlerContext context0(ChannelHandler handler) {
-        for (AbstractChannelHandlerContext ctx : handlerContexts) {
+            if (ctx == null) {
+                return null;
+            }
+
             if (ctx.handler() == handler) {
                 return ctx;
             }
+
+            ctx = ctx.next;
         }
-        return null;
     }
 
     @Override
     public final ChannelHandlerContext context(Class<? extends ChannelHandler> handlerType) {
         ObjectUtil.checkNotNull(handlerType, "handlerType");
 
-        StampedLock lock = pipelineLock;
-        long stamp = lock.tryOptimisticRead();
-        AbstractChannelHandlerContext ctx = context0(handlerType);
-        if (lock.validate(stamp)) {
-            return ctx;
-        }
-        stamp = lock.readLock();
-        try {
-            return context0(handlerType);
-        } finally {
-            lock.unlockRead(stamp);
-        }
-    }
-
-    private AbstractChannelHandlerContext context0(Class<? extends ChannelHandler> handlerType) {
-        for (AbstractChannelHandlerContext ctx : handlerContexts) {
+        AbstractChannelHandlerContext ctx = head.next;
+        for (;;) {
+            if (ctx == null) {
+                return null;
+            }
             if (handlerType.isAssignableFrom(ctx.handler().getClass())) {
                 return ctx;
             }
+            ctx = ctx.next;
         }
-        return null;
     }
 
     @Override
     public final List<String> names() {
-        final long stamp = pipelineLock.readLock();
-        try {
-            AbstractChannelHandlerContext[] ctxs = handlerContexts;
-            List<String> list = new ArrayList<String>(ctxs.length);
-            for (AbstractChannelHandlerContext ctx : ctxs) {
-                if (ctx == head || ctx == tail) {
-                    continue;
-                }
-                list.add(ctx.name());
+        List<String> list = new ArrayList<String>();
+        AbstractChannelHandlerContext ctx = head.next;
+        for (;;) {
+            if (ctx == null) {
+                return list;
             }
-            return list;
-        } finally {
-            pipelineLock.unlockRead(stamp);
+            list.add(ctx.name());
+            ctx = ctx.next;
         }
     }
 
     @Override
     public final Map<String, ChannelHandler> toMap() {
-        final long stamp = pipelineLock.readLock();
-        try {
-            AbstractChannelHandlerContext[] ctxs = handlerContexts;
-            Map<String, ChannelHandler> map = new LinkedHashMap<String, ChannelHandler>((int) (ctxs.length * 1.25));
-            for (AbstractChannelHandlerContext ctx : ctxs) {
-                if (ctx == head || ctx == tail) {
-                    continue;
-                }
-                map.put(ctx.name(), ctx.handler());
+        Map<String, ChannelHandler> map = new LinkedHashMap<String, ChannelHandler>();
+        AbstractChannelHandlerContext ctx = head.next;
+        for (;;) {
+            if (ctx == tail) {
+                return map;
             }
-            return map;
-        } finally {
-            pipelineLock.unlockRead(stamp);
+            map.put(ctx.name(), ctx.handler());
+            ctx = ctx.next;
         }
     }
 
@@ -858,26 +733,27 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      */
     @Override
     public final String toString() {
-        // NOTE: In toString we iterate without locking, because it might get called by debuggers while lock is held!
         StringBuilder buf = new StringBuilder()
             .append(StringUtil.simpleClassName(this))
             .append('{');
-        int headerLen = buf.length();
-
-        AbstractChannelHandlerContext[] ctxs = handlerContexts; // Should be stable, as we mutate with copy-on-write.
-        for (AbstractChannelHandlerContext ctx : ctxs) {
-            if (ctx == head || ctx == tail) {
-                continue;
+        AbstractChannelHandlerContext ctx = head.next;
+        for (;;) {
+            if (ctx == tail) {
+                break;
             }
+
             buf.append('(')
-                    .append(ctx.name())
-                    .append(" = ")
-                    .append(ctx.handler().getClass().getName())
-                    .append(')');
+               .append(ctx.name())
+               .append(" = ")
+               .append(ctx.handler().getClass().getName())
+               .append(')');
+
+            ctx = ctx.next;
+            if (ctx == tail) {
+                break;
+            }
+
             buf.append(", ");
-        }
-        if (buf.length() > headerLen) {
-            buf.setLength(buf.length() - 2); // Remove last ", ".
         }
         buf.append('}');
         return buf.toString();
@@ -914,37 +790,68 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     /**
      * Removes all handlers from the pipeline one by one from tail (exclusive) to head (exclusive) to trigger
      * handlerRemoved().
-     * <p>
-     * Note that we remove the handlers from the tail-end toward the head, and call handlerRemoved after each
-     * so that all events are handled.
-     * <p>
+     *
+     * Note that we traverse up the pipeline ({@link #destroyUp(AbstractChannelHandlerContext, boolean)})
+     * before traversing down ({@link #destroyDown(Thread, AbstractChannelHandlerContext, boolean)}) so that
+     * the handlers are removed after all events are handled.
+     *
      * See: https://github.com/netty/netty/issues/3156
      */
-    private void destroy() {
-        // It goes like this:
-        // 1. Find the last non-tail context (if there are none, we're done)
-        // 2. If we're in the event loop of that context:
-        // 2.1 Remove it
-        // 2.2 Schedule a task to call handlerRemoved(), followed by destroy().
-        // 3. If we're not in the event loop of the last non-tail task, schedule destroy() on that event loop.
-        final long stamp = pipelineLock.writeLock();
-        try {
-            AbstractChannelHandlerContext lastNonTail = handlerContexts[handlerContexts.length - 2];
-            if (lastNonTail == head) {
-                return; // We're done.
+    private synchronized void destroy() {
+        destroyUp(head.next, false);
+    }
+
+    private void destroyUp(AbstractChannelHandlerContext ctx, boolean inEventLoop) {
+        final Thread currentThread = Thread.currentThread();
+        final AbstractChannelHandlerContext tail = this.tail;
+        for (;;) {
+            if (ctx == tail) {
+                destroyDown(currentThread, tail.prev, inEventLoop);
+                break;
             }
-            final EventExecutor executor = lastNonTail.executor();
-            if (executor.inEventLoop(Thread.currentThread())) {
-                removeIndex(lastNonTail.pipelineIndex);
-                executor.execute(() -> {
-                    callHandlerRemoved0(lastNonTail);
-                    destroy();
+
+            final EventExecutor executor = ctx.executor();
+            if (!inEventLoop && !executor.inEventLoop(currentThread)) {
+                final AbstractChannelHandlerContext finalCtx = ctx;
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        destroyUp(finalCtx, true);
+                    }
                 });
-            } else {
-                executor.execute(this::destroy);
+                break;
             }
-        } finally {
-            pipelineLock.unlockWrite(stamp);
+
+            ctx = ctx.next;
+            inEventLoop = false;
+        }
+    }
+
+    private void destroyDown(Thread currentThread, AbstractChannelHandlerContext ctx, boolean inEventLoop) {
+        // We have reached at tail; now traverse backwards.
+        final AbstractChannelHandlerContext head = this.head;
+        for (;;) {
+            if (ctx == head) {
+                break;
+            }
+
+            final EventExecutor executor = ctx.executor();
+            if (inEventLoop || executor.inEventLoop(currentThread)) {
+                atomicRemoveFromHandlerList(ctx);
+                callHandlerRemoved0(ctx);
+            } else {
+                final AbstractChannelHandlerContext finalCtx = ctx;
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        destroyDown(Thread.currentThread(), finalCtx, true);
+                    }
+                });
+                break;
+            }
+
+            ctx = ctx.prev;
+            inEventLoop = false;
         }
     }
 
@@ -1076,14 +983,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             return tail.deregister();
         } finally {
-            final long stamp = pipelineLock.readLock(); // Read lock protects the context arrays while we iterate.
-            try {
-                for (AbstractChannelHandlerContext ctx : handlerContexts) {
-                    ctx.contextExecutor = null; // Clear cached executors in case channel gets re-registered.
-                }
-            } finally {
-                pipelineLock.unlockRead(stamp);
-            }
+            AbstractChannelHandlerContext context = tail;
+            do {
+                context.contextExecutor = null; // Clear cached executors in case channel gets re-registered.
+                context = context.prev;
+            } while (context != null);
         }
     }
 
@@ -1182,28 +1086,18 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private AbstractChannelHandlerContext context0(String name) {
-        for (AbstractChannelHandlerContext ctx : handlerContexts) {
-            if (ctx == head || ctx == tail) {
-                continue;
+        AbstractChannelHandlerContext context = head.next;
+        while (context != tail) {
+            if (context.name().equals(name)) {
+                return context;
             }
-            if (ctx.name().equals(name)) {
-                return ctx;
-            }
+            context = context.next;
         }
         return null;
     }
 
-    private int indexOfOrDie(String name) {
-        AbstractChannelHandlerContext ctx = context0(name);
-        if (ctx == null) {
-            throw new NoSuchElementException(name);
-        } else {
-            return ctx.pipelineIndex;
-        }
-    }
-
     private AbstractChannelHandlerContext getContextOrDie(String name) {
-        AbstractChannelHandlerContext ctx = context0(name);
+        AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) context(name);
         if (ctx == null) {
             throw new NoSuchElementException(name);
         } else {
@@ -1212,7 +1106,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private AbstractChannelHandlerContext getContextOrDie(ChannelHandler handler) {
-        AbstractChannelHandlerContext ctx = context0(handler);
+        AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) context(handler);
         if (ctx == null) {
             throw new NoSuchElementException(handler.getClass().getName());
         } else {
@@ -1221,7 +1115,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private AbstractChannelHandlerContext getContextOrDie(Class<? extends ChannelHandler> handlerType) {
-        AbstractChannelHandlerContext ctx = context0(handlerType);
+        AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) context(handlerType);
         if (ctx == null) {
             throw new NoSuchElementException(handlerType.getName());
         } else {
@@ -1231,8 +1125,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerAddedForAllHandlers() {
         final PendingHandlerCallback pendingHandlerCallbackHead;
-        final long stamp = pipelineLock.writeLock();
-        try {
+        synchronized (this) {
             assert !registered;
 
             // This Channel itself was registered.
@@ -1241,8 +1134,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             pendingHandlerCallbackHead = this.pendingHandlerCallbackHead;
             // Null out so it can be GC'ed.
             this.pendingHandlerCallbackHead = null;
-        } finally {
-            pipelineLock.unlockWrite(stamp);
         }
 
         // This must happen outside of the synchronized(...) block as otherwise handlerAdded(...) may be called while
@@ -1257,7 +1148,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerCallbackLater(AbstractChannelHandlerContext ctx, boolean added) {
         assert !registered;
-        assert pipelineLock.isWriteLocked();
 
         PendingHandlerCallback task = added ? new PendingHandlerAddedTask(ctx) : new PendingHandlerRemovedTask(ctx);
         PendingHandlerCallback pending = pendingHandlerCallbackHead;
@@ -1607,12 +1497,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                                 "Can't invoke handlerAdded() as the EventExecutor {} rejected it, removing handler {}.",
                                 executor, ctx.name(), e);
                     }
-                    final long stamp = pipelineLock.writeLock();
-                    try {
-                        removeIndex(ctx.pipelineIndex);
-                    } finally {
-                        pipelineLock.unlockWrite(stamp);
-                    }
+                    atomicRemoveFromHandlerList(ctx);
                     ctx.setRemoved();
                 }
             }

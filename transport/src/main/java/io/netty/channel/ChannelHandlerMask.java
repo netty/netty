@@ -61,7 +61,6 @@ final class ChannelHandlerMask {
     static final int MASK_ONLY_OUTBOUND =  MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
             MASK_CLOSE | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH;
     private static final int MASK_ALL_OUTBOUND = MASK_EXCEPTION_CAUGHT | MASK_ONLY_OUTBOUND;
-    private static final int MASK_BITS = Integer.SIZE;
 
     private static final FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>> MASKS =
             new FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>>() {
@@ -70,10 +69,6 @@ final class ChannelHandlerMask {
                     return new WeakHashMap<Class<? extends ChannelHandler>, Integer>(64);
                 }
             };
-
-    static {
-        assert MASK_BITS >= Integer.SIZE - Integer.numberOfLeadingZeros(MASK_ALL_INBOUND | MASK_ALL_OUTBOUND);
-    }
 
     /**
      * Return the {@code executionMask}.
@@ -186,49 +181,6 @@ final class ChannelHandlerMask {
                 return m.isAnnotationPresent(Skip.class);
             }
         });
-    }
-
-    static AbstractChannelHandlerContext[] initContextCache() {
-        return new AbstractChannelHandlerContext[4];
-    }
-
-    static long packMasks(int m1, int m2) {
-        return m1 | (long) m2 << MASK_BITS;
-    }
-
-    static int packedMaskIndexOf(int mask, long masks) {
-        long maskingMask = mask * 0x0000_0001_0000_0001L;
-        long matchingMasks = masks ^ maskingMask;
-        // overflow one bit if there's a match
-        long tmp = (matchingMasks & 0x7FFF_FFFF_7FFF_FFFFL) + 0x7FFF_FFFF_7FFF_FFFFL;
-        long msbSetIfFound = ~(tmp | matchingMasks | 0x7FFF_FFFF_7FFF_FFFFL);
-        return Long.numberOfTrailingZeros(msbSetIfFound) / MASK_BITS;
-    }
-
-    static boolean packedMaskIndexFound(int index) {
-        return index < 2;
-    }
-
-    static AbstractChannelHandlerContext getFoundOutbound(AbstractChannelHandlerContext[] array, int index) {
-        return array[index + 2];
-    }
-
-    static AbstractChannelHandlerContext getFoundInbound(AbstractChannelHandlerContext[] array, int index) {
-        return array[index];
-    }
-
-    static long storeOutbound(AbstractChannelHandlerContext[] contextCache, long masks,
-                              AbstractChannelHandlerContext ctx, int mask) {
-        contextCache[2] = contextCache[3];
-        contextCache[3] = ctx;
-        return masks >> MASK_BITS | (long) mask << MASK_BITS;
-    }
-
-    static long storeInbound(AbstractChannelHandlerContext[] contextCache, long masks,
-                              AbstractChannelHandlerContext ctx, int mask) {
-        contextCache[0] = contextCache[1];
-        contextCache[1] = ctx;
-        return masks >> MASK_BITS | (long) mask << MASK_BITS;
     }
 
     private ChannelHandlerMask() { }

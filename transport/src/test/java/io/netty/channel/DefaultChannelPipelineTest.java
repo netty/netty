@@ -493,22 +493,18 @@ public class DefaultChannelPipelineTest {
         pipeline.addBefore("1", "0", newHandler());
         pipeline.addAfter("10", "11", newHandler());
 
-        DefaultChannelPipeline dcp = (DefaultChannelPipeline) pipeline;
-        assertSame(dcp.head, dcp.handlerContexts[0]);
-        assertSame(dcp.tail, dcp.handlerContexts[dcp.handlerContexts.length - 1]);
-        for (int i = 1; i < dcp.handlerContexts.length - 1; i++) {
-            AbstractChannelHandlerContext ctx = dcp.handlerContexts[i];
-            AbstractChannelHandlerContext next = dcp.handlerContexts[i + 1];
-            int x = toInt(ctx.name());
-            int y = toInt(next.name());
-            if (y != -1) {
-                assertTrue(x < y);
-            } else {
-                assertSame(dcp.tail, next);
-            }
-        }
         AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) pipeline.firstContext();
         assertNotNull(ctx);
+        while (ctx != null) {
+            int i = toInt(ctx.name());
+            int j = next(ctx);
+            if (j != -1) {
+                assertTrue(i < j);
+            } else {
+                assertNull(ctx.next.next);
+            }
+            ctx = ctx.next;
+        }
 
         verifyContextNumber(pipeline, 8);
     }
@@ -2124,6 +2120,15 @@ public class DefaultChannelPipelineTest {
         }
     }
 
+    private static int next(AbstractChannelHandlerContext ctx) {
+        AbstractChannelHandlerContext next = ctx.next;
+        if (next == null) {
+            return Integer.MAX_VALUE;
+        }
+
+        return toInt(next.name());
+    }
+
     private static int toInt(String name) {
         try {
             return Integer.parseInt(name);
@@ -2133,8 +2138,12 @@ public class DefaultChannelPipelineTest {
     }
 
     private static void verifyContextNumber(ChannelPipeline pipeline, int expectedNumber) {
-        DefaultChannelPipeline dcp = (DefaultChannelPipeline) pipeline;
-        int handlerNumber = dcp.handlerContexts.length - 2; // Exclude head and tail
+        AbstractChannelHandlerContext ctx = (AbstractChannelHandlerContext) pipeline.firstContext();
+        int handlerNumber = 0;
+        while (ctx != ((DefaultChannelPipeline) pipeline).tail) {
+            handlerNumber++;
+            ctx = ctx.next;
+        }
         assertEquals(expectedNumber, handlerNumber);
     }
 
