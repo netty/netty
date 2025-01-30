@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.ThreadAwareExecutor;
+
 /**
  * Factory for {@link IoHandler} instances.
  */
@@ -23,8 +25,8 @@ public interface IoHandlerFactory {
     /**
      * Creates a new {@link IoHandler} instance.
      *
-     * @param ioExecutor        the {@link IoExecutor} for the {@link IoHandler}.
+     * @param ioExecutor        the {@link ThreadAwareExecutor} for the {@link IoHandler}.
      * @return                  a new {@link IoHandler} instance.
      */
-    IoHandler newHandler(IoExecutor ioExecutor);
+    IoHandler newHandler(ThreadAwareExecutor ioExecutor);
 }

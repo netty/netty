@@ -17,8 +17,7 @@ package io.netty.channel.nio;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.IoExecutorContext;
-import io.netty.channel.IoExecutor;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
@@ -27,6 +26,7 @@ import io.netty.channel.IoRegistration;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.util.IntSupplier;
+import io.netty.util.concurrent.ThreadAwareExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReflectionUtil;
@@ -111,11 +111,11 @@ public final class NioIoHandler implements IoHandler {
     private final AtomicBoolean wakenUp = new AtomicBoolean();
 
     private final SelectStrategy selectStrategy;
-    private final IoExecutor executor;
+    private final ThreadAwareExecutor executor;
     private int cancelledKeys;
     private boolean needsToSelectAgain;
 
-    private NioIoHandler(IoExecutor executor, SelectorProvider selectorProvider,
+    private NioIoHandler(ThreadAwareExecutor executor, SelectorProvider selectorProvider,
                          SelectStrategy strategy) {
         this.executor = ObjectUtil.checkNotNull(executor, "executionContext");
         this.provider = ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
@@ -322,7 +322,7 @@ public final class NioIoHandler implements IoHandler {
         private final NioIoHandle handle;
         private volatile SelectionKey key;
 
-        DefaultNioRegistration(IoExecutor executor, NioIoHandle handle, NioIoOps initialOps, Selector selector)
+        DefaultNioRegistration(ThreadAwareExecutor executor, NioIoHandle handle, NioIoOps initialOps, Selector selector)
                 throws IOException {
             this.handle = handle;
             key = handle.selectableChannel().register(selector, initialOps.value, this);
@@ -409,7 +409,7 @@ public final class NioIoHandler implements IoHandler {
     }
 
     @Override
-    public int run(IoExecutorContext context) {
+    public int run(IoHandlerContext context) {
         int handled = 0;
         try {
             try {
@@ -594,7 +594,7 @@ public final class NioIoHandler implements IoHandler {
 
     @Override
     public void wakeup() {
-        if (!executor.inExecutorThread(Thread.currentThread()) && wakenUp.compareAndSet(false, true)) {
+        if (!executor.isExecutorThread(Thread.currentThread()) && wakenUp.compareAndSet(false, true)) {
             selector.wakeup();
         }
     }
@@ -608,7 +608,7 @@ public final class NioIoHandler implements IoHandler {
         return unwrappedSelector;
     }
 
-    private void select(IoExecutorContext runner, boolean oldWakenUp) throws IOException {
+    private void select(IoHandlerContext runner, boolean oldWakenUp) throws IOException {
         Selector selector = this.selector;
         try {
             int selectCnt = 0;

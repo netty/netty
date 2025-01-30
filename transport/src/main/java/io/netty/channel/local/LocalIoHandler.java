@@ -15,13 +15,13 @@
  */
 package io.netty.channel.local;
 
-import io.netty.channel.IoExecutorContext;
-import io.netty.channel.IoExecutor;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
+import io.netty.util.concurrent.ThreadAwareExecutor;
 import io.netty.util.internal.StringUtil;
 
 import java.util.HashSet;
@@ -32,10 +32,10 @@ import java.util.concurrent.locks.LockSupport;
 
 public final class LocalIoHandler implements IoHandler {
     private final Set<LocalIoHandle> registeredChannels = new HashSet<LocalIoHandle>(64);
-    private final IoExecutor executor;
+    private final ThreadAwareExecutor executor;
     private volatile Thread executionThread;
 
-    private LocalIoHandler(IoExecutor executor) {
+    private LocalIoHandler(ThreadAwareExecutor executor) {
         this.executor = Objects.requireNonNull(executor, "executor");
     }
 
@@ -54,7 +54,7 @@ public final class LocalIoHandler implements IoHandler {
     }
 
     @Override
-    public int run(IoExecutorContext context) {
+    public int run(IoHandlerContext context) {
         if (executionThread == null) {
             executionThread = Thread.currentThread();
         }
@@ -67,7 +67,7 @@ public final class LocalIoHandler implements IoHandler {
 
     @Override
     public void wakeup() {
-        if (!executor.inExecutorThread(Thread.currentThread())) {
+        if (!executor.isExecutorThread(Thread.currentThread())) {
             Thread thread = executionThread;
             if (thread != null) {
                 // Wakeup if we block at the moment.
@@ -106,10 +106,10 @@ public final class LocalIoHandler implements IoHandler {
 
     private final class LocalIoRegistration implements IoRegistration {
         private final AtomicBoolean canceled = new AtomicBoolean();
-        private final IoExecutor executor;
+        private final ThreadAwareExecutor executor;
         private final LocalIoHandle handle;
 
-        LocalIoRegistration(IoExecutor executor, LocalIoHandle handle) {
+        LocalIoRegistration(ThreadAwareExecutor executor, LocalIoHandle handle) {
             this.executor = executor;
             this.handle = handle;
         }
@@ -134,7 +134,7 @@ public final class LocalIoHandler implements IoHandler {
             if (!canceled.compareAndSet(false, true)) {
                 return false;
             }
-            if (executor.inExecutorThread(Thread.currentThread())) {
+            if (executor.isExecutorThread(Thread.currentThread())) {
                 cancel0();
             } else {
                 executor.execute(this::cancel0);

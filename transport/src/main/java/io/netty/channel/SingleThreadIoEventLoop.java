@@ -39,7 +39,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             SystemPropertyUtil.getInt("io.netty.eventLoop.maxTaskProcessingQuantumMs", 1000)));
 
     private final long maxTaskProcessingQuantumNs;
-    private final IoExecutorContext context = new IoExecutorContext() {
+    private final IoHandlerContext context = new IoHandlerContext() {
         @Override
         public boolean canBlock() {
             assert inEventLoop();
@@ -59,19 +59,6 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         }
     };
 
-    private final IoExecutor ioExecutor = new IoExecutor() {
-
-        @Override
-        public boolean inExecutorThread(Thread currentThread) {
-            return SingleThreadIoEventLoop.this.inEventLoop(currentThread);
-        }
-
-        @Override
-        public void execute(Runnable command) {
-            SingleThreadIoEventLoop.this.execute(command);
-        }
-    };
-
     private final IoHandler ioHandler;
 
     private final AtomicInteger numRegistrations = new AtomicInteger();
@@ -88,7 +75,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
                                    IoHandlerFactory ioHandlerFactory) {
         super(parent, threadFactory, false, true);
         this.maxTaskProcessingQuantumNs = DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS;
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(ioExecutor);
+        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
     }
 
     /**
@@ -102,7 +89,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor, IoHandlerFactory ioHandlerFactory) {
         super(parent, executor, false, true);
         this.maxTaskProcessingQuantumNs = DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS;
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(ioExecutor);
+        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
     }
 
     /**
@@ -129,7 +116,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         this.maxTaskProcessingQuantumNs =
                 ObjectUtil.checkPositiveOrZero(maxTaskProcessingQuantumMs, "maxTaskProcessingQuantumMs") == 0 ?
                         DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS : maxTaskProcessingQuantumMs;
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(ioExecutor);
+        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
     }
 
     /**
@@ -155,7 +142,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         this.maxTaskProcessingQuantumNs =
                 ObjectUtil.checkPositiveOrZero(maxTaskProcessingQuantumMs, "maxTaskProcessingQuantumMs") == 0 ?
                         DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS : maxTaskProcessingQuantumMs;
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(ioExecutor);
+        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
     }
 
     /**
@@ -177,7 +164,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
                                       RejectedExecutionHandler rejectedExecutionHandler) {
         super(parent, executor, false, true, taskQueue, tailTaskQueue, rejectedExecutionHandler);
         this.maxTaskProcessingQuantumNs = DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS;
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(ioExecutor);
+        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
     }
 
     @Override

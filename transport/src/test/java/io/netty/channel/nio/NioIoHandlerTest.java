@@ -15,13 +15,11 @@
  */
 package io.netty.channel.nio;
 
-import io.netty.channel.IoExecutor;
-import io.netty.channel.IoExecutorContext;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoRegistration;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.ThreadAwareExecutor;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -44,9 +42,9 @@ public class NioIoHandlerTest {
         final Thread current = Thread.currentThread();
         final Queue<Runnable> tasks = new ConcurrentLinkedQueue<>();
         // Create our own IoExecutor that is driven by the main thread
-        final IoExecutor executor = new IoExecutor() {
+        final ThreadAwareExecutor executor = new ThreadAwareExecutor() {
             @Override
-            public boolean inExecutorThread(Thread thread) {
+            public boolean isExecutorThread(Thread thread) {
                 return current == thread;
             }
 
@@ -55,7 +53,7 @@ public class NioIoHandlerTest {
                 tasks.add(command);
             }
         };
-        IoExecutorContext context = new IoExecutorContext() {
+        IoHandlerContext context = new IoHandlerContext() {
             @Override
             public boolean canBlock() {
                 // Just busy spin.

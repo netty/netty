@@ -15,10 +15,12 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.ThreadAwareExecutor;
+
 /**
- * Handles IO dispatching for an {@link IoExecutor}.
+ * Handles IO dispatching for an {@link ThreadAwareExecutor}.
  * All operations except {@link #wakeup()} and {@link #isCompatible(Class)} <strong>MUST</strong> be executed
- * on the {@link IoExecutor} thread (which means {@link IoExecutor#inExecutorThread(Thread)} must
+ * on the {@link ThreadAwareExecutor} thread (which means {@link ThreadAwareExecutor#isExecutorThread(Thread)} must
  * return {@code true}) and should never be called from the user-directly.
  * <p>
  * Once a {@link IoHandle} is registered via the {@link #register(IoHandle)} method it's possible
@@ -36,15 +38,15 @@ public interface IoHandler {
     default void initialize() { }
 
     /**
-     * Run the IO handled by this {@link IoHandler}. The {@link IoExecutorContext} should be used
+     * Run the IO handled by this {@link IoHandler}. The {@link IoHandlerContext} should be used
      * to ensure we not execute too long and so block the processing of other task that are
-     * scheduled on the {@link IoExecutor}. This is done by taking {@link IoExecutorContext#delayNanos(long)}
-     * or {@link IoExecutorContext#deadlineNanos()} into account.
+     * scheduled on the {@link ThreadAwareExecutor}. This is done by taking {@link IoHandlerContext#delayNanos(long)}
+     * or {@link IoHandlerContext#deadlineNanos()} into account.
      *
-     * @param  context  the {@link IoExecutorContext}.
+     * @param  context  the {@link IoHandlerContext}.
      * @return          the number of {@link IoHandle} for which I/O was handled.
      */
-    int run(IoExecutorContext context);
+    int run(IoHandlerContext context);
 
     /**
      * Prepare to destroy this {@link IoHandler}. This method will be called before {@link #destroy()} and may be

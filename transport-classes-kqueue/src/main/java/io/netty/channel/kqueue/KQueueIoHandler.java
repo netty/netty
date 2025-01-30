@@ -17,8 +17,7 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.IoExecutorContext;
-import io.netty.channel.IoExecutor;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
@@ -30,6 +29,7 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.ThreadAwareExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -75,7 +75,7 @@ public final class KQueueIoHandler implements IoHandler {
             return kqueueWaitNow();
         }
     };
-    private final IoExecutor executor;
+    private final ThreadAwareExecutor executor;
     private final IntObjectMap<DefaultKqueueIoRegistration> registrations = new IntObjectHashMap<>(4096);
     private int numChannels;
 
@@ -98,7 +98,7 @@ public final class KQueueIoHandler implements IoHandler {
         return executor -> new KQueueIoHandler(executor, maxEvents, selectStrategyFactory.newSelectStrategy());
     }
 
-    private KQueueIoHandler(IoExecutor executor, int maxEvents, SelectStrategy strategy) {
+    private KQueueIoHandler(ThreadAwareExecutor executor, int maxEvents, SelectStrategy strategy) {
         this.executor = ObjectUtil.checkNotNull(executor, "executor");
         this.selectStrategy = ObjectUtil.checkNotNull(strategy, "strategy");
         this.kqueueFd = Native.newKQueue();
@@ -120,7 +120,7 @@ public final class KQueueIoHandler implements IoHandler {
 
     @Override
     public void wakeup() {
-        if (!executor.inExecutorThread(Thread.currentThread())
+        if (!executor.isExecutorThread(Thread.currentThread())
                 && WAKEN_UP_UPDATER.compareAndSet(this, 0, 1)) {
             wakeup0();
         }
@@ -132,7 +132,7 @@ public final class KQueueIoHandler implements IoHandler {
         // So it is not very practical to assert the return value is always >= 0.
     }
 
-    private int kqueueWait(IoExecutorContext context, boolean oldWakeup) throws IOException {
+    private int kqueueWait(IoHandlerContext context, boolean oldWakeup) throws IOException {
         // If a task was submitted when wakenUp value was 1, the task didn't get a chance to produce wakeup event.
         // So we need to check task queue again before calling kqueueWait. If we don't, the task might be pended
         // until kqueueWait was timed out. It might be pended until idle timeout if IdleStateHandler existed
@@ -183,7 +183,7 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     @Override
-    public int run(IoExecutorContext context) {
+    public int run(IoHandlerContext context) {
         int handled = 0;
         try {
             int strategy = selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock());
@@ -361,9 +361,9 @@ public final class KQueueIoHandler implements IoHandler {
 
         final KQueueIoHandle handle;
 
-        private final IoExecutor executor;
+        private final ThreadAwareExecutor executor;
 
-        DefaultKqueueIoRegistration(IoExecutor executor, KQueueIoHandle handle) {
+        DefaultKqueueIoRegistration(ThreadAwareExecutor executor, KQueueIoHandle handle) {
             this.executor = executor;
             this.handle = handle;
         }
@@ -383,7 +383,7 @@ public final class KQueueIoHandler implements IoHandler {
             short filter = kQueueIoOps.filter();
             short flags = kQueueIoOps.flags();
             int fflags = kQueueIoOps.fflags();
-            if (executor.inExecutorThread(Thread.currentThread())) {
+            if (executor.isExecutorThread(Thread.currentThread())) {
                 evSet(filter, flags, fflags);
             } else {
                 executor.execute(() -> evSet(filter, flags, fflags));
@@ -410,7 +410,7 @@ public final class KQueueIoHandler implements IoHandler {
             if (!canceled.compareAndSet(false, true)) {
                 return false;
             }
-            if (executor.inExecutorThread(Thread.currentThread())) {
+            if (executor.isExecutorThread(Thread.currentThread())) {
                 cancel0();
             } else {
                 executor.execute(this::cancel0);

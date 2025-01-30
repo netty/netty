@@ -14,6 +14,7 @@
  * under the License.
  */
 package io.netty.channel;
+import io.netty.util.concurrent.ThreadAwareExecutor;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Executors;
@@ -30,7 +31,7 @@ public class SingleThreadIoEventLoopTest {
     @Test
     void testIsIoType() {
         class TestIoHandler2 extends TestIoHandler {
-            TestIoHandler2(IoExecutor executor) {
+            TestIoHandler2(ThreadAwareExecutor executor) {
                 super(executor);
             }
         }
@@ -43,7 +44,7 @@ public class SingleThreadIoEventLoopTest {
     }
 
     static final class CompatibleTestIoHandler extends TestIoHandler {
-        CompatibleTestIoHandler(IoExecutor executor) {
+        CompatibleTestIoHandler(ThreadAwareExecutor executor) {
             super(executor);
         }
 
@@ -105,9 +106,9 @@ public class SingleThreadIoEventLoopTest {
 
     private static class TestIoHandler implements IoHandler {
         private final Semaphore semaphore = new Semaphore(0);
-        private final IoExecutor executor;
+        private final ThreadAwareExecutor executor;
 
-        TestIoHandler(IoExecutor executor) {
+        TestIoHandler(ThreadAwareExecutor executor) {
             this.executor = executor;
         }
 
@@ -154,7 +155,7 @@ public class SingleThreadIoEventLoopTest {
         }
 
         @Override
-        public int run(IoExecutorContext context) {
+        public int run(IoHandlerContext context) {
             try {
                 semaphore.acquire();
             } catch (InterruptedException e) {
