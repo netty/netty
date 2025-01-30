@@ -17,22 +17,19 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.EventLoop;
 import io.netty.channel.IoExecutorContext;
 import io.netty.channel.IoExecutor;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -41,9 +38,11 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.Math.min;
@@ -71,10 +70,7 @@ public class EpollIoHandler implements IoHandler {
     private final IntObjectMap<DefaultEpollIoRegistration> registrations = new IntObjectHashMap<>(4096);
     private final boolean allowGrowing;
     private final EpollEventArray events;
-
-    // These are initialized on first use
-    private IovArray iovArray;
-    private NativeDatagramPacketArray datagramPacketArray;
+    private final NativeArrays nativeArrays;
 
     private final SelectStrategy selectStrategy;
     private final IntSupplier selectNowSupplier = new IntSupplier() {
@@ -128,6 +124,7 @@ public class EpollIoHandler implements IoHandler {
             allowGrowing = false;
             events = new EpollEventArray(maxEvents);
         }
+        nativeArrays = new NativeArrays();
         openFileDescriptors();
     }
 
@@ -193,30 +190,6 @@ public class EpollIoHandler implements IoHandler {
         }
     }
 
-    /**
-     * Return a cleared {@link IovArray} that can be used for writes in this {@link EventLoop}.
-     */
-    IovArray cleanIovArray() {
-        if (iovArray == null) {
-            iovArray = new IovArray();
-        } else {
-            iovArray.clear();
-        }
-        return iovArray;
-    }
-
-    /**
-     * Return a cleared {@link NativeDatagramPacketArray} that can be used for writes in this {@link EventLoop}.
-     */
-    NativeDatagramPacketArray cleanDatagramPacketArray() {
-        if (datagramPacketArray == null) {
-            datagramPacketArray = new NativeDatagramPacketArray();
-        } else {
-            datagramPacketArray.clear();
-        }
-        return datagramPacketArray;
-    }
-
     @Override
     public void wakeup() {
         if (!executor.inExecutorThread(Thread.currentThread()) && nextWakeupNanos.getAndSet(AWAKE) != AWAKE) {
@@ -241,32 +214,29 @@ public class EpollIoHandler implements IoHandler {
         try {
             closeFileDescriptors();
         } finally {
-            // release native memory
-            if (iovArray != null) {
-                iovArray.release();
-                iovArray = null;
-            }
-            if (datagramPacketArray != null) {
-                datagramPacketArray.release();
-                datagramPacketArray = null;
-            }
+            nativeArrays.free();
             events.free();
         }
     }
 
-    private final class DefaultEpollIoRegistration implements EpollIoRegistration {
-        private final Promise<?> cancellationPromise;
+    private final class DefaultEpollIoRegistration implements IoRegistration {
         private final IoExecutor executor;
+        private final AtomicBoolean canceled = new AtomicBoolean();
         final EpollIoHandle handle;
 
         DefaultEpollIoRegistration(IoExecutor executor, EpollIoHandle handle) {
             this.executor = executor;
             this.handle = handle;
-            this.cancellationPromise = executor.newPromise();
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> T attachment() {
+            return (T) nativeArrays;
         }
 
         @Override
-        public long submit(IoOps ops) throws Exception {
+        public long submit(IoOps ops) {
             EpollIoOps epollIoOps = cast(ops);
             try {
                 if (!isValid()) {
@@ -275,9 +245,7 @@ public class EpollIoHandler implements IoHandler {
                 Native.epollCtlMod(epollFd.intValue(), handle.fd().intValue(), epollIoOps.value);
                 return epollIoOps.value;
             } catch (IOException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new IOException(e);
+                throw new UncheckedIOException(e);
             }
         }
 
@@ -287,20 +255,21 @@ public class EpollIoHandler implements IoHandler {
         }
 
         @Override
-        public void cancel() throws IOException {
-            if (!cancellationPromise.trySuccess(null)) {
-                return;
-            }
-            if (handle.fd().isOpen()) {
-                // Remove the fd registration from epoll. This is only needed if it's still open as otherwise it will
-                // be automatically removed once the file-descriptor is closed.
-                Native.epollCtlDel(epollFd.intValue(), handle.fd().intValue());
+        public boolean isValid() {
+            return !canceled.get();
+        }
+
+        @Override
+        public boolean cancel() {
+            if (!canceled.compareAndSet(false, true)) {
+                return false;
             }
             if (executor.inExecutorThread(Thread.currentThread())) {
                 cancel0();
             } else {
                 executor.execute(this::cancel0);
             }
+            return true;
         }
 
         private void cancel0() {
@@ -310,8 +279,18 @@ public class EpollIoHandler implements IoHandler {
                 if (old != this) {
                     // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
                     registrations.put(fd, old);
+                    return;
                 } else if (old.handle instanceof AbstractEpollChannel.AbstractEpollUnsafe) {
                     numChannels--;
+                }
+                if (handle.fd().isOpen()) {
+                    try {
+                        // Remove the fd registration from epoll. This is only needed if it's still open as otherwise
+                        // it will be automatically removed once the file-descriptor is closed.
+                        Native.epollCtlDel(epollFd.intValue(), fd);
+                    } catch (IOException e) {
+                        logger.debug("Unable to remove fd {} from epoll {}", fd, epollFd.intValue());
+                    }
                 }
             }
         }
@@ -329,18 +308,13 @@ public class EpollIoHandler implements IoHandler {
             }
         }
 
-        @Override
-        public Future<?> cancelFuture() {
-            return cancellationPromise;
-        }
-
         void handle(long ev) {
             handle.handle(this, EpollIoOps.eventOf((int) ev));
         }
     }
 
     @Override
-    public EpollIoRegistration register(IoHandle handle)
+    public IoRegistration register(IoHandle handle)
             throws Exception {
         final EpollIoHandle epollHandle = cast(handle);
         DefaultEpollIoRegistration registration = new DefaultEpollIoRegistration(executor, epollHandle);

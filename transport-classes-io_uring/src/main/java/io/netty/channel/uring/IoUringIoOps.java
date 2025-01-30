@@ -224,7 +224,7 @@ public final class IoUringIoOps implements IoOps {
      *
      * @param flags     the flags.
      * @param userData  the user data that identify a previous submitted {@link IoUringIoOps} that should be cancelled.
-     *                  The value to use here is returned by {@link IoUringIoRegistration#submit(IoOps)}.
+     *                  The value to use here is returned by {@link io.netty.channel.IoRegistration#submit(IoOps)}.
      * @param data      the data
      * @return          ops.
      */
@@ -299,7 +299,7 @@ public final class IoUringIoOps implements IoOps {
      *
      * @param flags     the flags.
      * @param userData  the user data that identify a previous submitted {@link IoUringIoOps} that should be cancelled.
-     *                  The value to use here is returned by {@link IoUringIoRegistration#submit(IoOps)}.
+     *                  The value to use here is returned by {@link io.netty.channel.IoRegistration#submit(IoOps)}.
      * @param data      the data
      * @return          ops.
      */

@@ -22,13 +22,12 @@ import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 
 public final class LocalIoHandler implements IoHandler {
@@ -106,14 +105,13 @@ public final class LocalIoHandler implements IoHandler {
     }
 
     private final class LocalIoRegistration implements IoRegistration {
-        private final Promise<?> cancellationPromise;
+        private final AtomicBoolean canceled = new AtomicBoolean();
         private final IoExecutor executor;
         private final LocalIoHandle handle;
 
         LocalIoRegistration(IoExecutor executor, LocalIoHandle handle) {
             this.executor = executor;
             this.handle = handle;
-            this.cancellationPromise = executor.newPromise();
         }
 
         @Override
@@ -122,20 +120,21 @@ public final class LocalIoHandler implements IoHandler {
         }
 
         @Override
-        public void cancel() {
-            if (!cancellationPromise.trySuccess(null)) {
-                return;
+        public boolean isValid() {
+            return !canceled.get();
+        }
+
+        @Override
+        public boolean cancel() {
+            if (!canceled.compareAndSet(false, true)) {
+                return false;
             }
             if (executor.inExecutorThread(Thread.currentThread())) {
                 cancel0();
             } else {
                 executor.execute(this::cancel0);
             }
-        }
-
-        @Override
-        public Future<?> cancelFuture() {
-            return cancellationPromise;
+            return true;
         }
 
         private void cancel0() {

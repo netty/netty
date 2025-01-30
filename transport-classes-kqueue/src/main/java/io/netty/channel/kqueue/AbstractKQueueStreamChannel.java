@@ -346,7 +346,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
         final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
-        IovArray array = registration().ioHandler().cleanArray();
+        IovArray array = ((NativeArrays) registration().attachment()).cleanIovArray();
         array.maxBytes(maxBytesPerGatheringWrite);
         in.forEachFlushedMessage(array);
 

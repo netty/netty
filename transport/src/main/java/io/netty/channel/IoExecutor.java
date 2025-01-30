@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.Promise;
-
 import java.util.concurrent.Executor;
 
 /**
@@ -27,9 +25,4 @@ public interface IoExecutor extends Executor {
      * Return {@code true} if the given {@link Thread} is used by this {@link IoExecutor}.
      */
     boolean inExecutorThread(Thread thread);
-
-    /**
-     * Return a new {@link Promise}.
-     */
-    <V> Promise<V> newPromise();
 }

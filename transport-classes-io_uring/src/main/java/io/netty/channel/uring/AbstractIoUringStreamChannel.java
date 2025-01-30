@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
@@ -232,7 +233,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 in.forEachFlushedMessage(iovArray);
 
                 int fd = fd().intValue();
-                IoUringIoRegistration registration = registration();
+                IoRegistration registration = registration();
                 IoUringIoOps ops = IoUringIoOps.newWritev(fd, flags((byte) 0), 0, iovArray.memoryAddress(offset),
                         iovArray.count() - offset, nextOpsId());
                 byte opCode = ops.opcode();
@@ -259,7 +260,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert writeId == 0;
 
             int fd = fd().intValue();
-            IoUringIoRegistration registration = registration();
+            IoRegistration registration = registration();
             final IoUringIoOps ops;
             if (msg instanceof IoUringFileRegion) {
                 IoUringFileRegion fileRegion = (IoUringFileRegion) msg;
@@ -313,7 +314,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             try {
                 allocHandle.attemptedBytesRead(byteBuf.writableBytes());
                 int fd = fd().intValue();
-                IoUringIoRegistration registration = registration();
+                IoRegistration registration = registration();
 
                 // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
                 // attempt.
@@ -358,7 +359,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             short bgId = bufferRing.bufferGroupId();
             try {
                 int chunkSize = bufferRing.chunkSize();
-                IoUringIoRegistration registration = registration();
+                IoRegistration registration = registration();
                 IoUringBufferRing ioUringBufferRing = ((IoUringIoHandler) registration.ioHandler())
                         .findBufferRing(bgId);
 
@@ -539,14 +540,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected void freeResourcesNow(IoUringIoRegistration reg) {
+        protected void freeResourcesNow(IoRegistration reg) {
             super.freeResourcesNow(reg);
             assert readBuffer == null;
         }
     }
 
     @Override
-    protected final void cancelOutstandingReads(IoUringIoRegistration registration, int numOutstandingReads) {
+    protected final void cancelOutstandingReads(IoRegistration registration, int numOutstandingReads) {
         if (readId != 0) {
             // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
             assert numOutstandingReads == 1;
@@ -558,7 +559,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     }
 
     @Override
-    protected final void cancelOutstandingWrites(IoUringIoRegistration registration, int numOutstandingWrites) {
+    protected final void cancelOutstandingWrites(IoRegistration registration, int numOutstandingWrites) {
         if (writeId != 0) {
             // Let's try to cancel outstanding writes as these might be submitted and waiting to finish writing
             // (via fastpoll).

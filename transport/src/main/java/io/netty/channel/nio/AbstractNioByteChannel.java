@@ -24,6 +24,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.FileRegion;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -323,7 +324,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
 
     protected final void setOpWrite() {
-        final NioIoRegistration registration = registration();
+        final IoRegistration registration = registration();
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop
         // See https://github.com/netty/netty/issues/2104
@@ -335,7 +336,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     protected final void clearOpWrite() {
-        final NioIoRegistration registration = registration();
+        final IoRegistration registration = registration();
         // Check first if the key is still valid as it may be canceled as part of the deregistration
         // from the EventLoop
         // See https://github.com/netty/netty/issues/2104
