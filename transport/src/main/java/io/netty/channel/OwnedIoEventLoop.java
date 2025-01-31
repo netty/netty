@@ -247,8 +247,12 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
     }
 
     @Override
-    public void shutdown() {
-        if (isShutdown()) {
+    public boolean inEventLoop(Thread thread) {
+        return this.owningThread == thread;
+    }
+
+    private void shutdown0(long quietPeriod, long timeout, int shutdownState) {
+        if (isShuttingDown()) {
             return;
         }
 
@@ -263,12 +267,11 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
             wakeup = true;
             oldState = state.get();
             if (inEventLoop) {
-                newState = ST_SHUTDOWN;
+                newState = shutdownState;
             } else {
                 switch (oldState) {
                     case ST_STARTED:
-                    case ST_SHUTTING_DOWN:
-                        newState = ST_SHUTDOWN;
+                        newState = shutdownState;
                         break;
                     default:
                         newState = oldState;
@@ -279,15 +282,16 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
                 break;
             }
         }
+        if (quietPeriod != -1) {
+            gracefulShutdownQuietPeriod = quietPeriod;
+        }
+        if (timeout != -1) {
+            gracefulShutdownTimeout = timeout;
+        }
 
         if (wakeup) {
             handler.wakeup();
         }
-    }
-
-    @Override
-    public boolean inEventLoop(Thread thread) {
-        return this.owningThread == thread;
     }
 
     @Override
@@ -299,16 +303,14 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
         }
         ObjectUtil.checkNotNull(unit, "unit");
 
-        if (isShuttingDown()) {
-            return terminationFuture();
-        }
-
-        gracefulShutdownQuietPeriod = unit.toNanos(quietPeriod);
-        gracefulShutdownTimeout = unit.toNanos(timeout);
-
-        shutdown();
-
+        shutdown0(unit.toNanos(quietPeriod), unit.toNanos(timeout), ST_SHUTTING_DOWN);
         return terminationFuture();
+    }
+
+    @Override
+    @Deprecated
+    public void shutdown() {
+        shutdown0(-1, -1, ST_SHUTDOWN);
     }
 
     @Override
