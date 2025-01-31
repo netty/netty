@@ -313,7 +313,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     // scheduled tasks are never executed if there is always one task in the taskQueue.
                     // This is for example true for the read task of OIO Transport
                     // See https://github.com/netty/netty/issues/1614
-                    fetchFromScheduledTaskQueue(taskQueue);
+                    fetchFromScheduledTaskQueue();
                     task = taskQueue.poll();
                 }
 
@@ -325,6 +325,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 }
             }
         }
+    }
+
+    private boolean fetchFromScheduledTaskQueue() {
+        return fetchFromScheduledTaskQueue(taskQueue);
     }
 
     /**
