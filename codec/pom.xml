@@ -67,10 +67,6 @@
           <groupId>com.google.protobuf</groupId>
           <artifactId>protobuf-java</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>com.google.protobuf.nano</groupId>
-          <artifactId>protobuf-javanano</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -88,11 +84,6 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>com.google.protobuf.nano</groupId>
-      <artifactId>protobuf-javanano</artifactId>
       <optional>true</optional>
     </dependency>
     <dependency>

@@ -796,11 +796,6 @@
         <artifactId>protobuf-java</artifactId>
         <version>3.25.5</version>
       </dependency>
-      <dependency>
-        <groupId>com.google.protobuf.nano</groupId>
-        <artifactId>protobuf-javanano</artifactId>
-        <version>3.0.0-alpha-5</version>
-      </dependency>
 
       <!-- Our own Tomcat Native fork - completely optional for the native lib, used for accelerating SSL with OpenSSL. -->
       <dependency>
@@ -6294,7 +6289,7 @@
                   <ignore>true</ignore>
                   <code>java.class.removed</code>
                   <old>class io.netty.handler.codec.protobuf.ProtobufDecoderNano</old>
-                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                  <justification>Protobuf Nano support removed</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>
@@ -6306,7 +6301,7 @@
                   <ignore>true</ignore>
                   <code>java.class.removed</code>
                   <old>class io.netty.handler.codec.protobuf.ProtobufEncoderNano</old>
-                  <justification>Protobuf moved to netty-codec-protobuf</justification>
+                  <justification>Protobuf Nano support removed</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>

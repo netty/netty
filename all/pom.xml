@@ -372,10 +372,6 @@
           <groupId>com.google.protobuf</groupId>
           <artifactId>protobuf-java</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>com.google.protobuf.nano</groupId>
-          <artifactId>protobuf-javanano</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
     <dependency>

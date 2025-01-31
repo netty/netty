@@ -57,10 +57,6 @@
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.google.protobuf.nano</groupId>
-      <artifactId>protobuf-javanano</artifactId>
-    </dependency>
 
     <!-- Automatic native-image reflection metadata generation for handlers dependencies -->
     <dependency>
