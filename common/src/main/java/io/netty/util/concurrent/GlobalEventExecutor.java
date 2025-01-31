@@ -235,8 +235,13 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
 
     private void startThread() {
         if (started.compareAndSet(false, true)) {
-            Thread callingThread = Thread.currentThread();
-            ClassLoader parentCCL = callingThread.getContextClassLoader();
+            final Thread callingThread = Thread.currentThread();
+            ClassLoader parentCCL = AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return callingThread.getContextClassLoader();
+                }
+            });
             // Avoid calling classloader leaking through Thread.inheritedAccessControlContext.
             setContextClassLoader(callingThread, null);
             try {
