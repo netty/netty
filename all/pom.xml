@@ -367,11 +367,27 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-protobuf</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.protobuf</groupId>
+          <artifactId>protobuf-java</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.protobuf.nano</groupId>
+          <artifactId>protobuf-javanano</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-marshalling</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jboss.marshalling</groupId>
+          <artifactId>jboss-marshalling</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
