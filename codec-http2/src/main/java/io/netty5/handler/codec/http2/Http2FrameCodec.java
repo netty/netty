@@ -587,8 +587,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 // Ignore unknown frames on connection stream, for example: HTTP/2 GREASE testing
                 return;
             }
-            onHttp2Frame(ctx, newHttp2UnknownFrame(frameType, streamId, flags, payload.split())
-                .stream(requireStream(streamId)));
+
+            Http2FrameStream stream = requireStream(streamId);
+            onHttp2Frame(ctx, newHttp2UnknownFrame(frameType, streamId, flags, payload.split()).stream(stream));
         }
 
         @Override
@@ -608,7 +609,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) {
-            onHttp2Frame(ctx, new DefaultHttp2ResetFrame(errorCode).stream(requireStream(streamId)));
+            Http2FrameStream stream = requireStream(streamId);
+            onHttp2Frame(ctx, new DefaultHttp2ResetFrame(errorCode).stream(stream));
         }
 
         @Override
@@ -617,7 +619,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 // Ignore connection window updates.
                 return;
             }
-            onHttp2Frame(ctx, new DefaultHttp2WindowUpdateFrame(windowSizeIncrement).stream(requireStream(streamId)));
+            Http2FrameStream stream = requireStream(streamId);
+            onHttp2Frame(ctx, new DefaultHttp2WindowUpdateFrame(windowSizeIncrement).stream(stream));
         }
 
         @Override
@@ -630,15 +633,24 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         @Override
         public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                   int padding, boolean endOfStream) {
-            onHttp2Frame(ctx, new DefaultHttp2HeadersFrame(headers, endOfStream, padding)
-                    .stream(requireStream(streamId)));
+            Http2FrameStream stream = requireStream(streamId);
+            onHttp2Frame(ctx, new DefaultHttp2HeadersFrame(headers, endOfStream, padding).stream(stream));
         }
 
         @Override
         public int onDataRead(ChannelHandlerContext ctx, int streamId, Buffer data, int padding,
                               boolean endOfStream) {
-            onHttp2Frame(ctx, new DefaultHttp2DataFrame(data.send(), endOfStream, padding)
-                    .stream(requireStream(streamId)));
+            Http2FrameStream stream = requireStream(streamId);
+            final Http2DataFrame dataframe;
+            try {
+                dataframe = new DefaultHttp2DataFrame(data.send(), endOfStream, padding);
+            } catch (IllegalArgumentException e) {
+                // Might be thrown in case of invalid padding / length.
+                data.close();
+                throw e;
+            }
+            dataframe.stream(stream);
+            onHttp2Frame(ctx, dataframe);
             // We return the bytes in consumeBytes() once the stream channel consumed the bytes.
             return 0;
         }
@@ -657,8 +669,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 // The stream was not opened yet, let's just ignore this for now.
                 return;
             }
+            Http2FrameStream frameStream = requireStream(streamId);
             onHttp2Frame(ctx, new DefaultHttp2PriorityFrame(streamDependency, weight, exclusive)
-                    .stream(requireStream(streamId)));
+                    .stream(frameStream));
         }
 
         @Override
@@ -669,10 +682,11 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         @Override
         public void onPushPromiseRead(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
                                       Http2Headers headers, int padding) {
+            Http2FrameStream stream = requireStream(streamId);
             onHttp2Frame(ctx, new DefaultHttp2PushPromiseFrame(headers, padding, promisedStreamId)
                     .pushStream(new DefaultHttp2FrameStream()
                             .setStreamAndProperty(streamKey, connection().stream(promisedStreamId)))
-                    .stream(requireStream(streamId)));
+                    .stream(stream));
         }
 
         private Http2FrameStream requireStream(int streamId) {
