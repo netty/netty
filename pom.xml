@@ -576,7 +576,7 @@
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
     <conscrypt.version>2.5.2</conscrypt.version>
     <conscrypt.classifier />
-    <bouncycastle.version>1.78.1</bouncycastle.version>
+    <bouncycastle.version>1.80</bouncycastle.version>
     <corretto.version>2.4.1</corretto.version>
     <!--
       Don't use os.detected.classifier as it will also add the "likes" as configure above.

@@ -28,6 +28,7 @@ import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
@@ -197,7 +198,8 @@ public final class X509Bundle {
         Base64.Encoder encoder = getMimeEncoder();
         StringBuilder sb = new StringBuilder();
         sb.append("-----BEGIN PRIVATE KEY-----\r\n");
-        sb.append(encoder.encodeToString(keyPair.getPrivate().getEncoded()));
+        PrivateKey privateKey = keyPair.getPrivate();
+        sb.append(encoder.encodeToString(privateKey.getEncoded()));
         sb.append("\r\n-----END PRIVATE KEY-----\r\n");
         return sb.toString();
     }
@@ -312,7 +314,7 @@ public final class X509Bundle {
         }
         keyStore.setCertificateEntry("1", root);
         if (keyPair.getPrivate() != null) {
-            keyStore.setKeyEntry("2", keyPair.getPrivate(), keyEntryPassword, certPath);
+            keyStore.setKeyEntry("2", MLDSASeedPrivateKey.unwrap(keyPair.getPrivate()), keyEntryPassword, certPath);
         }
         return keyStore;
     }
