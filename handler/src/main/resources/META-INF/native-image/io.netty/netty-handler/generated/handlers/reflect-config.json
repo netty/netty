@@ -588,23 +588,9 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.handler.codec.protobuf.ProtobufDecoderNano",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.protobuf.ProtobufDecoderNano"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.netty.handler.codec.protobuf.ProtobufEncoder",
     "condition": {
       "typeReachable": "io.netty.handler.codec.protobuf.ProtobufEncoder"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.netty.handler.codec.protobuf.ProtobufEncoderNano",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.protobuf.ProtobufEncoderNano"
     },
     "queryAllPublicMethods": true
   },
@@ -994,23 +980,9 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.handler.codec.protobuf.ProtobufDecoderNano",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.protobuf.ProtobufDecoderNano"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.netty.handler.codec.protobuf.ProtobufEncoder",
     "condition": {
       "typeReachable": "io.netty.handler.codec.protobuf.ProtobufEncoder"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
-    "name": "io.netty.handler.codec.protobuf.ProtobufEncoderNano",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.protobuf.ProtobufEncoderNano"
     },
     "queryAllPublicMethods": true
   },
