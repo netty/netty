@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.Future;
+
 /**
  * {@link EventLoopGroup} for {@link IoEventLoop}s.
  */
@@ -22,6 +24,34 @@ public interface IoEventLoopGroup extends EventLoopGroup {
 
     @Override
     IoEventLoop next();
+
+    /**
+     * @deprecated Use {@link #register(IoHandle)}
+     */
+    @Deprecated
+    @Override
+    default ChannelFuture register(Channel channel) {
+        return next().register(channel);
+    }
+
+    /**
+     * @deprecated Use {@link #register(IoHandle)}
+     */
+    @Deprecated
+    @Override
+   default ChannelFuture register(ChannelPromise promise) {
+        return next().register(promise);
+    }
+
+    /**
+     * Register the {@link IoHandle} to the {@link EventLoop} for I/O processing.
+     *
+     * @param handle        the {@link IoHandle} to register.
+     * @return              the {@link Future} that is notified once the operations completes.
+     */
+    default Future<IoRegistration> register(IoHandle handle) {
+        return next().register(handle);
+    }
 
     /**
      * Returns {@code true} if the given type is compatible with this {@link IoEventLoopGroup} and so can be registered

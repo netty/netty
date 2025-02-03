@@ -23,25 +23,10 @@ import io.netty.util.concurrent.Future;
  */
 public interface IoEventLoop extends EventLoop, IoEventLoopGroup {
 
-    // We only not return IoHandleEventLoopGroup here as this could break compat for people
-    // that extend EventLoopGroup implementations that now implement IoHandleEventLoop (for example NioEventLoop).
     @Override
-    default EventLoopGroup parent() {
+    default IoEventLoop next() {
         return this;
     }
-    /**
-     * @deprecated Use {@link #register(IoHandle)}
-     */
-    @Deprecated
-    @Override
-    ChannelFuture register(Channel channel);
-
-    /**
-     * @deprecated Use {@link #register(IoHandle)}
-     */
-    @Deprecated
-    @Override
-    ChannelFuture register(ChannelPromise promise);
 
     /**
      * Register the {@link IoHandle} to the {@link EventLoop} for I/O processing.
