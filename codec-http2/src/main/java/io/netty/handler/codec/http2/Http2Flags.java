@@ -18,7 +18,18 @@ package io.netty.handler.codec.http2;
 /**
  * Provides utility methods for accessing specific flags as defined by the HTTP/2 spec.
  */
-public final class Http2Flags {
+public class Http2Flags {
+    /**
+     * a default instance that has all flags unset, should not be modified.
+     * */
+    public static final Http2Flags IMMUTABLE_DEFAULT = new ImmutableHttp2Flags();
+
+    public static final Http2Flags IMMUTABLE_END_OF_HEADERS = new ImmutableHttp2Flags(
+        new Http2Flags().endOfHeaders(true).value());
+
+    public static final Http2Flags IMMUTABLE_ACK = new ImmutableHttp2Flags(
+        new Http2Flags().ack(true).value());
+
     public static final short END_STREAM = 0x1;
     public static final short END_HEADERS = 0x4;
     public static final short ACK = 0x1;
@@ -39,6 +50,49 @@ public final class Http2Flags {
      */
     public short value() {
         return value;
+    }
+
+    /**
+     * An immutable Http2Flags that can't be modified after creation.
+     * */
+    private static final class ImmutableHttp2Flags extends Http2Flags {
+        ImmutableHttp2Flags(short value) {
+            super(value);
+        }
+
+        ImmutableHttp2Flags() {
+            super();
+        }
+
+        @Override
+        public Http2Flags setFlag(boolean on, short mask) {
+            throw new UnsupportedOperationException("This instance is immutable");
+        }
+
+        @Override
+        public Http2Flags ack(final boolean ack) {
+            throw new UnsupportedOperationException("This instance is immutable");
+        }
+
+        @Override
+        public Http2Flags endOfHeaders(final boolean endOfHeaders) {
+            throw new UnsupportedOperationException("This instance is immutable");
+        }
+
+        @Override
+        public Http2Flags endOfStream(final boolean endOfStream) {
+            throw new UnsupportedOperationException("This instance is immutable");
+        }
+
+        @Override
+        public Http2Flags paddingPresent(final boolean paddingPresent) {
+            throw new UnsupportedOperationException("This instance is immutable");
+        }
+
+        @Override
+        public Http2Flags priorityPresent(final boolean priorityPresent) {
+            throw new UnsupportedOperationException("This instance is immutable");
+        }
     }
 
     /**
