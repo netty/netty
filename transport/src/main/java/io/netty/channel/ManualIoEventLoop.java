@@ -23,10 +23,15 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -413,6 +418,39 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         // No tasks were added for last quiet period - hopefully safe to shut down.
         // (Hopefully because we really cannot make a guarantee that there will be no execute() calls by a user.)
         return true;
+    }
+
+    @Override
+    public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
+        throwIfInEventLoop("invokeAny");
+        return super.invokeAny(tasks);
+    }
+
+    @Override
+    public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        throwIfInEventLoop("invokeAny");
+        return super.invokeAny(tasks, timeout, unit);
+    }
+
+    @Override
+    public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
+            throws InterruptedException {
+        throwIfInEventLoop("invokeAll");
+        return super.invokeAll(tasks);
+    }
+
+    @Override
+    public <T> List<java.util.concurrent.Future<T>> invokeAll(
+            Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
+        throwIfInEventLoop("invokeAll");
+        return super.invokeAll(tasks, timeout, unit);
+    }
+
+    private void throwIfInEventLoop(String method) {
+        if (inEventLoop()) {
+            throw new RejectedExecutionException("Calling " + method + " from within the EventLoop is not allowed");
+        }
     }
 
     private final class BlockingIoHandlerContext implements IoHandlerContext {
