@@ -299,12 +299,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             // When the kernel does not support this feature, it helps the JIT to delete this branch.
             // only `first` value is true, we will recv with the buffer ring;
             if (IoUring.isRegisterBufferRingSupported() && first) {
-
                 short bgId = channelConfig.getBufferRingConfig();
                 if (bgId != IOUringStreamChannelConfig.DISABLE_BUFFER_SELECT_READ) {
                     IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(bgId);
                     if (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull()) {
-                        return scheduleReadProviderBuffer(ioUringBufferRing);
+                        return scheduleReadProviderBuffer(ioUringBufferRing, socketIsEmpty);
                     }
                 }
             }
@@ -355,7 +354,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
         }
 
-        private int scheduleReadProviderBuffer(IoUringBufferRing bufferRing) {
+        private int scheduleReadProviderBuffer(IoUringBufferRing bufferRing, boolean socketIsEmpty) {
             short bgId = bufferRing.bufferGroupId();
             try {
                 int chunkSize = bufferRing.chunkSize();
@@ -369,8 +368,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
                 int fd = fd().intValue();
 
+                // IORING_RECVSEND_POLL_FIRST and IORING_CQE_F_SOCK_NONEMPTY were added in the same release (5.19).
+                // We need to check if it's supported as otherwise providing these would result in an -EINVAL.
+                // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
+                short ioPrio = socketIsEmpty && IoUring.isIOUringCqeFSockNonEmptySupported() ?
+                        Native.IORING_RECVSEND_POLL_FIRST : 0;
                 IoUringIoOps ops = IoUringIoOps.newRecv(
-                        fd, flags((byte) Native.IOSQE_BUFFER_SELECT), (short) 0, 0, 0,
+                        fd, flags((byte) Native.IOSQE_BUFFER_SELECT), ioPrio, 0, 0,
                         chunkSize, nextOpsId(), bgId
                 );
                 readId = registration.submit(ops);
