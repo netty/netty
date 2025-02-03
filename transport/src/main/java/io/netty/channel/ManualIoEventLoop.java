@@ -425,6 +425,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
 
     @Override
     public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
+        // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAny");
         return super.invokeAny(tasks);
     }
@@ -432,6 +433,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     @Override
     public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
             throws InterruptedException, ExecutionException, TimeoutException {
+        // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAny");
         return super.invokeAny(tasks, timeout, unit);
     }
@@ -439,6 +441,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     @Override
     public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
             throws InterruptedException {
+        // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAll");
         return super.invokeAll(tasks);
     }
@@ -446,13 +449,15 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     @Override
     public <T> List<java.util.concurrent.Future<T>> invokeAll(
             Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
+        // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAll");
         return super.invokeAll(tasks, timeout, unit);
     }
 
     private void throwIfInEventLoop(String method) {
         if (inEventLoop()) {
-            throw new RejectedExecutionException("Calling " + method + " from within the EventLoop is not allowed");
+            throw new RejectedExecutionException(
+                    "Calling " + method + " from within the EventLoop is not allowed as it would deadlock");
         }
     }
 

@@ -15,12 +15,23 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.SingleThreadEventExecutor;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -61,7 +72,7 @@ public class ManualIoEventLoopTest {
         long current = System.nanoTime();
         assertEquals(0, eventLoop.run(waitTime));
         long actualNanos = System.nanoTime() - current;
-        assertTrue(actualNanos >= waitTime, actualNanos + " >= " + waitTime);
+        assertThat(actualNanos).isGreaterThanOrEqualTo(waitTime);
 
         TestRunnable runnable = new TestRunnable();
         eventLoop.execute(runnable);
@@ -70,7 +81,7 @@ public class ManualIoEventLoopTest {
         waitTime = TimeUnit.SECONDS.toNanos(1);
         current = System.nanoTime();
         assertEquals(1, eventLoop.run(waitTime));
-        assertTrue(System.nanoTime() - current < waitTime);
+        assertThat(waitTime).isGreaterThan(System.nanoTime() - current);
 
         assertTrue(runnable.isDone());
         eventLoop.shutdown();
@@ -90,6 +101,86 @@ public class ManualIoEventLoopTest {
 
         assertThrows(IllegalStateException.class, eventLoop::runNow);
         assertThrows(IllegalStateException.class, () -> eventLoop.run(10));
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testInvokeAnyInEventLoop() {
+        testInvokeInEventLoop(true, false);
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testInvokeAnyInEventLoopWithTimeout() {
+        testInvokeInEventLoop(true, true);
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testInvokeAllInEventLoop() {
+        testInvokeInEventLoop(false, false);
+    }
+
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    public void testInvokeAllInEventLoopWithTimeout() {
+        testInvokeInEventLoop(false, true);
+    }
+
+    private static void testInvokeInEventLoop(final boolean any, final boolean timeout) {
+        Semaphore semaphore = new Semaphore(0);
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(Thread.currentThread(), executor ->
+                new TestIoHandler(semaphore));
+        try {
+            assertThrows(RejectedExecutionException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    final Promise<Void> promise = eventLoop.newPromise();
+                    eventLoop.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Set<Callable<Boolean>> set = Collections.<Callable<Boolean>>singleton(
+                                        new Callable<Boolean>() {
+                                            @Override
+                                            public Boolean call() {
+                                                promise.setFailure(
+                                                        new AssertionError("Should never execute the Callable"));
+                                                return Boolean.TRUE;
+                                            }
+                                        });
+                                if (any) {
+                                    if (timeout) {
+                                        eventLoop.invokeAny(set, 10, TimeUnit.SECONDS);
+                                    } else {
+                                        eventLoop.invokeAny(set);
+                                    }
+                                } else {
+                                    if (timeout) {
+                                        eventLoop.invokeAll(set, 10, TimeUnit.SECONDS);
+                                    } else {
+                                        eventLoop.invokeAll(set);
+                                    }
+                                }
+                                promise.setFailure(new AssertionError("Should never reach here"));
+                            } catch (Throwable cause) {
+                                promise.setFailure(cause);
+                            }
+                        }
+                    });
+                    while (!promise.isDone()) {
+                        eventLoop.runNow();
+                    }
+                    promise.syncUninterruptibly();
+                }
+            });
+        } finally {
+            eventLoop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
+            while (!eventLoop.isTerminated()) {
+                eventLoop.runNow();
+            }
+            assertTrue(eventLoop.terminationFuture().isSuccess());
+        }
     }
 
     private static final class TestRunnable implements Runnable {
@@ -171,18 +262,6 @@ public class ManualIoEventLoopTest {
         @Override
         public boolean isCompatible(Class<? extends IoHandle> handleType) {
             return false;
-        }
-    }
-
-    private static class TestIoHandle implements IoHandle {
-        @Override
-        public void handle(IoRegistration registration, IoEvent readyOps) {
-            // NOOP
-        }
-
-        @Override
-        public void close() {
-            // NOOP
         }
     }
 }

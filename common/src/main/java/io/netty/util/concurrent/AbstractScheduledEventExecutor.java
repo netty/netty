@@ -20,6 +20,7 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PriorityQueue;
 
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -161,7 +162,16 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         return pollScheduledTask(getCurrentTimeNanos());
     }
 
+    /**
+     * Fetch scheduled tasks from the internal queue and add these to the given {@link Queue}.
+     *
+     * @param taskQueue the task queue into which the fetched scheduled tasks should be transferred.
+     * @return {@code true} if we were able to transfer everything, {@code false} if we need to call this method again
+     *         as soon as there is space again in {@code taskQueue}.
+     */
     protected boolean fetchFromScheduledTaskQueue(Queue<Runnable> taskQueue) {
+        assert inEventLoop();
+        Objects.requireNonNull(taskQueue, "taskQueue");
         if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
             return true;
         }
