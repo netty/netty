@@ -35,12 +35,12 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * {@link IoEventLoop} implementation that is owned by the user and so needs to be driven by the user with the given
- * {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or {@link #run(long)}
- * to execute IO or tasks that were submitted to this {@link IoEventLoop}.
+ * {@link IoEventLoop} implementation that is owned by the user and so needs to be driven by the user manually with the
+ * given {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or {@link #run(long)}
+ * to execute IO and tasks that were submitted to this {@link IoEventLoop}.
  * <p>
  * This is for <strong>advanced use-cases only</strong>, where the user wants to own the {@link Thread} that drives the
- * {@link IoEventLoop} to also do other work. That said care must be taken that the {@link #runNow() or
+ * {@link IoEventLoop} to also do other work. Care must be taken that the {@link #runNow() or
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
 public final class ManualIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
@@ -193,13 +193,16 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
 
     @Override
     public IoEventLoopGroup parent() {
-        return this;
+        return null;
     }
 
+    @Deprecated
+    @Override
     public ChannelFuture register(Channel channel) {
         return register(new DefaultChannelPromise(channel, this));
     }
 
+    @Deprecated
     @Override
     public ChannelFuture register(final ChannelPromise promise) {
         ObjectUtil.checkNotNull(promise, "promise");
