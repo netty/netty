@@ -39,8 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link IoEventLoop} to also do other work. That said care must be taken that the {@link #runNow() or
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
-public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
-        implements OrderedEventExecutor, IoEventLoop {
+public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
 
     private static final int ST_STARTED = 4;
     private static final int ST_SHUTTING_DOWN = 5;
@@ -83,12 +82,11 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
      * {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or
      * {@link #run(long)} to execute IO or tasks that were submitted to this {@link IoEventLoop}.
      *
-     *
-     * @param owningThread      the {@link Thread} that executed the IO and tasks for this {@link IoEventLoop}. The
+     * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link IoEventLoop}. The
      *                          user will use this {@link Thread} to call {@link #runNow()} or {@link #run(long)} to
      *                          make progress.
      * @param factory           the {@link IoHandlerFactory} that will be used to create the {@link IoHandler} that is
-     *                         used by this {@link IoEventLoop}.
+     *                          used by this {@link IoEventLoop}.
      */
     public OwnedIoEventLoop(Thread owningThread, IoHandlerFactory factory) {
         this.owningThread = Objects.requireNonNull(owningThread, "owningThread");
@@ -270,16 +268,13 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
             oldState = state.get();
             if (inEventLoop) {
                 newState = shutdownState;
+            } else if (oldState == ST_STARTED) {
+                newState = shutdownState;
             } else {
-                switch (oldState) {
-                    case ST_STARTED:
-                        newState = shutdownState;
-                        break;
-                    default:
-                        newState = oldState;
-                        wakeup = false;
-                }
+                newState = oldState;
+                wakeup = false;
             }
+
             if (state.compareAndSet(oldState, newState)) {
                 break;
             }
@@ -344,6 +339,11 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
     public void execute(Runnable command) {
         Objects.requireNonNull(command, "command");
         boolean inEventLoop = inEventLoop();
+        if (inEventLoop) {
+            if (isShutdown()) {
+                throw new RejectedExecutionException("event executor terminated");
+            }
+        }
         taskQueue.add(command);
         if (!inEventLoop) {
             if (isShutdown()) {
@@ -361,8 +361,6 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
                     throw new RejectedExecutionException("event executor terminated");
                 }
             }
-        }
-        if (!inEventLoop()) {
             handler.wakeup();
         }
     }
@@ -440,7 +438,7 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
         @Override
         public long deadlineNanos() {
             assert inEventLoop();
-            long next = OwnedIoEventLoop.this.nextScheduledTaskDeadlineNanos();
+            long next = nextScheduledTaskDeadlineNanos();
             if (next == -1) {
                 return maxBlockingNanos;
             }
