@@ -415,7 +415,16 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                         // fire the BufferRingExhaustedEvent to notify users.
                         // Users can then switch the ring buffer or do other things as they wish
                         pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
-                        scheduleNextRead(flags);
+
+                        // Let's trigger a read again without consulting the RecvByteBufAllocator.Handle as
+                        // we can't count this as a "real" read operation.
+                        // This will do the correct thing, taking into account if
+                        // there is again room in the ring or not and so either use the buffer ring or not for the
+                        // read.
+                        //
+                        // As we only use the buffer ring for the first read we can call schedule(...) with true as
+                        // parameter.
+                        scheduleRead(true);
                         return;
                     }
 
