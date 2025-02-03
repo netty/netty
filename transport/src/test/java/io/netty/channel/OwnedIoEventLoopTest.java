@@ -29,29 +29,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class OwnedIoEventLoopTest {
 
     @Test
-    public void testRun() throws Exception {
+    public void testRunNow() throws Exception {
         Thread currentThread = Thread.currentThread();
         Semaphore semaphore = new Semaphore(0);
         OwnedIoEventLoop eventLoop = new OwnedIoEventLoop(currentThread, executor ->
                 new TestIoHandler(semaphore));
-        assertEquals(0, eventLoop.run());
+        assertEquals(0, eventLoop.runNow());
 
         TestRunnable runnable = new TestRunnable();
         eventLoop.execute(runnable);
         assertFalse(runnable.isDone());
 
-        assertEquals(1, eventLoop.run());
+        assertEquals(1, eventLoop.runNow());
         assertTrue(runnable.isDone());
         eventLoop.shutdown();
         while (!eventLoop.isTerminated()) {
-            eventLoop.run();
+            eventLoop.runNow();
         }
 
         eventLoop.terminationFuture().sync();
     }
 
     @Test
-    public void testWaitAndRun() throws Exception {
+    public void testRun() throws Exception {
         Thread currentThread = Thread.currentThread();
         Semaphore semaphore = new Semaphore(0);
         OwnedIoEventLoop eventLoop = new OwnedIoEventLoop(currentThread, executor ->
@@ -59,7 +59,7 @@ public class OwnedIoEventLoopTest {
 
         long waitTime = TimeUnit.MILLISECONDS.toNanos(200);
         long current = System.nanoTime();
-        assertEquals(0, eventLoop.waitAndRun(waitTime));
+        assertEquals(0, eventLoop.run(waitTime));
         long actualNanos = System.nanoTime() - current;
         assertTrue(actualNanos >= waitTime, actualNanos + " >= " + waitTime);
 
@@ -69,14 +69,14 @@ public class OwnedIoEventLoopTest {
 
         waitTime = TimeUnit.SECONDS.toNanos(1);
         current = System.nanoTime();
-        assertEquals(1, eventLoop.waitAndRun(waitTime));
+        assertEquals(1, eventLoop.run(waitTime));
         assertTrue(System.nanoTime() - current < waitTime);
 
         assertTrue(runnable.isDone());
         eventLoop.shutdown();
 
         while (!eventLoop.isTerminated()) {
-            eventLoop.run();
+            eventLoop.runNow();
         }
         eventLoop.terminationFuture().sync();
     }
@@ -88,8 +88,8 @@ public class OwnedIoEventLoopTest {
         OwnedIoEventLoop eventLoop = new OwnedIoEventLoop(thread, executor ->
                 new TestIoHandler(semaphore));
 
-        assertThrows(IllegalStateException.class, eventLoop::run);
-        assertThrows(IllegalStateException.class, () -> eventLoop.waitAndRun(10));
+        assertThrows(IllegalStateException.class, eventLoop::runNow);
+        assertThrows(IllegalStateException.class, () -> eventLoop.run(10));
     }
 
     private static final class TestRunnable implements Runnable {

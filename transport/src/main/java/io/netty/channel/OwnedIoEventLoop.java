@@ -32,11 +32,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * {@link IoEventLoop} implementation that is owned by the user and so needs to be driven by the user with the given
- * {@link Thread}. This means that the user is responsible to call either {@link #run()} or {@link #waitAndRun(long)}
+ * {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or {@link #run(long)}
  * to execute IO or tasks that were submitted to this {@link IoEventLoop}.
  * <p>
  * This is for <strong>advanced use-cases only</strong>, where the user wants to own the {@link Thread} that drives the
- * {@link IoEventLoop} to also do other work. That said care must be taken that the {@link #run() or
+ * {@link IoEventLoop} to also do other work. That said care must be taken that the {@link #runNow() or
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
 public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
@@ -46,6 +46,7 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
     private static final int ST_SHUTTING_DOWN = 5;
     private static final int ST_SHUTDOWN = 6;
     private static final int ST_TERMINATED = 7;
+
     private final AtomicInteger state = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
     private final Queue<Runnable> taskQueue = PlatformDependent.newMpscQueue();
@@ -69,7 +70,6 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
         }
     };
     private final BlockingIoHandlerContext blockingContext = new BlockingIoHandlerContext();
-
     private final Thread owningThread;
     private final IoHandler handler;
 
@@ -80,12 +80,12 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
 
     /**
      * Create a new {@link IoEventLoop} that is owned by the user and so needs to be driven by the user with the given
-     * {@link Thread}. This means that the user is responsible to call either {@link #run()} or
-     * {@link #waitAndRun(long)} to execute IO or tasks that were submitted to this {@link IoEventLoop}.
+     * {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or
+     * {@link #run(long)} to execute IO or tasks that were submitted to this {@link IoEventLoop}.
      *
      *
      * @param owningThread      the {@link Thread} that executed the IO and tasks for this {@link IoEventLoop}. The
-     *                          user will use this {@link Thread} to call {@link #run()} or {@link #waitAndRun(long)} to
+     *                          user will use this {@link Thread} to call {@link #runNow()} or {@link #run(long)} to
      *                          make progress.
      * @param factory           the {@link IoHandlerFactory} that will be used to create the {@link IoHandler} that is
      *                         used by this {@link IoEventLoop}.
@@ -153,25 +153,28 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
      * This methods will <strong>NOT</strong> block and wait for IO / tasks to be ready, it will just
      * return directly if there is nothing to do.
      * <p>
-     * <strong>Must be called from the owning {@link Thread}</strong>
+     * <strong>Must be called from the owning {@link Thread} that was passed as an parameter on construction.</strong>
      *
      * @return the number of IO and tasks executed.
      */
-    public int run() {
+    public int runNow() {
         checkCurrentThread();
         return run(nonBlockingContext);
     }
 
     /**
      * Run all ready IO and tasks for this {@link IoEventLoop}.
-     * This methods will  block and wait for IO / tasks to be ready if there is nothing to process atm.
+     * This methods will block and wait for IO / tasks to be ready if there is nothing to process atm for the given
+     * {@code waitNanos}.
+     * <p>
+     * <strong>Must be called from the owning {@link Thread} that was passed as an parameter on construction.</strong>
      *
-     * @param nanos     the maximum amount of nanoseconds to wait before returning.
+     * @param waitNanos the maximum amount of nanoseconds to wait before returning.
      * @return          the number of IO and tasks executed.
      */
-    public int waitAndRun(long nanos) {
+    public int run(long waitNanos) {
         checkCurrentThread();
-        blockingContext.maxBlockingNanos = nanos;
+        blockingContext.maxBlockingNanos = waitNanos;
         return run(blockingContext);
     }
 
