@@ -748,6 +748,11 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         private Chunk newChunkAllocation(int promptingSize) {
             int size = Math.max(promptingSize * BUFS_PER_CHUNK, preferredChunkSize());
+            int minChunks = size / MIN_CHUNK_SIZE;
+            if (MIN_CHUNK_SIZE * minChunks < size) {
+                // Round up to nearest whole MIN_CHUNK_SIZE unit.
+                size = MIN_CHUNK_SIZE * (1 + minChunks);
+            }
             ChunkAllocator chunkAllocator = parent.chunkAllocator;
             return new Chunk(chunkAllocator.allocate(size, size), this, true);
         }
