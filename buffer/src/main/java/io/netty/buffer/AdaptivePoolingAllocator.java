@@ -750,7 +750,10 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             int size = Math.max(promptingSize * BUFS_PER_CHUNK, preferredChunkSize());
             int minChunks = size / MIN_CHUNK_SIZE;
             if (MIN_CHUNK_SIZE * minChunks < size) {
-                // Round up to nearest whole MIN_CHUNK_SIZE unit.
+                // Round up to nearest whole MIN_CHUNK_SIZE unit. The MIN_CHUNK_SIZE is an even multiple of many
+                // popular small page sizes, like 4k, 16k, and 64k, which makes it easier for the system allocator
+                // to manage the memory in terms of whole pages. This reduces memory fragmentation,
+                // but without the potentially high overhead that power-of-2 chunk sizes would bring.
                 size = MIN_CHUNK_SIZE * (1 + minChunks);
             }
             ChunkAllocator chunkAllocator = parent.chunkAllocator;
