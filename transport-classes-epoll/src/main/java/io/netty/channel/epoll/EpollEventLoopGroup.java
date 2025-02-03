@@ -36,7 +36,7 @@ import java.util.concurrent.ThreadFactory;
  * {@link EventLoopGroup} which uses epoll under the covers. Because of this
  * it only works on linux.
  *
- * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link EpollIoHandler}.
+ * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link EpollIoHandler#newFactory()}.
  */
 @Deprecated
 public final class EpollEventLoopGroup extends MultiThreadIoEventLoopGroup {
