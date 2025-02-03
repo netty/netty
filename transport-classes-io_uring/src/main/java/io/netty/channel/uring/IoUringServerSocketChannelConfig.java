@@ -104,6 +104,11 @@ final class IoUringServerSocketChannelConfig extends IOUringChannelConfig implem
     }
 
     @Override
+    boolean getPollInFirst() {
+        return false;
+    }
+
+    @Override
     public IoUringServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
         return this;
     }

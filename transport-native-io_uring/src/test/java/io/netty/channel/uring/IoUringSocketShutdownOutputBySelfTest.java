@@ -41,7 +41,6 @@ public class IoUringSocketShutdownOutputBySelfTest extends SocketShutdownOutputB
     @Override
     protected void configure(Bootstrap bootstrap, ByteBufAllocator allocator) {
         super.configure(bootstrap, allocator);
-        bootstrap.option(IoUringChannelOption.POLLIN_FIRST, true);
-        bootstrap.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        bootstrap.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
     }
 }

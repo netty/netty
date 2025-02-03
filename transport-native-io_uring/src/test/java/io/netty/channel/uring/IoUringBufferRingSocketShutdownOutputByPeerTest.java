@@ -15,18 +15,17 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.CompositeBufferGatheringWriteTest;
+import io.netty.testsuite.transport.socket.SocketShutdownOutputByPeerTest;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringPollinFirstCompositeBufferGatheringWriteTest extends CompositeBufferGatheringWriteTest  {
+public class IoUringBufferRingSocketShutdownOutputByPeerTest extends SocketShutdownOutputByPeerTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -34,15 +33,13 @@ public class IoUringPollinFirstCompositeBufferGatheringWriteTest extends Composi
     }
 
     @Override
-    protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        return IoUringSocketTestPermutation.INSTANCE.socket();
+    protected List<TestsuitePermutation.BootstrapFactory<ServerBootstrap>> newFactories() {
+        return IoUringSocketTestPermutation.INSTANCE.serverSocket();
     }
 
     @Override
-    protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
-        super.configure(sb, cb, allocator);
-        sb.option(IoUringChannelOption.POLLIN_FIRST, true);
-        sb.childOption(IoUringChannelOption.POLLIN_FIRST, true);
-        cb.option(IoUringChannelOption.POLLIN_FIRST, true);
+    protected void configure(ServerBootstrap bootstrap, ByteBufAllocator allocator) {
+        super.configure(bootstrap, allocator);
+        bootstrap.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
     }
 }

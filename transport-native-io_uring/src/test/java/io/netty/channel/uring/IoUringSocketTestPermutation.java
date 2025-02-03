@@ -40,6 +40,7 @@ import java.util.List;
 public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
     static final IoUringSocketTestPermutation INSTANCE = new IoUringSocketTestPermutation();
+    static final short NO_BGID = 0;
     static final short BGID = 1;
     static final EventLoopGroup IO_URING_BOSS_GROUP = new MultiThreadIoEventLoopGroup(
             BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());

@@ -58,6 +58,11 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
         return getOptions(super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID);
     }
 
+    @Override
+    boolean getPollInFirst() {
+        return bufferGroupId == DISABLE_BUFFER_SELECT_READ;
+    }
+
     /**
      * Returns the buffer ring config.
      *
