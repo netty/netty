@@ -19,7 +19,6 @@ import io.netty.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import io.netty.util.concurrent.OrderedEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -39,7 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link IoEventLoop} to also do other work. That said care must be taken that the {@link #runNow() or
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
-public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
+public final class ManualIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
 
     private static final int ST_STARTED = 4;
     private static final int ST_SHUTTING_DOWN = 5;
@@ -88,7 +87,7 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor imple
      * @param factory           the {@link IoHandlerFactory} that will be used to create the {@link IoHandler} that is
      *                          used by this {@link IoEventLoop}.
      */
-    public OwnedIoEventLoop(Thread owningThread, IoHandlerFactory factory) {
+    public ManualIoEventLoop(Thread owningThread, IoHandlerFactory factory) {
         this.owningThread = Objects.requireNonNull(owningThread, "owningThread");
         this.handler = factory.newHandler(this);
     }
@@ -183,7 +182,7 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor imple
     }
 
     @Override
-    public OwnedIoEventLoop next() {
+    public ManualIoEventLoop next() {
         return this;
     }
 
@@ -252,10 +251,6 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor imple
     }
 
     private void shutdown0(long quietPeriod, long timeout, int shutdownState) {
-        if (isShuttingDown()) {
-            return;
-        }
-
         boolean inEventLoop = inEventLoop();
         boolean wakeup;
         int oldState;
@@ -432,7 +427,7 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor imple
         @Override
         public long delayNanos(long currentTimeNanos) {
             assert inEventLoop();
-            return OwnedIoEventLoop.this.delayNanos(currentTimeNanos, maxBlockingNanos);
+            return ManualIoEventLoop.this.delayNanos(currentTimeNanos, maxBlockingNanos);
         }
 
         @Override

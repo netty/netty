@@ -32,7 +32,7 @@ public class OwnedIoEventLoopTest {
     public void testRunNow() throws Exception {
         Thread currentThread = Thread.currentThread();
         Semaphore semaphore = new Semaphore(0);
-        OwnedIoEventLoop eventLoop = new OwnedIoEventLoop(currentThread, executor ->
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(currentThread, executor ->
                 new TestIoHandler(semaphore));
         assertEquals(0, eventLoop.runNow());
 
@@ -54,7 +54,7 @@ public class OwnedIoEventLoopTest {
     public void testRun() throws Exception {
         Thread currentThread = Thread.currentThread();
         Semaphore semaphore = new Semaphore(0);
-        OwnedIoEventLoop eventLoop = new OwnedIoEventLoop(currentThread, executor ->
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(currentThread, executor ->
                 new TestIoHandler(semaphore));
 
         long waitTime = TimeUnit.MILLISECONDS.toNanos(200);
@@ -85,7 +85,7 @@ public class OwnedIoEventLoopTest {
     public void testCallFromWrongThread() throws Exception {
         Thread thread = new Thread();
         Semaphore semaphore = new Semaphore(0);
-        OwnedIoEventLoop eventLoop = new OwnedIoEventLoop(thread, executor ->
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(thread, executor ->
                 new TestIoHandler(semaphore));
 
         assertThrows(IllegalStateException.class, eventLoop::runNow);
