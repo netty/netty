@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2024 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,17 +18,20 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.Channel;
+import io.netty.channel.unix.Errors;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.SocketFileRegionTest;
+import io.netty.testsuite.transport.socket.SocketRstTest;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 
+import java.io.IOException;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringPollinFirstSocketFileRegionTest extends SocketFileRegionTest {
+public class IoUringBufferRingSocketRstTest extends SocketRstTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -41,21 +44,21 @@ public class IoUringPollinFirstSocketFileRegionTest extends SocketFileRegionTest
     }
 
     @Override
-    protected boolean supportsCustomFileRegion() {
-        return false;
-    }
+    protected void assertRstOnCloseException(IOException cause, Channel clientChannel) {
+        if (!AbstractIoUringChannel.class.isInstance(clientChannel)) {
+            super.assertRstOnCloseException(cause, clientChannel);
+            return;
+        }
 
-    //@Disabled("Fix me")
-    @Test
-    public void testFileRegionCountLargerThenFile(TestInfo testInfo) throws Throwable {
-        super.testFileRegionCountLargerThenFile(testInfo);
+        assertTrue(cause instanceof Errors.NativeIoException,
+                "actual [type, message]: [" + cause.getClass() + ", " + cause.getMessage() + ']');
+        assertEquals(Errors.ERRNO_ECONNRESET_NEGATIVE, ((Errors.NativeIoException) cause).expectedErr());
     }
 
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.option(IoUringChannelOption.POLLIN_FIRST, true);
-        sb.childOption(IoUringChannelOption.POLLIN_FIRST, true);
-        cb.option(IoUringChannelOption.POLLIN_FIRST, true);
+        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
     }
 }

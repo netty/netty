@@ -18,19 +18,15 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.IoEventLoopGroup;
-import io.netty.channel.nio.NioIoHandler;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.SocketMultipleConnectTest;
+import io.netty.testsuite.transport.socket.CompositeBufferGatheringWriteTest;
 import org.junit.jupiter.api.BeforeAll;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringPollinFirstSocketMultipleConnectTest extends SocketMultipleConnectTest {
+public class IoUringBufferRingCompositeBufferGatheringWriteTest extends CompositeBufferGatheringWriteTest  {
 
     @BeforeAll
     public static void loadJNI() {
@@ -39,25 +35,13 @@ public class IoUringPollinFirstSocketMultipleConnectTest extends SocketMultipleC
 
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
-        List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> factories = new ArrayList<>();
-        for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
-                : IoUringSocketTestPermutation.INSTANCE.socket()) {
-            EventLoopGroup group = comboFactory.newClientInstance().config().group();
-            if (group instanceof IoEventLoopGroup) {
-                IoEventLoopGroup ioGroup = (IoEventLoopGroup) group;
-                if (ioGroup.isIoType(NioIoHandler.class) || ioGroup.isIoType(IoUringIoHandler.class)) {
-                    factories.add(comboFactory);
-                }
-            }
-        }
-        return factories;
+        return IoUringSocketTestPermutation.INSTANCE.socket();
     }
 
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.option(IoUringChannelOption.POLLIN_FIRST, true);
-        sb.childOption(IoUringChannelOption.POLLIN_FIRST, true);
-        cb.option(IoUringChannelOption.POLLIN_FIRST, true);
+        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
     }
 }

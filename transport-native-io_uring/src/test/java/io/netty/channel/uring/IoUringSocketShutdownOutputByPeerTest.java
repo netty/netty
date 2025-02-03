@@ -41,8 +41,6 @@ public class IoUringSocketShutdownOutputByPeerTest extends SocketShutdownOutputB
     @Override
     protected void configure(ServerBootstrap bootstrap, ByteBufAllocator allocator) {
         super.configure(bootstrap, allocator);
-        bootstrap.option(IoUringChannelOption.POLLIN_FIRST, false);
-        bootstrap.childOption(IoUringChannelOption.POLLIN_FIRST, false);
-        bootstrap.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        bootstrap.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
     }
 }

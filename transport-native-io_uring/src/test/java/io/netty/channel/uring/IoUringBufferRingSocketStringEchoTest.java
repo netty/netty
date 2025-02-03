@@ -18,15 +18,15 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
-import io.netty.testsuite.transport.socket.SocketEchoTest;
+import io.netty.testsuite.transport.TestsuitePermutation;
+import io.netty.testsuite.transport.socket.SocketStringEchoTest;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringPollinFirstSocketEchoTest extends SocketEchoTest {
+public class IoUringBufferRingSocketStringEchoTest extends SocketStringEchoTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -34,15 +34,14 @@ public class IoUringPollinFirstSocketEchoTest extends SocketEchoTest {
     }
 
     @Override
-    protected List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
+    protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IoUringSocketTestPermutation.INSTANCE.socket();
     }
 
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.option(IoUringChannelOption.POLLIN_FIRST, true);
-        sb.childOption(IoUringChannelOption.POLLIN_FIRST, true);
-        cb.option(IoUringChannelOption.POLLIN_FIRST, true);
+        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
     }
 }

@@ -19,14 +19,14 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.SocketDataReadInitialStateTest;
+import io.netty.testsuite.transport.socket.SocketSslSessionReuseTest;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringPollinFirstSocketDataReadInitialStateTest extends SocketDataReadInitialStateTest {
+public class IoUringBufferRingSocketSslSessionReuseTest extends SocketSslSessionReuseTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -41,8 +41,7 @@ public class IoUringPollinFirstSocketDataReadInitialStateTest extends SocketData
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.option(IoUringChannelOption.POLLIN_FIRST, true);
-        sb.childOption(IoUringChannelOption.POLLIN_FIRST, true);
-        cb.option(IoUringChannelOption.POLLIN_FIRST, true);
+        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
     }
 }

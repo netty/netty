@@ -18,14 +18,14 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.SocketChannelNotYetConnectedTest;
+import io.netty.testsuite.transport.socket.WriteBeforeRegisteredTest;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringPollinFirstSocketChannelNotYetConnectedTest extends SocketChannelNotYetConnectedTest {
+public class IoUringBufferRingWriteBeforeRegisteredTest extends WriteBeforeRegisteredTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -38,8 +38,8 @@ public class IoUringPollinFirstSocketChannelNotYetConnectedTest extends SocketCh
     }
 
     @Override
-    protected void configure(Bootstrap cb, ByteBufAllocator allocator) {
-        super.configure(cb, allocator);
-        cb.option(IoUringChannelOption.POLLIN_FIRST, true);
+    protected void configure(Bootstrap bootstrap, ByteBufAllocator allocator) {
+        super.configure(bootstrap, allocator);
+        bootstrap.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
     }
 }

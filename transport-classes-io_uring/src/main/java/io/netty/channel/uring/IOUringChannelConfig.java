@@ -17,16 +17,13 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
-import java.util.Map;
 
 abstract class IOUringChannelConfig extends DefaultChannelConfig {
-    private volatile boolean pollInFirst = true;
 
     IOUringChannelConfig(Channel channel) {
         super(channel);
@@ -36,40 +33,7 @@ abstract class IOUringChannelConfig extends DefaultChannelConfig {
         super(channel, allocator);
     }
 
-    @Override
-    public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), IoUringChannelOption.POLLIN_FIRST);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T> T getOption(ChannelOption<T> option) {
-        if (option == IoUringChannelOption.POLLIN_FIRST) {
-            return (T) Boolean.valueOf(pollInFirst);
-        }
-        return super.getOption(option);
-    }
-
-    @Override
-    public <T> boolean setOption(ChannelOption<T> option, T value) {
-        validate(option, value);
-
-        if (option == IoUringChannelOption.POLLIN_FIRST) {
-            setPollInFirst((Boolean) value);
-        } else {
-            return super.setOption(option, value);
-        }
-
-        return true;
-    }
-
-    boolean getPollInFirst() {
-        return pollInFirst;
-    }
-
-    void setPollInFirst(boolean pollInFirst) {
-        this.pollInFirst = pollInFirst;
-    }
+    abstract boolean getPollInFirst();
 
     @Override
     public IOUringChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {

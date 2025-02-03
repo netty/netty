@@ -41,7 +41,6 @@ public class IoUringSocketConnectionAttemptTest extends SocketConnectionAttemptT
     @Override
     protected void configure(Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(cb, allocator);
-        cb.option(IoUringChannelOption.POLLIN_FIRST, false);
-        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
     }
 }

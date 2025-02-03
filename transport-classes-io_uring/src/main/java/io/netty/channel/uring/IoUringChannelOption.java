@@ -44,17 +44,6 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Integer> MAX_DATAGRAM_PAYLOAD_SIZE = valueOf("MAX_DATAGRAM_PAYLOAD_SIZE");
 
     /**
-     * When set to {@code true} a POLLIN will be scheduled to get notified once there is something to read.
-     * Once the notification is received the actual reading is scheduled. This means one extra operation has to be
-     * scheduled for each read-loop but also means that we will not need to reserve any extra memory until there is
-     * something to read for real.
-     * When set to {@code false} the read is submitted directly, which has the benefit that there are fewer operations
-     * that need to be scheduled per read-loop. That said it also means that the memory for the read needs to be
-     * reserved upfront even if we are not sure yet when exactly the read will happen.
-     */
-    public static final ChannelOption<Boolean> POLLIN_FIRST = valueOf("POLLIN_FIRST");
-
-    /**
      * The buffer group id to use when submitting recv / read / readv {@link IoUringIoOps}.
      * If it is set to {@code 0}, then this function will be disabled.
      * <p>

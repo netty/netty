@@ -142,6 +142,11 @@ final class IoUringDatagramChannelConfig extends IOUringChannelConfig implements
         return true;
     }
 
+    @Override
+    boolean getPollInFirst() {
+        return false;
+    }
+
     private void setActiveOnOpen(boolean activeOnOpen) {
         if (channel.isRegistered()) {
             throw new IllegalStateException("Can only changed before channel was registered");
