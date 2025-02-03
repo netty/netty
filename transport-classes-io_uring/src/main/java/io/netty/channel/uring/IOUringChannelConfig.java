@@ -27,7 +27,6 @@ import java.util.Map;
 
 abstract class IOUringChannelConfig extends DefaultChannelConfig {
     private volatile boolean pollInFirst = true;
-    private volatile boolean ioseqAsync;
 
     IOUringChannelConfig(Channel channel) {
         super(channel);
@@ -39,7 +38,7 @@ abstract class IOUringChannelConfig extends DefaultChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), IoUringChannelOption.POLLIN_FIRST, IoUringChannelOption.IOSQE_ASYNC);
+        return getOptions(super.getOptions(), IoUringChannelOption.POLLIN_FIRST);
     }
 
     @SuppressWarnings("unchecked")
@@ -47,9 +46,6 @@ abstract class IOUringChannelConfig extends DefaultChannelConfig {
     public <T> T getOption(ChannelOption<T> option) {
         if (option == IoUringChannelOption.POLLIN_FIRST) {
             return (T) Boolean.valueOf(pollInFirst);
-        }
-        if (option == IoUringChannelOption.IOSQE_ASYNC) {
-            return (T) Boolean.valueOf(ioseqAsync);
         }
         return super.getOption(option);
     }
@@ -60,8 +56,6 @@ abstract class IOUringChannelConfig extends DefaultChannelConfig {
 
         if (option == IoUringChannelOption.POLLIN_FIRST) {
             setPollInFirst((Boolean) value);
-        } else if (option == IoUringChannelOption.IOSQE_ASYNC) {
-            setIoseqAsync((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -75,14 +69,6 @@ abstract class IOUringChannelConfig extends DefaultChannelConfig {
 
     void setPollInFirst(boolean pollInFirst) {
         this.pollInFirst = pollInFirst;
-    }
-
-    boolean getIoseqAsync() {
-        return ioseqAsync;
-    }
-
-    void setIoseqAsync(boolean ioseqAsync) {
-        this.ioseqAsync = ioseqAsync;
     }
 
     @Override
