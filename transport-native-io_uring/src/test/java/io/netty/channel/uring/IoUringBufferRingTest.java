@@ -123,14 +123,14 @@ public class IoUringBufferRingTest {
         ByteBuf writeBuffer = Unpooled.directBuffer(randomStringLength);
         ByteBufUtil.writeAscii(writeBuffer, randomString);
         ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, userspaceIoUringBufferElement1);
+        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement1);
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, userspaceIoUringBufferElement2);
+        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement2);
         assertEquals(0, eventSyncer.size());
 
         // We ran out of buffers in the buffer ring
         ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertFalse(readBuffer instanceof IoUringBufferRing.UserspaceIoUringBuffer);
+        assertFalse(readBuffer instanceof IoUringBufferRing.IoUringBufferRingByteBuf);
         readBuffer.release();
         assertEquals(1, eventSyncer.size());
         assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take().bufferGroupId());
@@ -140,12 +140,12 @@ public class IoUringBufferRingTest {
 
         // As we already had the next read scheduled we will see one more buffer that was not taked out of the ring
         readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertFalse(readBuffer instanceof IoUringBufferRing.UserspaceIoUringBuffer);
+        assertFalse(readBuffer instanceof IoUringBufferRing.IoUringBufferRingByteBuf);
         readBuffer.release();
 
         // The next buffer is expected to be provided out of the ring again.
         readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, readBuffer);
+        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, readBuffer);
         readBuffer.release();
 
         userspaceIoUringBufferElement2.release();

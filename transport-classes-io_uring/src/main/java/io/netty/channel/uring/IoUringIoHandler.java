@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -444,7 +443,7 @@ public final class IoUringIoHandler implements IoHandler {
     public IoRegistration register(IoHandle handle) throws Exception {
         IoUringIoHandle ioHandle = cast(handle);
         if (shuttingDown) {
-            throw new RejectedExecutionException("IoEventLoop is shutting down");
+            throw new IllegalStateException("IoUringIoHandler is shutting down");
         }
         DefaultIoUringIoRegistration registration = new DefaultIoUringIoRegistration(executor, ioHandle);
         for (;;) {

@@ -23,83 +23,83 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 
 
-abstract class IOUringChannelConfig extends DefaultChannelConfig {
+abstract class IoUringChannelConfig extends DefaultChannelConfig {
 
-    IOUringChannelConfig(Channel channel) {
+    IoUringChannelConfig(Channel channel) {
         super(channel);
     }
 
-    IOUringChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
+    IoUringChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
         super(channel, allocator);
     }
 
     abstract boolean getPollInFirst();
 
     @Override
-    public IOUringChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+    public IoUringChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
         super.setConnectTimeoutMillis(connectTimeoutMillis);
         return this;
     }
 
     @Override
     @Deprecated
-    public IOUringChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+    public IoUringChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;
     }
 
     @Override
-    public IOUringChannelConfig setWriteSpinCount(int writeSpinCount) {
+    public IoUringChannelConfig setWriteSpinCount(int writeSpinCount) {
         super.setWriteSpinCount(writeSpinCount);
         return this;
     }
 
     @Override
-    public IOUringChannelConfig setAllocator(ByteBufAllocator allocator) {
+    public IoUringChannelConfig setAllocator(ByteBufAllocator allocator) {
         super.setAllocator(allocator);
         return this;
     }
 
     @Override
-    public IOUringChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+    public IoUringChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
         super.setRecvByteBufAllocator(allocator);
         return this;
     }
 
     @Override
-    public IOUringChannelConfig setAutoRead(boolean autoRead) {
+    public IoUringChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
         return this;
     }
 
     @Override
-    public IOUringChannelConfig setAutoClose(boolean autoClose) {
+    public IoUringChannelConfig setAutoClose(boolean autoClose) {
         super.setAutoClose(autoClose);
         return this;
     }
 
     @Override
     @Deprecated
-    public IOUringChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+    public IoUringChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
     @Deprecated
-    public IOUringChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+    public IoUringChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
     }
 
     @Override
-    public IOUringChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
+    public IoUringChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
         super.setWriteBufferWaterMark(writeBufferWaterMark);
         return this;
     }
 
     @Override
-    public IOUringChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+    public IoUringChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
         return this;
     }

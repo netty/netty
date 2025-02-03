@@ -291,7 +291,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert readBuffer == null;
             assert readId == 0;
 
-            final IOUringStreamChannelConfig channelConfig = (IOUringStreamChannelConfig) config();
+            final IoUringStreamChannelConfig channelConfig = (IoUringStreamChannelConfig) config();
             final IoUringIoHandler ioUringIoHandler = registration().attachment();
             // Although we checked whether the current kernel supports `register_buffer_ring`
             // during the initialization of IoUringIoHandler
@@ -299,8 +299,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             // When the kernel does not support this feature, it helps the JIT to delete this branch.
             // only `first` value is true, we will recv with the buffer ring;
             if (IoUring.isRegisterBufferRingSupported() && first) {
-                short bgId = channelConfig.getBufferRingConfig();
-                if (bgId != IOUringStreamChannelConfig.DISABLE_BUFFER_SELECT_READ) {
+                short bgId = channelConfig.getBufferGroupId();
+                if (bgId != IoUringStreamChannelConfig.DISABLE_BUFFER_SELECT_READ) {
                     IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(bgId);
                     if (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull()) {
                         return scheduleReadProviderBuffer(ioUringBufferRing, socketIsEmpty);
@@ -415,7 +415,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     if (res == Native.ERRNO_NO_BUFFER_NEGATIVE) {
                         //recv with provider buffer fail!
                         //fallback to normal recv
-                        bufferRing.markReadFail();
+                        bufferRing.markExhausted();
                         // fire the BufferRingExhaustedEvent to notify users.
                         // Users can then switch the ring buffer or do other things as they wish
                         pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
@@ -437,7 +437,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
                     if (bufferRing != null) {
-                        byteBuf = bufferRing.borrowBuffer(flags >> Native.IORING_CQE_BUFFER_SHIFT, res);
+                        byteBuf = bufferRing.borrowBuffer((short) (flags >> Native.IORING_CQE_BUFFER_SHIFT), res);
                     }
                     byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     allocHandle.lastBytesRead(res);
