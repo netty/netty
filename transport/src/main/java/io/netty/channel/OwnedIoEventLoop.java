@@ -68,7 +68,8 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
             return -1;
         }
     };
-    private final IoHandlerContext blockingContext = new BlockingIoHandlerContext(Long.MAX_VALUE);
+    private final BlockingIoHandlerContext blockingContext = new BlockingIoHandlerContext();
+
     private final Thread owningThread;
     private final IoHandler handler;
 
@@ -170,10 +171,8 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
      */
     public int waitAndRun(long nanos) {
         checkCurrentThread();
-        if (nanos <= 0) {
-            return run(blockingContext);
-        }
-        return run(new BlockingIoHandlerContext(nanos));
+        blockingContext.maxBlockingNanos = nanos;
+        return run(blockingContext);
     }
 
     private void checkCurrentThread() {
@@ -420,12 +419,8 @@ public final class OwnedIoEventLoop extends AbstractScheduledEventExecutor
         return true;
     }
 
-    private class BlockingIoHandlerContext implements IoHandlerContext {
-        private final long maxBlockingNanos;
-
-        BlockingIoHandlerContext(long maxBlockingNanos) {
-            this.maxBlockingNanos = maxBlockingNanos;
-        }
+    private final class BlockingIoHandlerContext implements IoHandlerContext {
+        long maxBlockingNanos = Long.MAX_VALUE;
 
         @Override
         public boolean canBlock() {
