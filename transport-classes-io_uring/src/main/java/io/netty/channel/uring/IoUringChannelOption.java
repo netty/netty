@@ -55,11 +55,6 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Boolean> POLLIN_FIRST = valueOf("POLLIN_FIRST");
 
     /**
-     * Use {@code IOSQE_ASYNC} when submitting {@link IoUringIoOps}.
-     */
-    public static final ChannelOption<Boolean> IOSQE_ASYNC = valueOf("IOSQE_ASYNC");
-
-    /**
      * The buffer group id to use when submitting recv / read / readv {@link IoUringIoOps}.
      * If it is set to {@code 0}, then this function will be disabled.
      * <p>
