@@ -33,7 +33,7 @@ public final class IoUringBufferRingConfig {
     /**
      * Create a new configuration.
      *
-     * @param bgId              the buffer group id to use.
+     * @param bgId              the buffer group id to use (must be non-negative).
      * @param bufferRingSize    the size of the ring
      * @param chunkSize         the chunk size of each {@link io.netty.buffer.ByteBuf} that is allocated out of the
      *                          {@link ByteBufAllocator} to fill the ring.
@@ -46,7 +46,7 @@ public final class IoUringBufferRingConfig {
     /**
      * Create a new configuration.
      *
-     * @param bgId              the buffer group id to use.
+     * @param bgId              the buffer group id to use (must be non-negative).
      * @param bufferRingSize    the size of the ring
      * @param chunkSize         the chunk size of each {@link io.netty.buffer.ByteBuf} that is allocated out of the
      *                          {@link ByteBufAllocator} to fill the ring.
@@ -55,7 +55,7 @@ public final class IoUringBufferRingConfig {
      */
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize,
                                    ByteBufAllocator allocator, int initSize) {
-        this.bgId = ObjectUtil.checkPositive(bgId, "bgId");
+        this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
         this.chunkSize = ObjectUtil.checkPositive(chunkSize, "chunkSize");
         this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
