@@ -44,7 +44,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
 public final class ManualIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
-
     private static final int ST_STARTED = 4;
     private static final int ST_SHUTTING_DOWN = 5;
     private static final int ST_SHUTDOWN = 6;
@@ -80,6 +79,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     private volatile long gracefulShutdownTimeout;
     private long gracefulShutdownStartTime;
     private long lastExecutionTime;
+    private boolean initialized;
 
     /**
      * Create a new {@link IoEventLoop} that is owned by the user and so needs to be driven by the user with the given
@@ -119,6 +119,10 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     private int run(IoHandlerContext context) {
+        if (!initialized) {
+            initialized = true;
+            handler.initialize();
+        }
         if (isShuttingDown()) {
             if (terminationFuture.isDone()) {
                 // Already completely terminated
