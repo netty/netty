@@ -283,11 +283,10 @@ public class ChannelInitializerTest {
                 if (thread == null) {
                     thread = Thread.currentThread();
                     return false;
-                } else {
-                    boolean result = thread == Thread.currentThread();
-                    thread = null;
-                    return result;
                 }
+                boolean result = thread == Thread.currentThread();
+                thread = null;
+                return result;
             }
 
             @Override
