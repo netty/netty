@@ -24,16 +24,16 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 public final class IoUringSocketChannel extends AbstractIoUringStreamChannel implements SocketChannel {
-    private final IOUringSocketChannelConfig config;
+    private final IoUringSocketChannelConfig config;
 
     public IoUringSocketChannel() {
        super(null, LinuxSocket.newSocketStream(), false);
-       this.config = new IOUringSocketChannelConfig(this);
+       this.config = new IoUringSocketChannelConfig(this);
     }
 
     IoUringSocketChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
         super(parent, fd, remote);
-        this.config = new IOUringSocketChannelConfig(this);
+        this.config = new IoUringSocketChannelConfig(this);
     }
 
     @Override

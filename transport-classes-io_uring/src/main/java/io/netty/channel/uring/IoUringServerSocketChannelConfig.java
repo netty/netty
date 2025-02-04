@@ -31,7 +31,7 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.TCP_FASTOPEN;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
-final class IoUringServerSocketChannelConfig extends IOUringChannelConfig implements ServerSocketChannelConfig {
+final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implements ServerSocketChannelConfig {
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile int pendingFastOpenRequestsThreshold;
 
