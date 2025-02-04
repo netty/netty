@@ -235,33 +235,24 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public ChannelHandlerContext fireChannelActive() {
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeChannelActive();
+            DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_ACTIVE);
+            if (ctx == null) {
+                notifyHandlerRemovedAlready();
+                return this;
+            }
+            if (ctx.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    ctx.handler().channelActive(ctx);
+                } catch (Throwable t) {
+                    ctx.invokeChannelExceptionCaught(t);
+                } finally {
+                    ctx.updatePendingBytesIfNeeded();
+                }
+            }
         } else {
-            executor.execute(this::findAndInvokeChannelActive);
+            executor.execute(this::fireChannelActive);
         }
         return this;
-    }
-
-    private void findAndInvokeChannelActive() {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_ACTIVE);
-        if (ctx == null) {
-            notifyHandlerRemovedAlready();
-            return;
-        }
-        ctx.invokeChannelActive();
-    }
-
-    void invokeChannelActive() {
-        if (!saveCurrentPendingBytesIfNeededInbound()) {
-            return;
-        }
-        try {
-            handler().channelActive(this);
-        } catch (Throwable t) {
-            invokeChannelExceptionCaught(t);
-        } finally {
-            updatePendingBytesIfNeeded();
-        }
     }
 
     @Override
@@ -1283,7 +1274,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
     }
 
-    private boolean saveCurrentPendingBytesIfNeededInbound() {
+    boolean saveCurrentPendingBytesIfNeededInbound() {
         IllegalStateException e = saveCurrentPendingBytesIfNeeded();
         if (e != null) {
             logger.error("Failed to save current pending bytes.", e);
@@ -1341,7 +1332,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return null;
     }
 
-    private void updatePendingBytesIfNeeded() {
+    void updatePendingBytesIfNeeded() {
         IllegalStateException exception = saveAndUpdatePendingBytes();
         if (exception != null) {
             logger.error("Failed to update pending bytes.", exception);

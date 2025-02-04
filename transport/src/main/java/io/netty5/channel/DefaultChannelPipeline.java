@@ -793,31 +793,91 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelRegistered() {
-        head.invokeChannelRegistered();
+        if (head.executor().inEventLoop()) {
+            if (head.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    head.handler().channelRegistered(head);
+                } catch (Throwable t) {
+                    head.invokeChannelExceptionCaught(t);
+                } finally {
+                    head.updatePendingBytesIfNeeded();
+                }
+            }
+        } else {
+            head.executor().execute(this::fireChannelRegistered);
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelUnregistered() {
-        head.invokeChannelUnregistered();
+        if (head.executor().inEventLoop()) {
+            if (head.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    head.handler().channelUnregistered(head);
+                } catch (Throwable t) {
+                    head.invokeChannelExceptionCaught(t);
+                } finally {
+                    head.updatePendingBytesIfNeeded();
+                }
+            }
+        } else {
+            head.executor().execute(this::fireChannelUnregistered);
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelActive() {
-        head.invokeChannelActive();
+        if (head.executor().inEventLoop()) {
+            if (head.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    head.handler().channelActive(head);
+                } catch (Throwable t) {
+                    head.invokeChannelExceptionCaught(t);
+                } finally {
+                    head.updatePendingBytesIfNeeded();
+                }
+            }
+        } else {
+            head.executor().execute(this::fireChannelActive);
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelInactive() {
-        head.invokeChannelInactive();
+        if (head.executor().inEventLoop()) {
+            if (head.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    head.handler().channelInactive(head);
+                } catch (Throwable t) {
+                    head.invokeChannelExceptionCaught(t);
+                } finally {
+                    head.updatePendingBytesIfNeeded();
+                }
+            }
+        } else {
+            head.executor().execute(this::fireChannelInactive);
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelShutdown(ChannelShutdownDirection direction) {
-        head.invokeChannelShutdown(direction);
+        if (head.executor().inEventLoop()) {
+            if (head.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    head.handler().channelShutdown(head, direction);
+                } catch (Throwable t) {
+                    head.invokeChannelExceptionCaught(t);
+                } finally {
+                    head.updatePendingBytesIfNeeded();
+                }
+            }
+        } else {
+            head.executor().execute(() -> fireChannelShutdown(direction));
+        }
         return this;
     }
 
@@ -829,25 +889,77 @@ public abstract class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelInboundEvent(Object event) {
-        head.invokeChannelInboundEvent(event);
+        if (head.executor().inEventLoop()) {
+            if (head.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    head.handler().channelInboundEvent(head, event);
+                } catch (Throwable t) {
+                    head.invokeChannelExceptionCaught(t);
+                } finally {
+                    head.updatePendingBytesIfNeeded();
+                }
+            } else {
+                Resource.dispose(event);
+            }
+        } else {
+            head.executor().execute(() -> fireChannelInboundEvent(event));
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelRead(Object msg) {
-        head.invokeChannelRead(msg);
+        if (head.executor().inEventLoop()) {
+            if (head.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    head.handler().channelRead(head, msg);
+                } catch (Throwable t) {
+                    head.invokeChannelExceptionCaught(t);
+                } finally {
+                    head.updatePendingBytesIfNeeded();
+                }
+            } else {
+                Resource.dispose(msg);
+            }
+        } else {
+            head.executor().execute(() -> fireChannelRead(msg));
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelReadComplete() {
-        head.invokeChannelReadComplete();
+        if (head.executor().inEventLoop()) {
+            if (head.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    head.handler().channelReadComplete(head);
+                } catch (Throwable t) {
+                    head.invokeChannelExceptionCaught(t);
+                } finally {
+                    head.updatePendingBytesIfNeeded();
+                }
+            }
+        } else {
+            head.executor().execute(this::fireChannelReadComplete);
+        }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelWritabilityChanged() {
-        head.invokeChannelWritabilityChanged();
+        if (head.executor().inEventLoop()) {
+            if (head.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    head.handler().channelWritabilityChanged(head);
+                } catch (Throwable t) {
+                    head.invokeChannelExceptionCaught(t);
+                } finally {
+                    head.updatePendingBytesIfNeeded();
+                }
+            }
+        } else {
+            head.executor().execute(this::fireChannelWritabilityChanged);
+        }
         return this;
     }
 
