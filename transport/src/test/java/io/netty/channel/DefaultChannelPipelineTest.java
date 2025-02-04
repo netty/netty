@@ -58,6 +58,7 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -2235,6 +2236,15 @@ public class DefaultChannelPipelineTest {
     private static final class WrapperExecutor extends AbstractEventExecutor {
 
         private final ExecutorService wrapped = Executors.newSingleThreadExecutor();
+        private final Thread eventLoopThread = get(wrapped.submit(() -> Thread.currentThread()));
+
+        private static Thread get(java.util.concurrent.Future<Thread> future) {
+            try {
+                return future.get();
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to get result of future", e);
+            }
+        }
 
         @Override
         public boolean isShuttingDown() {
@@ -2283,7 +2293,7 @@ public class DefaultChannelPipelineTest {
 
         @Override
         public boolean inEventLoop(Thread thread) {
-            return false;
+            return thread == eventLoopThread;
         }
 
         @Override
