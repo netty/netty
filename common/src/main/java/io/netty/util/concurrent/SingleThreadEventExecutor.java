@@ -328,21 +328,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     private boolean fetchFromScheduledTaskQueue() {
-        if (scheduledTaskQueue == null || scheduledTaskQueue.isEmpty()) {
-            return true;
-        }
-        long nanoTime = getCurrentTimeNanos();
-        for (;;) {
-            Runnable scheduledTask = pollScheduledTask(nanoTime);
-            if (scheduledTask == null) {
-                return true;
-            }
-            if (!taskQueue.offer(scheduledTask)) {
-                // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
-                scheduledTaskQueue.add((ScheduledFutureTask<?>) scheduledTask);
-                return false;
-            }
-        }
+        return fetchFromScheduledTaskQueue(taskQueue);
     }
 
     /**
@@ -422,7 +408,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         boolean ranAtLeastOne = false;
 
         do {
-            fetchedAll = fetchFromScheduledTaskQueue();
+            fetchedAll = fetchFromScheduledTaskQueue(taskQueue);
             if (runAllTasksFrom(taskQueue)) {
                 ranAtLeastOne = true;
             }
@@ -507,7 +493,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
      */
     protected boolean runAllTasks(long timeoutNanos) {
-        fetchFromScheduledTaskQueue();
+        fetchFromScheduledTaskQueue(taskQueue);
         Runnable task = pollTask();
         if (task == null) {
             afterRunningAllTasks();
