@@ -45,7 +45,7 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
 
     /**
      * The buffer group id to use when submitting recv / read / readv {@link IoUringIoOps}.
-     * If it is set to {@code 0}, then this function will be disabled.
+     * If it is set to {@code -1}, then this function will be disabled.
      * <p>
      * Check
      * <a href="https://man7.org/linux/man-pages/man3/io_uring_setup_buf_ring.3.html"> man io_uring_setup_buf_ring</a>

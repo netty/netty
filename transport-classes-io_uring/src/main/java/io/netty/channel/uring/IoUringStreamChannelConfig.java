@@ -24,7 +24,7 @@ import java.util.Map;
 
 abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
-    static final short DISABLE_BUFFER_SELECT_READ = 0;
+    static final short DISABLE_BUFFER_SELECT_READ = -1;
 
     private volatile short bufferGroupId = DISABLE_BUFFER_SELECT_READ;
 
@@ -80,7 +80,7 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
      * @return              itself.
      */
     IoUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
-        this.bufferGroupId = (short) ObjectUtil.checkPositiveOrZero(bufferGroupId, "bufferGroupId");
+        this.bufferGroupId = (short) ObjectUtil.checkInRange(bufferGroupId, -1, Short.MAX_VALUE, "bufferGroupId");
         return this;
     }
 }
