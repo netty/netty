@@ -616,13 +616,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 iovArray.release();
             }
             if (res >= 0) {
-
                 if (IoUring.isIOUringSendZCSupported()) {
+                    //a first CQE with standard res semantics and the IORING_CQE_F_MORE flag set, and
                     if ((flags & Native.IORING_CQE_F_MORE) != 0) {
                         lasSendZCRes = res;
                         return true;
                     }
-
+                    //a second CQE with res set to 0 and the IORING_CQE_F_NOTIF flag set.
                     if ((flags & Native.IORING_CQE_F_NOTIF) != 0) {
                         channelOutboundBuffer.removeBytes(res);
                         lasSendZCRes = -1;
