@@ -15,11 +15,11 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.util.internal.LongCounter;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Metric for {@link IoUring}.
@@ -28,18 +28,18 @@ public final class IoUringMetric {
 
     private static final boolean ENABLE_METRIC = SystemPropertyUtil.getBoolean("io.netty.iouring.enableMetric", true);
 
-    private static final LongCounter SQE_HANDLE_COUNTER = PlatformDependent.newLongCounter();
+    private static final AtomicLong SQE_HANDLE_COUNTER = new AtomicLong();
 
-    private static final LongCounter CQE_HANDLE_COUNT = PlatformDependent.newLongCounter();
+    private static final AtomicLong CQE_HANDLE_COUNT = new AtomicLong();
 
-    private static final LongCounter PROVIDER_BUFFER_READ_FAIL_COUNT = PlatformDependent.newLongCounter();
+    private static final AtomicLong PROVIDER_BUFFER_READ_FAIL_COUNT = new AtomicLong();
 
     /**
      * Use map instead of directly using CompletionQueue to prevent illegal access after ioUring is closed
      */
     private static final Map<CompletionQueue, Integer> OVERFLOW_RECORD = PlatformDependent.newConcurrentHashMap();
 
-    private static final LongCounter OVERFLOW_FROM_CLOSED_CQE = PlatformDependent.newLongCounter();
+    private static final AtomicLong OVERFLOW_FROM_CLOSED_CQE = new AtomicLong();
 
     private IoUringMetric() {
         // utility
@@ -47,19 +47,19 @@ public final class IoUringMetric {
 
     static void increaseSqeCounter(int count) {
         if (ENABLE_METRIC) {
-            SQE_HANDLE_COUNTER.add(count);
+            SQE_HANDLE_COUNTER.lazySet(count + SQE_HANDLE_COUNTER.get());
         }
     }
 
     static void increaseCqeCounter(int count) {
         if (ENABLE_METRIC) {
-            CQE_HANDLE_COUNT.add(count);
+            CQE_HANDLE_COUNT.lazySet(count + CQE_HANDLE_COUNT.get());
         }
     }
 
     static void increaseProviderBufferReadFailCounter() {
         if (ENABLE_METRIC) {
-            PROVIDER_BUFFER_READ_FAIL_COUNT.increment();
+            PROVIDER_BUFFER_READ_FAIL_COUNT.lazySet(1 + PROVIDER_BUFFER_READ_FAIL_COUNT.get());
         }
     }
 
@@ -71,7 +71,7 @@ public final class IoUringMetric {
 
     static void recordIOUringClose(RingBuffer ringBuffer) {
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
-        OVERFLOW_FROM_CLOSED_CQE.add(completionQueue.getKoverflow());
+        OVERFLOW_FROM_CLOSED_CQE.lazySet(OVERFLOW_FROM_CLOSED_CQE.get() + completionQueue.getKoverflow());
     }
 
     /**
@@ -80,7 +80,7 @@ public final class IoUringMetric {
      * @return the number of SQEs submitted
      */
     public static long sqeCounter() {
-        return ENABLE_METRIC ? SQE_HANDLE_COUNTER.value() : 0;
+        return ENABLE_METRIC ? SQE_HANDLE_COUNTER.get() : 0;
     }
 
     /**
@@ -89,7 +89,7 @@ public final class IoUringMetric {
      * @return The number of handle processed CQEs
      */
     public static long cqeCounter() {
-        return ENABLE_METRIC ? CQE_HANDLE_COUNT.value() : 0;
+        return ENABLE_METRIC ? CQE_HANDLE_COUNT.get() : 0;
     }
 
     /**
@@ -108,7 +108,7 @@ public final class IoUringMetric {
             count += value;
         }
 
-        return count + OVERFLOW_FROM_CLOSED_CQE.value();
+        return count + OVERFLOW_FROM_CLOSED_CQE.get();
     }
 
     /**
@@ -117,6 +117,6 @@ public final class IoUringMetric {
      * @return the number of buffer ring exhaustion occurrences
      */
     public static long providerBufferReadFailCounter() {
-        return ENABLE_METRIC && IoUring.isRegisterBufferRingSupported() ? PROVIDER_BUFFER_READ_FAIL_COUNT.value() : 0;
+        return ENABLE_METRIC && IoUring.isRegisterBufferRingSupported() ? PROVIDER_BUFFER_READ_FAIL_COUNT.get() : 0;
     }
 }
