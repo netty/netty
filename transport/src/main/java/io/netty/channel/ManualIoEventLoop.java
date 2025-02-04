@@ -190,6 +190,16 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         }
     }
 
+    /**
+     * Force a wakeup and so the {@link #run(long)} method will unblock and return even if there was nothing to do.
+     */
+    public void wakeup() {
+        if (isShuttingDown()) {
+            return;
+        }
+        handler.wakeup();
+    }
+
     @Override
     public ManualIoEventLoop next() {
         return this;
