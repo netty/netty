@@ -32,6 +32,7 @@ public final class IoUring {
     private static final boolean IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
     private static final boolean IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
     private static final boolean IO_URING_REGISTER_BUFFER_RING_SUPPORTED;
+    private static final boolean IO_URING_NO_DROP_SUPPORTED;
 
     private static final InternalLogger logger;
 
@@ -46,6 +47,7 @@ public final class IoUring {
         boolean singleIssuerSupported = false;
         boolean deferTaskrunSupported = false;
         boolean registerBufferRingSupported = false;
+        boolean noDropSupported = false;
         try {
             if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
                 cause = new UnsupportedOperationException(
@@ -63,6 +65,7 @@ public final class IoUring {
                         spliceSupported = Native.isIOUringSupportSplice(ringBuffer.fd());
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
                         acceptSupportNoWait = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
+                        noDropSupported = (ringBuffer.features() & Native.IORING_FEAT_NODROP) != 0;
                         registerIowqWorkersSupported = Native.isRegisterIOWQWorkerSupported(ringBuffer.fd());
                         submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
                         singleIssuerSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
@@ -118,6 +121,7 @@ public final class IoUring {
         IORING_SETUP_SINGLE_ISSUER_SUPPORTED = singleIssuerSupported;
         IORING_SETUP_DEFER_TASKRUN_SUPPORTED = deferTaskrunSupported;
         IO_URING_REGISTER_BUFFER_RING_SUPPORTED = registerBufferRingSupported;
+        IO_URING_NO_DROP_SUPPORTED = noDropSupported;
     }
 
     public static boolean isAvailable() {
@@ -174,6 +178,10 @@ public final class IoUring {
 
     public static boolean isRegisterBufferRingSupported() {
         return IO_URING_REGISTER_BUFFER_RING_SUPPORTED;
+    }
+
+    static boolean isIoUringNoDropSupported() {
+        return IO_URING_NO_DROP_SUPPORTED;
     }
 
     public static void ensureAvailability() {

@@ -35,6 +35,7 @@ final class CompletionQueue {
     //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
     private final long kHeadAddress;
     private final long kTailAddress;
+    private final long koverflowAddress;
 
     private final long completionQueueArrayAddress;
 
@@ -51,6 +52,7 @@ final class CompletionQueue {
                     int ringFd) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
+        this.koverflowAddress = kOverflowAddress;
         this.completionQueueArrayAddress = completionQueueArrayAddress;
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
@@ -97,7 +99,13 @@ final class CompletionQueue {
                 break;
             }
         }
+        IoUringMetric.increaseCqeCounter(i);
+        IoUringMetric.recordOverflowCounter(this, getKoverflow());
         return i;
+    }
+
+    int getKoverflow() {
+        return PlatformDependent.getInt(koverflowAddress);
     }
 
     @Override

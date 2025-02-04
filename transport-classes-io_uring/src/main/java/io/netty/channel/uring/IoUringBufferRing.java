@@ -75,6 +75,7 @@ final class IoUringBufferRing {
      * to use.
      */
     void markExhausted() {
+        IoUringMetric.increaseProviderBufferReadFailCounter();
         hasSpareBuffer = false;
     }
 

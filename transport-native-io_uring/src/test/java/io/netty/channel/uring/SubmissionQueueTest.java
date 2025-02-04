@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SubmissionQueueTest {
@@ -53,6 +54,17 @@ public class SubmissionQueueTest {
             assertEquals(1, submissionQueue.count());
             submissionQueue.submitAndWait();
             assertEquals(9, completionQueue.count());
+            assertEquals(9, IoUringMetric.sqeCounter());
+            assertEquals(0, IoUringMetric.cqeCounter());
+
+            completionQueue.process(new CompletionCallback() {
+                @Override
+                public boolean handle(int res, int flags, long udata) {
+                    //just drop
+                    return true;
+                }
+            });
+            assertEquals(9, IoUringMetric.cqeCounter());
         } finally {
             ringBuffer.close();
         }
