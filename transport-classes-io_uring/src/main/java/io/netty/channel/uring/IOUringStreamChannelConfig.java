@@ -26,7 +26,11 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
 
     static final short DISABLE_BUFFER_SELECT_READ = 0;
 
+    static final int DISABLE_SEND_ZC = -1;
+
     private volatile short bufferGroupId = DISABLE_BUFFER_SELECT_READ;
+
+    private volatile int sendZcThreshold = DISABLE_SEND_ZC;
 
     IOUringStreamChannelConfig(Channel channel) {
         super(channel);
@@ -41,6 +45,11 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
         if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
             return (T) Short.valueOf(getBufferRingConfig());
         }
+
+        if (option == IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD) {
+            return (T) Integer.valueOf(getSendZcThreshold());
+        }
+
         return super.getOption(option);
     }
 
@@ -50,6 +59,12 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
             setBufferGroupId((Short) value);
             return true;
         }
+
+        if (option == IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD) {
+            setSendZcThreshold((Integer) value);
+            return true;
+        }
+
         return super.setOption(option, value);
     }
 
@@ -67,6 +82,10 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
         return bufferGroupId;
     }
 
+    int getSendZcThreshold() {
+        return sendZcThreshold;
+    }
+
     /**
      * Set the buffer group id that will be used to select the correct ring buffer. This must have been configured
      * via {@link IoUringBufferRingConfig}.
@@ -77,5 +96,20 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
     IOUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
         this.bufferGroupId = (short) ObjectUtil.checkPositiveOrZero(bufferGroupId, "bufferGroupId");
         return this;
+    }
+
+    IOUringStreamChannelConfig setSendZcThreshold(int sendZcThreshold) {
+        if (sendZcThreshold == DISABLE_SEND_ZC) {
+            this.sendZcThreshold = DISABLE_SEND_ZC;
+        } else {
+            this.sendZcThreshold = ObjectUtil.checkPositiveOrZero(sendZcThreshold, "sendZcThreshold");
+        }
+        return this;
+    }
+
+    static boolean enableIOUringSendZC(IOUringStreamChannelConfig channelConfig, int waitSend) {
+        // This can reduce one read operation on a volatile field.
+        int threshold = channelConfig.getSendZcThreshold();
+        return threshold != DISABLE_SEND_ZC && waitSend >= threshold;
     }
 }

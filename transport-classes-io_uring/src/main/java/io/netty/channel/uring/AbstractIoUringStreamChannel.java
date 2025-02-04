@@ -27,6 +27,7 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DuplexChannel;
+import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
 import io.netty.util.internal.logging.InternalLogger;
@@ -34,6 +35,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -220,26 +222,50 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         private ByteBuf readBuffer;
         private IovArray iovArray;
         private IoUringBufferRing lastUsedBufferRing;
+        private int lasSendZCRes;
 
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
             assert iovArray == null;
             assert writeId == 0;
-            int numElements = Math.min(in.size(), Limits.IOV_MAX);
-            ByteBuf iovArrayBuffer = alloc().directBuffer(numElements * IovArray.IOV_SIZE);
-            iovArray = new IovArray(iovArrayBuffer);
+            int outstandingWrite = 1;
+            IoRegistration registration = registration();
             try {
-                int offset = iovArray.count();
-                in.forEachFlushedMessage(iovArray);
+                final IoUringIoOps ops;
+                //if the first ByteBuffer in the ChannelOutboundBuffer meets the conditions for sendZC,
+                IoUringIoOps sendZCOps = trySendZC((ByteBuf) in.current());
 
-                int fd = fd().intValue();
-                IoRegistration registration = registration();
-                IoUringIoOps ops = IoUringIoOps.newWritev(fd, flags((byte) 0), 0, iovArray.memoryAddress(offset),
-                        iovArray.count() - offset, nextOpsId());
+                if (sendZCOps != null) {
+                    ops = sendZCOps;
+                    outstandingWrite = 2;
+                } else {
+                    int numElements = Math.min(in.size(), Limits.IOV_MAX);
+                    ByteBuf iovArrayBuffer = alloc().directBuffer(numElements * IovArray.IOV_SIZE);
+                    iovArray = new IovArray(iovArrayBuffer);
+                    int offset = iovArray.count();
+                    in.forEachFlushedMessage(new ChannelOutboundBuffer.MessageProcessor() {
+                        @Override
+                        public boolean processMessage(Object msg) throws Exception {
+                            if (!(msg instanceof ByteBuf)) {
+                                return false;
+                            }
+                            //add bytebuffer to iovec until a ByteBuf meets the conditions for sendZC
+                            if (trySendZC((ByteBuf) msg) != null) {
+                                return false;
+                            }
+                            return iovArray.processMessage(msg);
+                        }
+                    });
+
+                    int fd = fd().intValue();
+                    ops = IoUringIoOps.newWritev(fd, flags((byte) 0), 0, iovArray.memoryAddress(offset),
+                            iovArray.count() - offset, nextOpsId());
+                }
+
                 byte opCode = ops.opcode();
                 writeId = registration.submit(ops);
                 writeOpCode = opCode;
-                if (writeId == 0) {
+                if (writeId == 0 && iovArray != null) {
                     iovArray.release();
                     iovArray = null;
                     return 0;
@@ -251,7 +277,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 // This should never happen, anyway fallback to single write.
                 scheduleWriteSingle(in.current());
             }
-            return 1;
+            return outstandingWrite;
         }
 
         @Override
@@ -259,6 +285,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert iovArray == null;
             assert writeId == 0;
 
+            int outstandingWrite = 1;
             int fd = fd().intValue();
             IoRegistration registration = registration();
             final IoUringIoOps ops;
@@ -273,8 +300,17 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ops = fileRegion.splice(fd);
             } else {
                 ByteBuf buf = (ByteBuf) msg;
-                ops = IoUringIoOps.newWrite(fd, flags((byte) 0), 0,
-                        buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
+
+                IoUringIoOps sendZCOps = trySendZC(buf);
+
+                if (sendZCOps != null) {
+                    ops = sendZCOps;
+                    //We will receive 2 cqe
+                    outstandingWrite = 2;
+                } else {
+                    ops = IoUringIoOps.newWrite(fd, flags((byte) 0), 0,
+                            buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
+                }
             }
 
             byte opCode = ops.opcode();
@@ -283,7 +319,60 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             if (writeId == 0) {
                 return 0;
             }
-            return 1;
+            return outstandingWrite;
+        }
+
+        IoUringIoOps trySendZC(ByteBuf buf) {
+
+            if (!IoUring.isIOUringSendZCSupported()) {
+                return null;
+            }
+
+            IOUringStreamChannelConfig ioUringStreamChannelConfig = (IOUringStreamChannelConfig) config();
+            int fd = fd().intValue();
+
+            if (buf.nioBufferCount() == 1) {
+                int waitSend = buf.readableBytes();
+                if (waitSend != 0
+                    && IOUringStreamChannelConfig.enableIOUringSendZC(ioUringStreamChannelConfig, waitSend)) {
+                    long memoryAddress ;
+                   if (buf.hasMemoryAddress()) {
+                        memoryAddress = buf.memoryAddress() + buf.readerIndex();
+                    } else {
+                        ByteBuffer nioBuffer = buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes());
+                        memoryAddress = Buffer.memoryAddress(nioBuffer) + nioBuffer.position();
+                    }
+                    return IoUringIoOps.newSendZC(
+                            fd, memoryAddress, buf.readableBytes(),
+                            0,
+                            nextOpsId(),
+                            0
+                    );
+                } else {
+                    // Not reaching the threshold., so we dont send ZC
+                    return null;
+                }
+            }
+
+            // get the first ByteBuffer
+            ByteBuffer[] byteBuffers = buf.nioBuffers();
+            if (byteBuffers.length >= 1) {
+                ByteBuffer firstByteBuffer = byteBuffers[0];
+                int remaining = firstByteBuffer.remaining();
+                if (remaining != 0) {
+                    if (IOUringStreamChannelConfig.enableIOUringSendZC(ioUringStreamChannelConfig, remaining)) {
+                        long memoryAddress = Buffer.memoryAddress(firstByteBuffer) + firstByteBuffer.position();
+                        return IoUringIoOps.newSendZC(
+                                fd, memoryAddress, remaining,
+                                0,
+                                nextOpsId(),
+                                0
+                        );
+                    }
+                }
+            }
+
+            return null;
         }
 
         @Override
@@ -492,8 +581,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         @Override
         boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
             assert writeId != 0;
-            writeId = 0;
-            writeOpCode = 0;
+
+            if ((flags & Native.IORING_CQE_F_MORE) == 0) {
+                writeId = 0;
+                writeOpCode = 0;
+            }
 
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             Object current = channelOutboundBuffer.current();
@@ -524,6 +616,20 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 iovArray.release();
             }
             if (res >= 0) {
+
+                if (IoUring.isIOUringSendZCSupported()) {
+                    if ((flags & Native.IORING_CQE_F_MORE) != 0) {
+                        lasSendZCRes = res;
+                        return true;
+                    }
+
+                    if ((flags & Native.IORING_CQE_F_NOTIF) != 0) {
+                        channelOutboundBuffer.removeBytes(res);
+                        lasSendZCRes = -1;
+                        return true;
+                    }
+                }
+
                 channelOutboundBuffer.removeBytes(res);
             } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return true;

@@ -202,7 +202,9 @@ final class Native {
     static final byte IORING_OP_FIXED_FD_INSTALL = 54;
     static final byte IORING_OP_FTRUNCATE = 55;
     static final byte IORING_OP_BIND = 56;
+    static final byte IORING_CQE_F_MORE = 1 << 1;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
+    static final byte IORING_CQE_F_NOTIF = 1 << 3;
 
     static final int IORING_SETUP_R_DISABLED = 1 << 6;
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
@@ -367,6 +369,11 @@ final class Native {
     static boolean isIOUringSupportSplice(int ringFd) {
         // IORING_OP_SPLICE Available since 5.7
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
+    }
+
+    static boolean isIOUringSupportSendZC(int ringFd) {
+        // IORING_OP_SEND_ZC Available since 6.0
+        return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SEND_ZC });
     }
 
     /**
