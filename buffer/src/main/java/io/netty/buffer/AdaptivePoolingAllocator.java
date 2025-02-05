@@ -29,6 +29,7 @@ import io.netty.util.internal.ReferenceCountUpdater;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
+import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
@@ -906,9 +907,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             AdaptivePoolingAllocator parent = mag.parent;
             int chunkSize = mag.preferredChunkSize();
             int memSize = delegate.capacity();
-            if (!pooled || memSize < chunkSize || memSize > chunkSize + (chunkSize >> 1)) {
-                // Drop the chunk if the parent allocator is closed, or if the chunk is smaller than the
-                // preferred chunk size, or over 50% larger than the preferred chunk size.
+            if (!pooled || shouldReleaseSuboptimalChunkSuze(memSize, chunkSize)) {
+                // Drop the chunk if the parent allocator is closed,
+                // or if the chunk deviates too much from the preferred chunk size.
                 detachFromMagazine();
                 delegate.release();
             } else {
@@ -927,6 +928,16 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     }
                 }
             }
+        }
+
+        private static boolean shouldReleaseSuboptimalChunkSuze(int givenSize, int preferredSize) {
+            int givenChunks = givenSize / MIN_CHUNK_SIZE;
+            int preferredChunks = preferredSize / MIN_CHUNK_SIZE;
+            int deviation = Math.abs(givenChunks - preferredChunks);
+
+            // Retire chunks with a 0.5% probability per unit of MIN_CHUNK_SIZE deviation from preference.
+            return deviation != 0 &&
+                    PlatformDependent.threadLocalRandom().nextDouble() * 200.0 > deviation;
         }
 
         public void readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
