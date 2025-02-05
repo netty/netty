@@ -377,7 +377,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         try {
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, true)
               .option(ChannelOption.AUTO_READ, autoRead)
-              .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(numReadsPerReadLoop));
+              .option(ChannelOption.RECVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(numReadsPerReadLoop));
 
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
@@ -716,7 +716,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         try {
             cb.option(ChannelOption.ALLOW_HALF_CLOSURE, allowHalfClosed)
                     .option(ChannelOption.AUTO_READ, autoRead)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(numReadsPerReadLoop));
+                    .option(ChannelOption.RECVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(numReadsPerReadLoop));
 
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override

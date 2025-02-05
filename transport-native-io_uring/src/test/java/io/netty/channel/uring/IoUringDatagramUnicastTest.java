@@ -82,7 +82,7 @@ public class IoUringDatagramUnicastTest extends DatagramUnicastInetTest {
                 public void channelReadComplete(ChannelHandlerContext ctx) {
                     readCompleteLatch.countDown();
                 }
-            }).option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(2048))
+            }).option(ChannelOption.RECVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(2048))
                     .bind(newSocketAddress()).sync().channel();
             InetSocketAddress addr = sendToAddress((InetSocketAddress) sc.localAddress());
             cc.writeAndFlush(new DatagramPacket(cc.alloc().buffer().writeZero(512),  addr)).sync();

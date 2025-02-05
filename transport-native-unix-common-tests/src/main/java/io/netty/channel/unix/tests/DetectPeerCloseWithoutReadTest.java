@@ -73,7 +73,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
             // calls to consume everything.
             sb.childOption(ChannelOption.AUTO_READ, false);
             sb.childOption(ChannelOption.MAX_MESSAGES_PER_READ, 1);
-            sb.childOption(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(expectedBytes / 10));
+            sb.childOption(ChannelOption.RECVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(expectedBytes / 10));
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
@@ -157,7 +157,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
             // calls to consume everything.
             cb.option(ChannelOption.AUTO_READ, false);
             cb.option(ChannelOption.MAX_MESSAGES_PER_READ, 1);
-            cb.option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(expectedBytes / 10));
+            cb.option(ChannelOption.RECVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(expectedBytes / 10));
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {

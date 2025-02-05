@@ -31,7 +31,7 @@ import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_READ;
 import static io.netty.channel.ChannelOption.MAX_MESSAGES_PER_WRITE;
 import static io.netty.channel.ChannelOption.MESSAGE_SIZE_ESTIMATOR;
-import static io.netty.channel.ChannelOption.RCVBUF_ALLOCATOR;
+import static io.netty.channel.ChannelOption.RECVBUF_ALLOCATOR;
 import static io.netty.channel.ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK;
 import static io.netty.channel.ChannelOption.WRITE_BUFFER_LOW_WATER_MARK;
@@ -86,7 +86,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         return getOptions(
                 null,
                 CONNECT_TIMEOUT_MILLIS, MAX_MESSAGES_PER_READ, WRITE_SPIN_COUNT,
-                ALLOCATOR, AUTO_READ, AUTO_CLOSE, RCVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
+                ALLOCATOR, AUTO_READ, AUTO_CLOSE, RECVBUF_ALLOCATOR, WRITE_BUFFER_HIGH_WATER_MARK,
                 WRITE_BUFFER_LOW_WATER_MARK, WRITE_BUFFER_WATER_MARK, MESSAGE_SIZE_ESTIMATOR,
                 SINGLE_EVENTEXECUTOR_PER_GROUP, MAX_MESSAGES_PER_WRITE);
     }
@@ -134,7 +134,7 @@ public class DefaultChannelConfig implements ChannelConfig {
         if (option == ALLOCATOR) {
             return (T) getAllocator();
         }
-        if (option == RCVBUF_ALLOCATOR) {
+        if (option == RECVBUF_ALLOCATOR) {
             return (T) getRecvByteBufAllocator();
         }
         if (option == AUTO_READ) {
@@ -177,7 +177,7 @@ public class DefaultChannelConfig implements ChannelConfig {
             setWriteSpinCount((Integer) value);
         } else if (option == ALLOCATOR) {
             setAllocator((ByteBufAllocator) value);
-        } else if (option == RCVBUF_ALLOCATOR) {
+        } else if (option == RECVBUF_ALLOCATOR) {
             setRecvByteBufAllocator((RecvByteBufAllocator) value);
         } else if (option == AUTO_READ) {
             setAutoRead((Boolean) value);
