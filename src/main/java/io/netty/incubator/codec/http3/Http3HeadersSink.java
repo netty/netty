@@ -15,10 +15,16 @@
  */
 package io.netty.incubator.codec.http3;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 
 import java.util.function.BiConsumer;
 
+import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.AUTHORITY;
+import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.METHOD;
+import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.PATH;
+import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.SCHEME;
+import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.STATUS;
 import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.getPseudoHeader;
 import static io.netty.incubator.codec.http3.Http3Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 
@@ -36,7 +42,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
     private Http3HeadersValidationException validationException;
     private HeaderType previousType;
     private boolean request;
-    private int pseudoHeadersCount;
+    private int receivedPseudoHeaders;
 
     Http3HeadersSink(Http3Headers headers, long maxHeaderListSize, boolean validate, boolean trailer) {
         this.headers = headers;
@@ -58,7 +64,7 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
         }
         if (validate) {
             if (trailer) {
-                if (pseudoHeadersCount != 0) {
+                if (receivedPseudoHeaders != 0) {
                     // Trailers must not have pseudo headers.
                     throw new Http3HeadersValidationException("Pseudo-header(s) included in trailers.");
                 }
@@ -69,16 +75,12 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
             if (request) {
                 CharSequence method = headers.method();
                 // fast-path
-                if (pseudoHeadersCount < 2) {
-                    // There can't be any duplicates for pseudy header names.
-                    throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
-                }
                 if (HttpMethod.CONNECT.asciiName().contentEqualsIgnoreCase(method)) {
                     // For CONNECT we must only include:
                     // - :method
                     // - :authority
-                    if (pseudoHeadersCount != 2 || headers.authority() == null) {
-                        // There can't be any duplicates for pseudy header names.
+                    final int requiredPseudoHeaders = METHOD.getFlag() | AUTHORITY.getFlag();
+                    if (receivedPseudoHeaders != requiredPseudoHeaders) {
                         throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
                     }
                 } else if (HttpMethod.OPTIONS.asciiName().contentEqualsIgnoreCase(method)) {
@@ -90,34 +92,41 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
                     // - :scheme
                     // - :authority
                     // - :path
-                    if (pseudoHeadersCount != 4 &&
-                            // - :method
-                            // - :scheme
-                            // - :path
-                            !(pseudoHeadersCount == 3 && headers.authority() == null &&
-                                    "*".contentEquals(headers.path()))) {
+                    final int requiredPseudoHeaders = METHOD.getFlag() | SCHEME.getFlag() | PATH.getFlag();
+                    if ((receivedPseudoHeaders & requiredPseudoHeaders) != requiredPseudoHeaders ||
+                            (!authorityOrHostHeaderReceived() && !"*".contentEquals(headers.path()))) {
                         throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
                     }
                 } else {
-                    // For requests we must include:
+                    // For other requests we must include:
                     // - :method
                     // - :scheme
                     // - :authority
                     // - :path
-                    if (pseudoHeadersCount != 4) {
-                        // There can't be any duplicates for pseudy header names.
+                    final int requiredPseudoHeaders = METHOD.getFlag() | SCHEME.getFlag() | PATH.getFlag();
+                    if ((receivedPseudoHeaders & requiredPseudoHeaders) != requiredPseudoHeaders ||
+                        !authorityOrHostHeaderReceived()) {
                         throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
                     }
                 }
             } else {
                 // For responses we must include:
                 // - :status
-                if (pseudoHeadersCount != 1) {
-                    // There can't be any duplicates for pseudy header names.
+                if (receivedPseudoHeaders != STATUS.getFlag()) {
                     throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
                 }
             }
         }
+    }
+
+    /**
+     * Find host header field in case the :authority pseudo header is not specified.
+     * See:
+     * https://www.rfc-editor.org/rfc/rfc9110#section-7.2
+     */
+    private boolean authorityOrHostHeaderReceived() {
+        return (receivedPseudoHeaders & AUTHORITY.getFlag()) == AUTHORITY.getFlag() ||
+                headers.contains(HttpHeaderNames.HOST);
     }
 
     @Override
@@ -154,19 +163,15 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
                 throw new Http3HeadersValidationException(
                         String.format("Invalid HTTP/3 pseudo-header '%s' encountered.", name));
             }
-
-            final HeaderType currentHeaderType = pseudoHeader.isRequestOnly() ?
-                    HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
-            if (previousType != null && currentHeaderType != previousType) {
-                throw new Http3HeadersValidationException("Mix of request and response pseudo-headers.");
-            }
-
-            if (headers.contains(name)) {
+            if ((receivedPseudoHeaders & pseudoHeader.getFlag()) != 0) {
                 // There can't be any duplicates for pseudy header names.
                 throw new Http3HeadersValidationException(
                         String.format("Pseudo-header field '%s' exists already.", name));
             }
-            pseudoHeadersCount++;
+            receivedPseudoHeaders |= pseudoHeader.getFlag();
+
+            final HeaderType currentHeaderType = pseudoHeader.isRequestOnly() ?
+                    HeaderType.REQUEST_PSEUDO_HEADER : HeaderType.RESPONSE_PSEUDO_HEADER;
             request = pseudoHeader.isRequestOnly();
             previousType = currentHeaderType;
         } else {

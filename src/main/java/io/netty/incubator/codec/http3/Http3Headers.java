@@ -31,33 +31,35 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
         /**
          * {@code :method}.
          */
-        METHOD(":method", true),
+        METHOD(":method", true, 0x1),
 
         /**
          * {@code :scheme}.
          */
-        SCHEME(":scheme", true),
+        SCHEME(":scheme", true, 0x2),
 
         /**
          * {@code :authority}.
          */
-        AUTHORITY(":authority", true),
+        AUTHORITY(":authority", true, 0x4),
 
         /**
          * {@code :path}.
          */
-        PATH(":path", true),
+        PATH(":path", true, 0x8),
 
         /**
          * {@code :status}.
          */
-        STATUS(":status", false);
+        STATUS(":status", false, 0x10);
 
         private static final char PSEUDO_HEADER_PREFIX = ':';
         private static final byte PSEUDO_HEADER_PREFIX_BYTE = (byte) PSEUDO_HEADER_PREFIX;
 
         private final AsciiString value;
         private final boolean requestOnly;
+        // The position of the bit in the flag indicates the type of the header field
+        private final int flag;
         private static final CharSequenceMap<PseudoHeaderName> PSEUDO_HEADERS = new CharSequenceMap<PseudoHeaderName>();
 
         static {
@@ -66,9 +68,10 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
             }
         }
 
-        PseudoHeaderName(String value, boolean requestOnly) {
+        PseudoHeaderName(String value, boolean requestOnly, int flag) {
             this.value = AsciiString.cached(value);
             this.requestOnly = requestOnly;
+            this.flag = flag;
         }
 
         public AsciiString value() {
@@ -119,6 +122,10 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
          */
         public boolean isRequestOnly() {
             return requestOnly;
+        }
+
+        public int getFlag() {
+             return flag;
         }
     }
 

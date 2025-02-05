@@ -16,6 +16,8 @@
 package io.netty.incubator.codec.http3;
 
 
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -143,12 +145,42 @@ public class Http3HeadersSinkTest {
     }
 
     @Test
-    public void testAuthorityRequiredForOptionsNonWildcard() throws Http3Exception {
+    public void testOptionsNonWildcardWithAuthority() throws Http3Exception {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
+        sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "OPTIONS");
+        sink.accept(Http3Headers.PseudoHeaderName.PATH.value(), "/something");
+        sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
+        sink.accept(Http3Headers.PseudoHeaderName.AUTHORITY.value(), "example.com:4433");
+        sink.finish();
+    }
+
+    @Test
+    public void testOptionsNonWildcardWithHost() throws Http3Exception {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
+        sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "OPTIONS");
+        sink.accept(Http3Headers.PseudoHeaderName.PATH.value(), "/something");
+        sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
+        sink.accept(new AsciiString(HttpHeaderNames.HOST), "example.com:4433");
+        sink.finish();
+    }
+
+    @Test
+    public void testAuthorityOrHostRequiredForOptionsNonWildcard() throws Http3Exception {
         Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
         sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "OPTIONS");
         sink.accept(Http3Headers.PseudoHeaderName.PATH.value(), "/something");
         sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
         assertThrows(Http3HeadersValidationException.class, () -> sink.finish());
+    }
+
+    @Test
+    public void testHostExistsInsteadOfAuthority() throws Http3Exception {
+        Http3HeadersSink sink = new Http3HeadersSink(new DefaultHttp3Headers(), 512, true, false);
+        sink.accept(Http3Headers.PseudoHeaderName.METHOD.value(), "GET");
+        sink.accept(Http3Headers.PseudoHeaderName.PATH.value(), "/");
+        sink.accept(Http3Headers.PseudoHeaderName.SCHEME.value(), "https");
+        sink.accept(new AsciiString(HttpHeaderNames.HOST), "example.com:4433");
+        sink.finish();
     }
 
     private static void addMandatoryPseudoHeaders(Http3HeadersSink sink, boolean req) {
