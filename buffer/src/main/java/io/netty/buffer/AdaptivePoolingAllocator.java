@@ -573,10 +573,10 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     allocationLock.unlockWrite(writeLock);
                 }
             }
-            return allocateWithoutLock(size, sizeBucket, maxCapacity, buf);
+            return allocateWithoutLock(size, maxCapacity, buf);
         }
 
-        private boolean allocateWithoutLock(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+        private boolean allocateWithoutLock(int size, int maxCapacity, AdaptiveByteBuf buf) {
             Chunk curr = NEXT_IN_LINE.getAndSet(this, null);
             if (curr == MAGAZINE_FREED) {
                 // Allocation raced with a stripe-resize that freed this magazine.
