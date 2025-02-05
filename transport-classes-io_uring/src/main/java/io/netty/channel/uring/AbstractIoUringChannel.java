@@ -432,6 +432,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_SENDMSG:
                 case Native.IORING_OP_WRITE:
                 case Native.IORING_OP_SPLICE:
+                case Native.IORING_OP_SEND_ZC:
                     writeComplete(op, res, flags, data);
 
                     // We delay the actual close if there is still a write or read scheduled, let's see if there

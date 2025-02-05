@@ -334,7 +334,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             if (buf.nioBufferCount() == 1) {
                 int waitSend = buf.readableBytes();
                 if (waitSend != 0
-                    && IOUringStreamChannelConfig.enableIOUringSendZC(ioUringStreamChannelConfig, waitSend)) {
+                    && IOUringStreamChannelConfig.needIOUringSendZC(ioUringStreamChannelConfig, waitSend)) {
                     long memoryAddress ;
                    if (buf.hasMemoryAddress()) {
                         memoryAddress = buf.memoryAddress() + buf.readerIndex();
@@ -349,18 +349,20 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                             0
                     );
                 } else {
-                    // Not reaching the threshold., so we dont send ZC
+                    // Not reaching the threshold, so we dont send ZC
                     return null;
                 }
             }
 
             // get the first ByteBuffer
+            // because UnixChannelUtil::isBufferCopyNeededForWrite in AbstractIoUringChannel::filterOutboundMessage
+            // so its hard to reach here
             ByteBuffer[] byteBuffers = buf.nioBuffers();
             if (byteBuffers.length >= 1) {
                 ByteBuffer firstByteBuffer = byteBuffers[0];
                 int remaining = firstByteBuffer.remaining();
                 if (remaining != 0) {
-                    if (IOUringStreamChannelConfig.enableIOUringSendZC(ioUringStreamChannelConfig, remaining)) {
+                    if (IOUringStreamChannelConfig.needIOUringSendZC(ioUringStreamChannelConfig, remaining)) {
                         long memoryAddress = Buffer.memoryAddress(firstByteBuffer) + firstByteBuffer.position();
                         return IoUringIoOps.newSendZC(
                                 fd, memoryAddress, remaining,
@@ -624,7 +626,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     }
                     //a second CQE with res set to 0 and the IORING_CQE_F_NOTIF flag set.
                     if ((flags & Native.IORING_CQE_F_NOTIF) != 0) {
-                        channelOutboundBuffer.removeBytes(res);
+                        channelOutboundBuffer.removeBytes(lasSendZCRes);
                         lasSendZCRes = -1;
                         return true;
                     }
