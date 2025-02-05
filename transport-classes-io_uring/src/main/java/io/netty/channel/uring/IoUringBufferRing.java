@@ -49,13 +49,13 @@ final class IoUringBufferRing {
     private final IoUringIoHandler source;
     private final ByteBufAllocator byteBufAllocator;
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
-
+    private final boolean incremental;
     private short nextIndex;
     private boolean hasSpareBuffer;
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
                       short entries, short bufferGroupId,
-                      int chunkSize, IoUringIoHandler ioUringIoHandler,
+                      int chunkSize, boolean incremental, IoUringIoHandler ioUringIoHandler,
                       ByteBufAllocator byteBufAllocator) {
         assert entries % 2 == 0;
         this.ioUringBufRingAddr = ioUringBufRingAddr;
@@ -65,6 +65,7 @@ final class IoUringBufferRing {
         this.ringFd = ringFd;
         this.buffers = new ByteBuf[entries];
         this.chunkSize = chunkSize;
+        this.incremental = incremental;
         this.source = ioUringIoHandler;
         this.byteBufAllocator = byteBufAllocator;
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
@@ -97,6 +98,7 @@ final class IoUringBufferRing {
 
     private void addToRing(short bid, boolean needAdvance) {
         ByteBuf byteBuf = buffers[bid];
+        byteBuf.setIndex(0, byteBuf.capacity());
 
         long tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
@@ -156,9 +158,18 @@ final class IoUringBufferRing {
      * @param readableBytes the number of bytes that could be read.
      * @return              the buffer.
      */
-    ByteBuf borrowBuffer(short bid, int readableBytes) {
+    ByteBuf borrowBuffer(short bid, int readableBytes, boolean more) {
         ByteBuf byteBuf = buffers[bid];
-        ByteBuf slice = byteBuf.retainedSlice(0, readableBytes);
+        if (incremental) {
+            if (byteBuf.readerIndex() == 0) {
+                if (more) {
+                    byteBuf.retain();
+                }
+            } else if (!more) {
+                byteBuf.release();
+            }
+        }
+        ByteBuf slice = byteBuf.readRetainedSlice(readableBytes);
         return new IoUringBufferRingByteBuf(this, bid, slice);
     }
 
@@ -234,7 +245,9 @@ final class IoUringBufferRing {
         public void run() {
             try {
                 wrapped.release();
-                ring.addToRing(bid, true);
+                if (wrapped.refCnt() == 1) {
+                    ring.addToRing(bid, true);
+                }
             } catch (Throwable t) {
                 logger.error("Failed to recycle buffer for bid " + bid, t);
             }

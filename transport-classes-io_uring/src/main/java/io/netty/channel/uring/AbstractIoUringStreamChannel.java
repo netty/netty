@@ -437,7 +437,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
                     if (bufferRing != null) {
-                        byteBuf = bufferRing.borrowBuffer((short) (flags >> Native.IORING_CQE_BUFFER_SHIFT), res);
+                        short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
+                        boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
+                        byteBuf = bufferRing.borrowBuffer(bid, res, more);
                     }
                     byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     allocHandle.lastBytesRead(res);
