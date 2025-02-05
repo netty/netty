@@ -328,13 +328,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 return null;
             }
 
-            IOUringStreamChannelConfig ioUringStreamChannelConfig = (IOUringStreamChannelConfig) config();
+            IoUringStreamChannelConfig ioUringStreamChannelConfig = (IoUringStreamChannelConfig) config();
             int fd = fd().intValue();
 
             if (buf.nioBufferCount() == 1) {
                 int waitSend = buf.readableBytes();
                 if (waitSend != 0
-                    && IOUringStreamChannelConfig.needIOUringSendZC(ioUringStreamChannelConfig, waitSend)) {
+                    && IoUringStreamChannelConfig.needIOUringSendZC(ioUringStreamChannelConfig, waitSend)) {
                     long memoryAddress ;
                    if (buf.hasMemoryAddress()) {
                         memoryAddress = buf.memoryAddress() + buf.readerIndex();
@@ -362,7 +362,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ByteBuffer firstByteBuffer = byteBuffers[0];
                 int remaining = firstByteBuffer.remaining();
                 if (remaining != 0) {
-                    if (IOUringStreamChannelConfig.needIOUringSendZC(ioUringStreamChannelConfig, remaining)) {
+                    if (IoUringStreamChannelConfig.needIOUringSendZC(ioUringStreamChannelConfig, remaining)) {
                         long memoryAddress = Buffer.memoryAddress(firstByteBuffer) + firstByteBuffer.position();
                         return IoUringIoOps.newSendZC(
                                 fd, memoryAddress, remaining,

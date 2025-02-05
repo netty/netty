@@ -32,7 +32,7 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
     private volatile int sendZcThreshold = DISABLE_SEND_ZC;
 
-    IOUringStreamChannelConfig(Channel channel) {
+    IoUringStreamChannelConfig(Channel channel) {
         super(channel);
     }
 
@@ -70,7 +70,10 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD);
+        return getOptions(
+                super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID,
+                IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD
+        );
     }
 
     @Override
@@ -103,7 +106,7 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
         return this;
     }
 
-    IOUringStreamChannelConfig setSendZcThreshold(int sendZcThreshold) {
+    IoUringStreamChannelConfig setSendZcThreshold(int sendZcThreshold) {
         if (sendZcThreshold == DISABLE_SEND_ZC) {
             this.sendZcThreshold = DISABLE_SEND_ZC;
         } else {
@@ -112,7 +115,7 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
         return this;
     }
 
-    static boolean needIOUringSendZC(IOUringStreamChannelConfig channelConfig, int waitSend) {
+    static boolean needIOUringSendZC(IoUringStreamChannelConfig channelConfig, int waitSend) {
         // This can reduce one read operation on a volatile field.
         int threshold = channelConfig.getSendZcThreshold();
         return threshold != DISABLE_SEND_ZC && waitSend >= threshold;
