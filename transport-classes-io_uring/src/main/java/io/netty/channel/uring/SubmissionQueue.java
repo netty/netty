@@ -247,7 +247,11 @@ final class SubmissionQueue {
         int f = enterFlags | flags;
 
         if (IoUring.isIOUringSetupSubmitAllSupported()) {
-            return ioUringEnter0(toSubmit, minComplete, f);
+            int submitCount = ioUringEnter0(toSubmit, minComplete, f);
+            if (submitCount > 0) {
+                IoUringMetric.increaseSqeCounter(submitCount);
+            }
+            return submitCount;
         }
         // If IORING_SETUP_SUBMIT_ALL is not supported we need to loop until we submitted everything as
         // io_uring_enter(...) will stop submitting once the first inline executed submission fails.
@@ -258,6 +262,7 @@ final class SubmissionQueue {
                 return ret;
             }
             submitted += ret;
+            IoUringMetric.increaseSqeCounter(ret);
             if (ret == toSubmit) {
                 return submitted;
             }
