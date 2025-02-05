@@ -48,7 +48,6 @@ final class IoUringBufferRing {
     private final int chunkSize;
     private final IoUringIoHandler source;
     private final ByteBufAllocator byteBufAllocator;
-    private final IoUringBufferRingExhaustedEvent exhaustedEvent;
 
     private short nextIndex;
     private boolean hasSpareBuffer;
@@ -67,7 +66,6 @@ final class IoUringBufferRing {
         this.chunkSize = chunkSize;
         this.source = ioUringIoHandler;
         this.byteBufAllocator = byteBufAllocator;
-        this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
     }
 
     /**
@@ -85,14 +83,6 @@ final class IoUringBufferRing {
      */
     boolean hasSpareBuffer() {
         return hasSpareBuffer;
-    }
-
-    /**
-     * @return the {@link IoUringBufferRingExhaustedEvent} that should be used to signal that there were no buffers
-     * left for this buffer ring.
-     */
-    IoUringBufferRingExhaustedEvent getExhaustedEvent() {
-        return exhaustedEvent;
     }
 
     private void addToRing(short bid, boolean needAdvance) {

@@ -416,9 +416,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                         //recv with provider buffer fail!
                         //fallback to normal recv
                         bufferRing.markExhausted();
-                        // fire the BufferRingExhaustedEvent to notify users.
+
                         // Users can then switch the ring buffer or do other things as they wish
-                        pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
+                        recvBufAllocHandle().exhaustedBufferRing(AbstractIoUringStreamChannel.this,
+                                bufferRing.bufferGroupId());
 
                         // Let's trigger a read again without consulting the RecvByteBufAllocator.Handle as
                         // we can't count this as a "real" read operation.

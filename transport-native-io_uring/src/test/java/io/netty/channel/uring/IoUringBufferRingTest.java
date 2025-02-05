@@ -91,7 +91,7 @@ public class IoUringBufferRingTest {
         String randomString = UUID.randomUUID().toString();
         int randomStringLength = randomString.length();
 
-        ArrayBlockingQueue<IoUringBufferRingExhaustedEvent> eventSyncer = new ArrayBlockingQueue<>(1);
+        ArrayBlockingQueue<Short> eventSyncer = new ArrayBlockingQueue<>(1);
 
         Channel serverChannel = serverBootstrap.group(group)
                 .childHandler(new ChannelInboundHandlerAdapter() {
@@ -99,16 +99,20 @@ public class IoUringBufferRingTest {
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         bufferSyncer.offer((ByteBuf) msg);
                     }
-
-                    @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                        if (evt instanceof IoUringBufferRingExhaustedEvent) {
-                            eventSyncer.add((IoUringBufferRingExhaustedEvent) evt);
-                        }
-                    }
                 })
                 .childOption(IoUringChannelOption.RCVBUF_ALLOCATOR,
-                        new IoUringBufferRingRecvByteBufAllocator(bufferRingConfig.bufferGroupId()))
+                        new IoUringBufferRingRecvByteBufAllocator(
+                                new IoUringBufferRingRecvByteBufAllocator.IoUringBufferGroupIdHandler() {
+                            @Override
+                            public short choose(int sizeGuess) {
+                                return bufferRingConfig.bufferGroupId();
+                            }
+
+                            @Override
+                            public void exhausted(Channel channel, short bgid) {
+                                eventSyncer.offer(bgid);
+                            }
+                        }))
                 .bind(NetUtil.LOCALHOST, 0)
                 .syncUninterruptibly().channel();
 
@@ -128,7 +132,7 @@ public class IoUringBufferRingTest {
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement2);
         // Directly after the second read we will see the event as it will be triggered inline when doing the submit.
-        assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take().bufferGroupId());
+        assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take());
         assertEquals(0, eventSyncer.size());
 
         // We ran out of buffers in the buffer ring

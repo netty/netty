@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.unix.PreferredDirectByteBufAllocator;
@@ -88,5 +89,11 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
 
     short getBufferGroupId() {
         return ringHandle == null ? DISABLE_BUFFER_SELECT_READ : ringHandle.getBufferGroupId();
+    }
+
+    void exhaustedBufferRing(Channel channel, short bgid) {
+        if (ringHandle != null) {
+            ringHandle.exhaustedBufferRing(channel, bgid);
+        }
     }
 }

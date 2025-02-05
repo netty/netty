@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.AdaptiveRecvByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
 
@@ -31,12 +32,12 @@ import java.util.Objects;
  */
 public final class IoUringBufferRingRecvByteBufAllocator implements RecvByteBufAllocator {
     private final RecvByteBufAllocator allocator;
-    private final IoUringBufferGroupIdChooser idChooser;
+    private final IoUringBufferGroupIdHandler ringHandler;
 
     /**
      * Interface that will return the buffer group id.
      */
-    public interface IoUringBufferGroupIdChooser {
+    public interface IoUringBufferGroupIdHandler {
         /**
          * Return the group id that should be used for the given size. This method must return a valid group id
          * that was configured previously via {
@@ -46,27 +47,38 @@ public final class IoUringBufferRingRecvByteBufAllocator implements RecvByteBufA
          * @return          the group id.
          */
         short choose(int sizeGuess);
+
+        /**
+         * Will be called if a read failed for a {@link Channel} because the configured buffer ring
+         * has no buffers left to use.
+         *
+         * @param channel   the {@link Channel} for which the read failed.
+         * @param bgid      the group id.
+         */
+        default void exhausted(Channel channel, short bgid) {
+            // Noop.
+        }
     }
 
     /**
      * Create a new instance.
      *
-     * @param allocator the {@link RecvByteBufAllocator} that should be used internally.
-     * @param idChooser the {@link IoUringBufferGroupIdChooser} that is used.
+     * @param allocator     the {@link RecvByteBufAllocator} that should be used internally.
+     * @param ringHandler   the {@link IoUringBufferGroupIdHandler} that is used.
      */
     public IoUringBufferRingRecvByteBufAllocator(RecvByteBufAllocator allocator,
-                                                 IoUringBufferGroupIdChooser idChooser) {
+                                                 IoUringBufferGroupIdHandler ringHandler) {
         this.allocator = Objects.requireNonNull(allocator, "allocator");
-        this.idChooser = Objects.requireNonNull(idChooser, "idChooser");
+        this.ringHandler = Objects.requireNonNull(ringHandler, "ringHandler");
     }
 
     /**
      * Create a new instance.
      *
-     * @param idChooser the {@link IoUringBufferGroupIdChooser} that is used.
+     * @param ringHandler the {@link IoUringBufferGroupIdHandler} that is used.
      */
-    public IoUringBufferRingRecvByteBufAllocator(IoUringBufferGroupIdChooser idChooser) {
-        this(new AdaptiveRecvByteBufAllocator(), idChooser);
+    public IoUringBufferRingRecvByteBufAllocator(IoUringBufferGroupIdHandler ringHandler) {
+        this(new AdaptiveRecvByteBufAllocator(), ringHandler);
     }
 
     /**
@@ -90,15 +102,15 @@ public final class IoUringBufferRingRecvByteBufAllocator implements RecvByteBufA
 
     @Override
     public Handle newHandle() {
-        return new IoBufferRingExtendedHandle(allocator.newHandle(), idChooser);
+        return new IoBufferRingExtendedHandle(allocator.newHandle(), ringHandler);
     }
 
     static final class IoBufferRingExtendedHandle extends DelegatingHandle implements ExtendedHandle {
-        private final IoUringBufferGroupIdChooser idChooser;
+        private final IoUringBufferGroupIdHandler ringHandler;
 
-        IoBufferRingExtendedHandle(Handle delegate, IoUringBufferGroupIdChooser idChooser) {
+        IoBufferRingExtendedHandle(Handle delegate, IoUringBufferGroupIdHandler ringHandler) {
             super(delegate);
-            this.idChooser = idChooser;
+            this.ringHandler = ringHandler;
         }
 
         @Override
@@ -107,7 +119,11 @@ public final class IoUringBufferRingRecvByteBufAllocator implements RecvByteBufA
         }
 
         short getBufferGroupId() {
-            return idChooser.choose(delegate().guess());
+            return ringHandler.choose(delegate().guess());
+        }
+
+        void exhaustedBufferRing(Channel channel, short bgid) {
+            ringHandler.exhausted(channel, bgid);
         }
     }
 }
