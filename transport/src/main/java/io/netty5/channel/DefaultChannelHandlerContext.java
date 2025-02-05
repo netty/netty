@@ -169,66 +169,46 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public ChannelHandlerContext fireChannelRegistered() {
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeChannelRegistered();
+            DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_REGISTERED);
+            if (ctx == null) {
+                notifyHandlerRemovedAlready();
+            } else {
+                try {
+                    if (ctx.saveCurrentPendingBytesIfNeededInbound()) {
+                        ctx.handler().channelRegistered(ctx);
+                    }
+                } catch (Throwable t) {
+                    ctx.invokeChannelExceptionCaught(t);
+                } finally {
+                    ctx.updatePendingBytesIfNeeded();
+                }
+            }
         } else {
-            executor.execute(this::findAndInvokeChannelRegistered);
+            executor.execute(this::fireChannelRegistered);
         }
         return this;
-    }
-
-    private void findAndInvokeChannelRegistered() {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_REGISTERED);
-        if (ctx == null) {
-            notifyHandlerRemovedAlready();
-            return;
-        }
-        ctx.invokeChannelRegistered();
-    }
-
-    void invokeChannelRegistered() {
-        try {
-            if (!saveCurrentPendingBytesIfNeededInbound()) {
-                return;
-            }
-            handler().channelRegistered(this);
-        } catch (Throwable t) {
-            invokeChannelExceptionCaught(t);
-        } finally {
-            updatePendingBytesIfNeeded();
-        }
     }
 
     @Override
     public ChannelHandlerContext fireChannelUnregistered() {
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeChannelUnregistered();
+            DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_UNREGISTERED);
+            if (ctx == null) {
+                notifyHandlerRemovedAlready();
+            } else if (ctx.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    ctx.handler().channelUnregistered(ctx);
+                } catch (Throwable t) {
+                    ctx.invokeChannelExceptionCaught(t);
+                } finally {
+                    ctx.updatePendingBytesIfNeeded();
+                }
+            }
         } else {
-            executor.execute(this::findAndInvokeChannelUnregistered);
+            executor.execute(this::fireChannelUnregistered);
         }
         return this;
-    }
-
-    private void findAndInvokeChannelUnregistered() {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_UNREGISTERED);
-        if (ctx == null) {
-            notifyHandlerRemovedAlready();
-            return;
-        }
-        ctx.invokeChannelUnregistered();
-    }
-
-    void invokeChannelUnregistered() {
-        if (!saveCurrentPendingBytesIfNeededInbound()) {
-            return;
-        }
-        try {
-            handler().channelUnregistered(this);
-        } catch (Throwable t) {
-            invokeChannelExceptionCaught(t);
-        } finally {
-            updatePendingBytesIfNeeded();
-        }
     }
 
     @Override
@@ -238,9 +218,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_ACTIVE);
             if (ctx == null) {
                 notifyHandlerRemovedAlready();
-                return this;
-            }
-            if (ctx.saveCurrentPendingBytesIfNeededInbound()) {
+            } else if (ctx.saveCurrentPendingBytesIfNeededInbound()) {
                 try {
                     ctx.handler().channelActive(ctx);
                 } catch (Throwable t) {
@@ -259,66 +237,44 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public ChannelHandlerContext fireChannelInactive() {
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeChannelInactive();
+            DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_INACTIVE);
+            if (ctx == null) {
+                notifyHandlerRemovedAlready();
+            } else if (ctx.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    ctx.handler().channelInactive(ctx);
+                } catch (Throwable t) {
+                    ctx.invokeChannelExceptionCaught(t);
+                } finally {
+                    ctx.updatePendingBytesIfNeeded();
+                }
+            }
         } else {
-            executor.execute(this::findAndInvokeChannelInactive);
+            executor.execute(this::fireChannelInactive);
         }
         return this;
-    }
-
-    private void findAndInvokeChannelInactive() {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_INACTIVE);
-        if (ctx == null) {
-            notifyHandlerRemovedAlready();
-            return;
-        }
-        ctx.invokeChannelInactive();
-    }
-
-    void invokeChannelInactive() {
-        if (!saveCurrentPendingBytesIfNeededInbound()) {
-            return;
-        }
-        try {
-            handler().channelInactive(this);
-        } catch (Throwable t) {
-            invokeChannelExceptionCaught(t);
-        } finally {
-            updatePendingBytesIfNeeded();
-        }
     }
 
     @Override
     public ChannelHandlerContext fireChannelShutdown(ChannelShutdownDirection direction) {
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeChannelShutdown(direction);
+            DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_SHUTDOWN);
+            if (ctx == null) {
+                notifyHandlerRemovedAlready();
+            } else if (ctx.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    ctx.handler().channelShutdown(ctx, direction);
+                } catch (Throwable t) {
+                    ctx.invokeChannelExceptionCaught(t);
+                } finally {
+                    ctx.updatePendingBytesIfNeeded();
+                }
+            }
         } else {
-            executor.execute(() -> findAndInvokeChannelShutdown(direction));
+            executor.execute(() -> fireChannelShutdown(direction));
         }
         return this;
-    }
-
-    private void findAndInvokeChannelShutdown(ChannelShutdownDirection direction) {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_SHUTDOWN);
-        if (ctx == null) {
-            notifyHandlerRemovedAlready();
-            return;
-        }
-        ctx.invokeChannelShutdown(direction);
-    }
-
-    void invokeChannelShutdown(ChannelShutdownDirection direction) {
-        if (!saveCurrentPendingBytesIfNeededInbound()) {
-            return;
-        }
-        try {
-            handler().channelShutdown(this, direction);
-        } catch (Throwable t) {
-            invokeChannelExceptionCaught(t);
-        } finally {
-            updatePendingBytesIfNeeded();
-        }
     }
 
     @Override
@@ -378,35 +334,25 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         requireNonNull(event, "event");
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeChannelInboundEvent(event);
+            DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_INBOUND_EVENT);
+            if (ctx == null) {
+                Resource.dispose(event);
+                notifyHandlerRemovedAlready();
+            } else if (ctx.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    ctx.handler().channelInboundEvent(ctx, event);
+                } catch (Throwable t) {
+                    ctx.invokeChannelExceptionCaught(t);
+                } finally {
+                    ctx.updatePendingBytesIfNeeded();
+                }
+            } else {
+                Resource.dispose(event);
+            }
         } else {
-            executor.execute(() -> findAndInvokeChannelInboundEvent(event));
+            executor.execute(() -> fireChannelInboundEvent(event));
         }
         return this;
-    }
-
-    private void findAndInvokeChannelInboundEvent(Object event) {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_INBOUND_EVENT);
-        if (ctx == null) {
-            Resource.dispose(event);
-            notifyHandlerRemovedAlready();
-            return;
-        }
-        ctx.invokeChannelInboundEvent(event);
-    }
-
-    void invokeChannelInboundEvent(Object event) {
-        if (!saveCurrentPendingBytesIfNeededInbound()) {
-            Resource.dispose(event);
-            return;
-        }
-        try {
-            handler().channelInboundEvent(this, event);
-        } catch (Throwable t) {
-            invokeChannelExceptionCaught(t);
-        } finally {
-            updatePendingBytesIfNeeded();
-        }
     }
 
     @Override
@@ -414,10 +360,25 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         requireNonNull(msg, "msg");
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeChannelRead(msg);
+            DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_READ);
+            if (ctx == null) {
+                Resource.dispose(msg);
+                notifyHandlerRemovedAlready();
+            } else if (ctx.saveCurrentPendingBytesIfNeededInbound()) {
+                final Object m = ctx.pipeline.touch(requireNonNull(msg, "msg"), ctx);
+                try {
+                    ctx.handler().channelRead(ctx, m);
+                } catch (Throwable t) {
+                    ctx.invokeChannelExceptionCaught(t);
+                } finally {
+                    ctx.updatePendingBytesIfNeeded();
+                }
+            } else {
+                Resource.dispose(msg);
+            }
         } else {
             try {
-                executor.execute(() -> findAndInvokeChannelRead(msg));
+                executor.execute(() -> fireChannelRead(msg));
             } catch (Throwable cause) {
                 Resource.dispose(msg);
                 throw cause;
@@ -426,36 +387,22 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return this;
     }
 
-    private void findAndInvokeChannelRead(Object msg) {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_READ);
-        if (ctx == null) {
-            Resource.dispose(msg);
-            notifyHandlerRemovedAlready();
-            return;
-        }
-        ctx.invokeChannelRead(msg);
-    }
-
-    void invokeChannelRead(Object msg) {
-        final Object m = pipeline.touch(requireNonNull(msg, "msg"), this);
-        if (!saveCurrentPendingBytesIfNeededInbound()) {
-            Resource.dispose(m);
-            return;
-        }
-        try {
-            handler().channelRead(this, m);
-        } catch (Throwable t) {
-            invokeChannelExceptionCaught(t);
-        } finally {
-            updatePendingBytesIfNeeded();
-        }
-    }
-
     @Override
     public ChannelHandlerContext fireChannelReadComplete() {
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeChannelReadComplete();
+            DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_READ_COMPLETE);
+            if (ctx == null) {
+                notifyHandlerRemovedAlready();
+            } else if (ctx.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    ctx.handler().channelReadComplete(ctx);
+                } catch (Throwable t) {
+                    ctx.invokeChannelExceptionCaught(t);
+                } finally {
+                    ctx.updatePendingBytesIfNeeded();
+                }
+            }
         } else {
             Tasks tasks = invokeTasks();
             executor.execute(tasks.invokeChannelReadCompleteTask);
@@ -463,60 +410,27 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return this;
     }
 
-    private void findAndInvokeChannelReadComplete() {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_READ_COMPLETE);
-        if (ctx == null) {
-            notifyHandlerRemovedAlready();
-            return;
-        }
-        ctx.invokeChannelReadComplete();
-    }
-
-    void invokeChannelReadComplete() {
-        if (!saveCurrentPendingBytesIfNeededInbound()) {
-            return;
-        }
-        try {
-            handler().channelReadComplete(this);
-        } catch (Throwable t) {
-            invokeChannelExceptionCaught(t);
-        } finally {
-            updatePendingBytesIfNeeded();
-        }
-    }
-
     @Override
     public ChannelHandlerContext fireChannelWritabilityChanged() {
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeChannelWritabilityChanged();
+            DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_WRITABILITY_CHANGED);
+            if (ctx == null) {
+                notifyHandlerRemovedAlready();
+            } else if (ctx.saveCurrentPendingBytesIfNeededInbound()) {
+                try {
+                    ctx.handler().channelWritabilityChanged(ctx);
+                } catch (Throwable t) {
+                    ctx.invokeChannelExceptionCaught(t);
+                } finally {
+                    ctx.updatePendingBytesIfNeeded();
+                }
+            }
         } else {
             Tasks tasks = invokeTasks();
             executor.execute(tasks.invokeChannelWritableStateChangedTask);
         }
         return this;
-    }
-
-    private void findAndInvokeChannelWritabilityChanged() {
-        DefaultChannelHandlerContext ctx = findContextInbound(MASK_CHANNEL_WRITABILITY_CHANGED);
-        if (ctx == null) {
-            notifyHandlerRemovedAlready();
-            return;
-        }
-        ctx.invokeChannelWritabilityChanged();
-    }
-
-    void invokeChannelWritabilityChanged() {
-        if (!saveCurrentPendingBytesIfNeededInbound()) {
-            return;
-        }
-        try {
-            handler().channelWritabilityChanged(this);
-        } catch (Throwable t) {
-            invokeChannelExceptionCaught(t);
-        } finally {
-            updatePendingBytesIfNeeded();
-        }
     }
 
     @Override
@@ -1267,9 +1181,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         private final Runnable invokeFlushTask;
 
         Tasks(DefaultChannelHandlerContext ctx) {
-            invokeChannelReadCompleteTask = ctx::findAndInvokeChannelReadComplete;
+            invokeChannelReadCompleteTask = ctx::fireChannelReadComplete;
             invokeReadTask = ctx::findAndInvokeRead;
-            invokeChannelWritableStateChangedTask = ctx::invokeChannelWritabilityChanged;
+            invokeChannelWritableStateChangedTask = ctx::fireChannelWritabilityChanged;
             invokeFlushTask = ctx::findAndInvokeFlush;
         }
     }
