@@ -22,9 +22,9 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.Map;
 
-abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
+abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
-    static final short DISABLE_BUFFER_SELECT_READ = 0;
+    static final short DISABLE_BUFFER_SELECT_READ = -1;
 
     static final int DISABLE_SEND_ZC = -1;
 
@@ -36,14 +36,14 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
         super(channel);
     }
 
-    IOUringStreamChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
+    IoUringStreamChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
         super(channel, allocator);
     }
 
     @Override
     public <T> T getOption(ChannelOption<T> option) {
         if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
-            return (T) Short.valueOf(getBufferRingConfig());
+            return (T) Short.valueOf(getBufferGroupId());
         }
 
         if (option == IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD) {
@@ -73,12 +73,17 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
         return getOptions(super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD);
     }
 
+    @Override
+    boolean getPollInFirst() {
+        return bufferGroupId == DISABLE_BUFFER_SELECT_READ;
+    }
+
     /**
-     * Returns the buffer ring config.
+     * Returns the buffer group id.
      *
-     * @return the buffer ring config.
+     * @return the buffer group id.
      */
-    short getBufferRingConfig() {
+    short getBufferGroupId() {
         return bufferGroupId;
     }
 
@@ -93,8 +98,8 @@ abstract class IOUringStreamChannelConfig extends IOUringChannelConfig {
      * @param bufferGroupId the buffer group id.
      * @return              itself.
      */
-    IOUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
-        this.bufferGroupId = (short) ObjectUtil.checkPositiveOrZero(bufferGroupId, "bufferGroupId");
+    IoUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
+        this.bufferGroupId = (short) ObjectUtil.checkInRange(bufferGroupId, -1, Short.MAX_VALUE, "bufferGroupId");
         return this;
     }
 

@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.1.RC2-SNAPSHOT</version>
+  <version>4.2.0.RC3-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -1270,6 +1270,16 @@
             </revapi.filter>
             <revapi.differences>
               <differences>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <classQualifiedName>"io.netty.util.concurrent.SingleThreadEventExecutor</classQualifiedName>
+                  <old>method boolean io.netty.util.concurrent.SingleThreadEventExecutor::fetchFromScheduledTaskQueue()</old>
+                  <new>method boolean io.netty.util.concurrent.AbstractScheduledEventExecutor::fetchFromScheduledTaskQueue(java.util.Queue&lt;java.lang.Runnable&gt;) @ io.netty.util.concurrent.SingleThreadEventExecutor</new>
+                  <oldVisibility>private</oldVisibility>
+                  <newVisibility>protected</newVisibility>
+                  <justification>Was private before and is needed for sub-classes</justification>
+                </item>
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.visibilityIncreased</code>

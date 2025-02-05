@@ -16,7 +16,6 @@
 package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -49,13 +48,6 @@ public class IoUringDatagramUnicastTest extends DatagramUnicastInetTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> newFactories() {
         return IoUringSocketTestPermutation.INSTANCE.datagram(SocketProtocolFamily.INET);
-    }
-
-    @Override
-    protected void configure(Bootstrap bootstrap, Bootstrap bootstrap2, ByteBufAllocator allocator) {
-        super.configure(bootstrap, bootstrap2, allocator);
-        bootstrap.option(IoUringChannelOption.POLLIN_FIRST, false);
-        bootstrap2.option(IoUringChannelOption.POLLIN_FIRST, false);
     }
 
     @Test

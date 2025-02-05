@@ -39,7 +39,7 @@ import java.util.concurrent.ThreadFactory;
 
 
 /**
- * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link KQueueIoHandler}.
+ * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link KQueueIoHandler#newFactory()}.
  */
 @Deprecated
 public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {

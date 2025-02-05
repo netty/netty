@@ -244,9 +244,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     protected byte flags(byte flags) {
-        if (((IOUringChannelConfig) config()).getIoseqAsync()) {
-            return (byte) (flags | Native.IOSQE_ASYNC);
-        }
         return flags;
     }
 
@@ -302,7 +299,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void doBeginReadNow() {
-        if (!((IOUringChannelConfig) config()).getPollInFirst()) {
+        if (!((IoUringChannelConfig) config()).getPollInFirst()) {
             // If the socket is blocking we will directly call scheduleFirstReadIfNeeded() as we can use FASTPOLL.
             ioUringUnsafe().scheduleFirstReadIfNeeded();
         } else if ((ioState & POLL_IN_SCHEDULED) == 0) {
@@ -321,7 +318,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
         if (scheduleWrite(in) > 0) {
             ioState |= WRITE_SCHEDULED;
-            if (submitAndRunNow && !isWritable() && !((IOUringChannelConfig) config()).getIoseqAsync()) {
+            if (submitAndRunNow && !isWritable()) {
                 submitAndRunNow();
             }
         }

@@ -19,14 +19,19 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
-import io.netty.testsuite.transport.socket.SocketAutoReadTest;
+import io.netty.testsuite.transport.socket.SocketHalfClosedTest;
+import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringPollinFirstSocketAutoReadTest extends SocketAutoReadTest {
+public class IoUringBufferRingSocketHalfClosedTest extends SocketHalfClosedTest {
 
     @BeforeAll
     public static void loadJNI() {
@@ -38,11 +43,22 @@ public class IoUringPollinFirstSocketAutoReadTest extends SocketAutoReadTest {
         return IoUringSocketTestPermutation.INSTANCE.socket();
     }
 
+    @Disabled
+    @Test
+    public void testAutoCloseFalseDoesShutdownOutput(TestInfo testInfo) throws Throwable {
+        // This test only works on Linux / BSD / MacOS as we assume some semantics that are not true for Windows.
+        Assumptions.assumeFalse(PlatformDependent.isWindows());
+        this.run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
+            public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
+                testAutoCloseFalseDoesShutdownOutput(serverBootstrap, bootstrap);
+            }
+        });
+    }
+
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.option(IoUringChannelOption.POLLIN_FIRST, true);
-        sb.childOption(IoUringChannelOption.POLLIN_FIRST, true);
-        cb.option(IoUringChannelOption.POLLIN_FIRST, true);
+        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
     }
 }

@@ -39,7 +39,7 @@ import java.util.concurrent.ThreadFactory;
 /**
  * {@link MultiThreadIoEventLoopGroup} implementation which is used for NIO {@link Selector} based {@link Channel}s.
  *
- * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link io.netty.channel.nio.NioIoHandler}.
+ * @deprecated Use {@link MultiThreadIoEventLoopGroup} with {@link NioIoHandler#newFactory()}.
  */
 @Deprecated
 public class NioEventLoopGroup extends MultiThreadIoEventLoopGroup implements IoEventLoopGroup {

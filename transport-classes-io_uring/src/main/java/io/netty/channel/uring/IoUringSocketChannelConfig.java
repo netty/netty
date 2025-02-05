@@ -31,11 +31,11 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.*;
 
 
-final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implements SocketChannelConfig {
+final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
 
-    IOUringSocketChannelConfig(Channel channel) {
+    IoUringSocketChannelConfig(Channel channel) {
         super(channel);
         if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
             setTcpNoDelay(true);
@@ -289,7 +289,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     }
 
     @Override
-    public IOUringSocketChannelConfig setKeepAlive(boolean keepAlive) {
+    public IoUringSocketChannelConfig setKeepAlive(boolean keepAlive) {
         try {
             ((IoUringSocketChannel) channel).socket.setKeepAlive(keepAlive);
             return this;
@@ -299,13 +299,13 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     }
 
     @Override
-    public IOUringSocketChannelConfig setPerformancePreferences(
+    public IoUringSocketChannelConfig setPerformancePreferences(
             int connectionTime, int latency, int bandwidth) {
         return this;
     }
 
     @Override
-    public IOUringSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    public IoUringSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((IoUringSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
@@ -315,7 +315,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     }
 
     @Override
-    public IOUringSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    public IoUringSocketChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             ((IoUringSocketChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
@@ -325,7 +325,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     }
 
     @Override
-    public IOUringSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+    public IoUringSocketChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             ((IoUringSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
             return this;
@@ -344,7 +344,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     }
 
     @Override
-    public IOUringSocketChannelConfig setSoLinger(int soLinger) {
+    public IoUringSocketChannelConfig setSoLinger(int soLinger) {
         try {
             ((IoUringSocketChannel) channel).socket.setSoLinger(soLinger);
             return this;
@@ -354,7 +354,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     }
 
     @Override
-    public IOUringSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
+    public IoUringSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpNoDelay(tcpNoDelay);
             return this;
@@ -366,7 +366,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_CORK} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IOUringSocketChannelConfig setTcpCork(boolean tcpCork) {
+    public IoUringSocketChannelConfig setTcpCork(boolean tcpCork) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpCork(tcpCork);
             return this;
@@ -378,7 +378,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     /**
      * Set the {@code SO_BUSY_POLL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IOUringSocketChannelConfig setSoBusyPoll(int loopMicros) {
+    public IoUringSocketChannelConfig setSoBusyPoll(int loopMicros) {
         try {
             ((IoUringSocketChannel) channel).socket.setSoBusyPoll(loopMicros);
             return this;
@@ -392,7 +392,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
      *
      * @param tcpNotSentLowAt is a uint32_t
      */
-    public IOUringSocketChannelConfig setTcpNotSentLowAt(long tcpNotSentLowAt) {
+    public IoUringSocketChannelConfig setTcpNotSentLowAt(long tcpNotSentLowAt) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpNotSentLowAt(tcpNotSentLowAt);
             return this;
@@ -402,7 +402,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     }
 
     @Override
-    public IOUringSocketChannelConfig setTrafficClass(int trafficClass) {
+    public IoUringSocketChannelConfig setTrafficClass(int trafficClass) {
         try {
             ((IoUringSocketChannel) channel).socket.setTrafficClass(trafficClass);
             return this;
@@ -414,7 +414,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_KEEPIDLE} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IOUringSocketChannelConfig setTcpKeepIdle(int seconds) {
+    public IoUringSocketChannelConfig setTcpKeepIdle(int seconds) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpKeepIdle(seconds);
             return this;
@@ -426,7 +426,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_KEEPINTVL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IOUringSocketChannelConfig setTcpKeepIntvl(int seconds) {
+    public IoUringSocketChannelConfig setTcpKeepIntvl(int seconds) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpKeepIntvl(seconds);
             return this;
@@ -439,14 +439,14 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
      * @deprecated use {@link #setTcpKeepCnt(int)}
      */
     @Deprecated
-    public IOUringSocketChannelConfig setTcpKeepCntl(int probes) {
+    public IoUringSocketChannelConfig setTcpKeepCntl(int probes) {
         return setTcpKeepCnt(probes);
     }
 
     /**
      * Set the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IOUringSocketChannelConfig setTcpKeepCnt(int probes) {
+    public IoUringSocketChannelConfig setTcpKeepCnt(int probes) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpKeepCnt(probes);
             return this;
@@ -458,7 +458,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_USER_TIMEOUT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IOUringSocketChannelConfig setTcpUserTimeout(int milliseconds) {
+    public IoUringSocketChannelConfig setTcpUserTimeout(int milliseconds) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpUserTimeout(milliseconds);
             return this;
@@ -483,7 +483,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public IOUringSocketChannelConfig setIpTransparent(boolean transparent) {
+    public IoUringSocketChannelConfig setIpTransparent(boolean transparent) {
         try {
             ((IoUringSocketChannel) channel).socket.setIpTransparent(transparent);
             return this;
@@ -510,7 +510,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
      * Set the {@code TCP_QUICKACK} option on the socket. See <a href="https://linux.die.net/man/7/tcp">TCP_QUICKACK</a>
      * for more details.
      */
-    public IOUringSocketChannelConfig setTcpQuickAck(boolean quickAck) {
+    public IoUringSocketChannelConfig setTcpQuickAck(boolean quickAck) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpQuickAck(quickAck);
             return this;
@@ -534,7 +534,7 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     /**
      * Enables client TCP fast open. See this <a href="https://lwn.net/Articles/508865/">LWN article</a> for more info.
      */
-    public IOUringSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
+    public IoUringSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
         this.tcpFastopen = fastOpenConnect;
         return this;
     }
@@ -552,76 +552,76 @@ final class IOUringSocketChannelConfig extends IOUringStreamChannelConfig implem
     }
 
     @Override
-    public IOUringSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+    public IoUringSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
         this.allowHalfClosure = allowHalfClosure;
         return this;
     }
 
     @Override
-    public IOUringSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+    public IoUringSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
         super.setConnectTimeoutMillis(connectTimeoutMillis);
         return this;
     }
 
     @Override
     @Deprecated
-    public IOUringSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+    public IoUringSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);
         return this;
     }
 
     @Override
-    public IOUringSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
+    public IoUringSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
         super.setWriteSpinCount(writeSpinCount);
         return this;
     }
 
     @Override
-    public IOUringSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
+    public IoUringSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
         super.setAllocator(allocator);
         return this;
     }
 
     @Override
-    public IOUringSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+    public IoUringSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
         super.setRecvByteBufAllocator(allocator);
         return this;
     }
 
     @Override
-    public IOUringSocketChannelConfig setAutoRead(boolean autoRead) {
+    public IoUringSocketChannelConfig setAutoRead(boolean autoRead) {
         super.setAutoRead(autoRead);
         return this;
     }
 
     @Override
-    public IOUringSocketChannelConfig setAutoClose(boolean autoClose) {
+    public IoUringSocketChannelConfig setAutoClose(boolean autoClose) {
         super.setAutoClose(autoClose);
         return this;
     }
 
     @Override
     @Deprecated
-    public IOUringSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+    public IoUringSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
         super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
         return this;
     }
 
     @Override
     @Deprecated
-    public IOUringSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+    public IoUringSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
         super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
         return this;
     }
 
     @Override
-    public IOUringSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
+    public IoUringSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
         super.setWriteBufferWaterMark(writeBufferWaterMark);
         return this;
     }
 
     @Override
-    public IOUringSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+    public IoUringSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
         return this;
     }

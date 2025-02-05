@@ -96,12 +96,12 @@ public class IoUringBufferRingTest {
         Channel serverChannel = serverBootstrap.group(group)
                 .childHandler(new ChannelInboundHandlerAdapter() {
                     @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         bufferSyncer.offer((ByteBuf) msg);
                     }
 
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt instanceof IoUringBufferRingExhaustedEvent) {
                             eventSyncer.add((IoUringBufferRingExhaustedEvent) evt);
                         }
@@ -123,25 +123,32 @@ public class IoUringBufferRingTest {
         ByteBuf writeBuffer = Unpooled.directBuffer(randomStringLength);
         ByteBufUtil.writeAscii(writeBuffer, randomString);
         ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, userspaceIoUringBufferElement1);
+        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement1);
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, userspaceIoUringBufferElement2);
+        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement2);
+        // Directly after the second read we will see the event as it will be triggered inline when doing the submit.
+        assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take().bufferGroupId());
         assertEquals(0, eventSyncer.size());
 
-        //now we run out of buffer ring buffer
+        // We ran out of buffers in the buffer ring
         ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertFalse(readBuffer instanceof IoUringBufferRing.UserspaceIoUringBuffer);
+        assertFalse(readBuffer instanceof IoUringBufferRing.IoUringBufferRingByteBuf);
         readBuffer.release();
-        assertEquals(1, eventSyncer.size());
-        assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take().bufferGroupId());
 
-        //now we release the buffer ring buffer
+        // Now we release the buffer and so put it back into the buffer ring.
         userspaceIoUringBufferElement1.release();
-        readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.UserspaceIoUringBuffer.class, readBuffer);
-
         userspaceIoUringBufferElement2.release();
+
+        // As we already had the next read scheduled we will see one more buffer that was not taken out of the ring
+        readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
+        assertFalse(readBuffer instanceof IoUringBufferRing.IoUringBufferRingByteBuf);
         readBuffer.release();
+
+        // The next buffer is expected to be provided out of the ring again.
+        readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
+        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, readBuffer);
+        readBuffer.release();
+
         writeBuffer.release();
 
         serverChannel.close();
