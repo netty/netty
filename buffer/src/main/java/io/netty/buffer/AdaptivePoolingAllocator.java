@@ -87,10 +87,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         None
     }
 
+    /**
+     * The 128 KiB minimum chunk size is chosen to encourage the system allocator to delegate to mmap for chunk
+     * allocations. For instance, glibc will do this.
+     * This pushes any fragmentation from chunk size deviations off physical memory, onto virtual memory,
+     * which is a much, much larger space. Chunks are also allocated in whole multiples of the minimum
+     * chunk size, which itself is a whole multiple of popular page sizes like 4 KiB, 16 KiB, and 64 KiB.
+     */
+    private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int EXPANSION_ATTEMPTS = 3;
     private static final int INITIAL_MAGAZINES = 4;
     private static final int RETIRE_CAPACITY = 4 * 1024;
-    private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
     private static final int BUFS_PER_CHUNK = 10; // For large buffers, aim to have about this many buffers per chunk.
 
