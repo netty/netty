@@ -42,16 +42,4 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Boolean> TCP_QUICKACK = valueOf(IoUringChannelOption.class, "TCP_QUICKACK");
 
     public static final ChannelOption<Integer> MAX_DATAGRAM_PAYLOAD_SIZE = valueOf("MAX_DATAGRAM_PAYLOAD_SIZE");
-
-    /**
-     * The buffer group id to use when submitting recv / read / readv {@link IoUringIoOps}.
-     * If it is set to {@code -1}, then this function will be disabled.
-     * <p>
-     * Check
-     * <a href="https://man7.org/linux/man-pages/man3/io_uring_setup_buf_ring.3.html"> man io_uring_setup_buf_ring</a>
-     * an this <a href="https://lwn.net/Articles/815491/">LWN article</a> for more details.
-     */
-    public static final ChannelOption<Short> IO_URING_BUFFER_GROUP_ID =
-            ChannelOption.valueOf(IoUringChannelOption.class, "IOURING_BUFFER_GROUP_ID");
-
 }

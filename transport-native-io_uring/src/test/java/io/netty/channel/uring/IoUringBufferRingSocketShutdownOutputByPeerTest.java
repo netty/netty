@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketShutdownOutputByPeerTest;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,6 +41,7 @@ public class IoUringBufferRingSocketShutdownOutputByPeerTest extends SocketShutd
     @Override
     protected void configure(ServerBootstrap bootstrap, ByteBufAllocator allocator) {
         super.configure(bootstrap, allocator);
-        bootstrap.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        bootstrap.childOption(ChannelOption.RCVBUF_ALLOCATOR,
+                IoUringSocketTestPermutation.newIoUringBufferRecvByteBufAllocator());
     }
 }

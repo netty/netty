@@ -16,8 +16,6 @@
 package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketConnectionAttemptTest;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,11 +34,5 @@ public class IoUringSocketConnectionAttemptTest extends SocketConnectionAttemptT
     @Override
     protected List<TestsuitePermutation.BootstrapFactory<Bootstrap>> newFactories() {
         return IoUringSocketTestPermutation.INSTANCE.clientSocket();
-    }
-
-    @Override
-    protected void configure(Bootstrap cb, ByteBufAllocator allocator) {
-        super.configure(cb, allocator);
-        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
     }
 }

@@ -18,6 +18,7 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -56,7 +57,9 @@ public class IoUringBufferRingSocketMultipleConnectTest extends SocketMultipleCo
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
-        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR,
+                IoUringSocketTestPermutation.newIoUringBufferRecvByteBufAllocator());
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR,
+                IoUringSocketTestPermutation.newIoUringBufferRecvByteBufAllocator());
     }
 }

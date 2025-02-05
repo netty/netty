@@ -107,7 +107,8 @@ public class IoUringBufferRingTest {
                         }
                     }
                 })
-                .childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, bufferRingConfig.bufferGroupId())
+                .childOption(IoUringChannelOption.RCVBUF_ALLOCATOR,
+                        new IoUringBufferRingRecvByteBufAllocator(bufferRingConfig.bufferGroupId()))
                 .bind(NetUtil.LOCALHOST, 0)
                 .syncUninterruptibly().channel();
 

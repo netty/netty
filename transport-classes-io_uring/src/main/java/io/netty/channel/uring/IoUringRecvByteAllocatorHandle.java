@@ -24,6 +24,8 @@ import io.netty.util.UncheckedBooleanSupplier;
 
 final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.DelegatingHandle
         implements RecvByteBufAllocator.ExtendedHandle {
+    static final short DISABLE_BUFFER_SELECT_READ = -1;
+
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
             new PreferredDirectByteBufAllocator();
 
@@ -31,8 +33,14 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
     // we will not be able to batch things in an efficient way.
     private final UncheckedBooleanSupplier defaultSupplier = () -> lastBytesRead() > 0;
 
+    private final IoUringBufferRingRecvByteBufAllocator.IoBufferRingExtendedHandle ringHandle;
     IoUringRecvByteAllocatorHandle(RecvByteBufAllocator.ExtendedHandle handle) {
         super(handle);
+        if (handle instanceof IoUringBufferRingRecvByteBufAllocator.IoBufferRingExtendedHandle) {
+            ringHandle = (IoUringBufferRingRecvByteBufAllocator.IoBufferRingExtendedHandle) handle;
+        } else {
+            this.ringHandle = null;
+        }
     }
 
     private boolean rdHupReceived;
@@ -76,5 +84,9 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
 
     boolean isReadComplete() {
         return readComplete;
+    }
+
+    short getBufferGroupId() {
+        return ringHandle == null ? DISABLE_BUFFER_SELECT_READ : ringHandle.getBufferGroupId();
     }
 }
