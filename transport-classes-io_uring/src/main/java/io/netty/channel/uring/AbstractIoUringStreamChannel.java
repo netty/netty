@@ -291,16 +291,17 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert readBuffer == null;
             assert readId == 0;
 
-            final IoUringStreamChannelConfig channelConfig = (IoUringStreamChannelConfig) config();
             final IoUringIoHandler ioUringIoHandler = registration().attachment();
+            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+
             // Although we checked whether the current kernel supports `register_buffer_ring`
             // during the initialization of IoUringIoHandler
             // we still check it again here.
             // When the kernel does not support this feature, it helps the JIT to delete this branch.
             // only `first` value is true, we will recv with the buffer ring;
             if (IoUring.isRegisterBufferRingSupported() && first) {
-                short bgId = channelConfig.getBufferGroupId();
-                if (bgId != IoUringStreamChannelConfig.DISABLE_BUFFER_SELECT_READ) {
+                short bgId = allocHandle.getBufferGroupId();
+                if (bgId != IoUringRecvByteAllocatorHandle.DISABLE_BUFFER_SELECT_READ) {
                     IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(bgId);
                     if (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull()) {
                         return scheduleReadProviderBuffer(ioUringBufferRing, socketIsEmpty);
@@ -308,7 +309,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 }
             }
 
-            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             ByteBuf byteBuf = allocHandle.allocate(alloc());
             try {
                 allocHandle.attemptedBytesRead(byteBuf.writableBytes());
@@ -597,5 +597,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             ((IoUringIoHandler) registration().attachment()).submitAndRunNow(writeId);
         }
         super.submitAndRunNow();
+    }
+
+    @Override
+    boolean isPollInFirst() {
+        return ((IoUringRecvByteAllocatorHandle) unsafe().recvBufAllocHandle()).getBufferGroupId()
+                == IoUringRecvByteAllocatorHandle.DISABLE_BUFFER_SELECT_READ;
     }
 }

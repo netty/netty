@@ -40,7 +40,6 @@ import java.util.List;
 public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
     static final IoUringSocketTestPermutation INSTANCE = new IoUringSocketTestPermutation();
-    static final short NO_BGID = -1;
     static final short BGID = 0;
     static final EventLoopGroup IO_URING_BOSS_GROUP = new MultiThreadIoEventLoopGroup(
             BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());
@@ -50,6 +49,10 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                     // Configure a buffer ring that we can easily enable by setting the correct IoUringChannelOption.
                     .addBufferRingConfig(
                             new IoUringBufferRingConfig(BGID, (short) 16, 1024, ByteBufAllocator.DEFAULT))));
+
+    static IoUringBufferRingRecvByteBufAllocator newIoUringBufferRecvByteBufAllocator() {
+        return new IoUringBufferRingRecvByteBufAllocator(IoUringSocketTestPermutation.BGID);
+    }
 
     @Override
     public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {

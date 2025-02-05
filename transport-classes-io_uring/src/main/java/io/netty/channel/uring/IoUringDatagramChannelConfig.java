@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -31,7 +32,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Map;
 
-final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements DatagramChannelConfig {
+final class IoUringDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
     private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
     private boolean activeOnOpen;
     private volatile int maxDatagramSize;
@@ -140,11 +141,6 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
 
         return true;
-    }
-
-    @Override
-    boolean getPollInFirst() {
-        return false;
     }
 
     private void setActiveOnOpen(boolean activeOnOpen) {

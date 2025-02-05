@@ -18,6 +18,7 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketHalfClosedTest;
 import io.netty.util.internal.PlatformDependent;
@@ -58,7 +59,9 @@ public class IoUringBufferRingSocketHalfClosedTest extends SocketHalfClosedTest 
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
-        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        sb.childOption(ChannelOption.RCVBUF_ALLOCATOR,
+                IoUringSocketTestPermutation.newIoUringBufferRecvByteBufAllocator());
+        cb.option(ChannelOption.RCVBUF_ALLOCATOR,
+                IoUringSocketTestPermutation.newIoUringBufferRecvByteBufAllocator());
     }
 }

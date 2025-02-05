@@ -20,7 +20,8 @@ import io.netty.util.internal.ObjectUtil;
 
 /**
  * Configuration class for an {@link IoUringBufferRing}.
- * It will configure the buffer ring size, buffer group id and the chunk size.
+ * Once this is configured you can select the right {@link IoUringBufferRing} by using
+ * {@link IoUringBufferRingRecvByteBufAllocator}.
  */
 public final class IoUringBufferRingConfig {
 

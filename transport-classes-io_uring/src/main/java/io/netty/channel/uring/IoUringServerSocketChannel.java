@@ -81,4 +81,9 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
         socket.listen(config.getBacklog());
         active = true;
     }
+
+    @Override
+    boolean isPollInFirst() {
+        return false;
+    }
 }

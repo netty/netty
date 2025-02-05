@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.unix.Errors;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -53,12 +52,5 @@ public class IoUringSocketRstTest extends SocketRstTest {
         assertTrue(cause instanceof Errors.NativeIoException,
                 "actual [type, message]: [" + cause.getClass() + ", " + cause.getMessage() + ']');
         assertEquals(Errors.ERRNO_ECONNRESET_NEGATIVE, ((Errors.NativeIoException) cause).expectedErr());
-    }
-
-    @Override
-    protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
-        super.configure(sb, cb, allocator);
-        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
-        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
     }
 }

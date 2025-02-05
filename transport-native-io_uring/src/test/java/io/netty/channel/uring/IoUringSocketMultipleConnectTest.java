@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -51,12 +50,5 @@ public class IoUringSocketMultipleConnectTest extends SocketMultipleConnectTest 
             }
         }
         return factories;
-    }
-
-    @Override
-    protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
-        super.configure(sb, cb, allocator);
-        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
-        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
     }
 }
