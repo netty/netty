@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.Channel;
 import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
@@ -35,6 +36,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -80,6 +82,7 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final CompletionBuffer completionBuffer;
     private final ThreadAwareExecutor executor;
+    final IoUringBufferRingHandler idHandler;
 
     IoUringIoHandler(ThreadAwareExecutor executor, IoUringIoHandlerConfig config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
@@ -99,8 +102,9 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         registeredIoUringBufferRing = new IntObjectHashMap<>();
-        List<IoUringBufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
-        if (!bufferRingConfigs.isEmpty()) {
+        idHandler = config.getBufferRingHandler();
+        Collection<IoUringBufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
+        if (bufferRingConfigs != null && !bufferRingConfigs.isEmpty()) {
             if (!IoUring.isRegisterBufferRingSupported()) {
                 // Close ringBuffer before throwing to ensure we release all memory on failure.
                 ringBuffer.close();
@@ -210,7 +214,14 @@ public final class IoUringIoHandler implements IoHandler {
         return ioUringBufferRing;
     }
 
-    IoUringBufferRing findBufferRing(short bgId) {
+    IoUringBufferRing findBufferRing(Channel channel, int guessedSize) {
+        if (idHandler == null) {
+            return null;
+        }
+        short bgId = idHandler.select(channel, guessedSize);
+        if (bgId < 0) {
+            return null;
+        }
         IoUringBufferRing cached = registeredIoUringBufferRing.get(bgId);
         if (cached != null) {
             return cached;

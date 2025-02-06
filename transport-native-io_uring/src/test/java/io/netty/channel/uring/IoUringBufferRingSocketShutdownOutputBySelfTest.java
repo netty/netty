@@ -40,7 +40,6 @@ public class IoUringBufferRingSocketShutdownOutputBySelfTest extends SocketShutd
     @Override
     protected void configure(Bootstrap bootstrap, ByteBufAllocator allocator) {
         super.configure(bootstrap, allocator);
-        bootstrap.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID_HANDLER,
-                IoUringSocketTestPermutation.RING_SELECTOR);
+        bootstrap.option(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true);
     }
 }

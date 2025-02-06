@@ -79,14 +79,14 @@ public class IoUringBufferRingTest {
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
                 (short) 1, (short) 2, 1024, incremental, ByteBufAllocator.DEFAULT);
-        ioUringIoHandlerConfiguration.addBufferRingConfig(bufferRingConfig);
 
         IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
                 (short) 2, (short) 16,
                 1024, incremental, ByteBufAllocator.DEFAULT,
                 12
         );
-        ioUringIoHandlerConfiguration.addBufferRingConfig(bufferRingConfig1);
+        ioUringIoHandlerConfiguration.setBufferRingConfig(
+                (ch, size) -> bufferRingConfig.bufferGroupId(), bufferRingConfig, bufferRingConfig1);
 
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1,
                 IoUringIoHandler.newFactory(ioUringIoHandlerConfiguration)
@@ -113,8 +113,7 @@ public class IoUringBufferRingTest {
                         }
                     }
                 })
-                .childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID_HANDLER,
-                        size -> bufferRingConfig.bufferGroupId())
+                .childOption(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true)
                 .bind(NetUtil.LOCALHOST, 0)
                 .syncUninterruptibly().channel();
 

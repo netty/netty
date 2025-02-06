@@ -298,16 +298,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             // we still check it again here.
             // When the kernel does not support this feature, it helps the JIT to delete this branch.
             // only `first` value is true, we will recv with the buffer ring;
-            if (IoUring.isRegisterBufferRingSupported() && first) {
-                IoUringBufferRingGroupIdHandler selector = channelConfig.getBufferRingSelector();
-                if (selector != null) {
-                    short bgId = selector.select(recvBufAllocHandle().guess());
-                    if (bgId >= 0) {
-                        IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(bgId);
-                        if (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull()) {
-                            return scheduleReadProviderBuffer(ioUringBufferRing, socketIsEmpty);
-                        }
-                    }
+            if (channelConfig.getUseIoUringBufferGroup() && IoUring.isRegisterBufferRingSupported() && first) {
+                IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(
+                        AbstractIoUringStreamChannel.this, recvBufAllocHandle().guess());
+                if (ioUringBufferRing != null &&
+                        (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull())) {
+                    return scheduleReadProviderBuffer(ioUringBufferRing, socketIsEmpty);
                 }
             }
 
@@ -362,11 +358,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             try {
                 int chunkSize = bufferRing.chunkSize();
                 IoRegistration registration = registration();
-                IoUringBufferRing ioUringBufferRing = ((IoUringIoHandler) registration.attachment())
-                        .findBufferRing(bgId);
 
-                if (!ioUringBufferRing.isFull()) {
-                    ioUringBufferRing.appendBuffer(1);
+                if (!bufferRing.isFull()) {
+                    bufferRing.appendBuffer(1);
                 }
 
                 int fd = fd().intValue();
@@ -384,7 +378,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 if (readId == 0) {
                     return 0;
                 }
-                lastUsedBufferRing = ioUringBufferRing;
+                lastUsedBufferRing = bufferRing;
                 return 1;
             } catch (IllegalArgumentException illegalArgumentException) {
                 this.handleReadException(pipeline(), null, illegalArgumentException, false, recvBufAllocHandle());
@@ -419,12 +413,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                         //recv with provider buffer fail!
                         //fallback to normal recv
                         bufferRing.markExhausted();
-                        IoUringBufferRingGroupIdHandler selector =
-                                ((IoUringStreamChannelConfig) config()).getBufferRingSelector();
-                        if (selector != null) {
-                            // Let the selector know that this ring was exhausted.
-                            selector.exhausted(bufferRing.bufferGroupId());
-                        }
+
                         // fire the BufferRingExhaustedEvent to notify users.
                         // Users can then switch the ring buffer or do other things as they wish
                         pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
@@ -612,6 +601,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
     @Override
     boolean isPollInFirst() {
-        return ((IoUringStreamChannelConfig) config()).getBufferRingSelector() == null;
+        return !((IoUringStreamChannelConfig) config()).getUseIoUringBufferGroup();
     }
 }

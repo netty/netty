@@ -54,9 +54,7 @@ public class IoUringBufferRingSocketFileRegionTest extends SocketFileRegionTest 
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID_HANDLER,
-                IoUringSocketTestPermutation.RING_SELECTOR);
-        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID_HANDLER,
-                IoUringSocketTestPermutation.RING_SELECTOR);
+        sb.childOption(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true);
+        cb.option(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true);
     }
 }
