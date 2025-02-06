@@ -113,7 +113,8 @@ public class IoUringBufferRingTest {
                         }
                     }
                 })
-                .childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, bufferRingConfig.bufferGroupId())
+                .childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID_HANDLER,
+                        size -> bufferRingConfig.bufferGroupId())
                 .bind(NetUtil.LOCALHOST, 0)
                 .syncUninterruptibly().channel();
 

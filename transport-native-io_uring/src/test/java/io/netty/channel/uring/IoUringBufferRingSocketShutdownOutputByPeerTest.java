@@ -40,6 +40,7 @@ public class IoUringBufferRingSocketShutdownOutputByPeerTest extends SocketShutd
     @Override
     protected void configure(ServerBootstrap bootstrap, ByteBufAllocator allocator) {
         super.configure(bootstrap, allocator);
-        bootstrap.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        bootstrap.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID_HANDLER,
+                IoUringSocketTestPermutation.RING_SELECTOR);
     }
 }

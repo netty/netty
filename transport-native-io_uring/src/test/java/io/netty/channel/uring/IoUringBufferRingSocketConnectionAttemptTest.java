@@ -40,6 +40,7 @@ public class IoUringBufferRingSocketConnectionAttemptTest extends SocketConnecti
     @Override
     protected void configure(Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(cb, allocator);
-        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID_HANDLER,
+                IoUringSocketTestPermutation.RING_SELECTOR);
     }
 }

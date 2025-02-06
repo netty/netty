@@ -17,16 +17,16 @@ package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.util.internal.ObjectUtil;
 
 import java.util.Map;
 
-abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
+abstract class IoUringStreamChannelConfig extends DefaultChannelConfig {
 
     static final short DISABLE_BUFFER_SELECT_READ = -1;
 
-    private volatile short bufferGroupId = DISABLE_BUFFER_SELECT_READ;
+    private volatile IoUringBufferRingGroupIdHandler ringSelector;
 
     IoUringStreamChannelConfig(Channel channel) {
         super(channel);
@@ -36,18 +36,19 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
         super(channel, allocator);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
-            return (T) Short.valueOf(getBufferGroupId());
+        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID_HANDLER) {
+            return (T) getBufferRingSelector();
         }
         return super.getOption(option);
     }
 
     @Override
     public <T> boolean setOption(ChannelOption<T> option, T value) {
-        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
-            setBufferGroupId((Short) value);
+        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID_HANDLER) {
+            setBufferRingSelector((IoUringBufferRingGroupIdHandler) value);
             return true;
         }
         return super.setOption(option, value);
@@ -55,12 +56,7 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID);
-    }
-
-    @Override
-    boolean getPollInFirst() {
-        return bufferGroupId == DISABLE_BUFFER_SELECT_READ;
+        return getOptions(super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID_HANDLER);
     }
 
     /**
@@ -68,19 +64,19 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
      *
      * @return the buffer group id.
      */
-    short getBufferGroupId() {
-        return bufferGroupId;
+    IoUringBufferRingGroupIdHandler getBufferRingSelector() {
+        return ringSelector;
     }
 
     /**
      * Set the buffer group id that will be used to select the correct ring buffer. This must have been configured
      * via {@link IoUringBufferRingConfig}.
      *
-     * @param bufferGroupId the buffer group id.
+     * @param ringSelector  the {@link IoUringBufferRingGroupIdHandler} to use to select the buffer group id.
      * @return              itself.
      */
-    IoUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
-        this.bufferGroupId = (short) ObjectUtil.checkInRange(bufferGroupId, -1, Short.MAX_VALUE, "bufferGroupId");
+    IoUringStreamChannelConfig setBufferRingSelector(IoUringBufferRingGroupIdHandler ringSelector) {
+        this.ringSelector = ringSelector;
         return this;
     }
 }

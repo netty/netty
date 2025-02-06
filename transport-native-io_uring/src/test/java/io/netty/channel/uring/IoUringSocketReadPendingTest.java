@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketReadPendingTest;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,13 +35,5 @@ public class IoUringSocketReadPendingTest extends SocketReadPendingTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IoUringSocketTestPermutation.INSTANCE.socket();
-    }
-
-    @Override
-    protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
-        super.configure(sb, cb, allocator);
-        // Don't use buffer group as the test wants to limit the number of bytes we read to 1.
-        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
-        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
     }
 }

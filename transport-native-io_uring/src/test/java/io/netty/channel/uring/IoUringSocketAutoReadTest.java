@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketAutoReadTest;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,15 +35,5 @@ public class IoUringSocketAutoReadTest extends SocketAutoReadTest {
     @Override
     protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
         return IoUringSocketTestPermutation.INSTANCE.socket();
-    }
-
-    @Override
-    protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
-        super.configure(sb, cb, allocator);
-        // This test does not enalbe IoUringChannelOption.IO_URING_BUFFER_GROUP_ID as it will not work because
-        // We want to use a custom RecvBytBufAllocator that limit the number of bytes that we can read per read
-        // operation to 1.
-        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
-        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.NO_BGID);
     }
 }

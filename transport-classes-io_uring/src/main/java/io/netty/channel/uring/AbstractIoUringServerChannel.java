@@ -220,5 +220,10 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         return IoUring.isIOUringAcceptNoWaitSupported() &&
                 IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
     }
+
+    @Override
+    boolean isPollInFirst() {
+        return false;
+    }
 }
 
