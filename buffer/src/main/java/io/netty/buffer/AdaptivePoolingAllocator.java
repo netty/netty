@@ -29,6 +29,7 @@ import io.netty.util.internal.ReferenceCountUpdater;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
+import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
@@ -86,10 +87,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         None
     }
 
+    /**
+     * The 128 KiB minimum chunk size is chosen to encourage the system allocator to delegate to mmap for chunk
+     * allocations. For instance, glibc will do this.
+     * This pushes any fragmentation from chunk size deviations off physical memory, onto virtual memory,
+     * which is a much, much larger space. Chunks are also allocated in whole multiples of the minimum
+     * chunk size, which itself is a whole multiple of popular page sizes like 4 KiB, 16 KiB, and 64 KiB.
+     */
+    private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int EXPANSION_ATTEMPTS = 3;
     private static final int INITIAL_MAGAZINES = 4;
     private static final int RETIRE_CAPACITY = 4 * 1024;
-    private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
     private static final int BUFS_PER_CHUNK = 10; // For large buffers, aim to have about this many buffers per chunk.
 
@@ -573,10 +581,10 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     allocationLock.unlockWrite(writeLock);
                 }
             }
-            return allocateWithoutLock(size, sizeBucket, maxCapacity, buf);
+            return allocateWithoutLock(size, maxCapacity, buf);
         }
 
-        private boolean allocateWithoutLock(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+        private boolean allocateWithoutLock(int size, int maxCapacity, AdaptiveByteBuf buf) {
             Chunk curr = NEXT_IN_LINE.getAndSet(this, null);
             if (curr == MAGAZINE_FREED) {
                 // Allocation raced with a stripe-resize that freed this magazine.
@@ -748,6 +756,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         private Chunk newChunkAllocation(int promptingSize) {
             int size = Math.max(promptingSize * BUFS_PER_CHUNK, preferredChunkSize());
+            int minChunks = size / MIN_CHUNK_SIZE;
+            if (MIN_CHUNK_SIZE * minChunks < size) {
+                // Round up to nearest whole MIN_CHUNK_SIZE unit. The MIN_CHUNK_SIZE is an even multiple of many
+                // popular small page sizes, like 4k, 16k, and 64k, which makes it easier for the system allocator
+                // to manage the memory in terms of whole pages. This reduces memory fragmentation,
+                // but without the potentially high overhead that power-of-2 chunk sizes would bring.
+                size = MIN_CHUNK_SIZE * (1 + minChunks);
+            }
             ChunkAllocator chunkAllocator = parent.chunkAllocator;
             return new Chunk(chunkAllocator.allocate(size, size), this, true);
         }
@@ -898,9 +914,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             AdaptivePoolingAllocator parent = mag.parent;
             int chunkSize = mag.preferredChunkSize();
             int memSize = delegate.capacity();
-            if (!pooled || memSize < chunkSize || memSize > chunkSize + (chunkSize >> 1)) {
-                // Drop the chunk if the parent allocator is closed, or if the chunk is smaller than the
-                // preferred chunk size, or over 50% larger than the preferred chunk size.
+            if (!pooled || shouldReleaseSuboptimalChunkSuze(memSize, chunkSize)) {
+                // Drop the chunk if the parent allocator is closed,
+                // or if the chunk deviates too much from the preferred chunk size.
                 detachFromMagazine();
                 delegate.release();
             } else {
@@ -919,6 +935,16 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     }
                 }
             }
+        }
+
+        private static boolean shouldReleaseSuboptimalChunkSuze(int givenSize, int preferredSize) {
+            int givenChunks = givenSize / MIN_CHUNK_SIZE;
+            int preferredChunks = preferredSize / MIN_CHUNK_SIZE;
+            int deviation = Math.abs(givenChunks - preferredChunks);
+
+            // Retire chunks with a 0.5% probability per unit of MIN_CHUNK_SIZE deviation from preference.
+            return deviation != 0 &&
+                    PlatformDependent.threadLocalRandom().nextDouble() * 200.0 > deviation;
         }
 
         public void readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
