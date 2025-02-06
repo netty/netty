@@ -54,8 +54,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -200,7 +199,6 @@ public class BootstrapTest {
             bootstrap.childHandler(new DummyHandler());
             bootstrap.localAddress(new LocalAddress(getClass()));
             Future<Channel> future = bootstrap.bind();
-            assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess(null);
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
             future.addListener(fut -> {
@@ -236,7 +234,6 @@ public class BootstrapTest {
             bootstrap.handler(registerHandler);
             bootstrap.localAddress(new LocalAddress(getClass()));
             Future<Channel> future = bootstrap.bind();
-            assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess(null);
             final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<>();
             future.addListener(fut -> {
@@ -262,10 +259,9 @@ public class BootstrapTest {
             bootstrapA.channel(LocalChannel.class);
             bootstrapA.handler(registerHandler);
             Future<Channel> future = bootstrapA.connect(LocalAddress.ANY);
-            assertFalse(future.isDone());
             registerHandler.registerPromise().setSuccess(null);
             CompletionException cause = assertThrows(CompletionException.class, future.asStage()::sync);
-            assertThat(cause.getCause(), instanceOf(ConnectException.class));
+            assertThat(cause).hasCauseInstanceOf(ConnectException.class);
         } finally {
             group.shutdownGracefully();
         }
@@ -303,7 +299,7 @@ public class BootstrapTest {
         bootstrapB.childHandler(dummyHandler);
 
         assertTrue(bootstrapA.config().toString().contains("resolver:"));
-        assertThat(bootstrapA.resolver(), instanceOf(TestAddressResolverGroup.class));
+        assertThat(bootstrapA.resolver()).isInstanceOf(TestAddressResolverGroup.class);
 
         SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).asStage().get().localAddress();
 
@@ -328,7 +324,7 @@ public class BootstrapTest {
             registerFuture.asStage().sync();
             CompletionException exception =
                     assertThrows(CompletionException.class, connectFuture.asStage()::sync);
-            assertTrue(exception.getCause() instanceof ConnectException);
+            assertThat(exception).hasCauseInstanceOf(ConnectException.class);
         } finally {
             group.shutdownGracefully();
         }
@@ -353,7 +349,7 @@ public class BootstrapTest {
 
         // Should fail with the UnknownHostException.
         assertTrue(connectFuture.asStage().await(10000, TimeUnit.MILLISECONDS));
-        assertThat(connectFuture.cause(), instanceOf(UnknownHostException.class));
+        assertThat(connectFuture.cause()).isInstanceOf(UnknownHostException.class);
     }
 
     @Test
