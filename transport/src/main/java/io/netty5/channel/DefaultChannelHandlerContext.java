@@ -109,7 +109,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         // Wrap the executor if the ChannelHandler implements pendingOutboundBytes(ChannelHandlerContext) so we are
         // sure that the pending bytes will be updated correctly in all cases. Otherwise, we don't need any special
         // wrapping and so can save some work (which is true most of the time).
-        this.executor = handlesPendingOutboundBytes(executionMask) ?
+        executor = handlesPendingOutboundBytes(executionMask) ?
                 new DefaultChannelHandlerContextAwareEventExecutor(pipeline.executor(), this) : null;
     }
 
@@ -700,13 +700,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         return this;
     }
 
-    private void findAndInvokeRead() {
-        DefaultChannelHandlerContext ctx = findContextOutbound(MASK_READ);
-        if (ctx != null) {
-            ctx.invokeRead(DefaultChannelPipeline.DEFAULT_READ_BUFFER_ALLOCATOR);
-        }
-    }
-
     @Override
     public ChannelHandlerContext read(ReadBufferAllocator readBufferAllocator) {
         requireNonNull(readBufferAllocator, "readBufferAllocator");
@@ -714,7 +707,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         if (executor.inEventLoop()) {
             findAndInvokeRead(readBufferAllocator);
         } else {
-            executor.execute(() -> findAndInvokeRead(readBufferAllocator));
+            executor.execute(() -> read(readBufferAllocator));
         }
         return this;
     }
@@ -722,22 +715,18 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     private void findAndInvokeRead(ReadBufferAllocator allocator) {
         DefaultChannelHandlerContext ctx = findContextOutbound(MASK_READ);
         if (ctx != null) {
-            ctx.invokeRead(allocator);
-        }
-    }
+            Future<Void> failed = ctx.saveCurrentPendingBytesIfNeededOutbound();
+            if (failed != null) {
+                return;
+            }
 
-    private void invokeRead(ReadBufferAllocator allocator) {
-        Future<Void> failed = saveCurrentPendingBytesIfNeededOutbound();
-        if (failed != null) {
-            return;
-        }
-
-        try {
-            handler().read(this, allocator);
-        } catch (Throwable t) {
-            handleOutboundHandlerException(t, false);
-        } finally {
-            updatePendingBytesIfNeeded();
+            try {
+                ctx.handler().read(ctx, allocator);
+            } catch (Throwable t) {
+                ctx.handleOutboundHandlerException(t, false);
+            } finally {
+                ctx.updatePendingBytesIfNeeded();
+            }
         }
     }
 
@@ -767,7 +756,10 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     public ChannelHandlerContext flush() {
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
-            findAndInvokeFlush();
+            DefaultChannelHandlerContext ctx = findContextOutbound(MASK_FLUSH);
+            if (ctx != null) {
+                ctx.invokeFlush();
+            }
         } else {
             Tasks tasks = invokeTasks();
             Promise<Void> promise = newPromise();
@@ -778,13 +770,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         }
 
         return this;
-    }
-
-    private void findAndInvokeFlush() {
-        DefaultChannelHandlerContext ctx = findContextOutbound(MASK_FLUSH);
-        if (ctx != null) {
-            ctx.invokeFlush();
-        }
     }
 
     private void invokeFlush() {
@@ -819,7 +804,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         EventExecutor executor = originalExecutor();
         if (executor.inEventLoop()) {
             final DefaultChannelHandlerContext next = findContextOutbound(flush ?
-                    (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
+                    MASK_WRITE | MASK_FLUSH : MASK_WRITE);
             if (next == null) {
                 Resource.dispose(msg);
                 return failRemoved(this);
@@ -1182,9 +1167,9 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
         Tasks(DefaultChannelHandlerContext ctx) {
             invokeChannelReadCompleteTask = ctx::fireChannelReadComplete;
-            invokeReadTask = ctx::findAndInvokeRead;
+            invokeReadTask = ctx::read;
             invokeChannelWritableStateChangedTask = ctx::fireChannelWritabilityChanged;
-            invokeFlushTask = ctx::findAndInvokeFlush;
+            invokeFlushTask = ctx::flush;
         }
     }
 
@@ -1314,51 +1299,53 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
         @Override
         public Future<Void> submit(Runnable task) {
-            return executor.submit(new DefaultHandlerContextRunnable(task));
+            return executor.submit(new DefaultHandlerContextRunnable(ctx, task));
         }
 
         @Override
         public <T> Future<T> submit(Runnable task, T result) {
-            return executor.submit(new DefaultHandlerContextRunnable(task), result);
+            return executor.submit(new DefaultHandlerContextRunnable(ctx, task), result);
         }
 
         @Override
         public <T> Future<T> submit(Callable<T> task) {
-            return executor.submit(new DefaultHandlerContextCallable<>(task));
+            return executor.submit(new DefaultHandlerContextCallable<>(ctx, task));
         }
 
         @Override
         public Future<Void> schedule(Runnable task, long delay, TimeUnit unit) {
-            return executor.schedule(new DefaultHandlerContextRunnable(task), delay, unit);
+            return executor.schedule(new DefaultHandlerContextRunnable(ctx, task), delay, unit);
         }
 
         @Override
         public <V> Future<V> schedule(Callable<V> task, long delay, TimeUnit unit) {
-            return executor.schedule(new DefaultHandlerContextCallable<>(task), delay, unit);
+            return executor.schedule(new DefaultHandlerContextCallable<>(ctx, task), delay, unit);
         }
 
         @Override
         public Future<Void> scheduleAtFixedRate(Runnable task, long initialDelay, long period, TimeUnit unit) {
             return executor.scheduleAtFixedRate(
-                    new DefaultHandlerContextRunnable(task), initialDelay, period, unit);
+                    new DefaultHandlerContextRunnable(ctx, task), initialDelay, period, unit);
         }
 
         @Override
         public Future<Void> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, TimeUnit unit) {
             return executor.scheduleWithFixedDelay(
-                    new DefaultHandlerContextRunnable(task), initialDelay, delay, unit);
+                    new DefaultHandlerContextRunnable(ctx, task), initialDelay, delay, unit);
         }
 
         @Override
         public void execute(Runnable task) {
-            executor.execute(new DefaultHandlerContextRunnable(task));
+            executor.execute(new DefaultHandlerContextRunnable(ctx, task));
         }
 
-        private final class DefaultHandlerContextCallable<V> implements Callable<V> {
+        private static final class DefaultHandlerContextCallable<V> implements Callable<V> {
 
+            private final DefaultChannelHandlerContext ctx;
             private final Callable<V> task;
 
-            DefaultHandlerContextCallable(Callable<V> task) {
+            DefaultHandlerContextCallable(DefaultChannelHandlerContext ctx, Callable<V> task) {
+                this.ctx = ctx;
                 this.task = task;
             }
 
@@ -1386,9 +1373,12 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
             }
         }
 
-        private final class DefaultHandlerContextRunnable implements Runnable {
+        private static final class DefaultHandlerContextRunnable implements Runnable {
+            private final DefaultChannelHandlerContext ctx;
             private final Runnable task;
-            DefaultHandlerContextRunnable(Runnable task) {
+
+            DefaultHandlerContextRunnable(DefaultChannelHandlerContext ctx, Runnable task) {
+                this.ctx = ctx;
                 this.task = task;
             }
 
