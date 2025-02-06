@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 
 public class SnappyTest {
     private final Snappy snappy = new Snappy();
@@ -173,7 +174,7 @@ public class SnappyTest {
                    "earned from the implementation of a lot of protocols " +
                    "such as FTP, SMTP, HTTP, and various binary and " +
                    "text-based legacy protocols";
-        ByteBuf in = Unpooled.wrappedBuffer(srcStr.getBytes("US-ASCII"));
+        ByteBuf in = Unpooled.wrappedBuffer(srcStr.getBytes(StandardCharsets.US_ASCII));
         ByteBuf out = Unpooled.buffer(180);
         snappy.encode(in, out, in.readableBytes());
 

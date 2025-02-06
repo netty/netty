@@ -27,7 +27,6 @@ import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -100,7 +99,6 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
     /**
      * Create a new instance using the given {@link ServerSocketChannel}.
      */
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     public NioServerDomainSocketChannel(ServerSocketChannel channel) {
         super(null, channel, SelectionKey.OP_ACCEPT);
         if (PlatformDependent.javaVersion() < 16) {
@@ -132,7 +130,6 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
         return isOpen() && bound;
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         javaChannel().bind(localAddress, config.getBacklog());
@@ -185,7 +182,6 @@ public final class NioServerDomainSocketChannel extends AbstractNioMessageChanne
         }
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     protected SocketAddress localAddress0() {
         // do not use unsafe which uses native transport (epoll or kqueue)

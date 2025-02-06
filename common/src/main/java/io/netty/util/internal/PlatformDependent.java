@@ -565,18 +565,6 @@ public final class PlatformDependent {
     }
 
     private static int toIntExact(long value) {
-        if (javaVersion() >= 8) {
-            return toIntExact8(value);
-        }
-        int result = (int) value;
-        if (result != value) {
-            throw new ArithmeticException("Cannot convert to exact int: " + value);
-        }
-        return result;
-    }
-
-    @SuppressJava6Requirement(reason = "version checked")
-    private static int toIntExact8(long value) {
         return Math.toIntExact(value);
     }
 
@@ -968,9 +956,6 @@ public final class PlatformDependent {
 
     private static final class Mpsc {
         private static final boolean USE_MPSC_CHUNKED_ARRAY_QUEUE;
-
-        private Mpsc() {
-        }
 
         static {
             Object unsafe = null;
@@ -1586,34 +1571,6 @@ public final class PlatformDependent {
         }
 
         return "unknown";
-    }
-
-    private static final class AtomicLongCounter extends AtomicLong implements LongCounter {
-        private static final long serialVersionUID = 4074772784610639305L;
-
-        @Override
-        public void add(long delta) {
-            addAndGet(delta);
-        }
-
-        @Override
-        public void increment() {
-            incrementAndGet();
-        }
-
-        @Override
-        public void decrement() {
-            decrementAndGet();
-        }
-
-        @Override
-        public long value() {
-            return get();
-        }
-    }
-
-    private interface ThreadLocalRandomProvider {
-        Random current();
     }
 
     private PlatformDependent() {

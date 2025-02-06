@@ -15,9 +15,6 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.SuppressJava6Requirement;
-
 import java.net.Socket;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -42,10 +39,9 @@ final class ResumptionController {
         resumableTm = new AtomicReference<ResumableX509ExtendedTrustManager>();
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by version check")
     public TrustManager wrapIfNeeded(TrustManager tm) {
         if (tm instanceof ResumableX509ExtendedTrustManager) {
-            if (PlatformDependent.javaVersion() < 7 || !(tm instanceof X509ExtendedTrustManager)) {
+            if (!(tm instanceof X509ExtendedTrustManager)) {
                 throw new IllegalStateException("ResumableX509ExtendedTrustManager implementation must be a " +
                         "subclass of X509ExtendedTrustManager, found: " + (tm == null ? null : tm.getClass()));
             }
@@ -133,7 +129,6 @@ final class ResumptionController {
         return chain;
     }
 
-    @SuppressJava6Requirement(reason = "Guarded by version check")
     private static final class X509ExtendedWrapTrustManager extends X509ExtendedTrustManager {
         private final X509ExtendedTrustManager trustManager;
         private final Set<SSLEngine> confirmedValidations;

@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -65,7 +65,7 @@ public class QueryStringEncoderTest {
 
     @Test
     public void testNonDefaultEncoding() throws Exception {
-        QueryStringEncoder e = new QueryStringEncoder("/foo/\u00A5", Charset.forName("UTF-16"));
+        QueryStringEncoder e = new QueryStringEncoder("/foo/\u00A5", StandardCharsets.UTF_16);
         e.addParam("a", "\u00A5");
         assertEquals("/foo/\u00A5?a=%FE%FF%00%A5", e.toString());
         assertEquals(new URI("/foo/\u00A5?a=%FE%FF%00%A5"), e.toUri());

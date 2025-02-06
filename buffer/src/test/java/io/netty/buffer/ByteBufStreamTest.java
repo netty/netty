@@ -22,6 +22,7 @@ import org.junit.jupiter.api.function.Executable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -122,7 +123,7 @@ public class ByteBufStreamTest {
 
             byte[] tmp = new byte[13];
             in.readFully(tmp);
-            assertEquals("Hello, World!", new String(tmp, "ISO-8859-1"));
+            assertEquals("Hello, World!", new String(tmp, StandardCharsets.ISO_8859_1));
 
             assertEquals('H', in.readChar());
             assertEquals('e', in.readChar());
@@ -191,7 +192,7 @@ public class ByteBufStreamTest {
 
     @Test
     public void testReadLine() throws Exception {
-        Charset utf8 = Charset.forName("UTF-8");
+        Charset utf8 = StandardCharsets.UTF_8;
         ByteBuf buf = Unpooled.buffer();
         ByteBufInputStream in = new ByteBufInputStream(buf, true);
 

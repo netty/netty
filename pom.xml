@@ -1950,6 +1950,46 @@
                   <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "guarded by version check")</annotation>
                   <justification>Java baseline version changed.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method java.net.SocketAddress io.netty.channel.socket.nio.NioDomainSocketChannel::localAddress0()</old>
+                  <new>method java.net.SocketAddress io.netty.channel.socket.nio.NioDomainSocketChannel::localAddress0()</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method java.net.SocketAddress io.netty.channel.socket.nio.NioDomainSocketChannel::remoteAddress0()</old>
+                  <new>method java.net.SocketAddress io.netty.channel.socket.nio.NioDomainSocketChannel::remoteAddress0()</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.socket.nio.NioServerDomainSocketChannel::&lt;init&gt;(java.nio.channels.ServerSocketChannel)</old>
+                  <new>method void io.netty.channel.socket.nio.NioServerDomainSocketChannel::&lt;init&gt;(java.nio.channels.ServerSocketChannel)</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method void io.netty.channel.socket.nio.NioServerDomainSocketChannel::doBind(java.net.SocketAddress) throws java.lang.Exception</old>
+                  <new>method void io.netty.channel.socket.nio.NioServerDomainSocketChannel::doBind(java.net.SocketAddress) throws java.lang.Exception</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.annotation.removed</code>
+                  <old>method java.net.SocketAddress io.netty.channel.socket.nio.NioServerDomainSocketChannel::localAddress0()</old>
+                  <new>method java.net.SocketAddress io.netty.channel.socket.nio.NioServerDomainSocketChannel::localAddress0()</new>
+                  <annotation>@io.netty.util.internal.SuppressJava6Requirement(reason = "Usage guarded by java version check")</annotation>
+                  <justification>Java baseline version changed.</justification>
+                </item>
                 <!-- Changes necessary for upgrading com.google.protobuf:protobuf-java from 2.x to 3.x -->
                 <item>
                   <ignore>true</ignore>
