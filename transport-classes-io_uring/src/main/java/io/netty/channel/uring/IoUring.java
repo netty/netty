@@ -182,6 +182,7 @@ public final class IoUring {
     public static boolean isRegisterBufferRingSupported() {
         return IORING_REGISTER_BUFFER_RING_SUPPORTED;
     }
+
     public static boolean isRegisterBufferRingIncSupported() {
         return IORING_REGISTER_BUFFER_RING_INC_SUPPORTED;
     }
