@@ -380,7 +380,7 @@ public class HttpPostRequestDecoderTest {
                         data + "\r\n" +
                         "--" + boundary + "--\r\n";
 
-        req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8.name()));
+        req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
@@ -406,7 +406,7 @@ public class HttpPostRequestDecoderTest {
                         data + "\r\n" +
                         "--" + boundary + "--\r\n";
 
-        req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8.name()));
+        req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
@@ -715,7 +715,7 @@ public class HttpPostRequestDecoderTest {
                         data + "\r\n" +
                         "--" + boundary + "--\r\n";
 
-        req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8.name()));
+        req.content().writeBytes(body.getBytes(CharsetUtil.UTF_8));
         // Create decoder instance to test.
         final HttpPostRequestDecoder decoder = new HttpPostRequestDecoder(inMemoryFactory, req);
         assertFalse(decoder.getBodyHttpDatas().isEmpty());
