@@ -28,7 +28,6 @@ import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReferenceCountUpdater;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
-import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
@@ -45,6 +44,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -939,7 +939,7 @@ final class AdaptivePoolingAllocator {
 
             // Retire chunks with a 0.5% probability per unit of MIN_CHUNK_SIZE deviation from preference.
             return deviation != 0 &&
-                    PlatformDependent.threadLocalRandom().nextDouble() * 200.0 > deviation;
+                    ThreadLocalRandom.current().nextDouble() * 200.0 > deviation;
         }
 
         public void readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
