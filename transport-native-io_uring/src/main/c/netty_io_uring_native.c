@@ -368,8 +368,8 @@ static jint netty_io_uring_register_ring_fds(JNIEnv *env, jclass clazz, jint rin
 }
 
 static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
-                                           int ringFd, unsigned int nentries,
-                                           short bgid, unsigned int flags) {
+                                           jint ringFd, jint nentries,
+                                           jshort bgid, jint flags) {
     struct io_uring_buf_ring *br;
     struct io_uring_buf_reg reg;
     size_t ring_size;
@@ -381,15 +381,15 @@ static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
         return -errno;
     }
 
-    reg.ring_addr = (__u64)br;
-    reg.ring_entries = nentries;
-    reg.bgid = bgid;
-    reg.flags |= flags;
+    reg.ring_addr = (__u64) br;
+    reg.ring_entries = (__u32) nentries;
+    reg.bgid = (__u16) bgid;
+    reg.flags |= (__u16) flags;
 
     int registerRes = sys_io_uring_register(ringFd, IORING_REGISTER_PBUF_RING, &reg, 1);
 
     if (registerRes) {
-        munmap(br,ring_size);
+        munmap(br, ring_size);
         return registerRes;
     }
     br->tail = 0;
