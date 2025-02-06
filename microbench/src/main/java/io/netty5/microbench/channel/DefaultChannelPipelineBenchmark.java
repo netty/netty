@@ -23,8 +23,6 @@ import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.microbench.util.AbstractMicrobenchmark;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.concurrent.GlobalEventExecutor;
-import io.netty5.util.concurrent.Promise;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.annotations.Fork;
@@ -43,11 +41,10 @@ import java.util.SplittableRandom;
 
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
-@Fork(0)
+@Fork(5)
 @State(Scope.Thread)
 public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
     private static final Object MESSAGE = new Object();
-    private static final Future<Void> FUTURE = GlobalEventExecutor.INSTANCE.newSucceededFuture();
 
     private abstract static class SharableHandlerAdapter implements ChannelHandler {
         @Override
@@ -87,10 +84,14 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
             // NOOP
         }
 
+        private Future<Void> writeFuture;
         @Override
         public Future<Void> write(ChannelHandlerContext ctx, Object msg) {
+            if (writeFuture == null) {
+                writeFuture = ctx.newSucceededFuture();
+            }
             // NOOP
-            return FUTURE;
+            return writeFuture;
         }
 
         @Override
