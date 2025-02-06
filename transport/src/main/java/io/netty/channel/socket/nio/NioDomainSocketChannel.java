@@ -37,7 +37,6 @@ import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.socket.DuplexChannelConfig;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -274,13 +273,11 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
         }
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     private void shutdownInput0() throws Exception {
         javaChannel().shutdownInput();
         isInputShutdown = true;
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     protected SocketAddress localAddress0() {
         try {
@@ -291,7 +288,6 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
         return null;
     }
 
-    @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     @Override
     protected SocketAddress remoteAddress0() {
         try {
@@ -518,7 +514,6 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
             return true;
         }
 
-        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
         private int getReceiveBufferSize() {
             try {
                 return javaChannel.getOption(StandardSocketOptions.SO_RCVBUF);
@@ -527,17 +522,15 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
             }
         }
 
-        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
         private NioDomainSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
             try {
-                javaChannel.<Integer>setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+                javaChannel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
             return this;
         }
 
-        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
         private int getSendBufferSize() {
             try {
                 return javaChannel.getOption(StandardSocketOptions.SO_SNDBUF);
@@ -545,10 +538,9 @@ public final class NioDomainSocketChannel extends AbstractNioByteChannel
                 throw new ChannelException(e);
             }
         }
-        @SuppressJava6Requirement(reason = "Usage guarded by java version check")
         private NioDomainSocketChannelConfig setSendBufferSize(int sendBufferSize) {
             try {
-                javaChannel.<Integer>setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
+                javaChannel.setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
