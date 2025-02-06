@@ -88,6 +88,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
 
     // Is null if the ChannelHandler not implements pendingOutboundBytes(...).
     private final DefaultChannelHandlerContextAwareEventExecutor executor;
+    private final EventExecutor pipelineExecutor;
     private long currentPendingBytes;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
@@ -111,6 +112,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         // wrapping and so can save some work (which is true most of the time).
         executor = handlesPendingOutboundBytes(executionMask) ?
                 new DefaultChannelHandlerContextAwareEventExecutor(pipeline.executor(), this) : null;
+        pipelineExecutor = pipeline.executor();
     }
 
     private static boolean handlesPendingOutboundBytes(int mask) {
@@ -162,7 +164,7 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
     }
 
     private EventExecutor originalExecutor() {
-        return executor == null ? pipeline().executor() : executor.wrappedExecutor();
+        return pipelineExecutor;
     }
 
     @Override
@@ -1246,10 +1248,6 @@ final class DefaultChannelHandlerContext implements ChannelHandlerContext, Resou
         DefaultChannelHandlerContextAwareEventExecutor(EventExecutor executor, DefaultChannelHandlerContext ctx) {
             this.executor = executor;
             this.ctx = ctx;
-        }
-
-        EventExecutor wrappedExecutor() {
-            return executor;
         }
 
         @Override
