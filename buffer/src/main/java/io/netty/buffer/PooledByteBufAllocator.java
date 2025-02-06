@@ -398,7 +398,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         if (cache.useThreadLocal()) {
             heapArena = cache.heapArena;
         } else {
-            heapArena = threadCache.attatchHeapArena();
+            heapArena = threadCache.selectHeapArena();
         }
         final ByteBuf buf;
         if (heapArena != null) {
@@ -419,7 +419,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         if (cache.useThreadLocal()) {
             directArena = cache.directArena;
         } else {
-            directArena = threadCache.attatchDirectArena();
+            directArena = threadCache.selectDirectArena();
         }
         final ByteBuf buf;
         if (directArena != null) {
@@ -590,7 +590,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             return PoolThreadCache.THREAD_CACHE_WITHOUT_THREAD_LOCAL;
         }
 
-        private PoolArena<byte[]> attatchHeapArena() {
+        private PoolArena<byte[]> selectHeapArena() {
             if (heapArenas == null || heapArenas.length == 0) {
                 return null;
             }
@@ -601,7 +601,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             }
         }
 
-        private PoolArena<ByteBuffer> attatchDirectArena() {
+        private PoolArena<ByteBuffer> selectDirectArena() {
             if (directArenas == null || directArenas.length == 0) {
                 return null;
             }
