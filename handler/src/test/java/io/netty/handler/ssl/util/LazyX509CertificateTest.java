@@ -73,7 +73,7 @@ public class LazyX509CertificateTest {
         assertArrayEquals(x509Certificate.getSignature(), lazyX509Certificate.getSignature());
         assertEquals(x509Certificate.getSigAlgName(), lazyX509Certificate.getSigAlgName());
         assertEquals(x509Certificate.getSigAlgOID(), lazyX509Certificate.getSigAlgOID());
-        assertEquals(x509Certificate.getSigAlgParams(), lazyX509Certificate.getSigAlgParams());
+        assertArrayEquals(x509Certificate.getSigAlgParams(), lazyX509Certificate.getSigAlgParams());
         assertArrayEquals(x509Certificate.getIssuerUniqueID(), lazyX509Certificate.getIssuerUniqueID());
         assertArrayEquals(x509Certificate.getSubjectUniqueID(), lazyX509Certificate.getSubjectUniqueID());
         assertArrayEquals(x509Certificate.getKeyUsage(), lazyX509Certificate.getKeyUsage());
