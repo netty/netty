@@ -336,9 +336,6 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
 
             boolean gotInterrupted = false;
             do {
-                if (trigger.get() >= 1 && isNotNull(ref)) {
-                    System.out.println("hmmm.");
-                }
                 try (AutoCloseable ignore = installGcEventListener(gcCallback)) {
                     for (int i = 0; i < N_THREADS; i++) {
                         executor.execute(gcProducer);
