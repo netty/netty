@@ -96,7 +96,7 @@ public final class LeakDetection {
      * Called when a leak is detected. This method will inform all registered
      * {@linkplain MemoryManager#onLeakDetected(Consumer) on-leak-detected} callbacks.
      *
-     * @param tracer The life-cycle trace of the leaked object.
+     * @param tracer The life-cycle tracer of the leaked object.
      * @param leakedObjectDescription A human-readable description of the leaked object, that can be used for logging.
      */
     public static void reportLeak(LifecycleTracer tracer, String leakedObjectDescription) {
