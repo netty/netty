@@ -68,7 +68,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             var runnable = new CreateAndUseBuffers(allocator, hint, closeBuffer);
             var thread = new Thread(runnable);
             thread.start();
-            gcEvents.acquire(); // Wait for a GC event to happen.
+            acquire(gcEvents); // Wait for a GC event to happen.
             thread.interrupt();
             thread.join();
             assertThat(counter.get()).as("Unexpected leak in " + testInfo.getDisplayName()).isZero();
@@ -116,7 +116,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             var runnable = new CreateAndUseBuffers(allocator, hint, sendThenClose);
             var thread = new Thread(runnable);
             thread.start();
-            gcEvents.acquire(); // Wait for a GC event to happen.
+            acquire(gcEvents); // Wait for a GC event to happen.
             thread.interrupt();
             thread.join();
             assertThat(counter.get()).as("Unexpected leak in " + testInfo.getDisplayName()).isZero();
@@ -238,6 +238,12 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             System.gc();
         }
         return info;
+    }
+
+    private static void acquire(Semaphore gcEvents) throws InterruptedException {
+        while (!gcEvents.tryAcquire(1, TimeUnit.SECONDS)) {
+            System.gc();
+        }
     }
 
     private static class CreateAndUseBuffers implements Runnable {
