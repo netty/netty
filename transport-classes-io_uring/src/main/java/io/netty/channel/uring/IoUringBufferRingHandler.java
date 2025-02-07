@@ -34,23 +34,23 @@ public interface IoUringBufferRingHandler {
      * @param guessedSize       the estimated size of the next read.
      * @return                  the group to use if non-negative. If negative no group will be used at all.
      */
-    short select(Channel channel, int guessedSize);
+    short selectBufferRing(Channel channel, int guessedSize);
 
     /**
-     * Called when a buffer ring was exhausted.
+     * Called when a buffer ring was exhausted and so all buffers in it are currently in use.
      *
      * @param id    the id of the buffer ring.
      */
-    default void exhausted(short id) {
+    default void notifyAllBuffersUsed(short id) {
         // Do nothing by default.
     }
 
     /**
-     * Called when a buffer ring has more space again (after it was exhausted)
+     * Called when a buffer ring has more buffers ready to use again (after it was exhausted)
      *
      * @param id    the id of the buffer ring.
      */
-    default void moreSpace(short id) {
+    default void notifyMoreBuffersReady(short id) {
         // Do nothing by default.
     }
 }

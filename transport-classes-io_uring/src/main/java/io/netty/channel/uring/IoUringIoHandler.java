@@ -218,7 +218,7 @@ public final class IoUringIoHandler implements IoHandler {
         if (idHandler == null) {
             return null;
         }
-        short bgId = idHandler.select(channel, guessedSize);
+        short bgId = idHandler.selectBufferRing(channel, guessedSize);
         if (bgId < 0) {
             return null;
         }
