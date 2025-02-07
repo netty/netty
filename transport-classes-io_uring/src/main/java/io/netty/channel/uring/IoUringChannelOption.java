@@ -44,14 +44,15 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Integer> MAX_DATAGRAM_PAYLOAD_SIZE = valueOf("MAX_DATAGRAM_PAYLOAD_SIZE");
 
     /**
-     * The buffer group id to use when submitting recv / read / readv {@link IoUringIoOps}.
-     * If it is set to {@code -1}, then this function will be disabled.
+     * If {@param true} try to use a buffer ring when submitting recv / read / readv {@link IoUringIoOps}.
+     * If it is set to {@code false}, no buffer ring will be used.
+     *
      * <p>
      * Check
      * <a href="https://man7.org/linux/man-pages/man3/io_uring_setup_buf_ring.3.html"> man io_uring_setup_buf_ring</a>
-     * an this <a href="https://lwn.net/Articles/815491/">LWN article</a> for more details.
+     * and this <a href="https://lwn.net/Articles/815491/">LWN article</a> for more details.
      */
-    public static final ChannelOption<Short> IO_URING_BUFFER_GROUP_ID =
-            ChannelOption.valueOf(IoUringChannelOption.class, "IOURING_BUFFER_GROUP_ID");
+    public static final ChannelOption<Boolean> USE_IO_URING_BUFFER_GROUP =
+            ChannelOption.valueOf(IoUringChannelOption.class, "USE_IO_URING_BUFFER_GROUP");
 
 }

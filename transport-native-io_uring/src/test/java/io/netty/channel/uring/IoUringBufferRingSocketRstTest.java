@@ -58,7 +58,7 @@ public class IoUringBufferRingSocketRstTest extends SocketRstTest {
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
-        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        sb.childOption(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true);
+        cb.option(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true);
     }
 }

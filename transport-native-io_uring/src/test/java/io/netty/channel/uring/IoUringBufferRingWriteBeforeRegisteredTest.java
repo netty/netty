@@ -40,6 +40,6 @@ public class IoUringBufferRingWriteBeforeRegisteredTest extends WriteBeforeRegis
     @Override
     protected void configure(Bootstrap bootstrap, ByteBufAllocator allocator) {
         super.configure(bootstrap, allocator);
-        bootstrap.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        bootstrap.option(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true);
     }
 }

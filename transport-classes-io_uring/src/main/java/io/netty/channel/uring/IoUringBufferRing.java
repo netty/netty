@@ -77,6 +77,7 @@ final class IoUringBufferRing {
      */
     void markExhausted() {
         hasSpareBuffer = false;
+        source.idHandler.notifyAllBuffersUsed(bufferGroupId);
     }
 
     /**
@@ -178,7 +179,10 @@ final class IoUringBufferRing {
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
         short newTail = (short) (oldTail + count);
         PlatformDependent.putShortOrdered(tailFieldAddress, newTail);
-        hasSpareBuffer = true;
+        if (!hasSpareBuffer) {
+            hasSpareBuffer = true;
+            source.idHandler.notifyMoreBuffersReady(bufferGroupId);
+        }
     }
 
     /**
