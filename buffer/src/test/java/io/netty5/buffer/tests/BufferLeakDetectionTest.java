@@ -34,6 +34,7 @@ import javax.management.NotificationListener;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -41,6 +42,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -88,7 +90,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             runnable = new CreateAndUseBuffers(allocator, hint, leakBuffer);
             thread = new Thread(runnable);
             thread.start();
-            leakInfo = leakQueue.poll(30, TimeUnit.SECONDS);
+            leakInfo = poll(leakQueue);
             thread.interrupt();
             thread.join();
         }
@@ -142,7 +144,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             runnable = new CreateAndUseBuffers(allocator, nonLeakingHint, sendThenLeakBuffer);
             thread = new Thread(runnable);
             thread.start();
-            leakInfo = leakQueue.poll(20, TimeUnit.SECONDS);
+            leakInfo = poll(leakQueue);
             thread.interrupt();
             thread.join();
         }
@@ -175,7 +177,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             runnable = new CreateAndUseBuffers(allocator, hint, sendThenLeakBuffer);
             thread = new Thread(runnable);
             thread.start();
-            leakInfo = leakQueue.poll(20, TimeUnit.SECONDS);
+            leakInfo = poll(leakQueue);
             thread.interrupt();
             thread.join();
         }
@@ -185,7 +187,10 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
     }
 
     private static String makeHint(TestInfo testInfo) {
-        return new String("for test \"" + testInfo.getDisplayName() + '"');
+        return "for test \"" +
+                testInfo.getTestClass().map(Class::getName).orElse("?") + '.' +
+                testInfo.getTestMethod().map(Method::getName).orElse("?") +
+                testInfo.getDisplayName() + '"';
     }
 
     private static AutoCloseable installGcEventListener(Runnable callback) {
@@ -221,6 +226,18 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
                             leak.objectDescription(), hint);
             }
         };
+    }
+
+    private static LeakInfo poll(LinkedBlockingQueue<LeakInfo> leakQueue) throws Exception {
+        LeakInfo info;
+        int seconds = 0;
+        while ((info = leakQueue.poll(1, TimeUnit.SECONDS)) == null) {
+            if (seconds++ > 30) {
+                throw new TimeoutException();
+            }
+            System.gc();
+        }
+        return info;
     }
 
     private static class CreateAndUseBuffers implements Runnable {
@@ -337,7 +354,7 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             boolean interrupted = false;
             do {
                 try {
-                    Thread.sleep(1);
+                    sleep(1);
                 } catch (InterruptedException e) {
                     interrupted = true;
                 }
