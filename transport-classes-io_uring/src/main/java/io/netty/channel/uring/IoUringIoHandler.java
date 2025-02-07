@@ -180,17 +180,6 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    void runInExecutorThread(Runnable runnable) {
-        //if we are in the executor thread we can run the runnable directly
-        if (executor.isExecutorThread(Thread.currentThread())) {
-            // Just directly run.
-            runnable.run();
-        } else {
-            // This will also wakeup the blocked run(...) method if needed.
-            executor.execute(runnable);
-        }
-    }
-
     IoUringBufferRing newBufferRing(IoUringBufferRingConfig bufferRingConfig) throws Errors.NativeIoException {
         int ringFd = ringBuffer.fd();
         short bufferRingSize = bufferRingConfig.bufferRingSize();
@@ -201,17 +190,11 @@ public final class IoUringIoHandler implements IoHandler {
         if (ioUringBufRingAddr < 0) {
             throw Errors.newIOException("ioUringRegisterBuffRing", (int) ioUringBufRingAddr);
         }
-        IoUringBufferRing ioUringBufferRing = new IoUringBufferRing(
+        return new IoUringBufferRing(
                 ringFd, ioUringBufRingAddr,
                 bufferRingSize, bufferGroupId, chunkSize, bufferRingConfig.isIncremental(),
                 this, bufferRingConfig.allocator()
         );
-
-        if (bufferRingConfig.initSize() != 0) {
-            ioUringBufferRing.appendBuffer(bufferRingConfig.initSize());
-        }
-
-        return ioUringBufferRing;
     }
 
     IoUringBufferRing findBufferRing(Channel channel, int guessedSize) {

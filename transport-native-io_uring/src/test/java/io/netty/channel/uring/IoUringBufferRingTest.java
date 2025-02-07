@@ -38,8 +38,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -82,8 +80,7 @@ public class IoUringBufferRingTest {
 
         IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
                 (short) 2, (short) 16,
-                1024, incremental, ByteBufAllocator.DEFAULT,
-                12
+                1024, incremental, ByteBufAllocator.DEFAULT
         );
         ioUringIoHandlerConfiguration.setBufferRingConfig(
                 (ch, size) -> bufferRingConfig.bufferGroupId(), bufferRingConfig, bufferRingConfig1);
@@ -129,9 +126,7 @@ public class IoUringBufferRingTest {
         ByteBuf writeBuffer = Unpooled.directBuffer(randomStringLength);
         ByteBufUtil.writeAscii(writeBuffer, randomString);
         ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement1);
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement2);
         if (!incremental) {
             // Directly after the second read we will see the event as it will be triggered inline when
             // doing the submit.
@@ -140,12 +135,6 @@ public class IoUringBufferRingTest {
         assertEquals(0, eventSyncer.size());
 
         ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        if (incremental) {
-            assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, readBuffer);
-        } else {
-            // We ran out of buffers in the buffer ring
-            assertFalse(readBuffer instanceof IoUringBufferRing.IoUringBufferRingByteBuf);
-        }
         readBuffer.release();
 
         // Now we release the buffer and so put it back into the buffer ring.
@@ -153,18 +142,10 @@ public class IoUringBufferRingTest {
         userspaceIoUringBufferElement2.release();
 
         readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-
-        if (incremental) {
-            assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, readBuffer);
-        } else {
-            // As we already had the next read scheduled we will see one more buffer that was not taken out of the ring
-            assertFalse(readBuffer instanceof IoUringBufferRing.IoUringBufferRingByteBuf);
-        }
         readBuffer.release();
 
         // The next buffer is expected to be provided out of the ring again.
         readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, readBuffer);
         readBuffer.release();
 
         writeBuffer.release();
