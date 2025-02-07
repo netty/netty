@@ -163,14 +163,14 @@ final class IoUringBufferRing {
         ByteBuf byteBuf = buffers[bid];
         if (incremental) {
             if (byteBuf.readerIndex() == 0) {
-                if (more) {
+                if (more && byteBuf.readableBytes() > readableBytes) {
                     byteBuf.retain();
                 }
             } else if (!more) {
                 byteBuf.release();
             }
         }
-        ByteBuf slice = byteBuf.readRetainedSlice(readableBytes);
+        ByteBuf slice = byteBuf.readRetainedSlice(Math.min(readableBytes, byteBuf.readableBytes()));
         return new IoUringBufferRingByteBuf(this, bid, slice);
     }
 

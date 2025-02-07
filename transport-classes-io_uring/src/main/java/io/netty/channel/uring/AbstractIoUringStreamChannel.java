@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -437,9 +438,39 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     if (bufferRing != null) {
                         short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
                         boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
-                        byteBuf = bufferRing.borrowBuffer(bid, res, more);
+
+                        // If IORING_RECVSEND_BUNDLE was used we will need to grab multiple buffers from the ring.
+                        if (IoUring.isIOUringRecvsendBundleSupported()) {
+                            int totalRead = res;
+                            CompositeByteBuf compositeByteBuf = null;
+                            for (;;) {
+                                // If totalRead <= 0 we know this will be the last buffer we borrow out of the ring.
+                                ByteBuf buffer = bufferRing.borrowBuffer(bid, totalRead, more);
+                                totalRead -= buffer.readableBytes();
+
+                                if (totalRead == 0) {
+                                    // We are done
+                                    if (compositeByteBuf == null) {
+                                        byteBuf = buffer;
+                                    } else {
+                                        compositeByteBuf.addComponent(true, buffer);
+                                        byteBuf = compositeByteBuf;
+                                    }
+                                    break;
+                                }
+                                bid++;
+                                if (compositeByteBuf == null) {
+                                    compositeByteBuf = alloc().compositeBuffer();
+                                }
+                                compositeByteBuf.addComponent(true, buffer);
+                            }
+                        } else {
+                            // If totalRead <= 0 we know this will be the last buffer we borrow out of the ring.
+                            byteBuf = bufferRing.borrowBuffer(bid, res, more);
+                        }
+                    } else {
+                        byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     }
-                    byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     allocHandle.lastBytesRead(res);
                 } else {
                     // EOF which we signal with -1.

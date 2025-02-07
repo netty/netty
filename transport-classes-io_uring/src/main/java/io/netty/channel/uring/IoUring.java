@@ -26,6 +26,7 @@ public final class IoUring {
     private static final Throwable UNAVAILABILITY_CAUSE;
     private static final boolean IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED;
     private static final boolean IORING_SPLICE_SUPPORTED;
+    private static final boolean IORING_RECVSEND_BUNDLE_SUPPORTED;
     private static final boolean IORING_ACCEPT_NO_WAIT_SUPPORTED;
     private static final boolean IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     private static final boolean IORING_SETUP_SUBMIT_ALL_SUPPORTED;
@@ -41,6 +42,7 @@ public final class IoUring {
         Throwable cause = null;
         boolean socketNonEmptySupported = false;
         boolean spliceSupported = false;
+        boolean recvsendBundleSupported = false;
         boolean acceptSupportNoWait = false;
         boolean registerIowqWorkersSupported = false;
         boolean submitAllSupported = false;
@@ -64,8 +66,9 @@ public final class IoUring {
                         Native.checkAllIOSupported(ringBuffer.fd());
                         socketNonEmptySupported = Native.isIOUringCqeFSockNonEmptySupported(ringBuffer.fd());
                         spliceSupported = Native.isIOUringSupportSplice(ringBuffer.fd());
+                        recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
-                        acceptSupportNoWait = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
+                        acceptSupportNoWait = recvsendBundleSupported;
                         registerIowqWorkersSupported = Native.isRegisterIOWQWorkerSupported(ringBuffer.fd());
                         submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
                         singleIssuerSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
@@ -103,6 +106,7 @@ public final class IoUring {
                 logger.debug("IoUring support is available (" +
                         "IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED={}, " +
                         "IORING_SPLICE_SUPPORTED={}, " +
+                        "IORING_RECVSEND_BUNDLE_SUPPORTED={}, " +
                         "IORING_ACCEPT_NO_WAIT_SUPPORTED={}, " +
                         "IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED={}, " +
                         "IORING_SETUP_SUBMIT_ALL_SUPPORTED={}, " +
@@ -110,7 +114,7 @@ public final class IoUring {
                         "IORING_SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
                         "IORING_REGISTER_BUFFER_RING_SUPPORTED={}, " +
                         "IOU_PBUF_RING_INC_SUPPORTED={}" +
-                        ")", socketNonEmptySupported, spliceSupported, acceptSupportNoWait,
+                        ")", socketNonEmptySupported, spliceSupported, recvsendBundleSupported, acceptSupportNoWait,
                         registerIowqWorkersSupported, submitAllSupported, singleIssuerSupported,
                         deferTaskrunSupported, registerBufferRingSupported, registerBufferRingIncSupported);
             }
@@ -118,6 +122,7 @@ public final class IoUring {
         UNAVAILABILITY_CAUSE = cause;
         IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED = socketNonEmptySupported;
         IORING_SPLICE_SUPPORTED = spliceSupported;
+        IORING_RECVSEND_BUNDLE_SUPPORTED = recvsendBundleSupported;
         IORING_ACCEPT_NO_WAIT_SUPPORTED = acceptSupportNoWait;
         IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED = registerIowqWorkersSupported;
         IORING_SETUP_SUBMIT_ALL_SUPPORTED = submitAllSupported;
@@ -157,6 +162,10 @@ public final class IoUring {
 
     static boolean isIOUringSpliceSupported() {
         return IORING_SPLICE_SUPPORTED;
+    }
+
+    static boolean isIOUringRecvsendBundleSupported() {
+        return IORING_RECVSEND_BUNDLE_SUPPORTED;
     }
 
     static boolean isIOUringAcceptNoWaitSupported() {
