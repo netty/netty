@@ -356,7 +356,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         private int scheduleReadProviderBuffer(IoUringBufferRing bufferRing, boolean socketIsEmpty) {
             short bgId = bufferRing.bufferGroupId();
             try {
-                int chunkSize = bufferRing.chunkSize();
+                // Let's limit the amount of data that is read by either the recv handle or the chunksize
+                // of the ring, whatever is smaller.
+                int len = Math.min(bufferRing.chunkSize(), Math.max(1, recvBufAllocHandle().guess()));
                 IoRegistration registration = registration();
 
                 if (!bufferRing.isFull()) {
@@ -372,7 +374,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                         Native.IORING_RECVSEND_POLL_FIRST : 0;
                 IoUringIoOps ops = IoUringIoOps.newRecv(
                         fd, flags((byte) Native.IOSQE_BUFFER_SELECT), ioPrio, 0, 0,
-                        chunkSize, nextOpsId(), bgId
+                        len, nextOpsId(), bgId
                 );
                 readId = registration.submit(ops);
                 if (readId == 0) {
