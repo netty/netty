@@ -282,6 +282,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                 useCacheForAllThreads, directMemoryCacheAlignment, true);
     }
 
+    /**
+     * @param useThreadLocal If set to {@code false}, then the params {@code smallCacheSize}, {@code normalCacheSize}
+     *                       and {@code useCacheForAllThreads} will not take effect.
+     */
     public PooledByteBufAllocator(boolean preferDirect, int nHeapArena, int nDirectArena, int pageSize, int maxOrder,
                                   int smallCacheSize, int normalCacheSize, boolean useCacheForAllThreads,
                                   int directMemoryCacheAlignment, boolean useThreadLocal) {

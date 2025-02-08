@@ -62,6 +62,7 @@ final class PoolThreadCache {
     private final FreeOnFinalize freeOnFinalize;
 
     private int allocations;
+    // A special `PoolThreadCache` that is not stored in thread-local.
     static final PoolThreadCache THREAD_CACHE_WITHOUT_THREAD_LOCAL = new PoolThreadCache();
 
     // TODO: Test if adding padding helps under contention
