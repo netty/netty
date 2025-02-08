@@ -104,7 +104,7 @@ final class PoolThreadCache {
         freeOnFinalize = useFinalizer ? new FreeOnFinalize(this) : null;
     }
 
-    /** Creates a special `PoolThreadCache` that is not using thread-local. */
+    /** Creates a special `PoolThreadCache` that is not stored in thread-local. */
     PoolThreadCache() {
         this.freeSweepAllocationThreshold = 0;
         this.heapArena = null;
