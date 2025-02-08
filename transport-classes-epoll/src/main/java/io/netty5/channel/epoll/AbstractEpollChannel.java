@@ -489,6 +489,7 @@ abstract class AbstractEpollChannel<P extends UnixChannel>
     /**
      * Connect to the remote peer
      */
+    @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData)
             throws Exception {
         if (localAddress instanceof InetSocketAddress) {
