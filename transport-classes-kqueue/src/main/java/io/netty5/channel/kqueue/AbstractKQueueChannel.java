@@ -214,6 +214,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
         }
     }
 
+    @Override
     protected final KQueueIoRegistration registration() {
         return (KQueueIoRegistration) super.registration();
     }
@@ -518,6 +519,7 @@ abstract class AbstractKQueueChannel<P extends UnixChannel>
     /**
      * Connect to the remote peer
      */
+    @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initialData)
             throws Exception {
         if (localAddress instanceof InetSocketAddress) {

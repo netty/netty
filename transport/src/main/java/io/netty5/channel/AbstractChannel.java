@@ -135,6 +135,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     /** true if the channel has never been registered, false otherwise */
     private boolean neverRegistered = true;
     private boolean neverActive = true;
+    private boolean flushAwaitingRegister;
 
     private boolean inputClosedSeenErrorOnRead;
 
@@ -485,6 +486,10 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
                     safeSetSuccess(promise);
                     pipeline.fireChannelRegistered();
+                    if (flushAwaitingRegister) {
+                        flushAwaitingRegister = false;
+                        flushTransport();
+                    }
                     // Only fire a channelActive if the channel has never been registered. This prevents firing
                     // multiple channel actives if the channel is deregistered and re-registered.
                     if (isActive()) {
@@ -896,7 +901,8 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
     private void readTransport(ReadBufferAllocator readBufferAllocator) {
         assertEventLoop();
 
-        if (!isActive()) {
+        if (!registered || !isActive()) {
+            // Delay reads until after the channel becomes active and registration completes.
             readBeforeActive = readBufferAllocator;
             return;
         }
@@ -1033,6 +1039,13 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
     private void flushTransport() {
         assertEventLoop();
+        if (!registered) {
+            // If writes and flushes somehow race with channel registration, for instance because handlerAdded runs
+            // before channel registration, then we need the flushes to wait for the registration to complete.
+            // We do this by setting this flag, and then the registration completion lister will call us again.
+            flushAwaitingRegister = true;
+            return;
+        }
 
         ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
         if (outboundBuffer == null) {
@@ -1407,7 +1420,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             // outbound buffer could be null in theory if the channel was closed in the meantime.
             ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
             if (outboundBuffer != null &&
-                    isOptionSupported(ChannelOption.TCP_FASTOPEN_CONNECT) && getOption(TCP_FASTOPEN_CONNECT)) {
+                    isOptionSupported(TCP_FASTOPEN_CONNECT) && getOption(TCP_FASTOPEN_CONNECT)) {
                 outboundBuffer.addFlush();
                 Object current = outboundBuffer.current();
                 if (current instanceof Buffer) {
@@ -1954,8 +1967,7 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
 
         @Override
         protected final void sendOutboundEventTransport(Object event, Promise<Void> promise) {
-            AbstractChannel<?, ?, ?> channel = abstractChannel();
-            channel.sendOutboundEventTransport(event, promise);
+            AbstractChannel.sendOutboundEventTransport(event, promise);
             runAfterTransportOperation();
         }
 
@@ -2311,15 +2323,15 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             this.attemptedBytesWrite = checkPositiveOrZero(attemptedBytesWrite, "attemptedBytesWrite");
             this.actualBytesWrite = actualBytesWrite;
             this.messagesWritten = verifyMessagesWritten(messagesWritten);
-            this.continueWriting = mightContinueWriting ? Boolean.TRUE : Boolean.FALSE;
-            this.writeError = null;
+            continueWriting = mightContinueWriting ? Boolean.TRUE : Boolean.FALSE;
+            writeError = null;
         }
 
         private int verifyMessagesWritten(int messagesWritten) {
             checkPositiveOrZero(messagesWritten, "messagesWritten");
             if (messagesWritten > numFlushedMessages()) {
                 throw new IllegalArgumentException("messagesWritten > size(): " +
-                        messagesWritten + " (expected: " + 0 + "-" + numFlushedMessages() + ")");
+                        messagesWritten + " (expected: " + 0 + '-' + numFlushedMessages() + ')');
             }
             return messagesWritten;
         }
@@ -2339,10 +2351,10 @@ public abstract class AbstractChannel<P extends Channel, L extends SocketAddress
             assertEventLoop();
             checkCompleteAlready();
             this.attemptedBytesWrite = checkPositiveOrZero(attemptedBytesWrite, "attemptedBytesWrite");
-            this.writeError = requireNonNull(cause, "cause");
-            this.actualBytesWrite = 0;
-            this.messagesWritten = 0;
-            this.continueWriting = mightContinueWriting ? Boolean.TRUE : Boolean.FALSE;
+            writeError = requireNonNull(cause, "cause");
+            actualBytesWrite = 0;
+            messagesWritten = 0;
+            continueWriting = mightContinueWriting ? Boolean.TRUE : Boolean.FALSE;
         }
 
         private void checkCompleteAlready() {

@@ -113,18 +113,11 @@ final class CleanerPool {
         protected Cleaner initialValue() {
             if (!EVENT_LOOP_USE_POOL && Thread.currentThread() instanceof FastThreadLocalThread) {
                 // Allocate one dedicated cleaner for the caller event-loop thread
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Creating new cleaner instance.");
-                }
                 return Cleaner.create();
             }
 
             // Return one of the shared cleaners from the shared cleaner pool.
-            Cleaner cleaner = CleanersPool.cleaners[(counter.getAndIncrement() & 0x7F_FF_FF_FF) % POOL_SIZE];
-            if (logger.isDebugEnabled()) {
-                logger.debug("Reusing cleaner {} from the shared pool.", System.identityHashCode(cleaner));
-            }
-            return cleaner;
+            return CleanersPool.cleaners[(counter.getAndIncrement() & 0x7F_FF_FF_FF) % POOL_SIZE];
         }
     }
 

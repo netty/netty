@@ -15,13 +15,13 @@
  */
 package io.netty5.channel;
 
-import io.netty5.buffer.Buffer;
+import io.netty5.channel.local.LocalChannel;
+import io.netty5.channel.local.LocalIoHandler;
 import org.junit.jupiter.api.AutoClose;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -37,71 +37,7 @@ public class DefaultChannelPipelineTailTest {
 
     @BeforeAll
     public static void init() {
-        group = new MultithreadEventLoopGroup(1, () -> new IoHandler() {
-            private final Object lock = new Object();
-            @Override
-            public int run(IoExecutionContext context) {
-                try {
-                    while (context.canBlock()) {
-                        synchronized (lock) {
-                            lock.wait();
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                return 0;
-            }
-
-            @Override
-            public void prepareToDestroy() {
-                // NOOP
-            }
-
-            @Override
-            public void destroy() {
-                // NOOP
-            }
-
-            @Override
-            public IoRegistration register(EventLoop eventLoop, IoHandle handle) {
-                return new IoRegistration() {
-                    @Override
-                    public long submit(IoOps ops) {
-                        return 0;
-                    }
-
-                    @Override
-                    public boolean isValid() {
-                        return false;
-                    }
-
-                    @Override
-                    public void cancel() {
-                        // NOOP.
-                    }
-
-                    @Override
-                    public IoHandler ioHandler() {
-                        return null;
-                    }
-                };
-            }
-
-            @Override
-            public void wakeup(EventLoop eventLoop) {
-                if (!eventLoop.inEventLoop()) {
-                    synchronized (lock) {
-                        lock.notify();
-                    }
-                }
-            }
-
-            @Override
-            public boolean isCompatible(Class<? extends IoHandle> handleType) {
-                return MyChannel.MyIoHandle.class.isAssignableFrom(handleType);
-            }
-        });
+        group = new MultithreadEventLoopGroup(1, LocalIoHandler.newFactory());
     }
 
     @Test
@@ -189,7 +125,7 @@ public class DefaultChannelPipelineTailTest {
         EventLoop loop = group.next();
         MyChannel myChannel = new MyChannel(loop) {
             @Override
-            protected void onUnhandledInboundReadComplete() {
+            protected void onUnhandledInboundChannelReadComplete() {
                 latch.countDown();
             }
         };
@@ -227,7 +163,7 @@ public class DefaultChannelPipelineTailTest {
         EventLoop loop = group.next();
         MyChannel myChannel = new MyChannel(loop) {
             @Override
-            protected void onUnhandledInboundWritabilityChanged() {
+            protected void onUnhandledChannelWritabilityChanged() {
                 latch.countDown();
             }
         };
@@ -240,126 +176,14 @@ public class DefaultChannelPipelineTailTest {
         }
     }
 
-    private abstract static class MyChannel extends AbstractChannel<Channel, SocketAddress, SocketAddress> {
-        private boolean active;
-        private boolean closed;
-        private boolean inputShutdown;
-        private boolean outputShutdown;
-
-        private static final class MyIoHandle implements IoHandle {
-
-            static final MyIoHandle INSTANCE = new MyIoHandle();
-
-            @Override
-            public void handle(IoRegistration registration, IoEvent ioEvent) {
-                // NOOP
-            }
-
-            @Override
-            public void close() {
-                // NOOP
-            }
-        }
-
+    private abstract static class MyChannel extends LocalChannel {
         protected MyChannel(EventLoop eventLoop) {
-            super(null, eventLoop, false, MyIoHandle.class);
-        }
-
-        @Override
-        protected IoHandle ioHandle() {
-            return MyIoHandle.INSTANCE;
+            super(eventLoop);
         }
 
         @Override
         protected DefaultChannelPipeline newChannelPipeline() {
             return new MyChannelPipeline(this);
-        }
-
-        @Override
-        public boolean isOpen() {
-            return !closed;
-        }
-
-        @Override
-        public boolean isActive() {
-            return isOpen() && active;
-        }
-
-        @Override
-        protected SocketAddress localAddress0() {
-            return null;
-        }
-
-        @Override
-        protected SocketAddress remoteAddress0() {
-            return null;
-        }
-
-        @Override
-        protected void doBind(SocketAddress localAddress) throws Exception {
-        }
-
-        @Override
-        protected void doDisconnect() throws Exception {
-        }
-
-        @Override
-        protected void doClose() throws Exception {
-            closed = true;
-        }
-
-        @Override
-        protected void doRead(boolean wasReadPendingAlready) throws Exception {
-        }
-
-        @Override
-        protected boolean doReadNow(ReadSink readSink) {
-            return false;
-        }
-
-        @Override
-        protected void doWriteNow(WriteSink writeHandle) throws Exception {
-            throw new IOException();
-        }
-
-        @Override
-        protected void doShutdown(ChannelShutdownDirection direction) {
-            switch (direction) {
-                case Inbound:
-                    inputShutdown = true;
-                    break;
-                case Outbound:
-                    outputShutdown = true;
-                    break;
-                default:
-                    throw new AssertionError();
-            }
-        }
-
-        @Override
-        public boolean isShutdown(ChannelShutdownDirection direction) {
-            if (!isActive()) {
-                return true;
-            }
-            switch (direction) {
-                case Inbound:
-                    return inputShutdown;
-                case Outbound:
-                    return outputShutdown;
-                default:
-                    throw new AssertionError();
-            }
-        }
-
-        @Override
-        protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Buffer initalData) {
-            active = true;
-            return true;
-        }
-
-        @Override
-        protected boolean doFinishConnect(SocketAddress requestedRemoteAddress) {
-            return true;
         }
 
         protected void onUnhandledInboundChannelActive() {
@@ -374,13 +198,13 @@ public class DefaultChannelPipelineTailTest {
         protected void onUnhandledInboundMessage(Object msg) {
         }
 
-        protected void onUnhandledInboundReadComplete() {
+        protected void onUnhandledInboundChannelReadComplete() {
         }
 
         protected void onUnhandledChannelInboundEvent(Object evt) {
         }
 
-        protected void onUnhandledInboundWritabilityChanged() {
+        protected void onUnhandledChannelWritabilityChanged() {
         }
 
         private class MyChannelPipeline extends DefaultAbstractChannelPipeline {
@@ -411,7 +235,7 @@ public class DefaultChannelPipelineTailTest {
 
             @Override
             protected void onUnhandledInboundChannelReadComplete() {
-                MyChannel.this.onUnhandledInboundReadComplete();
+                MyChannel.this.onUnhandledInboundChannelReadComplete();
             }
 
             @Override
@@ -421,7 +245,7 @@ public class DefaultChannelPipelineTailTest {
 
             @Override
             protected void onUnhandledChannelWritabilityChanged() {
-                MyChannel.this.onUnhandledInboundWritabilityChanged();
+                MyChannel.this.onUnhandledChannelWritabilityChanged();
             }
         }
     }
