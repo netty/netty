@@ -314,8 +314,12 @@ final class SslUtils {
      *                      the given {@link Buffer} is not encrypted at all.
      */
     static int getEncryptedPacketLength(Buffer buffer, int offset, boolean probeSSLv2) {
+        assert offset >= buffer.readerOffset();
+        int remaining = buffer.writerOffset() - offset;
+        if (remaining < SSL_RECORD_HEADER_LENGTH) {
+            return NOT_ENOUGH_DATA;
+        }
         int packetLength = 0;
-
         // SSLv3 or TLS - Check ContentType
         boolean tls;
         switch (buffer.getUnsignedByte(offset)) {
@@ -346,7 +350,7 @@ final class SslUtils {
                     tls = false;
                 }
             } else if (version == DTLS_1_0 || version == DTLS_1_2 || version == DTLS_1_3) {
-                if (buffer.readableBytes() < offset + DTLS_RECORD_HEADER_LENGTH) {
+                if (remaining < DTLS_RECORD_HEADER_LENGTH) {
                     return NOT_ENOUGH_DATA;
                 }
                 // length is the last 2 bytes in the 13 byte header.
@@ -367,7 +371,8 @@ final class SslUtils {
                 packetLength = headerLength == 2 ?
                         (buffer.getShort(offset) & 0x7FFF) + 2 : (buffer.getShort(offset) & 0x3FFF) + 3;
                 if (packetLength <= headerLength) {
-                    return NOT_ENOUGH_DATA;
+                    // If there's no data then consider this package as not encrypted.
+                    return NOT_ENCRYPTED;
                 }
             } else {
                 return NOT_ENCRYPTED;
@@ -400,7 +405,7 @@ final class SslUtils {
         }
 
         // We need to copy 5 bytes into a temporary buffer, so we can parse out the packet length easily.
-        ByteBuffer tmp = ByteBuffer.allocate(5);
+        ByteBuffer tmp = ByteBuffer.allocate(SSL_RECORD_HEADER_LENGTH);
 
         do {
             buffer = buffers[offset++].duplicate();
@@ -408,7 +413,7 @@ final class SslUtils {
                 buffer.limit(buffer.position() + tmp.remaining());
             }
             tmp.put(buffer);
-        } while (tmp.hasRemaining());
+        } while (tmp.hasRemaining() && offset < buffers.length);
 
         // Done, flip the buffer so we can read from it.
         tmp.flip();
@@ -416,8 +421,13 @@ final class SslUtils {
     }
 
     private static int getEncryptedPacketLength(ByteBuffer buffer, boolean probeSSLv2) {
+        int remaining = buffer.remaining();
+        if (remaining < SSL_RECORD_HEADER_LENGTH) {
+            return NOT_ENOUGH_DATA;
+        }
         int packetLength = 0;
         int pos = buffer.position();
+
         // SSLv3 or TLS - Check ContentType
         boolean tls;
         switch (unsignedByte(buffer.get(pos))) {
@@ -461,7 +471,8 @@ final class SslUtils {
                 packetLength = headerLength == 2 ?
                         (shortBE(buffer, pos) & 0x7FFF) + 2 : (shortBE(buffer, pos) & 0x3FFF) + 3;
                 if (packetLength <= headerLength) {
-                    return NOT_ENOUGH_DATA;
+                    // If there's no data then consider this package as not encrypted.
+                    return NOT_ENCRYPTED;
                 }
             } else {
                 return NOT_ENCRYPTED;

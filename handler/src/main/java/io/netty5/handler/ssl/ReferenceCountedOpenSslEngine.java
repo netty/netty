@@ -1148,6 +1148,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                     throw new NotSslRecordException("not an SSL/TLS record");
                 }
 
+                assert packetLength >= 0;
+
                 final int packetLengthDataOnly = packetLength - SSL_RECORD_HEADER_LENGTH;
                 if (packetLengthDataOnly > capacity) {
                     // Not enough space in the destination buffer so signal the caller that the buffer needs to be
