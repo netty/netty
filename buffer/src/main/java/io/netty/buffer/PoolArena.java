@@ -642,7 +642,6 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                         bufferQueue.offer(self);
                     }
                 };
-
             }
         }
 
