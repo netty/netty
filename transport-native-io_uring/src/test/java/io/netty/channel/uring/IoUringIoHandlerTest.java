@@ -35,7 +35,9 @@ public class IoUringIoHandlerTest {
     public void testOptions() {
         IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
         config.setMaxBoundedWorker(2)
-                .setMaxUnboundedWorker(2);
+                .setMaxUnboundedWorker(2)
+                .setRingSize(4)
+                .setCqSize(32);
         IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory(config);
         IoHandler handler = ioHandlerFactory.newHandler(new ThreadAwareExecutor() {
 

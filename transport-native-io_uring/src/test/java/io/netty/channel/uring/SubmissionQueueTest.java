@@ -57,4 +57,31 @@ public class SubmissionQueueTest {
             ringBuffer.close();
         }
     }
+
+    @Test
+    public void testSetUpCqSize() {
+        int cqSize = 8;
+        RingBuffer ringBuffer = Native.createRingBuffer(2, cqSize, Native.IORING_SETUP_CQSIZE);
+        try {
+            assertNotNull(ringBuffer);
+            ringBuffer.enable();
+            assertEquals(cqSize, ringBuffer.ioUringCompletionQueue().ringEntries);
+
+            int count = cqSize;
+
+            while (count > 0) {
+                assertThat(ringBuffer.ioUringSubmissionQueue().addNop((byte) 0, 1)).isNotZero();
+                count--;
+                if (ringBuffer.ioUringSubmissionQueue().remaining() == 0) {
+                    ringBuffer.ioUringSubmissionQueue().submitAndWait();
+                }
+            }
+
+            ringBuffer.ioUringSubmissionQueue().submit();
+            assertEquals(cqSize, ringBuffer.ioUringCompletionQueue().count());
+        } finally {
+            ringBuffer.close();
+        }
+    }
+
 }

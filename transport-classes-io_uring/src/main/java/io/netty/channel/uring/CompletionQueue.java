@@ -41,8 +41,8 @@ final class CompletionQueue {
     final int ringSize;
     final long ringAddress;
     final int ringFd;
+    final int ringEntries;
 
-    private final int ringEntries;
     private final int ringMask;
     private int ringHead;
 

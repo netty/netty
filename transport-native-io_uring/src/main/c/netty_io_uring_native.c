@@ -238,6 +238,10 @@ static jboolean netty_io_uring_setup_supports_flags(JNIEnv *env, jclass clazz, j
     memset(&p, 0, sizeof(p));
     p.flags = (__u32) flags;
 
+    if (flags & IORING_SETUP_CQSIZE) {
+        p.cq_entries = (__u32) 4;
+    }
+
     // Just try to create the ring and if it works we know the flags are supported.
     int ring_fd = sys_io_uring_setup((int) 1, &p);
     if (ring_fd < 0) {
@@ -279,11 +283,15 @@ done:
 }
 
 
-static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, jint setupFlags) {
+static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, jint cqSize, jint setupFlags) {
     struct io_uring_params p;
     memset(&p, 0, sizeof(p));
 
     p.flags = (__u32) setupFlags;
+
+    if (setupFlags & IORING_SETUP_CQSIZE) {
+        p.cq_entries = (__u32) cqSize;
+    }
 
     jlongArray array = (*env)->NewLongArray(env, 21);
     if (array == NULL) {
@@ -727,7 +735,7 @@ static const jint statically_referenced_fixed_method_table_size = sizeof(statica
 
 static const JNINativeMethod method_table[] = {
     {"ioUringSetupSupportsFlags", "(I)Z", (void *) netty_io_uring_setup_supports_flags },
-    {"ioUringSetup", "(II)[J", (void *) netty_io_uring_setup},
+    {"ioUringSetup", "(III)[J", (void *) netty_io_uring_setup},
     {"ioUringRegisterIoWqMaxWorkers","(III)I", (void*) netty_io_uring_register_iowq_max_workers },
     {"ioUringRegisterEnableRings","(I)I", (void*) netty_io_uring_register_enable_rings },
     {"ioUringRegisterRingFds","(I)I", (void*) netty_io_uring_register_ring_fds },

@@ -68,7 +68,10 @@ import java.util.Set;
  */
 
 public final class IoUringIoHandlerConfig {
+    private static final int DISABLE_SETUP_CQ_SIZE = -1;
+
     private int ringSize = Native.DEFAULT_RING_SIZE;
+    private int cqSize = DISABLE_SETUP_CQ_SIZE;
 
     private int maxBoundedWorker;
 
@@ -83,6 +86,14 @@ public final class IoUringIoHandlerConfig {
      */
     public int getRingSize() {
         return ringSize;
+    }
+
+    /**
+     * Return the size of the io_uring cqe.
+     * @return the cq size of the io_uring.
+     */
+    public int getCqSize() {
+        return cqSize;
     }
 
     /**
@@ -109,6 +120,29 @@ public final class IoUringIoHandlerConfig {
     public IoUringIoHandlerConfig setRingSize(int ringSize) {
         this.ringSize = ObjectUtil.checkPositive(ringSize, "ringSize");
         return this;
+    }
+
+    /**
+     * Set the size of the io_uring cqe.
+     * @param cqSize the size of the io_uring cqe.
+     * @throws IllegalArgumentException if cqSize is less than ringSize, or not a power of 2
+     * @return reference to this, so the API can be used fluently
+     */
+    public IoUringIoHandlerConfig setCqSize(int cqSize) {
+        ObjectUtil.checkPositive(cqSize, "cqSize");
+        this.cqSize = checkCqSize(cqSize);
+        return this;
+    }
+
+    int checkCqSize(int cqSize) {
+        if (cqSize < ringSize) {
+            throw new IllegalArgumentException("cqSize must be greater than or equal to ringSize");
+        }
+        boolean isPowerOfTwo = (cqSize & (cqSize - 1)) == 0;
+        if (!isPowerOfTwo) {
+            throw new IllegalArgumentException("cqSize: " + cqSize + " (expected: power of 2)");
+        }
+        return cqSize;
     }
 
     /**
@@ -165,6 +199,10 @@ public final class IoUringIoHandlerConfig {
 
     boolean needRegisterIowqMaxWorker() {
         return maxBoundedWorker > 0 || maxUnboundedWorker > 0;
+    }
+
+    boolean needSetupCqeSize() {
+        return cqSize != DISABLE_SETUP_CQ_SIZE;
     }
 
     /**
