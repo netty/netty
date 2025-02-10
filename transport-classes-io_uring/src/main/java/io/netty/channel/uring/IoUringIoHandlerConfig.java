@@ -138,7 +138,8 @@ public final class IoUringIoHandlerConfig {
         if (cqSize < ringSize) {
             throw new IllegalArgumentException("cqSize must be greater than or equal to ringSize");
         }
-        boolean isPowerOfTwo = (cqSize & (cqSize - 1)) == 0;
+
+        boolean isPowerOfTwo = Integer.bitCount(cqSize) == 1;
         if (!isPowerOfTwo) {
             throw new IllegalArgumentException("cqSize: " + cqSize + " (expected: power of 2)");
         }
