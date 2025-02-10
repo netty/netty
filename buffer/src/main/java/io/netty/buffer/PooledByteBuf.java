@@ -18,6 +18,7 @@ package io.netty.buffer;
 
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.internal.ObjectPool.Handle;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -44,7 +45,7 @@ abstract class PooledByteBuf<T> extends AbstractReferenceCountedByteBuf {
     @SuppressWarnings("unchecked")
     protected PooledByteBuf(Handle<? extends PooledByteBuf<T>> recyclerHandle, int maxCapacity) {
         super(maxCapacity);
-        this.recyclerHandle = (Handle<PooledByteBuf<T>>) recyclerHandle;
+        this.recyclerHandle = ObjectUtil.checkNotNull((Handle<PooledByteBuf<T>>) recyclerHandle, "recyclerHandle");
     }
 
     void init(PoolChunk<T> chunk, ByteBuffer nioBuffer,
