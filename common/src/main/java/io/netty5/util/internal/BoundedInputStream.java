@@ -40,11 +40,9 @@ public final class BoundedInputStream extends FilterInputStream {
         checkMaxBytesRead();
 
         int b = super.read();
-        if (b > 0) {
+        if (b != -1) {
             numRead++;
         }
-
-        checkMaxBytesRead();
         return b;
     }
 
@@ -57,11 +55,9 @@ public final class BoundedInputStream extends FilterInputStream {
 
         int b = super.read(buf, off, num);
 
-        if (b > 0) {
+        if (b != -1) {
             numRead += b;
         }
-
-        checkMaxBytesRead();
         return b;
     }
 
