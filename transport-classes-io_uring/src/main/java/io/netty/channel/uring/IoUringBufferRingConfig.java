@@ -31,7 +31,6 @@ public final class IoUringBufferRingConfig {
     private final int chunkSize;
     private final boolean incremental;
     private final ByteBufAllocator allocator;
-    private final int initSize;
 
     /**
      * Create a new configuration.
@@ -43,7 +42,7 @@ public final class IoUringBufferRingConfig {
      * @param allocator         the {@link ByteBufAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
      */
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize, ByteBufAllocator allocator) {
-        this(bgId, bufferRingSize, chunkSize, allocator, 0);
+        this(bgId, bufferRingSize, chunkSize, IoUring.isRegisterBufferRingIncSupported(), allocator);
     }
 
     /**
@@ -58,37 +57,6 @@ public final class IoUringBufferRingConfig {
      */
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize, boolean incremental,
                                    ByteBufAllocator allocator) {
-        this(bgId, bufferRingSize, chunkSize, incremental, allocator, 0);
-    }
-
-    /**
-     * Create a new configuration.
-     *
-     * @param bgId              the buffer group id to use (must be non-negative).
-     * @param bufferRingSize    the size of the ring
-     * @param chunkSize         the chunk size of each {@link io.netty.buffer.ByteBuf} that is allocated out of the
-     *                          {@link ByteBufAllocator} to fill the ring.
-     * @param allocator         the {@link ByteBufAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
-     * @param initSize          the number of buffers that are created during initialization.
-     */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize,
-                                   ByteBufAllocator allocator, int initSize) {
-        this(bgId, bufferRingSize, chunkSize, IoUring.isRegisterBufferRingIncSupported(), allocator, initSize);
-    }
-
-    /**
-     * Create a new configuration.
-     *
-     * @param bgId              the buffer group id to use (must be non-negative).
-     * @param bufferRingSize    the size of the ring
-     * @param chunkSize         the chunk size of each {@link io.netty.buffer.ByteBuf} that is allocated out of the
-     *                          {@link ByteBufAllocator} to fill the ring.
-     * @param incremental       {@code true} if the buffer ring is using incremental buffer consumption.
-     * @param allocator         the {@link ByteBufAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
-     * @param initSize          the number of buffers that are created during initialization.
-     */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize, boolean incremental,
-                                   ByteBufAllocator allocator, int initSize) {
         this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
         this.chunkSize = ObjectUtil.checkPositive(chunkSize, "chunkSize");
@@ -97,7 +65,6 @@ public final class IoUringBufferRingConfig {
         }
         this.incremental = incremental;
         this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
-        this.initSize = checkInitSize(initSize, bufferRingSize);
     }
 
     /**
@@ -137,15 +104,6 @@ public final class IoUringBufferRingConfig {
         return allocator;
     }
 
-    /**
-     * Returns the number of buffers that are created during initialization.
-     *
-     * @return  init size.
-     */
-    public int initSize() {
-        return initSize;
-    }
-
     public boolean isIncremental() {
         return incremental;
     }
@@ -160,16 +118,6 @@ public final class IoUringBufferRingConfig {
             throw new IllegalArgumentException("bufferRingSize: " + bufferRingSize + " (expected: power of 2)");
         }
         return bufferRingSize;
-    }
-
-    private static int checkInitSize(int initSize, short bufferRingSize) {
-        ObjectUtil.checkPositiveOrZero(initSize, "initSize");
-        if (initSize > bufferRingSize) {
-            throw new IllegalArgumentException(
-                    "initSize: " + initSize + " (expected: <= bufferRingSize: " + bufferRingSize + ')'
-            );
-        }
-        return initSize;
     }
 
     @Override

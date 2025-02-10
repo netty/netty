@@ -301,8 +301,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             if (channelConfig.getUseIoUringBufferGroup() && IoUring.isRegisterBufferRingSupported() && first) {
                 IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(
                         AbstractIoUringStreamChannel.this, recvBufAllocHandle().guess());
-                if (ioUringBufferRing != null &&
-                        (ioUringBufferRing.hasSpareBuffer() || !ioUringBufferRing.isFull())) {
+                if (ioUringBufferRing != null && ioUringBufferRing.hasSpareBuffer()) {
                     return scheduleReadProviderBuffer(ioUringBufferRing, socketIsEmpty);
                 }
             }
@@ -360,10 +359,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 // of the ring, whatever is smaller.
                 int len = Math.min(bufferRing.chunkSize(), Math.max(1, recvBufAllocHandle().guess()));
                 IoRegistration registration = registration();
-
-                if (!bufferRing.isFull()) {
-                    bufferRing.appendBuffer(1);
-                }
 
                 int fd = fd().intValue();
 
@@ -439,9 +434,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     if (bufferRing != null) {
                         short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
                         boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
-                        byteBuf = bufferRing.borrowBuffer(bid, res, more);
+                        byteBuf = bufferRing.useBuffer(bid, res, more);
+                    } else {
+                        byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     }
-                    byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     allocHandle.lastBytesRead(res);
                 } else {
                     // EOF which we signal with -1.
