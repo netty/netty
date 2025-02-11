@@ -20,6 +20,8 @@ import io.netty.channel.IoHandlerFactory;
 import io.netty.util.concurrent.ThreadAwareExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -33,6 +35,31 @@ public class IoUringIoHandlerTest {
 
     @Test
     public void testOptions() {
+        IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
+        config.setMaxBoundedWorker(2)
+                .setMaxUnboundedWorker(2)
+                .setRingSize(4);
+        IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory(config);
+        IoHandler handler = ioHandlerFactory.newHandler(new ThreadAwareExecutor() {
+
+            @Override
+            public boolean isExecutorThread(Thread thread) {
+                return false;
+            }
+
+            @Override
+            public void execute(Runnable command) {
+                command.run();
+            }
+        });
+        handler.initialize();
+        handler.destroy();
+    }
+
+
+    @Test
+    @DisabledIf("setUpCQSizeUnavailable")
+    public void testSetCqSizeOptions() {
         IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
         config.setMaxBoundedWorker(2)
                 .setMaxUnboundedWorker(2)
@@ -53,5 +80,9 @@ public class IoUringIoHandlerTest {
         });
         handler.initialize();
         handler.destroy();
+    }
+
+    private static boolean setUpCQSizeUnavailable() {
+        return !IoUring.isIOUringSetupCqeSizeSupported();
     }
 }

@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -59,6 +60,7 @@ public class SubmissionQueueTest {
     }
 
     @Test
+    @DisabledIf("setUpCQSizeUnavailable")
     public void testSetUpCqSize() {
         int cqSize = 8;
         RingBuffer ringBuffer = Native.createRingBuffer(2, cqSize, Native.IORING_SETUP_CQSIZE);
@@ -84,4 +86,7 @@ public class SubmissionQueueTest {
         }
     }
 
+    private static boolean setUpCQSizeUnavailable() {
+        return !IoUring.isIOUringSetupCqeSizeSupported();
+    }
 }
