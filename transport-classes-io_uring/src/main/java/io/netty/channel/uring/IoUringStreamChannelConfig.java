@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.Map;
 
@@ -70,7 +71,7 @@ abstract class IoUringStreamChannelConfig extends DefaultChannelConfig {
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(
-                super.getOptions(), IoUringChannelOption.USE_IO_URING_BUFFER_GROUP
+                super.getOptions(), IoUringChannelOption.USE_IO_URING_BUFFER_GROUP,
                 IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD
         );
     }
