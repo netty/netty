@@ -204,6 +204,7 @@ final class Native {
     static final byte IORING_OP_BIND = 56;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
 
+    static final int IORING_SETUP_CQSIZE = 1 << 3;
     static final int IORING_SETUP_R_DISABLED = 1 << 6;
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
@@ -326,8 +327,13 @@ final class Native {
     }
 
     static RingBuffer createRingBuffer(int ringSize, int setupFlags) {
+        return createRingBuffer(ringSize, ringSize * 2, setupFlags);
+    }
+
+    static RingBuffer createRingBuffer(int ringSize, int cqeSize, int setupFlags) {
         ObjectUtil.checkPositive(ringSize, "ringSize");
-        long[] values = ioUringSetup(ringSize, setupFlags);
+        ObjectUtil.checkPositive(cqeSize, "cqeSize");
+        long[] values = ioUringSetup(ringSize, cqeSize, setupFlags);
         assert values.length == 21;
         CompletionQueue completionQueue = new CompletionQueue(
                 values[0],
@@ -445,7 +451,7 @@ final class Native {
 
     static native boolean ioUringSetupSupportsFlags(int setupFlags);
     private static native boolean ioUringProbe(int ringFd, int[] ios);
-    private static native long[] ioUringSetup(int entries, int setupFlags);
+    private static native long[] ioUringSetup(int entries, int cqeSize, int setupFlags);
 
     static native int ioUringRegisterIoWqMaxWorkers(int ringFd, int maxBoundedValue, int maxUnboundedValue);
     static native int ioUringRegisterEnableRings(int ringFd);
