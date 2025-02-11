@@ -56,7 +56,6 @@ public class IoUringIoHandlerTest {
         handler.destroy();
     }
 
-
     @Test
     @DisabledIf("setUpCQSizeUnavailable")
     public void testSetCqSizeOptions() {
