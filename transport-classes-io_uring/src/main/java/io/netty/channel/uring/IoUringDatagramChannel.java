@@ -383,6 +383,8 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
         @Override
         protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
+            assert outstanding != -1 : "multi-shot not implemented yet";
+
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             final ChannelPipeline pipeline = pipeline();
             ByteBuf byteBuf = this.readBuffer;

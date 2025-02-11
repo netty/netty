@@ -202,8 +202,8 @@ final class Native {
     static final byte IORING_OP_FIXED_FD_INSTALL = 54;
     static final byte IORING_OP_FTRUNCATE = 55;
     static final byte IORING_OP_BIND = 56;
+    static final byte IORING_CQE_F_MORE = 1 << 1;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
-
     static final int IORING_SETUP_CQSIZE = 1 << 3;
     static final int IORING_SETUP_R_DISABLED = 1 << 6;
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
@@ -213,8 +213,10 @@ final class Native {
     static final int IORING_CQE_F_BUF_MORE = 1 << 4;
 
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
+    static final short IORING_ACCEPT_MULTISHOT = 1 << 0;
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;
     static final short IORING_ACCEPT_POLL_FIRST = 1 << 2;
+
     static final int IORING_FEAT_RECVSEND_BUNDLE = 1 << 14;
     static final int SPLICE_F_MOVE = 1;
 
@@ -365,6 +367,11 @@ final class Native {
             throw new UnsupportedOperationException("Not all operations are supported: "
                     + Arrays.toString(REQUIRED_IORING_OPS));
         }
+    }
+
+    static boolean isIOUringAcceptMultishotSupported(int ringFd) {
+        // IORING_OP_SOCKET was added in the same release (5.19);
+        return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
     }
 
     static boolean isIOUringCqeFSockNonEmptySupported(int ringFd) {
