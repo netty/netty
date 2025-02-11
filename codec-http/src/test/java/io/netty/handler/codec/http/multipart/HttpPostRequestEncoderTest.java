@@ -18,8 +18,8 @@ package io.netty.handler.codec.http.multipart;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
@@ -450,15 +450,9 @@ public class HttpPostRequestEncoderTest {
     public void testEncodeChunkedContent() throws Exception {
         HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
         HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(req, false);
-
-        int length = 8077 + 8096;
-        char[] array = new char[length];
-        Arrays.fill(array, 'a');
-        String longText = new String(array);
-
-        encoder.addBodyAttribute("data", longText);
+        encoder.addBodyAttribute("data", largeValue("data", 3));
+        encoder.addBodyAttribute("data", largeValue("data", 4));
         encoder.addBodyAttribute("moreData", "abcd");
-
         assertNotNull(encoder.finalizeRequest());
 
         while (!encoder.isEndOfInput()) {
@@ -467,5 +461,12 @@ public class HttpPostRequestEncoderTest {
 
         assertTrue(encoder.isEndOfInput());
         encoder.cleanFiles();
+    }
+
+    private String largeValue(String key, int multipleChunks) {
+        final int length = HttpPostBodyUtil.chunkSize * multipleChunks - key.length() - 2; // 2 is '=' and '&'
+        final char[] array = new char[length];
+        Arrays.fill(array, 'a');
+        return new String(array);
     }
 }

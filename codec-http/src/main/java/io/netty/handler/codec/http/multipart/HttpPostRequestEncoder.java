@@ -1009,7 +1009,8 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         }
 
         // end for current InterfaceHttpData, need more data
-        if (currentBuffer.readableBytes() < HttpPostBodyUtil.chunkSize) {
+        final int delimiterSize = delimiter != null ? delimiter.readableBytes() : 0;
+        if (currentBuffer.readableBytes() - delimiterSize < HttpPostBodyUtil.chunkSize) {
             currentData = null;
             isKey = true;
             return null;
