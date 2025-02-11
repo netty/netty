@@ -211,6 +211,7 @@ final class Native {
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
     static final int IORING_CQE_BUFFER_SHIFT = 16;
+    static final int IORING_CQE_F_BUF_MORE = 1 << 4;
 
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;
@@ -218,6 +219,7 @@ final class Native {
     static final int IORING_FEAT_RECVSEND_BUNDLE = 1 << 14;
     static final int SPLICE_F_MOVE = 1;
 
+    static final int IOU_PBUF_RING_INC = 2;
     static String opToStr(byte op) {
         switch (op) {
             case IORING_OP_NOP: return "NOP";
@@ -391,10 +393,12 @@ final class Native {
         return false;
     }
 
-    static boolean isRegisterBufferRingSupported(int ringFd) {
-        long result = ioUringRegisterBuffRing(ringFd, 2, (short) 1, 0);
+    static boolean isRegisterBufferRingSupported(int ringFd, int flags) {
+        int entries = 2;
+        short bgid = 1;
+        long result = ioUringRegisterBuffRing(ringFd, entries, bgid, flags);
         if (result >= 0) {
-            ioUringUnRegisterBufRing(ringFd, result, 2, 1);
+            ioUringUnRegisterBufRing(ringFd, result, entries, bgid);
             return true;
         }
         // This is not supported and so will return -EINVAL

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -208,7 +209,7 @@ public class QueryStringDecoderTest {
                 // source file, we directly use the UTF-8 encoding so as to
                 // not rely on the platform's default encoding (not portable).
                 new byte[] {'C', 'a', 'f', 'f', (byte) 0xC3, (byte) 0xA9},
-                "UTF-8");
+                StandardCharsets.UTF_8);
         final String[] tests = {
             // Encoded   ->   Decoded or error message substring
             "",               "",

@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.Channel;
 import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
@@ -35,6 +36,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -80,6 +82,7 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final CompletionBuffer completionBuffer;
     private final ThreadAwareExecutor executor;
+    final IoUringBufferRingHandler idHandler;
 
     IoUringIoHandler(ThreadAwareExecutor executor, IoUringIoHandlerConfig config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
@@ -99,8 +102,9 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         registeredIoUringBufferRing = new IntObjectHashMap<>();
-        List<IoUringBufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
-        if (!bufferRingConfigs.isEmpty()) {
+        idHandler = config.getBufferRingHandler();
+        Collection<IoUringBufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
+        if (bufferRingConfigs != null && !bufferRingConfigs.isEmpty()) {
             if (!IoUring.isRegisterBufferRingSupported()) {
                 // Close ringBuffer before throwing to ensure we release all memory on failure.
                 ringBuffer.close();
@@ -176,40 +180,31 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    void runInExecutorThread(Runnable runnable) {
-        //if we are in the executor thread we can run the runnable directly
-        if (executor.isExecutorThread(Thread.currentThread())) {
-            // Just directly run.
-            runnable.run();
-        } else {
-            // This will also wakeup the blocked run(...) method if needed.
-            executor.execute(runnable);
-        }
-    }
-
     IoUringBufferRing newBufferRing(IoUringBufferRingConfig bufferRingConfig) throws Errors.NativeIoException {
         int ringFd = ringBuffer.fd();
         short bufferRingSize = bufferRingConfig.bufferRingSize();
         short bufferGroupId = bufferRingConfig.bufferGroupId();
         int chunkSize = bufferRingConfig.chunkSize();
-        long ioUringBufRingAddr = Native.ioUringRegisterBuffRing(ringFd, bufferRingSize, bufferGroupId, 0);
+        int flags = bufferRingConfig.isIncremental() ? Native.IOU_PBUF_RING_INC : 0;
+        long ioUringBufRingAddr = Native.ioUringRegisterBuffRing(ringFd, bufferRingSize, bufferGroupId, flags);
         if (ioUringBufRingAddr < 0) {
             throw Errors.newIOException("ioUringRegisterBuffRing", (int) ioUringBufRingAddr);
         }
-        IoUringBufferRing ioUringBufferRing = new IoUringBufferRing(
+        return new IoUringBufferRing(
                 ringFd, ioUringBufRingAddr,
-                bufferRingSize, bufferGroupId, chunkSize,
+                bufferRingSize, bufferGroupId, chunkSize, bufferRingConfig.isIncremental(),
                 this, bufferRingConfig.allocator()
         );
-
-        if (bufferRingConfig.initSize() != 0) {
-            ioUringBufferRing.appendBuffer(bufferRingConfig.initSize());
-        }
-
-        return ioUringBufferRing;
     }
 
-    IoUringBufferRing findBufferRing(short bgId) {
+    IoUringBufferRing findBufferRing(Channel channel, int guessedSize) {
+        if (idHandler == null) {
+            return null;
+        }
+        short bgId = idHandler.selectBufferRing(channel, guessedSize);
+        if (bgId < 0) {
+            return null;
+        }
         IoUringBufferRing cached = registeredIoUringBufferRing.get(bgId);
         if (cached != null) {
             return cached;

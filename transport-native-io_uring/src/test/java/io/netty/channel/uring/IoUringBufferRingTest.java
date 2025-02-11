@@ -29,6 +29,8 @@ import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -36,8 +38,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -67,20 +67,23 @@ public class IoUringBufferRingTest {
         }
     }
 
-    @Test
-    public void testProviderBufferRead() throws InterruptedException {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void testProviderBufferRead(boolean incremental) throws InterruptedException {
+        if (incremental) {
+            assumeTrue(IoUring.isRegisterBufferRingIncSupported());
+        }
         final BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
-                (short) 1, (short) 2, 1024, ByteBufAllocator.DEFAULT);
-        ioUringIoHandlerConfiguration.addBufferRingConfig(bufferRingConfig);
+                (short) 1, (short) 2, 1024, incremental, ByteBufAllocator.DEFAULT);
 
         IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
                 (short) 2, (short) 16,
-                1024, ByteBufAllocator.DEFAULT,
-                12
+                1024, incremental, ByteBufAllocator.DEFAULT
         );
-        ioUringIoHandlerConfiguration.addBufferRingConfig(bufferRingConfig1);
+        ioUringIoHandlerConfiguration.setBufferRingConfig(
+                (ch, size) -> bufferRingConfig.bufferGroupId(), bufferRingConfig, bufferRingConfig1);
 
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1,
                 IoUringIoHandler.newFactory(ioUringIoHandlerConfiguration)
@@ -107,7 +110,7 @@ public class IoUringBufferRingTest {
                         }
                     }
                 })
-                .childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, bufferRingConfig.bufferGroupId())
+                .childOption(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true)
                 .bind(NetUtil.LOCALHOST, 0)
                 .syncUninterruptibly().channel();
 
@@ -123,30 +126,26 @@ public class IoUringBufferRingTest {
         ByteBuf writeBuffer = Unpooled.directBuffer(randomStringLength);
         ByteBufUtil.writeAscii(writeBuffer, randomString);
         ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement1);
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement2);
-        // Directly after the second read we will see the event as it will be triggered inline when doing the submit.
-        assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take().bufferGroupId());
+        if (!incremental) {
+            // Directly after the second read we will see the event as it will be triggered inline when
+            // doing the submit.
+            assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take().bufferGroupId());
+        }
         assertEquals(0, eventSyncer.size());
 
-        // We ran out of buffers in the buffer ring
         ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertFalse(readBuffer instanceof IoUringBufferRing.IoUringBufferRingByteBuf);
         readBuffer.release();
 
         // Now we release the buffer and so put it back into the buffer ring.
         userspaceIoUringBufferElement1.release();
         userspaceIoUringBufferElement2.release();
 
-        // As we already had the next read scheduled we will see one more buffer that was not taken out of the ring
         readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertFalse(readBuffer instanceof IoUringBufferRing.IoUringBufferRingByteBuf);
         readBuffer.release();
 
         // The next buffer is expected to be provided out of the ring again.
         readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, readBuffer);
         readBuffer.release();
 
         writeBuffer.release();

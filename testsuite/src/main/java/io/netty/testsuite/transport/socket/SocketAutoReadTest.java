@@ -67,7 +67,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
                     .childOption(ChannelOption.AUTO_READ, true)
                     // We want to ensure that we attempt multiple individual read operations per read loop so we can
                     // test the auto read feature being turned off when data is first read.
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
+                    .childOption(ChannelOption.RECVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
                     .childHandler(serverInitializer);
 
             serverChannel = sb.bind().syncUninterruptibly().channel();
@@ -75,7 +75,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
             cb.option(ChannelOption.AUTO_READ, true)
                     // We want to ensure that we attempt multiple individual read operations per read loop so we can
                     // test the auto read feature being turned off when data is first read.
-                    .option(ChannelOption.RCVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
+                    .option(ChannelOption.RECVBUF_ALLOCATOR, new TestRecvByteBufAllocator())
                     .handler(clientInitializer);
 
             clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();

@@ -18,6 +18,8 @@ package io.netty.channel.uring;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 /**
  * Configuration class for an {@link IoUringBufferRing}.
  * It will configure the buffer ring size, buffer group id and the chunk size.
@@ -27,8 +29,8 @@ public final class IoUringBufferRingConfig {
     private final short bgId;
     private final short bufferRingSize;
     private final int chunkSize;
+    private final boolean incremental;
     private final ByteBufAllocator allocator;
-    private final int initSize;
 
     /**
      * Create a new configuration.
@@ -40,7 +42,7 @@ public final class IoUringBufferRingConfig {
      * @param allocator         the {@link ByteBufAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
      */
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize, ByteBufAllocator allocator) {
-        this(bgId, bufferRingSize, chunkSize, allocator, 0);
+        this(bgId, bufferRingSize, chunkSize, IoUring.isRegisterBufferRingIncSupported(), allocator);
     }
 
     /**
@@ -50,16 +52,19 @@ public final class IoUringBufferRingConfig {
      * @param bufferRingSize    the size of the ring
      * @param chunkSize         the chunk size of each {@link io.netty.buffer.ByteBuf} that is allocated out of the
      *                          {@link ByteBufAllocator} to fill the ring.
+     * @param incremental       {@code true} if the buffer ring is using incremental buffer consumption.
      * @param allocator         the {@link ByteBufAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
-     * @param initSize          the number of buffers that are created during initialization.
      */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize,
-                                   ByteBufAllocator allocator, int initSize) {
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize, boolean incremental,
+                                   ByteBufAllocator allocator) {
         this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
         this.chunkSize = ObjectUtil.checkPositive(chunkSize, "chunkSize");
+        if (incremental && !IoUring.isRegisterBufferRingIncSupported()) {
+            throw new IllegalArgumentException("Incremental buffer ring is not supported");
+        }
+        this.incremental = incremental;
         this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
-        this.initSize = checkInitSize(initSize, bufferRingSize);
     }
 
     /**
@@ -99,13 +104,8 @@ public final class IoUringBufferRingConfig {
         return allocator;
     }
 
-    /**
-     * Returns the number of buffers that are created during initialization.
-     *
-     * @return  init size.
-     */
-    public int initSize() {
-        return initSize;
+    public boolean isIncremental() {
+        return incremental;
     }
 
     private static short checkBufferRingSize(short bufferRingSize) {
@@ -120,13 +120,17 @@ public final class IoUringBufferRingConfig {
         return bufferRingSize;
     }
 
-    private static int checkInitSize(int initSize, short bufferRingSize) {
-        ObjectUtil.checkPositiveOrZero(initSize, "initSize");
-        if (initSize > bufferRingSize) {
-            throw new IllegalArgumentException(
-                    "initSize: " + initSize + " (expected: <= bufferRingSize: " + bufferRingSize + ')'
-            );
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) {
+            return false;
         }
-        return initSize;
+        IoUringBufferRingConfig that = (IoUringBufferRingConfig) o;
+        return bgId == that.bgId;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(bgId);
     }
 }

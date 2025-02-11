@@ -40,17 +40,15 @@ import java.util.List;
 public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
     static final IoUringSocketTestPermutation INSTANCE = new IoUringSocketTestPermutation();
-    static final short NO_BGID = -1;
-    static final short BGID = 0;
+    private static final short BGID = 0;
+    static final IoUringBufferRingHandler RING_SELECTOR = (channel, size) -> BGID;
     static final EventLoopGroup IO_URING_BOSS_GROUP = new MultiThreadIoEventLoopGroup(
             BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());
     static final EventLoopGroup IO_URING_WORKER_GROUP = new MultiThreadIoEventLoopGroup(
             WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true),
             IoUringIoHandler.newFactory(new IoUringIoHandlerConfig()
-                    // Configure a buffer ring that we can easily enable by setting the correct IoUringChannelOption.
-                    .addBufferRingConfig(
+                    .setBufferRingConfig(RING_SELECTOR,
                             new IoUringBufferRingConfig(BGID, (short) 16, 1024, ByteBufAllocator.DEFAULT))));
-
     @Override
     public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
 

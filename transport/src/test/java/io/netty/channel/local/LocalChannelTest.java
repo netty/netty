@@ -1254,14 +1254,14 @@ public class LocalChannelTest {
 
         sb.group(sharedGroup)
                 .channel(LocalServerChannel.class)
-                .option(ChannelOption.RCVBUF_ALLOCATOR, new ReadCompleteRecvAllocator(serverLatch))
+                .option(ChannelOption.RECVBUF_ALLOCATOR, new ReadCompleteRecvAllocator(serverLatch))
                 .childHandler(new ChannelInitializer<Channel>() {
                     @Override
                     protected void initChannel(Channel ch) {
                         // NOOP
                     }
                 })
-                .childOption(ChannelOption.RCVBUF_ALLOCATOR, new ReadCompleteRecvAllocator(childLatch));
+                .childOption(ChannelOption.RECVBUF_ALLOCATOR, new ReadCompleteRecvAllocator(childLatch));
 
         Channel sc = null;
         Channel cc = null;

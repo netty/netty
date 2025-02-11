@@ -17,18 +17,16 @@ package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.util.internal.ObjectUtil;
 
 import java.util.Map;
 
-abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
-
-    static final short DISABLE_BUFFER_SELECT_READ = -1;
+abstract class IoUringStreamChannelConfig extends DefaultChannelConfig {
 
     static final int DISABLE_SEND_ZC = -1;
 
-    private volatile short bufferGroupId = DISABLE_BUFFER_SELECT_READ;
+    private volatile boolean useIoUringBufferGroup;
 
     private volatile int sendZcThreshold = DISABLE_SEND_ZC;
 
@@ -40,10 +38,11 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
         super(channel, allocator);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
-            return (T) Short.valueOf(getBufferGroupId());
+        if (option == IoUringChannelOption.USE_IO_URING_BUFFER_GROUP) {
+            return (T) Boolean.valueOf(getUseIoUringBufferGroup());
         }
 
         if (option == IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD) {
@@ -55,8 +54,8 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
     @Override
     public <T> boolean setOption(ChannelOption<T> option, T value) {
-        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
-            setBufferGroupId((Short) value);
+        if (option == IoUringChannelOption.USE_IO_URING_BUFFER_GROUP) {
+            setUseIoUringBufferGroup((Boolean) value);
             return true;
         }
 
@@ -71,38 +70,21 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(
-                super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID,
+                super.getOptions(), IoUringChannelOption.USE_IO_URING_BUFFER_GROUP
                 IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD
         );
     }
 
-    @Override
-    boolean getPollInFirst() {
-        return bufferGroupId == DISABLE_BUFFER_SELECT_READ;
-    }
-
-    /**
-     * Returns the buffer group id.
-     *
-     * @return the buffer group id.
-     */
-    short getBufferGroupId() {
-        return bufferGroupId;
+    boolean getUseIoUringBufferGroup() {
+        return useIoUringBufferGroup;
     }
 
     int getSendZcThreshold() {
         return sendZcThreshold;
     }
 
-    /**
-     * Set the buffer group id that will be used to select the correct ring buffer. This must have been configured
-     * via {@link IoUringBufferRingConfig}.
-     *
-     * @param bufferGroupId the buffer group id.
-     * @return              itself.
-     */
-    IoUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
-        this.bufferGroupId = (short) ObjectUtil.checkInRange(bufferGroupId, -1, Short.MAX_VALUE, "bufferGroupId");
+    IoUringStreamChannelConfig setUseIoUringBufferGroup(boolean useIoUringBufferGroup) {
+        this.useIoUringBufferGroup = useIoUringBufferGroup;
         return this;
     }
 

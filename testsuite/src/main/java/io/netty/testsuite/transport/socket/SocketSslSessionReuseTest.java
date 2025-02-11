@@ -35,7 +35,6 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
-import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -324,7 +323,6 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         }
     }
 
-    @SuppressJava6Requirement(reason = "Test only")
     private static final class SessionSettingTrustManager extends X509ExtendedTrustManager
             implements ResumableX509ExtendedTrustManager {
         @Override
@@ -332,7 +330,6 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
             engine.getSession().putValue("key", "value");
         }
 
-        @SuppressJava6Requirement(reason = "Test only")
         @Override
         public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
                 throws CertificateException {

@@ -358,10 +358,10 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
         }
         if (encoding == null) {
             byte[] array = readFrom(file);
-            return new String(array, HttpConstants.DEFAULT_CHARSET.name());
+            return new String(array, HttpConstants.DEFAULT_CHARSET);
         }
         byte[] array = readFrom(file);
-        return new String(array, encoding.name());
+        return new String(array, encoding);
     }
 
     @Override
