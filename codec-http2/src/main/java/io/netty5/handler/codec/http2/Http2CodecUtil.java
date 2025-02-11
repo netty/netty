@@ -207,10 +207,10 @@ public final class Http2CodecUtil {
     /**
      * Writes an HTTP/2 frame header to the output buffer.
      */
-    public static void writeFrameHeader(Buffer out, int payloadLength, byte type,
+    public static void writeFrameHeader(Buffer out, int payloadLength, short frameType,
             Http2Flags flags, int streamId) {
         out.ensureWritable(FRAME_HEADER_LENGTH + payloadLength);
-        writeFrameHeaderInternal(out, payloadLength, type, flags, streamId);
+        writeFrameHeaderInternal(out, payloadLength, frameType, flags, streamId);
     }
 
     /**
@@ -246,9 +246,10 @@ public final class Http2CodecUtil {
                 "allowed size (%d)", maxHeaderListSize);
     }
 
-    static void writeFrameHeaderInternal(Buffer out, int payloadLength, byte type, Http2Flags flags, int streamId) {
+    static void writeFrameHeaderInternal(Buffer out, int payloadLength, short frameType, Http2Flags flags,
+                                         int streamId) {
         out.writeMedium(payloadLength);
-        out.writeByte(type);
+        out.writeUnsignedByte(frameType);
         out.writeByte((byte) flags.value());
         out.writeInt(streamId);
     }

@@ -383,7 +383,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
-    public Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+    public Future<Void> writeFrame(ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags,
                                    Buffer payload) {
         return frameWriter.writeFrame(ctx, frameType, streamId, flags, payload);
     }

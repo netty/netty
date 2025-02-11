@@ -26,15 +26,15 @@ import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 
 @UnstableApi
 public final class DefaultHttp2UnknownFrame extends BufferHolder<Http2UnknownFrame> implements Http2UnknownFrame {
-    private final byte frameType;
+    private final short frameType;
     private final Http2Flags flags;
     private Http2FrameStream stream;
 
-    public DefaultHttp2UnknownFrame(byte frameType, Http2Flags flags) {
+    public DefaultHttp2UnknownFrame(short frameType, Http2Flags flags) {
         this(frameType, flags, onHeapAllocator().allocate(0));
     }
 
-    public DefaultHttp2UnknownFrame(byte frameType, Http2Flags flags, Buffer data) {
+    public DefaultHttp2UnknownFrame(short frameType, Http2Flags flags, Buffer data) {
         super(data);
         this.frameType = frameType;
         this.flags = flags;
@@ -57,7 +57,7 @@ public final class DefaultHttp2UnknownFrame extends BufferHolder<Http2UnknownFra
     }
 
     @Override
-    public byte frameType() {
+    public short frameType() {
         return frameType;
     }
 

@@ -44,7 +44,7 @@ public interface Http2UnknownFrame extends Http2StreamFrame, Resource<Http2Unkno
      *
      * @return The raw frame type.
      */
-    byte frameType();
+    short frameType();
 
     /**
      * Get the {@link Http2Flags} set on this unknown frame.
