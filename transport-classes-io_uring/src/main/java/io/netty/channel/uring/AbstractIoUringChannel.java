@@ -98,7 +98,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private boolean readPending;
     private boolean inReadComplete;
 
-    private final class DelayedClose {
+    private static final class DelayedClose {
         private final ChannelPromise promise;
         private final Throwable cause;
         private final ClosedChannelException closeCause;
@@ -374,10 +374,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                fd, flags((byte) 0), mask, (short) mask);
+                fd, flags((byte) 0), mask, nextOpsId());
         long id = registration.submit(ops);
         if (id != 0) {
-            ioState |= ioMask;
+            ioState |= (byte) ioMask;
         }
         return id;
     }
@@ -390,6 +390,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
         private IoUringRecvByteAllocatorHandle allocHandle;
         private boolean socketIsEmpty;
+        private boolean closed;
+        private boolean freed;
 
         /**
          * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer} and returns the number of
@@ -402,9 +404,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          * {@link #writeComplete(byte, int, int, short)} calls that are expected because of the scheduled write.
          */
         protected abstract int scheduleWriteSingle(Object msg);
-
-        private boolean closed;
-        private boolean freed;
 
         @Override
         public final void handle(IoRegistration registration, IoEvent ioEvent) {
@@ -419,10 +418,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_RECVMSG:
                 case Native.IORING_OP_READ:
                     readComplete(op, res, flags, data);
-
-                    // We delay the actual close if there is still a write or read scheduled, let's see if there
-                    // was a close that needs to be done now.
-                    handleDelayedClosed();
                     break;
                 case Native.IORING_OP_WRITEV:
                 case Native.IORING_OP_SEND:
@@ -430,27 +425,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_WRITE:
                 case Native.IORING_OP_SPLICE:
                     writeComplete(op, res, flags, data);
-
-                    // We delay the actual close if there is still a write or read scheduled, let's see if there
-                    // was a close that needs to be done now.
-                    handleDelayedClosed();
                     break;
                 case Native.IORING_OP_POLL_ADD:
                     pollAddComplete(res, flags, data);
                     break;
-                case Native.IORING_OP_POLL_REMOVE:
-                    // fd reuse can replace a closed channel (with pending POLL_REMOVE CQEs)
-                    // with a new one: better not making it to mess-up with its state!
-                    if (res == 0) {
-                        clearPollFlag(data);
-                    }
-                    break;
                 case Native.IORING_OP_ASYNC_CANCEL:
                     cancelComplete0(op, res, flags, data);
-
-                    // We delay the actual close if there is still a write or read scheduled, let's see if there
-                    // was a close that needs to be done now.
-                    handleDelayedClosed();
                     break;
                 case Native.IORING_OP_CONNECT:
                     connectComplete(op, res, flags, data);
@@ -467,7 +447,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         closed = true;
                     }
                     break;
+                default:
+                    break;
             }
+
+            // We delay the actual close if there is still a write or read scheduled, let's see if there
+            // was a close that needs to be done now.
+            handleDelayedClosed();
 
             if (ioState == 0 && closed) {
                 freeResourcesNowIfNeeded(registration);
@@ -501,13 +487,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
 
         private void pollAddComplete(int res, int flags, short data) {
-            if ((data & Native.POLLOUT) != 0) {
+            if ((res & Native.POLLOUT) != 0) {
                 pollOut(res);
             }
-            if ((data & Native.POLLIN) != 0) {
+            if ((res & Native.POLLIN) != 0) {
                 pollIn(res);
             }
-            if ((data & Native.POLLRDHUP) != 0) {
+            if ((res & Native.POLLRDHUP) != 0) {
                 pollRdHup(res);
             }
         }
@@ -563,17 +549,27 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             }
             byte flags = flags((byte) 0);
             if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
-                registration.submit(IoUringIoOps.newPollRemove(flags, pollRdhupId, (short) Native.POLLRDHUP));
+                assert pollRdhupId != 0;
+                long id = registration.submit(
+                        IoUringIoOps.newAsyncCancel(flags, pollRdhupId, Native.IORING_OP_POLL_ADD));
+                assert id != 0;
             }
             if ((ioState & POLL_IN_SCHEDULED) != 0) {
-                registration.submit(IoUringIoOps.newPollRemove(flags, pollInId, (short) Native.POLLIN));
+                assert pollInId != 0;
+                long id = registration.submit(
+                        IoUringIoOps.newAsyncCancel(flags, pollInId, Native.IORING_OP_POLL_ADD));
+                assert id != 0;
             }
             if ((ioState & POLL_OUT_SCHEDULED) != 0) {
-                registration.submit(IoUringIoOps.newPollRemove(flags, pollOutId, (short) Native.POLLOUT));
+                assert pollOutId != 0;
+                long id = registration.submit(
+                        IoUringIoOps.newAsyncCancel(flags, pollOutId, Native.IORING_OP_POLL_ADD));
+                assert id != 0;
             }
             if (cancelConnect && connectId != 0) {
                 // Best effort to cancel the already submitted connect request.
-                registration.submit(IoUringIoOps.newAsyncCancel(flags, connectId, Native.IORING_OP_CONNECT));
+                long id = registration.submit(IoUringIoOps.newAsyncCancel(flags, connectId, Native.IORING_OP_CONNECT));
+                assert id != 0;
             }
             cancelOutstandingReads(registration, numOutstandingReads);
             cancelOutstandingWrites(registration, numOutstandingWrites);
@@ -1143,21 +1139,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     private boolean shouldBreakIoUringInReady(ChannelConfig config) {
         return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
-    }
-
-    private void clearPollFlag(int pollMask) {
-        if ((pollMask & Native.POLLIN) != 0) {
-            ioState &= ~POLL_IN_SCHEDULED;
-            pollInId = 0;
-        }
-        if ((pollMask & Native.POLLOUT) != 0) {
-            ioState &= ~POLL_OUT_SCHEDULED;
-            pollOutId = 0;
-        }
-        if ((pollMask & Native.POLLRDHUP) != 0) {
-            ioState &= ~POLL_RDHUP_SCHEDULED;
-            pollRdhupId = 0;
-        }
     }
 
     /**
