@@ -163,7 +163,11 @@ public final class IoUring {
         return IORING_SPLICE_SUPPORTED;
     }
 
-    static boolean isIOUringSendZCSupported() {
+    /**
+     * Returns {@code true} if the io_uring native transport supports IO_URING_SENDZC
+     * @return {@code true} if the io_uring native transport supports IO_URING_SENDZC, otherwise {@code false}.
+     */
+    public static boolean isIOUringSendZCSupported() {
         return IORING_SEND_ZC_SUPPORTED;
     }
 
