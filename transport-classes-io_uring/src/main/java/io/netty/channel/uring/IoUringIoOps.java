@@ -295,21 +295,6 @@ public final class IoUringIoOps implements IoOps {
     }
 
     /**
-     * Returns a new {@code OP_POLL_REMOVE} {@link IoUringIoOps}.
-     *
-     * @param flags     the flags.
-     * @param userData  the user data that identify a previous submitted {@link IoUringIoOps} that should be cancelled.
-     *                  The value to use here is returned by {@link io.netty.channel.IoRegistration#submit(IoOps)}.
-     * @param data      the data
-     * @return          ops.
-     */
-    static IoUringIoOps newPollRemove(byte flags, long userData, short data) {
-        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L568
-        return new IoUringIoOps(Native.IORING_OP_POLL_REMOVE, flags, (short) 0, -1, 0, userData, 0, 0, data,
-                (short) 0, (short) 0, 0, 0);
-    }
-
-    /**
      * Returns a new {@code OP_ACCEPT} {@link IoUringIoOps}.
      *
      * @param fd                                    the filedescriptor
