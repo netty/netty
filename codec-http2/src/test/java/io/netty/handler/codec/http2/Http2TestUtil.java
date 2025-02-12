@@ -504,6 +504,15 @@ public final class Http2TestUtil {
                 return ((ChannelPromise) invocationOnMock.getArgument(5)).setSuccess();
             }
         });
+
+        when(frameWriter.writeFrame(any(ChannelHandlerContext.class), anyByte(), anyInt(), any(short.class),
+            any(ByteBuf.class), anyChannelPromise())).thenAnswer(new Answer<ChannelFuture>() {
+            @Override
+            public ChannelFuture answer(InvocationOnMock invocationOnMock) {
+                buffers.offer((ByteBuf) invocationOnMock.getArgument(4));
+                return ((ChannelPromise) invocationOnMock.getArgument(5)).setSuccess();
+            }
+        });
         return frameWriter;
     }
 

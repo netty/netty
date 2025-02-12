@@ -121,6 +121,12 @@ public class Http2OutboundFrameLogger implements Http2FrameWriter {
     @Override
     public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
             Http2Flags flags, ByteBuf payload, ChannelPromise promise) {
+        return writeFrame(ctx, frameType, streamId, flags.value(), payload, promise);
+    }
+
+    @Override
+    public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+                                    short flags, ByteBuf payload, ChannelPromise promise) {
         logger.logUnknownFrame(OUTBOUND, ctx, frameType, streamId, flags, payload);
         return writer.writeFrame(ctx, frameType, streamId, flags, payload, promise);
     }

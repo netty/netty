@@ -155,9 +155,14 @@ public class Http2FrameLogger extends ChannelHandlerAdapter {
 
     public void logUnknownFrame(Direction direction, ChannelHandlerContext ctx, byte frameType, int streamId,
             Http2Flags flags, ByteBuf data) {
+        logUnknownFrame(direction, ctx, frameType, streamId, flags.value(), data);
+    }
+
+    public void logUnknownFrame(Direction direction, ChannelHandlerContext ctx, byte frameType, int streamId,
+                                short flags, ByteBuf data) {
         if (isEnabled()) {
             logger.log(level, "{} {} UNKNOWN: frameType={} streamId={} flags={} length={} bytes={}", ctx.channel(),
-                    direction.name(), frameType & 0xFF, streamId, flags.value(), data.readableBytes(), toString(data));
+                direction.name(), frameType & 0xFF, streamId, flags, data.readableBytes(), toString(data));
         }
     }
 

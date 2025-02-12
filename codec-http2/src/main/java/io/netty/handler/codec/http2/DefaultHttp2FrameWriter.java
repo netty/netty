@@ -466,7 +466,13 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
 
     @Override
     public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
-            Http2Flags flags, ByteBuf payload, ChannelPromise promise) {
+                                    Http2Flags flags, ByteBuf payload, ChannelPromise promise) {
+        return writeFrame(ctx, frameType, streamId, flags.value(), payload, promise);
+    }
+
+    @Override
+    public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+            short flags, ByteBuf payload, ChannelPromise promise) {
         SimpleChannelPromiseAggregator promiseAggregator =
                 new SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
         try {
