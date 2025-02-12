@@ -35,12 +35,19 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_DISPOSITION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TRANSFER_ENCODING;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
+import static io.netty.handler.codec.http.HttpMethod.POST;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static io.netty.handler.codec.http.multipart.HttpPostBodyUtil.chunkSize;
+import static io.netty.util.CharsetUtil.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -450,9 +457,15 @@ public class HttpPostRequestEncoderTest {
     public void testEncodeChunkedContent() throws Exception {
         HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/");
         HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(req, false);
-        encoder.addBodyAttribute("data", largeValue("data", 3));
-        encoder.addBodyAttribute("data", largeValue("data", 4));
+
+        int length = 8077 + 8096;
+        char[] array = new char[length];
+        Arrays.fill(array, 'a');
+        String longText = new String(array);
+
+        encoder.addBodyAttribute("data", longText);
         encoder.addBodyAttribute("moreData", "abcd");
+
         assertNotNull(encoder.finalizeRequest());
 
         while (!encoder.isEndOfInput()) {
@@ -463,8 +476,45 @@ public class HttpPostRequestEncoderTest {
         encoder.cleanFiles();
     }
 
-    private String largeValue(String key, int multipleChunks) {
-        final int length = HttpPostBodyUtil.chunkSize * multipleChunks - key.length() - 2; // 2 is '=' and '&'
+    @Test
+    public void testEncodeChunkedContentV2() throws Exception {
+        final Map<String, String> params = new LinkedHashMap<String, String>();
+        params.put("data", largeText("data", 3));
+        params.put("empty", "");
+        params.put("tiny", "a");
+        params.put("large", generateString(chunkSize - 7 - 7 - 1 - 8));
+        params.put("huge", largeText("huge", 8));
+        params.put("small", "abcd");
+
+        final StringBuilder expectQueryStr = new StringBuilder();
+        final HttpRequest req = new DefaultHttpRequest(HTTP_1_1, POST, "/");
+        final HttpPostRequestEncoder encoder = new HttpPostRequestEncoder(req, false);
+        for (Entry<String, String> entry : params.entrySet()) {
+            final String key = entry.getKey();
+            final String value = entry.getValue();
+            encoder.addBodyAttribute(key, value);
+            expectQueryStr.append(key).append('=').append(value).append('&');
+        }
+        expectQueryStr.setLength(expectQueryStr.length() - 1); //remove last '&'
+        assertNotNull(encoder.finalizeRequest());
+
+        final StringBuilder chunks = new StringBuilder();
+        while (!encoder.isEndOfInput()) {
+            final HttpContent httpContent = encoder.readChunk((ByteBufAllocator) null);
+            chunks.append(httpContent.content().toString(UTF_8));
+            httpContent.release();
+        }
+
+        assertTrue(encoder.isEndOfInput());
+        assertEquals(expectQueryStr.toString(), chunks.toString());
+        encoder.cleanFiles();
+    }
+
+    private String largeText(String key, int multipleChunks) {
+        return generateString(chunkSize * multipleChunks - key.length() - 2); // 2 is '=' and '&'
+    }
+
+    private String generateString(int length) {
         final char[] array = new char[length];
         Arrays.fill(array, 'a');
         return new String(array);
