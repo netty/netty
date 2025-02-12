@@ -31,6 +31,11 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
        this.config = new IoUringSocketChannelConfig(this);
     }
 
+    IoUringSocketChannel(Channel parent, LinuxSocket fd) {
+        super(parent, fd, true);
+        this.config = new IoUringSocketChannelConfig(this);
+    }
+
     IoUringSocketChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
         super(parent, fd, remote);
         this.config = new IoUringSocketChannelConfig(this);

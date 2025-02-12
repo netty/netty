@@ -46,17 +46,22 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
 
     @Override
     Channel newChildChannel(int fd, long acceptedAddressMemoryAddress, long acceptedAddressLengthMemoryAddress) {
-        final InetSocketAddress address;
         IoUringIoHandler handler = registration().attachment();
-        if (socket.isIpv6()) {
-            byte[] ipv6Array = handler.inet6AddressArray();
-            byte[] ipv4Array = handler.inet4AddressArray();
-            address = SockaddrIn.readIPv6(acceptedAddressMemoryAddress, ipv6Array, ipv4Array);
-        } else {
-            byte[] addressArray = handler.inet4AddressArray();
-            address = SockaddrIn.readIPv4(acceptedAddressMemoryAddress, addressArray);
+        LinuxSocket socket = new LinuxSocket(fd);
+        if (acceptedAddressMemoryAddress != 0 && acceptedAddressLengthMemoryAddress != 0) {
+            // We didnt use ACCEPT_MULTISHOT And so can depend on the addresses.
+            final InetSocketAddress address;
+            if (socket.isIpv6()) {
+                byte[] ipv6Array = handler.inet6AddressArray();
+                byte[] ipv4Array = handler.inet4AddressArray();
+                address = SockaddrIn.readIPv6(acceptedAddressMemoryAddress, ipv6Array, ipv4Array);
+            } else {
+                byte[] addressArray = handler.inet4AddressArray();
+                address = SockaddrIn.readIPv4(acceptedAddressMemoryAddress, addressArray);
+            }
+            return new IoUringSocketChannel(this, new LinuxSocket(fd), address);
         }
-        return new IoUringSocketChannel(this, new LinuxSocket(fd), address);
+        return new IoUringSocketChannel(this, new LinuxSocket(fd));
     }
 
     @Override
