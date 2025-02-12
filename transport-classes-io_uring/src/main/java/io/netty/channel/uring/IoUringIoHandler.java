@@ -89,7 +89,19 @@ public final class IoUringIoHandler implements IoHandler {
         IoUring.ensureAvailability();
         this.executor = requireNonNull(executor, "executor");
         requireNonNull(config, "config");
-        this.ringBuffer = Native.createRingBuffer(config.getRingSize(), Native.setupFlags());
+        int setupFlags = Native.setupFlags();
+
+        //The default cq size is always twice the ringSize.
+        // It only makes sense when the user actually specifies the cq ring size.
+        int cqSize = 2 * config.getRingSize();
+        if (config.needSetupCqeSize()) {
+            if (!IoUring.isIOUringSetupCqeSizeSupported()) {
+                throw new UnsupportedOperationException("IORING_SETUP_CQSIZE is not supported");
+            }
+            setupFlags |= Native.IORING_SETUP_CQSIZE;
+            cqSize = config.checkCqSize(config.getCqSize());
+        }
+        this.ringBuffer = Native.createRingBuffer(config.getRingSize(), cqSize, setupFlags);
         if (IoUring.isRegisterIowqMaxWorkersSupported() && config.needRegisterIowqMaxWorker()) {
             int maxBoundedWorker = Math.max(config.getMaxBoundedWorker(), 0);
             int maxUnboundedWorker = Math.max(config.getMaxUnboundedWorker(), 0);

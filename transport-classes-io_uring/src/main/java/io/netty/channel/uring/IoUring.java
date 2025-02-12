@@ -30,6 +30,7 @@ public final class IoUring {
     private static final boolean IORING_ACCEPT_NO_WAIT_SUPPORTED;
     private static final boolean IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     private static final boolean IORING_SETUP_SUBMIT_ALL_SUPPORTED;
+    private static final boolean IORING_SETUP_CQ_SIZE_SUPPORTED;
     private static final boolean IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
     private static final boolean IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
     private static final boolean IORING_REGISTER_BUFFER_RING_SUPPORTED;
@@ -46,6 +47,7 @@ public final class IoUring {
         boolean acceptSupportNoWait = false;
         boolean registerIowqWorkersSupported = false;
         boolean submitAllSupported = false;
+        boolean setUpCqSizeSupported = false;
         boolean singleIssuerSupported = false;
         boolean deferTaskrunSupported = false;
         boolean registerBufferRingSupported = false;
@@ -71,6 +73,7 @@ public final class IoUring {
                         acceptSupportNoWait = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
                         registerIowqWorkersSupported = Native.isRegisterIOWQWorkerSupported(ringBuffer.fd());
                         submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
+                        setUpCqSizeSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQSIZE);
                         singleIssuerSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
                         // IORING_SETUP_DEFER_TASKRUN requires to also set IORING_SETUP_SINGLE_ISSUER.
                         // See https://manpages.debian.org/unstable/liburing-dev/io_uring_setup.2.en.html
@@ -125,6 +128,7 @@ public final class IoUring {
         IORING_ACCEPT_NO_WAIT_SUPPORTED = acceptSupportNoWait;
         IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED = registerIowqWorkersSupported;
         IORING_SETUP_SUBMIT_ALL_SUPPORTED = submitAllSupported;
+        IORING_SETUP_CQ_SIZE_SUPPORTED = setUpCqSizeSupported;
         IORING_SETUP_SINGLE_ISSUER_SUPPORTED = singleIssuerSupported;
         IORING_SETUP_DEFER_TASKRUN_SUPPORTED = deferTaskrunSupported;
         IORING_REGISTER_BUFFER_RING_SUPPORTED = registerBufferRingSupported;
@@ -177,6 +181,10 @@ public final class IoUring {
 
     static boolean isRegisterIowqMaxWorkersSupported() {
         return IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
+    }
+
+    static boolean isIOUringSetupCqeSizeSupported() {
+        return IORING_SETUP_CQ_SIZE_SUPPORTED;
     }
 
     static boolean isIOUringSetupSubmitAllSupported() {

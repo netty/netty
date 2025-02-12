@@ -57,7 +57,12 @@ final class IoUringBufferRing {
         this.source = ioUringIoHandler;
         this.byteBufAllocator = byteBufAllocator;
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
-        refill();
+    }
+
+    void refillIfNecessary() {
+        if (!hasSpareBuffer) {
+            refill();
+        }
     }
 
     /**
@@ -67,16 +72,6 @@ final class IoUringBufferRing {
     void markExhausted() {
         hasSpareBuffer = false;
         source.idHandler.notifyAllBuffersUsed(bufferGroupId);
-        refill();
-    }
-
-    /**
-     * Returns {@code true} if this buffer ring has buffers left that can be used before the need of returning buffers.
-     *
-     * @return {@code true} if something spare to use, {@code false} otherwise.
-     */
-    boolean hasSpareBuffer() {
-        return hasSpareBuffer;
     }
 
     /**
