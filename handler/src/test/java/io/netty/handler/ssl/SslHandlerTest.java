@@ -1700,7 +1700,7 @@ public class SslHandlerTest {
         buf.writeByte(0x2);
         DecoderException e = assertThrows(DecoderException.class, () -> channel.writeInbound(buf));
         assertThat(e.getCause(), instanceOf(NotSslRecordException.class));
-        channel.finishAndReleaseAll();
+        assertTrue(channel.finishAndReleaseAll());
     }
 
     @Test
