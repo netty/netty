@@ -323,7 +323,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         IoUringIoOps trySendZC(ByteBuf buf) {
-
             if (!IoUring.isIOUringSendZCSupported()) {
                 return null;
             }
