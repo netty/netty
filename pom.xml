@@ -1470,6 +1470,30 @@
                   <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage()</new>
                   <justification>Exposed private method.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.http.HttpClientUpgradeHandler</new>
+                  <justification>Exposed private method.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.http.HttpObjectAggregator</new>
+                  <justification>Exposed private method.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.http.HttpServerUpgradeHandler</new>
+                  <justification>Exposed private method.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator</new>
+                  <justification>Exposed private method.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
