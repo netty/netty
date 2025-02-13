@@ -1506,6 +1506,12 @@
                   <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.memcache.AbstractMemcacheObjectAggregator&lt;H extends io.netty.handler.codec.memcache.MemcacheMessage&gt;</new>
                   <justification>Exposed private method.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.stomp.StompSubframeAggregator</new>
+                  <justification>Exposed private method.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
