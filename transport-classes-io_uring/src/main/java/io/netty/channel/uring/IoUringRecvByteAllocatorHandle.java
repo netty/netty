@@ -43,7 +43,7 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
     public void reset(ChannelConfig config) {
         super.reset(config);
         readComplete = false;
-        firstRead = false;
+        firstRead = true;
     }
 
     void rdHupReceived() {
