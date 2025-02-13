@@ -652,8 +652,74 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return ran;
     }
 
-    private void shutdown0(long quietPeriod, long timeout, int shutdownState) {
+    @Override
+    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        ObjectUtil.checkPositiveOrZero(quietPeriod, "quietPeriod");
+        if (timeout < quietPeriod) {
+            throw new IllegalArgumentException(
+                    "timeout: " + timeout + " (expected >= quietPeriod (" + quietPeriod + "))");
+        }
+        ObjectUtil.checkNotNull(unit, "unit");
+
         if (isShuttingDown()) {
+            return terminationFuture();
+        }
+
+        boolean inEventLoop = inEventLoop();
+        boolean wakeup;
+        int oldState;
+        for (;;) {
+            if (isShuttingDown()) {
+                return terminationFuture();
+            }
+            int newState;
+            wakeup = true;
+            oldState = state;
+            if (inEventLoop) {
+                newState = ST_SHUTTING_DOWN;
+            } else {
+                switch (oldState) {
+                    case ST_NOT_STARTED:
+                    case ST_STARTED:
+                    case ST_SUSPENDING:
+                    case ST_SUSPENDED:
+                        newState = ST_SHUTTING_DOWN;
+                        break;
+                    default:
+                        newState = oldState;
+                        wakeup = false;
+                }
+            }
+            if (STATE_UPDATER.compareAndSet(this, oldState, newState)) {
+                break;
+            }
+        }
+        gracefulShutdownQuietPeriod = unit.toNanos(quietPeriod);
+        gracefulShutdownTimeout = unit.toNanos(timeout);
+
+        if (ensureThreadStarted(oldState)) {
+            return terminationFuture;
+        }
+
+        if (wakeup) {
+            taskQueue.offer(WAKEUP_TASK);
+            if (!addTaskWakesUp) {
+                wakeup(inEventLoop);
+            }
+        }
+
+        return terminationFuture();
+    }
+
+    @Override
+    public Future<?> terminationFuture() {
+        return terminationFuture;
+    }
+
+    @Override
+    @Deprecated
+    public void shutdown() {
+        if (isShutdown()) {
             return;
         }
 
@@ -668,14 +734,15 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             wakeup = true;
             oldState = state;
             if (inEventLoop) {
-                newState = shutdownState;
+                newState = ST_SHUTDOWN;
             } else {
                 switch (oldState) {
                     case ST_NOT_STARTED:
                     case ST_STARTED:
                     case ST_SUSPENDING:
                     case ST_SUSPENDED:
-                        newState = shutdownState;
+                    case ST_SHUTTING_DOWN:
+                        newState = ST_SHUTDOWN;
                         break;
                     default:
                         newState = oldState;
@@ -685,12 +752,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if (STATE_UPDATER.compareAndSet(this, oldState, newState)) {
                 break;
             }
-        }
-        if (quietPeriod != -1) {
-            gracefulShutdownQuietPeriod = quietPeriod;
-        }
-        if (timeout != -1) {
-            gracefulShutdownTimeout = timeout;
         }
 
         if (ensureThreadStarted(oldState)) {
@@ -703,30 +764,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 wakeup(inEventLoop);
             }
         }
-    }
-
-    @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
-        ObjectUtil.checkPositiveOrZero(quietPeriod, "quietPeriod");
-        if (timeout < quietPeriod) {
-            throw new IllegalArgumentException(
-                    "timeout: " + timeout + " (expected >= quietPeriod (" + quietPeriod + "))");
-        }
-        ObjectUtil.checkNotNull(unit, "unit");
-
-        shutdown0(unit.toNanos(quietPeriod), unit.toNanos(timeout), ST_SHUTTING_DOWN);
-        return terminationFuture();
-    }
-
-    @Override
-    public Future<?> terminationFuture() {
-        return terminationFuture;
-    }
-
-    @Override
-    @Deprecated
-    public void shutdown() {
-        shutdown0(-1, -1, ST_SHUTDOWN);
     }
 
     @Override
