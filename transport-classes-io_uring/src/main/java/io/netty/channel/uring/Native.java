@@ -213,6 +213,9 @@ final class Native {
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
     static final int IORING_CQE_BUFFER_SHIFT = 16;
+
+    static final short IORING_POLL_ADD_MULTI = 1 << 0;
+
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
     static final short IORING_RECV_MULTISHOT = 1 << 1;
 
@@ -390,6 +393,11 @@ final class Native {
     static boolean isSpliceSupported(int ringFd) {
         // IORING_OP_SPLICE Available since 5.7
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
+    }
+
+    static boolean isPollAddMultiShotSupported(int ringfd) {
+        // Was added in the same release and we also need this feature to correctly handle edge-triggered mode.
+        return isCqeFSockNonEmptySupported(ringfd);
     }
 
     /**
