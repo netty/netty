@@ -1497,6 +1497,7 @@
               <exclude>io.netty.util.internal.shaded</exclude>
               <exclude>io.netty.buffer.AdaptivePoolingAllocator$ChunkAllocator</exclude>
               <exclude>io.netty.channel.socket.nio.NioDomainSocketChannel#parent()</exclude>
+              <exclude>io.netty.handler.codec.MessageAggregator#releaseCurrentMessage()</exclude>
             </excludes>
             <overrideCompatibilityChangeParameters>
               <overrideCompatibilityChangeParameter>
