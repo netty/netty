@@ -1698,7 +1698,12 @@ public class SslHandlerTest {
         buf.writeByte(0xfe);
         buf.writeByte(0x87);
         buf.writeByte(0x2);
-        DecoderException e = assertThrows(DecoderException.class, () -> channel.writeInbound(buf));
+        DecoderException e = assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(buf);
+            }
+        });
         assertThat(e.getCause(), instanceOf(NotSslRecordException.class));
         assertTrue(channel.finishAndReleaseAll());
     }
