@@ -1464,6 +1464,12 @@
                   <new>method io.netty.channel.ServerChannel io.netty.channel.socket.nio.NioDomainSocketChannel::parent()</new>
                   <justification>Old return type made no sense, the parent channel is a NioServerDomainSocketChannel which does not implement ServerSocketChannel. The method always threw a ClassCastException (except for null).</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator::releaseCurrentMessage()</new>
+                  <justification>Exposed private method.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
