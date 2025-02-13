@@ -35,6 +35,7 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
         super(handle);
     }
 
+    private boolean firstRead;
     private boolean rdHupReceived;
     private boolean readComplete;
 
@@ -42,6 +43,7 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
     public void reset(ChannelConfig config) {
         super.reset(config);
         readComplete = false;
+        firstRead = false;
     }
 
     void rdHupReceived() {
@@ -68,6 +70,10 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
                 || rdHupReceived;
     }
 
+    public boolean isFirstRead() {
+        return firstRead;
+    }
+
     @Override
     public void readComplete() {
         super.readComplete();
@@ -76,5 +82,17 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
 
     boolean isReadComplete() {
         return readComplete;
+    }
+
+    @Override
+    public void lastBytesRead(int bytes) {
+        firstRead = false;
+        super.lastBytesRead(bytes);
+    }
+
+    @Override
+    public void incMessagesRead(int numMessages) {
+        firstRead = false;
+        super.incMessagesRead(numMessages);
     }
 }
