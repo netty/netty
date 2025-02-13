@@ -127,14 +127,14 @@ public class IoUringBufferRingTest {
         ByteBufUtil.writeAscii(writeBuffer, randomString);
         ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
+
+        ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         if (!incremental) {
             // Directly after the second read we will see the event as it will be triggered inline when
             // doing the submit.
             assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take().bufferGroupId());
         }
         assertEquals(0, eventSyncer.size());
-
-        ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         readBuffer.release();
 
         // Now we release the buffer and so put it back into the buffer ring.
