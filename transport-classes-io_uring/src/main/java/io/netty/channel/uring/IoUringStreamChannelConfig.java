@@ -98,7 +98,7 @@ abstract class IoUringStreamChannelConfig extends DefaultChannelConfig {
         return this;
     }
 
-    static boolean needIOUringSendZC(IoUringStreamChannelConfig channelConfig, int waitSend) {
+    static boolean tryUsingSendZC(IoUringStreamChannelConfig channelConfig, int waitSend) {
         // This can reduce one read operation on a volatile field.
         int threshold = channelConfig.getSendZcThreshold();
         return threshold != DISABLE_SEND_ZC && waitSend >= threshold;

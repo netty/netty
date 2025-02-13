@@ -222,22 +222,23 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         private ByteBuf readBuffer;
         private IovArray iovArray;
         private IoUringBufferRing lastUsedBufferRing;
-        private int lasSendZCRes;
+        private int lastSendZCRes;
 
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
             assert iovArray == null;
             assert writeId == 0;
-            int outstandingWrite = 1;
+            int outstandingCompletions = 1;
             IoRegistration registration = registration();
             try {
                 final IoUringIoOps ops;
-                //if the first ByteBuffer in the ChannelOutboundBuffer meets the conditions for sendZC,
+                // Try to use sendZC if the first ByteBuffer in the ChannelOutboundBuffer meets the conditions for it.
                 IoUringIoOps sendZCOps = trySendZC((ByteBuf) in.current());
 
                 if (sendZCOps != null) {
                     ops = sendZCOps;
-                    outstandingWrite = 2;
+                    // There will be 2 completion events when using zero copy send
+                    outstandingCompletions = 2;
                 } else {
                     int numElements = Math.min(in.size(), Limits.IOV_MAX);
                     ByteBuf iovArrayBuffer = alloc().directBuffer(numElements * IovArray.IOV_SIZE);
@@ -249,7 +250,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                             if (!(msg instanceof ByteBuf)) {
                                 return false;
                             }
-                            //add bytebuffer to iovec until a ByteBuf meets the conditions for sendZC
+                            // Add bytebuffer to iovec until a ByteBuf meets the conditions for sendZC
                             if (trySendZC((ByteBuf) msg) != null) {
                                 return false;
                             }
@@ -277,7 +278,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 // This should never happen, anyway fallback to single write.
                 scheduleWriteSingle(in.current());
             }
-            return outstandingWrite;
+            return outstandingCompletions;
         }
 
         @Override
@@ -285,7 +286,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert iovArray == null;
             assert writeId == 0;
 
-            int outstandingWrite = 1;
+            int outstandingCompletions = 1;
             int fd = fd().intValue();
             IoRegistration registration = registration();
             final IoUringIoOps ops;
@@ -305,8 +306,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
                 if (sendZCOps != null) {
                     ops = sendZCOps;
-                    //We will receive 2 cqe
-                    outstandingWrite = 2;
+                    // We will receive 2 cqe
+                    outstandingCompletions = 2;
                 } else {
                     ops = IoUringIoOps.newWrite(fd, flags((byte) 0), 0,
                             buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
@@ -319,7 +320,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             if (writeId == 0) {
                 return 0;
             }
-            return outstandingWrite;
+            return outstandingCompletions;
         }
 
         IoUringIoOps trySendZC(ByteBuf buf) {
@@ -333,9 +334,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             if (buf.nioBufferCount() == 1) {
                 int waitSend = buf.readableBytes();
                 if (waitSend != 0
-                    && IoUringStreamChannelConfig.needIOUringSendZC(ioUringStreamChannelConfig, waitSend)) {
+                    && IoUringStreamChannelConfig.tryUsingSendZC(ioUringStreamChannelConfig, waitSend)) {
                     long memoryAddress ;
-                   if (buf.hasMemoryAddress()) {
+                    if (buf.hasMemoryAddress()) {
                         memoryAddress = buf.memoryAddress() + buf.readerIndex();
                     } else {
                         ByteBuffer nioBuffer = buf.internalNioBuffer(buf.readerIndex(), buf.readableBytes());
@@ -347,13 +348,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                             nextOpsId(),
                             0
                     );
-                } else {
-                    // Not reaching the threshold, so we dont send ZC
-                    return null;
                 }
+                // Not reaching the threshold, so we dont send ZC
+                return null;
             }
 
-            // get the first ByteBuffer
+            // Get the first ByteBuffer
             // because UnixChannelUtil::isBufferCopyNeededForWrite in AbstractIoUringChannel::filterOutboundMessage
             // so its hard to reach here
             ByteBuffer[] byteBuffers = buf.nioBuffers();
@@ -361,7 +361,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ByteBuffer firstByteBuffer = byteBuffers[0];
                 int remaining = firstByteBuffer.remaining();
                 if (remaining != 0) {
-                    if (IoUringStreamChannelConfig.needIOUringSendZC(ioUringStreamChannelConfig, remaining)) {
+                    if (IoUringStreamChannelConfig.tryUsingSendZC(ioUringStreamChannelConfig, remaining)) {
                         long memoryAddress = Buffer.memoryAddress(firstByteBuffer) + firstByteBuffer.position();
                         return IoUringIoOps.newSendZC(
                                 fd, memoryAddress, remaining,
@@ -628,15 +628,16 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
             if (res >= 0) {
                 if (IoUring.isIOUringSendZCSupported()) {
-                    //a first CQE with standard res semantics and the IORING_CQE_F_MORE flag set, and
+                    // First CQE with standard res semantics and the IORING_CQE_F_MORE flag set, and
                     if ((flags & Native.IORING_CQE_F_MORE) != 0) {
-                        lasSendZCRes = res;
+                        lastSendZCRes = res;
                         return true;
                     }
-                    //a second CQE with res set to 0 and the IORING_CQE_F_NOTIF flag set.
+                    // Second CQE with res set to 0 and the IORING_CQE_F_NOTIF flag set.
                     if ((flags & Native.IORING_CQE_F_NOTIF) != 0) {
-                        channelOutboundBuffer.removeBytes(lasSendZCRes);
-                        lasSendZCRes = -1;
+                        int sendRes = lastSendZCRes;
+                        lastSendZCRes = -1;
+                        channelOutboundBuffer.removeBytes(sendRes);
                         return true;
                     }
                 }

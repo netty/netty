@@ -183,7 +183,11 @@ public final class IoUring {
         return IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     }
 
-    static boolean isIOUringSetupCqeSizeSupported() {
+    /**
+     * Returns {@code true} if the io_uring native transport supports IORING_SETUP_CQ_SIZE.
+     * @return @code true} if the io_uring native transport supports IO_URING_SENDZC, otherwise {@code false}.
+     */
+    public static boolean isIOUringSetupCqeSizeSupported() {
         return IORING_SETUP_CQ_SIZE_SUPPORTED;
     }
 
