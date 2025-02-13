@@ -23,6 +23,8 @@ import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.SSL;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.AfterEach;
@@ -34,6 +36,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.opentest4j.TestAbortedException;
 
+import java.io.File;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.AlgorithmConstraints;
@@ -67,6 +70,7 @@ import static io.netty.handler.ssl.SslProvider.OPENSSL;
 import static io.netty.handler.ssl.SslProvider.isOptionSupported;
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static java.lang.Integer.MAX_VALUE;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1604,27 +1608,38 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @MethodSource("newTestParams")
     @ParameterizedTest
-    public void testMaxCertificateList(final SSLEngineTestParam param) throws Exception {
+    public void testMaxCertificateListSmallLimitAccept(final SSLEngineTestParam param) throws Exception {
         assumeTrue(isOptionSupported(sslClientProvider(), MAX_CERTIFICATE_LIST_BYTES));
         assumeTrue(isOptionSupported(sslServerProvider(), MAX_CERTIFICATE_LIST_BYTES));
-        SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .keyManager(ssc.certificate(), ssc.privateKey())
-                .sslProvider(sslClientProvider())
-                .sslContextProvider(clientSslContextProvider())
-                .protocols(param.protocols())
-                .ciphers(param.ciphers())
-                .option(MAX_CERTIFICATE_LIST_BYTES, 10)
-                .build());
-        serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                .sslProvider(sslServerProvider())
-                .sslContextProvider(serverSslContextProvider())
-                .protocols(param.protocols())
-                .ciphers(param.ciphers())
-                .option(MAX_CERTIFICATE_LIST_BYTES, 10)
-                .clientAuth(ClientAuth.REQUIRE)
-                .build());
+        X509Bundle ssc = createLargeCertificate(1024);
+        File privateKey = ssc.toTempPrivateKeyPem();
+        File certificate = ssc.toTempCertChainPem();
+        // Limits below 16 KiB are ignored:
+        clientSslCtx = clientContectWithCertSizeLimit(param, certificate, privateKey, 10);
+        serverSslCtx = serverContextWithCertSizeLimit(param, certificate, privateKey, 10);
+
+        final SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        final SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+        try {
+            handshake(param.type(), param.delegate(), client, server);
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testMaxCertificateListSmallLimitReject(final SSLEngineTestParam param) throws Exception {
+        assumeTrue(isOptionSupported(sslClientProvider(), MAX_CERTIFICATE_LIST_BYTES));
+        assumeTrue(isOptionSupported(sslServerProvider(), MAX_CERTIFICATE_LIST_BYTES));
+        X509Bundle ssc = createLargeCertificate(16 * 1024); // This certificate is too large, and must be rejected.
+        File privateKey = ssc.toTempPrivateKeyPem();
+        File certificate = ssc.toTempCertChainPem();
+        // Limits below 16 KiB are ignored:
+        clientSslCtx = clientContectWithCertSizeLimit(param, certificate, privateKey, 10);
+        serverSslCtx = serverContextWithCertSizeLimit(param, certificate, privateKey, 10);
 
         final SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
         final SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
@@ -1637,15 +1652,139 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 }
             });
             // In the case of TLS_v1_3 we might only generate the exception once the actual handshake is considered
-            // done. If other protocols this should be generasted during the handshake itself and so be of type
+            // done. If other protocols this should be generated during the handshake itself and so be of type
             // SSLHandshakeException.
             if (!SslProtocols.TLS_v1_3.equals(client.getSession().getProtocol())) {
                 assertInstanceOf(SSLHandshakeException.class, e);
             }
+            assertThat(e.getMessage()).contains("EXCESSIVE_MESSAGE_SIZE");
         } finally {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
         }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testMaxCertificateListAcceptingLargeLimitAccept(final SSLEngineTestParam param) throws Exception {
+        assumeTrue(isOptionSupported(sslClientProvider(), MAX_CERTIFICATE_LIST_BYTES));
+        assumeTrue(isOptionSupported(sslServerProvider(), MAX_CERTIFICATE_LIST_BYTES));
+        X509Bundle ssc = createLargeCertificate(100 * 1024);
+        File privateKey = ssc.toTempPrivateKeyPem();
+        File certificate = ssc.toTempCertChainPem();
+        clientSslCtx = clientContectWithCertSizeLimit(param, certificate, privateKey, 116 * 1024);
+        serverSslCtx = serverContextWithCertSizeLimit(param, certificate, privateKey, 116 * 1024);
+
+        final SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        final SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+        try {
+            handshake(param.type(), param.delegate(), client, server);
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testMaxCertificateListAcceptingLargeLimitReject(final SSLEngineTestParam param) throws Exception {
+        assumeTrue(isOptionSupported(sslClientProvider(), MAX_CERTIFICATE_LIST_BYTES));
+        assumeTrue(isOptionSupported(sslServerProvider(), MAX_CERTIFICATE_LIST_BYTES));
+        X509Bundle ssc = createLargeCertificate(100 * 1024);
+        File privateKey = ssc.toTempPrivateKeyPem();
+        File certificate = ssc.toTempCertChainPem();
+        clientSslCtx = clientContectWithCertSizeLimit(param, certificate, privateKey, 100 * 1024);
+        serverSslCtx = serverContextWithCertSizeLimit(param, certificate, privateKey, 100 * 1024);
+
+        final SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        final SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+        try {
+            SSLException e = assertThrows(SSLException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    handshake(param.type(), param.delegate(), client, server);
+                }
+            });
+            // In the case of TLS_v1_3 we might only generate the exception once the actual handshake is considered
+            // done. If other protocols this should be generated during the handshake itself and so be of type
+            // SSLHandshakeException.
+            if (!SslProtocols.TLS_v1_3.equals(client.getSession().getProtocol())) {
+                assertInstanceOf(SSLHandshakeException.class, e);
+            }
+            assertThat(e.getMessage()).contains("EXCESSIVE_MESSAGE_SIZE");
+        } finally {
+            cleanupClientSslEngine(client);
+            cleanupServerSslEngine(server);
+        }
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    public void testMaxCertificateListAcceptingLargeLimitAcceptWithSessionResumption(final SSLEngineTestParam param)
+            throws Exception {
+        assumeTrue(isOptionSupported(sslClientProvider(), MAX_CERTIFICATE_LIST_BYTES));
+        assumeTrue(isOptionSupported(sslServerProvider(), MAX_CERTIFICATE_LIST_BYTES));
+        X509Bundle ssc = createLargeCertificate(100 * 1024);
+        File privateKey = ssc.toTempPrivateKeyPem();
+        File certificate = ssc.toTempCertChainPem();
+        clientSslCtx = clientContectWithCertSizeLimit(param, certificate, privateKey, 116 * 1024);
+        serverSslCtx = serverContextWithCertSizeLimit(param, certificate, privateKey, 116 * 1024);
+
+        for (int i = 0; i < 3; i++) {
+            final SSLEngine client = wrapEngine(clientSslCtx.newEngine(
+                    UnpooledByteBufAllocator.DEFAULT, "netty.io", 80));
+            final SSLEngine server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
+
+            try {
+                handshake(param.type(), param.delegate(), client, server);
+            } finally {
+                cleanupClientSslEngine(client);
+                cleanupServerSslEngine(server);
+            }
+        }
+    }
+
+    private SslContext clientContectWithCertSizeLimit(
+            SSLEngineTestParam param, File certificate, File privateKey, int maxCertList) throws SSLException {
+        return wrapContext(param, SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .keyManager(certificate, privateKey)
+                .sslProvider(sslClientProvider())
+                .sslContextProvider(clientSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .endpointIdentificationAlgorithm(null)
+                .option(MAX_CERTIFICATE_LIST_BYTES, maxCertList)
+                .build());
+    }
+
+    private SslContext serverContextWithCertSizeLimit(
+            SSLEngineTestParam param, File certificate, File privateKey, int maxCertList) throws SSLException {
+        return wrapContext(param, SslContextBuilder.forServer(certificate, privateKey)
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .sslProvider(sslServerProvider())
+                .sslContextProvider(serverSslContextProvider())
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .option(MAX_CERTIFICATE_LIST_BYTES, maxCertList)
+                .clientAuth(ClientAuth.REQUIRE)
+                .build());
+    }
+
+    private static X509Bundle createLargeCertificate(int extensionSize) throws Exception {
+        byte[] extension = new byte[extensionSize];
+        ThreadLocalRandom.current().nextBytes(extension);
+        return new CertificateBuilder()
+                .subject("cn=netty.io")
+                .rsa2048()
+                .setIsCertificateAuthority(true)
+                .setKeyUsage(true, CertificateBuilder.KeyUsage.digitalSignature)
+                .addExtendedKeyUsageClientAuth()
+                .addExtendedKeyUsageServerAuth()
+                .addExtensionOctetString("1.2.840.113635.100.6.2.1", false, extension)
+                .buildSelfSigned();
     }
 
     private static boolean isWrappingTrustManagerSupported() {
