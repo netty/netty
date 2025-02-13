@@ -28,6 +28,7 @@ public final class IoUring {
     private static final boolean IORING_SPLICE_SUPPORTED;
     private static final boolean IORING_SEND_ZC_SUPPORTED;
     private static final boolean IORING_ACCEPT_NO_WAIT_SUPPORTED;
+    private static final boolean IORING_ACCEPT_MULTISHOT_SUPPORTED;
     private static final boolean IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     private static final boolean IORING_SETUP_SUBMIT_ALL_SUPPORTED;
     private static final boolean IORING_SETUP_CQ_SIZE_SUPPORTED;
@@ -45,6 +46,7 @@ public final class IoUring {
         boolean spliceSupported = false;
         boolean sendZCSupported = false;
         boolean acceptSupportNoWait = false;
+        boolean acceptMultishotSupported = false;
         boolean registerIowqWorkersSupported = false;
         boolean submitAllSupported = false;
         boolean setUpCqSizeSupported = false;
@@ -71,6 +73,7 @@ public final class IoUring {
                         sendZCSupported = Native.isIOUringSupportSendZC(ringBuffer.fd());
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
                         acceptSupportNoWait = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
+                        acceptMultishotSupported = Native.isIOUringAcceptMultishotSupported(ringBuffer.fd());
                         registerIowqWorkersSupported = Native.isRegisterIOWQWorkerSupported(ringBuffer.fd());
                         submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
                         setUpCqSizeSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQSIZE);
@@ -110,13 +113,14 @@ public final class IoUring {
                         "IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED={}, " +
                         "IORING_SPLICE_SUPPORTED={}, " +
                         "IORING_ACCEPT_NO_WAIT_SUPPORTED={}, " +
+                        "IORING_ACCEPT_MULTISHOT_SUPPORTED={}, " +
                         "IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED={}, " +
                         "IORING_SETUP_SUBMIT_ALL_SUPPORTED={}, " +
                         "IORING_SETUP_SINGLE_ISSUER_SUPPORTED={}, " +
                         "IORING_SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
                         "IORING_REGISTER_BUFFER_RING_SUPPORTED={}, " +
                         "IOU_PBUF_RING_INC_SUPPORTED={}" +
-                        ")", socketNonEmptySupported, spliceSupported, acceptSupportNoWait,
+                        ")", socketNonEmptySupported, spliceSupported, acceptSupportNoWait, acceptMultishotSupported,
                         registerIowqWorkersSupported, submitAllSupported, singleIssuerSupported,
                         deferTaskrunSupported, registerBufferRingSupported, registerBufferRingIncSupported);
             }
@@ -126,6 +130,7 @@ public final class IoUring {
         IORING_SPLICE_SUPPORTED = spliceSupported;
         IORING_SEND_ZC_SUPPORTED = sendZCSupported;
         IORING_ACCEPT_NO_WAIT_SUPPORTED = acceptSupportNoWait;
+        IORING_ACCEPT_MULTISHOT_SUPPORTED = acceptMultishotSupported;
         IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED = registerIowqWorkersSupported;
         IORING_SETUP_SUBMIT_ALL_SUPPORTED = submitAllSupported;
         IORING_SETUP_CQ_SIZE_SUPPORTED = setUpCqSizeSupported;
@@ -177,6 +182,10 @@ public final class IoUring {
 
     static boolean isIOUringAcceptNoWaitSupported() {
         return IORING_ACCEPT_NO_WAIT_SUPPORTED;
+    }
+
+    static boolean isIOUringAcceptMultishotSupported() {
+        return IORING_ACCEPT_MULTISHOT_SUPPORTED;
     }
 
     static boolean isRegisterIowqMaxWorkersSupported() {

@@ -376,6 +376,32 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             return null;
         }
 
+        private int calculateRecvFlags(boolean first) {
+            // Depending on if this is the first read or not we will use Native.MSG_DONTWAIT.
+            // The idea is that if the socket is blocking we can do the first read in a blocking fashion
+            // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
+            // be possible directly we schedule these with Native.MSG_DONTWAIT. This allows us to still be
+            // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
+            // transports.
+            if (first) {
+                return 0;
+            }
+            return Native.MSG_DONTWAIT;
+        }
+
+        private short calculateRecvIoPrio(boolean first, boolean socketIsEmpty) {
+            // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
+            // attempt.
+            // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
+            if (first) {
+                // IORING_RECVSEND_POLL_FIRST and IORING_CQE_F_SOCK_NONEMPTY were added in the same release (5.19).
+                // We need to check if it's supported as otherwise providing these would result in an -EINVAL.
+                return socketIsEmpty && IoUring.isIOUringCqeFSockNonEmptySupported() ?
+                        Native.IORING_RECVSEND_POLL_FIRST : 0;
+            }
+            return 0;
+        }
+
         @Override
         protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
             assert readBuffer == null;
@@ -384,16 +410,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             final IoUringStreamChannelConfig channelConfig = (IoUringStreamChannelConfig) config();
             final IoUringIoHandler ioUringIoHandler = registration().attachment();
             // Although we checked whether the current kernel supports `register_buffer_ring`
-            // during the initialization of IoUringIoHandler
-            // we still check it again here.
+            // during the initialization of IoUringIoHandler we still check it again here.
             // When the kernel does not support this feature, it helps the JIT to delete this branch.
-            // only `first` value is true, we will recv with the buffer ring;
-            if (channelConfig.getUseIoUringBufferGroup() && IoUring.isRegisterBufferRingSupported() && first) {
+            if (IoUring.isRegisterBufferRingSupported() && channelConfig.getUseIoUringBufferGroup()) {
                 IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(
                         AbstractIoUringStreamChannel.this, recvBufAllocHandle().guess());
                 if (ioUringBufferRing != null) {
                     ioUringBufferRing.refillIfNecessary();
-                    return scheduleReadProviderBuffer(ioUringBufferRing, socketIsEmpty);
+                    return scheduleReadProviderBuffer(ioUringBufferRing, first, socketIsEmpty);
                 }
             }
 
@@ -403,30 +427,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.attemptedBytesRead(byteBuf.writableBytes());
                 int fd = fd().intValue();
                 IoRegistration registration = registration();
+                short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
+                int recvFlags = calculateRecvFlags(first);
 
-                // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
-                // attempt.
-                // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
-                final short ioPrio;
-
-                // Depending on if this is the first read or not we will use Native.MSG_DONTWAIT.
-                // The idea is that if the socket is blocking we can do the first read in a blocking fashion
-                // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
-                // be possible directly we schedule these with Native.MSG_DONTWAIT. This allows us to still be
-                // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
-                // transports.
-                final int recvFlags;
-
-                if (first) {
-                    // IORING_RECVSEND_POLL_FIRST and IORING_CQE_F_SOCK_NONEMPTY were added in the same release (5.19).
-                    // We need to check if it's supported as otherwise providing these would result in an -EINVAL.
-                    ioPrio = socketIsEmpty && IoUring.isIOUringCqeFSockNonEmptySupported() ?
-                            Native.IORING_RECVSEND_POLL_FIRST : 0;
-                    recvFlags = 0;
-                } else {
-                    ioPrio = 0;
-                    recvFlags = Native.MSG_DONTWAIT;
-                }
                 IoUringIoOps ops = IoUringIoOps.newRecv(fd, flags((byte) 0), ioPrio, recvFlags,
                         byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
                 readId = registration.submit(ops);
@@ -443,21 +446,18 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
         }
 
-        private int scheduleReadProviderBuffer(IoUringBufferRing bufferRing, boolean socketIsEmpty) {
+        private int scheduleReadProviderBuffer(IoUringBufferRing bufferRing, boolean first, boolean socketIsEmpty) {
             short bgId = bufferRing.bufferGroupId();
             try {
                 int chunkSize = bufferRing.chunkSize();
                 IoRegistration registration = registration();
 
                 int fd = fd().intValue();
+                short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
+                int recvFlags = calculateRecvFlags(first);
 
-                // IORING_RECVSEND_POLL_FIRST and IORING_CQE_F_SOCK_NONEMPTY were added in the same release (5.19).
-                // We need to check if it's supported as otherwise providing these would result in an -EINVAL.
-                // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
-                short ioPrio = socketIsEmpty && IoUring.isIOUringCqeFSockNonEmptySupported() ?
-                        Native.IORING_RECVSEND_POLL_FIRST : 0;
                 IoUringIoOps ops = IoUringIoOps.newRecv(
-                        fd, flags((byte) Native.IOSQE_BUFFER_SELECT), ioPrio, 0, 0,
+                        fd, flags((byte) Native.IOSQE_BUFFER_SELECT), ioPrio, recvFlags, 0,
                         chunkSize, nextOpsId(), bgId
                 );
                 readId = registration.submit(ops);
@@ -476,6 +476,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
             assert readId != 0;
             readId = 0;
+            assert outstanding != -1 : "multi-shot not implemented yet";
             boolean allDataRead = false;
 
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
