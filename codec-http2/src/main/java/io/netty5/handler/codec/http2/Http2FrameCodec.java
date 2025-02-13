@@ -751,6 +751,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         DefaultHttp2FrameStream setStreamAndProperty(PropertyKey streamKey, Http2Stream stream) {
             assert id == -1 || stream.id() == id;
             this.stream = stream;
+            this.id = stream.id();
             stream.setProperty(streamKey, this);
             return this;
         }
