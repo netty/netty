@@ -277,6 +277,12 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             // Call the base class to handle the aggregation of the full request.
             super.decode(ctx, msg, out);
             if (out.isEmpty()) {
+                if (msg instanceof LastHttpContent) {
+                    // request failed to aggregate, try with the next request
+                    handlingUpgrade = false;
+                    releaseCurrentMessage();
+                }
+
                 // The full request hasn't been created yet, still awaiting more data.
                 return;
             }
