@@ -1467,7 +1467,7 @@
                 <item>
                   <ignore>true</ignore>
                   <code>java.method.finalMethodAddedToNonFinalClass</code>
-                  <new>method void io.netty.handler.codec.MessageAggregator::releaseCurrentMessage()</new>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage()</new>
                   <justification>Exposed private method.</justification>
                 </item>
               </differences>
