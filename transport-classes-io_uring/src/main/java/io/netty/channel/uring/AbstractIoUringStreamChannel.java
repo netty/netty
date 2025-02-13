@@ -386,6 +386,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
             assert readId != 0;
             readId = 0;
+            assert outstanding != -1 : "multi-shot not implemented yet";
             boolean allDataRead = false;
 
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();

@@ -93,6 +93,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     // Let's limit the amount of pending writes and reads by Short.MAX_VALUE. Maybe Byte.MAX_VALUE would also be good
     // enough but let's be a bit more flexible for now.
     private short numOutstandingWrites;
+    // A value of -1 means that multi-shot is used and so reads will be issued as long as the request is not canceled.
     private short numOutstandingReads;
 
     private boolean readPending;
@@ -227,7 +228,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      * Cancel all outstanding reads
      *
      * @param registration          the {@link IoRegistration}.
-     * @param numOutstandingReads   the number of outstanding reads.
+     * @param numOutstandingReads   the number of outstanding reads, or {@code -1} if multi-shot was used.
      */
     protected abstract void cancelOutstandingReads(IoRegistration registration, int numOutstandingReads);
 
@@ -690,8 +691,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
 
         private void readComplete(byte op, int res, int flags, short data) {
-            assert numOutstandingReads > 0;
-            if (--numOutstandingReads == 0) {
+            assert numOutstandingReads > 0 || numOutstandingReads == -1 : numOutstandingReads;
+            if (numOutstandingReads == -1) {
+                // Reset readPending so we can still keep track if we might need to cancel the multi-shot read or
+                // not.
+                readPending = false;
+            } else if (--numOutstandingReads == 0) {
                 readPending = false;
                 ioState &= ~READ_SCHEDULED;
             }
@@ -705,8 +710,21 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 inReadComplete = false;
                 // There is a pending read and readComplete0(...) also did stop issue read request.
                 // Let's trigger the requested read now.
-                if (readPending && recvBufAllocHandle().isReadComplete()) {
-                    doBeginReadNow();
+                if (recvBufAllocHandle().isReadComplete()) {
+                    if (numOutstandingReads != -1) {
+                        if (readPending) {
+                            doBeginReadNow();
+                        }
+                    } else if (!readPending) {
+                        // Cancel the multi-shot read now as the user did not signal that we want to keep reading.
+                        cancelOutstandingReads(registration, numOutstandingReads);
+                        ioState &= ~READ_SCHEDULED;
+                    }
+                } else if (res == Native.ERRNO_ECANCELED_NEGATIVE && !readPending) {
+                    // In case of using multi-shot we should ensure we reset READ_SCHEDULED if the original
+                    // read was canceled as otherwise we might not be able to close the channel later on as it
+                    // consider things not completely cleaned up.
+                    ioState &= ~READ_SCHEDULED;
                 }
             }
         }
@@ -768,7 +786,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // Only schedule another read if the fd is still open.
             if (delayedClose == null && fd().isOpen() && (ioState & READ_SCHEDULED) == 0) {
                 numOutstandingReads = (short) scheduleRead0(first, socketIsEmpty);
-                if (numOutstandingReads > 0) {
+                if (numOutstandingReads > 0 || numOutstandingReads == -1) {
                     ioState |= READ_SCHEDULED;
                 }
             }
@@ -780,6 +798,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          *
          * @param first             {@code true} if this is the first read of a read loop.
          * @param socketIsEmpty     {@code true} if the socket is guaranteed to be empty, {@code false} otherwise.
+         * @return                  the number of {@link #readComplete(byte, int, int, short)} calls expected or
+         *                          {@code -1} if {@link #readComplete(byte, int, int, short)} is called until
+         *                          the read is cancelled (multi-shot).
          */
         protected abstract int scheduleRead0(boolean first, boolean socketIsEmpty);
 
