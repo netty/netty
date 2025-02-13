@@ -1685,14 +1685,14 @@ public class SslHandlerTest {
 
     @Test
     public void testIncorrectLength() throws SSLException {
-        SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
-        EmbeddedChannel channel = new EmbeddedChannel();
+        final SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
+        final EmbeddedChannel channel = new EmbeddedChannel();
         channel.pipeline().addLast(
                 SslContextBuilder.forServer(cert.key(), cert.cert())
                         .sslProvider(SslProvider.JDK)
                         .build()
                         .newHandler(channel.alloc()));
-        ByteBuf buf = channel.alloc().buffer(5);
+        final ByteBuf buf = channel.alloc().buffer(5);
         buf.writeByte(0x0);
         buf.writeByte(0x1);
         buf.writeByte(0xfe);
