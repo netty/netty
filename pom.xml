@@ -1464,6 +1464,54 @@
                   <new>method io.netty.channel.ServerChannel io.netty.channel.socket.nio.NioDomainSocketChannel::parent()</new>
                   <justification>Old return type made no sense, the parent channel is a NioServerDomainSocketChannel which does not implement ServerSocketChannel. The method always threw a ClassCastException (except for null).</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage()</new>
+                  <justification>Exposed private method.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.http.HttpClientUpgradeHandler</new>
+                  <justification>Exposed private method.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.http.HttpObjectAggregator</new>
+                  <justification>Exposed private method.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.http.HttpServerUpgradeHandler</new>
+                  <justification>Exposed private method.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator</new>
+                  <justification>Exposed private method.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.memcache.binary.BinaryMemcacheObjectAggregator</new>
+                  <justification>Exposed private method.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.memcache.AbstractMemcacheObjectAggregator&lt;H extends io.netty.handler.codec.memcache.MemcacheMessage&gt;</new>
+                  <justification>Exposed private method.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.stomp.StompSubframeAggregator</new>
+                  <justification>Exposed private method.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
@@ -1497,6 +1545,7 @@
               <exclude>io.netty.util.internal.shaded</exclude>
               <exclude>io.netty.buffer.AdaptivePoolingAllocator$ChunkAllocator</exclude>
               <exclude>io.netty.channel.socket.nio.NioDomainSocketChannel#parent()</exclude>
+              <exclude>io.netty.handler.codec.MessageAggregator#releaseCurrentMessage()</exclude>
             </excludes>
             <overrideCompatibilityChangeParameters>
               <overrideCompatibilityChangeParameter>
