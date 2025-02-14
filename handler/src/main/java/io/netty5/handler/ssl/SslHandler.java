@@ -1212,9 +1212,11 @@ public class SslHandler extends ByteToMessageDecoder {
         this.packetLength = 0;
         try {
             final int bytesConsumed = unwrap(ctx, in, packetLength);
-            assert bytesConsumed == packetLength || engine.isInboundDone() :
-                    "we feed the SSLEngine a packets worth of data: " + packetLength + " but it only consumed: " +
-                            bytesConsumed;
+            if (bytesConsumed != packetLength && !engine.isInboundDone()) {
+                // The JDK equivalent of getEncryptedPacketLength has some optimizations and can behave slightly
+                // differently to ours, but this should always be a sign of bad input data.
+                throw new NotSslRecordException();
+            }
         } catch (Throwable cause) {
             handleUnwrapThrowable(ctx, cause);
         }

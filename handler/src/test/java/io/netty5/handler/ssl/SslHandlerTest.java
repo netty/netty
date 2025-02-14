@@ -1687,6 +1687,30 @@ public class SslHandlerTest {
     }
 
     @Test
+    public void testIncorrectLength() throws SSLException {
+        final EmbeddedChannel channel = new EmbeddedChannel();
+        channel.pipeline().addLast(
+                SslContextBuilder.forServer(CERT.getKeyPair().getPrivate(), CERT.getCertificatePath())
+                        .sslProvider(SslProvider.JDK)
+                        .build()
+                        .newHandler(channel.bufferAllocator()));
+        final Buffer buf = channel.bufferAllocator().allocate(5);
+        buf.writeByte((byte) 0x0);
+        buf.writeByte((byte) 0x1);
+        buf.writeByte((byte) 0xfe);
+        buf.writeByte((byte) 0x87);
+        buf.writeByte((byte) 0x2);
+        DecoderException e = assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(buf);
+            }
+        });
+        assertThat(e.getCause(), instanceOf(NotSslRecordException.class));
+        assertTrue(channel.finishAndReleaseAll());
+    }
+
+    @Test
     public void testSslCompletionEventsTls12JDK() throws Exception {
         testSslCompletionEvents(SslProvider.JDK, SslProtocols.TLS_v1_2, true);
         testSslCompletionEvents(SslProvider.JDK, SslProtocols.TLS_v1_2, false);
