@@ -71,6 +71,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLProtocolException;
+import javax.net.ssl.X509ExtendedTrustManager;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.ClosedChannelException;
@@ -90,14 +95,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLProtocolException;
-import javax.net.ssl.X509ExtendedTrustManager;
-
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1686,6 +1689,31 @@ public class SslHandlerTest {
             group.shutdownGracefully();
             ReferenceCountUtil.release(sslClientCtx);
         }
+    }
+
+    @Test
+    public void testIncorrectLength() throws SSLException {
+        final SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
+        final EmbeddedChannel channel = new EmbeddedChannel();
+        channel.pipeline().addLast(
+                SslContextBuilder.forServer(cert.key(), cert.cert())
+                        .sslProvider(SslProvider.JDK)
+                        .build()
+                        .newHandler(channel.alloc()));
+        final ByteBuf buf = channel.alloc().buffer(5);
+        buf.writeByte(0x0);
+        buf.writeByte(0x1);
+        buf.writeByte(0xfe);
+        buf.writeByte(0x87);
+        buf.writeByte(0x2);
+        DecoderException e = assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                channel.writeInbound(buf);
+            }
+        });
+        assertThat(e.getCause(), instanceOf(NotSslRecordException.class));
+        assertTrue(channel.finishAndReleaseAll());
     }
 
     @Test
