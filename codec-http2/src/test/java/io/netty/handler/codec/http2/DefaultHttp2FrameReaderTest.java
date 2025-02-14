@@ -110,6 +110,39 @@ public class DefaultHttp2FrameReaderTest {
     }
 
     @Test
+    public void readHeaderFrameAndContinuationFrameExceedMax() throws Http2Exception {
+        frameReader = new DefaultHttp2FrameReader(new DefaultHttp2HeadersDecoder(true), 2);
+        final int streamId = 1;
+
+        final ByteBuf input = Unpooled.buffer();
+        try {
+            Http2Headers headers = new DefaultHttp2Headers()
+                    .authority("foo")
+                    .method("get")
+                    .path("/")
+                    .scheme("https");
+            writeHeaderFrame(input, streamId, headers,
+                    new Http2Flags().endOfHeaders(false).endOfStream(true));
+            writeContinuationFrame(input, streamId, new DefaultHttp2Headers().add("foo", "bar"),
+                    new Http2Flags().endOfHeaders(false));
+            writeContinuationFrame(input, streamId, new DefaultHttp2Headers().add("foo2", "bar2"),
+                    new Http2Flags().endOfHeaders(false));
+            writeContinuationFrame(input, streamId, new DefaultHttp2Headers().add("foo3", "bar3"),
+                    new Http2Flags().endOfHeaders(false));
+
+            Http2Exception ex = assertThrows(Http2Exception.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    frameReader.readFrame(ctx, input, listener);
+                }
+            });
+            assertEquals(Http2Error.ENHANCE_YOUR_CALM, ex.error());
+        } finally {
+            input.release();
+        }
+    }
+
+    @Test
     public void readUnknownFrame() throws Http2Exception {
         ByteBuf input = Unpooled.buffer();
         ByteBuf payload = Unpooled.buffer();
