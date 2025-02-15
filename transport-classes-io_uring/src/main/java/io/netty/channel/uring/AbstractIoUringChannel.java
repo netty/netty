@@ -748,7 +748,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         // The readComplete(...) was triggered because the previous read was cancelled.
                         // In this case we we need to check if the user did signal the desire to read again
                         // in the meantime. If this is the case we need to schedule the read to ensure
-                        // we not stale.
+                        // we do not stall.
                         if (pending) {
                             doBeginReadNow();
                         }
