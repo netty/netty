@@ -292,7 +292,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         readPending = true;
         if (inReadComplete || !isActive()) {
             // We are currently in the readComplete(...) callback which might issue more reads by itself.
-            // If readComplete(...) will not issue more reads itself it will pick up he readPending flag, reset it and
+            // If readComplete(...) will not issue more reads itself it will pick up the readPending flag, reset it and
             // call doBeginReadNow().
             return;
         }
