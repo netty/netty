@@ -289,11 +289,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // We already have a read pending.
             return;
         }
+        readPending = true;
         if (inReadComplete || !isActive()) {
-            // We are currently in the readComplete(...) callback which might issue more reads by itself. Just
-            // mark it as a pending read. If readComplete(...) will not issue more reads itself it will pick up
-            // the readPending flag, reset it and call doBeginReadNow().
-            readPending = true;
+            // We are currently in the readComplete(...) callback which might issue more reads by itself.
+            // If readComplete(...) will not issue more reads itself it will pick up the readPending flag, reset it and
+            // call doBeginReadNow().
             return;
         }
         doBeginReadNow();
@@ -668,6 +668,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     }
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
+                    // Handle this same way as if we did read all data so we don't schedule another read.
+                    inputClosedSeenErrorOnRead = true;
                     close(voidPromise());
                     return;
                 }
@@ -693,6 +695,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         private void readComplete(byte op, int res, int flags, short data) {
             assert numOutstandingReads > 0 || numOutstandingReads == -1 : numOutstandingReads;
+            // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm. This works for
+            // multi-shot and non multi-shot variants.
+            if ((flags & Native.IORING_CQE_F_MORE) == 0) {
+                ioState &= ~READ_SCHEDULED;
+            }
+            boolean pending = readPending;
             if (numOutstandingReads == -1) {
                 // Reset readPending so we can still keep track if we might need to cancel the multi-shot read or
                 // not.
@@ -707,25 +715,49 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
                 readComplete0(op, res, flags, data, numOutstandingReads);
             } finally {
-                socketIsEmpty = false;
-                inReadComplete = false;
-                // There is a pending read and readComplete0(...) also did stop issue read request.
-                // Let's trigger the requested read now.
-                if (recvBufAllocHandle().isReadComplete()) {
-                    if (numOutstandingReads != -1) {
-                        if (readPending) {
+                try {
+                    // Check if we should consider the read loop to be done.
+                    if (recvBufAllocHandle().isReadComplete()) {
+                        // Reset the handle as we are done with the read-loop.
+                        recvBufAllocHandle().reset(config());
+
+                        // Check if this was a readComplete(...) triggered by a read or multi-shot read.
+                        if (numOutstandingReads != -1) {
+                            if (readPending) {
+                                // This was a "normal" read and the user did signal we should continue reading.
+                                // Let's schedule the read now.
+                                doBeginReadNow();
+                            }
+                        } else {
+                            // The readComplete(...) was triggered by a multi-shot read. Because of this the state
+                            // machine is a bit more complicated.
+                            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                                // The readComplete(...) was triggered because the previous read was cancelled.
+                                // In this case we we need to check if the user did signal the desire to read again
+                                // in the meantime. If this is the case we need to schedule the read to ensure
+                                // we do not stall.
+                                if (pending) {
+                                    doBeginReadNow();
+                                }
+                            } else if (!readPending) {
+                                // Cancel the multi-shot read now as the user did not signal that we want to keep
+                                // reading while we handle the completion event.
+                                cancelOutstandingReads(registration, numOutstandingReads);
+                            }
+                        }
+                    } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                        // The readComplete(...) was triggered because the previous read was cancelled.
+                        // In this case we we need to check if the user did signal the desire to read again
+                        // in the meantime. If this is the case we need to schedule the read to ensure
+                        // we do not stall.
+                        if (pending) {
                             doBeginReadNow();
                         }
-                    } else if (!readPending) {
-                        // Cancel the multi-shot read now as the user did not signal that we want to keep reading.
-                        cancelOutstandingReads(registration, numOutstandingReads);
-                        ioState &= ~READ_SCHEDULED;
+                        doBeginReadNow();
                     }
-                } else if (res == Native.ERRNO_ECANCELED_NEGATIVE && !readPending) {
-                    // In case of using multi-shot we should ensure we reset READ_SCHEDULED if the original
-                    // read was canceled as otherwise we might not be able to close the channel later on as it
-                    // consider things not completely cleaned up.
-                    ioState &= ~READ_SCHEDULED;
+                } finally {
+                    socketIsEmpty = false;
+                    inReadComplete = false;
                 }
             }
         }

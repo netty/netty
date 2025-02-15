@@ -405,7 +405,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         @Override
         protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
             assert readBuffer == null;
-            assert readId == 0;
+            assert readId == 0 : readId;
 
             final IoUringStreamChannelConfig channelConfig = (IoUringStreamChannelConfig) config();
             final IoUringIoHandler ioUringIoHandler = registration().attachment();
@@ -449,22 +449,32 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         private int scheduleReadProviderBuffer(IoUringBufferRing bufferRing, boolean first, boolean socketIsEmpty) {
             short bgId = bufferRing.bufferGroupId();
             try {
-                int chunkSize = bufferRing.chunkSize();
-                IoRegistration registration = registration();
-
-                int fd = fd().intValue();
+                boolean multishot = IoUring.isIOUringRecvMultishotSupported();
+                byte flags = flags((byte) Native.IOSQE_BUFFER_SELECT);
                 short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
                 int recvFlags = calculateRecvFlags(first);
-
+                final int len;
+                if (multishot) {
+                    ioPrio |= Native.IORING_RECV_MULTISHOT;
+                    len = 0;
+                } else {
+                    len = bufferRing.chunkSize();
+                }
+                IoRegistration registration = registration();
+                int fd = fd().intValue();
                 IoUringIoOps ops = IoUringIoOps.newRecv(
-                        fd, flags((byte) Native.IOSQE_BUFFER_SELECT), ioPrio, recvFlags, 0,
-                        chunkSize, nextOpsId(), bgId
+                        fd, flags, ioPrio, recvFlags, 0,
+                        len, nextOpsId(), bgId
                 );
                 readId = registration.submit(ops);
                 if (readId == 0) {
                     return 0;
                 }
                 lastUsedBufferRing = bufferRing;
+                if (multishot) {
+                    // Return -1 to signal we used multishot and so expect multiple recvComplete(...) calls.
+                    return -1;
+                }
                 return 1;
             } catch (IllegalArgumentException illegalArgumentException) {
                 this.handleReadException(pipeline(), null, illegalArgumentException, false, recvBufAllocHandle());
@@ -474,29 +484,42 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
+            ByteBuf byteBuf = readBuffer;
+            readBuffer = null;
+            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                readId = 0;
+                // In case of cancellation we should reset the last used buffer ring to null as we will select a new one
+                // when calling scheduleRead(..)
+                lastUsedBufferRing = null;
+                if (byteBuf != null) {
+                    //recv without buffer ring
+                    byteBuf.release();
+                }
+                return;
+            }
             assert readId != 0;
-            readId = 0;
-            assert outstanding != -1 : "multi-shot not implemented yet";
+            IoUringBufferRing bufferRing = lastUsedBufferRing;
+            boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
+            boolean empty = socketIsEmpty(flags);
+            if (rearm) {
+                // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
+                readId = 0;
+                // In case of rearm we should reset the last used buffer ring to null as we will select a new one
+                // when calling scheduleRead(..)
+                lastUsedBufferRing = null;
+            }
+
             boolean allDataRead = false;
 
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             final ChannelPipeline pipeline = pipeline();
-            ByteBuf byteBuf = this.readBuffer;
-            IoUringBufferRing bufferRing = lastUsedBufferRing;
-            this.readBuffer = null;
-            this.lastUsedBufferRing = null;
 
             try {
                 if (res < 0) {
-                    if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                        if (byteBuf != null) {
-                            //recv without buffer ring
-                            byteBuf.release();
-                        }
-                        return;
-                    }
-
                     if (res == Native.ERRNO_NO_BUFFER_NEGATIVE) {
+                        // Reset the last used buffer ring to null as we will call scheduleRead(...) below which
+                        // will either select a new buffer ring to use or not use a buffer ring at all.
+                        this.lastUsedBufferRing = null;
                         //recv with provider buffer fail!
                         //fallback to normal recv
                         bufferRing.markExhausted();
@@ -553,18 +576,20 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.incMessagesRead(1);
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
-                scheduleNextRead(flags);
+                scheduleNextRead(pipeline, allocHandle, rearm, empty);
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
             }
         }
 
-        private void scheduleNextRead(int cqeFlags) {
-            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            final ChannelPipeline pipeline = pipeline();
-            if (allocHandle.continueReading() && !socketIsEmpty(cqeFlags)) {
-                // Let's schedule another read.
-                scheduleRead(false);
+        private void scheduleNextRead(ChannelPipeline pipeline, IoUringRecvByteAllocatorHandle allocHandle,
+                                      boolean rearm, boolean empty) {
+            if (allocHandle.continueReading() && !empty) {
+                if (rearm) {
+                    // We only should schedule another read if we need to rearm.
+                    // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#multi-shot
+                    scheduleRead(false);
+                }
             } else {
                 // We did not fill the whole ByteBuf so we should break the "read loop" and try again later.
                 allocHandle.readComplete();
@@ -669,11 +694,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     protected final void cancelOutstandingReads(IoRegistration registration, int numOutstandingReads) {
         if (readId != 0) {
             // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
-            assert numOutstandingReads == 1;
+            assert numOutstandingReads == 1 || numOutstandingReads == -1;
             IoUringIoOps ops = IoUringIoOps.newAsyncCancel(flags((byte) 0), readId, Native.IORING_OP_RECV);
-            registration.submit(ops);
+            long id = registration.submit(ops);
+            assert id != 0;
         } else {
-            assert numOutstandingReads == 0;
+            assert numOutstandingReads == 0 || numOutstandingReads == -1;
         }
     }
 
@@ -684,7 +710,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             // (via fastpoll).
             assert numOutstandingWrites == 1;
             assert writeOpCode != 0;
-            registration.submit(IoUringIoOps.newAsyncCancel(flags((byte) 0), writeId, writeOpCode));
+            long id = registration.submit(IoUringIoOps.newAsyncCancel(flags((byte) 0), writeId, writeOpCode));
+            assert id != 0;
         } else {
             assert numOutstandingWrites == 0;
         }

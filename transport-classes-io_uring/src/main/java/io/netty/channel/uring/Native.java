@@ -215,6 +215,8 @@ final class Native {
     static final int IORING_CQE_F_BUF_MORE = 1 << 4;
 
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
+    static final short IORING_RECV_MULTISHOT = 1 << 1;
+
     static final short IORING_ACCEPT_MULTISHOT = 1 << 0;
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;
     static final short IORING_ACCEPT_POLL_FIRST = 1 << 2;
@@ -369,6 +371,11 @@ final class Native {
             throw new UnsupportedOperationException("Not all operations are supported: "
                     + Arrays.toString(REQUIRED_IORING_OPS));
         }
+    }
+
+    static boolean isIOUringRecvMultishotSupported() {
+        // Added in the same release as IORING_SETUP_SINGLE_ISSUER.
+        return Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
     }
 
     static boolean isIOUringAcceptMultishotSupported(int ringFd) {
