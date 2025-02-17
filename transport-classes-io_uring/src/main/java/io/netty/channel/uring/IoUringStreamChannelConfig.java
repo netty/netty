@@ -19,12 +19,17 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.Map;
 
 abstract class IoUringStreamChannelConfig extends DefaultChannelConfig {
 
+    static final int DISABLE_SEND_ZC = -1;
+
     private volatile boolean useIoUringBufferGroup;
+
+    private volatile int sendZcThreshold = DISABLE_SEND_ZC;
 
     IoUringStreamChannelConfig(Channel channel) {
         super(channel);
@@ -40,6 +45,11 @@ abstract class IoUringStreamChannelConfig extends DefaultChannelConfig {
         if (option == IoUringChannelOption.USE_IO_URING_BUFFER_GROUP) {
             return (T) Boolean.valueOf(getUseIoUringBufferGroup());
         }
+
+        if (option == IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD) {
+            return (T) Integer.valueOf(getSendZcThreshold());
+        }
+
         return super.getOption(option);
     }
 
@@ -49,20 +59,48 @@ abstract class IoUringStreamChannelConfig extends DefaultChannelConfig {
             setUseIoUringBufferGroup((Boolean) value);
             return true;
         }
+
+        if (option == IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD) {
+            setSendZcThreshold((Integer) value);
+            return true;
+        }
+
         return super.setOption(option, value);
     }
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), IoUringChannelOption.USE_IO_URING_BUFFER_GROUP);
+        return getOptions(
+                super.getOptions(), IoUringChannelOption.USE_IO_URING_BUFFER_GROUP,
+                IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD
+        );
     }
 
     boolean getUseIoUringBufferGroup() {
         return useIoUringBufferGroup;
     }
 
+    int getSendZcThreshold() {
+        return sendZcThreshold;
+    }
+
     IoUringStreamChannelConfig setUseIoUringBufferGroup(boolean useIoUringBufferGroup) {
         this.useIoUringBufferGroup = useIoUringBufferGroup;
         return this;
+    }
+
+    IoUringStreamChannelConfig setSendZcThreshold(int sendZcThreshold) {
+        if (sendZcThreshold == DISABLE_SEND_ZC) {
+            this.sendZcThreshold = DISABLE_SEND_ZC;
+        } else {
+            this.sendZcThreshold = ObjectUtil.checkPositiveOrZero(sendZcThreshold, "sendZcThreshold");
+        }
+        return this;
+    }
+
+    static boolean tryUsingSendZC(IoUringStreamChannelConfig channelConfig, int waitSend) {
+        // This can reduce one read operation on a volatile field.
+        int threshold = channelConfig.getSendZcThreshold();
+        return threshold != DISABLE_SEND_ZC && waitSend >= threshold;
     }
 }
