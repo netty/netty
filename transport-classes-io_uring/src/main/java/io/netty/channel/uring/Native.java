@@ -216,6 +216,9 @@ final class Native {
 
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
     static final short IORING_RECV_MULTISHOT = 1 << 1;
+    static final short IORING_SEND_ZC_REPORT_USAGE = 1 << 3;
+
+    static final int IORING_NOTIF_USAGE_ZC_COPIED = 1 << 31;
 
     static final short IORING_ACCEPT_MULTISHOT = 1 << 0;
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;

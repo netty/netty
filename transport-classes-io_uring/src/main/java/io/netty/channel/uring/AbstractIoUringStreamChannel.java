@@ -330,6 +330,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
             IoUringStreamChannelConfig ioUringStreamChannelConfig = (IoUringStreamChannelConfig) config();
             int fd = fd().intValue();
+            int zcFlags = Native.IORING_SEND_ZC_REPORT_USAGE;
 
             if (buf.nioBufferCount() == 1) {
                 int waitSend = buf.readableBytes();
@@ -346,7 +347,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                             fd, memoryAddress, buf.readableBytes(),
                             0,
                             nextOpsId(),
-                            0
+                            zcFlags
                     );
                 }
                 // Not reaching the threshold, so we dont send ZC
@@ -367,7 +368,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                                 fd, memoryAddress, remaining,
                                 0,
                                 nextOpsId(),
-                                0
+                                zcFlags
                         );
                     }
                 }
@@ -652,6 +653,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 this.iovArray = null;
                 iovArray.release();
             }
+
+            if (IoUring.isIOUringSendZCSupported() && (flags & Native.IORING_CQE_F_NOTIF) != 0) {
+                checkZCReport(res);
+                res &= ~Native.IORING_NOTIF_USAGE_ZC_COPIED;
+            }
+
             if (res >= 0) {
                 if (IoUring.isIOUringSendZCSupported()) {
                     // First CQE with standard res semantics and the IORING_CQE_F_MORE flag set, and
@@ -687,6 +694,28 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         protected void freeResourcesNow(IoRegistration reg) {
             super.freeResourcesNow(reg);
             assert readBuffer == null;
+        }
+    }
+
+    private void checkZCReport(int res) {
+        /*
+         * IORING_SEND_ZC_REPORT_USAGE
+         * If set, SEND[MSG]_ZC should report the zerocopy usage in cqe.res for the IORING_CQE_F_NOTIF cqe.
+         * 0 is reported if zerocopy was actually possible.
+         * IORING_NOTIF_USAGE_ZC_COPIED if data was copied(at least partially).
+         */
+        if (res == 0) {
+            return;
+        }
+
+        /*
+         * cqe.res for IORING_CQE_F_NOTIF if IORING_SEND_ZC_REPORT_USAGE was requested
+         *
+         * It should be treated as a flag, all other bits of cqe.res should be treated as reserved!
+         */
+        boolean isCopy = (res & Native.IORING_NOTIF_USAGE_ZC_COPIED) != 0;
+        if (isCopy) {
+            pipeline().fireUserEventTriggered(IoUringSendZCFallbackEvent.INSTANCE);
         }
     }
 
