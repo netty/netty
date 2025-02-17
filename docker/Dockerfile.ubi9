@@ -1,0 +1,37 @@
+FROM --platform=linux/amd64 redhat/ubi9-minimal
+
+RUN microdnf install -y \
+ apr-devel \
+ autoconf \
+ automake \
+ git \
+ glibc-devel \
+ libtool \
+ lksctp-tools \
+ make \
+ openssl-devel \
+ tar \
+ unzip \
+ wget \
+ zip
+
+# Downloading and installing SDKMAN!
+RUN curl -s  "https://get.sdkman.io" | bash
+
+ARG java_version=11.0.12-zulu
+ENV JAVA_VERSION $java_version
+
+# Installing Java removing some unnecessary SDKMAN files
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    yes | sdk install java $JAVA_VERSION && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
+
+RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
+RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
+
+# Cleanup
+RUN microdnf clean all
+
+# when the JDK is GraalVM install native-image
+RUN if [ -O /root/.sdkman/candidates/java/current/bin/gu ]; then /root/.sdkman/candidates/java/current/bin/gu install native-image; else echo "Not GraalVM, skip installation of native-image" ; fi

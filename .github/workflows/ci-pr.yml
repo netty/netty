@@ -183,6 +183,9 @@ jobs:
           - setup: linux-x86_64-java11-adaptive
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-adaptive"
+          - setup: linux-x86_64-ubi9-java21
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.21.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.21.yaml run build-boringssl-static"
 
     name: ${{ matrix.setup }} build
     needs: verify-pr

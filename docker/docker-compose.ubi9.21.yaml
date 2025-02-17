@@ -1,0 +1,29 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty:ubi9-21
+    build:
+      args:
+        java_version : "21.0.5-zulu"
+      context: .
+      dockerfile: Dockerfile.centos6
+
+  build:
+    image: netty:ubi9-21
+
+  build-leak:
+    image: netty:ubi9-21
+
+  build-boringssl-static:
+    image: netty:ubi9-21
+
+  build-leak-boringssl-static:
+    image: netty:ubi9-21
+
+  build-boringssl-snapshot:
+    image: netty:ubi9-21
+
+  shell:
+    image: netty:ubi9-21
