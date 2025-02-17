@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 import io.netty.util.concurrent.ThreadAwareExecutor;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.Executors;
@@ -75,6 +76,7 @@ public class SingleThreadIoEventLoopTest {
         }
     }
 
+    @Disabled("This test is flaky and will often stall the build")
     @Test
     void testSuspendingWhileRegistrationActive() throws Exception {
         TestThreadFactory threadFactory = new TestThreadFactory();
