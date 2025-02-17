@@ -94,7 +94,7 @@ public class FileDescriptor {
         return !isClosed(state);
     }
 
-    public final int write(ByteBuffer buf, int pos, int limit) throws IOException {
+    public int write(ByteBuffer buf, int pos, int limit) throws IOException {
         int res = write(fd, buf, pos, limit);
         if (res >= 0) {
             return res;
@@ -102,7 +102,7 @@ public class FileDescriptor {
         return ioResult("write", res);
     }
 
-    public final int writeAddress(long address, int pos, int limit) throws IOException {
+    public int writeAddress(long address, int pos, int limit) throws IOException {
         int res = writeAddress(fd, address, pos, limit);
         if (res >= 0) {
             return res;
@@ -110,7 +110,7 @@ public class FileDescriptor {
         return ioResult("writeAddress", res);
     }
 
-    public final long writev(ByteBuffer[] buffers, int offset, int length, long maxBytesToWrite) throws IOException {
+    public long writev(ByteBuffer[] buffers, int offset, int length, long maxBytesToWrite) throws IOException {
         long res = writev(fd, buffers, offset, min(IOV_MAX, length), maxBytesToWrite);
         if (res >= 0) {
             return res;
@@ -118,7 +118,7 @@ public class FileDescriptor {
         return ioResult("writev", (int) res);
     }
 
-    public final long writevAddresses(long memoryAddress, int length) throws IOException {
+    public long writevAddresses(long memoryAddress, int length) throws IOException {
         long res = writevAddresses(fd, memoryAddress, length);
         if (res >= 0) {
             return res;
@@ -126,7 +126,7 @@ public class FileDescriptor {
         return ioResult("writevAddresses", (int) res);
     }
 
-    public final int read(ByteBuffer buf, int pos, int limit) throws IOException {
+    public int read(ByteBuffer buf, int pos, int limit) throws IOException {
         int res = read(fd, buf, pos, limit);
         if (res > 0) {
             return res;
@@ -137,7 +137,7 @@ public class FileDescriptor {
         return ioResult("read", res);
     }
 
-    public final int readAddress(long address, int pos, int limit) throws IOException {
+    public int readAddress(long address, int pos, int limit) throws IOException {
         int res = readAddress(fd, address, pos, limit);
         if (res > 0) {
             return res;
