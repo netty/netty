@@ -1615,7 +1615,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         File privateKey = ssc.toTempPrivateKeyPem();
         File certificate = ssc.toTempCertChainPem();
         // Limits below 16 KiB are ignored:
-        clientSslCtx = clientContectWithCertSizeLimit(param, certificate, privateKey, 10);
+        clientSslCtx = clientContextWithCertSizeLimit(param, certificate, privateKey, 10);
         serverSslCtx = serverContextWithCertSizeLimit(param, certificate, privateKey, 10);
 
         final SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
@@ -1638,7 +1638,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         File privateKey = ssc.toTempPrivateKeyPem();
         File certificate = ssc.toTempCertChainPem();
         // Limits below 16 KiB are ignored:
-        clientSslCtx = clientContectWithCertSizeLimit(param, certificate, privateKey, 10);
+        clientSslCtx = clientContextWithCertSizeLimit(param, certificate, privateKey, 10);
         serverSslCtx = serverContextWithCertSizeLimit(param, certificate, privateKey, 10);
 
         final SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
@@ -1672,7 +1672,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         X509Bundle ssc = createLargeCertificate(100 * 1024);
         File privateKey = ssc.toTempPrivateKeyPem();
         File certificate = ssc.toTempCertChainPem();
-        clientSslCtx = clientContectWithCertSizeLimit(param, certificate, privateKey, 116 * 1024);
+        clientSslCtx = clientContextWithCertSizeLimit(param, certificate, privateKey, 116 * 1024);
         serverSslCtx = serverContextWithCertSizeLimit(param, certificate, privateKey, 116 * 1024);
 
         final SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
@@ -1694,7 +1694,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         X509Bundle ssc = createLargeCertificate(100 * 1024);
         File privateKey = ssc.toTempPrivateKeyPem();
         File certificate = ssc.toTempCertChainPem();
-        clientSslCtx = clientContectWithCertSizeLimit(param, certificate, privateKey, 100 * 1024);
+        clientSslCtx = clientContextWithCertSizeLimit(param, certificate, privateKey, 100 * 1024);
         serverSslCtx = serverContextWithCertSizeLimit(param, certificate, privateKey, 100 * 1024);
 
         final SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
@@ -1729,7 +1729,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         X509Bundle ssc = createLargeCertificate(100 * 1024);
         File privateKey = ssc.toTempPrivateKeyPem();
         File certificate = ssc.toTempCertChainPem();
-        clientSslCtx = clientContectWithCertSizeLimit(param, certificate, privateKey, 116 * 1024);
+        clientSslCtx = clientContextWithCertSizeLimit(param, certificate, privateKey, 116 * 1024);
         serverSslCtx = serverContextWithCertSizeLimit(param, certificate, privateKey, 116 * 1024);
 
         for (int i = 0; i < 3; i++) {
@@ -1746,7 +1746,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         }
     }
 
-    private SslContext clientContectWithCertSizeLimit(
+    private SslContext clientContextWithCertSizeLimit(
             SSLEngineTestParam param, File certificate, File privateKey, int maxCertList) throws SSLException {
         return wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
