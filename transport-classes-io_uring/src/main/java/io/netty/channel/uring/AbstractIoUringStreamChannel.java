@@ -325,8 +325,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             if (IoUring.isRegisterBufferRingSupported() && channelConfig.getUseIoUringBufferGroup()) {
                 IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(
                         AbstractIoUringStreamChannel.this, recvBufAllocHandle().guess());
-                if (ioUringBufferRing != null) {
-                    ioUringBufferRing.refillIfNecessary();
+                if (ioUringBufferRing != null && !ioUringBufferRing.isExhausted()) {
                     return scheduleReadProviderBuffer(ioUringBufferRing, first, socketIsEmpty);
                 }
             }
