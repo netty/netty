@@ -134,7 +134,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             // Everything looks good.
             return true;
         } catch (Throwable cause) {
-            logger.info("Error during upgrade to HTTP/2", cause);
+            logger.info("{} Error during upgrade to HTTP/2", ctx.channel(), cause);
             return false;
         }
     }

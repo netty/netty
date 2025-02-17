@@ -790,7 +790,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             //
             // See:
             // https://github.com/netty/netty/issues/4435
-            invokeLater(new Runnable() {
+            invokeLater(promise.channel(), new Runnable() {
                 @Override
                 public void run() {
                     if (fireChannelInactive) {
@@ -809,11 +809,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         private void safeSetSuccess(ChannelPromise promise) {
             if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
-                logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
+                logger.warn("{} Failed to mark a promise as success because it is done already: {}",
+                        promise.channel(), promise);
             }
         }
 
-        private void invokeLater(Runnable task) {
+        private void invokeLater(Channel channel, Runnable task) {
             try {
                 // This method is used by outbound operation implementations to trigger an inbound event later.
                 // They do not trigger an inbound event immediately because an outbound operation might have been
@@ -828,7 +829,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 // which means the execution of two inbound handler methods of the same handler overlap undesirably.
                 eventLoop().execute(task);
             } catch (RejectedExecutionException e) {
-                logger.warn("Can't invoke task later as EventLoop rejected it", e);
+                logger.warn("{} Can't invoke task later as EventLoop rejected it", channel, e);
             }
         }
 
