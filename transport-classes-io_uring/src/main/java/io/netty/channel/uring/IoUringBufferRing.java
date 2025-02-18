@@ -27,9 +27,6 @@ final class IoUringBufferRing {
     private final short mask;
     private final short bufferGroupId;
     private final int ringFd;
-    // At the moment we are just always refill everything when there is nothing left.
-    // We could be smarter here as buffers[] is used as a ring buffer. So it would be possible to refill in between
-    // as well.
     private final ByteBuf[] buffers;
     private final int chunkSize;
     private final IoUringIoHandler source;
@@ -37,9 +34,6 @@ final class IoUringBufferRing {
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
     private final boolean incremental;
     private boolean hasSpareBuffer;
-
-    private short tail;
-    private int numBuffers;
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
                       short entries, short bufferGroupId,
@@ -57,12 +51,22 @@ final class IoUringBufferRing {
         this.source = ioUringIoHandler;
         this.byteBufAllocator = byteBufAllocator;
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
+        fill();
     }
 
-    void refillIfNecessary() {
-        if (!hasSpareBuffer) {
-            refill();
+    private boolean fill() {
+        boolean fillSomething = false;
+        for (short i = 0; i < entries; i++) {
+            if (buffers[i] == null) {
+                addBuffer(i);
+                fillSomething = true;
+            }
         }
+        return fillSomething;
+    }
+
+    boolean isExhausted() {
+        return !hasSpareBuffer;
     }
 
     /**
@@ -72,6 +76,9 @@ final class IoUringBufferRing {
     void markExhausted() {
         hasSpareBuffer = false;
         source.idHandler.notifyAllBuffersUsed(bufferGroupId);
+        if (fill()) {
+            source.idHandler.notifyMoreBuffersReady(bufferGroupId);
+        }
     }
 
     /**
@@ -82,40 +89,28 @@ final class IoUringBufferRing {
         return exhaustedEvent;
     }
 
-    private short idx(short idx) {
-        return (short) (idx & mask);
-    }
-
-    /**
-     * Refill the buffer ring with buffers allocated via our allocator.
-     */
-    private void refill() {
+    private void addBuffer(short bid) {
         long tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
 
-        int num = entries - numBuffers;
-        for (short i = 0; i < num; i++) {
-            short bid = idx(tail++);
-            assert buffers[bid] == null : "buffer[" + bid + "] is already used";
-            ByteBuf byteBuf = byteBufAllocator.directBuffer(chunkSize);
-            byteBuf.writerIndex(byteBuf.capacity());
-            buffers[bid] = byteBuf;
-            int ringIndex = (oldTail + i) & mask;
+        ByteBuf byteBuf = byteBufAllocator.directBuffer(chunkSize);
+        byteBuf.writerIndex(byteBuf.capacity());
+        buffers[bid] = byteBuf;
+        int ringIndex = oldTail & mask;
 
-            //  see:
-            //  https://github.com/axboe/liburing/
-            //      blob/19134a8fffd406b22595a5813a3e319c19630ac9/src/include/liburing.h#L1561
-            long ioUringBufAddress = ioUringBufRingAddr + (long) Native.SIZEOF_IOURING_BUF * ringIndex;
-            PlatformDependent.putLong(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_ADDR,
-                    byteBuf.memoryAddress() + byteBuf.readerIndex());
-            PlatformDependent.putInt(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.capacity());
-            PlatformDependent.putShort(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
-            numBuffers++;
-        }
+        //  see:
+        //  https://github.com/axboe/liburing/
+        //      blob/19134a8fffd406b22595a5813a3e319c19630ac9/src/include/liburing.h#L1561
+        long ioUringBufAddress = ioUringBufRingAddr + (long) Native.SIZEOF_IOURING_BUF * ringIndex;
+        PlatformDependent.putLong(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_ADDR,
+                byteBuf.memoryAddress() + byteBuf.readerIndex());
+        PlatformDependent.putInt(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.capacity());
+        PlatformDependent.putShort(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
         // Now advanced the tail by the number of buffers that we just added.
-        PlatformDependent.putShortOrdered(tailFieldAddress, (short) (oldTail + entries));
-        hasSpareBuffer = true;
-        source.idHandler.notifyMoreBuffersReady(bufferGroupId);
+        PlatformDependent.putShortOrdered(tailFieldAddress, (short) (oldTail + 1));
+        if (!hasSpareBuffer) {
+            hasSpareBuffer = true;
+        }
     }
 
     /**
@@ -131,10 +126,18 @@ final class IoUringBufferRing {
             // The buffer will be used later again, just slice out what we did read so far.
             return byteBuf.readRetainedSlice(readableBytes);
         }
-        // Buffer is completely used. Remove it from the backing store, adjust writerIndex and return it.
+
+        // Let's null it out so we can fill it again when we mark this buffer ring exhausted.
         buffers[bid] = null;
-        numBuffers--;
-        return byteBuf.writerIndex(byteBuf.readerIndex() + readableBytes);
+        if (!hasSpareBuffer) {
+            // This buffer ring was marked as exhausted before. We have space again now, let's fill something
+            // in.
+            boolean filled = fill();
+            assert filled : "There must be space in the backing array";
+            source.idHandler.notifyMoreBuffersReady(bufferGroupId);
+        }
+        return byteBuf.writerIndex(byteBuf.readerIndex() +
+                Math.min(readableBytes, byteBuf.readableBytes()));
     }
 
     /**
