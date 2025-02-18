@@ -388,12 +388,12 @@ public abstract class MessageAggregator<I, S, C extends AutoCloseable, A extends
         }
     }
 
-    private void releaseCurrentMessage() throws Exception {
+    protected final void releaseCurrentMessage() throws Exception {
         if (currentMessage != null) {
             currentMessage.close();
             currentMessage = null;
-            handlingOversizedMessage = false;
-            aggregating = false;
         }
+        handlingOversizedMessage = false;
+        aggregating = false;
     }
 }

@@ -251,10 +251,19 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
                 public ChannelHandlerContext fireChannelRead(Object msg) {
                     // Finished aggregating the full request, get it from the output list.
                     handlingUpgrade = false;
-                    tryUpgrade(ctx, (FullHttpRequest) msg);
+                    FullHttpRequest request = (FullHttpRequest) msg;
+                    HttpHeaders headers = request.headers();
+                    if (headers != null && headers.contains(HttpHeaderNames.UPGRADE)) {
+                        tryUpgrade(ctx, request);
+                    }
                     return this;
                 }
             }, msg);
+            if (handlingUpgrade && msg instanceof LastHttpContent) {
+                // request failed to aggregate, try with the next request
+                handlingUpgrade = false;
+                releaseCurrentMessage();
+            }
         }
     }
 
