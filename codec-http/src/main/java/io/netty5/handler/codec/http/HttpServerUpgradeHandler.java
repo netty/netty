@@ -255,6 +255,11 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
                     return this;
                 }
             }, msg);
+            if (handlingUpgrade && msg instanceof LastHttpContent) {
+                // request failed to aggregate, try with the next request
+                handlingUpgrade = false;
+                releaseCurrentMessage();
+            }
         }
     }
 

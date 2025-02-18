@@ -214,4 +214,34 @@ public class HttpServerUpgradeHandlerTest {
         assertNull(channel.readOutbound());
         assertFalse(channel.finishAndReleaseAll());
     }
+
+    @Test
+    public void upgradeExpect() {
+        final HttpServerCodec httpServerCodec = new HttpServerCodec();
+        final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
+            @Override
+            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+                return new TestUpgradeCodec();
+            }
+        };
+
+        HttpServerUpgradeHandler<?> upgradeHandler =
+                new HttpServerUpgradeHandler<DefaultHttpContent>(httpServerCodec, factory);
+
+        EmbeddedChannel channel = new EmbeddedChannel(httpServerCodec, upgradeHandler);
+
+        // Build a h2c upgrade request, but without connection header.
+        String upgradeString = "GET / HTTP/1.1\r\n" +
+                "Expect: foo\r\n" +
+                "Upgrade: h2c\r\n" +
+                "\r\n" +
+                "GET / HTTP/1.1\r\n" +
+                "Content-Length: 0\r\n" +
+                "\r\n";
+        Buffer upgrade = channel.bufferAllocator().copyOf(upgradeString, US_ASCII);
+
+        assertTrue(channel.writeInbound(upgrade));
+        channel.checkException();
+        assertTrue(channel.finishAndReleaseAll());
+    }
 }
