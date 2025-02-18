@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -29,13 +30,16 @@ import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.net.InetSocketAddress;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -153,6 +157,91 @@ public class IoUringBufferRingTest {
         serverChannel.close();
         clientChannel.close();
         group.shutdownGracefully();
+    }
+
+    static boolean recvsendBundleSupported() {
+        return IoUring.isIOUringRecvsendBundleSupported();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    @EnabledIf("recvsendBundleSupported")
+    public void testProviderBufferReadWithRecvsendBundle(boolean incremental) throws InterruptedException {
+        // See https://lore.kernel.org/io-uring/184f9f92-a682-4205-a15d-89e18f664502@kernel.dk/T/#u
+        assumeTrue(IoUring.isIOUringAcceptMultishotSupported(),
+                "Only yields expected test results when using multishot atm");
+        if (incremental) {
+            assumeTrue(IoUring.isRegisterBufferRingIncSupported());
+        }
+        int bufferRingChunkSize = 8;
+        IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
+        IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
+                // let's use a small chunkSize so we are sure a recv will span multiple buffers.
+                (short) 1, (short) 16, bufferRingChunkSize, incremental, ByteBufAllocator.DEFAULT);
+
+        ioUringIoHandlerConfiguration.setBufferRingConfig(
+                (ch, size) -> bufferRingConfig.bufferGroupId(), bufferRingConfig);
+
+        MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1,
+                IoUringIoHandler.newFactory(ioUringIoHandlerConfiguration)
+        );
+        ServerBootstrap serverBootstrap = new ServerBootstrap();
+        serverBootstrap.channel(IoUringServerSocketChannel.class);
+
+        final BlockingQueue<ByteBuf> buffers = new LinkedBlockingQueue<>();
+        Channel serverChannel = serverBootstrap.group(group)
+                .childHandler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                        buffers.offer((ByteBuf) msg);
+                    }
+                })
+                .childOption(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true)
+                .bind(new InetSocketAddress(0))
+                .syncUninterruptibly().channel();
+
+        Bootstrap clientBoostrap = new Bootstrap();
+        clientBoostrap.group(group)
+                .channel(IoUringSocketChannel.class)
+                .handler(new ChannelInboundHandlerAdapter());
+        ChannelFuture channelFuture = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly();
+        assumeTrue(channelFuture.isSuccess());
+        Channel clientChannel = channelFuture.channel();
+
+        // Create a buffer that will span multiple buffers that are used out of the buffer ring.
+        ByteBuf writeBuffer = Unpooled.directBuffer(bufferRingChunkSize * 16);
+        CompositeByteBuf received = Unpooled.compositeBuffer();
+        try {
+            // Fill the buffer with something so we can assert if the received bytes are the same.
+            for (int i = 0; i < writeBuffer.capacity(); i++) {
+                writeBuffer.writeByte((byte) i);
+            }
+            clientChannel.writeAndFlush(writeBuffer.retainedDuplicate()).syncUninterruptibly();
+
+            // Aggregate all received buffers until we received everything.
+            boolean hasCompositeBuffer = false;
+            do {
+                ByteBuf buffer = buffers.take();
+                if (buffer instanceof CompositeByteBuf) {
+                    hasCompositeBuffer = true;
+                }
+                received.addComponent(true, buffer);
+            } while (received.readableBytes() != writeBuffer.readableBytes());
+
+            assertEquals(writeBuffer, received);
+            if (!incremental) {
+                assertTrue(hasCompositeBuffer);
+            } else {
+                // TODO: Find out why recv bundles seem to not be used when incremental is used.
+            }
+            serverChannel.close();
+            clientChannel.close();
+            group.shutdownGracefully();
+            assertTrue(buffers.isEmpty());
+        } finally {
+            writeBuffer.release();
+            received.release();
+        }
     }
 
     private ByteBuf sendAndRecvMessage(Channel clientChannel, ByteBuf writeBuffer, BlockingQueue<ByteBuf> bufferSyncer)

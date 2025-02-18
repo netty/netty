@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -369,6 +370,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 } else {
                     len = bufferRing.chunkSize();
                 }
+                if (IoUring.isIOUringRecvsendBundleSupported()) {
+                    // See https://github.com/axboe/liburing/wiki/
+                    // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
+                    ioPrio |= Native.IORING_RECVSEND_BUNDLE;
+                }
                 IoRegistration registration = registration();
                 int fd = fd().intValue();
                 IoUringIoOps ops = IoUringIoOps.newRecv(
@@ -453,7 +459,43 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     if (bufferRing != null) {
                         short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
                         boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
-                        byteBuf = bufferRing.useBuffer(bid, res, more);
+                        if (IoUring.isIOUringRecvsendBundleSupported()) {
+                            // If RECVSEND_BUNDLE is supported we need to do a bit more work here.
+                            // In this case we might need to obtain multiple buffers out of the buffer ring as
+                            // multiple of them might have been filled for one recv operation.
+                            // See https://github.com/axboe/liburing/wiki/
+                            // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
+                            //
+                            // If we have multiple buffers we will wrap these in a CompositeByteBuf to mimic
+                            // the behavior of one recv result in one fireChannelRead(...).
+                            CompositeByteBuf compositeByteBuf = null;
+                            int read = res;
+                            for (;;) {
+                                ByteBuf buffer = bufferRing.useBuffer(bid, read, more);
+                                read -= buffer.readableBytes();
+                                assert read >= 0;
+                                if (read == 0) {
+                                    if (compositeByteBuf == null) {
+                                        // We only had one buffer, there is no need to use a CompositeByteBuf.
+                                        byteBuf = buffer;
+                                    } else {
+                                        compositeByteBuf.addComponent(true, buffer);
+                                    }
+                                    break;
+                                }
+                                if (compositeByteBuf == null) {
+                                    // We have at least two buffers, allocate a CompositeByteBuf that we will use
+                                    // to compose the buffers. Also directly assign it to byteBuf so we not risk to
+                                    // leak.
+                                    compositeByteBuf = alloc().compositeBuffer();
+                                    byteBuf = compositeByteBuf;
+                                }
+                                compositeByteBuf.addComponent(true, buffer);
+                                bid++;
+                            }
+                        } else {
+                            byteBuf = bufferRing.useBuffer(bid, res, more);
+                        }
                     } else {
                         byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     }
