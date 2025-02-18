@@ -300,6 +300,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void doBeginReadNow() {
+        if (inputClosedSeenErrorOnRead) {
+            // We did see an error while reading and so closed the input.
+            return;
+        }
         if (!isPollInFirst()) {
             // If the socket is blocking we will directly call scheduleFirstReadIfNeeded() as we can use FASTPOLL.
             ioUringUnsafe().scheduleFirstReadIfNeeded();
@@ -694,17 +698,21 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         private void readComplete(byte op, int res, int flags, short data) {
             assert numOutstandingReads > 0 || numOutstandingReads == -1 : numOutstandingReads;
-            // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm. This works for
-            // multi-shot and non multi-shot variants.
-            if ((flags & Native.IORING_CQE_F_MORE) == 0) {
+
+            boolean multishot = numOutstandingReads == -1;
+            boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
+            if (rearm) {
+                // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm. This works for
+                // multi-shot and non multi-shot variants.
                 ioState &= ~READ_SCHEDULED;
             }
             boolean pending = readPending;
-            if (numOutstandingReads == -1) {
+            if (multishot) {
                 // Reset readPending so we can still keep track if we might need to cancel the multi-shot read or
                 // not.
                 readPending = false;
             } else if (--numOutstandingReads == 0) {
+                // We received all outstanding completions.
                 readPending = false;
                 ioState &= ~READ_SCHEDULED;
             }
@@ -721,7 +729,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         recvBufAllocHandle().reset(config());
 
                         // Check if this was a readComplete(...) triggered by a read or multi-shot read.
-                        if (numOutstandingReads != -1) {
+                        if (!multishot) {
                             if (readPending) {
                                 // This was a "normal" read and the user did signal we should continue reading.
                                 // Let's schedule the read now.
@@ -730,6 +738,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         } else {
                             // The readComplete(...) was triggered by a multi-shot read. Because of this the state
                             // machine is a bit more complicated.
+
                             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                                 // The readComplete(...) was triggered because the previous read was cancelled.
                                 // In this case we we need to check if the user did signal the desire to read again
@@ -738,6 +747,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                                 if (pending) {
                                     doBeginReadNow();
                                 }
+                            } else if (rearm) {
+                                // We need to rearm the multishot as otherwise we might miss some data.
+                                doBeginReadNow();
                             } else if (!readPending) {
                                 // Cancel the multi-shot read now as the user did not signal that we want to keep
                                 // reading while we handle the completion event.
@@ -752,6 +764,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         if (pending) {
                             doBeginReadNow();
                         }
+                    } else if (multishot && rearm) {
+                        // We need to rearm the multishot as otherwise we might miss some data.
                         doBeginReadNow();
                     }
                 } finally {
