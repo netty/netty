@@ -76,11 +76,10 @@ public class IoUringBufferRingTest {
         final BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
-                (short) 1, (short) 2, 1024, incremental, ByteBufAllocator.DEFAULT);
+                (short) 1, (short) 2, incremental, new IoUringFixedBufferRingRecvAllocator(1024));
 
         IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
-                (short) 2, (short) 16,
-                1024, incremental, ByteBufAllocator.DEFAULT
+                (short) 2, (short) 16, incremental, new IoUringFixedBufferRingRecvAllocator(1024)
         );
         ioUringIoHandlerConfiguration.setBufferRingConfig(
                 (ch, size) -> bufferRingConfig.bufferGroupId(), bufferRingConfig, bufferRingConfig1);

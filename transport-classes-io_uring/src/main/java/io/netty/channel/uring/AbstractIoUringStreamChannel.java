@@ -362,12 +362,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 byte flags = flags((byte) Native.IOSQE_BUFFER_SELECT);
                 short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
                 int recvFlags = calculateRecvFlags(first);
-                final int len;
+                final int len = 0;
                 if (multishot) {
                     ioPrio |= Native.IORING_RECV_MULTISHOT;
-                    len = 0;
-                } else {
-                    len = bufferRing.chunkSize();
                 }
                 IoRegistration registration = registration();
                 int fd = fd().intValue();

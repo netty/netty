@@ -16,7 +16,6 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Arrays;
@@ -28,17 +27,15 @@ final class IoUringBufferRing {
     private final short bufferGroupId;
     private final int ringFd;
     private final ByteBuf[] buffers;
-    private final int chunkSize;
     private final IoUringIoHandler source;
-    private final ByteBufAllocator byteBufAllocator;
+    private final IoUringBufferRingRecvAllocator allocator;
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
     private final boolean incremental;
     private boolean hasSpareBuffer;
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
-                      short entries, short bufferGroupId,
-                      int chunkSize, boolean incremental, IoUringIoHandler ioUringIoHandler,
-                      ByteBufAllocator byteBufAllocator) {
+                      short entries, short bufferGroupId, boolean incremental, IoUringIoHandler ioUringIoHandler,
+                      IoUringBufferRingRecvAllocator allocator) {
         assert entries % 2 == 0;
         this.ioUringBufRingAddr = ioUringBufRingAddr;
         this.entries = entries;
@@ -46,10 +43,9 @@ final class IoUringBufferRing {
         this.bufferGroupId = bufferGroupId;
         this.ringFd = ringFd;
         this.buffers = new ByteBuf[entries];
-        this.chunkSize = chunkSize;
         this.incremental = incremental;
         this.source = ioUringIoHandler;
-        this.byteBufAllocator = byteBufAllocator;
+        this.allocator = allocator;
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
         fill();
     }
@@ -93,7 +89,7 @@ final class IoUringBufferRing {
         long tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
 
-        ByteBuf byteBuf = byteBufAllocator.directBuffer(chunkSize);
+        ByteBuf byteBuf = allocator.allocate();
         byteBuf.writerIndex(byteBuf.capacity());
         buffers[bid] = byteBuf;
         int ringIndex = oldTail & mask;
@@ -121,6 +117,7 @@ final class IoUringBufferRing {
      * @return              the buffer.
      */
     ByteBuf useBuffer(short bid, int readableBytes, boolean more) {
+        allocator.lastBytesRead(readableBytes);
         ByteBuf byteBuf = buffers[bid];
         if (incremental && more) {
             // The buffer will be used later again, just slice out what we did read so far.
@@ -147,15 +144,6 @@ final class IoUringBufferRing {
      */
     short bufferGroupId() {
         return bufferGroupId;
-    }
-
-    /**
-     * This size of the chunks that are allocated.
-     *
-     * @return chunk size.
-     */
-    int chunkSize() {
-        return chunkSize;
     }
 
     /**
