@@ -551,7 +551,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         Http2FrameStream stream = connectionStream.getProperty(streamKey);
         if (stream == null) {
-            LOG.warn("Stream exception thrown without stream object attached.", cause);
+            LOG.warn("{} Stream exception thrown without stream object attached.", ctx.channel(), cause);
             // Write a RST_STREAM
             super.onStreamError(ctx, outbound, cause, streamException);
             return;
@@ -570,7 +570,8 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
         // - fireUserEventTriggered(Http2ResetFrame), see Http2MultiplexHandler#channelRead(...)
         // - by failing write promise
         // Receiver of the error is responsible for correct handling of this exception.
-        LOG.debug("Stream exception thrown for unknown stream {}.", streamException.streamId(), cause);
+        LOG.debug("{} Stream exception thrown for unknown stream {}.",
+                ctx.channel(), streamException.streamId(), cause);
     }
 
     @Override

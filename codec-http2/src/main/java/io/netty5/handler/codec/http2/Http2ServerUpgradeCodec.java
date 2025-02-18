@@ -119,7 +119,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             throw new IllegalArgumentException("There must be 1 and only 1 "
                                                + HTTP_UPGRADE_SETTINGS_HEADER + " header.");
         } catch (Throwable cause) {
-            logger.info("Error during upgrade to HTTP/2", cause);
+            logger.info("{} Error during upgrade to HTTP/2", ctx.channel(), cause);
             return false;
         }
     }

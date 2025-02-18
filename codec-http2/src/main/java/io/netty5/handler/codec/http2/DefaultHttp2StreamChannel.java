@@ -635,7 +635,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
         //
         // See:
         // https://github.com/netty/netty/issues/4435
-        invokeLater(()-> {
+        invokeLater(this, ()-> {
             if (fireChannelInactive) {
                 pipeline.fireChannelInactive();
             }
@@ -651,11 +651,12 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
     private void safeSetSuccess(Promise<Void> promise) {
         if (!promise.trySuccess(null)) {
-            logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
+            logger.warn("{} Failed to mark a promise as success because it is done already: {}",
+                    this, promise);
         }
     }
 
-    private void invokeLater(Runnable task) {
+    private void invokeLater(Channel channel, Runnable task) {
         try {
             // This method is used by outbound operation implementations to trigger an inbound event later.
             // They do not trigger an inbound event immediately because an outbound operation might have been
@@ -670,7 +671,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
             // which means the execution of two inbound handler methods of the same handler overlap undesirably.
             executor().execute(task);
         } catch (RejectedExecutionException e) {
-            logger.warn("Can't invoke task later as EventLoop rejected it", e);
+            logger.warn("{} Can't invoke task later as EventLoop rejected it", channel, e);
         }
     }
 
