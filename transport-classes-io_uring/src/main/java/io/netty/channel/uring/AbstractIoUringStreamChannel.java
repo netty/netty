@@ -442,10 +442,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                         // This will do the correct thing, taking into account if
                         // there is again room in the ring or not and so either use the buffer ring or not for the
                         // read.
-                        //
-                        // As we only use the buffer ring for the first read we can call schedule(...) with true as
-                        // parameter.
-                        scheduleRead(true);
+                        scheduleRead(allocHandle.isFirstRead());
                         return;
                     }
 
