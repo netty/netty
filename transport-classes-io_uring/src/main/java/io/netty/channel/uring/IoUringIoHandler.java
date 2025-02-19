@@ -95,7 +95,7 @@ public final class IoUringIoHandler implements IoHandler {
         // It only makes sense when the user actually specifies the cq ring size.
         int cqSize = 2 * config.getRingSize();
         if (config.needSetupCqeSize()) {
-            if (!IoUring.isIOUringSetupCqeSizeSupported()) {
+            if (!IoUring.isSetupCqeSizeSupported()) {
                 throw new UnsupportedOperationException("IORING_SETUP_CQSIZE is not supported");
             }
             setupFlags |= Native.IORING_SETUP_CQSIZE;

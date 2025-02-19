@@ -316,15 +316,15 @@ final class Native {
 
     static int setupFlags() {
         int flags = Native.IORING_SETUP_R_DISABLED;
-        if (IoUring.isIOUringSetupSubmitAllSupported()) {
+        if (IoUring.isSetupSubmitAllSupported()) {
             flags |= Native.IORING_SETUP_SUBMIT_ALL;
         }
 
         // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#task-work
-        if (IoUring.isIOUringSetupSingleIssuerSupported()) {
+        if (IoUring.isSetupSingleIssuerSupported()) {
             flags |= Native.IORING_SETUP_SINGLE_ISSUER;
         }
-        if (IoUring.isIOUringSetupDeferTaskrunSupported()) {
+        if (IoUring.isSetupDeferTaskrunSupported()) {
             flags |= Native.IORING_SETUP_DEFER_TASKRUN;
         }
         return flags;
