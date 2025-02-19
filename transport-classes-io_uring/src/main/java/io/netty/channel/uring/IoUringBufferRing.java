@@ -54,15 +54,10 @@ final class IoUringBufferRing {
         fill();
     }
 
-    private boolean fill() {
-        boolean fillSomething = false;
+    private void fill() {
         for (short i = 0; i < entries; i++) {
-            if (buffers[i] == null) {
-                addBuffer(i);
-                fillSomething = true;
-            }
+            addBuffer(i);
         }
-        return fillSomething;
     }
 
     boolean isExhausted() {
@@ -74,10 +69,9 @@ final class IoUringBufferRing {
      * to use.
      */
     void markExhausted() {
-        hasSpareBuffer = false;
-        source.idHandler.notifyAllBuffersUsed(bufferGroupId);
-        if (fill()) {
-            source.idHandler.notifyMoreBuffersReady(bufferGroupId);
+        if (hasSpareBuffer) {
+            hasSpareBuffer = false;
+            source.idHandler.notifyAllBuffersUsed(bufferGroupId);
         }
     }
 
@@ -108,9 +102,7 @@ final class IoUringBufferRing {
         PlatformDependent.putShort(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
         // Now advanced the tail by the number of buffers that we just added.
         PlatformDependent.putShortOrdered(tailFieldAddress, (short) (oldTail + 1));
-        if (!hasSpareBuffer) {
-            hasSpareBuffer = true;
-        }
+        hasSpareBuffer = true;
     }
 
     /**
@@ -127,13 +119,13 @@ final class IoUringBufferRing {
             return byteBuf.readRetainedSlice(readableBytes);
         }
 
-        // Let's null it out so we can fill it again when we mark this buffer ring exhausted.
+        // Let's null it out and call addBuffer(bid) to ensure we add a new buffer that can be used.
         buffers[bid] = null;
-        if (!hasSpareBuffer) {
-            // This buffer ring was marked as exhausted before. We have space again now, let's fill something
-            // in.
-            boolean filled = fill();
-            assert filled : "There must be space in the backing array";
+        boolean hadSpareBuffer = hasSpareBuffer;
+        addBuffer(bid);
+        if (!hadSpareBuffer) {
+            // This buffer ring was marked as exhausted before. We have space again, let's notify the handler.
+            assert hasSpareBuffer;
             source.idHandler.notifyMoreBuffersReady(bufferGroupId);
         }
         return byteBuf.writerIndex(byteBuf.readerIndex() +
