@@ -117,12 +117,16 @@ final class IoUringBufferRing {
      * Use the buffer for the given buffer id. The returned {@link ByteBuf} must be released once not used anymore.
      *
      * @param bid           the id of the buffer
-     * @param readableBytes the number of bytes that could be read.
+     * @param readableBytes the number of bytes that could be read. This value might be larger then what a single
+     *                      {@link ByteBuf} can hold. Because of this, the caller should call
+     *                      @link #useBuffer(short, int, boolean)} in a loop (increasing bid by one)
+     *                      until all buffers could be obtained.
      * @return              the buffer.
      */
     ByteBuf useBuffer(short bid, int readableBytes, boolean more) {
+        assert readableBytes > 0;
         ByteBuf byteBuf = buffers[bid];
-        if (incremental && more) {
+        if (incremental && more && byteBuf.readableBytes() > readableBytes) {
             // The buffer will be used later again, just slice out what we did read so far.
             return byteBuf.readRetainedSlice(readableBytes);
         }
