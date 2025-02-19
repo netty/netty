@@ -77,7 +77,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         //       time to process a past connection. If the application knows that a
         //       new connection cannot come in before a previous one has been
         //       processed, it may be used as expected.
-        if (IoUring.isIOUringAcceptMultishotSupported()) {
+        if (IoUring.isAcceptMultishotSupported()) {
             acceptedAddressMemory = null;
         } else {
             acceptedAddressMemory = new AcceptedAddressMemory();
@@ -164,7 +164,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
 
             // IORING_ACCEPT_POLL_FIRST and IORING_ACCEPT_DONTWAIT were added in the same release.
             // We need to check if its supported as otherwise providing these would result in an -EINVAL.
-            if (IoUring.isIOUringAcceptNoWaitSupported()) {
+            if (IoUring.isAcceptNoWaitSupported()) {
                 if (first) {
                     ioPrio = socketIsEmpty ? Native.IORING_ACCEPT_POLL_FIRST : 0;
                 } else {
@@ -176,7 +176,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
 
             final long acceptedAddressMemoryAddress;
             final long acceptedAddressLengthMemoryAddress;
-            if (IoUring.isIOUringAcceptMultishotSupported()) {
+            if (IoUring.isAcceptMultishotSupported()) {
                 // Let's use multi-shot accept to reduce overhead.
                 ioPrio |= Native.IORING_ACCEPT_MULTISHOT;
                 acceptedAddressMemoryAddress = 0;
@@ -287,8 +287,8 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     protected boolean socketIsEmpty(int flags) {
         // IORING_CQE_F_SOCK_NONEMPTY is used for accept since IORING_ACCEPT_DONTWAIT was added.
         // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10
-        return IoUring.isIOUringAcceptNoWaitSupported() &&
-                IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
+        return IoUring.isAcceptNoWaitSupported() &&
+                IoUring.isCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
     }
 
     @Override

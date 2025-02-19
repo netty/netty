@@ -21,7 +21,6 @@ import io.netty.util.concurrent.ThreadAwareExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
-import org.junit.jupiter.api.condition.EnabledIf;
 
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -82,6 +81,6 @@ public class IoUringIoHandlerTest {
     }
 
     private static boolean setUpCQSizeUnavailable() {
-        return !IoUring.isIOUringSetupCqeSizeSupported();
+        return !IoUring.isSetupCqeSizeSupported();
     }
 }

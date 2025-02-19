@@ -110,17 +110,17 @@ public final class IoUring {
         } else {
             if (logger.isDebugEnabled()) {
                 logger.debug("IoUring support is available (" +
-                        "IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED={}, " +
-                        "IORING_SPLICE_SUPPORTED={}, " +
-                        "IORING_ACCEPT_NO_WAIT_SUPPORTED={}, " +
-                        "IORING_ACCEPT_MULTISHOT_SUPPORTED={}, " +
-                        "IORING_RECV_MULTISHOT_SUPPORTED={}, " +
-                        "IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED={}, " +
-                        "IORING_SETUP_SUBMIT_ALL_SUPPORTED={}, " +
-                        "IORING_SETUP_SINGLE_ISSUER_SUPPORTED={}, " +
-                        "IORING_SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
-                        "IORING_REGISTER_BUFFER_RING_SUPPORTED={}, " +
-                        "IOU_PBUF_RING_INC_SUPPORTED={}" +
+                        "CQE_F_SOCK_NONEMPTY_SUPPORTED={}, " +
+                        "SPLICE_SUPPORTED={}, " +
+                        "ACCEPT_NO_WAIT_SUPPORTED={}, " +
+                        "ACCEPT_MULTISHOT_SUPPORTED={}, " +
+                        "RECV_MULTISHOT_SUPPORTED={}, " +
+                        "REGISTER_IOWQ_MAX_WORKERS_SUPPORTED={}, " +
+                        "SETUP_SUBMIT_ALL_SUPPORTED={}, " +
+                        "SETUP_SINGLE_ISSUER_SUPPORTED={}, " +
+                        "SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
+                        "REGISTER_BUFFER_RING_SUPPORTED={}, " +
+                        "REGISTER_BUFFER_RING_INC_SUPPORTED={}" +
                         ")", socketNonEmptySupported, spliceSupported, acceptSupportNoWait, acceptMultishotSupported,
                         recvMultishotSupported, registerIowqWorkersSupported, submitAllSupported, singleIssuerSupported,
                         deferTaskrunSupported, registerBufferRingSupported, registerBufferRingIncSupported);
@@ -165,23 +165,23 @@ public final class IoUring {
         return isAvailable() && Native.IS_SUPPORTING_TCP_FASTOPEN_SERVER;
     }
 
-    static boolean isIOUringCqeFSockNonEmptySupported() {
+    static boolean isCqeFSockNonEmptySupported() {
         return IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED;
     }
 
-    static boolean isIOUringSpliceSupported() {
+    static boolean isSpliceSupported() {
         return IORING_SPLICE_SUPPORTED;
     }
 
-    static boolean isIOUringAcceptNoWaitSupported() {
+    static boolean isAcceptNoWaitSupported() {
         return IORING_ACCEPT_NO_WAIT_SUPPORTED;
     }
 
-    static boolean isIOUringAcceptMultishotSupported() {
+    static boolean isAcceptMultishotSupported() {
         return IORING_ACCEPT_MULTISHOT_SUPPORTED;
     }
 
-    static boolean isIOUringRecvMultishotSupported() {
+    static boolean isRecvMultishotSupported() {
         return IORING_RECV_MULTISHOT_SUPPORTED;
     }
 
@@ -189,19 +189,19 @@ public final class IoUring {
         return IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     }
 
-    static boolean isIOUringSetupCqeSizeSupported() {
+    static boolean isSetupCqeSizeSupported() {
         return IORING_SETUP_CQ_SIZE_SUPPORTED;
     }
 
-    static boolean isIOUringSetupSubmitAllSupported() {
+    static boolean isSetupSubmitAllSupported() {
         return IORING_SETUP_SUBMIT_ALL_SUPPORTED;
     }
 
-    static boolean isIOUringSetupSingleIssuerSupported() {
+    static boolean isSetupSingleIssuerSupported() {
         return IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
     }
 
-    static boolean isIOUringSetupDeferTaskrunSupported() {
+    static boolean isSetupDeferTaskrunSupported() {
         return IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
     }
 

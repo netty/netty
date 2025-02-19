@@ -208,7 +208,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     protected Object filterOutboundMessage(Object msg) {
         // Since we cannot use synchronous sendfile,
         // the channel can only support DefaultFileRegion instead of FileRegion.
-        if (IoUring.isIOUringSpliceSupported() && msg instanceof DefaultFileRegion) {
+        if (IoUring.isSpliceSupported() && msg instanceof DefaultFileRegion) {
             return new IoUringFileRegion((DefaultFileRegion) msg);
         }
 
@@ -306,7 +306,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             if (first) {
                 // IORING_RECVSEND_POLL_FIRST and IORING_CQE_F_SOCK_NONEMPTY were added in the same release (5.19).
                 // We need to check if it's supported as otherwise providing these would result in an -EINVAL.
-                return socketIsEmpty && IoUring.isIOUringCqeFSockNonEmptySupported() ?
+                return socketIsEmpty && IoUring.isCqeFSockNonEmptySupported() ?
                         Native.IORING_RECVSEND_POLL_FIRST : 0;
             }
             return 0;
@@ -358,7 +358,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         private int scheduleReadProviderBuffer(IoUringBufferRing bufferRing, boolean first, boolean socketIsEmpty) {
             short bgId = bufferRing.bufferGroupId();
             try {
-                boolean multishot = IoUring.isIOUringRecvMultishotSupported();
+                boolean multishot = IoUring.isRecvMultishotSupported();
                 byte flags = flags((byte) Native.IOSQE_BUFFER_SELECT);
                 short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
                 int recvFlags = calculateRecvFlags(first);
@@ -607,7 +607,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
     @Override
     protected boolean socketIsEmpty(int flags) {
-        return IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
+        return IoUring.isCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
     }
 
     @Override
