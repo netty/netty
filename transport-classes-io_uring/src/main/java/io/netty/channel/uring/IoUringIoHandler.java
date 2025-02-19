@@ -196,7 +196,6 @@ public final class IoUringIoHandler implements IoHandler {
         int ringFd = ringBuffer.fd();
         short bufferRingSize = bufferRingConfig.bufferRingSize();
         short bufferGroupId = bufferRingConfig.bufferGroupId();
-        int chunkSize = bufferRingConfig.chunkSize();
         int flags = bufferRingConfig.isIncremental() ? Native.IOU_PBUF_RING_INC : 0;
         long ioUringBufRingAddr = Native.ioUringRegisterBuffRing(ringFd, bufferRingSize, bufferGroupId, flags);
         if (ioUringBufRingAddr < 0) {
@@ -204,7 +203,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
         return new IoUringBufferRing(
                 ringFd, ioUringBufRingAddr,
-                bufferRingSize, bufferGroupId, chunkSize, bufferRingConfig.isIncremental(),
+                bufferRingSize, bufferGroupId, bufferRingConfig.isIncremental(),
                 this, bufferRingConfig.allocator()
         );
     }

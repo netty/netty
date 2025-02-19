@@ -15,7 +15,6 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.Objects;
@@ -25,24 +24,21 @@ import java.util.Objects;
  * It will configure the buffer ring size, buffer group id and the chunk size.
  */
 public final class IoUringBufferRingConfig {
-
     private final short bgId;
     private final short bufferRingSize;
-    private final int chunkSize;
     private final boolean incremental;
-    private final ByteBufAllocator allocator;
+    private final IoUringBufferRingAllocator allocator;
 
     /**
      * Create a new configuration.
      *
      * @param bgId              the buffer group id to use (must be non-negative).
      * @param bufferRingSize    the size of the ring
-     * @param chunkSize         the chunk size of each {@link io.netty.buffer.ByteBuf} that is allocated out of the
-     *                          {@link ByteBufAllocator} to fill the ring.
-     * @param allocator         the {@link ByteBufAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
+     * @param allocator         the {@link IoUringBufferRingAllocator} to use to allocate
+     *                          {@link io.netty.buffer.ByteBuf}s.
      */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize, ByteBufAllocator allocator) {
-        this(bgId, bufferRingSize, chunkSize, IoUring.isRegisterBufferRingIncSupported(), allocator);
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize, IoUringBufferRingAllocator allocator) {
+        this(bgId, bufferRingSize, IoUring.isRegisterBufferRingIncSupported(), allocator);
     }
 
     /**
@@ -50,16 +46,14 @@ public final class IoUringBufferRingConfig {
      *
      * @param bgId              the buffer group id to use (must be non-negative).
      * @param bufferRingSize    the size of the ring
-     * @param chunkSize         the chunk size of each {@link io.netty.buffer.ByteBuf} that is allocated out of the
-     *                          {@link ByteBufAllocator} to fill the ring.
      * @param incremental       {@code true} if the buffer ring is using incremental buffer consumption.
-     * @param allocator         the {@link ByteBufAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
+     * @param allocator         the {@link IoUringBufferRingAllocator} to use to allocate
+     *                          {@link io.netty.buffer.ByteBuf}s.
      */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int chunkSize, boolean incremental,
-                                   ByteBufAllocator allocator) {
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize, boolean incremental,
+                                   IoUringBufferRingAllocator allocator) {
         this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
-        this.chunkSize = ObjectUtil.checkPositive(chunkSize, "chunkSize");
         if (incremental && !IoUring.isRegisterBufferRingIncSupported()) {
             throw new IllegalArgumentException("Incremental buffer ring is not supported");
         }
@@ -86,24 +80,21 @@ public final class IoUringBufferRingConfig {
     }
 
     /**
-     * Returns the chunk size of each {@link io.netty.buffer.ByteBuf} that is allocated out of the
-     * {@link ByteBufAllocator} to fill the ring.
-     *
-     * @return  the chunksize.
-     */
-    public int chunkSize() {
-        return chunkSize;
-    }
-
-    /**
-     * Returns the {@link ByteBufAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
+     * Returns the {@link IoUringBufferRingAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
      *
      * @return  the allocator.
      */
-    public ByteBufAllocator allocator() {
+    public IoUringBufferRingAllocator allocator() {
         return allocator;
     }
 
+    /**
+     * Returns true if <a href="https://github.com/axboe/liburing/wiki/
+     * What's-new-with-io_uring-in-6.11-and-6.12#incremental-provided-buffer-consumption">incremental mode</a>
+     * should be used for the buffer ring.
+     *
+     * @return {@code true} if incremental mode is used, {@code false} otherwise.
+     */
     public boolean isIncremental() {
         return incremental;
     }
