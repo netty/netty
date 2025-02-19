@@ -28,14 +28,14 @@ final class IoUringBufferRing {
     private final int ringFd;
     private final ByteBuf[] buffers;
     private final IoUringIoHandler source;
-    private final IoUringBufferRingRecvAllocator allocator;
+    private final IoUringBufferRingAllocator allocator;
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
     private final boolean incremental;
     private boolean hasSpareBuffer;
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
                       short entries, short bufferGroupId, boolean incremental, IoUringIoHandler ioUringIoHandler,
-                      IoUringBufferRingRecvAllocator allocator) {
+                      IoUringBufferRingAllocator allocator) {
         assert entries % 2 == 0;
         this.ioUringBufRingAddr = ioUringBufRingAddr;
         this.entries = entries;

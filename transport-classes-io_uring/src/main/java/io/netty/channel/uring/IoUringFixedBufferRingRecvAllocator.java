@@ -21,15 +21,30 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.Objects;
 
-public final class IoUringFixedBufferRingRecvAllocator implements IoUringBufferRingRecvAllocator {
+/**
+ * {@link IoUringBufferRingAllocator} implementation which uses a fixed size for the buffers that are returned by
+ * {@link #allocate()}.
+ */
+public final class IoUringFixedBufferRingRecvAllocator implements IoUringBufferRingAllocator {
     private final ByteBufAllocator allocator;
     private final int bufferSize;
 
+    /**
+     * Create a new instance
+     *
+     * @param allocator     the {@link ByteBufAllocator} to use.
+     * @param bufferSize    the size of the buffers that are allocated.
+     */
     public IoUringFixedBufferRingRecvAllocator(ByteBufAllocator allocator, int bufferSize) {
         this.allocator = Objects.requireNonNull(allocator, "allocator");
         this.bufferSize = ObjectUtil.checkPositive(bufferSize, "bufferSize");
     }
 
+    /**
+     * Create a new instance
+     *
+     * @param bufferSize    the size of the buffers that are allocated.
+     */
     public IoUringFixedBufferRingRecvAllocator(int bufferSize) {
         this(ByteBufAllocator.DEFAULT, bufferSize);
     }

@@ -15,7 +15,6 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.Objects;
@@ -28,17 +27,17 @@ public final class IoUringBufferRingConfig {
     private final short bgId;
     private final short bufferRingSize;
     private final boolean incremental;
-    private final IoUringBufferRingRecvAllocator allocator;
+    private final IoUringBufferRingAllocator allocator;
 
     /**
      * Create a new configuration.
      *
      * @param bgId              the buffer group id to use (must be non-negative).
      * @param bufferRingSize    the size of the ring
-     * @param allocator         the {@link IoUringBufferRingRecvAllocator} to use to allocate
+     * @param allocator         the {@link IoUringBufferRingAllocator} to use to allocate
      *                          {@link io.netty.buffer.ByteBuf}s.
      */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize, IoUringBufferRingRecvAllocator allocator) {
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize, IoUringBufferRingAllocator allocator) {
         this(bgId, bufferRingSize, IoUring.isRegisterBufferRingIncSupported(), allocator);
     }
 
@@ -48,11 +47,11 @@ public final class IoUringBufferRingConfig {
      * @param bgId              the buffer group id to use (must be non-negative).
      * @param bufferRingSize    the size of the ring
      * @param incremental       {@code true} if the buffer ring is using incremental buffer consumption.
-     * @param allocator         the {@link IoUringBufferRingRecvAllocator} to use to allocate
+     * @param allocator         the {@link IoUringBufferRingAllocator} to use to allocate
      *                          {@link io.netty.buffer.ByteBuf}s.
      */
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, boolean incremental,
-                                   IoUringBufferRingRecvAllocator allocator) {
+                                   IoUringBufferRingAllocator allocator) {
         this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
         if (incremental && !IoUring.isRegisterBufferRingIncSupported()) {
@@ -81,11 +80,11 @@ public final class IoUringBufferRingConfig {
     }
 
     /**
-     * Returns the {@link IoUringBufferRingRecvAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
+     * Returns the {@link IoUringBufferRingAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
      *
      * @return  the allocator.
      */
-    public IoUringBufferRingRecvAllocator allocator() {
+    public IoUringBufferRingAllocator allocator() {
         return allocator;
     }
 

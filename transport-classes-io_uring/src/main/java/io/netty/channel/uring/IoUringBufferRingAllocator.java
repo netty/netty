@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBuf;
 /**
  * Allocator that is responsible to allocate buffers for a buffer ring.
  */
-public interface IoUringBufferRingRecvAllocator {
+public interface IoUringBufferRingAllocator {
     /**
      * Creates a new receive buffer to use by the buffer ring. The returned {@link ByteBuf} must be direct.
      */
