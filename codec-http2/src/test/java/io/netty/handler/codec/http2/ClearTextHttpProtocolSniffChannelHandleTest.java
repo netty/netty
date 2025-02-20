@@ -144,8 +144,8 @@ public class ClearTextHttpProtocolSniffChannelHandleTest {
         ByteBuf http1RequestLine = Unpooled.directBuffer();
         http1RequestLine.writeBytes("GET https://netty.io/wiki/index.html HTTP/1.1".getBytes(Charset.defaultCharset()));
 
-        ByteBuf part0 = http1RequestLine.slice(0, 10);
-        ByteBuf part1 = http1RequestLine.slice(10, http1RequestLine.readableBytes() - part0.readableBytes());
+        ByteBuf part0 = http1RequestLine.retainedSlice(0, 10);
+        ByteBuf part1 = http1RequestLine.retainedSlice(10, http1RequestLine.readableBytes() - part0.readableBytes());
 
         embeddedChannel.writeInbound(part0);
 
@@ -162,6 +162,7 @@ public class ClearTextHttpProtocolSniffChannelHandleTest {
         Assertions.assertTrue(ByteBufUtil.equals(http1RequestLine, downstreamChannelHandle.bufFromUpstream));
         Assertions.assertNull(embeddedChannel.pipeline().get(ClearTextHttpProtocolSniffChannelHandle.class));
         downstreamChannelHandle.release();
+        http1RequestLine.release();
     }
 
     @Test
