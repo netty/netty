@@ -41,7 +41,6 @@ public class ClearTextHttpProtocolSniffChannelHandleTest {
 
                 @Override
                 protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-
                 }
 
                 @Override
@@ -285,6 +284,5 @@ public class ClearTextHttpProtocolSniffChannelHandleTest {
             }
         }
     }
-
 
 }
