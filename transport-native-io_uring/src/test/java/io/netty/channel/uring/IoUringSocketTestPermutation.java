@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
@@ -49,7 +48,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
             IoUringIoHandler.newFactory(new IoUringIoHandlerConfig()
                     .setBufferRingConfig(RING_SELECTOR,
                             new IoUringBufferRingConfig(BGID, (short) 16,
-                                    new IoUringFixedBufferRingRecvAllocator(1024)))));
+                                    new IoUringFixedBufferRingAllocator(1024)))));
     @Override
     public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
 

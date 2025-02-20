@@ -25,7 +25,7 @@ import java.util.Objects;
  * {@link IoUringBufferRingAllocator} implementation which uses a fixed size for the buffers that are returned by
  * {@link #allocate()}.
  */
-public final class IoUringFixedBufferRingRecvAllocator implements IoUringBufferRingAllocator {
+public final class IoUringFixedBufferRingAllocator implements IoUringBufferRingAllocator {
     private final ByteBufAllocator allocator;
     private final int bufferSize;
 
@@ -35,7 +35,7 @@ public final class IoUringFixedBufferRingRecvAllocator implements IoUringBufferR
      * @param allocator     the {@link ByteBufAllocator} to use.
      * @param bufferSize    the size of the buffers that are allocated.
      */
-    public IoUringFixedBufferRingRecvAllocator(ByteBufAllocator allocator, int bufferSize) {
+    public IoUringFixedBufferRingAllocator(ByteBufAllocator allocator, int bufferSize) {
         this.allocator = Objects.requireNonNull(allocator, "allocator");
         this.bufferSize = ObjectUtil.checkPositive(bufferSize, "bufferSize");
     }
@@ -45,7 +45,7 @@ public final class IoUringFixedBufferRingRecvAllocator implements IoUringBufferR
      *
      * @param bufferSize    the size of the buffers that are allocated.
      */
-    public IoUringFixedBufferRingRecvAllocator(int bufferSize) {
+    public IoUringFixedBufferRingAllocator(int bufferSize) {
         this(ByteBufAllocator.DEFAULT, bufferSize);
     }
 

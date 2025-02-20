@@ -18,7 +18,6 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -76,10 +75,10 @@ public class IoUringBufferRingTest {
         final BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
-                (short) 1, (short) 2, incremental, new IoUringFixedBufferRingRecvAllocator(1024));
+                (short) 1, (short) 2, incremental, new IoUringFixedBufferRingAllocator(1024));
 
         IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
-                (short) 2, (short) 16, incremental, new IoUringFixedBufferRingRecvAllocator(1024)
+                (short) 2, (short) 16, incremental, new IoUringFixedBufferRingAllocator(1024)
         );
         ioUringIoHandlerConfiguration.setBufferRingConfig(
                 (ch, size) -> bufferRingConfig.bufferGroupId(), bufferRingConfig, bufferRingConfig1);
