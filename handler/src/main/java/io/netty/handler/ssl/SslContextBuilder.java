@@ -655,7 +655,7 @@ public final class SslContextBuilder {
             throw new UnsupportedOperationException("Cannot add Server Name Indication extension, " +
                     "because this is a server context builder.");
         }
-        serverNames.add(serverName);
+        serverNames.add(checkNotNull(serverName, "serverName"));
         return this;
     }
 
