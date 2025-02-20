@@ -3130,15 +3130,11 @@ public abstract class SSLEngineTest {
                 })
                 .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
+                .serverName(new SNIHostName(fqdn))
+                .endpointIdentificationAlgorithm("HTTPS")
                 .build());
 
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT, "127.0.0.1", 1234));
-        SSLParameters sslParameters = client.getSSLParameters();
-        sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
-        if (useSNI) {
-            sslParameters.setServerNames(Collections.<SNIServerName>singletonList(new SNIHostName(fqdn)));
-        }
-        client.setSSLParameters(sslParameters);
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.getKeyPair().getPrivate(), cert.getCertificatePath())

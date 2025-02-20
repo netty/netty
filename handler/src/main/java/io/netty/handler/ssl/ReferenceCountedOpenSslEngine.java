@@ -41,7 +41,6 @@ import java.nio.ReadOnlyBufferException;
 import java.security.AlgorithmConstraints;
 import java.security.Principal;
 import java.security.cert.Certificate;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -189,9 +188,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
 
     private String endpointIdentificationAlgorithm;
-    // Store as object as AlgorithmConstraints only exists since java 7.
-    private Object algorithmConstraints;
-    private List<String> sniHostNames;
+    private List<SNIServerName> serverNames;
+    private AlgorithmConstraints algorithmConstraints;
 
     // Mark as volatile as accessed by checkSniHostnameMatch(...).
     private volatile Collection<SNIMatcher> matchers;
@@ -228,7 +226,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      */
     ReferenceCountedOpenSslEngine(ReferenceCountedOpenSslContext context, final ByteBufAllocator alloc, String peerHost,
                                   int peerPort, boolean jdkCompatibilityMode, boolean leakDetection,
-                                  String endpointIdentificationAlgorithm) {
+                                  String endpointIdentificationAlgorithm, List<SNIServerName> serverNames) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
         engineMap = context.engineMap;
@@ -238,6 +236,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
         clientMode = context.isClient();
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
+        this.serverNames = serverNames;
 
         session = new ExtendedOpenSslSession(new DefaultOpenSslSession(context.sessionContext())) {
             private String[] peerSupportedSignatureAlgorithms;
@@ -246,7 +245,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             @Override
             public List<SNIServerName> getRequestedServerNames() {
                 if (clientMode) {
-                    return getSniHostNames(sniHostNames);
+                    return serverNames;
                 } else {
                     synchronized (ReferenceCountedOpenSslEngine.this) {
                         if (requestedServerNames == null) {
@@ -335,17 +334,25 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
 
                 assert context.protocols != null;
-                this.hasTLSv13Cipher = context.hasTLSv13Cipher;
+                hasTLSv13Cipher = context.hasTLSv13Cipher;
 
                 setEnabledProtocols(context.protocols);
 
                 // Use SNI if peerHost was specified and a valid hostname
                 // See https://github.com/netty/netty/issues/4746
-                if (clientMode && SslUtils.isValidHostNameForSNI(peerHost)) {
+                boolean usePeerHost;
+                boolean useServerNames = serverNames != null && !serverNames.isEmpty() &&
+                        serverNames.stream().allMatch(n -> n instanceof SNIHostName);
+                if (clientMode && (usePeerHost = SslUtils.isValidHostNameForSNI(peerHost) || useServerNames)) {
                     // We do some extra validation to ensure we can construct the SNIHostName later again.
-                    if (isValidHostNameForSNI(peerHost)) {
+                    if (usePeerHost && isValidHostNameForSNI(peerHost)) {
                         SSL.setTlsExtHostName(ssl, peerHost);
-                        sniHostNames = Collections.singletonList(peerHost);
+                        this.serverNames = Collections.singletonList(new SNIHostName(peerHost));
+                    } else if (useServerNames) {
+                        for (SNIServerName serverName : serverNames) {
+                            SNIHostName name = (SNIHostName) serverName;
+                            SSL.setTlsExtHostName(ssl, name.getAsciiName());
+                        }
                     }
                 }
 
@@ -2192,27 +2199,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         SSLParameters sslParameters = super.getSSLParameters();
 
         sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
-        sslParameters.setAlgorithmConstraints((AlgorithmConstraints) algorithmConstraints);
-        if (sniHostNames != null) {
-            sslParameters.setServerNames(getSniHostNames(sniHostNames));
-        }
+        sslParameters.setAlgorithmConstraints(algorithmConstraints);
+        sslParameters.setServerNames(serverNames);
         if (!isDestroyed()) {
             sslParameters.setUseCipherSuitesOrder((SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
         }
 
         sslParameters.setSNIMatchers(matchers);
         return sslParameters;
-    }
-
-    private static List<SNIServerName> getSniHostNames(List<String> names) {
-        if (names == null || names.isEmpty()) {
-            return Collections.emptyList();
-        }
-        List<SNIServerName> sniServerNames = new ArrayList<SNIServerName>(names.size());
-        for (String name: names) {
-            sniServerNames.add(new SNIHostName(name.getBytes(CharsetUtil.UTF_8)));
-        }
-        return sniServerNames;
     }
 
     @Override
@@ -2224,11 +2218,18 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         boolean isDestroyed = isDestroyed();
         if (!isDestroyed) {
             if (clientMode) {
-                final List<String> sniHostNames = getSniHostNames(sslParameters);
-                for (String name: sniHostNames) {
-                    SSL.setTlsExtHostName(ssl, name);
+                List<SNIServerName> proposedServerNames = sslParameters.getServerNames();
+                for (SNIServerName serverName : proposedServerNames) {
+                    if (!(serverName instanceof SNIHostName)) {
+                        throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
+                                + " instances are supported, but found: " + serverName);
+                    }
                 }
-                this.sniHostNames = sniHostNames;
+                for (SNIServerName serverName : proposedServerNames) {
+                    SNIHostName name = (SNIHostName) serverName;
+                    SSL.setTlsExtHostName(ssl, name.getAsciiName());
+                }
+                serverNames = proposedServerNames;
             }
             if (sslParameters.getUseCipherSuitesOrder()) {
                 SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
@@ -2253,24 +2254,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (clientMode && isEndPointVerificationEnabled(endpointIdentificationAlgorithm)) {
             SSL.setVerify(ssl, SSL.SSL_CVERIFY_REQUIRED, -1);
         }
-    }
-
-    private static List<String> getSniHostNames(SSLParameters sslParameters) {
-        List<SNIServerName> names = sslParameters.getServerNames();
-        if (names == null || names.isEmpty()) {
-            return Collections.emptyList();
-        }
-        List<String> strings = new ArrayList<String>(names.size());
-
-        for (SNIServerName serverName : names) {
-            if (serverName instanceof SNIHostName) {
-                strings.add(((SNIHostName) serverName).getAsciiName());
-            } else {
-                throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
-                        + " instances are supported, but found: " + serverName);
-            }
-        }
-        return strings;
     }
 
     private static boolean isEndPointVerificationEnabled(String endPointIdentificationAlgorithm) {
@@ -2411,10 +2394,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 long creationTime, long lastAccessedTime, OpenSslSessionId sessionId,
                 Map<String, Object> keyValueStorage) {
             synchronized (ReferenceCountedOpenSslEngine.this) {
-                if (this.id == OpenSslSessionId.NULL_ID) {
-                    this.id = sessionId;
+                if (id == OpenSslSessionId.NULL_ID) {
+                    id = sessionId;
                     this.creationTime = creationTime;
-                    this.lastAccessed = lastAccessedTime;
+                    lastAccessed = lastAccessedTime;
 
                     // Update the key value storage. It's fine to just drop the previous stored values on the floor
                     // as the JDK does the same in the sense that it will use a new SSLSessionImpl instance once the
@@ -2445,7 +2428,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public void setLocalCertificate(Certificate[] localCertificate) {
-            this.localCertificateChain = localCertificate;
+            localCertificateChain = localCertificate;
         }
 
         @Override
@@ -2468,7 +2451,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         @Override
         public void setLastAccessedTime(long time) {
             synchronized (ReferenceCountedOpenSslEngine.this) {
-                this.lastAccessed = time;
+                lastAccessed = time;
             }
         }
 
@@ -2644,7 +2627,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public Certificate[] getLocalCertificates() {
-            Certificate[] localCerts = this.localCertificateChain;
+            Certificate[] localCerts = localCertificateChain;
             if (localCerts == null) {
                 return null;
             }
@@ -2676,7 +2659,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
         @Override
         public Principal getLocalPrincipal() {
-            Certificate[] local = this.localCertificateChain;
+            Certificate[] local = localCertificateChain;
             if (local == null || local.length == 0) {
                 return null;
             }

@@ -300,7 +300,7 @@ public final class JdkSslServerContext extends JdkSslContext {
                         keyPassword, keyManagerFactory, sessionCacheSize, sessionTimeout, secureRandom, keyStore,
                         resumptionController),
                 false, ciphers, cipherFilter, toNegotiator(apn, true), clientAuth, protocols, startTls, null,
-                resumptionController);
+                null, resumptionController);
     }
 
     private static SSLContext newSSLContext(Provider sslContextProvider, X509Certificate[] trustCertCollection,
