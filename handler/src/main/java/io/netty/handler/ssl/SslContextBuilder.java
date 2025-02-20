@@ -655,7 +655,12 @@ public final class SslContextBuilder {
             throw new UnsupportedOperationException("Cannot add Server Name Indication extension, " +
                     "because this is a server context builder.");
         }
-        serverNames.add(checkNotNull(serverName, "serverName"));
+        checkNotNull(serverName, "serverName");
+        if (!(serverName instanceof SNIHostName)) {
+            throw new IllegalArgumentException("Only SNIHostName is supported. The given SNIServerName type was " +
+                    serverName.getClass().getName());
+        }
+        serverNames.add(serverName);
         return this;
     }
 
