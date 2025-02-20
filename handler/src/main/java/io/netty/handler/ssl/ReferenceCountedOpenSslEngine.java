@@ -245,7 +245,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             @Override
             public List<SNIServerName> getRequestedServerNames() {
                 if (clientMode) {
-                    return serverNames;
+                    return ReferenceCountedOpenSslEngine.this.serverNames;
                 } else {
                     synchronized (ReferenceCountedOpenSslEngine.this) {
                         if (requestedServerNames == null) {
@@ -340,18 +340,22 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                 // Use SNI if peerHost was specified and a valid hostname
                 // See https://github.com/netty/netty/issues/4746
-                boolean usePeerHost;
-                boolean useServerNames = serverNames != null && !serverNames.isEmpty() &&
-                        serverNames.stream().allMatch(n -> n instanceof SNIHostName);
-                if (clientMode && (usePeerHost = SslUtils.isValidHostNameForSNI(peerHost) || useServerNames)) {
+                boolean usePeerHost = peerHost != null && SslUtils.isValidHostNameForSNI(peerHost);
+                boolean useServerNames = serverNames != null && !serverNames.isEmpty();
+                if (clientMode && (usePeerHost || useServerNames)) {
                     // We do some extra validation to ensure we can construct the SNIHostName later again.
-                    if (usePeerHost && isValidHostNameForSNI(peerHost)) {
+                    if (usePeerHost) {
                         SSL.setTlsExtHostName(ssl, peerHost);
                         this.serverNames = Collections.singletonList(new SNIHostName(peerHost));
                     } else if (useServerNames) {
                         for (SNIServerName serverName : serverNames) {
-                            SNIHostName name = (SNIHostName) serverName;
-                            SSL.setTlsExtHostName(ssl, name.getAsciiName());
+                            if (serverName instanceof SNIHostName) {
+                                SNIHostName name = (SNIHostName) serverName;
+                                SSL.setTlsExtHostName(ssl, name.getAsciiName());
+                            } else {
+                                throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
+                                        + " instances are supported, but found: " + serverName);
+                            }
                         }
                     }
                 }
@@ -409,15 +413,6 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
         // the ResourceLeakDetector.
         leak = leakDetection ? leakDetector.track(this) : null;
-    }
-
-    private static boolean isValidHostNameForSNI(String hostname) {
-        try {
-            new SNIHostName(hostname);
-            return true;
-        } catch (IllegalArgumentException illegal) {
-            return false;
-        }
     }
 
     final synchronized String[] authMethods() {

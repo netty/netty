@@ -391,7 +391,9 @@ public class JdkSslContext extends SslContext {
     private void configureSSLParameters(SSLEngine engine) {
         SSLParameters params = engine.getSSLParameters();
         params.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
-        params.setServerNames(serverNames); // Note: setServerNames also accepts null and empty lists.
+        if (serverNames != null && !serverNames.isEmpty()) {
+            params.setServerNames(serverNames);
+        }
         engine.setSSLParameters(params);
     }
 
