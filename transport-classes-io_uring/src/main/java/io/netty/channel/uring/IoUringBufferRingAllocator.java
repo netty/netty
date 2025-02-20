@@ -29,7 +29,8 @@ public interface IoUringBufferRingAllocator {
     /**
      * Set the bytes that have been read for the last read operation that was full-filled out of the buffer ring.
      *
-     * @param bytes The number of bytes from the previous read operation.
+     * @param attempted  the attempted bytes to read.
+     * @param actual     the number of bytes that could be read.
      */
-    void lastBytesRead(int bytes);
+    void lastBytesRead(int attempted, int actual);
 }
