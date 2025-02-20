@@ -109,8 +109,8 @@ final class IoUringBufferRing {
      * @return              the buffer.
      */
     ByteBuf useBuffer(short bid, int readableBytes, boolean more) {
-        allocator.lastBytesRead(readableBytes);
         ByteBuf byteBuf = buffers[bid];
+        allocator.lastBytesRead(byteBuf.readableBytes(), readableBytes);
         if (incremental && more) {
             // The buffer will be used later again, just slice out what we did read so far.
             return byteBuf.readRetainedSlice(readableBytes);

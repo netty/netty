@@ -55,7 +55,7 @@ public final class IoUringFixedBufferRingRecvAllocator implements IoUringBufferR
     }
 
     @Override
-    public void lastBytesRead(int bytes) {
+    public void lastBytesRead(int attempted, int actual) {
         // NOOP.
     }
 }
