@@ -3091,48 +3091,52 @@ public abstract class SSLEngineTest {
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
 
-        clientSslCtx = wrapContext(param, SslContextBuilder
+        TrustManagerFactory clientTrustManagerFactory = new TrustManagerFactory(new TrustManagerFactorySpi() {
+            @Override
+            protected void engineInit(KeyStore keyStore) {
+                // NOOP
+            }
+
+            @Override
+            protected TrustManager[] engineGetTrustManagers() {
+                // Provide a custom trust manager, this manager trust all certificates
+                return new TrustManager[]{
+                        new X509TrustManager() {
+                            @Override
+                            public void checkClientTrusted(
+                                    java.security.cert.X509Certificate[] x509Certificates, String s) {
+                                // NOOP
+                            }
+
+                            @Override
+                            public void checkServerTrusted(
+                                    java.security.cert.X509Certificate[] x509Certificates, String s) {
+                                // NOOP
+                            }
+
+                            @Override
+                            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                                return EmptyArrays.EMPTY_X509_CERTIFICATES;
+                            }
+                        }
+                };
+            }
+
+            @Override
+            protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {
+            }
+        }, null, TrustManagerFactory.getDefaultAlgorithm()) {
+        };
+        SslContextBuilder clientSslContextBuilder = SslContextBuilder
                 .forClient()
-                .trustManager(new TrustManagerFactory(new TrustManagerFactorySpi() {
-                    @Override
-                    protected void engineInit(KeyStore keyStore) {
-                        // NOOP
-                    }
-                    @Override
-                    protected TrustManager[] engineGetTrustManagers() {
-                        // Provide a custom trust manager, this manager trust all certificates
-                        return new TrustManager[] {
-                                new X509TrustManager() {
-                                    @Override
-                                    public void checkClientTrusted(
-                                            java.security.cert.X509Certificate[] x509Certificates, String s) {
-                                        // NOOP
-                                    }
-
-                                    @Override
-                                    public void checkServerTrusted(
-                                            java.security.cert.X509Certificate[] x509Certificates, String s) {
-                                        // NOOP
-                                    }
-
-                                    @Override
-                                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                                        return EmptyArrays.EMPTY_X509_CERTIFICATES;
-                                    }
-                                }
-                        };
-                    }
-
-                    @Override
-                    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {
-                    }
-                }, null, TrustManagerFactory.getDefaultAlgorithm()) {
-                })
+                .trustManager(clientTrustManagerFactory)
                 .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
-                .serverName(new SNIHostName(fqdn))
-                .endpointIdentificationAlgorithm("HTTPS")
-                .build());
+                .endpointIdentificationAlgorithm("HTTPS");
+        if (useSNI) {
+                clientSslContextBuilder.serverName(new SNIHostName(fqdn));
+        }
+        clientSslCtx = wrapContext(param, clientSslContextBuilder.build());
 
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT, "127.0.0.1", 1234));
 

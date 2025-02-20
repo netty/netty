@@ -340,7 +340,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
                 // Use SNI if peerHost was specified and a valid hostname
                 // See https://github.com/netty/netty/issues/4746
-                boolean usePeerHost = peerHost != null && SslUtils.isValidHostNameForSNI(peerHost);
+                boolean usePeerHost = SslUtils.isValidHostNameForSNI(peerHost) && isValidHostNameForSNI(peerHost);
                 boolean useServerNames = serverNames != null && !serverNames.isEmpty();
                 if (clientMode && (usePeerHost || useServerNames)) {
                     // We do some extra validation to ensure we can construct the SNIHostName later again.
@@ -413,6 +413,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
         // the ResourceLeakDetector.
         leak = leakDetection ? leakDetector.track(this) : null;
+    }
+
+    private static boolean isValidHostNameForSNI(String hostname) {
+        try {
+            new SNIHostName(hostname);
+            return true;
+        } catch (IllegalArgumentException illegal) {
+            return false;
+        }
     }
 
     final synchronized String[] authMethods() {
