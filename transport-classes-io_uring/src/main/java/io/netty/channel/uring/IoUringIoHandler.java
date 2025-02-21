@@ -150,6 +150,10 @@ public final class IoUringIoHandler implements IoHandler {
     @Override
     public void initialize() {
         ringBuffer.enable();
+        // Fill all buffer rings now.
+        for (IoUringBufferRing bufferRing : registeredIoUringBufferRing.values()) {
+            bufferRing.fill();
+        }
     }
 
     @Override

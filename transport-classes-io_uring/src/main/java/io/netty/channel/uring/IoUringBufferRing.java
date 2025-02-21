@@ -47,10 +47,9 @@ final class IoUringBufferRing {
         this.source = ioUringIoHandler;
         this.allocator = allocator;
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
-        fill();
     }
 
-    private void fill() {
+    void fill() {
         for (short i = 0; i < entries; i++) {
             addBuffer(i);
         }
