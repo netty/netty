@@ -62,7 +62,7 @@ public final class IoUringAdaptiveBufferRingAllocator implements IoUringBufferRi
 
     @Override
     public ByteBuf allocate() {
-        return allocator.directBuffer(nextSize());
+        return allocator.directBuffer(calculator.nextSize());
     }
 
     @Override
@@ -74,10 +74,5 @@ public final class IoUringAdaptiveBufferRingAllocator implements IoUringBufferRi
         if (attempted == actual) {
             calculator.record(actual);
         }
-    }
-
-    // Visible for testing
-    int nextSize() {
-        return calculator.nextSize();
     }
 }
