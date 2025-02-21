@@ -16,23 +16,23 @@
 package io.netty.microbench.util;
 
 import io.netty.util.concurrent.AbstractEventExecutor;
-import io.netty.util.concurrent.AbstractScheduledEventExecutor;
-import io.netty.util.concurrent.DefaultEventExecutor;
-import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
+import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
@@ -115,23 +115,21 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
     }
 
     public AbstractMicrobenchmark(boolean disableAssertions, boolean disableHarnessExecutor) {
-        final String[] customArgs;
-        if (disableHarnessExecutor) {
-            customArgs = new String[]{"-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m",
-                    "-XX:BiasedLockingStartupDelay=0"};
-        } else {
-            customArgs = new String[]{"-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m",
-                    "-XX:BiasedLockingStartupDelay=0",
-                    "-Djmh.executor=CUSTOM",
-                    "-Djmh.executor.class=io.netty.microbench.util.AbstractMicrobenchmark$HarnessExecutor"};
+        final List<String> jvmArgs = new ArrayList<>(Arrays.asList(BASE_JVM_ARGS));
+        jvmArgs.add("-Xms768m");
+        jvmArgs.add("-Xmx768m");
+        jvmArgs.add("-XX:MaxDirectMemorySize=768m");
+        if (PlatformDependent.javaVersion() < 15) { // not entirely sure when this option was removed, but
+            jvmArgs.add("-XX:BiasedLockingStartupDelay=0");
         }
-        String[] jvmArgs = new String[BASE_JVM_ARGS.length + customArgs.length];
-        System.arraycopy(BASE_JVM_ARGS, 0, jvmArgs, 0, BASE_JVM_ARGS.length);
-        System.arraycopy(customArgs, 0, jvmArgs, BASE_JVM_ARGS.length, customArgs.length);
+        if (!disableHarnessExecutor) {
+            jvmArgs.add("-Djmh.executor=CUSTOM");
+            jvmArgs.add("-Djmh.executor.class=" + HarnessExecutor.class.getName());
+        }
         if (disableAssertions) {
-            jvmArgs = removeAssertions(jvmArgs);
+            removeAssertions(jvmArgs);
         }
-        this.jvmArgs = jvmArgs;
+        this.jvmArgs = jvmArgs.toArray(EmptyArrays.EMPTY_STRINGS);
     }
 
     @Override
