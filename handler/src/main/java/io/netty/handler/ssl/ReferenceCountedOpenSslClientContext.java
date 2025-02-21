@@ -27,9 +27,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
@@ -61,11 +63,11 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                          String[] protocols, long sessionCacheSize, long sessionTimeout,
                                          boolean enableOcsp, String keyStore, String endpointIdentificationAlgorithm,
-                                         ResumptionController resumptionController,
+                                         List<SNIServerName> serverNames, ResumptionController resumptionController,
                                          Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apn), SSL.SSL_MODE_CLIENT, keyCertChain,
               ClientAuth.NONE, protocols, false, endpointIdentificationAlgorithm, enableOcsp, true,
-                resumptionController, options);
+                serverNames, resumptionController, options);
         boolean success = false;
         try {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,

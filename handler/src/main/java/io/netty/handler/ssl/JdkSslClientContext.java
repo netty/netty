@@ -20,6 +20,7 @@ import java.security.KeyStore;
 import java.security.Provider;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSessionContext;
@@ -29,6 +30,7 @@ import java.io.File;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.util.List;
 
 /**
  * A client-side {@link SslContext} which uses JDK's SSL/TLS implementation.
@@ -270,13 +272,13 @@ public final class JdkSslClientContext extends JdkSslContext {
                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                         ApplicationProtocolConfig apn, String[] protocols, long sessionCacheSize, long sessionTimeout,
                         SecureRandom secureRandom, String keyStoreType, String endpointIdentificationAlgorithm,
-                        ResumptionController resumptionController)
+                        List<SNIServerName> serverNames, ResumptionController resumptionController)
             throws SSLException {
         super(newSSLContext(sslContextProvider, trustCertCollection, trustManagerFactory,
                             keyCertChain, key, keyPassword, keyManagerFactory, sessionCacheSize,
                             sessionTimeout, secureRandom, keyStoreType, resumptionController),
                 true, ciphers, cipherFilter, toNegotiator(apn, false), ClientAuth.NONE, protocols, false,
-                endpointIdentificationAlgorithm, resumptionController);
+                endpointIdentificationAlgorithm, serverNames, resumptionController);
     }
 
     private static SSLContext newSSLContext(Provider sslContextProvider,

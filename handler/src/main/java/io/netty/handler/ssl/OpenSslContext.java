@@ -18,8 +18,10 @@ package io.netty.handler.ssl;
 import io.netty.buffer.ByteBufAllocator;
 
 import java.security.cert.Certificate;
+import java.util.List;
 import java.util.Map;
 
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
@@ -31,28 +33,28 @@ public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apnCfg,
                    int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls, String endpointIdentificationAlgorithm,
-                   boolean enableOcsp, ResumptionController resumptionController,
+                   boolean enableOcsp, List<SNIServerName> serverNames, ResumptionController resumptionController,
                    Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apnCfg), mode, keyCertChain,
                 clientAuth, protocols, startTls, endpointIdentificationAlgorithm, enableOcsp, false,
-                resumptionController, options);
+                serverNames, resumptionController, options);
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
                    int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
-                   ResumptionController resumptionController,
+                   List<SNIServerName> serverNames, ResumptionController resumptionController,
                    Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, mode, keyCertChain,
-                clientAuth, protocols, startTls, null, enableOcsp, false, resumptionController, options);
+                clientAuth, protocols, startTls, null, enableOcsp, false, serverNames, resumptionController, options);
     }
 
     @Override
     final SSLEngine newEngine0(ByteBufAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
         return new OpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode,
-                endpointIdentificationAlgorithm);
+                endpointIdentificationAlgorithm, serverNames);
     }
 
     @Override

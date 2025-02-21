@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Set;
 import javax.crypto.NoSuchPaddingException;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
@@ -191,6 +192,7 @@ public class JdkSslContext extends SslContext {
     private final SSLContext sslContext;
     private final boolean isClient;
     private final String endpointIdentificationAlgorithm;
+    private final List<SNIServerName> serverNames;
 
     /**
      * Creates a new {@link JdkSslContext} from a pre-configured {@link SSLContext}.
@@ -260,18 +262,20 @@ public class JdkSslContext extends SslContext {
     @SuppressWarnings("deprecation")
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                   JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls) {
-        this(sslContext, isClient, ciphers, cipherFilter, apn, clientAuth, protocols, startTls, null, null);
+        this(sslContext, isClient, ciphers, cipherFilter, apn, clientAuth, protocols, startTls, null, null, null);
     }
 
     @SuppressWarnings("deprecation")
     JdkSslContext(SSLContext sslContext, boolean isClient, Iterable<String> ciphers, CipherSuiteFilter cipherFilter,
                   JdkApplicationProtocolNegotiator apn, ClientAuth clientAuth, String[] protocols, boolean startTls,
-                  String endpointIdentificationAlgorithm, ResumptionController resumptionController) {
+                  String endpointIdentificationAlgorithm, List<SNIServerName> serverNames,
+                  ResumptionController resumptionController) {
         super(startTls, resumptionController);
         this.apn = checkNotNull(apn, "apn");
         this.clientAuth = checkNotNull(clientAuth, "clientAuth");
         this.sslContext = checkNotNull(sslContext, "sslContext");
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
+        this.serverNames = serverNames;
 
         final List<String> defaultCiphers;
         final Set<String> supportedCiphers;
@@ -375,7 +379,7 @@ public class JdkSslContext extends SslContext {
                     throw new Error("Unknown auth " + clientAuth);
             }
         }
-        configureEndpointVerification(engine);
+        configureSSLParameters(engine);
         JdkApplicationProtocolNegotiator.SslEngineWrapperFactory factory = apn.wrapperFactory();
         if (factory instanceof JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) {
             return ((JdkApplicationProtocolNegotiator.AllocatorAwareSslEngineWrapperFactory) factory)
@@ -384,9 +388,12 @@ public class JdkSslContext extends SslContext {
         return factory.wrapSslEngine(engine, apn, isServer());
     }
 
-    private void configureEndpointVerification(SSLEngine engine) {
+    private void configureSSLParameters(SSLEngine engine) {
         SSLParameters params = engine.getSSLParameters();
         params.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
+        if (serverNames != null && !serverNames.isEmpty()) {
+            params.setServerNames(serverNames);
+        }
         engine.setSSLParameters(params);
     }
 

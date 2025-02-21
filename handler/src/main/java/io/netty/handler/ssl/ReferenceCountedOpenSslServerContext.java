@@ -72,7 +72,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
                 clientAuth, protocols, startTls,
                 null, // No endpoint validation for servers.
-                enableOcsp, true, resumptionController, options);
+                enableOcsp, true, null, resumptionController, options);
         // Create a new SSL_CTX and configure it.
         boolean success = false;
         try {
