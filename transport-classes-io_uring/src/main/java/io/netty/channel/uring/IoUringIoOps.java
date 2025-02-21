@@ -255,12 +255,13 @@ public final class IoUringIoOps implements IoOps {
      * @param fd        the filedescriptor
      * @param flags     the flags.
      * @param mask      the mask.
-     * @param data      the data
+     * @param len       the len.
+     * @param data      the data.
      * @return          ops.
      */
-    static IoUringIoOps newPollAdd(int fd, byte flags, int mask, short data) {
+    static IoUringIoOps newPollAdd(int fd, byte flags, int mask, int len, short data) {
         // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L554
-        return new IoUringIoOps(Native.IORING_OP_POLL_ADD, flags, (short) 0, fd, 0L, 0L, 0, mask, data,
+        return new IoUringIoOps(Native.IORING_OP_POLL_ADD, flags, (short) 0, fd, 0L, 0L, len, mask, data,
                 (short) 0, (short) 0, 0, 0);
     }
 
