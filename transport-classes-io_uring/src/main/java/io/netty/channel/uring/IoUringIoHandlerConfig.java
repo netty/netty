@@ -78,7 +78,6 @@ public final class IoUringIoHandlerConfig {
     private int maxUnboundedWorker;
 
     private Set<IoUringBufferRingConfig> bufferRingConfigs;
-    private IoUringBufferRingHandler bufferRingHandler;
 
     /**
      * Return the ring size of the io_uring instance.
@@ -172,20 +171,16 @@ public final class IoUringIoHandlerConfig {
      * Add a buffer ring configuration to the list of buffer ring configurations.
      * Each {@link IoUringBufferRingConfig} must have a different {@link IoUringBufferRingConfig#bufferGroupId()}.
      *
-     * @param bufferRingHandler the {@link IoUringBufferRingHandler} that is used to select the correct ring.
      * @param ringConfig        the buffer ring configuration to append.
      * @return reference to this, so the API can be used fluently
      */
-    public IoUringIoHandlerConfig setBufferRingConfig(IoUringBufferRingHandler bufferRingHandler,
-                                                      IoUringBufferRingConfig... ringConfig) {
-        Objects.requireNonNull(bufferRingHandler, "bufferRingHandler");
+    public IoUringIoHandlerConfig setBufferRingConfig(IoUringBufferRingConfig... ringConfig) {
         Set<IoUringBufferRingConfig> configSet = new HashSet<>(ringConfig.length);
         for (IoUringBufferRingConfig bufferRingConfig : ringConfig) {
             if (!configSet.add(bufferRingConfig)) {
                 throw new IllegalArgumentException("Duplicated buffer group id: " + bufferRingConfig.bufferGroupId());
             }
         }
-        this.bufferRingHandler = bufferRingHandler;
         bufferRingConfigs = configSet;
         return this;
     }
@@ -206,14 +201,6 @@ public final class IoUringIoHandlerConfig {
         return cqSize != DISABLE_SETUP_CQ_SIZE;
     }
 
-    /**
-     * Returns the {@link IoUringBufferRingHandler} that is used or {@code null} if none.
-     *
-     * @return  the handler.
-     */
-    public IoUringBufferRingHandler getBufferRingHandler() {
-        return bufferRingHandler;
-    }
 
     Set<IoUringBufferRingConfig> getInternBufferRingConfigs() {
         return bufferRingConfigs;

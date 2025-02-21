@@ -38,6 +38,7 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
     private boolean firstRead;
     private boolean rdHupReceived;
     private boolean readComplete;
+    private boolean forceNonBufferRing;
 
     @Override
     public void reset(ChannelConfig config) {
@@ -78,6 +79,8 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
     public void readComplete() {
         super.readComplete();
         readComplete = true;
+        // Reset this so we might try again to use the buffer ring.
+        forceNonBufferRing = false;
     }
 
     boolean isReadComplete() {
@@ -94,5 +97,13 @@ final class IoUringRecvByteAllocatorHandle extends RecvByteBufAllocator.Delegati
     public void incMessagesRead(int numMessages) {
         firstRead = false;
         super.incMessagesRead(numMessages);
+    }
+
+    boolean isNonBufferRingForced() {
+        return forceNonBufferRing;
+    }
+
+    void forceNonBufferRing() {
+        forceNonBufferRing = true;
     }
 }

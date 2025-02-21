@@ -15,7 +15,6 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.Channel;
 import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
@@ -82,7 +81,6 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final CompletionBuffer completionBuffer;
     private final ThreadAwareExecutor executor;
-    final IoUringBufferRingHandler idHandler;
 
     IoUringIoHandler(ThreadAwareExecutor executor, IoUringIoHandlerConfig config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
@@ -114,7 +112,6 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         registeredIoUringBufferRing = new IntObjectHashMap<>();
-        idHandler = config.getBufferRingHandler();
         Collection<IoUringBufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
         if (bufferRingConfigs != null && !bufferRingConfigs.isEmpty()) {
             if (!IoUring.isRegisterBufferRingSupported()) {
@@ -207,19 +204,11 @@ public final class IoUringIoHandler implements IoHandler {
         }
         return new IoUringBufferRing(
                 ringFd, ioUringBufRingAddr,
-                bufferRingSize, bufferGroupId, bufferRingConfig.isIncremental(),
-                this, bufferRingConfig.allocator()
+                bufferRingSize, bufferGroupId, bufferRingConfig.isIncremental(), bufferRingConfig.allocator()
         );
     }
 
-    IoUringBufferRing findBufferRing(Channel channel, int guessedSize) {
-        if (idHandler == null) {
-            return null;
-        }
-        short bgId = idHandler.selectBufferRing(channel, guessedSize);
-        if (bgId < 0) {
-            return null;
-        }
+    IoUringBufferRing findBufferRing(short bgId) {
         IoUringBufferRing cached = registeredIoUringBufferRing.get(bgId);
         if (cached != null) {
             return cached;
