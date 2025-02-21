@@ -68,13 +68,13 @@ public final class IoUring {
                     try {
                         ringBuffer = Native.createRingBuffer(1, 0);
                         Native.checkAllIOSupported(ringBuffer.fd());
-                        socketNonEmptySupported = Native.isIOUringCqeFSockNonEmptySupported(ringBuffer.fd());
-                        spliceSupported = Native.isIOUringSupportSplice(ringBuffer.fd());
+                        socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ringBuffer.fd());
+                        spliceSupported = Native.isSpliceSupported(ringBuffer.fd());
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
                         acceptSupportNoWait = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
-                        acceptMultishotSupported = Native.isIOUringAcceptMultishotSupported(ringBuffer.fd());
-                        recvMultishotSupported = Native.isIOUringRecvMultishotSupported();
-                        registerIowqWorkersSupported = Native.isRegisterIOWQWorkerSupported(ringBuffer.fd());
+                        acceptMultishotSupported = Native.isAcceptMultishotSupported(ringBuffer.fd());
+                        recvMultishotSupported = Native.isRecvMultishotSupported();
+                        registerIowqWorkersSupported = Native.isRegisterIoWqWorkerSupported(ringBuffer.fd());
                         submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
                         setUpCqSizeSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQSIZE);
                         singleIssuerSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);

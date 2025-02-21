@@ -372,22 +372,22 @@ final class Native {
         }
     }
 
-    static boolean isIOUringRecvMultishotSupported() {
+    static boolean isRecvMultishotSupported() {
         // Added in the same release as IORING_SETUP_SINGLE_ISSUER.
         return Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
     }
 
-    static boolean isIOUringAcceptMultishotSupported(int ringFd) {
+    static boolean isAcceptMultishotSupported(int ringFd) {
         // IORING_OP_SOCKET was added in the same release (5.19);
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
     }
 
-    static boolean isIOUringCqeFSockNonEmptySupported(int ringFd) {
+    static boolean isCqeFSockNonEmptySupported(int ringFd) {
         // IORING_OP_SOCKET was added in the same release (5.19);
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
     }
 
-    static boolean isIOUringSupportSplice(int ringFd) {
+    static boolean isSpliceSupported(int ringFd) {
         // IORING_OP_SPLICE Available since 5.7
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
     }
@@ -397,7 +397,7 @@ final class Native {
      * Available since 5.15.
      * @return true if support io_uring_register_io_wq_worker
      */
-    static boolean isRegisterIOWQWorkerSupported(int ringFd) {
+    static boolean isRegisterIoWqWorkerSupported(int ringFd) {
         // See https://github.com/torvalds/linux/blob/v5.5/fs/io_uring.c#L5488C10-L5488C16
         int result = ioUringRegisterIoWqMaxWorkers(ringFd, 0, 0);
         if (result >= 0) {
