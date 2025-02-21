@@ -87,7 +87,7 @@ public abstract class AbstractMicrobenchmarkBase {
     protected abstract String[] jvmArgs();
 
     static void removeAssertions(List<String> jvmArgs) {
-        for (Iterator<String> iterator = jvmArgs.iterator(); iterator.hasNext(); ) {
+        for (Iterator<String> iterator = jvmArgs.iterator(); iterator.hasNext();) {
             String jvmArg = iterator.next();
             if (jvmArg.startsWith("-ea")) {
                 iterator.remove();
