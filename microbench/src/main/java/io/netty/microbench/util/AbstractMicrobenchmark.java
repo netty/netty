@@ -115,7 +115,7 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
     }
 
     public AbstractMicrobenchmark(boolean disableAssertions, boolean disableHarnessExecutor) {
-        final List<String> jvmArgs = new ArrayList<>(Arrays.asList(BASE_JVM_ARGS));
+        final List<String> jvmArgs = new ArrayList<String>(Arrays.asList(BASE_JVM_ARGS));
         jvmArgs.add("-Xms768m");
         jvmArgs.add("-Xmx768m");
         jvmArgs.add("-XX:MaxDirectMemorySize=768m");
