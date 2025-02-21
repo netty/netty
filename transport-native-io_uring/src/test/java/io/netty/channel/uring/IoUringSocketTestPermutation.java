@@ -39,14 +39,13 @@ import java.util.List;
 public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
     static final IoUringSocketTestPermutation INSTANCE = new IoUringSocketTestPermutation();
-    private static final short BGID = 0;
-    static final IoUringBufferRingHandler RING_SELECTOR = (channel, size) -> BGID;
+    static final short BGID = 0;
     static final EventLoopGroup IO_URING_BOSS_GROUP = new MultiThreadIoEventLoopGroup(
             BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());
     static final EventLoopGroup IO_URING_WORKER_GROUP = new MultiThreadIoEventLoopGroup(
             WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true),
             IoUringIoHandler.newFactory(new IoUringIoHandlerConfig()
-                    .setBufferRingConfig(RING_SELECTOR,
+                    .setBufferRingConfig(
                             new IoUringBufferRingConfig(BGID, (short) 16,
                                     new IoUringFixedBufferRingAllocator(1024)))));
     @Override

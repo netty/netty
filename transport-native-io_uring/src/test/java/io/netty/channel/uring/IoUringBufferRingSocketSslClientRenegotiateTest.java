@@ -41,7 +41,7 @@ public class IoUringBufferRingSocketSslClientRenegotiateTest extends SocketSslCl
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.childOption(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true);
-        cb.option(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true);
+        sb.childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
+        cb.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
     }
 }

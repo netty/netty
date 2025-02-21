@@ -131,7 +131,7 @@ public final class IoUring {
         IORING_SPLICE_SUPPORTED = spliceSupported;
         IORING_ACCEPT_NO_WAIT_SUPPORTED = acceptSupportNoWait;
         IORING_ACCEPT_MULTISHOT_SUPPORTED = acceptMultishotSupported;
-        IORING_RECV_MULTISHOT_SUPPORTED = recvMultishotSupported;
+        IORING_RECV_MULTISHOT_SUPPORTED = false;//recvMultishotSupported;
         IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED = registerIowqWorkersSupported;
         IORING_SETUP_SUBMIT_ALL_SUPPORTED = submitAllSupported;
         IORING_SETUP_CQ_SIZE_SUPPORTED = setUpCqSizeSupported;
