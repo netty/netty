@@ -202,16 +202,17 @@ final class Native {
     static final byte IORING_OP_FIXED_FD_INSTALL = 54;
     static final byte IORING_OP_FTRUNCATE = 55;
     static final byte IORING_OP_BIND = 56;
+    static final byte IORING_CQE_F_BUFFER = 1 << 0;
     static final byte IORING_CQE_F_MORE = 1 << 1;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
+    static final byte IORING_CQE_F_BUF_MORE = 1 << 4;
+
     static final int IORING_SETUP_CQSIZE = 1 << 3;
     static final int IORING_SETUP_R_DISABLED = 1 << 6;
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
     static final int IORING_CQE_BUFFER_SHIFT = 16;
-    static final int IORING_CQE_F_BUF_MORE = 1 << 4;
-
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
     static final short IORING_RECV_MULTISHOT = 1 << 1;
 

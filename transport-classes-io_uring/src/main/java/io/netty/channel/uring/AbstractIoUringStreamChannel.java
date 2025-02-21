@@ -406,6 +406,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert readId != 0;
             IoUringBufferRing bufferRing = lastUsedBufferRing;
             boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
+            boolean useBufferRing = (flags & Native.IORING_CQE_F_BUFFER) != 0;
             boolean empty = socketIsEmpty(flags);
             if (rearm) {
                 // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
@@ -448,10 +449,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
                     if (bufferRing != null) {
+                        assert useBufferRing;
                         short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
                         boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
                         byteBuf = bufferRing.useBuffer(bid, res, more);
                     } else {
+                        assert !useBufferRing;
                         byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     }
                     allocHandle.lastBytesRead(res);
