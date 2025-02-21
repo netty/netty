@@ -111,6 +111,15 @@ public class QueryStringDecoderTest {
     }
 
     @Test
+    public void testNonHtmlQuery() {
+        QueryStringDecoder d = QueryStringDecoder.builder().build("/foo?abc=foo+bar");
+        assertEquals("foo bar", d.parameters().get("abc").get(0));
+
+        d = QueryStringDecoder.builder().htmlQueryDecoding(false).build("/foo?abc=foo+bar");
+        assertEquals("foo+bar", d.parameters().get("abc").get(0));
+    }
+
+    @Test
     public void testExotic() {
         assertQueryString("", "");
         assertQueryString("foo", "foo");
