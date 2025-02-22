@@ -17,9 +17,11 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.BufferAllocator;
 
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import java.security.cert.Certificate;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -31,29 +33,31 @@ public abstract class OpenSslContext extends ReferenceCountedOpenSslContext {
                    int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls,
                    boolean enableOcsp, String endpointIdentificationAlgorithm,
+                   List<SNIServerName> serverNames,
                    ResumptionController resumptionController,
                    Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apnCfg), mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, false, endpointIdentificationAlgorithm,
+                clientAuth, protocols, startTls, enableOcsp, false, endpointIdentificationAlgorithm, serverNames,
                 resumptionController, options);
     }
 
     OpenSslContext(Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
                    int mode, Certificate[] keyCertChain,
                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
-                   String endpointIdentificationAlgorithm, ResumptionController resumptionController,
+                   String endpointIdentificationAlgorithm, List<SNIServerName> serverNames,
+                   ResumptionController resumptionController,
                    Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, mode, keyCertChain,
-                clientAuth, protocols, startTls, enableOcsp, false, endpointIdentificationAlgorithm,
+                clientAuth, protocols, startTls, enableOcsp, false, endpointIdentificationAlgorithm, serverNames,
                 resumptionController, options);
     }
 
     @Override
     final SSLEngine newEngine0(BufferAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
         return new OpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode,
-                endpointIdentificationAlgorithm);
+                endpointIdentificationAlgorithm, serverNames);
     }
 
     @Override

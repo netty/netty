@@ -18,10 +18,12 @@ package io.netty5.handler.ssl;
 import io.netty.internal.tcnative.SSL;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
 
 import static io.netty5.handler.ssl.ReferenceCountedOpenSslClientContext.newSessionContext;
@@ -36,14 +38,15 @@ final class OpenSslClientContext extends OpenSslContext {
 
     OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                          X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
-                                KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
-                                CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
-                                long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
-                         String endpointIdentificationAlgorithm, ResumptionController resumptionController,
+                         KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
+                         CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
+                         long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
+                         String endpointIdentificationAlgorithm, List<SNIServerName> serverName,
+                         ResumptionController resumptionController,
                          Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain, ClientAuth.NONE, protocols, false,
-                enableOcsp, endpointIdentificationAlgorithm, resumptionController, options);
+                enableOcsp, endpointIdentificationAlgorithm, serverName, resumptionController, options);
         boolean success = false;
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);

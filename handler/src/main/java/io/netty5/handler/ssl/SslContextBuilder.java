@@ -21,6 +21,8 @@ import io.netty5.util.internal.UnstableApi;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
@@ -209,6 +211,7 @@ public final class SslContextBuilder {
     private SecureRandom secureRandom;
     private String keyStoreType = KeyStore.getDefaultType();
     private String endpointIdentificationAlgorithm;
+    private final List<SNIServerName> serverNames;
     private final Map<SslContextOption<?>, Object> options = new HashMap<>();
 
     private SslContextBuilder(boolean forServer) {
@@ -216,6 +219,7 @@ public final class SslContextBuilder {
         if (!forServer) {
             endpointIdentificationAlgorithm = "HTTPS";
         }
+        serverNames = forServer ? null : new ArrayList<>(2); // Only for clients.
     }
 
     /**
@@ -637,6 +641,29 @@ public final class SslContextBuilder {
     }
 
     /**
+     * Add the given server name indication to this client context. This will cause the client to include a
+     * Server Name Indication extension with its {@code ClientHello} message, as per
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6066#section-3">RFC 6066 section 3</a>.
+     * <p>
+     * Note that only one name per name type can be included in the message.
+     * Currently, only the {@link SNIHostName} type is supported.
+     * @param serverName The server name to include in the SNI extension.
+     */
+    public SslContextBuilder serverName(SNIServerName serverName) {
+        if (forServer) {
+            throw new UnsupportedOperationException("Cannot add Server Name Indication extension, " +
+                    "because this is a server context builder.");
+        }
+        requireNonNull(serverName, "serverName");
+        if (!(serverName instanceof SNIHostName)) {
+            throw new IllegalArgumentException("Only SNIHostName is supported. The given SNIServerName type was " +
+                    serverName.getClass().getName());
+        }
+        serverNames.add(serverName);
+        return this;
+    }
+
+    /**
      * Create new {@code SslContext} instance with configured settings.
      * <p>If {@link #sslProvider(SslProvider)} is set to {@link SslProvider#OPENSSL_REFCNT} then the caller is
      * responsible for releasing this object, or else native memory may leak.
@@ -652,7 +679,7 @@ public final class SslContextBuilder {
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize,
                     sessionTimeout, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
-                    toArray(options.entrySet(), EMPTY_ENTRIES));
+                    serverNames, toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }
 
