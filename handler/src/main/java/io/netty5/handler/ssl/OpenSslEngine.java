@@ -17,6 +17,8 @@ package io.netty5.handler.ssl;
 
 import io.netty5.buffer.BufferAllocator;
 
+import java.util.List;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 
 /**
@@ -28,8 +30,10 @@ import javax.net.ssl.SSLEngine;
  */
 public final class OpenSslEngine extends ReferenceCountedOpenSslEngine {
     OpenSslEngine(OpenSslContext context, BufferAllocator alloc, String peerHost, int peerPort,
-                  boolean jdkCompatibilityMode,  String endpointIdentificationAlgorithm) {
-        super(context, alloc, peerHost, peerPort, jdkCompatibilityMode, false, endpointIdentificationAlgorithm);
+                  boolean jdkCompatibilityMode,  String endpointIdentificationAlgorithm,
+                  List<SNIServerName> serverNames) {
+        super(context, alloc, peerHost, peerPort, jdkCompatibilityMode, false, endpointIdentificationAlgorithm,
+                serverNames);
     }
 
     @Override

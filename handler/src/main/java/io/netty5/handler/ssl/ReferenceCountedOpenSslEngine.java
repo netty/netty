@@ -201,8 +201,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
     private volatile ClientAuth clientAuth = ClientAuth.NONE;
 
     private String endpointIdentificationAlgorithm;
+    private List<SNIServerName> serverNames;
     private AlgorithmConstraints algorithmConstraints;
-    private List<SNIServerName> sniHostNames;
+
+    // Mark as volatile as accessed by checkSniHostnameMatch(...).
     private volatile Collection<SNIMatcher> matchers;
 
     // SSL Engine status variables
@@ -237,7 +239,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
      */
     ReferenceCountedOpenSslEngine(ReferenceCountedOpenSslContext context, final BufferAllocator alloc, String peerHost,
                                   int peerPort, boolean jdkCompatibilityMode, boolean leakDetection,
-                                  String endpointIdentificationAlgorithm) {
+                                  String endpointIdentificationAlgorithm, List<SNIServerName> serverNames) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
         engineMap = context.engineMap;
@@ -252,6 +254,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
             this.alloc = alloc;
         }
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
+        this.serverNames = serverNames;
 
         session = new DefaultOpenSslSession(context.sessionContext());
 
@@ -277,18 +280,28 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                 setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
 
                 assert context.protocols != null;
-                this.hasTLSv13Cipher = context.hasTLSv13Cipher;
+                hasTLSv13Cipher = context.hasTLSv13Cipher;
 
                 setEnabledProtocols(context.protocols);
 
                 // Use SNI if peerHost was specified and a valid hostname
                 // See https://github.com/netty/netty/issues/4746
-                if (clientMode && SslUtils.isValidHostNameForSNI(peerHost)) {
-                    try {
-                        sniHostNames = Collections.singletonList(new SNIHostName(peerHost));
+                boolean usePeerHost = SslUtils.isValidHostNameForSNI(peerHost);
+                boolean useServerNames = serverNames != null && !serverNames.isEmpty();
+                if (clientMode && (usePeerHost || useServerNames)) {
+                    if (usePeerHost) {
                         SSL.setTlsExtHostName(ssl, peerHost);
-                    } catch (IllegalArgumentException ignored) {
-                        // Just ignore
+                        this.serverNames = Collections.singletonList(new SNIHostName(peerHost));
+                    } else if (useServerNames) {
+                        for (SNIServerName serverName : serverNames) {
+                            if (serverName instanceof SNIHostName) {
+                                SNIHostName name = (SNIHostName) serverName;
+                                SSL.setTlsExtHostName(ssl, name.getAsciiName());
+                            } else {
+                                throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
+                                        + " instances are supported, but found: " + serverName);
+                            }
+                        }
                     }
                 }
 
@@ -552,7 +565,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
 
    synchronized void bioSetFd(int fd) {
         if (!isDestroyed()) {
-            SSL.bioSetFd(this.ssl, fd);
+            SSL.bioSetFd(ssl, fd);
         }
     }
 
@@ -802,7 +815,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                     bytesProduced = bioLengthBefore - SSL.bioLengthByteBuffer(networkBIO);
 
                     if (status == NEED_TASK) {
-                        return newResult(status, 0, bytesProduced);
+                        return newResult(NEED_TASK, 0, bytesProduced);
                     }
 
                     if (bytesProduced > 0) {
@@ -1116,7 +1129,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                 status = handshake();
 
                 if (status == NEED_TASK) {
-                    return newResult(status, 0, 0);
+                    return newResult(NEED_TASK, 0, 0);
                 }
 
                 if (status == NEED_WRAP) {
@@ -1473,7 +1486,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
     private void runAndResetNeedTask(Runnable task) {
         // We need to synchronize on the ReferenceCountedOpenSslEngine, we are sure the SSL object
         // will not be freed by the user calling for example shutdown() concurrently.
-        synchronized (ReferenceCountedOpenSslEngine.this) {
+        synchronized (this) {
             try {
                 if (isDestroyed()) {
                     // The engine was destroyed in the meantime, just return.
@@ -2153,10 +2166,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
 
         sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
         sslParameters.setAlgorithmConstraints(algorithmConstraints);
-
-        if (sniHostNames != null) {
-            sslParameters.setServerNames(sniHostNames);
-        }
+        sslParameters.setServerNames(serverNames);
         if (!isDestroyed()) {
             sslParameters.setUseCipherSuitesOrder((SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
         }
@@ -2174,19 +2184,19 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         boolean isDestroyed = isDestroyed();
         if (!isDestroyed) {
             if (clientMode) {
-                final List<SNIServerName> sniHostNames = sslParameters.getServerNames();
-                if (sniHostNames != null && !sniHostNames.isEmpty()) {
-                    for (SNIServerName serverName: sniHostNames) {
+                final List<SNIServerName> proposedServerNames = sslParameters.getServerNames();
+                if (proposedServerNames != null && !proposedServerNames.isEmpty()) {
+                    for (SNIServerName serverName: proposedServerNames) {
                         if (!(serverName instanceof SNIHostName)) {
                             throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
                                     + " instances are supported, but found: " + serverName);
                         }
                     }
-                    for (SNIServerName serverName: sniHostNames) {
+                    for (SNIServerName serverName: proposedServerNames) {
                         SSL.setTlsExtHostName(ssl, ((SNIHostName) serverName).getAsciiName());
                     }
                 }
-                this.sniHostNames = sniHostNames;
+                this.serverNames = proposedServerNames;
             }
             if (sslParameters.getUseCipherSuitesOrder()) {
                 SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);
@@ -2343,7 +2353,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         @Override
         public List<SNIServerName> getRequestedServerNames() {
             if (clientMode) {
-                return sniHostNames == null ? Collections.emptyList() : sniHostNames;
+                return serverNames == null ? List.of() : List.copyOf(serverNames);
             } else {
                 synchronized (ReferenceCountedOpenSslEngine.this) {
                     if (requestedServerNames == null) {
@@ -2423,10 +2433,10 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                 long creationTime, long lastAccessedTime, OpenSslSessionId sessionId,
                 Map<String, Object> keyValueStorage) {
             synchronized (ReferenceCountedOpenSslEngine.this) {
-                if (this.id == OpenSslSessionId.NULL_ID) {
-                    this.id = sessionId;
+                if (id == OpenSslSessionId.NULL_ID) {
+                    id = sessionId;
                     this.creationTime = creationTime;
-                    this.lastAccessed = lastAccessedTime;
+                    lastAccessed = lastAccessedTime;
 
                     // Update the key value storage. It's fine to just drop the previous stored values on the floor
                     // as the JDK does the same in the sense that it will use a new SSLSessionImpl instance once the
@@ -2481,7 +2491,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         @Override
         public void setLastAccessedTime(long time) {
             synchronized (ReferenceCountedOpenSslEngine.this) {
-                this.lastAccessed = time;
+                lastAccessed = time;
             }
         }
 

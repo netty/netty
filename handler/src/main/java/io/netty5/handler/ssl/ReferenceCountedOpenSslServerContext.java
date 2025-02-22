@@ -72,6 +72,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                 clientAuth, protocols, startTls,
                 enableOcsp, true,
                 null, // No endpoint validation for servers.
+                null, // No SNI extensions for servers.
                 resumptionController, options);
         // Create a new SSL_CTX and configure it.
         boolean success = false;

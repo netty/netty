@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
@@ -156,6 +157,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final ClientAuth clientAuth;
     final String[] protocols;
     final String endpointIdentificationAlgorithm;
+    final List<SNIServerName> serverNames;
     final boolean hasTLSv13Cipher;
 
     final boolean enableOcsp;
@@ -213,6 +215,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                                    OpenSslApplicationProtocolNegotiator apn, int mode, Certificate[] keyCertChain,
                                    ClientAuth clientAuth, String[] protocols, boolean startTls, boolean enableOcsp,
                                    boolean leakDetection, String endpointIdentificationAlgorithm,
+                                   List<SNIServerName> serverNames,
                                    ResumptionController resumptionController,
                                    Map.Entry<SslContextOption<?>, Object>... ctxOptions)
             throws SSLException {
@@ -277,6 +280,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         this.clientAuth = isServer() ? requireNonNull(clientAuth, "clientAuth") : ClientAuth.NONE;
         this.protocols = protocols == null ? OpenSsl.defaultProtocols(mode == SSL.SSL_MODE_CLIENT) : protocols;
         this.endpointIdentificationAlgorithm = endpointIdentificationAlgorithm;
+        this.serverNames = serverNames;
         this.enableOcsp = enableOcsp;
 
         this.keyCertChain = keyCertChain == null ? null : keyCertChain.clone();
@@ -516,7 +520,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
 
     SSLEngine newEngine0(BufferAllocator alloc, String peerHost, int peerPort, boolean jdkCompatibilityMode) {
         return new ReferenceCountedOpenSslEngine(this, alloc, peerHost, peerPort, jdkCompatibilityMode, true,
-                endpointIdentificationAlgorithm);
+                endpointIdentificationAlgorithm, serverNames);
     }
 
     /**

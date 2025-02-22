@@ -21,6 +21,7 @@ import io.netty.internal.tcnative.SSLContext;
 import io.netty5.util.internal.EmptyArrays;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
@@ -33,6 +34,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -61,10 +63,11 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
                                          String[] protocols, long sessionCacheSize, long sessionTimeout,
                                          boolean enableOcsp, String keyStore, String endpointIdentificationAlgorithm,
+                                         List<SNIServerName> serverNames,
                                          ResumptionController resumptionController,
                                          Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
         super(ciphers, cipherFilter, toNegotiator(apn), SSL.SSL_MODE_CLIENT, keyCertChain,
-                ClientAuth.NONE, protocols, false, enableOcsp, true, endpointIdentificationAlgorithm,
+                ClientAuth.NONE, protocols, false, enableOcsp, true, endpointIdentificationAlgorithm, serverNames,
                 resumptionController, options);
         boolean success = false;
         try {
