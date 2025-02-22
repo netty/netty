@@ -41,6 +41,7 @@ import java.nio.ReadOnlyBufferException;
 import java.security.AlgorithmConstraints;
 import java.security.Principal;
 import java.security.cert.Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -245,7 +246,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             @Override
             public List<SNIServerName> getRequestedServerNames() {
                 if (clientMode) {
-                    return ReferenceCountedOpenSslEngine.this.serverNames;
+                    List<SNIServerName> names = ReferenceCountedOpenSslEngine.this.serverNames;
+                    return names == null ? Collections.emptyList() :
+                            Collections.unmodifiableList(new ArrayList<>(names));
                 } else {
                     synchronized (ReferenceCountedOpenSslEngine.this) {
                         if (requestedServerNames == null) {
@@ -2223,15 +2226,17 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (!isDestroyed) {
             if (clientMode) {
                 List<SNIServerName> proposedServerNames = sslParameters.getServerNames();
-                for (SNIServerName serverName : proposedServerNames) {
-                    if (!(serverName instanceof SNIHostName)) {
-                        throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
-                                + " instances are supported, but found: " + serverName);
+                if (proposedServerNames != null && !proposedServerNames.isEmpty()) {
+                    for (SNIServerName serverName : proposedServerNames) {
+                        if (!(serverName instanceof SNIHostName)) {
+                            throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
+                                    + " instances are supported, but found: " + serverName);
+                        }
                     }
-                }
-                for (SNIServerName serverName : proposedServerNames) {
-                    SNIHostName name = (SNIHostName) serverName;
-                    SSL.setTlsExtHostName(ssl, name.getAsciiName());
+                    for (SNIServerName serverName : proposedServerNames) {
+                        SNIHostName name = (SNIHostName) serverName;
+                        SSL.setTlsExtHostName(ssl, name.getAsciiName());
+                    }
                 }
                 serverNames = proposedServerNames;
             }
