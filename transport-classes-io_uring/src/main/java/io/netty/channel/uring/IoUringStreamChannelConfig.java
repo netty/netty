@@ -15,22 +15,20 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
 
 import java.util.Map;
 
-abstract class IoUringStreamChannelConfig extends DefaultChannelConfig {
+abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
     private volatile boolean useIoUringBufferGroup;
 
-    IoUringStreamChannelConfig(Channel channel) {
+    IoUringStreamChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
     }
 
-    IoUringStreamChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
+    IoUringStreamChannelConfig(AbstractIoUringChannel channel, RecvByteBufAllocator allocator) {
         super(channel, allocator);
     }
 
