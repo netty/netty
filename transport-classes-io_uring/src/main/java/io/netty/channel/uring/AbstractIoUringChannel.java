@@ -819,7 +819,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
-
+            if (!readPending) {
+                // We received the POLLIN but the user is not interested yet in reading, just mark socketHasMoreData
+                // as true so we will trigger a read directly once the user calls read()
+                socketHasMoreData = true;
+                return;
+            }
             scheduleFirstReadIfNeeded();
         }
 
