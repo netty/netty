@@ -16,7 +16,6 @@
 package io.netty5.microbench.util;
 
 import io.netty5.util.ResourceLeakDetector;
-import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.SystemPropertyUtil;
 import org.junit.jupiter.api.Test;
 import org.openjdk.jmh.annotations.Measurement;
@@ -29,7 +28,7 @@ import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.File;
-import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -100,17 +99,13 @@ public abstract class AbstractMicrobenchmarkBase {
 
     protected abstract String[] jvmArgs();
 
-    protected static String[] removeAssertions(String[] jvmArgs) {
-        List<String> customArgs = new ArrayList<>(jvmArgs.length);
-        for (String arg : jvmArgs) {
-            if (!arg.startsWith("-ea")) {
-                customArgs.add(arg);
+    static void removeAssertions(List<String> jvmArgs) {
+        for (Iterator<String> iterator = jvmArgs.iterator(); iterator.hasNext();) {
+            String jvmArg = iterator.next();
+            if (jvmArg.startsWith("-ea")) {
+                iterator.remove();
             }
         }
-        if (jvmArgs.length != customArgs.size()) {
-            jvmArgs = customArgs.toArray(EmptyArrays.EMPTY_STRINGS);
-        }
-        return jvmArgs;
     }
 
     @Test

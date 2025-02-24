@@ -20,6 +20,8 @@ import io.netty5.util.concurrent.DefaultThreadFactory;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.FastThreadLocalThread;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.internal.EmptyArrays;
+import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.ThreadExecutorMap;
 import org.openjdk.jmh.annotations.Fork;
@@ -27,10 +29,15 @@ import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+
 
 /**
  * Default implementation of the JMH microbenchmark adapter.  There may be context switches introduced by this harness.
@@ -128,21 +135,21 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
     }
 
     public AbstractMicrobenchmark(boolean disableAssertions, boolean disableHarnessExecutor) {
-        final String[] customArgs;
-        if (disableHarnessExecutor) {
-            customArgs = new String[]{"-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m"};
-        } else {
-            customArgs = new String[]{"-Xms768m", "-Xmx768m", "-XX:MaxDirectMemorySize=768m",
-                    "-Djmh.executor=CUSTOM",
-                    "-Djmh.executor.class=io.netty5.microbench.util.AbstractMicrobenchmark$HarnessExecutor"};
+        final List<String> jvmArgs = new ArrayList<>(Arrays.asList(BASE_JVM_ARGS));
+        jvmArgs.add("-Xms768m");
+        jvmArgs.add("-Xmx768m");
+        jvmArgs.add("-XX:MaxDirectMemorySize=768m");
+        if (PlatformDependent.javaVersion() < 15) { // not entirely sure when this option was removed, but
+            jvmArgs.add("-XX:BiasedLockingStartupDelay=0");
         }
-        String[] jvmArgs = new String[BASE_JVM_ARGS.length + customArgs.length];
-        System.arraycopy(BASE_JVM_ARGS, 0, jvmArgs, 0, BASE_JVM_ARGS.length);
-        System.arraycopy(customArgs, 0, jvmArgs, BASE_JVM_ARGS.length, customArgs.length);
+        if (!disableHarnessExecutor) {
+            jvmArgs.add("-Djmh.executor=CUSTOM");
+            jvmArgs.add("-Djmh.executor.class=" + HarnessExecutor.class.getName());
+        }
         if (disableAssertions) {
-            jvmArgs = removeAssertions(jvmArgs);
+            removeAssertions(jvmArgs);
         }
-        this.jvmArgs = jvmArgs;
+        this.jvmArgs = jvmArgs.toArray(EmptyArrays.EMPTY_STRINGS);
     }
 
     @Override

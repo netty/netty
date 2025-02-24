@@ -15,7 +15,6 @@
  */
 package io.netty5.handler.codec.http;
 
-import io.netty5.util.CharsetUtil;
 import io.netty5.util.internal.PlatformDependent;
 
 import java.net.URI;
@@ -68,6 +67,7 @@ public class QueryStringDecoder {
     private final String uri;
     private final int maxParams;
     private final boolean semicolonIsNormalChar;
+    private final boolean htmlQueryDecoding;
     private int pathEndIdx;
     private String path;
     private Map<String, List<String>> params;
@@ -77,7 +77,7 @@ public class QueryStringDecoder {
      * assume that the query string is encoded in UTF-8.
      */
     public QueryStringDecoder(String uri) {
-        this(uri, HttpConstants.DEFAULT_CHARSET);
+        this(builder(), uri);
     }
 
     /**
@@ -85,7 +85,7 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, boolean hasPath) {
-        this(uri, HttpConstants.DEFAULT_CHARSET, hasPath);
+        this(builder().hasPath(hasPath), uri);
     }
 
     /**
@@ -93,7 +93,7 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, Charset charset) {
-        this(uri, charset, true);
+        this(builder().charset(charset), uri);
     }
 
     /**
@@ -101,7 +101,7 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath) {
-        this(uri, charset, hasPath, DEFAULT_MAX_PARAMS);
+        this(builder().hasPath(hasPath).charset(charset), uri);
     }
 
     /**
@@ -109,7 +109,7 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath, int maxParams) {
-        this(uri, charset, hasPath, maxParams, false);
+        this(builder().hasPath(hasPath).charset(charset).maxParams(maxParams), uri);
     }
 
     /**
@@ -118,13 +118,13 @@ public class QueryStringDecoder {
      */
     public QueryStringDecoder(String uri, Charset charset, boolean hasPath,
                               int maxParams, boolean semicolonIsNormalChar) {
-        this.uri = requireNonNull(uri, "uri");
-        this.charset = requireNonNull(charset, "charset");
-        this.maxParams = checkPositive(maxParams, "maxParams");
-        this.semicolonIsNormalChar = semicolonIsNormalChar;
-
-        // `-1` means that path end index will be initialized lazily
-        pathEndIdx = hasPath ? -1 : 0;
+        this(
+                builder()
+                        .hasPath(hasPath)
+                        .charset(charset)
+                        .maxParams(maxParams)
+                        .semicolonIsNormalChar(semicolonIsNormalChar),
+                uri);
     }
 
     /**
@@ -132,7 +132,7 @@ public class QueryStringDecoder {
      * assume that the query string is encoded in UTF-8.
      */
     public QueryStringDecoder(URI uri) {
-        this(uri, HttpConstants.DEFAULT_CHARSET);
+        this(builder(), uri);
     }
 
     /**
@@ -140,7 +140,7 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(URI uri, Charset charset) {
-        this(uri, charset, DEFAULT_MAX_PARAMS);
+        this(builder().charset(charset), uri);
     }
 
     /**
@@ -148,7 +148,7 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(URI uri, Charset charset, int maxParams) {
-        this(uri, charset, maxParams, false);
+        this(builder().charset(charset).maxParams(maxParams), uri);
     }
 
     /**
@@ -156,6 +156,21 @@ public class QueryStringDecoder {
      * specified charset.
      */
     public QueryStringDecoder(URI uri, Charset charset, int maxParams, boolean semicolonIsNormalChar) {
+        this(builder().charset(charset).maxParams(maxParams).semicolonIsNormalChar(semicolonIsNormalChar), uri);
+    }
+
+    private QueryStringDecoder(Builder builder, String uri) {
+        this.uri = requireNonNull(uri, "uri");
+        this.charset = requireNonNull(builder.charset, "charset");
+        this.maxParams = checkPositive(builder.maxParams, "maxParams");
+        this.semicolonIsNormalChar = builder.semicolonIsNormalChar;
+        this.htmlQueryDecoding = builder.htmlQueryDecoding;
+
+        // `-1` means that path end index will be initialized lazily
+        pathEndIdx = builder.hasPath ? -1 : 0;
+    }
+
+    private QueryStringDecoder(Builder builder, URI uri) {
         String rawPath = uri.getRawPath();
         if (rawPath == null) {
             rawPath = EMPTY_STRING;
@@ -163,9 +178,10 @@ public class QueryStringDecoder {
         String rawQuery = uri.getRawQuery();
         // Also take care of cut of things like "http://localhost"
         this.uri = rawQuery == null? rawPath : rawPath + '?' + rawQuery;
-        this.charset = requireNonNull(charset, "charset");
-        this.maxParams = checkPositive(maxParams, "maxParams");
-        this.semicolonIsNormalChar = semicolonIsNormalChar;
+        this.charset = requireNonNull(builder.charset, "charset");
+        this.maxParams = checkPositive(builder.maxParams, "maxParams");
+        this.semicolonIsNormalChar = builder.semicolonIsNormalChar;
+        this.htmlQueryDecoding = builder.htmlQueryDecoding;
         pathEndIdx = rawPath.length();
     }
 
@@ -186,7 +202,7 @@ public class QueryStringDecoder {
      */
     public String path() {
         if (path == null) {
-            path = decodeComponent(uri, 0, pathEndIdx(), charset, true);
+            path = decodeComponent(uri, 0, pathEndIdx(), charset, false);
         }
         return path;
     }
@@ -196,7 +212,7 @@ public class QueryStringDecoder {
      */
     public Map<String, List<String>> parameters() {
         if (params == null) {
-            params = decodeParams(uri, pathEndIdx(), charset, maxParams, semicolonIsNormalChar);
+            params = decodeParams(uri, pathEndIdx(), charset, maxParams);
         }
         return params;
     }
@@ -223,8 +239,7 @@ public class QueryStringDecoder {
         return pathEndIdx;
     }
 
-    private static Map<String, List<String>> decodeParams(String s, int from, Charset charset, int paramsLimit,
-                                                          boolean semicolonIsNormalChar) {
+    private Map<String, List<String>> decodeParams(String s, int from, Charset charset, int paramsLimit) {
         int len = s.length();
         if (from >= len) {
             return Collections.emptyMap();
@@ -270,7 +285,7 @@ public class QueryStringDecoder {
         return params;
     }
 
-    private static boolean addParam(String s, int nameStart, int valueStart, int valueEnd,
+    private boolean addParam(String s, int nameStart, int valueStart, int valueEnd,
                                     Map<String, List<String>> params, Charset charset) {
         if (nameStart >= valueEnd) {
             return false;
@@ -278,8 +293,8 @@ public class QueryStringDecoder {
         if (valueStart <= nameStart) {
             valueStart = valueEnd + 1;
         }
-        String name = decodeComponent(s, nameStart, valueStart - 1, charset, false);
-        String value = decodeComponent(s, valueStart, valueEnd, charset, false);
+        String name = decodeComponent(s, nameStart, valueStart - 1, charset, htmlQueryDecoding);
+        String value = decodeComponent(s, valueStart, valueEnd, charset, htmlQueryDecoding);
         List<String> values = params.computeIfAbsent(name, k -> new ArrayList<>(1));
         // Often there's only 1 value.
         values.add(value);
@@ -327,10 +342,10 @@ public class QueryStringDecoder {
         if (s == null) {
             return EMPTY_STRING;
         }
-        return decodeComponent(s, 0, s.length(), charset, false);
+        return decodeComponent(s, 0, s.length(), charset, true);
     }
 
-    private static String decodeComponent(String s, int from, int toExcluded, Charset charset, boolean isPath) {
+    private static String decodeComponent(String s, int from, int toExcluded, Charset charset, boolean plusToSpace) {
         int len = toExcluded - from;
         if (len <= 0) {
             return EMPTY_STRING;
@@ -338,7 +353,7 @@ public class QueryStringDecoder {
         int firstEscaped = -1;
         for (int i = from; i < toExcluded; i++) {
             char c = s.charAt(i);
-            if (c == '%' || c == '+' && !isPath) {
+            if (c == '%' || (c == '+' && plusToSpace)) {
                 firstEscaped = i;
                 break;
             }
@@ -358,7 +373,7 @@ public class QueryStringDecoder {
         for (int i = firstEscaped; i < toExcluded; i++) {
             char c = s.charAt(i);
             if (c != '%') {
-                strBuf.append(c != '+' || isPath? c : SPACE);
+                strBuf.append(c != '+' || !plusToSpace ? c : SPACE);
                 continue;
             }
 
@@ -386,5 +401,103 @@ public class QueryStringDecoder {
             }
         }
         return len;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private boolean hasPath = true;
+        private int maxParams = DEFAULT_MAX_PARAMS;
+        private boolean semicolonIsNormalChar;
+        private Charset charset = HttpConstants.DEFAULT_CHARSET;
+        private boolean htmlQueryDecoding = true;
+
+        private Builder() {
+        }
+
+        /**
+         * {@code true} by default. When set to {@code false}, the input string only contains the query component of
+         * the URI.
+         *
+         * @param hasPath Whether the URI contains a path
+         * @return This builder
+         */
+        public Builder hasPath(boolean hasPath) {
+            this.hasPath = hasPath;
+            return this;
+        }
+
+        /**
+         * Maximum number of query parameters allowed, to mitigate HashDOS. {@value DEFAULT_MAX_PARAMS} by default.
+         *
+         * @param maxParams The maximum number of query parameters
+         * @return This builder
+         */
+        public Builder maxParams(int maxParams) {
+            this.maxParams = maxParams;
+            return this;
+        }
+
+        /**
+         * {@code false} by default. If set to {@code true}, instead of allowing query parameters to be separated by
+         * semicolons, treat the semicolon as a normal character in a query value.
+         *
+         * @param semicolonIsNormalChar Whether to treat semicolons as a normal character
+         * @return This builder
+         */
+        public Builder semicolonIsNormalChar(boolean semicolonIsNormalChar) {
+            this.semicolonIsNormalChar = semicolonIsNormalChar;
+            return this;
+        }
+
+        /**
+         * The charset to use for decoding percent escape sequences. {@link HttpConstants#DEFAULT_CHARSET} by default.
+         *
+         * @param charset The charset
+         * @return This builder
+         */
+        public Builder charset(Charset charset) {
+            this.charset = charset;
+            return this;
+        }
+
+        /**
+         * RFC 3986 (the URI standard) makes no mention of using '+' to encode a space in a URI query component. The
+         * whatwg HTML standard, however, defines the query to be encoded with the
+         * {@code application/x-www-form-urlencoded} serializer defined in the whatwg URL standard, which does use '+'
+         * to encode a space instead of {@code %20}.
+         * <p>This flag controls whether the decoding should happen according to HTML rules, which decodes the '+' to a
+         * space. The default is {@code true}.
+         *
+         * @param htmlQueryDecoding Whether to decode '+' to space
+         * @return This builder
+         */
+        public Builder htmlQueryDecoding(boolean htmlQueryDecoding) {
+            this.htmlQueryDecoding = htmlQueryDecoding;
+            return this;
+        }
+
+        /**
+         * Create a decoder that will lazily decode the given URI with the settings configured in this builder.
+         *
+         * @param uri The URI in String form
+         * @return The decoder
+         */
+        public QueryStringDecoder build(String uri) {
+            return new QueryStringDecoder(this, uri);
+        }
+
+        /**
+         * Create a decoder that will lazily decode the given URI with the settings configured in this builder. Note
+         * that {@link #hasPath(boolean)} has no effect when using this method.
+         *
+         * @param uri The already parsed URI
+         * @return The decoder
+         */
+        public QueryStringDecoder build(URI uri) {
+            return new QueryStringDecoder(this, uri);
+        }
     }
 }
