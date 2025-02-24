@@ -201,7 +201,6 @@ public final class IoUringIoHandlerConfig {
         return cqSize != DISABLE_SETUP_CQ_SIZE;
     }
 
-
     Set<IoUringBufferRingConfig> getInternBufferRingConfigs() {
         return bufferRingConfigs;
     }
