@@ -202,15 +202,19 @@ final class Native {
     static final byte IORING_OP_FIXED_FD_INSTALL = 54;
     static final byte IORING_OP_FTRUNCATE = 55;
     static final byte IORING_OP_BIND = 56;
+    static final byte IORING_CQE_F_BUFFER = 1 << 0;
     static final byte IORING_CQE_F_MORE = 1 << 1;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
+    static final byte IORING_CQE_F_BUF_MORE = 1 << 4;
+
     static final int IORING_SETUP_CQSIZE = 1 << 3;
     static final int IORING_SETUP_R_DISABLED = 1 << 6;
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
     static final int IORING_CQE_BUFFER_SHIFT = 16;
-    static final int IORING_CQE_F_BUF_MORE = 1 << 4;
+
+    static final short IORING_POLL_ADD_MULTI = 1 << 0;
 
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
     static final short IORING_RECVSEND_BUNDLE = 1 << 4;
@@ -317,15 +321,15 @@ final class Native {
 
     static int setupFlags() {
         int flags = Native.IORING_SETUP_R_DISABLED;
-        if (IoUring.isIOUringSetupSubmitAllSupported()) {
+        if (IoUring.isSetupSubmitAllSupported()) {
             flags |= Native.IORING_SETUP_SUBMIT_ALL;
         }
 
         // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#task-work
-        if (IoUring.isIOUringSetupSingleIssuerSupported()) {
+        if (IoUring.isSetupSingleIssuerSupported()) {
             flags |= Native.IORING_SETUP_SINGLE_ISSUER;
         }
-        if (IoUring.isIOUringSetupDeferTaskrunSupported()) {
+        if (IoUring.isSetupDeferTaskrunSupported()) {
             flags |= Native.IORING_SETUP_DEFER_TASKRUN;
         }
         return flags;
@@ -372,24 +376,29 @@ final class Native {
         }
     }
 
-    static boolean isIOUringRecvMultishotSupported() {
+    static boolean isRecvMultishotSupported() {
         // Added in the same release as IORING_SETUP_SINGLE_ISSUER.
         return Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
     }
 
-    static boolean isIOUringAcceptMultishotSupported(int ringFd) {
+    static boolean isAcceptMultishotSupported(int ringFd) {
         // IORING_OP_SOCKET was added in the same release (5.19);
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
     }
 
-    static boolean isIOUringCqeFSockNonEmptySupported(int ringFd) {
+    static boolean isCqeFSockNonEmptySupported(int ringFd) {
         // IORING_OP_SOCKET was added in the same release (5.19);
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
     }
 
-    static boolean isIOUringSupportSplice(int ringFd) {
+    static boolean isSpliceSupported(int ringFd) {
         // IORING_OP_SPLICE Available since 5.7
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
+    }
+
+    static boolean isPollAddMultiShotSupported(int ringfd) {
+        // Was added in the same release and we also need this feature to correctly handle edge-triggered mode.
+        return isCqeFSockNonEmptySupported(ringfd);
     }
 
     /**
@@ -397,7 +406,7 @@ final class Native {
      * Available since 5.15.
      * @return true if support io_uring_register_io_wq_worker
      */
-    static boolean isRegisterIOWQWorkerSupported(int ringFd) {
+    static boolean isRegisterIoWqWorkerSupported(int ringFd) {
         // See https://github.com/torvalds/linux/blob/v5.5/fs/io_uring.c#L5488C10-L5488C16
         int result = ioUringRegisterIoWqMaxWorkers(ringFd, 0, 0);
         if (result >= 0) {

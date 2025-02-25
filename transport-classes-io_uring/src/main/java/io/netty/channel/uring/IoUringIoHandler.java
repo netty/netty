@@ -15,7 +15,6 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.Channel;
 import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
@@ -82,7 +81,6 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final CompletionBuffer completionBuffer;
     private final ThreadAwareExecutor executor;
-    final IoUringBufferRingHandler idHandler;
 
     IoUringIoHandler(ThreadAwareExecutor executor, IoUringIoHandlerConfig config) {
         // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
@@ -95,7 +93,7 @@ public final class IoUringIoHandler implements IoHandler {
         // It only makes sense when the user actually specifies the cq ring size.
         int cqSize = 2 * config.getRingSize();
         if (config.needSetupCqeSize()) {
-            if (!IoUring.isIOUringSetupCqeSizeSupported()) {
+            if (!IoUring.isSetupCqeSizeSupported()) {
                 throw new UnsupportedOperationException("IORING_SETUP_CQSIZE is not supported");
             }
             setupFlags |= Native.IORING_SETUP_CQSIZE;
@@ -114,7 +112,6 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         registeredIoUringBufferRing = new IntObjectHashMap<>();
-        idHandler = config.getBufferRingHandler();
         Collection<IoUringBufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
         if (bufferRingConfigs != null && !bufferRingConfigs.isEmpty()) {
             if (!IoUring.isRegisterBufferRingSupported()) {
@@ -150,6 +147,10 @@ public final class IoUringIoHandler implements IoHandler {
     @Override
     public void initialize() {
         ringBuffer.enable();
+        // Fill all buffer rings now.
+        for (IoUringBufferRing bufferRing : registeredIoUringBufferRing.values()) {
+            bufferRing.fill();
+        }
     }
 
     @Override
@@ -196,7 +197,6 @@ public final class IoUringIoHandler implements IoHandler {
         int ringFd = ringBuffer.fd();
         short bufferRingSize = bufferRingConfig.bufferRingSize();
         short bufferGroupId = bufferRingConfig.bufferGroupId();
-        int chunkSize = bufferRingConfig.chunkSize();
         int flags = bufferRingConfig.isIncremental() ? Native.IOU_PBUF_RING_INC : 0;
         long ioUringBufRingAddr = Native.ioUringRegisterBuffRing(ringFd, bufferRingSize, bufferGroupId, flags);
         if (ioUringBufRingAddr < 0) {
@@ -204,19 +204,11 @@ public final class IoUringIoHandler implements IoHandler {
         }
         return new IoUringBufferRing(
                 ringFd, ioUringBufRingAddr,
-                bufferRingSize, bufferGroupId, chunkSize, bufferRingConfig.isIncremental(),
-                this, bufferRingConfig.allocator()
+                bufferRingSize, bufferGroupId, bufferRingConfig.isIncremental(), bufferRingConfig.allocator()
         );
     }
 
-    IoUringBufferRing findBufferRing(Channel channel, int guessedSize) {
-        if (idHandler == null) {
-            return null;
-        }
-        short bgId = idHandler.selectBufferRing(channel, guessedSize);
-        if (bgId < 0) {
-            return null;
-        }
+    IoUringBufferRing findBufferRing(short bgId) {
         IoUringBufferRing cached = registeredIoUringBufferRing.get(bgId);
         if (cached != null) {
             return cached;

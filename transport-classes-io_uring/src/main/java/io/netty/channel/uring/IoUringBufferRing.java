@@ -16,7 +16,6 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Arrays;
@@ -28,17 +27,13 @@ final class IoUringBufferRing {
     private final short bufferGroupId;
     private final int ringFd;
     private final ByteBuf[] buffers;
-    private final int chunkSize;
-    private final IoUringIoHandler source;
-    private final ByteBufAllocator byteBufAllocator;
+    private final IoUringBufferRingAllocator allocator;
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
     private final boolean incremental;
-    private boolean hasSpareBuffer;
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
-                      short entries, short bufferGroupId,
-                      int chunkSize, boolean incremental, IoUringIoHandler ioUringIoHandler,
-                      ByteBufAllocator byteBufAllocator) {
+                      short entries, short bufferGroupId, boolean incremental,
+                      IoUringBufferRingAllocator allocator) {
         assert entries % 2 == 0;
         this.ioUringBufRingAddr = ioUringBufRingAddr;
         this.entries = entries;
@@ -46,38 +41,14 @@ final class IoUringBufferRing {
         this.bufferGroupId = bufferGroupId;
         this.ringFd = ringFd;
         this.buffers = new ByteBuf[entries];
-        this.chunkSize = chunkSize;
         this.incremental = incremental;
-        this.source = ioUringIoHandler;
-        this.byteBufAllocator = byteBufAllocator;
+        this.allocator = allocator;
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
-        fill();
     }
 
-    private boolean fill() {
-        boolean fillSomething = false;
+    void fill() {
         for (short i = 0; i < entries; i++) {
-            if (buffers[i] == null) {
-                addBuffer(i);
-                fillSomething = true;
-            }
-        }
-        return fillSomething;
-    }
-
-    boolean isExhausted() {
-        return !hasSpareBuffer;
-    }
-
-    /**
-     * Mark this buffer ring as exhausted. This should be done if a read failed because there were no more buffers left
-     * to use.
-     */
-    void markExhausted() {
-        hasSpareBuffer = false;
-        source.idHandler.notifyAllBuffersUsed(bufferGroupId);
-        if (fill()) {
-            source.idHandler.notifyMoreBuffersReady(bufferGroupId);
+            addBuffer(i);
         }
     }
 
@@ -93,7 +64,7 @@ final class IoUringBufferRing {
         long tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
 
-        ByteBuf byteBuf = byteBufAllocator.directBuffer(chunkSize);
+        ByteBuf byteBuf = allocator.allocate();
         byteBuf.writerIndex(byteBuf.capacity());
         buffers[bid] = byteBuf;
         int ringIndex = oldTail & mask;
@@ -108,9 +79,6 @@ final class IoUringBufferRing {
         PlatformDependent.putShort(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
         // Now advanced the tail by the number of buffers that we just added.
         PlatformDependent.putShortOrdered(tailFieldAddress, (short) (oldTail + 1));
-        if (!hasSpareBuffer) {
-            hasSpareBuffer = true;
-        }
     }
 
     /**
@@ -126,20 +94,15 @@ final class IoUringBufferRing {
     ByteBuf useBuffer(short bid, int readableBytes, boolean more) {
         assert readableBytes > 0;
         ByteBuf byteBuf = buffers[bid];
+
+        allocator.lastBytesRead(byteBuf.readableBytes(), readableBytes);
         if (incremental && more && byteBuf.readableBytes() > readableBytes) {
             // The buffer will be used later again, just slice out what we did read so far.
             return byteBuf.readRetainedSlice(readableBytes);
         }
 
-        // Let's null it out so we can fill it again when we mark this buffer ring exhausted.
-        buffers[bid] = null;
-        if (!hasSpareBuffer) {
-            // This buffer ring was marked as exhausted before. We have space again now, let's fill something
-            // in.
-            boolean filled = fill();
-            assert filled : "There must be space in the backing array";
-            source.idHandler.notifyMoreBuffersReady(bufferGroupId);
-        }
+        // The buffer is considered to be used, replace it with a new one that we can use.
+        addBuffer(bid);
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
     }
@@ -151,15 +114,6 @@ final class IoUringBufferRing {
      */
     short bufferGroupId() {
         return bufferGroupId;
-    }
-
-    /**
-     * This size of the chunks that are allocated.
-     *
-     * @return chunk size.
-     */
-    int chunkSize() {
-        return chunkSize;
     }
 
     /**

@@ -87,6 +87,6 @@ public class SubmissionQueueTest {
     }
 
     private static boolean setUpCQSizeUnavailable() {
-        return !IoUring.isIOUringSetupCqeSizeSupported();
+        return !IoUring.isSetupCqeSizeSupported();
     }
 }

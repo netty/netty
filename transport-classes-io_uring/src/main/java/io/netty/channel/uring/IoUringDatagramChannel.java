@@ -435,7 +435,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                             // trying to schedule a read. If it's supported and not part of the flags we know for sure
                             // that the next read (which would be using Native.MSG_DONTWAIT) will complete without
                             // be able to read any data. This is useless work and we can skip it.
-                            (!IoUring.isIOUringCqeFSockNonEmptySupported() ||
+                            (!IoUring.isCqeFSockNonEmptySupported() ||
                                     (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
                         // Let's schedule another read.
                         scheduleRead(false);
@@ -679,7 +679,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
     @Override
     protected boolean socketIsEmpty(int flags) {
-        return IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
+        return IoUring.isCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
     }
 
     @Override

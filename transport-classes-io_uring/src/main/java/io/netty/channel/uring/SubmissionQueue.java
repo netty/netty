@@ -246,7 +246,7 @@ final class SubmissionQueue {
     private int ioUringEnter(int toSubmit, int minComplete, int flags) {
         int f = enterFlags | flags;
 
-        if (IoUring.isIOUringSetupSubmitAllSupported()) {
+        if (IoUring.isSetupSubmitAllSupported()) {
             return ioUringEnter0(toSubmit, minComplete, f);
         }
         // If IORING_SETUP_SUBMIT_ALL is not supported we need to loop until we submitted everything as

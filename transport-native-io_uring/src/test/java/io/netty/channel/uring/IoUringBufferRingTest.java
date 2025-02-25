@@ -18,7 +18,6 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
@@ -80,14 +79,12 @@ public class IoUringBufferRingTest {
         final BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
-                (short) 1, (short) 2, 1024, incremental, ByteBufAllocator.DEFAULT);
+                (short) 1, (short) 2, incremental, new IoUringFixedBufferRingAllocator(1024));
 
         IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
-                (short) 2, (short) 16,
-                1024, incremental, ByteBufAllocator.DEFAULT
+                (short) 2, (short) 16, incremental, new IoUringFixedBufferRingAllocator(1024)
         );
-        ioUringIoHandlerConfiguration.setBufferRingConfig(
-                (ch, size) -> bufferRingConfig.bufferGroupId(), bufferRingConfig, bufferRingConfig1);
+        ioUringIoHandlerConfiguration.setBufferRingConfig(bufferRingConfig, bufferRingConfig1);
 
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1,
                 IoUringIoHandler.newFactory(ioUringIoHandlerConfiguration)
@@ -114,7 +111,7 @@ public class IoUringBufferRingTest {
                         }
                     }
                 })
-                .childOption(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true)
+                .childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, bufferRingConfig.bufferGroupId())
                 .bind(NetUtil.LOCALHOST, 0)
                 .syncUninterruptibly().channel();
 
@@ -133,12 +130,6 @@ public class IoUringBufferRingTest {
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
 
         ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        if (!incremental) {
-            // Directly after the second read we will see the event as it will be triggered inline when
-            // doing the submit.
-            assertEquals(bufferRingConfig.bufferGroupId(), eventSyncer.take().bufferGroupId());
-        }
-        assertEquals(0, eventSyncer.size());
         readBuffer.release();
 
         // Now we release the buffer and so put it back into the buffer ring.

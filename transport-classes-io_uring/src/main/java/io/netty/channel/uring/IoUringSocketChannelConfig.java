@@ -35,7 +35,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
 
-    IoUringSocketChannelConfig(Channel channel) {
+    IoUringSocketChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
         if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
             setTcpNoDelay(true);
