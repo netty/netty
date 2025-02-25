@@ -38,7 +38,6 @@ import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -151,7 +150,7 @@ public class IoUringBufferRingTest {
     }
 
     static boolean recvsendBundleSupported() {
-        return IoUring.isIOUringRecvsendBundleSupported();
+        return IoUring.isRecvsendBundleSupported();
     }
 
     @ParameterizedTest

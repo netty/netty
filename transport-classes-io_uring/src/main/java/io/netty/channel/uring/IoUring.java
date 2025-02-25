@@ -196,7 +196,7 @@ public final class IoUring {
         return IORING_RECV_MULTISHOT_SUPPORTED;
     }
 
-    static boolean isIOUringRecvsendBundleSupported() {
+    static boolean isRecvsendBundleSupported() {
         return IORING_RECVSEND_BUNDLE_SUPPORTED;
     }
 

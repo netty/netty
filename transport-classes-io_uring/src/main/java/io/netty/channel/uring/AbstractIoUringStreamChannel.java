@@ -365,7 +365,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 if (multishot) {
                     ioPrio |= Native.IORING_RECV_MULTISHOT;
                 }
-                if (IoUring.isIOUringRecvsendBundleSupported()) {
+                if (IoUring.isRecvsendBundleSupported()) {
                     // See https://github.com/axboe/liburing/wiki/
                     // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
                     ioPrio |= Native.IORING_RECVSEND_BUNDLE;
@@ -446,7 +446,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     if (useBufferRing) {
                         short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
                         boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
-                        if (IoUring.isIOUringRecvsendBundleSupported()) {
+                        if (IoUring.isRecvsendBundleSupported()) {
                             // If RECVSEND_BUNDLE is supported we need to do a bit more work here.
                             // In this case we might need to obtain multiple buffers out of the buffer ring as
                             // multiple of them might have been filled for one recv operation.
