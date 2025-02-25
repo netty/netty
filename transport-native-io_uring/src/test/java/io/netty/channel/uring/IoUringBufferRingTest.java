@@ -158,7 +158,7 @@ public class IoUringBufferRingTest {
     @EnabledIf("recvsendBundleSupported")
     public void testProviderBufferReadWithRecvsendBundle(boolean incremental) throws InterruptedException {
         // See https://lore.kernel.org/io-uring/184f9f92-a682-4205-a15d-89e18f664502@kernel.dk/T/#u
-        assumeTrue(IoUring.isIOUringAcceptMultishotSupported(),
+        assumeTrue(IoUring.isRecvMultishotSupported(),
                 "Only yields expected test results when using multishot atm");
         if (incremental) {
             assumeTrue(IoUring.isRegisterBufferRingIncSupported());
@@ -167,10 +167,9 @@ public class IoUringBufferRingTest {
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
                 // let's use a small chunkSize so we are sure a recv will span multiple buffers.
-                (short) 1, (short) 16, bufferRingChunkSize, incremental, ByteBufAllocator.DEFAULT);
+                (short) 1, (short) 16, incremental, new IoUringFixedBufferRingAllocator(bufferRingChunkSize));
 
-        ioUringIoHandlerConfiguration.setBufferRingConfig(
-                (ch, size) -> bufferRingConfig.bufferGroupId(), bufferRingConfig);
+        ioUringIoHandlerConfiguration.setBufferRingConfig(bufferRingConfig);
 
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1,
                 IoUringIoHandler.newFactory(ioUringIoHandlerConfiguration)
@@ -186,7 +185,7 @@ public class IoUringBufferRingTest {
                         buffers.offer((ByteBuf) msg);
                     }
                 })
-                .childOption(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true)
+                .childOption(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, (short) 1)
                 .bind(new InetSocketAddress(0))
                 .syncUninterruptibly().channel();
 
