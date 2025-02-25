@@ -82,6 +82,17 @@ final class IoUringBufferRing {
     }
 
     /**
+     * Return the amount of bytes that we attempted to read for the given id.
+     * This method must be called before {@link #useBuffer(short, int, boolean)}.
+     *
+     * @param bid   the id of the buffer.
+     * @return      the attempted bytes.
+     */
+    int attemptedBytesRead(short bid) {
+        return buffers[bid].readableBytes();
+    }
+
+    /**
      * Use the buffer for the given buffer id. The returned {@link ByteBuf} must be released once not used anymore.
      *
      * @param bid           the id of the buffer
