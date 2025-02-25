@@ -331,7 +331,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             // We either have no buffer ring configured or we force a recv without using a buffer ring.
             ByteBuf byteBuf = allocHandle.allocate(alloc());
             try {
-                allocHandle.attemptedBytesRead(byteBuf.writableBytes());
                 int fd = fd().intValue();
                 IoRegistration registration = registration();
                 short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
@@ -437,13 +436,17 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     // or convert it to 0 if we could not read because the socket was not readable.
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
+                    final int attemptedBytesRead;
                     if (useBufferRing) {
                         short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
                         boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
+                        attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
                         byteBuf = bufferRing.useBuffer(bid, res, more);
                     } else {
+                        attemptedBytesRead = byteBuf.writableBytes();
                         byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     }
+                    allocHandle.attemptedBytesRead(attemptedBytesRead);
                     allocHandle.lastBytesRead(res);
                 } else {
                     // EOF which we signal with -1.
