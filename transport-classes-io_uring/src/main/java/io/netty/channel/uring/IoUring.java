@@ -130,9 +130,9 @@ public final class IoUring {
                         "REGISTER_BUFFER_RING_SUPPORTED={}, " +
                         "REGISTER_BUFFER_RING_INC_SUPPORTED={}" +
                         ")", socketNonEmptySupported, spliceSupported, acceptSupportNoWait, acceptMultishotSupported,
-                        pollAddMultishotSupported, recvMultishotSupported, recvsendBundleSupported, registerIowqWorkersSupported,
-                        submitAllSupported, singleIssuerSupported, deferTaskrunSupported, registerBufferRingSupported,
-                        registerBufferRingIncSupported);
+                        pollAddMultishotSupported, recvMultishotSupported, recvsendBundleSupported,
+                        registerIowqWorkersSupported, submitAllSupported, singleIssuerSupported, deferTaskrunSupported,
+                        registerBufferRingSupported, registerBufferRingIncSupported);
             }
         }
         UNAVAILABILITY_CAUSE = cause;
