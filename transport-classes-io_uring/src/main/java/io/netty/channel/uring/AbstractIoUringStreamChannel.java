@@ -325,14 +325,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert readId == 0 : readId;
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
 
-            if (bufferRing != null && !allocHandle.isNonBufferRingForced()) {
+            if (bufferRing != null) {
                 return scheduleReadProviderBuffer(bufferRing, first, socketIsEmpty);
             }
 
             // We either have no buffer ring configured or we force a recv without using a buffer ring.
             ByteBuf byteBuf = allocHandle.allocate(alloc());
             try {
-                allocHandle.attemptedBytesRead(byteBuf.writableBytes());
                 int fd = fd().intValue();
                 IoRegistration registration = registration();
                 short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
@@ -421,20 +420,15 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
             try {
                 if (res < 0) {
-                    if (res == Native.ERRNO_NO_BUFFER_NEGATIVE) {
-                        // recv with provider buffer failed, let's force using a recv without a buffer ring,
-                        // until we receive a readComplete(). After this the next reads will try to use a buffer ring
-                        // again.
-                        allocHandle.forceNonBufferRing();
-                        // fire the BufferRingExhaustedEvent to notify users.
-                        // Users can then switch the ring buffer or do other things as they wish
+                    if (res == Native.ERRNO_NOBUFS_NEGATIVE) {
+                        // recv with provider buffer failed, Fire the BufferRingExhaustedEvent to notify users.
+                        // About the failure. If this happens to often the user should most likely increase the
+                        // buffer ring size.
                         pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
 
                         // Let's trigger a read again without consulting the RecvByteBufAllocator.Handle as
                         // we can't count this as a "real" read operation.
-                        // This will do the correct thing, taking into account if
-                        // there is again room in the ring or not and so either use the buffer ring or not for the
-                        // read.
+                        // Because of how our BufferRing works we should have it filled again.
                         scheduleRead(allocHandle.isFirstRead());
                         return;
                     }
@@ -443,6 +437,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     // or convert it to 0 if we could not read because the socket was not readable.
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
+                    int attemptedBytesRead = 0;
                     if (useBufferRing) {
                         short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
                         boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
@@ -458,6 +453,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                             CompositeByteBuf compositeByteBuf = null;
                             int read = res;
                             for (;;) {
+                                attemptedBytesRead += bufferRing.attemptedBytesRead(bid);
                                 ByteBuf buffer = bufferRing.useBuffer(bid, read, more);
                                 read -= buffer.readableBytes();
                                 assert read >= 0;
@@ -481,11 +477,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                                 bid++;
                             }
                         } else {
+                            attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
                             byteBuf = bufferRing.useBuffer(bid, res, more);
                         }
                     } else {
+                        attemptedBytesRead = byteBuf.writableBytes();
                         byteBuf.writerIndex(byteBuf.writerIndex() + res);
                     }
+                    allocHandle.attemptedBytesRead(attemptedBytesRead);
                     allocHandle.lastBytesRead(res);
                 } else {
                     // EOF which we signal with -1.

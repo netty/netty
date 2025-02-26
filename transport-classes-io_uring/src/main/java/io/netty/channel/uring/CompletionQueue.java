@@ -79,25 +79,28 @@ final class CompletionQueue {
      */
     int process(CompletionCallback callback) {
         int tail = PlatformDependent.getIntVolatile(kTailAddress);
-        int i = 0;
-        while (ringHead != tail) {
-            long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
+        try {
+            int i = 0;
+            while (ringHead != tail) {
+                long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
 
-            long udata = PlatformDependent.getLong(cqeAddress + CQE_USER_DATA_FIELD);
-            int res = PlatformDependent.getInt(cqeAddress + CQE_RES_FIELD);
-            int flags = PlatformDependent.getInt(cqeAddress + CQE_FLAGS_FIELD);
+                long udata = PlatformDependent.getLong(cqeAddress + CQE_USER_DATA_FIELD);
+                int res = PlatformDependent.getInt(cqeAddress + CQE_RES_FIELD);
+                int flags = PlatformDependent.getInt(cqeAddress + CQE_FLAGS_FIELD);
 
-            //Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
-            ringHead++;
-            PlatformDependent.putIntOrdered(kHeadAddress, ringHead);
+                ringHead++;
 
-            i++;
-            if (!callback.handle(res, flags, udata)) {
-                // Stop processing. as the callback can not handle any more completions for now,
-                break;
+                i++;
+                if (!callback.handle(res, flags, udata)) {
+                    // Stop processing. as the callback can not handle any more completions for now,
+                    break;
+                }
             }
+            return i;
+        } finally {
+            // Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
+            PlatformDependent.putIntOrdered(kHeadAddress, ringHead);
         }
-        return i;
     }
 
     @Override

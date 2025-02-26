@@ -22,6 +22,7 @@ import java.util.Arrays;
 
 final class IoUringBufferRing {
     private final long ioUringBufRingAddr;
+    private final long tailFieldAddress;
     private final short entries;
     private final short mask;
     private final short bufferGroupId;
@@ -36,6 +37,7 @@ final class IoUringBufferRing {
                       IoUringBufferRingAllocator allocator) {
         assert entries % 2 == 0;
         this.ioUringBufRingAddr = ioUringBufRingAddr;
+        this.tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         this.entries = entries;
         this.mask = (short) (entries - 1);
         this.bufferGroupId = bufferGroupId;
@@ -61,7 +63,6 @@ final class IoUringBufferRing {
     }
 
     private void addBuffer(short bid) {
-        long tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
 
         ByteBuf byteBuf = allocator.allocate();
@@ -79,6 +80,17 @@ final class IoUringBufferRing {
         PlatformDependent.putShort(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
         // Now advanced the tail by the number of buffers that we just added.
         PlatformDependent.putShortOrdered(tailFieldAddress, (short) (oldTail + 1));
+    }
+
+    /**
+     * Return the amount of bytes that we attempted to read for the given id.
+     * This method must be called before {@link #useBuffer(short, int, boolean)}.
+     *
+     * @param bid   the id of the buffer.
+     * @return      the attempted bytes.
+     */
+    int attemptedBytesRead(short bid) {
+        return buffers[bid].readableBytes();
     }
 
     /**

@@ -133,7 +133,7 @@ final class Native {
     static final int POLLRDHUP = NativeStaticallyReferencedJniMethods.pollrdhup();
     static final int ERRNO_ECANCELED_NEGATIVE = -NativeStaticallyReferencedJniMethods.ecanceled();
     static final int ERRNO_ETIME_NEGATIVE = -NativeStaticallyReferencedJniMethods.etime();
-    static final int ERRNO_NO_BUFFER_NEGATIVE = -NativeStaticallyReferencedJniMethods.enobufs();
+    static final int ERRNO_NOBUFS_NEGATIVE = -NativeStaticallyReferencedJniMethods.enobufs();
 
     static final int PAGE_SIZE = NativeStaticallyReferencedJniMethods.pageSize();
 
