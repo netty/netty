@@ -208,21 +208,12 @@ public class IoUringBufferRingTest {
             clientChannel.writeAndFlush(writeBuffer.retainedDuplicate()).syncUninterruptibly();
 
             // Aggregate all received buffers until we received everything.
-            boolean hasCompositeBuffer = false;
             do {
                 ByteBuf buffer = buffers.take();
-                if (buffer instanceof CompositeByteBuf) {
-                    hasCompositeBuffer = true;
-                }
                 received.addComponent(true, buffer);
             } while (received.readableBytes() != writeBuffer.readableBytes());
 
             assertEquals(writeBuffer, received);
-            if (!incremental) {
-                assertTrue(hasCompositeBuffer);
-            } else {
-                // TODO: Find out why recv bundles seem to not be used when incremental is used.
-            }
             serverChannel.close();
             clientChannel.close();
             group.shutdownGracefully();

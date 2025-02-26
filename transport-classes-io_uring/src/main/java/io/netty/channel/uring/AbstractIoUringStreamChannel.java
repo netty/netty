@@ -16,7 +16,6 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -437,7 +436,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     // or convert it to 0 if we could not read because the socket was not readable.
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
-                    int attemptedBytesRead = 0;
                     if (useBufferRing) {
                         short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
                         boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
@@ -447,45 +445,42 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                             // multiple of them might have been filled for one recv operation.
                             // See https://github.com/axboe/liburing/wiki/
                             // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
-                            //
-                            // If we have multiple buffers we will wrap these in a CompositeByteBuf to mimic
-                            // the behavior of one recv result in one fireChannelRead(...).
-                            CompositeByteBuf compositeByteBuf = null;
                             int read = res;
                             for (;;) {
-                                attemptedBytesRead += bufferRing.attemptedBytesRead(bid);
-                                ByteBuf buffer = bufferRing.useBuffer(bid, read, more);
-                                read -= buffer.readableBytes();
+                                int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
+                                byteBuf = bufferRing.useBuffer(bid, read, more);
+                                read -= byteBuf.readableBytes();
+                                allocHandle.attemptedBytesRead(attemptedBytesRead);
+                                allocHandle.lastBytesRead(byteBuf.readableBytes());
+
                                 assert read >= 0;
                                 if (read == 0) {
-                                    if (compositeByteBuf == null) {
-                                        // We only had one buffer, there is no need to use a CompositeByteBuf.
-                                        byteBuf = buffer;
-                                    } else {
-                                        compositeByteBuf.addComponent(true, buffer);
-                                    }
+                                    // Just break here, we will handle the byteBuf below.
                                     break;
                                 }
-                                if (compositeByteBuf == null) {
-                                    // We have at least two buffers, allocate a CompositeByteBuf that we will use
-                                    // to compose the buffers. Also directly assign it to byteBuf so we not risk to
-                                    // leak.
-                                    compositeByteBuf = alloc().compositeBuffer();
-                                    byteBuf = compositeByteBuf;
+                                allocHandle.incMessagesRead(1);
+                                pipeline.fireChannelRead(byteBuf);
+                                byteBuf = null;
+                                if (!allocHandle.continueReading()) {
+                                    // We should call fireChannelReadComplete() to mimic a normal read loop.
+                                    allocHandle.readComplete();
+                                    pipeline.fireChannelReadComplete();
+                                    allocHandle.reset(config());
                                 }
-                                compositeByteBuf.addComponent(true, buffer);
                                 bid = bufferRing.nextBid(bid);
                             }
                         } else {
-                            attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
+                            int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
                             byteBuf = bufferRing.useBuffer(bid, res, more);
+                            allocHandle.attemptedBytesRead(attemptedBytesRead);
+                            allocHandle.lastBytesRead(res);
                         }
                     } else {
-                        attemptedBytesRead = byteBuf.writableBytes();
+                        int attemptedBytesRead = byteBuf.writableBytes();
                         byteBuf.writerIndex(byteBuf.writerIndex() + res);
+                        allocHandle.attemptedBytesRead(attemptedBytesRead);
+                        allocHandle.lastBytesRead(res);
                     }
-                    allocHandle.attemptedBytesRead(attemptedBytesRead);
-                    allocHandle.lastBytesRead(res);
                 } else {
                     // EOF which we signal with -1.
                     allocHandle.lastBytesRead(-1);
