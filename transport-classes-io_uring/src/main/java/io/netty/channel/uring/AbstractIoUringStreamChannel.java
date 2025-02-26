@@ -414,7 +414,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
             try {
                 if (res < 0) {
-                    if (res == Native.ERRNO_NO_BUFFER_NEGATIVE) {
+                    if (res == Native.ERRNO_NOBUFS_NEGATIVE) {
                         // recv with provider buffer failed, Fire the BufferRingExhaustedEvent to notify users.
                         // About the failure. If this happens to often the user should most likely increase the
                         // buffer ring size.

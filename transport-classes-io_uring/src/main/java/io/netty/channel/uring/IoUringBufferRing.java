@@ -22,6 +22,7 @@ import java.util.Arrays;
 
 final class IoUringBufferRing {
     private final long ioUringBufRingAddr;
+    private final long tailFieldAddress;
     private final short entries;
     private final short mask;
     private final short bufferGroupId;
@@ -36,6 +37,7 @@ final class IoUringBufferRing {
                       IoUringBufferRingAllocator allocator) {
         assert entries % 2 == 0;
         this.ioUringBufRingAddr = ioUringBufRingAddr;
+        this.tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         this.entries = entries;
         this.mask = (short) (entries - 1);
         this.bufferGroupId = bufferGroupId;
@@ -61,7 +63,6 @@ final class IoUringBufferRing {
     }
 
     private void addBuffer(short bid) {
-        long tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
 
         ByteBuf byteBuf = allocator.allocate();
