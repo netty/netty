@@ -406,6 +406,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert readId != 0;
             boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
             boolean useBufferRing = (flags & Native.IORING_CQE_F_BUFFER) != 0;
+            short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
+            boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
+            boolean fillBufferRing = useBufferRing && !more;
+
             boolean empty = socketIsEmpty(flags);
             if (rearm) {
                 // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
@@ -437,8 +441,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
                     if (useBufferRing) {
-                        short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
-                        boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
                         if (IoUring.isRecvsendBundleSupported()) {
                             // If RECVSEND_BUNDLE is supported we need to do a bit more work here.
                             // In this case we might need to obtain multiple buffers out of the buffer ring as
@@ -505,8 +507,16 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.incMessagesRead(1);
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
+                if (fillBufferRing) {
+                    bufferRing.addBuffer(bid);
+                    fillBufferRing = false;
+                }
                 scheduleNextRead(pipeline, allocHandle, rearm, empty);
             } catch (Throwable t) {
+                if (fillBufferRing) {
+                    bufferRing.addBuffer(bid);
+                    fillBufferRing = false;
+                }
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
             }
         }

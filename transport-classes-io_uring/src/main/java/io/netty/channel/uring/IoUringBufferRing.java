@@ -31,6 +31,7 @@ final class IoUringBufferRing {
     private final IoUringBufferRingAllocator allocator;
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
     private final boolean incremental;
+    private int numBuffers;
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
                       short entries, short bufferGroupId, boolean incremental,
@@ -49,8 +50,10 @@ final class IoUringBufferRing {
     }
 
     void fill() {
-        for (short i = 0; i < entries; i++) {
-            addBuffer(i);
+        if (numBuffers == 0) {
+            for (short i = 0; i < entries; i++) {
+                addBuffer(i);
+            }
         }
     }
 
@@ -62,12 +65,13 @@ final class IoUringBufferRing {
         return exhaustedEvent;
     }
 
-    private void addBuffer(short bid) {
+    void addBuffer(short bid) {
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
 
         ByteBuf byteBuf = allocator.allocate();
         byteBuf.writerIndex(byteBuf.capacity());
         buffers[bid] = byteBuf;
+        numBuffers++;
         int ringIndex = oldTail & mask;
 
         //  see:
@@ -114,7 +118,9 @@ final class IoUringBufferRing {
         }
 
         // The buffer is considered to be used, replace it with a new one that we can use.
-        addBuffer(bid);
+        buffers[bid] = null;
+        numBuffers--;
+        //addBuffer(bid);
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
     }
