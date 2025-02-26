@@ -52,7 +52,7 @@ final class IoUringBufferRing {
     void fill() {
         if (numBuffers == 0) {
             for (short i = 0; i < entries; i++) {
-                addBuffer(i);
+                fill(i);
             }
         }
     }
@@ -65,7 +65,7 @@ final class IoUringBufferRing {
         return exhaustedEvent;
     }
 
-    void addBuffer(short bid) {
+    void fill(short bid) {
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
 
         ByteBuf byteBuf = allocator.allocate();
@@ -120,7 +120,6 @@ final class IoUringBufferRing {
         // The buffer is considered to be used, replace it with a new one that we can use.
         buffers[bid] = null;
         numBuffers--;
-        //addBuffer(bid);
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
     }

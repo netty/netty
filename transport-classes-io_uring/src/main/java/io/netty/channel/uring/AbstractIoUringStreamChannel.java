@@ -462,6 +462,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                                 }
                                 allocHandle.incMessagesRead(1);
                                 pipeline.fireChannelRead(byteBuf);
+
+                                bufferRing.fill(bid);
+
                                 byteBuf = null;
                                 if (!allocHandle.continueReading()) {
                                     // We should call fireChannelReadComplete() to mimic a normal read loop.
@@ -508,15 +511,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
                 if (fillBufferRing) {
-                    bufferRing.addBuffer(bid);
+                    bufferRing.fill(bid);
                     fillBufferRing = false;
                 }
                 scheduleNextRead(pipeline, allocHandle, rearm, empty);
             } catch (Throwable t) {
-                if (fillBufferRing) {
-                    bufferRing.addBuffer(bid);
-                    fillBufferRing = false;
-                }
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
             }
         }
