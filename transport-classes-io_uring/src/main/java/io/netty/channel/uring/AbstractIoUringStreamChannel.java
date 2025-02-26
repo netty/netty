@@ -474,7 +474,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                                     byteBuf = compositeByteBuf;
                                 }
                                 compositeByteBuf.addComponent(true, buffer);
-                                bid++;
+                                bid = bufferRing.nextBid(bid);
                             }
                         } else {
                             attemptedBytesRead = bufferRing.attemptedBytesRead(bid);

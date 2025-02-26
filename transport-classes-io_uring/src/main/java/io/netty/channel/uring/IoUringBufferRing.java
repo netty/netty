@@ -99,8 +99,8 @@ final class IoUringBufferRing {
      * @param bid           the id of the buffer
      * @param readableBytes the number of bytes that could be read. This value might be larger then what a single
      *                      {@link ByteBuf} can hold. Because of this, the caller should call
-     *                      @link #useBuffer(short, int, boolean)} in a loop (increasing bid by one)
-     *                      until all buffers could be obtained.
+     *                      @link #useBuffer(short, int, boolean)} in a loop (obtaining the next bid to use by calling
+     *                      {@link #nextBid(short)}) until all buffers could be obtained.
      * @return              the buffer.
      */
     ByteBuf useBuffer(short bid, int readableBytes, boolean more) {
@@ -117,6 +117,10 @@ final class IoUringBufferRing {
         addBuffer(bid);
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
+    }
+
+    short nextBid(short bid) {
+        return (short) ((bid + 1) & mask);
     }
 
     /**
