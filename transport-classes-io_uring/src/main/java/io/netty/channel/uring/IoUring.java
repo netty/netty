@@ -29,6 +29,7 @@ public final class IoUring {
     private static final boolean IORING_ACCEPT_NO_WAIT_SUPPORTED;
     private static final boolean IORING_ACCEPT_MULTISHOT_SUPPORTED;
     private static final boolean IORING_RECV_MULTISHOT_SUPPORTED;
+    private static final boolean IORING_RECVSEND_BUNDLE_SUPPORTED;
     private static final boolean IORING_POLL_ADD_MULTISHOT_SUPPORTED;
     private static final boolean IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     private static final boolean IORING_SETUP_SUBMIT_ALL_SUPPORTED;
@@ -47,6 +48,7 @@ public final class IoUring {
         boolean spliceSupported = false;
         boolean acceptSupportNoWait = false;
         boolean acceptMultishotSupported = false;
+        boolean recvsendBundleSupported = false;
         boolean recvMultishotSupported = false;
         boolean pollAddMultishotSupported = false;
         boolean registerIowqWorkersSupported = false;
@@ -72,8 +74,9 @@ public final class IoUring {
                         Native.checkAllIOSupported(ringBuffer.fd());
                         socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ringBuffer.fd());
                         spliceSupported = Native.isSpliceSupported(ringBuffer.fd());
+                        recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
-                        acceptSupportNoWait = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
+                        acceptSupportNoWait = recvsendBundleSupported;
                         acceptMultishotSupported = Native.isAcceptMultishotSupported(ringBuffer.fd());
                         recvMultishotSupported = Native.isRecvMultishotSupported();
                         pollAddMultishotSupported = Native.isPollAddMultiShotSupported(ringBuffer.fd());
@@ -119,6 +122,7 @@ public final class IoUring {
                         "ACCEPT_MULTISHOT_SUPPORTED={}, " +
                         "POLL_ADD_MULTISHOT_SUPPORTED={} " +
                         "RECV_MULTISHOT_SUPPORTED={}, " +
+                        "IORING_RECVSEND_BUNDLE_SUPPORTED={}, " +
                         "REGISTER_IOWQ_MAX_WORKERS_SUPPORTED={}, " +
                         "SETUP_SUBMIT_ALL_SUPPORTED={}, " +
                         "SETUP_SINGLE_ISSUER_SUPPORTED={}, " +
@@ -126,9 +130,9 @@ public final class IoUring {
                         "REGISTER_BUFFER_RING_SUPPORTED={}, " +
                         "REGISTER_BUFFER_RING_INC_SUPPORTED={}" +
                         ")", socketNonEmptySupported, spliceSupported, acceptSupportNoWait, acceptMultishotSupported,
-                        pollAddMultishotSupported, recvMultishotSupported, registerIowqWorkersSupported,
-                        submitAllSupported, singleIssuerSupported, deferTaskrunSupported, registerBufferRingSupported,
-                        registerBufferRingIncSupported);
+                        pollAddMultishotSupported, recvMultishotSupported, recvsendBundleSupported,
+                        registerIowqWorkersSupported, submitAllSupported, singleIssuerSupported, deferTaskrunSupported,
+                        registerBufferRingSupported, registerBufferRingIncSupported);
             }
         }
         UNAVAILABILITY_CAUSE = cause;
@@ -137,6 +141,7 @@ public final class IoUring {
         IORING_ACCEPT_NO_WAIT_SUPPORTED = acceptSupportNoWait;
         IORING_ACCEPT_MULTISHOT_SUPPORTED = acceptMultishotSupported;
         IORING_RECV_MULTISHOT_SUPPORTED = recvMultishotSupported;
+        IORING_RECVSEND_BUNDLE_SUPPORTED = recvsendBundleSupported;
         IORING_POLL_ADD_MULTISHOT_SUPPORTED = pollAddMultishotSupported;
         IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED = registerIowqWorkersSupported;
         IORING_SETUP_SUBMIT_ALL_SUPPORTED = submitAllSupported;
@@ -189,6 +194,10 @@ public final class IoUring {
 
     static boolean isRecvMultishotSupported() {
         return IORING_RECV_MULTISHOT_SUPPORTED;
+    }
+
+    static boolean isRecvsendBundleSupported() {
+        return IORING_RECVSEND_BUNDLE_SUPPORTED;
     }
 
     static boolean isPollAddMultishotSupported() {

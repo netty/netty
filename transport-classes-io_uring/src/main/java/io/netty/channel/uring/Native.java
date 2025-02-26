@@ -217,6 +217,7 @@ final class Native {
     static final short IORING_POLL_ADD_MULTI = 1 << 0;
 
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
+    static final short IORING_RECVSEND_BUNDLE = 1 << 4;
     static final short IORING_RECV_MULTISHOT = 1 << 1;
 
     static final short IORING_ACCEPT_MULTISHOT = 1 << 0;

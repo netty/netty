@@ -363,6 +363,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 if (multishot) {
                     ioPrio |= Native.IORING_RECV_MULTISHOT;
                 }
+                if (IoUring.isRecvsendBundleSupported()) {
+                    // See https://github.com/axboe/liburing/wiki/
+                    // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
+                    ioPrio |= Native.IORING_RECVSEND_BUNDLE;
+                }
                 IoRegistration registration = registration();
                 int fd = fd().intValue();
                 IoUringIoOps ops = IoUringIoOps.newRecv(
@@ -431,18 +436,51 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     // or convert it to 0 if we could not read because the socket was not readable.
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
-                    final int attemptedBytesRead;
                     if (useBufferRing) {
                         short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
                         boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
-                        attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
-                        byteBuf = bufferRing.useBuffer(bid, res, more);
+                        if (IoUring.isRecvsendBundleSupported()) {
+                            // If RECVSEND_BUNDLE is supported we need to do a bit more work here.
+                            // In this case we might need to obtain multiple buffers out of the buffer ring as
+                            // multiple of them might have been filled for one recv operation.
+                            // See https://github.com/axboe/liburing/wiki/
+                            // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
+                            int read = res;
+                            for (;;) {
+                                int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
+                                byteBuf = bufferRing.useBuffer(bid, read, more);
+                                read -= byteBuf.readableBytes();
+                                allocHandle.attemptedBytesRead(attemptedBytesRead);
+                                allocHandle.lastBytesRead(byteBuf.readableBytes());
+
+                                assert read >= 0;
+                                if (read == 0) {
+                                    // Just break here, we will handle the byteBuf below.
+                                    break;
+                                }
+                                allocHandle.incMessagesRead(1);
+                                pipeline.fireChannelRead(byteBuf);
+                                byteBuf = null;
+                                if (!allocHandle.continueReading()) {
+                                    // We should call fireChannelReadComplete() to mimic a normal read loop.
+                                    allocHandle.readComplete();
+                                    pipeline.fireChannelReadComplete();
+                                    allocHandle.reset(config());
+                                }
+                                bid = bufferRing.nextBid(bid);
+                            }
+                        } else {
+                            int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
+                            byteBuf = bufferRing.useBuffer(bid, res, more);
+                            allocHandle.attemptedBytesRead(attemptedBytesRead);
+                            allocHandle.lastBytesRead(res);
+                        }
                     } else {
-                        attemptedBytesRead = byteBuf.writableBytes();
+                        int attemptedBytesRead = byteBuf.writableBytes();
                         byteBuf.writerIndex(byteBuf.writerIndex() + res);
+                        allocHandle.attemptedBytesRead(attemptedBytesRead);
+                        allocHandle.lastBytesRead(res);
                     }
-                    allocHandle.attemptedBytesRead(attemptedBytesRead);
-                    allocHandle.lastBytesRead(res);
                 } else {
                     // EOF which we signal with -1.
                     allocHandle.lastBytesRead(-1);
