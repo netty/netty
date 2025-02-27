@@ -139,9 +139,9 @@ public final class IoUringIoHandler implements IoHandler {
         eventfdReadBuf = PlatformDependent.allocateMemory(8);
         this.timeoutMemoryAddress = PlatformDependent.allocateMemory(KERNEL_TIMESPEC_SIZE);
 
-        // We buffer a maximum of 2 * CompletionQueue.ringSize completions before we drain them in batches.
+        // We buffer a maximum of 2 * CompletionQueue.ringCapacity completions before we drain them in batches.
         // Also as we never submit an udata which is 0L we use this as the tombstone marker.
-        completionBuffer = new CompletionBuffer(ringBuffer.ioUringCompletionQueue().ringSize * 2, 0);
+        completionBuffer = new CompletionBuffer(ringBuffer.ioUringCompletionQueue().ringCapacity * 2, 0);
     }
 
     @Override

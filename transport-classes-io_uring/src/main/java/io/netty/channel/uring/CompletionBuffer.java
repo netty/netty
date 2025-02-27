@@ -32,7 +32,7 @@ final class CompletionBuffer {
     private int tail = -1;
 
     CompletionBuffer(int numCompletions, long tombstone) {
-        capacity = MathUtil.findNextPositivePowerOfTwo(numCompletions * 2);
+        capacity = MathUtil.findNextPositivePowerOfTwo(numCompletions);
         array = new long[capacity];
         mask = capacity - 1;
         for (int i = 0; i < capacity; i += 2) {
