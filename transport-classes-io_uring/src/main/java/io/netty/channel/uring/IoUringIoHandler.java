@@ -334,10 +334,15 @@ public final class IoUringIoHandler implements IoHandler {
             registration.close();
         }
 
+        // Write to the eventfd to ensure that if we submitted a read for the eventfd we will see the completion event.
+        Native.eventFdWrite(eventfd.intValue(), 1L);
+
         // Ensure all previously submitted IOs get to complete before tearing down everything.
         long udata = UserData.encode(RINGFD_ID, Native.IORING_OP_NOP, (short) 0);
         submissionQueue.addNop((byte) Native.IOSQE_IO_DRAIN, udata);
-        submissionQueue.submit();
+
+        // Submit everything and wait until we could drain i.
+        submissionQueue.submitAndWait();
         while (completionQueue.hasCompletions()) {
             completionQueue.process(this::handle);
 
