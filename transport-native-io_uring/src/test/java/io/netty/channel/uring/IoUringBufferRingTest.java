@@ -51,7 +51,8 @@ public class IoUringBufferRingTest {
 
     @Test
     public void testRegister() {
-        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        // using cqeSize on purpose NOT a power of 2
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 15, 0);
         try {
             int ringFd = ringBuffer.fd();
             long ioUringBufRingAddr = Native.ioUringRegisterBuffRing(ringFd, 4, (short) 1, 0);
@@ -64,6 +65,8 @@ public class IoUringBufferRingTest {
                     freeRes,
                     "ioUringFreeBufRing result must be 0, but now result is " + freeRes
             );
+            // let io_uring to "fix" it
+            assertEquals(16, ringBuffer.ioUringCompletionQueue().ringCapacity);
         } finally {
             ringBuffer.close();
         }

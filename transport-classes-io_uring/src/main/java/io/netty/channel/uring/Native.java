@@ -343,7 +343,7 @@ final class Native {
         ObjectUtil.checkPositive(ringSize, "ringSize");
         ObjectUtil.checkPositive(cqeSize, "cqeSize");
         long[] values = ioUringSetup(ringSize, cqeSize, setupFlags);
-        assert values.length == 21;
+        assert values.length == 22;
         CompletionQueue completionQueue = new CompletionQueue(
                 values[0],
                 values[1],
@@ -353,9 +353,9 @@ final class Native {
                 values[5],
                 (int) values[6],
                 values[7],
-                (int) values[8]);
+                (int) values[8],
+                (int) values[9]);
         SubmissionQueue submissionQueue = new SubmissionQueue(
-                values[9],
                 values[10],
                 values[11],
                 values[12],
@@ -363,10 +363,11 @@ final class Native {
                 values[14],
                 values[15],
                 values[16],
-                (int) values[17],
-                values[18],
-                (int) values[19]);
-        return new RingBuffer(submissionQueue, completionQueue, (int) values[20]);
+                values[17],
+                (int) values[18],
+                values[19],
+                (int) values[20]);
+        return new RingBuffer(submissionQueue, completionQueue, (int) values[21]);
     }
 
     static void checkAllIOSupported(int ringFd) {
