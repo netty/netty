@@ -26,6 +26,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.unix.Socket;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -235,5 +237,44 @@ public class IoUringBufferRingTest {
         assertEquals(writeBuffer.readableBytes(), readBuffer.readableBytes());
         assertTrue(ByteBufUtil.equals(writeBuffer, readBuffer));
         return readBuffer;
+    }
+
+    @Test
+    public void testCloseEventLoopGroupWhileConnected() throws Exception {
+        MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1,
+                IoUringIoHandler.newFactory()
+        );
+        try {
+            final BlockingQueue<Channel> acceptedChannels = new LinkedBlockingQueue<>();
+            ServerBootstrap serverBootstrap = new ServerBootstrap();
+            serverBootstrap.channel(IoUringServerSocketChannel.class);
+            Channel serverChannel = serverBootstrap.group(group)
+                    .childHandler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelActive(ChannelHandlerContext ctx) {
+                            acceptedChannels.add(ctx.channel());
+                        }
+                    })
+                    .bind(new InetSocketAddress(0))
+                    .syncUninterruptibly().channel();
+
+            Bootstrap clientBoostrap = new Bootstrap();
+            clientBoostrap.group(group)
+                    .channel(IoUringSocketChannel.class)
+                    .handler(new ChannelInboundHandlerAdapter());
+            ChannelFuture channelFuture = clientBoostrap.connect(serverChannel.localAddress());
+            Channel clientChannel = channelFuture.sync().channel();
+
+            group.shutdownGracefully().syncUninterruptibly();
+            clientChannel.closeFuture().sync();
+            serverChannel.closeFuture().sync();
+            acceptedChannels.take().closeFuture().sync();
+            assertTrue(acceptedChannels.isEmpty());
+        } catch (Throwable t) {
+            if (!group.isShutdown()) {
+                group.shutdownGracefully().syncUninterruptibly();
+            }
+            throw t;
+        }
     }
 }
