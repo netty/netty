@@ -107,7 +107,7 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
     private final String[] jvmArgs;
 
     public AbstractMicrobenchmark() {
-        this(false, false);
+        this(true, false);
     }
 
     public AbstractMicrobenchmark(boolean disableAssertions) {
