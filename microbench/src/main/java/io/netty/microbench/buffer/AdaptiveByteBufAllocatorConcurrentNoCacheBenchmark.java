@@ -44,7 +44,7 @@ public class AdaptiveByteBufAllocatorConcurrentNoCacheBenchmark extends Abstract
     private int size;
 
     public AdaptiveByteBufAllocatorConcurrentNoCacheBenchmark() {
-        super(false, true);
+        super(true, true);
     }
 
     @Benchmark
