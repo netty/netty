@@ -208,6 +208,8 @@ final class Native {
     static final byte IORING_CQE_F_BUF_MORE = 1 << 4;
 
     static final int IORING_SETUP_CQSIZE = 1 << 3;
+    static final int IORING_SETUP_CLAMP = 1 << 4;
+
     static final int IORING_SETUP_R_DISABLED = 1 << 6;
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
@@ -320,7 +322,7 @@ final class Native {
     };
 
     static int setupFlags() {
-        int flags = Native.IORING_SETUP_R_DISABLED;
+        int flags = Native.IORING_SETUP_R_DISABLED | Native.IORING_SETUP_CLAMP;
         if (IoUring.isSetupSubmitAllSupported()) {
             flags |= Native.IORING_SETUP_SUBMIT_ALL;
         }
