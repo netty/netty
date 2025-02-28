@@ -81,10 +81,10 @@ public class IoUringBufferRingTest {
         final BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
-                (short) 1, (short) 2, incremental, new IoUringFixedBufferRingAllocator(1024));
+                (short) 1, (short) 2, 2 * 16, incremental, new IoUringFixedBufferRingAllocator(1024));
 
         IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
-                (short) 2, (short) 16, incremental, new IoUringFixedBufferRingAllocator(1024)
+                (short) 2, (short) 16, 16 * 16, incremental, new IoUringFixedBufferRingAllocator(1024)
         );
         ioUringIoHandlerConfiguration.setBufferRingConfig(bufferRingConfig, bufferRingConfig1);
 
@@ -170,7 +170,7 @@ public class IoUringBufferRingTest {
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
                 // let's use a small chunkSize so we are sure a recv will span multiple buffers.
-                (short) 1, (short) 16, incremental, new IoUringFixedBufferRingAllocator(bufferRingChunkSize));
+                (short) 1, (short) 16, 16 * 16, incremental, new IoUringFixedBufferRingAllocator(bufferRingChunkSize));
 
         ioUringIoHandlerConfiguration.setBufferRingConfig(bufferRingConfig);
 

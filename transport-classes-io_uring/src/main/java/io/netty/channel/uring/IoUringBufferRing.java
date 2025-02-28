@@ -16,42 +16,48 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.WrappedByteBuf;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class IoUringBufferRing {
     private final long ioUringBufRingAddr;
     private final long tailFieldAddress;
     private final short entries;
+    private final int maxUnreleasedBuffers;
     private final short mask;
     private final short bufferGroupId;
     private final int ringFd;
-    private final ByteBuf[] buffers;
+    private final IoUringBufferRingByteBuf[] buffers;
     private final IoUringBufferRingAllocator allocator;
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
     private final boolean incremental;
+    private final AtomicInteger unreleasedBuffers = new AtomicInteger();
+    private volatile boolean usable;
     private boolean corrupted;
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
-                      short entries, short bufferGroupId, boolean incremental,
+                      short entries, int maxUnreleasedBuffers, short bufferGroupId, boolean incremental,
                       IoUringBufferRingAllocator allocator) {
         assert entries % 2 == 0;
         this.ioUringBufRingAddr = ioUringBufRingAddr;
         this.tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         this.entries = entries;
+        this.maxUnreleasedBuffers = maxUnreleasedBuffers;
         this.mask = (short) (entries - 1);
         this.bufferGroupId = bufferGroupId;
         this.ringFd = ringFd;
-        this.buffers = new ByteBuf[entries];
+        this.buffers = new IoUringBufferRingByteBuf[entries];
         this.incremental = incremental;
         this.allocator = allocator;
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
     }
 
     boolean isUsable() {
-        return !corrupted;
+        return !corrupted && usable;
     }
 
     void fill() {
@@ -87,7 +93,7 @@ final class IoUringBufferRing {
             throw e;
         }
         byteBuf.writerIndex(byteBuf.capacity());
-        buffers[bid] = byteBuf;
+        buffers[bid] = new IoUringBufferRingByteBuf(byteBuf);
 
         //  see:
         //  https://github.com/axboe/liburing/
@@ -124,7 +130,7 @@ final class IoUringBufferRing {
      */
     ByteBuf useBuffer(short bid, int readableBytes, boolean more) {
         assert readableBytes > 0;
-        ByteBuf byteBuf = buffers[bid];
+        IoUringBufferRingByteBuf byteBuf = buffers[bid];
 
         allocator.lastBytesRead(byteBuf.readableBytes(), readableBytes);
         if (incremental && more && byteBuf.readableBytes() > readableBytes) {
@@ -134,6 +140,7 @@ final class IoUringBufferRing {
 
         // The buffer is considered to be used, null out the slot.
         buffers[bid] = null;
+        byteBuf.markUsed();
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
     }
@@ -162,5 +169,41 @@ final class IoUringBufferRing {
             }
         }
         Arrays.fill(buffers, null);
+    }
+
+    private final class IoUringBufferRingByteBuf extends WrappedByteBuf {
+        IoUringBufferRingByteBuf(ByteBuf buf) {
+            super(buf);
+        }
+
+        void markUsed() {
+            if (unreleasedBuffers.incrementAndGet() == maxUnreleasedBuffers) {
+                usable = false;
+            }
+        }
+
+        @Override
+        public boolean release() {
+            if (super.release()) {
+                released();
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean release(int decrement) {
+            if (super.release(decrement)) {
+                released();
+                return true;
+            }
+            return false;
+        }
+
+        private void released() {
+            if (unreleasedBuffers.decrementAndGet() == maxUnreleasedBuffers / 2) {
+                usable = true;
+            }
+        }
     }
 }

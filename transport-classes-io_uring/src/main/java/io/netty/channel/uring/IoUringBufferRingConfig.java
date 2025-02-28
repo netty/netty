@@ -26,34 +26,44 @@ import java.util.Objects;
 public final class IoUringBufferRingConfig {
     private final short bgId;
     private final short bufferRingSize;
+    private final int maxUnreleasedBuffers;
     private final boolean incremental;
     private final IoUringBufferRingAllocator allocator;
 
     /**
      * Create a new configuration.
      *
-     * @param bgId              the buffer group id to use (must be non-negative).
-     * @param bufferRingSize    the size of the ring
-     * @param allocator         the {@link IoUringBufferRingAllocator} to use to allocate
-     *                          {@link io.netty.buffer.ByteBuf}s.
+     * @param bgId                  the buffer group id to use (must be non-negative).
+     * @param bufferRingSize        the size of the ring
+     * @param maxUnreleasedBuffers  the maximum buffers that were allocated out of this buffer ring and are
+     *                              unreleased yet. Once this threshold is hit the usage of the buffer ring will
+     *                              be temporary disabled.
+     * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
+     *                              {@link io.netty.buffer.ByteBuf}s.
      */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize, IoUringBufferRingAllocator allocator) {
-        this(bgId, bufferRingSize, IoUring.isRegisterBufferRingIncSupported(), allocator);
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int maxUnreleasedBuffers,
+                                   IoUringBufferRingAllocator allocator) {
+        this(bgId, bufferRingSize, maxUnreleasedBuffers, IoUring.isRegisterBufferRingIncSupported(), allocator);
     }
 
     /**
      * Create a new configuration.
      *
-     * @param bgId              the buffer group id to use (must be non-negative).
-     * @param bufferRingSize    the size of the ring
-     * @param incremental       {@code true} if the buffer ring is using incremental buffer consumption.
-     * @param allocator         the {@link IoUringBufferRingAllocator} to use to allocate
-     *                          {@link io.netty.buffer.ByteBuf}s.
+     * @param bgId                  the buffer group id to use (must be non-negative).
+     * @param bufferRingSize        the size of the ring
+     * @param maxUnreleasedBuffers  the maximum buffers that can be allocated out of this buffer ring and are
+     *                              unreleased yet. Once this threshold is hit the usage of the buffer ring will
+     *                              be temporarily disabled.
+     * @param incremental           {@code true} if the buffer ring is using incremental buffer consumption.
+     * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
+     *                              {@link io.netty.buffer.ByteBuf}s.
      */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize, boolean incremental,
-                                   IoUringBufferRingAllocator allocator) {
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int maxUnreleasedBuffers,
+                                   boolean incremental, IoUringBufferRingAllocator allocator) {
         this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
+        this.maxUnreleasedBuffers = ObjectUtil.checkInRange(
+                maxUnreleasedBuffers, bufferRingSize, Integer.MAX_VALUE, "maxUnreleasedBuffers");
         if (incremental && !IoUring.isRegisterBufferRingIncSupported()) {
             throw new IllegalArgumentException("Incremental buffer ring is not supported");
         }
@@ -77,6 +87,16 @@ public final class IoUringBufferRingConfig {
      */
     public short bufferRingSize() {
         return bufferRingSize;
+    }
+
+    /**
+     * Returns the maximum buffers that can be allocated out of this buffer ring and are
+     * unreleased yet
+     *
+     * @return the max unreleased buffers.
+     */
+    public int maxUnreleasedBuffers() {
+        return maxUnreleasedBuffers;
     }
 
     /**
