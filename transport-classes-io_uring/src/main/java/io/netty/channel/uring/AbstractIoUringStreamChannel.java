@@ -324,7 +324,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert readId == 0 : readId;
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
 
-            if (bufferRing != null) {
+            if (bufferRing != null && bufferRing.isUsable()) {
                 return scheduleReadProviderBuffer(bufferRing, first, socketIsEmpty);
             }
 
@@ -406,6 +406,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert readId != 0;
             boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
             boolean useBufferRing = (flags & Native.IORING_CQE_F_BUFFER) != 0;
+            short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
+            boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
+
             boolean empty = socketIsEmpty(flags);
             if (rearm) {
                 // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
@@ -437,8 +440,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
                     if (useBufferRing) {
-                        short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
-                        boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
+
                         if (IoUring.isRecvsendBundleSupported()) {
                             // If RECVSEND_BUNDLE is supported we need to do a bit more work here.
                             // In this case we might need to obtain multiple buffers out of the buffer ring as
@@ -455,19 +457,25 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
                                 assert read >= 0;
                                 if (read == 0) {
-                                    // Just break here, we will handle the byteBuf below.
+                                    // Just break here, we will handle the byteBuf below and also fill the bufferRing
+                                    // if needed later.
                                     break;
                                 }
                                 allocHandle.incMessagesRead(1);
                                 pipeline.fireChannelRead(byteBuf);
                                 byteBuf = null;
+
+                                // Fill a new buffer for the bid after we fired the buffer through the pipeline.
+                                // We do it only after we called fireChannelRead(...) as there is a good chance
+                                // that the user will have released the buffer. In this case we reduce memory usage.
+                                bufferRing.fillBuffer(bid);
+                                bid = bufferRing.nextBid(bid);
                                 if (!allocHandle.continueReading()) {
                                     // We should call fireChannelReadComplete() to mimic a normal read loop.
                                     allocHandle.readComplete();
                                     pipeline.fireChannelReadComplete();
                                     allocHandle.reset(config());
                                 }
-                                bid = bufferRing.nextBid(bid);
                             }
                         } else {
                             int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
@@ -505,6 +513,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.incMessagesRead(1);
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
+                if (useBufferRing && !more) {
+                    // Fill a new buffer for the bid after we fired the buffer through the pipeline.
+                    // We do it only after we called fireChannelRead(...) as there is a good chance
+                    // that the user will have released the buffer. In this case we reduce memory usage.
+                    bufferRing.fillBuffer(bid);
+                }
                 scheduleNextRead(pipeline, allocHandle, rearm, empty);
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
@@ -645,6 +659,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
     @Override
     boolean isPollInFirst() {
-        return bufferRing == null;
+        return bufferRing == null || !bufferRing.isUsable();
     }
 }

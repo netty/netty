@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.internal.PlatformDependent;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
 
 final class IoUringBufferRing {
     private final long ioUringBufRingAddr;
@@ -31,6 +32,7 @@ final class IoUringBufferRing {
     private final IoUringBufferRingAllocator allocator;
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
     private final boolean incremental;
+    private boolean corrupted;
 
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
                       short entries, short bufferGroupId, boolean incremental,
@@ -48,9 +50,13 @@ final class IoUringBufferRing {
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
     }
 
+    boolean isUsable() {
+        return !corrupted;
+    }
+
     void fill() {
         for (short i = 0; i < entries; i++) {
-            addBuffer(i);
+            fillBuffer(i);
         }
     }
 
@@ -62,13 +68,26 @@ final class IoUringBufferRing {
         return exhaustedEvent;
     }
 
-    private void addBuffer(short bid) {
+    void fillBuffer(short bid) {
+        if (corrupted) {
+            return;
+        }
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
-
-        ByteBuf byteBuf = allocator.allocate();
+        int ringIndex = oldTail & mask;
+        assert ringIndex == bid;
+        assert buffers[bid] == null;
+        final ByteBuf byteBuf;
+        try {
+            byteBuf = allocator.allocate();
+        } catch (OutOfMemoryError e) {
+            // We did run out of memory, This buffer ring should be considered corrupted.
+            // TODO: In the future we could try to recover it later by trying to refill it after some time and so
+            //       bring it back to a non-corrupted state.
+            corrupted = true;
+            throw e;
+        }
         byteBuf.writerIndex(byteBuf.capacity());
         buffers[bid] = byteBuf;
-        int ringIndex = oldTail & mask;
 
         //  see:
         //  https://github.com/axboe/liburing/
@@ -113,8 +132,8 @@ final class IoUringBufferRing {
             return byteBuf.readRetainedSlice(readableBytes);
         }
 
-        // The buffer is considered to be used, replace it with a new one that we can use.
-        addBuffer(bid);
+        // The buffer is considered to be used, null out the slot.
+        buffers[bid] = null;
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
     }
