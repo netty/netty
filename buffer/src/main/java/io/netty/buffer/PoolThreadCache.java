@@ -62,6 +62,8 @@ final class PoolThreadCache {
     private final FreeOnFinalize freeOnFinalize;
 
     private int allocations;
+    // A special `PoolThreadCache` that is not stored in thread-local.
+    static final PoolThreadCache THREAD_CACHE_WITHOUT_THREAD_LOCAL = new PoolThreadCache();
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
@@ -101,6 +103,18 @@ final class PoolThreadCache {
                     + freeSweepAllocationThreshold + " (expected: > 0)");
         }
         freeOnFinalize = useFinalizer ? new FreeOnFinalize(this) : null;
+    }
+
+    /** Creates a special `PoolThreadCache` that is not stored in thread-local. */
+    PoolThreadCache() {
+        this.freeSweepAllocationThreshold = 0;
+        this.heapArena = null;
+        this.directArena = null;
+        this.smallSubPageDirectCaches = null;
+        this.normalDirectCaches = null;
+        this.smallSubPageHeapCaches = null;
+        this.normalHeapCaches = null;
+        this.freeOnFinalize = null;
     }
 
     private static <T> MemoryRegionCache<T>[] createSubPageCaches(
@@ -167,6 +181,10 @@ final class PoolThreadCache {
             trim();
         }
         return allocated;
+    }
+
+    boolean useThreadLocal() {
+        return this != THREAD_CACHE_WITHOUT_THREAD_LOCAL;
     }
 
     /**

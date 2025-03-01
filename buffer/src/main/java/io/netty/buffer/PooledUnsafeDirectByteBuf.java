@@ -41,9 +41,13 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         return buf;
     }
 
+    static PooledUnsafeDirectByteBuf newInstanceNoThreadLocal(Handle<PooledByteBuf<ByteBuffer>> handle) {
+        return new PooledUnsafeDirectByteBuf(handle, 0);
+    }
+
     private long memoryAddress;
 
-    private PooledUnsafeDirectByteBuf(Handle<PooledUnsafeDirectByteBuf> recyclerHandle, int maxCapacity) {
+    private PooledUnsafeDirectByteBuf(Handle<? extends PooledByteBuf<ByteBuffer>> recyclerHandle, int maxCapacity) {
         super(recyclerHandle, maxCapacity);
     }
 

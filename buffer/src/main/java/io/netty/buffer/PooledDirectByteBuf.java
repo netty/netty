@@ -41,7 +41,11 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         return buf;
     }
 
-    private PooledDirectByteBuf(Handle<PooledDirectByteBuf> recyclerHandle, int maxCapacity) {
+    static PooledDirectByteBuf newInstanceNoThreadLocal(Handle<PooledByteBuf<ByteBuffer>> handle) {
+        return new PooledDirectByteBuf(handle, 0);
+    }
+
+    private PooledDirectByteBuf(Handle<? extends PooledByteBuf<ByteBuffer>> recyclerHandle, int maxCapacity) {
         super(recyclerHandle, maxCapacity);
     }
 

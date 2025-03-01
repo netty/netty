@@ -16,14 +16,18 @@
 
 package io.netty.buffer;
 
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.LongCounter;
+import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -74,6 +78,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private final ReentrantLock lock = new ReentrantLock();
 
     final SizeClasses sizeClass;
+
+    private static final int ARENA_BUFFER_QUEUE_CAPACITY = Math.max(SystemPropertyUtil.getInt(
+            "io.netty.allocator.arenaBufferQueueCapacity", 1024), 2);
 
     protected PoolArena(PooledByteBufAllocator parent, SizeClasses sizeClass) {
         assert null != sizeClass;
@@ -146,7 +153,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private void tcacheAllocateSmall(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity,
                                      final int sizeIdx) {
 
-        if (cache.allocateSmall(this, buf, reqCapacity, sizeIdx)) {
+        if (cache.useThreadLocal() && cache.allocateSmall(this, buf, reqCapacity, sizeIdx)) {
             // was able to allocate out of the cache so move on
             return;
         }
@@ -186,7 +193,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     private void tcacheAllocateNormal(PoolThreadCache cache, PooledByteBuf<T> buf, final int reqCapacity,
                                       final int sizeIdx) {
-        if (cache.allocateNormal(this, buf, reqCapacity, sizeIdx)) {
+        if (cache.useThreadLocal() && cache.allocateNormal(this, buf, reqCapacity, sizeIdx)) {
             // was able to allocate out of the cache so move on
             return;
         }
@@ -236,7 +243,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
             deallocationsHuge.increment();
         } else {
             SizeClass sizeClass = sizeClass(handle);
-            if (cache != null && cache.add(this, chunk, nioBuffer, handle, normCapacity, sizeClass)) {
+            if (cache != null && cache.useThreadLocal() &&
+                    cache.add(this, chunk, nioBuffer, handle, normCapacity, sizeClass)) {
                 // cached so not free it.
                 return;
             }
@@ -618,10 +626,19 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     static final class HeapArena extends PoolArena<byte[]> {
         private final AtomicReference<PoolChunk<byte[]>> lastDestroyedChunk;
+        private final Queue<PooledByteBuf<byte[]>> bufferQueue;
+        private final ObjectPool.Handle<PooledHeapByteBuf> handle;
 
         HeapArena(PooledByteBufAllocator parent, SizeClasses sizeClass) {
             super(parent, sizeClass);
             lastDestroyedChunk = new AtomicReference<PoolChunk<byte[]>>();
+            bufferQueue = PlatformDependent.newFixedMpmcQueue(ARENA_BUFFER_QUEUE_CAPACITY);
+            handle = new ObjectPool.Handle<PooledHeapByteBuf>() {
+                @Override
+                public void recycle(PooledHeapByteBuf self) {
+                    bufferQueue.offer(self);
+                }
+            };
         }
 
         private static byte[] newByteArray(int size) {
@@ -662,8 +679,17 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected PooledByteBuf<byte[]> newByteBuf(int maxCapacity) {
-            return HAS_UNSAFE ? PooledUnsafeHeapByteBuf.newUnsafeInstance(maxCapacity)
-                    : PooledHeapByteBuf.newInstance(maxCapacity);
+            if (feasibleToUseThreadLocal()) {
+                return HAS_UNSAFE ? PooledUnsafeHeapByteBuf.newUnsafeInstance(maxCapacity)
+                        : PooledHeapByteBuf.newInstance(maxCapacity);
+            }
+            PooledByteBuf<byte[]> buf = bufferQueue.poll();
+            if (buf == null) {
+                buf = HAS_UNSAFE ? PooledUnsafeHeapByteBuf.newInstanceNoThreadLocal(handle)
+                        : PooledHeapByteBuf.newInstanceNoThreadLocal(handle);
+            }
+            buf.reuse(maxCapacity);
+            return buf;
         }
 
         @Override
@@ -677,9 +703,18 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     }
 
     static final class DirectArena extends PoolArena<ByteBuffer> {
+        private final Queue<PooledByteBuf<ByteBuffer>> bufferQueue;
+        private final ObjectPool.Handle<PooledByteBuf<ByteBuffer>> handle;
 
         DirectArena(PooledByteBufAllocator parent, SizeClasses sizeClass) {
             super(parent, sizeClass);
+            bufferQueue = PlatformDependent.newFixedMpmcQueue(ARENA_BUFFER_QUEUE_CAPACITY);
+            handle = new ObjectPool.Handle<PooledByteBuf<ByteBuffer>>() {
+                @Override
+                public void recycle(PooledByteBuf<ByteBuffer> self) {
+                    bufferQueue.offer(self);
+                }
+            };
         }
 
         @Override
@@ -729,11 +764,18 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
-            if (HAS_UNSAFE) {
-                return PooledUnsafeDirectByteBuf.newInstance(maxCapacity);
-            } else {
-                return PooledDirectByteBuf.newInstance(maxCapacity);
+            if (feasibleToUseThreadLocal()) {
+                return HAS_UNSAFE ? PooledUnsafeDirectByteBuf.newInstance(maxCapacity)
+                        : PooledDirectByteBuf.newInstance(maxCapacity);
             }
+            PooledByteBuf<ByteBuffer> buf = bufferQueue.poll();
+            if (buf == null) {
+                buf = HAS_UNSAFE ?
+                        PooledUnsafeDirectByteBuf.newInstanceNoThreadLocal(handle)
+                        : PooledDirectByteBuf.newInstanceNoThreadLocal(handle);
+            }
+            buf.reuse(maxCapacity);
+            return buf;
         }
 
         @Override
@@ -803,5 +845,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     @Override
     public int normalizeSize(int size) {
         return sizeClass.normalizeSize(size);
+    }
+
+    private static boolean feasibleToUseThreadLocal() {
+        return Thread.currentThread() instanceof FastThreadLocalThread;
     }
 }
