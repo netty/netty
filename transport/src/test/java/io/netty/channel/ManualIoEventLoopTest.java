@@ -16,8 +16,6 @@
 package io.netty.channel;
 
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
@@ -25,7 +23,6 @@ import org.junit.jupiter.api.function.Executable;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -90,6 +87,18 @@ public class ManualIoEventLoopTest {
             eventLoop.runNow();
         }
         eventLoop.terminationFuture().sync();
+    }
+
+    @Test
+    public void testShutdownOutSideOfOwningThread() throws Exception {
+        Semaphore semaphore = new Semaphore(0);
+        Thread ownerThread = new Thread();
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(ownerThread, executor ->
+                new TestIoHandler(semaphore));
+        eventLoop.shutdown();
+        assertTrue(eventLoop.isShuttingDown());
+        // we expect wakeup to be called!
+        assertEquals(1, semaphore.availablePermits());
     }
 
     @Test
