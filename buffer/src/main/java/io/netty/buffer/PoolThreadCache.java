@@ -64,6 +64,8 @@ final class PoolThreadCache {
     private int allocations;
     // A special `PoolThreadCache` that is not stored in thread-local.
     static final PoolThreadCache THREAD_CACHE_WITHOUT_THREAD_LOCAL = new PoolThreadCache();
+    final int smallCacheSize;
+    final int normalCacheSize;
 
     // TODO: Test if adding padding helps under contention
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
@@ -75,6 +77,8 @@ final class PoolThreadCache {
         this.freeSweepAllocationThreshold = freeSweepAllocationThreshold;
         this.heapArena = heapArena;
         this.directArena = directArena;
+        this.smallCacheSize = smallCacheSize;
+        this.normalCacheSize = normalCacheSize;
         if (directArena != null) {
             smallSubPageDirectCaches = createSubPageCaches(smallCacheSize, directArena.sizeClass.nSubpages);
             normalDirectCaches = createNormalCaches(normalCacheSize, maxCachedBufferCapacity, directArena);
@@ -115,6 +119,8 @@ final class PoolThreadCache {
         this.smallSubPageHeapCaches = null;
         this.normalHeapCaches = null;
         this.freeOnFinalize = null;
+        this.smallCacheSize = 0;
+        this.normalCacheSize = 0;
     }
 
     private static <T> MemoryRegionCache<T>[] createSubPageCaches(

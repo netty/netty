@@ -130,7 +130,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     abstract boolean isDirect();
 
     PooledByteBuf<T> allocate(PoolThreadCache cache, int reqCapacity, int maxCapacity) {
-        PooledByteBuf<T> buf = newByteBuf(maxCapacity);
+        PooledByteBuf<T> buf = newByteBuf(maxCapacity, cache);
         allocate(cache, buf, reqCapacity);
         return buf;
     }
@@ -539,7 +539,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     protected abstract PoolChunk<T> newChunk(int pageSize, int maxPageIdx, int pageShifts, int chunkSize);
     protected abstract PoolChunk<T> newUnpooledChunk(int capacity);
-    protected abstract PooledByteBuf<T> newByteBuf(int maxCapacity);
+    protected abstract PooledByteBuf<T> newByteBuf(int maxCapacity, PoolThreadCache cache);
     protected abstract void memoryCopy(T src, int srcOffset, PooledByteBuf<T> dst, int length);
     protected abstract void destroyChunk(PoolChunk<T> chunk);
 
@@ -678,8 +678,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         @Override
-        protected PooledByteBuf<byte[]> newByteBuf(int maxCapacity) {
-            if (feasibleToUseThreadLocal()) {
+        protected PooledByteBuf<byte[]> newByteBuf(int maxCapacity, PoolThreadCache threadCache) {
+            if (threadCache.useThreadLocal()) {
                 return HAS_UNSAFE ? PooledUnsafeHeapByteBuf.newUnsafeInstance(maxCapacity)
                         : PooledHeapByteBuf.newInstance(maxCapacity);
             }
@@ -763,8 +763,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         }
 
         @Override
-        protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity) {
-            if (feasibleToUseThreadLocal()) {
+        protected PooledByteBuf<ByteBuffer> newByteBuf(int maxCapacity, PoolThreadCache threadCache) {
+            if (threadCache.useThreadLocal()) {
                 return HAS_UNSAFE ? PooledUnsafeDirectByteBuf.newInstance(maxCapacity)
                         : PooledDirectByteBuf.newInstance(maxCapacity);
             }
@@ -845,9 +845,5 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     @Override
     public int normalizeSize(int size) {
         return sizeClass.normalizeSize(size);
-    }
-
-    private static boolean feasibleToUseThreadLocal() {
-        return Thread.currentThread() instanceof FastThreadLocalThread;
     }
 }
