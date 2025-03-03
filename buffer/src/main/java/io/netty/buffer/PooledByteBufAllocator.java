@@ -574,9 +574,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             }
         }
 
-        private boolean feasibleToUseThreadLocal(Thread thread) {
-            return PlatformDependent.checkVirtualThread(thread) == 1;
-        }
 
         private PoolArena<byte[]> selectHeapArena() {
             if (heapArenas == null || heapArenas.length == 0) {
@@ -620,6 +617,10 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
             return minArena;
         }
+    }
+
+    private static boolean feasibleToUseThreadLocal(Thread thread) {
+        return PlatformDependent.checkVirtualThread(thread) == 1;
     }
 
     private static boolean useCacheFinalizers(Thread current) {
