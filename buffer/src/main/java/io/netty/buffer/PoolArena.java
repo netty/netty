@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.Recycler;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.LongCounter;
 import io.netty.util.internal.ObjectPool;
@@ -632,13 +633,24 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         HeapArena(PooledByteBufAllocator parent, SizeClasses sizeClass) {
             super(parent, sizeClass);
             lastDestroyedChunk = new AtomicReference<PoolChunk<byte[]>>();
-            bufferQueue = PlatformDependent.newFixedMpmcQueue(ARENA_BUFFER_QUEUE_CAPACITY);
-            handle = new ObjectPool.Handle<PooledHeapByteBuf>() {
-                @Override
-                public void recycle(PooledHeapByteBuf self) {
-                    bufferQueue.offer(self);
-                }
-            };
+            // Virtual-thread not available, so no need to create `bufferQueue`.
+            if (PlatformDependent.javaVersion() < 19) {
+                bufferQueue = null;
+                handle = new ObjectPool.Handle<PooledHeapByteBuf>() {
+                    @Override
+                    public void recycle(PooledHeapByteBuf self) {
+                        // noop
+                    }
+                };
+            } else {
+                bufferQueue = PlatformDependent.newFixedMpmcQueue(ARENA_BUFFER_QUEUE_CAPACITY);
+                handle = new ObjectPool.Handle<PooledHeapByteBuf>() {
+                    @Override
+                    public void recycle(PooledHeapByteBuf self) {
+                        bufferQueue.offer(self);
+                    }
+                };
+            }
         }
 
         private static byte[] newByteArray(int size) {
@@ -683,7 +695,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 return HAS_UNSAFE ? PooledUnsafeHeapByteBuf.newUnsafeInstance(maxCapacity)
                         : PooledHeapByteBuf.newInstance(maxCapacity);
             }
-            PooledByteBuf<byte[]> buf = bufferQueue.poll();
+            PooledByteBuf<byte[]> buf = bufferQueue == null ? null : bufferQueue.poll();
             if (buf == null) {
                 buf = HAS_UNSAFE ? PooledUnsafeHeapByteBuf.newInstanceNoThreadLocal(handle)
                         : PooledHeapByteBuf.newInstanceNoThreadLocal(handle);
@@ -708,13 +720,24 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         DirectArena(PooledByteBufAllocator parent, SizeClasses sizeClass) {
             super(parent, sizeClass);
-            bufferQueue = PlatformDependent.newFixedMpmcQueue(ARENA_BUFFER_QUEUE_CAPACITY);
-            handle = new ObjectPool.Handle<PooledByteBuf<ByteBuffer>>() {
-                @Override
-                public void recycle(PooledByteBuf<ByteBuffer> self) {
-                    bufferQueue.offer(self);
-                }
-            };
+            // Virtual-thread not available, so no need to create `bufferQueue`.
+            if (PlatformDependent.javaVersion() < 19) {
+                bufferQueue = null;
+                handle = new ObjectPool.Handle<PooledByteBuf<ByteBuffer>>() {
+                    @Override
+                    public void recycle(PooledByteBuf<ByteBuffer> self) {
+                        // noop
+                    }
+                };
+            } else {
+                bufferQueue = PlatformDependent.newFixedMpmcQueue(ARENA_BUFFER_QUEUE_CAPACITY);
+                handle = new ObjectPool.Handle<PooledByteBuf<ByteBuffer>>() {
+                    @Override
+                    public void recycle(PooledByteBuf<ByteBuffer> self) {
+                        bufferQueue.offer(self);
+                    }
+                };
+            }
         }
 
         @Override
@@ -768,7 +791,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 return HAS_UNSAFE ? PooledUnsafeDirectByteBuf.newInstance(maxCapacity)
                         : PooledDirectByteBuf.newInstance(maxCapacity);
             }
-            PooledByteBuf<ByteBuffer> buf = bufferQueue.poll();
+            PooledByteBuf<ByteBuffer> buf = bufferQueue == null ? null : bufferQueue.poll();
             if (buf == null) {
                 buf = HAS_UNSAFE ?
                         PooledUnsafeDirectByteBuf.newInstanceNoThreadLocal(handle)
