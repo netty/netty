@@ -44,12 +44,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
 public final class ManualIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
-    private static final int ST_STARTED = 4;
-    private static final int ST_SHUTTING_DOWN = 5;
-    private static final int ST_SHUTDOWN = 6;
-    private static final int ST_TERMINATED = 7;
+    private static final int ST_STARTED = 0;
+    private static final int ST_SHUTTING_DOWN = 1;
+    private static final int ST_SHUTDOWN = 2;
+    private static final int ST_TERMINATED = 3;
 
-    private final AtomicInteger state = new AtomicInteger();
+    private final AtomicInteger state;
     private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
     private final Queue<Runnable> taskQueue = PlatformDependent.newMpscQueue();
     private final IoHandlerContext nonBlockingContext = new IoHandlerContext() {
@@ -95,6 +95,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     public ManualIoEventLoop(Thread owningThread, IoHandlerFactory factory) {
         this.owningThread = Objects.requireNonNull(owningThread, "owningThread");
         this.handler = factory.newHandler(this);
+        state = new AtomicInteger(ST_STARTED);
     }
 
     private int runAllTasks() {
