@@ -574,7 +574,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             }
         }
 
-
         private PoolArena<byte[]> selectHeapArena() {
             if (heapArenas == null || heapArenas.length == 0) {
                 return null;
