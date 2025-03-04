@@ -107,7 +107,7 @@ jobs:
   build-pr-aarch64:
     name: linux-aarch64-verify-native
     # The host should always be Linux
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     permissions:
       contents: read  # for actions/checkout to fetch code
       packages: write  # for uraimo/run-on-arch-action to cache docker images
