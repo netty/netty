@@ -202,9 +202,9 @@ public final class IoUringIoHandler implements IoHandler {
         if (ioUringBufRingAddr < 0) {
             throw Errors.newIOException("ioUringRegisterBuffRing", (int) ioUringBufRingAddr);
         }
-        return new IoUringBufferRing(
-                ringFd, ioUringBufRingAddr,
-                bufferRingSize, bufferGroupId, bufferRingConfig.isIncremental(), bufferRingConfig.allocator()
+        return new IoUringBufferRing(ringFd, ioUringBufRingAddr,
+                bufferRingSize, bufferRingConfig.maxUnreleasedBuffers(),
+                bufferGroupId, bufferRingConfig.isIncremental(), bufferRingConfig.allocator()
         );
     }
 

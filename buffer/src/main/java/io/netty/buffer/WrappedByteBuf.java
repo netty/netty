@@ -37,7 +37,7 @@ import java.nio.charset.Charset;
  * indices on the fly because of internal optimizations made by {@link ByteBufUtil#writeAscii(ByteBuf, CharSequence)}
  * and {@link ByteBufUtil#writeUtf8(ByteBuf, CharSequence)}.
  */
-class WrappedByteBuf extends ByteBuf {
+public class WrappedByteBuf extends ByteBuf {
 
     protected final ByteBuf buf;
 
