@@ -106,14 +106,31 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
 
     private final String[] jvmArgs;
 
+    /**
+     * Default settings:
+     * <br>
+     * Disable assertion in package: {@code io.netty.*}, except {@code io.netty.microbench.*}.
+     * <br>
+     * Use custom {@code HarnessExecutor}.
+     */
     public AbstractMicrobenchmark() {
-        this(false, false);
+        this(true, false);
     }
 
+    /**
+     * @param disableAssertions If true, it will disable assertion in package: {@code io.netty.*},
+     *                          except {@code io.netty.microbench.*},
+     *                          which means package {@code io.netty.microbench.*} always gets assertion enabled.
+     */
     public AbstractMicrobenchmark(boolean disableAssertions) {
         this(disableAssertions, false);
     }
 
+    /**
+     * @param disableAssertions If true, it will disable assertion in package: {@code io.netty.*},
+     *                          except {@code io.netty.microbench.*},
+     *                          which means package {@code io.netty.microbench.*} always gets assertion enabled.
+     */
     public AbstractMicrobenchmark(boolean disableAssertions, boolean disableHarnessExecutor) {
 
         final List<String> jvmArgs = new ArrayList<>(Arrays.asList(BASE_JVM_ARGS));
@@ -129,6 +146,8 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
         }
         if (disableAssertions) {
             removeAssertions(jvmArgs);
+            // Enable assertion in 'io.netty.microbench.*' package.
+            jvmArgs.add("-ea:io.netty.microbench...");
         }
         this.jvmArgs = jvmArgs.toArray(EmptyArrays.EMPTY_STRINGS);
     }
