@@ -15,6 +15,7 @@
  */
 package io.netty.util.internal;
 
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import sun.misc.Unsafe;
@@ -61,6 +62,10 @@ final class PlatformDependent0 {
             "org.graalvm.nativeimage.imagecode");
 
     private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
+
+    private static final Method VIRTUAL_THREAD_CHECK_METHOD = getVirtualThreadCheckMethod();
+
+    private static final Class<?> BASE_VIRTUAL_THREAD_CLASS = getBaseVirtualThreadClass();
 
     static final Unsafe UNSAFE;
 
@@ -539,6 +544,74 @@ final class PlatformDependent0 {
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
+    }
+
+    private static Method getVirtualThreadCheckMethod() {
+        if (JAVA_VERSION < 19) {
+            return null;
+        }
+        try {
+            Method isVirtualMethod = Thread.class.getMethod("isVirtual");
+            // Call once to make sure the invocation works.
+            boolean isVirtual = (Boolean) isVirtualMethod.invoke(Thread.currentThread());
+            return isVirtualMethod;
+        } catch (Throwable e) {
+            if (logger.isTraceEnabled()) {
+                logger.debug("virtual thread check method is not available: ", e);
+            } else {
+                logger.debug("virtual thread check method is not available: ", e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    private static Class<?> getBaseVirtualThreadClass() {
+        if (JAVA_VERSION < 19) {
+            return null;
+        }
+        try {
+            return Class.forName("java.lang.BaseVirtualThread", false, ClassLoader.getSystemClassLoader());
+        } catch (Throwable e) {
+            if (logger.isTraceEnabled()) {
+                logger.debug("java.lang.BaseVirtualThread is not available: ", e);
+            } else {
+                logger.debug("java.lang.BaseVirtualThread is not available: ", e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
+     * @param thread the thread to be checked.
+     * @return
+     * {@code 0}: MUST be a virtual thread.
+     * <br>
+     * {@code 1}: MUST NOT be a virtual thread.
+     * <br>
+     * {@code -1}: Not able to check the thread type.
+     */
+    static int checkVirtualThread(Thread thread) {
+        if (thread == null || JAVA_VERSION < 19 || thread instanceof FastThreadLocalThread) {
+            return 1;
+        }
+        if (BASE_VIRTUAL_THREAD_CLASS != null) {
+            return BASE_VIRTUAL_THREAD_CLASS.isInstance(thread) ? 0 : 1;
+        }
+        Class<?> clazz = thread.getClass();
+        if (clazz == Thread.class || clazz.getSuperclass() == Thread.class) {
+            return 1;
+        }
+        if (VIRTUAL_THREAD_CHECK_METHOD == null) {
+            return -1;
+        }
+        try {
+            return (Boolean) VIRTUAL_THREAD_CHECK_METHOD.invoke(thread) ? 0 : 1;
+        } catch (Throwable t) {
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
+            throw new Error(t);
+        }
     }
 
     private static boolean unsafeStaticFieldOffsetSupported() {
