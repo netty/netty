@@ -26,7 +26,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.unix.Socket;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -35,13 +34,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -131,8 +130,19 @@ public class IoUringBufferRingTest {
         ByteBuf writeBuffer = Unpooled.directBuffer(randomStringLength);
         ByteBufUtil.writeAscii(writeBuffer, randomString);
         ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
+        if (incremental) {
+            // Need to unwrap as its a slice.
+            assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement1.unwrap());
+        } else {
+            assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement1);
+        }
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-
+        if (incremental) {
+            // Need to unwrap as its a slice.
+            assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement2.unwrap());
+        } else {
+            assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement2);
+        }
         ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         readBuffer.release();
 
