@@ -72,6 +72,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         }
     };
     private final BlockingIoHandlerContext blockingContext = new BlockingIoHandlerContext();
+    private final IoEventLoopGroup parent;
     private final Thread owningThread;
     private final IoHandler handler;
 
@@ -93,6 +94,23 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      *                          used by this {@link IoEventLoop}.
      */
     public ManualIoEventLoop(Thread owningThread, IoHandlerFactory factory) {
+        this(null, owningThread, factory);
+    }
+
+    /**
+     * Create a new {@link IoEventLoop} that is owned by the user and so needs to be driven by the user with the given
+     * {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or
+     * {@link #run(long)} to execute IO or tasks that were submitted to this {@link IoEventLoop}.
+     *
+     * @param parent            the parent {@link IoEventLoopGroup} or {@code null} if no parent.
+     * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link IoEventLoop}. The
+     *                          user will use this {@link Thread} to call {@link #runNow()} or {@link #run(long)} to
+     *                          make progress.
+     * @param factory           the {@link IoHandlerFactory} that will be used to create the {@link IoHandler} that is
+     *                          used by this {@link IoEventLoop}.
+     */
+    public ManualIoEventLoop(IoEventLoopGroup parent, Thread owningThread, IoHandlerFactory factory) {
+        this.parent = parent;
         this.owningThread = Objects.requireNonNull(owningThread, "owningThread");
         this.handler = factory.newHandler(this);
         state = new AtomicInteger(ST_STARTED);
@@ -208,7 +226,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
 
     @Override
     public IoEventLoopGroup parent() {
-        return null;
+        return parent;
     }
 
     @Deprecated
