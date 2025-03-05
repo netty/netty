@@ -22,6 +22,7 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThreadExecutorMap;
 
 import java.util.Collection;
 import java.util.List;
@@ -124,35 +125,40 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
             initialized = true;
             handler.initialize();
         }
-        if (isShuttingDown()) {
-            if (terminationFuture.isDone()) {
-                // Already completely terminated
-                return 0;
-            }
-            // Run all tasks before prepare to destroy.
-            int run = runAllTasks();
-            handler.prepareToDestroy();
-            if (confirmShutdown()) {
-                // Destroy the handler now and run all remaining tasks.
-                try {
-                    handler.destroy();
-                    for (;;) {
-                        int r = runAllTasks();
-                        run += r;
-                        if (r == 0) {
-                            break;
-                        }
-                    }
-                } finally {
-                    state.set(ST_TERMINATED);
-                    terminationFuture.setSuccess(null);
+        ThreadExecutorMap.setCurrentExecutor(this);
+        try {
+            if (isShuttingDown()) {
+                if (terminationFuture.isDone()) {
+                    // Already completely terminated
+                    return 0;
                 }
+                // Run all tasks before prepare to destroy.
+                int run = runAllTasks();
+                handler.prepareToDestroy();
+                if (confirmShutdown()) {
+                    // Destroy the handler now and run all remaining tasks.
+                    try {
+                        handler.destroy();
+                        for (;;) {
+                            int r = runAllTasks();
+                            run += r;
+                            if (r == 0) {
+                                break;
+                            }
+                        }
+                    } finally {
+                        state.set(ST_TERMINATED);
+                        terminationFuture.setSuccess(null);
+                    }
+                }
+                return run;
             }
-            return run;
+            int run = handler.run(context);
+            // Now run all tasks.
+            return run + runAllTasks();
+        } finally {
+            ThreadExecutorMap.setCurrentExecutor(null);
         }
-        int run = handler.run(context);
-        // Now run all tasks.
-        return run + runAllTasks();
     }
 
     /**
