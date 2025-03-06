@@ -1675,9 +1675,41 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.returnTypeErasureChanged</code>
+                  <old>method B io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::decoderEnforceMaxConsecutiveEmptyDataFrames(int) @ io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder</old>
+                  <new>method io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder::decoderEnforceMaxConsecutiveEmptyDataFrames(int)</new>
+                  <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.returnTypeErasureChanged</code>
+                  <old>method B io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::decoderEnforceMaxRstFramesPerWindow(int, int) @ io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder</old>
+                  <new>method io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder::decoderEnforceMaxRstFramesPerWindow(int, int)</new>
+                  <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.method.visibilityIncreased</code>
                   <old>method B io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::encoderIgnoreMaxHeaderListSize(boolean) @ io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder</old>
                   <new>method io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder::encoderIgnoreMaxHeaderListSize(boolean)</new>
+                  <oldVisibility>protected</oldVisibility>
+                  <newVisibility>public</newVisibility>
+                  <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method B io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::decoderEnforceMaxConsecutiveEmptyDataFrames(int) @ io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder</old>
+                  <new>method io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder::decoderEnforceMaxConsecutiveEmptyDataFrames(int)</new>
+                  <oldVisibility>protected</oldVisibility>
+                  <newVisibility>public</newVisibility>
+                  <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method B io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::decoderEnforceMaxRstFramesPerWindow(int, int) @ io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder</old>
+                  <new>method io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder::decoderEnforceMaxRstFramesPerWindow(int, int)</new>
                   <oldVisibility>protected</oldVisibility>
                   <newVisibility>public</newVisibility>
                   <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
