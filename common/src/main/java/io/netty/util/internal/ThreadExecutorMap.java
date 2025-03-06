@@ -40,8 +40,8 @@ public final class ThreadExecutorMap {
     /**
      * Set the current {@link EventExecutor} that is used by the {@link Thread}.
      */
-    public static void setCurrentExecutor(EventExecutor executor) {
-        mappings.set(executor);
+    public static EventExecutor setCurrentExecutor(EventExecutor executor) {
+        return mappings.getAndSet(executor);
     }
 
     /**
@@ -69,11 +69,11 @@ public final class ThreadExecutorMap {
         return new Runnable() {
             @Override
             public void run() {
-                setCurrentExecutor(eventExecutor);
+                EventExecutor old = setCurrentExecutor(eventExecutor);
                 try {
                     command.run();
                 } finally {
-                    setCurrentExecutor(null);
+                    setCurrentExecutor(old);
                 }
             }
         };

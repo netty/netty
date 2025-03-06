@@ -47,6 +47,20 @@ public class FastThreadLocalTest {
     }
 
     @Test
+    public void testGetAndSetReturnsOldValue() {
+        FastThreadLocal<Boolean> threadLocal = new FastThreadLocal<Boolean>() {
+            @Override
+            protected Boolean initialValue() {
+                return Boolean.TRUE;
+            }
+        };
+
+        assertNull(threadLocal.getAndSet(Boolean.FALSE));
+        assertEquals(Boolean.FALSE, threadLocal.get());
+        threadLocal.remove();
+    }
+
+    @Test
     public void testGetIfExists() {
         FastThreadLocal<Boolean> threadLocal = new FastThreadLocal<Boolean>() {
             @Override
