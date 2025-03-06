@@ -16,11 +16,14 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.DuplicatedByteBuf;
+import io.netty.buffer.SlicedByteBuf;
+import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.WrappedByteBuf;
 import io.netty.util.internal.PlatformDependent;
 
+import java.nio.ByteOrder;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class IoUringBufferRing {
@@ -64,6 +67,7 @@ final class IoUringBufferRing {
         for (short i = 0; i < entries; i++) {
             fillBuffer(i);
         }
+        usable = true;
     }
 
     /**
@@ -171,7 +175,8 @@ final class IoUringBufferRing {
         Arrays.fill(buffers, null);
     }
 
-    private final class IoUringBufferRingByteBuf extends WrappedByteBuf {
+    // Package-private for testing
+    final class IoUringBufferRingByteBuf extends WrappedByteBuf {
         IoUringBufferRingByteBuf(ByteBuf buf) {
             super(buf);
         }
@@ -180,6 +185,66 @@ final class IoUringBufferRing {
             if (unreleasedBuffers.incrementAndGet() == maxUnreleasedBuffers) {
                 usable = false;
             }
+        }
+
+        @SuppressWarnings("deprecation")
+        @Override
+        public ByteBuf order(ByteOrder endianness) {
+            if (endianness == order()) {
+                return this;
+            }
+            return new SwappedByteBuf(this);
+        }
+
+        @Override
+        public ByteBuf slice() {
+            return slice(readerIndex(), readableBytes());
+        }
+
+        @Override
+        public ByteBuf retainedSlice() {
+            return slice().retain();
+        }
+
+        @SuppressWarnings("deprecation")
+        @Override
+        public ByteBuf slice(int index, int length) {
+            return new SlicedByteBuf(this, index, length);
+        }
+
+        @Override
+        public ByteBuf retainedSlice(int index, int length) {
+            return slice(index, length).retain();
+        }
+
+        @Override
+        public ByteBuf readSlice(int length) {
+            ByteBuf slice = slice(readerIndex(), length);
+            skipBytes(length);
+            return slice;
+        }
+
+        @Override
+        public ByteBuf readRetainedSlice(int length) {
+            ByteBuf slice = retainedSlice(readerIndex(), length);
+            try {
+                skipBytes(length);
+            } catch (Throwable cause) {
+                slice.release();
+                throw cause;
+            }
+            return slice;
+        }
+
+        @SuppressWarnings("deprecation")
+        @Override
+        public ByteBuf duplicate() {
+            return new DuplicatedByteBuf(this);
+        }
+
+        @Override
+        public ByteBuf retainedDuplicate() {
+            return duplicate().retain();
         }
 
         @Override
