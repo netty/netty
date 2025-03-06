@@ -179,7 +179,8 @@ public final class IoUringIoHandler implements IoHandler {
             long timeoutNanos = context.deadlineNanos() == -1 ? -1 : context.delayNanos(System.nanoTime());
             submitAndWaitWithTimeout(submissionQueue, false, timeoutNanos);
         } else {
-            submitAndClear(submissionQueue);
+            // Even if we have some completions already pending we can still try to even fetch more.
+            submitAndClearNow(submissionQueue);
         }
         for (;;) {
             // we might call submitAndRunNow() while processing stuff in the completionArray we need to
@@ -190,7 +191,7 @@ public final class IoUringIoHandler implements IoHandler {
             // Let's submit again.
             // If we were not able to submit anything and there was nothing left in the completionBuffer we will
             // break out of the loop and return to the caller.
-            if (submitAndClear(submissionQueue) == 0 && processed == 0) {
+            if (submitAndClearNow(submissionQueue) == 0 && processed == 0) {
                 break;
             }
         }
@@ -204,14 +205,14 @@ public final class IoUringIoHandler implements IoHandler {
         }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
-        if (submitAndClear(submissionQueue) > 0) {
+        if (submitAndClearNow(submissionQueue) > 0) {
             completionBuffer.drain(completionQueue);
             completionBuffer.processOneNow(this::handle, udata);
         }
     }
 
-    private int submitAndClear(SubmissionQueue submissionQueue) {
-        int submitted = submissionQueue.submit();
+    private int submitAndClearNow(SubmissionQueue submissionQueue) {
+        int submitted = submissionQueue.submitAndGetNow();
 
         // Clear the iovArray as we can re-use it now as things are considered stable after submission:
         // See https://man7.org/linux/man-pages/man3/io_uring_prep_sendmsg.3.html
@@ -343,7 +344,7 @@ public final class IoUringIoHandler implements IoHandler {
                 submissionQueue.addTimeout(timeoutMemoryAddress, udata);
             }
         }
-        int submitted = submissionQueue.submitAndWait();
+        int submitted = submissionQueue.submitAndGet();
         // Clear the iovArray as we can re-use it now as things are considered stable after submission:
         // See https://man7.org/linux/man-pages/man3/io_uring_prep_sendmsg.3.html
         iovArray.clear();
@@ -370,12 +371,12 @@ public final class IoUringIoHandler implements IoHandler {
         submissionQueue.addNop((byte) Native.IOSQE_IO_DRAIN, udata);
 
         // Submit everything and wait until we could drain i.
-        submissionQueue.submitAndWait();
+        submissionQueue.submitAndGet();
         while (completionQueue.hasCompletions()) {
             completionQueue.process(this::handle);
 
             if (submissionQueue.count() > 0) {
-                submissionQueue.submit();
+                submissionQueue.submitAndGetNow();
             }
         }
     }
@@ -440,7 +441,7 @@ public final class IoUringIoHandler implements IoHandler {
             drainAndProcessAll(completionQueue, handler);
             completionQueue.process(handler);
             while (!handler.eventFdDrained) {
-                submissionQueue.submitAndWait();
+                submissionQueue.submitAndGet();
                 drainAndProcessAll(completionQueue, handler);
             }
         }
@@ -637,7 +638,7 @@ public final class IoUringIoHandler implements IoHandler {
     IovArray iovArray() {
         if (iovArray.isFull()) {
             // Submit so we can reuse the iovArray.
-            submitAndClear(ringBuffer.ioUringSubmissionQueue());
+            submitAndClearNow(ringBuffer.ioUringSubmissionQueue());
         }
         assert iovArray.count() == 0;
         return iovArray;
