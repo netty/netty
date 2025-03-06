@@ -15,14 +15,18 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.internal.ThreadExecutorMap;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +35,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -110,6 +116,24 @@ public class ManualIoEventLoopTest {
 
         assertThrows(IllegalStateException.class, eventLoop::runNow);
         assertThrows(IllegalStateException.class, () -> eventLoop.run(10));
+    }
+
+    @Test
+    public void testThreadEventExecutorMap() throws Exception {
+        final BlockingQueue<EventExecutor> queue = new LinkedBlockingQueue<>();
+        Semaphore semaphore = new Semaphore(0);
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(Thread.currentThread(), executor ->
+                new TestIoHandler(semaphore));
+        assertNull(ThreadExecutorMap.currentExecutor());
+        eventLoop.execute(() -> queue.offer(ThreadExecutorMap.currentExecutor()));
+        assertEquals(1, eventLoop.runNow());
+        assertSame(eventLoop, queue.take());
+        eventLoop.shutdown();
+
+        while (!eventLoop.isTerminated()) {
+            eventLoop.runNow();
+        }
+        eventLoop.terminationFuture().sync();
     }
 
     @Test
