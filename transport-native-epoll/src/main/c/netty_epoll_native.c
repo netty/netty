@@ -36,6 +36,7 @@
 #include <inttypes.h>
 #include <link.h>
 #include <time.h>
+#include <linux/if_tun.h>
 // Needed to be able to use syscalls directly and so not depend on newer GLIBC versions
 #include <linux/net.h>
 #include <sys/syscall.h>
@@ -660,6 +661,14 @@ static jint netty_epoll_native_recvmmsg0(JNIEnv* env, jclass clazz, jint fd, jbo
     return (jint) res;
 }
 
+static jboolean netty_epoll_native_isSupportingMultiQueue(JNIEnv* env, jclass clazz) {
+#if defined(IFF_MULTI_QUEUE)
+    return JNI_TRUE;
+#else
+    return JNI_FALSE;
+#endif
+}
+
 static jstring netty_epoll_native_kernelVersion(JNIEnv* env, jclass clazz) {
     struct utsname name;
 
@@ -789,7 +798,8 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "isSupportingSendmmsg", "()Z", (void *) netty_epoll_native_isSupportingSendmmsg },
   { "isSupportingRecvmmsg", "()Z", (void *) netty_epoll_native_isSupportingRecvmmsg },
   { "tcpFastopenMode", "()I", (void *) netty_epoll_native_tcpFastopenMode },
-  { "kernelVersion", "()Ljava/lang/String;", (void *) netty_epoll_native_kernelVersion }
+  { "kernelVersion", "()Ljava/lang/String;", (void *) netty_epoll_native_kernelVersion },
+  { "isSupportingMultiQueue", "()Z", (void *) netty_epoll_native_isSupportingMultiQueue }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 static const JNINativeMethod fixed_method_table[] = {
