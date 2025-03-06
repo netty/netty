@@ -205,7 +205,7 @@ public class FastThreadLocal<V> {
     /**
      * Set the value for the current thread and returns the old value.
      */
-    public final V getAndSet(V value) {
+    public V getAndSet(V value) {
         if (value != InternalThreadLocalMap.UNSET) {
             InternalThreadLocalMap threadLocalMap = InternalThreadLocalMap.get();
             return setKnownNotUnset(threadLocalMap, value);
@@ -216,7 +216,7 @@ public class FastThreadLocal<V> {
     /**
      * Set the value for the specified thread local map. The specified thread local map must be for the current thread.
      */
-    public final V getAndSet(InternalThreadLocalMap threadLocalMap, V value) {
+    public V getAndSet(InternalThreadLocalMap threadLocalMap, V value) {
         if (value != InternalThreadLocalMap.UNSET) {
             return setKnownNotUnset(threadLocalMap, value);
         }
