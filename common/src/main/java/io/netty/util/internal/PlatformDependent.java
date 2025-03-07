@@ -364,6 +364,19 @@ public final class PlatformDependent {
     }
 
     /**
+     * @param thread the thread to be checked.
+     * @return
+     * {@code 0}: MUST be a virtual thread.
+     * <br>
+     * {@code 1}: MUST NOT be a virtual thread.
+     * <br>
+     * {@code -1}: Not able to check the thread type.
+     */
+    public static int checkVirtualThread(Thread thread) {
+        return PlatformDependent0.checkVirtualThread(thread);
+    }
+
+    /**
      * Returns {@code true} if and only if it is fine to enable TCP_NODELAY socket option by default.
      */
     public static boolean canEnableTcpNoDelayByDefault() {
