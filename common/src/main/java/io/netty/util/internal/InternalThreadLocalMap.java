@@ -331,15 +331,21 @@ public final class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap
      * @return {@code true} if and only if a new thread-local variable has been created
      */
     public boolean setIndexedVariable(int index, Object value) {
+        return getAndSetIndexedVariable(index, value) == UNSET;
+    }
+
+    /**
+     * @return {@link InternalThreadLocalMap#UNSET} if and only if a new thread-local variable has been created.
+     */
+    public Object getAndSetIndexedVariable(int index, Object value) {
         Object[] lookup = indexedVariables;
         if (index < lookup.length) {
             Object oldValue = lookup[index];
             lookup[index] = value;
-            return oldValue == UNSET;
-        } else {
-            expandIndexedVariableTableAndSet(index, value);
-            return true;
+            return oldValue;
         }
+        expandIndexedVariableTableAndSet(index, value);
+        return UNSET;
     }
 
     private void expandIndexedVariableTableAndSet(int index, Object value) {
