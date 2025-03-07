@@ -18,15 +18,14 @@
 
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>9</version>
+    <groupId>io.netty</groupId>
+    <artifactId>minimal-parent</artifactId>
+    <version>5.0.0.Alpha6-SNAPSHOT</version>
+    <relativePath>minimal-parent</relativePath>
   </parent>
 
-  <groupId>io.netty</groupId>
   <artifactId>netty5-parent</artifactId>
   <packaging>pom</packaging>
-  <version>5.0.0.Alpha6-SNAPSHOT</version>
 
   <name>Netty 5 Parent</name>
   <url>https://netty.io/</url>
@@ -48,13 +47,6 @@
     </license>
   </licenses>
   <inceptionYear>2008</inceptionYear>
-
-  <scm>
-    <url>https://github.com/netty/netty</url>
-    <connection>scm:git:git://github.com/netty/netty.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/netty/netty.git</developerConnection>
-    <tag>HEAD</tag>
-  </scm>
 
   <developers>
     <developer>
@@ -78,7 +70,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.3.2</version>
             <executions>
               <execution>
                 <id>aggregate</id>
@@ -516,7 +507,6 @@
           <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.7.7.201606060606</version>
             <executions>
               <execution>
                 <id>jacoco-prepare-agent</id>
@@ -563,9 +553,6 @@
     <argLine.printGC>-Xlog:gc</argLine.printGC>
     <argLine.java9 /> <!-- Overridden when 'java9' profile is active -->
     <argLine.javaProperties>-D_</argLine.javaProperties>
-    <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
-    <!-- Fedora-"like" systems. This is currently only used for the netty-tcnative dependency -->
-    <osmaven.version>1.7.1</osmaven.version>
     <!-- keep in sync with PlatformDependent#ALLOWED_LINUX_OS_CLASSIFIERS -->
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
@@ -588,7 +575,6 @@
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.17.2</log4j2.version>
-    <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.11.0-M1</junit.version>
     <nativebuildtools.version>0.9.13</nativebuildtools.version>
     <skipTests>false</skipTests>
@@ -606,6 +592,7 @@
   </properties>
 
   <modules>
+    <module>minimal-parent</module>
     <module>all</module>
     <module>common</module>
     <module>buffer</module>
@@ -967,26 +954,10 @@
   </dependencies>
 
   <build>
-    <extensions>
-      <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>${osmaven.version}</version>
-      </extension>
-    </extensions>
-
     <plugins>
       <plugin>
         <groupId>org.revapi</groupId>
         <artifactId>revapi-maven-plugin</artifactId>
-        <version>0.15.0</version>
-        <dependencies>
-          <dependency>
-            <groupId>org.revapi</groupId>
-            <artifactId>revapi-java</artifactId>
-            <version>0.28.1</version>
-          </dependency>
-        </dependencies>
         <configuration>
           <skip>true</skip> <!-- Skip this until we've released Netty 5.0.0.Final -->
           <versionFormat>.*\.Final</versionFormat>
@@ -1010,7 +981,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>${enforcer.plugin.version}</version>
         <executions>
           <execution>
             <id>enforce-tools</id>
@@ -1041,15 +1011,12 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.0</version>
         <configuration>
-          <compilerVersion>11</compilerVersion>
           <fork>true</fork>
           <source>${maven.compiler.source}</source>
           <target>${maven.compiler.target}</target>
           <release>${maven.compiler.target}</release>
           <debug>true</debug>
-          <optimize>true</optimize>
           <showDeprecation>true</showDeprecation>
           <showWarnings>true</showWarnings>
           <compilerArgument>-Xlint:-options</compilerArgument>
@@ -1069,8 +1036,33 @@
         </configuration>
       </plugin>
       <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <archive>
+                <manifest>
+                  <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                  <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                </manifest>
+                <manifestEntries>
+                  <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                </manifestEntries>
+                <index>true</index>
+                <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+              </archive>
+            </configuration>
+          </execution>
+          <execution>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>3.1.2</version>
         <executions>
           <execution>
             <id>check-style</id>
@@ -1130,7 +1122,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>xml-maven-plugin</artifactId>
-        <version>1.0.1</version>
         <executions>
           <execution>
             <id>check-style</id>
@@ -1191,7 +1182,6 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <version>5.1.8</version>
         <executions>
           <execution>
             <id>generate-manifest</id>
@@ -1219,7 +1209,6 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.10</version>
         <executions>
           <execution>
             <id>parse-version</id>
@@ -1232,7 +1221,6 @@
 
       <plugin>
         <artifactId>maven-source-plugin</artifactId>
-        <version>3.2.0</version>
         <!-- Eclipse-related OSGi manifests
              See https://github.com/netty/netty/issues/3886
              More information: https://rajakannappan.blogspot.ie/2010/03/automating-eclipse-source-bundle.html -->
@@ -1268,7 +1256,6 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>3.3.2</version>
         <configuration>
           <detectOfflineLinks>false</detectOfflineLinks>
           <breakiterator>true</breakiterator>
@@ -1279,37 +1266,11 @@
       </plugin>
       <plugin>
         <artifactId>maven-deploy-plugin</artifactId>
-        <version>2.8.2</version>
         <configuration>
           <retryFailedDeploymentCount>10</retryFailedDeploymentCount>
           <skip>${skipDeploy}</skip>
         </configuration>
       </plugin>
-      <plugin>
-        <artifactId>maven-release-plugin</artifactId>
-        <!-- Downgrade to 2.4.1 if release fails -->
-        <version>2.5.3</version>
-        <configuration>
-          <useReleaseProfile>false</useReleaseProfile>
-          <arguments>-P restricted-release,sonatype-oss-release,full</arguments>
-          <autoVersionSubmodules>true</autoVersionSubmodules>
-          <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
-          <tagNameFormat>netty-@{project.version}</tagNameFormat>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-api</artifactId>
-            <version>1.9.4</version>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-provider-gitexe</artifactId>
-            <version>1.9.4</version>
-          </dependency>
-        </dependencies>
-      </plugin>
-
       <!-- Ensure to put maven-antrun-plugin at the end of the plugin list
            so that they are run lastly in the same phase. -->
       <plugin>
@@ -1384,170 +1345,45 @@
             </configuration>
           </execution>
         </executions>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-            <version>1.10.11</version>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant-launcher</artifactId>
-            <version>1.9.7</version>
-          </dependency>
-          <dependency>
-            <groupId>ant-contrib</groupId>
-            <artifactId>ant-contrib</artifactId>
-            <version>1.0b3</version>
-            <exclusions>
-              <exclusion>
-                <groupId>ant</groupId>
-                <artifactId>ant</artifactId>
-              </exclusion>
-            </exclusions>
-          </dependency>
-        </dependencies>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-remote-resources-plugin</artifactId>
-        <version>1.5</version>
-      </plugin>
-    </plugins>
-
-    <pluginManagement>
-      <plugins>
-        <!-- keep surefire and failsafe in sync -->
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.2</version>
-        </plugin>
-        <!-- keep surefire and failsafe in sync -->
-        <plugin>
-          <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.22.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-clean-plugin</artifactId>
-          <version>3.0.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-resources-plugin</artifactId>
-          <version>3.0.1</version>
-          <executions>
-            <execution>
-              <id>default-testResources</id>
-              <phase>process-test-resources</phase>
-              <goals>
-                <goal>testResources</goal>
-              </goals>
-              <configuration>
-                <resources>
-                  <resource>
-                    <directory>${project.basedir}/src/test/resources</directory>
-                  </resource>
-                  <resource>
-                    <directory>${project.build.outputDirectory}</directory>
-                    <excludes>
-                      <!--
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-testResources</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>testResources</goal>
+            </goals>
+            <configuration>
+              <resources>
+                <resource>
+                  <directory>${project.basedir}/src/test/resources</directory>
+                </resource>
+                <resource>
+                  <directory>${project.build.outputDirectory}</directory>
+                  <excludes>
+                    <!--
 -                       Exclude native files as these are already in the classes directory. This is needed as
 -                       otherwise NativeLibraryLoader will fail to load the native lib as it detects duplicates on
 -                       the classpath.
 -                     -->
-                      <exclude>META-INF/native/*.*</exclude>
-                    </excludes>
-                    <includes>
-                      <!-- Include everything else -->
-                      <include>*.*</include>
-                    </includes>
-                  </resource>
-                </resources>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.ops4j.pax.exam</groupId>
-          <artifactId>maven-paxexam-plugin</artifactId>
-          <version>1.2.4</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>3.0.2</version>
-          <executions>
-            <execution>
-              <id>default-jar</id>
-              <configuration>
-                <archive>
-                  <manifest>
-                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                  </manifest>
-                  <manifestEntries>
-                    <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
-                  </manifestEntries>
-                  <index>true</index>
-                  <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-                </archive>
-              </configuration>
-            </execution>
-            <execution>
-              <goals>
-                <goal>test-jar</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <artifactId>maven-dependency-plugin</artifactId>
-          <version>2.10</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.6</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-jxr-plugin</artifactId>
-          <version>3.1.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-antrun-plugin</artifactId>
-          <version>1.8</version>
-          <dependencies>
-            <dependency>
-              <groupId>ant-contrib</groupId>
-              <artifactId>ant-contrib</artifactId>
-              <version>1.0b3</version>
-              <exclusions>
-                <exclusion>
-                  <groupId>ant</groupId>
-                  <artifactId>ant</artifactId>
-                </exclusion>
-              </exclusions>
-            </dependency>
-          </dependencies>
-        </plugin>
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.10</version>
-        </plugin>
-        <plugin>
-          <groupId>org.fusesource.hawtjni</groupId>
-          <artifactId>hawtjni-maven-plugin</artifactId>
-          <version>1.18</version>
-        </plugin>
-        <plugin>
-          <groupId>kr.motd.maven</groupId>
-          <artifactId>exec-maven-plugin</artifactId>
-          <version>1.0.0.Final</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-shade-plugin</artifactId>
-          <version>3.2.1</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
+                    <exclude>META-INF/native/*.*</exclude>
+                  </excludes>
+                  <includes>
+                    <!-- Include everything else -->
+                    <include>*.*</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+      </plugin>
+    </plugins>
   </build>
 </project>
