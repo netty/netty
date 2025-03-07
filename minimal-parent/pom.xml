@@ -14,8 +14,7 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>io.netty</groupId>
@@ -177,7 +176,7 @@
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>animal-sniffer-maven-plugin</artifactId>
-          <version>1.16</version>
+          <version>1.24</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -203,7 +202,7 @@
         <plugin>
           <groupId>org.apache.felix</groupId>
           <artifactId>maven-bundle-plugin</artifactId>
-          <version>5.1.9</version>
+          <version>6.0.0</version>
         </plugin>
         <plugin>
           <groupId>org.jacoco</groupId>
@@ -213,7 +212,7 @@
         <plugin>
           <groupId>org.revapi</groupId>
           <artifactId>revapi-maven-plugin</artifactId>
-          <version>0.14.6</version>
+          <version>0.15.0</version>
           <dependencies>
             <dependency>
               <groupId>org.revapi</groupId>
@@ -235,7 +234,7 @@
         <plugin>
           <groupId>org.basepom.maven</groupId>
           <artifactId>duplicate-finder-maven-plugin</artifactId>
-          <version>1.5.1</version>
+          <version>2.0.1</version>
         </plugin>
         <plugin>
           <groupId>kr.motd.maven</groupId>
@@ -245,12 +244,12 @@
         <plugin>
           <groupId>com.github.siom79.japicmp</groupId>
           <artifactId>japicmp-maven-plugin</artifactId>
-          <version>0.23.0</version>
+          <version>0.23.1</version>
         </plugin>
         <plugin>
           <groupId>com.github.veithen.alta</groupId>
           <artifactId>alta-maven-plugin</artifactId>
-          <version>0.7.2</version>
+          <version>0.8.1</version>
         </plugin>
 
         <plugin>
@@ -262,7 +261,7 @@
         <plugin>
           <groupId>de.thetaphi</groupId>
           <artifactId>forbiddenapis</artifactId>
-          <version>2.7</version>
+          <version>3.8</version>
         </plugin>
       </plugins>
     </pluginManagement>
