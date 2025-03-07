@@ -57,6 +57,8 @@ public class FastThreadLocalTest {
 
         assertNull(threadLocal.getAndSet(Boolean.FALSE));
         assertEquals(Boolean.FALSE, threadLocal.get());
+        assertEquals(Boolean.FALSE, threadLocal.getAndSet(Boolean.TRUE));
+        assertEquals(Boolean.TRUE, threadLocal.get());
         threadLocal.remove();
     }
 
