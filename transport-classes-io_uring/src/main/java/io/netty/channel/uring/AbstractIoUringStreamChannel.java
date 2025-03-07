@@ -357,11 +357,16 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             try {
                 boolean multishot = IoUring.isRecvMultishotSupported();
                 byte flags = flags((byte) Native.IOSQE_BUFFER_SELECT);
-                short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
-                int recvFlags = calculateRecvFlags(first);
-                final int len = 0;
+                short ioPrio;
+                final int recvFlags;
                 if (multishot) {
-                    ioPrio |= Native.IORING_RECV_MULTISHOT;
+                    ioPrio = Native.IORING_RECV_MULTISHOT;
+                    recvFlags = 0;
+                } else {
+                    // We should only use the calculate*() methods if this is not a multishot recv, as otherwise
+                    // the would be applied until the multishot will be re-armed.
+                    ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
+                    recvFlags = calculateRecvFlags(first);
                 }
                 if (IoUring.isRecvsendBundleSupported()) {
                     // See https://github.com/axboe/liburing/wiki/
@@ -372,7 +377,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 int fd = fd().intValue();
                 IoUringIoOps ops = IoUringIoOps.newRecv(
                         fd, flags, ioPrio, recvFlags, 0,
-                        len, nextOpsId(), bgId
+                        0, nextOpsId(), bgId
                 );
                 readId = registration.submit(ops);
                 if (readId == 0) {
