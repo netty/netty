@@ -17,6 +17,7 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -143,7 +144,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
             initialized = true;
             handler.initialize();
         }
-        ThreadExecutorMap.setCurrentExecutor(this);
+        EventExecutor old = ThreadExecutorMap.setCurrentExecutor(this);
         try {
             if (isShuttingDown()) {
                 if (terminationFuture.isDone()) {
@@ -175,7 +176,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
             // Now run all tasks.
             return run + runAllTasks();
         } finally {
-            ThreadExecutorMap.setCurrentExecutor(null);
+            ThreadExecutorMap.setCurrentExecutor(old);
         }
     }
 
