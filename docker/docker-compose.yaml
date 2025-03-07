@@ -32,9 +32,9 @@ services:
   build:
     <<: *common
     command: '/bin/bash -cl "
-      ./mvnw -B -ntp clean install -Dio.netty5.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora &&
+      ./mvnw -V -B -ntp clean install -Dio.netty5.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora &&
       cd testsuite-shading &&
-      ../mvnw -B -ntp integration-test failsafe:verify -Dtcnative.classifier=linux-x86_64-fedora
+      ../mvnw -V -B -ntp integration-test failsafe:verify -Dtcnative.classifier=linux-x86_64-fedora
     "'
 
   deploy:
@@ -49,7 +49,7 @@ services:
       - ~/.m2:/root/.m2
       - ~/local-staging:/root/local-staging
       - ..:/code
-    command: /bin/bash -cl "./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true"
+    command: /bin/bash -cl "./mvnw -V -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true"
 
   stage-release:
     <<: *common
@@ -62,23 +62,23 @@ services:
 
   build-boringssl-static:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true"
+    command: /bin/bash -cl "./mvnw -V -B -ntp -Pboringssl clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true"
 
   build-leak-boringssl-static:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true"
+    command: /bin/bash -cl "./mvnw -V -B -ntp -Pboringssl,leak clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true"
 
   build-unsafe-buffer:
     <<: *common
-    command: /bin/bash -cl "./mvnw -PunsafeBuffer clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true -Dtcnative.classifier=linux-x86_64-fedora"
+    command: /bin/bash -cl "./mvnw -V -PunsafeBuffer clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true -Dtcnative.classifier=linux-x86_64-fedora"
 
   build-leak-adaptive:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty5.allocator.type=adaptive"
+    command: /bin/bash -cl "./mvnw -V -B -ntp -Pboringssl,leak clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty5.allocator.type=adaptive"
 
   build-boringssl-snapshot:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -pl handler -Pboringssl-snapshot clean package -Dxml.skip=true -Dtcnative.classifier=linux-x86_64"
+    command: /bin/bash -cl "./mvnw -V -B -ntp -pl handler -Pboringssl-snapshot clean package -Dxml.skip=true -Dtcnative.classifier=linux-x86_64"
 
   shell:
     <<: *common
