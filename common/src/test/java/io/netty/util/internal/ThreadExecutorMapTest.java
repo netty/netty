@@ -81,7 +81,7 @@ public class ThreadExecutorMapTest {
     @Test
     public void testOldExecutorIsRestored() {
         Executor executor = ThreadExecutorMap.apply(ImmediateExecutor.INSTANCE, ImmediateEventExecutor.INSTANCE);
-        Executor executor2 = ThreadExecutorMap.apply(ImmediateExecutor.INSTANCE, EVENT_EXECUTOR);
+        final Executor executor2 = ThreadExecutorMap.apply(ImmediateExecutor.INSTANCE, EVENT_EXECUTOR);
         executor.execute(new Runnable() {
             @Override
             public void run() {
