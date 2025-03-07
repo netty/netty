@@ -202,7 +202,7 @@
         <plugin>
           <groupId>org.apache.felix</groupId>
           <artifactId>maven-bundle-plugin</artifactId>
-          <version>6.0.0</version>
+          <version>5.1.9</version>
         </plugin>
         <plugin>
           <groupId>org.jacoco</groupId>
