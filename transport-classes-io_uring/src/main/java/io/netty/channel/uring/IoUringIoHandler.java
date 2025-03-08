@@ -165,7 +165,8 @@ public final class IoUringIoHandler implements IoHandler {
             long timeoutNanos = context.deadlineNanos() == -1 ? -1 : context.delayNanos(System.nanoTime());
             submitAndWaitWithTimeout(submissionQueue, false, timeoutNanos);
         } else {
-            submissionQueue.submit();
+            // Even if we have some completions already pending we can still try to even fetch more.
+            submissionQueue.submitAndGetNow();
         }
         for (;;) {
             // we might call submitAndRunNow() while processing stuff in the completionArray we need to
@@ -176,7 +177,7 @@ public final class IoUringIoHandler implements IoHandler {
             // Let's submit again.
             // If we were not able to submit anything and there was nothing left in the completionBuffer we will
             // break out of the loop and return to the caller.
-            if (submissionQueue.submit() == 0 && processed == 0) {
+            if (submissionQueue.submitAndGetNow() == 0 && processed == 0) {
                 break;
             }
         }
@@ -187,7 +188,7 @@ public final class IoUringIoHandler implements IoHandler {
     void submitAndRunNow(long udata) {
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
-        if (submissionQueue.submit() > 0) {
+        if (submissionQueue.submitAndGetNow() > 0) {
             completionBuffer.drain(completionQueue);
             completionBuffer.processOneNow(this::handle, udata);
         }
@@ -319,7 +320,7 @@ public final class IoUringIoHandler implements IoHandler {
                 submissionQueue.addTimeout(timeoutMemoryAddress, udata);
             }
         }
-        return submissionQueue.submitAndWait();
+        return submissionQueue.submitAndGet();
     }
 
     @Override
@@ -342,12 +343,12 @@ public final class IoUringIoHandler implements IoHandler {
         submissionQueue.addNop((byte) Native.IOSQE_IO_DRAIN, udata);
 
         // Submit everything and wait until we could drain i.
-        submissionQueue.submitAndWait();
+        submissionQueue.submitAndGet();
         while (completionQueue.hasCompletions()) {
             completionQueue.process(this::handle);
 
             if (submissionQueue.count() > 0) {
-                submissionQueue.submit();
+                submissionQueue.submitAndGetNow();
             }
         }
     }
@@ -412,7 +413,7 @@ public final class IoUringIoHandler implements IoHandler {
             drainAndProcessAll(completionQueue, handler);
             completionQueue.process(handler);
             while (!handler.eventFdDrained) {
-                submissionQueue.submitAndWait();
+                submissionQueue.submitAndGet();
                 drainAndProcessAll(completionQueue, handler);
             }
         }

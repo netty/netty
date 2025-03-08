@@ -213,18 +213,42 @@ final class SubmissionQueue {
                 udata, (short) 0, (short) 0, 0, 0);
     }
 
+    /**
+     * Submit entries.
+     *
+     * @return  the number of submitted entries.
+     */
     int submit() {
         int submit = tail - head;
         return submit > 0 ? submit(submit, 0, 0) : 0;
     }
 
-    int submitAndWait() {
+    /**
+     * Submit entries and fetch completions. This method will block until there is at least one completion ready to be
+     * processed.
+     *
+     * @return  the number of submitted entries.
+     */
+    int submitAndGet() {
+        return submitAndGet0(1);
+    }
+
+    /**
+     * Submit entries and fetch completions.
+     *
+     * @return  the number of submitted entries.
+     */
+    int submitAndGetNow() {
+        return submitAndGet0(0);
+    }
+
+    private int submitAndGet0(int minComplete) {
         int submit = tail - head;
         if (submit > 0) {
-            return submit(submit, 1, Native.IORING_ENTER_GETEVENTS);
+            return submit(submit, minComplete, Native.IORING_ENTER_GETEVENTS);
         }
         assert submit == 0;
-        int ret = ioUringEnter(0, 1, Native.IORING_ENTER_GETEVENTS);
+        int ret = ioUringEnter(0, minComplete, Native.IORING_ENTER_GETEVENTS);
         if (ret < 0) {
             throw new RuntimeException("ioUringEnter syscall returned " + ret);
         }

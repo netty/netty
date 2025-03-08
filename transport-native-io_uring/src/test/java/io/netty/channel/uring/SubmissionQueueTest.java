@@ -52,7 +52,7 @@ public class SubmissionQueueTest {
             assertEquals(8, submissionQueue.count());
             assertThat(submissionQueue.addNop((byte) 0, 1)).isNotZero();
             assertEquals(1, submissionQueue.count());
-            submissionQueue.submitAndWait();
+            submissionQueue.submitAndGet();
             assertEquals(9, completionQueue.count());
         } finally {
             ringBuffer.close();
@@ -75,7 +75,7 @@ public class SubmissionQueueTest {
                 assertThat(ringBuffer.ioUringSubmissionQueue().addNop((byte) 0, 1)).isNotZero();
                 count--;
                 if (ringBuffer.ioUringSubmissionQueue().remaining() == 0) {
-                    ringBuffer.ioUringSubmissionQueue().submitAndWait();
+                    ringBuffer.ioUringSubmissionQueue().submitAndGet();
                 }
             }
 
