@@ -49,7 +49,6 @@ import static java.util.Objects.requireNonNull;
  */
 public final class IoUringIoHandler implements IoHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringIoHandler.class);
-    private static final short RING_CLOSE = 1;
 
     private final RingBuffer ringBuffer;
     private final IntObjectMap<IoUringBufferRing> registeredIoUringBufferRing;
@@ -257,9 +256,7 @@ public final class IoUringIoHandler implements IoHandler {
                 return true;
             }
             if (id == RINGFD_ID) {
-                if (op == Native.IORING_OP_NOP && data == RING_CLOSE) {
-                    completeRingClose();
-                }
+                // Just return
                 return true;
             }
             DefaultIoUringIoRegistration registration = registrations.get(id);
