@@ -422,7 +422,7 @@ final class Native {
     static boolean isRegisterBufferRingSupported(int ringFd, int flags) {
         int entries = 2;
         short bgid = 1;
-        long result = ioUringRegisterBuffRing(ringFd, entries, bgid, flags);
+        long result = ioUringRegisterBufRing(ringFd, entries, bgid, flags);
         if (result >= 0) {
             ioUringUnRegisterBufRing(ringFd, result, entries, bgid);
             return true;
@@ -484,7 +484,7 @@ final class Native {
     static native int ioUringRegisterEnableRings(int ringFd);
     static native int ioUringRegisterRingFds(int ringFds);
 
-    static native long ioUringRegisterBuffRing(int ringFd, int entries, short bufferGroup, int flags);
+    static native long ioUringRegisterBufRing(int ringFd, int entries, short bufferGroup, int flags);
     static native int ioUringUnRegisterBufRing(int ringFd, long ioUringBufRingAddr, int entries, int bufferGroupId);
 
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);

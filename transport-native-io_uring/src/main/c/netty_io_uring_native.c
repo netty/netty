@@ -750,7 +750,7 @@ static const JNINativeMethod method_table[] = {
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
     {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 },
-    {"ioUringRegisterBuffRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring},
+    {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring},
     {"ioUringUnRegisterBufRing", "(IJII)I", (void *) netty_io_uring_unregister_buf_ring}
 };
 static const jint method_table_size =

@@ -121,7 +121,7 @@ public final class IoUringIoHandler implements IoHandler {
             }
             for (IoUringBufferRingConfig bufferRingConfig : bufferRingConfigs) {
                 try {
-                    IoUringBufferRing ring = newBufferRing(bufferRingConfig);
+                    IoUringBufferRing ring = newBufferRing(ringBuffer.fd(), bufferRingConfig);
                     registeredIoUringBufferRing.put(bufferRingConfig.bufferGroupId(), ring);
                 } catch (Errors.NativeIoException e) {
                     for (IoUringBufferRing bufferRing : registeredIoUringBufferRing.values()) {
@@ -193,14 +193,14 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    IoUringBufferRing newBufferRing(IoUringBufferRingConfig bufferRingConfig) throws Errors.NativeIoException {
-        int ringFd = ringBuffer.fd();
+    IoUringBufferRing newBufferRing(int ringFd, IoUringBufferRingConfig bufferRingConfig)
+            throws Errors.NativeIoException {
         short bufferRingSize = bufferRingConfig.bufferRingSize();
         short bufferGroupId = bufferRingConfig.bufferGroupId();
         int flags = bufferRingConfig.isIncremental() ? Native.IOU_PBUF_RING_INC : 0;
-        long ioUringBufRingAddr = Native.ioUringRegisterBuffRing(ringFd, bufferRingSize, bufferGroupId, flags);
+        long ioUringBufRingAddr = Native.ioUringRegisterBufRing(ringFd, bufferRingSize, bufferGroupId, flags);
         if (ioUringBufRingAddr < 0) {
-            throw Errors.newIOException("ioUringRegisterBuffRing", (int) ioUringBufRingAddr);
+            throw Errors.newIOException("ioUringRegisterBufRing", (int) ioUringBufRingAddr);
         }
         return new IoUringBufferRing(ringFd, ioUringBufRingAddr,
                 bufferRingSize, bufferRingConfig.maxUnreleasedBuffers(),
