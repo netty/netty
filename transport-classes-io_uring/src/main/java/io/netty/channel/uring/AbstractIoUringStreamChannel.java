@@ -240,7 +240,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
                 int fd = fd().intValue();
                 IoRegistration registration = registration();
-                IoUringIoOps ops = IoUringIoOps.newWritev(fd, flags((byte) 0), 0, iovArray.memoryAddress(offset),
+                IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArray.memoryAddress(offset),
                         iovArray.count() - offset, nextOpsId());
                 byte opCode = ops.opcode();
                 writeId = registration.submit(ops);
@@ -279,7 +279,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ops = fileRegion.splice(fd);
             } else {
                 ByteBuf buf = (ByteBuf) msg;
-                ops = IoUringIoOps.newWrite(fd, flags((byte) 0), 0,
+                ops = IoUringIoOps.newWrite(fd, (byte) 0, 0,
                         buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
             }
 
@@ -336,7 +336,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
                 int recvFlags = calculateRecvFlags(first);
 
-                IoUringIoOps ops = IoUringIoOps.newRecv(fd, flags((byte) 0), ioPrio, recvFlags,
+                IoUringIoOps ops = IoUringIoOps.newRecv(fd, (byte) 0, ioPrio, recvFlags,
                         byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
                 readId = registration.submit(ops);
                 if (readId == 0) {
@@ -356,7 +356,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             short bgId = bufferRing.bufferGroupId();
             try {
                 boolean multishot = IoUring.isRecvMultishotSupported();
-                byte flags = flags((byte) Native.IOSQE_BUFFER_SELECT);
+                byte flags = (byte) Native.IOSQE_BUFFER_SELECT;
                 short ioPrio;
                 final int recvFlags;
                 if (multishot) {
@@ -625,7 +625,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         if (readId != 0) {
             // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
             assert numOutstandingReads == 1 || numOutstandingReads == -1;
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(flags((byte) 0), readId, Native.IORING_OP_RECV);
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel((byte) 0, readId, Native.IORING_OP_RECV);
             long id = registration.submit(ops);
             assert id != 0;
         } else {
@@ -640,7 +640,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             // (via fastpoll).
             assert numOutstandingWrites == 1;
             assert writeOpCode != 0;
-            long id = registration.submit(IoUringIoOps.newAsyncCancel(flags((byte) 0), writeId, writeOpCode));
+            long id = registration.submit(IoUringIoOps.newAsyncCancel((byte) 0, writeId, writeOpCode));
             assert id != 0;
         } else {
             assert numOutstandingWrites == 0;

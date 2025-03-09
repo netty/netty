@@ -280,10 +280,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected void doDisconnect() throws Exception {
     }
 
-    protected byte flags(byte flags) {
-        return flags;
-    }
-
     private void freeRemoteAddressMemory() {
         if (remoteAddressMemory != null) {
             Buffer.free(remoteAddressMemory);
@@ -305,7 +301,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         if (registration != null) {
             if (socket.markClosed()) {
                 int fd = fd().intValue();
-                IoUringIoOps ops = IoUringIoOps.newClose(fd, flags((byte) 0), nextOpsId());
+                IoUringIoOps ops = IoUringIoOps.newClose(fd, (byte) 0, nextOpsId());
                 registration.submit(ops);
             }
         } else {
@@ -418,7 +414,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                fd, flags((byte) 0), mask, multishot ? Native.IORING_POLL_ADD_MULTI : 0, nextOpsId());
+                fd, (byte) 0, mask, multishot ? Native.IORING_POLL_ADD_MULTI : 0, nextOpsId());
         long id = registration.submit(ops);
         if (id != 0) {
             ioState |= (byte) ioMask;
@@ -591,7 +587,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             if (registration == null || !registration.isValid()) {
                 return;
             }
-            byte flags = flags((byte) 0);
+            byte flags = (byte) 0;
             if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
                 assert pollRdhupId != 0;
                 long id = registration.submit(
@@ -1114,7 +1110,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
                     int fd = fd().intValue();
                     IoRegistration registration = registration();
-                    IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, flags((byte) 0), Native.MSG_FASTOPEN,
+                    IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
                             hdr.address(), hdr.idx());
                     connectId = registration.submit(ops);
                     if (connectId == 0) {
@@ -1174,7 +1170,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         int fd = fd().intValue();
         IoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newConnect(
-                fd, flags((byte) 0), remoteAddressMemoryAddress, nextOpsId());
+                fd, (byte) 0, remoteAddressMemoryAddress, nextOpsId());
         connectId = registration.submit(ops);
         if (connectId == 0) {
             // Directly release the memory if submitting failed.
