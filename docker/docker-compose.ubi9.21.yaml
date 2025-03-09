@@ -8,7 +8,7 @@ services:
       args:
         java_version : "21.0.5-zulu"
       context: .
-      dockerfile: Dockerfile.centos6
+      dockerfile: Dockerfile.ubi9
 
   build:
     image: netty:ubi9-21
