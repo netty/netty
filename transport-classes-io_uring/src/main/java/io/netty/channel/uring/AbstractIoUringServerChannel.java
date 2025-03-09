@@ -150,38 +150,39 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             int fd = fd().intValue();
             IoRegistration registration = registration();
 
-            // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
-            // attempt.
-            // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
-            //
-            // Depending on if this is the first read or not we will use Native.IORING_ACCEPT_DONT_WAIT.
-            // The idea is that if the socket is blocking we can do the first read in a blocking fashion
-            // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
-            // be possible directly we schedule these with Native.IORING_ACCEPT_DONT_WAIT. This allows us to still be
-            // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
-            // transports.
-            short ioPrio;
-
-            // IORING_ACCEPT_POLL_FIRST and IORING_ACCEPT_DONTWAIT were added in the same release.
-            // We need to check if its supported as otherwise providing these would result in an -EINVAL.
-            if (IoUring.isAcceptNoWaitSupported()) {
-                if (first) {
-                    ioPrio = socketIsEmpty ? Native.IORING_ACCEPT_POLL_FIRST : 0;
-                } else {
-                    ioPrio = Native.IORING_ACCEPT_DONTWAIT;
-                }
-            } else {
-                ioPrio = 0;
-            }
+            final short ioPrio;
 
             final long acceptedAddressMemoryAddress;
             final long acceptedAddressLengthMemoryAddress;
             if (IoUring.isAcceptMultishotSupported()) {
                 // Let's use multi-shot accept to reduce overhead.
-                ioPrio |= Native.IORING_ACCEPT_MULTISHOT;
+                ioPrio = Native.IORING_ACCEPT_MULTISHOT;
                 acceptedAddressMemoryAddress = 0;
                 acceptedAddressLengthMemoryAddress = 0;
             } else {
+                // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
+                // attempt.
+                // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
+                //
+                // Depending on if this is the first read or not we will use Native.IORING_ACCEPT_DONT_WAIT.
+                // The idea is that if the socket is blocking we can do the first read in a blocking fashion
+                // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
+                // be possible directly we schedule these with Native.IORING_ACCEPT_DONT_WAIT. This allows us to still
+                // be able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
+                // transports.
+                //
+                // IORING_ACCEPT_POLL_FIRST and IORING_ACCEPT_DONTWAIT were added in the same release.
+                // We need to check if its supported as otherwise providing these would result in an -EINVAL.
+                if (IoUring.isAcceptNoWaitSupported()) {
+                    if (first) {
+                        ioPrio = socketIsEmpty ? Native.IORING_ACCEPT_POLL_FIRST : 0;
+                    } else {
+                        ioPrio = Native.IORING_ACCEPT_DONTWAIT;
+                    }
+                } else {
+                    ioPrio = 0;
+                }
+
                 assert acceptedAddressMemory != null;
                 acceptedAddressMemoryAddress = acceptedAddressMemory.acceptedAddressMemoryAddress;
                 acceptedAddressLengthMemoryAddress = acceptedAddressMemory.acceptedAddressLengthMemoryAddress;
