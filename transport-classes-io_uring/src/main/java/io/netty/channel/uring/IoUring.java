@@ -38,6 +38,10 @@ public final class IoUring {
     private static final boolean IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
     private static final boolean IORING_REGISTER_BUFFER_RING_SUPPORTED;
     private static final boolean IORING_REGISTER_BUFFER_RING_INC_SUPPORTED;
+    private static final boolean IORING_ACCEPT_MULTISHOT_ENABLED;
+    private static final boolean IORING_RECV_MULTISHOT_ENABLED;
+    private static final boolean IORING_RECVSEND_BUNDLE_ENABLED;
+    private static final boolean IORING_POLL_ADD_MULTISHOT_ENABLED;
 
     private static final InternalLogger logger;
 
@@ -150,6 +154,15 @@ public final class IoUring {
         IORING_SETUP_DEFER_TASKRUN_SUPPORTED = deferTaskrunSupported;
         IORING_REGISTER_BUFFER_RING_SUPPORTED = registerBufferRingSupported;
         IORING_REGISTER_BUFFER_RING_INC_SUPPORTED = registerBufferRingIncSupported;
+
+        IORING_ACCEPT_MULTISHOT_ENABLED = IORING_ACCEPT_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
+                "io.netty.iouring.acceptMultiShotEnabled", true);
+        IORING_RECV_MULTISHOT_ENABLED = IORING_RECV_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
+                "io.netty.iouring.recvMultiShotEnabled", true);
+        IORING_RECVSEND_BUNDLE_ENABLED = IORING_RECVSEND_BUNDLE_SUPPORTED && SystemPropertyUtil.getBoolean(
+                "io.netty.iouring.recvsendBundleEnabled", true);
+       IORING_POLL_ADD_MULTISHOT_ENABLED = IORING_POLL_ADD_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
+               "io.netty.iouring.pollAddMultishotEnabled", true);
     }
 
     public static boolean isAvailable() {
@@ -230,6 +243,22 @@ public final class IoUring {
 
     public static boolean isRegisterBufferRingIncSupported() {
         return IORING_REGISTER_BUFFER_RING_INC_SUPPORTED;
+    }
+
+    static boolean isAcceptMultishotEnabled() {
+        return IORING_ACCEPT_MULTISHOT_ENABLED;
+    }
+
+    static boolean isRecvMultishotEnabled() {
+        return IORING_RECV_MULTISHOT_ENABLED;
+    }
+
+    static boolean isRecvsendBundleEnabled() {
+        return IORING_RECVSEND_BUNDLE_ENABLED;
+    }
+
+    static boolean isPollAddMultishotEnabled() {
+        return IORING_POLL_ADD_MULTISHOT_ENABLED;
     }
 
     public static void ensureAvailability() {

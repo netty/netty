@@ -77,7 +77,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         //       time to process a past connection. If the application knows that a
         //       new connection cannot come in before a previous one has been
         //       processed, it may be used as expected.
-        if (IoUring.isAcceptMultishotSupported()) {
+        if (IoUring.isAcceptMultishotEnabled()) {
             acceptedAddressMemory = null;
         } else {
             acceptedAddressMemory = new AcceptedAddressMemory();
@@ -154,7 +154,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
 
             final long acceptedAddressMemoryAddress;
             final long acceptedAddressLengthMemoryAddress;
-            if (IoUring.isAcceptMultishotSupported()) {
+            if (IoUring.isAcceptMultishotEnabled()) {
                 // Let's use multi-shot accept to reduce overhead.
                 ioPrio = Native.IORING_ACCEPT_MULTISHOT;
                 acceptedAddressMemoryAddress = 0;

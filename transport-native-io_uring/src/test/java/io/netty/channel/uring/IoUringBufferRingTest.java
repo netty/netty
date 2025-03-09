@@ -164,16 +164,16 @@ public class IoUringBufferRingTest {
         group.shutdownGracefully();
     }
 
-    static boolean recvsendBundleSupported() {
-        return IoUring.isRecvsendBundleSupported();
+    static boolean recvsendBundleEnabled() {
+        return IoUring.isRecvsendBundleEnabled();
     }
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    @EnabledIf("recvsendBundleSupported")
+    @EnabledIf("recvsendBundleEnabled")
     public void testProviderBufferReadWithRecvsendBundle(boolean incremental) throws InterruptedException {
         // See https://lore.kernel.org/io-uring/184f9f92-a682-4205-a15d-89e18f664502@kernel.dk/T/#u
-        assumeTrue(IoUring.isRecvMultishotSupported(),
+        assumeTrue(IoUring.isRecvMultishotEnabled(),
                 "Only yields expected test results when using multishot atm");
         if (incremental) {
             assumeTrue(IoUring.isRegisterBufferRingIncSupported());
