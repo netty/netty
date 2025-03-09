@@ -20,8 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SubmissionQueueTest {
@@ -57,6 +56,32 @@ public class SubmissionQueueTest {
         } finally {
             ringBuffer.close();
         }
+    }
+
+    @Test
+    public void useAfterClose() {
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        ringBuffer.enable();
+        ringBuffer.close();
+
+        SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        final CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+
+        assertNotNull(ringBuffer);
+        assertNotNull(submissionQueue);
+        assertNotNull(completionQueue);
+
+        assertThrows(IllegalStateException.class, () -> submissionQueue.addNop((byte) 0, 1));
+        assertThrows(IllegalStateException.class, submissionQueue::tryRegisterRingFd);
+        assertThrows(IllegalStateException.class, submissionQueue::submit);
+        assertThrows(IllegalStateException.class, submissionQueue::submitAndWait);
+
+        assertEquals(0, completionQueue.count());
+        assertFalse(completionQueue.hasCompletions());
+        assertEquals(0, completionQueue.process((res, flags, data) -> {
+            fail("Should not be called");
+            return false;
+        }));
     }
 
     @Test

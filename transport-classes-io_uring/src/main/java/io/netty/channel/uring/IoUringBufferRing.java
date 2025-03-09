@@ -41,7 +41,7 @@ final class IoUringBufferRing {
     private final AtomicInteger unreleasedBuffers = new AtomicInteger();
     private volatile boolean usable;
     private boolean corrupted;
-
+    private boolean closed;
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
                       short entries, int maxUnreleasedBuffers, short bufferGroupId, boolean incremental,
                       IoUringBufferRingAllocator allocator) {
@@ -79,7 +79,7 @@ final class IoUringBufferRing {
     }
 
     void fillBuffer(short bid) {
-        if (corrupted) {
+        if (corrupted || closed) {
             return;
         }
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
@@ -166,6 +166,10 @@ final class IoUringBufferRing {
      * Close this {@link IoUringBufferRing}, using it after this method is called will lead to undefined behaviour.
      */
     void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
         Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, entries, bufferGroupId);
         for (ByteBuf byteBuf : buffers) {
             if (byteBuf != null) {
