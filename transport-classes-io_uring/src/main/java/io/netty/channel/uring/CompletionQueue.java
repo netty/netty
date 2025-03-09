@@ -46,6 +46,7 @@ final class CompletionQueue {
 
     private final int ringMask;
     private int ringHead;
+    private boolean closed;
 
     CompletionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
                     long kOverflowAddress, long completionQueueArrayAddress, int ringSize, long ringAddress,
@@ -63,15 +64,22 @@ final class CompletionQueue {
         ringHead = PlatformDependent.getIntVolatile(kHeadAddress);
     }
 
+    void close() {
+        closed = true;
+    }
+
     /**
      * Returns {@code true} if any completion event is ready to be processed by
      * {@link #process(CompletionCallback)}, {@code false} otherwise.
      */
     boolean hasCompletions() {
-        return ringHead != PlatformDependent.getIntVolatile(kTailAddress);
+        return !closed && ringHead != PlatformDependent.getIntVolatile(kTailAddress);
     }
 
     int count() {
+        if (closed) {
+            return 0;
+        }
         return PlatformDependent.getIntVolatile(kTailAddress) - ringHead;
     }
 
@@ -80,6 +88,9 @@ final class CompletionQueue {
      * events.
      */
     int process(CompletionCallback callback) {
+        if (closed) {
+            return 0;
+        }
         int tail = PlatformDependent.getIntVolatile(kTailAddress);
         try {
             int i = 0;
@@ -108,16 +119,20 @@ final class CompletionQueue {
     @Override
     public String toString() {
         StringJoiner sb = new StringJoiner(", ", "CompletionQueue [", "]");
-        int tail = PlatformDependent.getIntVolatile(kTailAddress);
-        int head = ringHead;
-        while (head != tail) {
-            long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
-            long udata = PlatformDependent.getLong(cqeAddress + CQE_USER_DATA_FIELD);
-            int res = PlatformDependent.getInt(cqeAddress + CQE_RES_FIELD);
-            int flags = PlatformDependent.getInt(cqeAddress + CQE_FLAGS_FIELD);
+        if (closed) {
+            sb.add("closed");
+        } else {
+            int tail = PlatformDependent.getIntVolatile(kTailAddress);
+            int head = ringHead;
+            while (head != tail) {
+                long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
+                long udata = PlatformDependent.getLong(cqeAddress + CQE_USER_DATA_FIELD);
+                int res = PlatformDependent.getInt(cqeAddress + CQE_RES_FIELD);
+                int flags = PlatformDependent.getInt(cqeAddress + CQE_FLAGS_FIELD);
 
-            sb.add("(res=" + res).add(", flags=" + flags).add(", udata=" + udata).add(")");
-            head++;
+                sb.add("(res=" + res).add(", flags=" + flags).add(", udata=" + udata).add(")");
+                head++;
+            }
         }
         return sb.toString();
     }
