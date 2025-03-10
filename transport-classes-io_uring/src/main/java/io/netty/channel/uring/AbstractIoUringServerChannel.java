@@ -108,7 +108,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     protected final void cancelOutstandingReads(IoRegistration registration, int numOutstandingReads) {
         if (acceptId != 0) {
             assert numOutstandingReads == 1 || numOutstandingReads == -1;
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(flags((byte) 0), acceptId, Native.IORING_OP_ACCEPT);
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel((byte) 0, acceptId, Native.IORING_OP_ACCEPT);
             registration.submit(ops);
             acceptId = 0;
         } else {
@@ -188,7 +188,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             }
 
             // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10#improvements-for-accept
-            IoUringIoOps ops = IoUringIoOps.newAccept(fd, flags((byte) 0), 0, ioPrio,
+            IoUringIoOps ops = IoUringIoOps.newAccept(fd, (byte) 0, 0, ioPrio,
                     acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, nextOpsId());
             acceptId = registration.submit(ops);
             if (acceptId == 0) {

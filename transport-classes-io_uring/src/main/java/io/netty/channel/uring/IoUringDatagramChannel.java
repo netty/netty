@@ -503,7 +503,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             // We always use idx here so we can detect if no idx was used by checking if data < 0 in
             // readComplete0(...)
             IoUringIoOps ops = IoUringIoOps.newRecvmsg(
-                    fd, flags((byte) 0), msgFlags, msgHdrMemory.address(), msgHdrMemory.idx());
+                    fd, (byte) 0, msgFlags, msgHdrMemory.address(), msgHdrMemory.idx());
             long id = registration.submit(ops);
             if (id == 0) {
                 // Submission failed we don't used the MsgHdrMemory and so should give it back.
@@ -607,7 +607,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
             IoRegistration registration = registration();
-            IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, flags((byte) 0), msgFlags, hdr.address(), hdr.idx());
+            IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, msgFlags, hdr.address(), hdr.idx());
             long id = registration.submit(ops);
             if (id == 0) {
                 // Submission failed we don't used the MsgHdrMemory and so should give it back.
@@ -670,7 +670,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             }
             // Let's try to cancel outstanding op as these might be submitted and waiting for data
             // (via fastpoll).
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(flags((byte) 0), id, op);
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel((byte) 0, id, op);
             registration.submit(ops);
             cancelled++;
         }
