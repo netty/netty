@@ -485,7 +485,7 @@ final class Native {
     static native int ioUringRegisterRingFds(int ringFds);
 
     static native long ioUringRegisterBufRing(int ringFd, int entries, short bufferGroup, int flags);
-    static native int ioUringUnRegisterBufRing(int ringFd, long ioUringBufRingAddr, int entries, int bufferGroupId);
+    static native int ioUringUnRegisterBufRing(int ringFd, long ioUringBufRingAddr, int entries, short bufferGroupId);
 
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
