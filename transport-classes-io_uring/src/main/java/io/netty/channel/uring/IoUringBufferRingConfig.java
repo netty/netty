@@ -26,6 +26,7 @@ import java.util.Objects;
 public final class IoUringBufferRingConfig {
     private final short bgId;
     private final short bufferRingSize;
+    private final int batchSize;
     private final int maxUnreleasedBuffers;
     private final boolean incremental;
     private final IoUringBufferRingAllocator allocator;
@@ -43,7 +44,7 @@ public final class IoUringBufferRingConfig {
      */
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int maxUnreleasedBuffers,
                                    IoUringBufferRingAllocator allocator) {
-        this(bgId, bufferRingSize, maxUnreleasedBuffers, IoUring.isRegisterBufferRingIncSupported(), allocator);
+        this(bgId, bufferRingSize, bufferRingSize / 2, maxUnreleasedBuffers, IoUring.isRegisterBufferRingIncSupported(), allocator);
     }
 
     /**
@@ -58,10 +59,11 @@ public final class IoUringBufferRingConfig {
      * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
      *                              {@link io.netty.buffer.ByteBuf}s.
      */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int maxUnreleasedBuffers,
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int batchSize, int maxUnreleasedBuffers,
                                    boolean incremental, IoUringBufferRingAllocator allocator) {
         this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
+        this.batchSize = ObjectUtil.checkInRange(batchSize, 1, bufferRingSize, "batchSize");
         this.maxUnreleasedBuffers = ObjectUtil.checkInRange(
                 maxUnreleasedBuffers, bufferRingSize, Integer.MAX_VALUE, "maxUnreleasedBuffers");
         if (incremental && !IoUring.isRegisterBufferRingIncSupported()) {
@@ -87,6 +89,15 @@ public final class IoUringBufferRingConfig {
      */
     public short bufferRingSize() {
         return bufferRingSize;
+    }
+
+    /**
+     * Returns the size of the batch on how many buffers are added everytime we need to expand the buffer ring.
+     *
+     * @return batch size.
+     */
+    public int batchSize() {
+        return batchSize;
     }
 
     /**

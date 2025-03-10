@@ -433,6 +433,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                         // buffer ring size.
                         pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
 
+                        // try to expand the buffer ring by adding more buffers to it if there is any space left.
+                        bufferRing.expand();
+
                         // Let's trigger a read again without consulting the RecvByteBufAllocator.Handle as
                         // we can't count this as a "real" read operation.
                         // Because of how our BufferRing works we should have it filled again.
@@ -473,7 +476,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                                 // Fill a new buffer for the bid after we fired the buffer through the pipeline.
                                 // We do it only after we called fireChannelRead(...) as there is a good chance
                                 // that the user will have released the buffer. In this case we reduce memory usage.
-                                bufferRing.fillBuffer(bid);
+                                bufferRing.fillBuffer();
                                 bid = bufferRing.nextBid(bid);
                                 if (!allocHandle.continueReading()) {
                                     // We should call fireChannelReadComplete() to mimic a normal read loop.
@@ -522,7 +525,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     // Fill a new buffer for the bid after we fired the buffer through the pipeline.
                     // We do it only after we called fireChannelRead(...) as there is a good chance
                     // that the user will have released the buffer. In this case we reduce memory usage.
-                    bufferRing.fillBuffer(bid);
+                    bufferRing.fillBuffer();
                 }
                 scheduleNextRead(pipeline, allocHandle, rearm, empty);
             } catch (Throwable t) {

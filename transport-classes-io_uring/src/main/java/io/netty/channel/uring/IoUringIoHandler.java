@@ -148,7 +148,7 @@ public final class IoUringIoHandler implements IoHandler {
         ringBuffer.enable();
         // Fill all buffer rings now.
         for (IoUringBufferRing bufferRing : registeredIoUringBufferRing.values()) {
-            bufferRing.fill();
+            bufferRing.initialize();
         }
     }
 
@@ -202,7 +202,7 @@ public final class IoUringIoHandler implements IoHandler {
             throw Errors.newIOException("ioUringRegisterBufRing", (int) ioUringBufRingAddr);
         }
         return new IoUringBufferRing(ringFd, ioUringBufRingAddr,
-                bufferRingSize, bufferRingConfig.maxUnreleasedBuffers(),
+                bufferRingSize, bufferRingConfig.batchSize(), bufferRingConfig.maxUnreleasedBuffers(),
                 bufferGroupId, bufferRingConfig.isIncremental(), bufferRingConfig.allocator()
         );
     }
