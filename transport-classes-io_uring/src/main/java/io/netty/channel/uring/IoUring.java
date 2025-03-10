@@ -193,7 +193,12 @@ public final class IoUring {
         return IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED;
     }
 
-    static boolean isSpliceSupported() {
+    /**
+     * Returns if SPLICE is supported or not.
+     *
+     * @return {@code true} if supported, {@code false} otherwise.
+     */
+    public static boolean isSpliceSupported() {
         return IORING_SPLICE_SUPPORTED;
     }
 
@@ -237,27 +242,57 @@ public final class IoUring {
         return IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
     }
 
+    /**
+     * Returns if it is supported to use a buffer ring.
+     *
+     * @return {@code true} if supported, {@code false} otherwise.
+     */
     public static boolean isRegisterBufferRingSupported() {
         return IORING_REGISTER_BUFFER_RING_SUPPORTED;
     }
 
+    /**
+     * Returns if it is supported to use an incremental buffer ring.
+     *
+     * @return {@code true} if supported, {@code false} otherwise.
+     */
     public static boolean isRegisterBufferRingIncSupported() {
         return IORING_REGISTER_BUFFER_RING_INC_SUPPORTED;
     }
 
-    static boolean isAcceptMultishotEnabled() {
+    /**
+     * Returns if multi-shot ACCEPT is used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isAcceptMultishotEnabled() {
         return IORING_ACCEPT_MULTISHOT_ENABLED;
     }
 
-    static boolean isRecvMultishotEnabled() {
+    /**
+     * Returns if multi-shot RECV is used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isRecvMultishotEnabled() {
         return IORING_RECV_MULTISHOT_ENABLED;
     }
 
-    static boolean isRecvsendBundleEnabled() {
+    /**
+     * Returns if RECVSEND bundles are used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isRecvsendBundleEnabled() {
         return IORING_RECVSEND_BUNDLE_ENABLED;
     }
 
-    static boolean isPollAddMultishotEnabled() {
+    /**
+     * Returns if multi-shot POLL_ADD is used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isPollAddMultishotEnabled() {
         return IORING_POLL_ADD_MULTISHOT_ENABLED;
     }
 
