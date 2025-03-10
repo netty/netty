@@ -246,9 +246,14 @@ public final class Http2CodecUtil {
 
     static void writeFrameHeaderInternal(ByteBuf out, int payloadLength, byte type,
             Http2Flags flags, int streamId) {
+        writeFrameHeaderInternal(out, payloadLength, type, flags.value(), streamId);
+    }
+
+    static void writeFrameHeaderInternal(ByteBuf out, int payloadLength, byte type,
+                                         short flags, int streamId) {
         out.writeMedium(payloadLength);
         out.writeByte(type);
-        out.writeByte(flags.value());
+        out.writeByte(flags);
         out.writeInt(streamId);
     }
 

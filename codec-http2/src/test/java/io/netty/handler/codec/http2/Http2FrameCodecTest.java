@@ -585,7 +585,7 @@ public class Http2FrameCodecTest {
         channel.write(unknownFrame);
 
         verify(frameWriter).writeFrame(eqFrameCodecCtx(), eq(unknownFrame.frameType()),
-                eq(unknownFrame.stream().id()), eq(unknownFrame.flags()), eq(buffer), any(ChannelPromise.class));
+            eq(unknownFrame.stream().id()), eq(unknownFrame.flags().value()), eq(buffer), any(ChannelPromise.class));
     }
 
     @Test
