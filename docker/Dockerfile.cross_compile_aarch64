@@ -1,5 +1,6 @@
 FROM --platform=linux/amd64 centos:7.6.1810
 
+ARG java_version=22.0.2-zulu
 ARG gcc_version=10.2-2020.11
 ENV GCC_VERSION $gcc_version
 ENV SOURCE_DIR /root/source
@@ -11,8 +12,17 @@ RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.cent
 # Install requirements
 RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools unzip zip
 
-# Install Java
-RUN yum install -y java-22-openjdk-devel
+# Downloading and installing SDKMAN!
+RUN curl -s  "https://get.sdkman.io" | bash
+ENV JAVA_VERSION $java_version
+
+# Installing Java removing some unnecessary SDKMAN files
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    yes | sdk install java $JAVA_VERSION && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
+
+RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
 
 RUN mkdir $SOURCE_DIR
 WORKDIR $SOURCE_DIR
@@ -22,7 +32,7 @@ RUN wget https://developer.arm.com/-/media/Files/downloads/gnu-a/$GCC_VERSION/bi
    tar xvf gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && mv gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu /opt/
 ENV PATH="/opt/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu/bin:${PATH}"
 
-ENV JAVA_HOME="/usr/lib/jvm/java-22-openjdk/"
+ENV JAVA_HOME="/root/.sdkman/candidates/java/current"
 
 # Cleanup
 RUN rm -rf $SOURCE_DIR
