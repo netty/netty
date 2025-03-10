@@ -200,9 +200,6 @@
       <activation>
         <jdk>23</jdk>
       </activation>
-      <modules>
-        <module>buffer-memory-segment</module>
-      </modules>
       <properties>
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
@@ -216,165 +213,11 @@
       <activation>
         <jdk>22</jdk>
       </activation>
-      <modules>
-        <module>buffer-memory-segment</module>
-      </modules>
       <properties>
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
         <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-      </properties>
-    </profile>
-    <profile>
-      <id>java21</id>
-      <activation>
-        <jdk>21</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-      </properties>
-    </profile>
-    <profile>
-      <id>java20</id>
-      <activation>
-        <jdk>20</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-      </properties>
-    </profile>
-    <profile>
-      <id>java19</id>
-      <activation>
-        <jdk>19</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-      </properties>
-    </profile>
-    <profile>
-      <id>java18</id>
-      <activation>
-        <jdk>18</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-      </properties>
-    </profile>
-    <profile>
-      <id>java17</id>
-      <activation>
-        <jdk>17</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-      </properties>
-    </profile>
-
-    <!-- JDK16 -->
-    <profile>
-      <id>java16</id>
-      <activation>
-        <jdk>16</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-      </properties>
-    </profile>
-
-    <!-- JDK15 -->
-    <profile>
-      <id>java15</id>
-      <activation>
-        <jdk>15</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-      </properties>
-    </profile>
-    <!-- JDK14 -->
-    <profile>
-      <id>java14</id>
-      <activation>
-        <jdk>14</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-      </properties>
-    </profile>
-    <!-- JDK13 -->
-    <profile>
-      <id>java13</id>
-      <activation>
-        <jdk>13</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-      </properties>
-    </profile>
-    <!-- JDK12 -->
-    <profile>
-      <id>java12</id>
-      <activation>
-        <jdk>12</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-      </properties>
-    </profile>
-    <!-- JDK11 -->
-    <profile>
-      <id>java11</id>
-      <activation>
-        <jdk>11</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
-        <!-- pax-exam does not work on latest Java11 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
     </profile>
@@ -545,8 +388,8 @@
   </profiles>
 
   <properties>
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
+    <maven.compiler.source>22</maven.compiler.source>
+    <maven.compiler.target>22</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
@@ -609,6 +452,7 @@
     <module>all</module>
     <module>common</module>
     <module>buffer</module>
+    <module>buffer-memory-segment</module>
     <module>codec</module>
     <module>codec-dns</module>
     <module>codec-http</module>
@@ -1020,9 +864,9 @@
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <!-- Enforce JDK 11+ for compilation. -->
-                  <!-- This is needed because of java.util.zip.Deflater and NIO UDP multicast. -->
-                  <version>[11.0.0,)</version>
+                  <!-- Enforce JDK 22+ for compilation. -->
+                  <!-- This is needed because of Foreign Function & Memory API stabilisation. -->
+                  <version>[22.0.0,)</version>
                 </requireJavaVersion>
                 <requireMavenVersion>
                   <version>[3.1.1,)</version>
@@ -1043,7 +887,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.0</version>
         <configuration>
-          <compilerVersion>11</compilerVersion>
+          <compilerVersion>22</compilerVersion>
           <fork>true</fork>
           <source>${maven.compiler.source}</source>
           <target>${maven.compiler.target}</target>
@@ -1545,7 +1389,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.2.1</version>
+          <version>3.6.0</version>
         </plugin>
       </plugins>
     </pluginManagement>

@@ -33,11 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 8
+      - name: Set up JDK 22
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '11'
+          java-version: '22'
 
       # Cache .m2/repository
       - name: Cache local Maven repository
@@ -61,16 +61,16 @@ jobs:
 
   build-pr-windows:
     runs-on: windows-2019
-    name: windows-x86_64-java11-boringssl
+    name: windows-x86_64-java22-boringssl
     needs: verify-pr
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 11
+      - name: Set up JDK 22
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '11'
+          java-version: '22'
 
       # Cache .m2/repository
       # Caching of maven dependencies
@@ -93,7 +93,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-windows-x86_64-java11-boringssl
+          name: test-results-windows-x86_64-java22-boringssl
           path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
@@ -131,7 +131,7 @@ jobs:
         id: runcmd
         with:
           arch: aarch64
-          distro: ubuntu20.04
+          distro: ubuntu_rolling
 
           # Not required, but speeds up builds by storing container images in
           # a GitHub package registry.
@@ -144,14 +144,14 @@ jobs:
           # Install dependencies
           install: |
             apt-get update -q -y
-            apt-get install -q -y openjdk-11-jdk autoconf automake libtool make tar maven git
+            apt-get install -q -y openjdk-22-jdk autoconf automake libtool make tar maven git
 
           # Compile native code and the modules it depend on and run NativeLoadingTest. This is enough to ensure
           # we can load the native module on aarch64
           #
           # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |
-            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64 ./mvnw -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
+            JAVA_HOME=/usr/lib/jvm/java-22-openjdk-arm64 ./mvnw -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
     runs-on: ubuntu-latest
@@ -159,33 +159,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - setup: linux-x86_64-java11
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak"
-          - setup: linux-x86_64-java17-graal
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.graalvm117.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.graalvm117.yaml run build-leak"
-          - setup: linux-x86_64-java17
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build-leak"
-          - setup: linux-x86_64-java21
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.21.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.21.yaml run build-leak"
+          - setup: linux-x86_64-java22-graal
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.graalvm23.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.graalvm23.yaml run build-leak"
           - setup: linux-x86_64-java22
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml run build-leak"
-          - setup: linux-x86_64-java11-boringssl
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-boringssl-static"
-          - setup: linux-x86_64-java11-unsafe-buffer
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-unsafe-buffer"
-          - setup: linux-x86_64-java11-adaptive
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-adaptive"
-          - setup: linux-x86_64-ubi9-java21
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.21.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.21.yaml run build-boringssl-static"
+          - setup: linux-x86_64-java22-boringssl
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml run build-leak-boringssl-static"
+          - setup: linux-x86_64-java22-unsafe-buffer
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml run build-unsafe-buffer"
+          - setup: linux-x86_64-java22-adaptive
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml run build-leak-adaptive"
+          - setup: linux-x86_64-ubi9-java22
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.22.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.22.yaml run build-boringssl-static"
 
     name: ${{ matrix.setup }} build
     needs: verify-pr
