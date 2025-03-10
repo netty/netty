@@ -44,7 +44,8 @@ public final class IoUringBufferRingConfig {
      */
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int maxUnreleasedBuffers,
                                    IoUringBufferRingAllocator allocator) {
-        this(bgId, bufferRingSize, bufferRingSize / 2, maxUnreleasedBuffers, IoUring.isRegisterBufferRingIncSupported(), allocator);
+        this(bgId, bufferRingSize, bufferRingSize / 2, maxUnreleasedBuffers,
+                IoUring.isRegisterBufferRingIncSupported(), allocator);
     }
 
     /**
@@ -52,6 +53,8 @@ public final class IoUringBufferRingConfig {
      *
      * @param bgId                  the buffer group id to use (must be non-negative).
      * @param bufferRingSize        the size of the ring
+     * @param batchSize             the size of the batch on how many buffers are added everytime we need to expand the
+     *                              buffer ring.
      * @param maxUnreleasedBuffers  the maximum buffers that can be allocated out of this buffer ring and are
      *                              unreleased yet. Once this threshold is hit the usage of the buffer ring will
      *                              be temporarily disabled.
