@@ -38,6 +38,10 @@ public final class IoUring {
     private static final boolean IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
     private static final boolean IORING_REGISTER_BUFFER_RING_SUPPORTED;
     private static final boolean IORING_REGISTER_BUFFER_RING_INC_SUPPORTED;
+    private static final boolean IORING_ACCEPT_MULTISHOT_ENABLED;
+    private static final boolean IORING_RECV_MULTISHOT_ENABLED;
+    private static final boolean IORING_RECVSEND_BUNDLE_ENABLED;
+    private static final boolean IORING_POLL_ADD_MULTISHOT_ENABLED;
 
     private static final InternalLogger logger;
 
@@ -150,6 +154,15 @@ public final class IoUring {
         IORING_SETUP_DEFER_TASKRUN_SUPPORTED = deferTaskrunSupported;
         IORING_REGISTER_BUFFER_RING_SUPPORTED = registerBufferRingSupported;
         IORING_REGISTER_BUFFER_RING_INC_SUPPORTED = registerBufferRingIncSupported;
+
+        IORING_ACCEPT_MULTISHOT_ENABLED = IORING_ACCEPT_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
+                "io.netty.iouring.acceptMultiShotEnabled", true);
+        IORING_RECV_MULTISHOT_ENABLED = IORING_RECV_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
+                "io.netty.iouring.recvMultiShotEnabled", true);
+        IORING_RECVSEND_BUNDLE_ENABLED = IORING_RECVSEND_BUNDLE_SUPPORTED && SystemPropertyUtil.getBoolean(
+                "io.netty.iouring.recvsendBundleEnabled", true);
+       IORING_POLL_ADD_MULTISHOT_ENABLED = IORING_POLL_ADD_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
+               "io.netty.iouring.pollAddMultishotEnabled", true);
     }
 
     public static boolean isAvailable() {
@@ -180,7 +193,12 @@ public final class IoUring {
         return IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED;
     }
 
-    static boolean isSpliceSupported() {
+    /**
+     * Returns if SPLICE is supported or not.
+     *
+     * @return {@code true} if supported, {@code false} otherwise.
+     */
+    public static boolean isSpliceSupported() {
         return IORING_SPLICE_SUPPORTED;
     }
 
@@ -224,12 +242,58 @@ public final class IoUring {
         return IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
     }
 
+    /**
+     * Returns if it is supported to use a buffer ring.
+     *
+     * @return {@code true} if supported, {@code false} otherwise.
+     */
     public static boolean isRegisterBufferRingSupported() {
         return IORING_REGISTER_BUFFER_RING_SUPPORTED;
     }
 
+    /**
+     * Returns if it is supported to use an incremental buffer ring.
+     *
+     * @return {@code true} if supported, {@code false} otherwise.
+     */
     public static boolean isRegisterBufferRingIncSupported() {
         return IORING_REGISTER_BUFFER_RING_INC_SUPPORTED;
+    }
+
+    /**
+     * Returns if multi-shot ACCEPT is used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isAcceptMultishotEnabled() {
+        return IORING_ACCEPT_MULTISHOT_ENABLED;
+    }
+
+    /**
+     * Returns if multi-shot RECV is used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isRecvMultishotEnabled() {
+        return IORING_RECV_MULTISHOT_ENABLED;
+    }
+
+    /**
+     * Returns if RECVSEND bundles are used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isRecvsendBundleEnabled() {
+        return IORING_RECVSEND_BUNDLE_ENABLED;
+    }
+
+    /**
+     * Returns if multi-shot POLL_ADD is used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isPollAddMultishotEnabled() {
+        return IORING_POLL_ADD_MULTISHOT_ENABLED;
     }
 
     public static void ensureAvailability() {

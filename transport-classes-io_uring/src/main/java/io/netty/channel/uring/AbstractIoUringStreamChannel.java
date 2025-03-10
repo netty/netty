@@ -355,7 +355,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         private int scheduleReadProviderBuffer(IoUringBufferRing bufferRing, boolean first, boolean socketIsEmpty) {
             short bgId = bufferRing.bufferGroupId();
             try {
-                boolean multishot = IoUring.isRecvMultishotSupported();
+                boolean multishot = IoUring.isRecvMultishotEnabled();
                 byte flags = (byte) Native.IOSQE_BUFFER_SELECT;
                 short ioPrio;
                 final int recvFlags;
@@ -368,7 +368,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
                     recvFlags = calculateRecvFlags(first);
                 }
-                if (IoUring.isRecvsendBundleSupported()) {
+                if (IoUring.isRecvsendBundleEnabled()) {
                     // See https://github.com/axboe/liburing/wiki/
                     // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
                     ioPrio |= Native.IORING_RECVSEND_BUNDLE;
@@ -446,7 +446,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 } else if (res > 0) {
                     if (useBufferRing) {
 
-                        if (IoUring.isRecvsendBundleSupported()) {
+                        if (IoUring.isRecvsendBundleEnabled()) {
                             // If RECVSEND_BUNDLE is supported we need to do a bit more work here.
                             // In this case we might need to obtain multiple buffers out of the buffer ring as
                             // multiple of them might have been filled for one recv operation.
