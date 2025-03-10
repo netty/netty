@@ -3,29 +3,29 @@ version: "3"
 services:
 
   runtime-setup:
-    image: netty:centos-6-1.17
+    image: netty:centos-6-1.22
     build:
       args:
-        java_version : "22.1.0.r17-grl"
+        java_version : "23.0.2-graalce"
 
   build:
-    image: netty:centos-6-1.17
+    image: netty:centos-6-1.22
 
   build-leak:
-    image: netty:centos-6-1.17
+    image: netty:centos-6-1.22
     command: /usr/bin/scl enable devtoolset-7 -- bash -cl "./mvnw -B -ntp -Pleak clean install -Dio.netty5.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora"
 
   build-boringssl-static:
-    image: netty:centos-6-1.17
+    image: netty:centos-6-1.22
 
   build-leak-boringssl-static:
-    image: netty:centos-6-1.17
+    image: netty:centos-6-1.22
 
   build-boringssl-snapshot:
-    image: netty:centos-6-1.17
+    image: netty:centos-6-1.22
 
   build-unsafe-buffer:
-    image: netty:centos-6-1.17
+    image: netty:centos-6-1.22
 
   shell:
-    image: netty:centos-6-1.17
+    image: netty:centos-6-1.22
