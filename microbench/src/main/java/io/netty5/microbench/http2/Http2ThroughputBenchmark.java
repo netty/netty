@@ -429,7 +429,7 @@ public class Http2ThroughputBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
-        public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+        public void onUnknownFrame(ChannelHandlerContext ctx, short frameType, int streamId,
                                    Http2Flags flags, Buffer payload) {
         }
     }
