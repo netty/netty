@@ -182,7 +182,8 @@ public class IoUringBufferRingTest {
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
                 // let's use a small chunkSize so we are sure a recv will span multiple buffers.
-                (short) 1, (short) 16, 8, 16 * 16, incremental, new IoUringFixedBufferRingAllocator(bufferRingChunkSize));
+                (short) 1, (short) 16, 8, 16 * 16,
+                incremental, new IoUringFixedBufferRingAllocator(bufferRingChunkSize));
 
         ioUringIoHandlerConfiguration.setBufferRingConfig(bufferRingConfig);
 
