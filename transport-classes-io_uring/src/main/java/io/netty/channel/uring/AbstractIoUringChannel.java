@@ -728,7 +728,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             if (!isActive() || shouldBreakIoUringInReady(config())) {
                 return;
             }
-            pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, IoUring.isPollAddMultishotSupported());
+            pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, IoUring.isPollAddMultishotEnabled());
         }
 
         private void readComplete(byte op, int res, int flags, short data) {
