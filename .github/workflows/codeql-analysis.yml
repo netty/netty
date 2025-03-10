@@ -22,10 +22,10 @@ name: "CodeQL"
 
 on:
   push:
-    branches: ["4.1", main]
+    branches: [main]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: ["4.1", main]
+    branches: [main]
   schedule:
     - cron: '0 13 * * 3'
 
@@ -93,7 +93,7 @@ jobs:
     - uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
-        java-version: '11' # The JDK version to make available on the path.
+        java-version: '22' # The JDK version to make available on the path.
 
     - name: Compile project
       run: ./mvnw -B -ntp clean package -DskipTests=true

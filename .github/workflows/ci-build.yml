@@ -37,12 +37,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - setup: linux-x86_64-java11
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build"
-          - setup: linux-x86_64-java11-boringssl-snapshot
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-boringssl-snapshot"
+          - setup: linux-x86_64-java22
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml run build"
+          - setup: linux-x86_64-java22-boringssl-snapshot
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.22.yaml run build-boringssl-snapshot"
 
     name: ${{ matrix.setup }}
     steps:

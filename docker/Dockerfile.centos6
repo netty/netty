@@ -28,7 +28,7 @@ RUN mkdir -p /var/cache/yum/x86_64/6/centos-sclo-rh/ && \
 # Downloading and installing SDKMAN!
 RUN curl -s  "https://get.sdkman.io" | bash
 
-ARG java_version=11.0.12-zulu
+ARG java_version=22.0.2-zulu
 ENV JAVA_VERSION $java_version
 
 # Installing Java removing some unnecessary SDKMAN files
