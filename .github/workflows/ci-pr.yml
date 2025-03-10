@@ -131,7 +131,7 @@ jobs:
         id: runcmd
         with:
           arch: aarch64
-          distro: ubuntu24.10
+          distro: ubuntu_rolling
 
           # Not required, but speeds up builds by storing container images in
           # a GitHub package registry.
