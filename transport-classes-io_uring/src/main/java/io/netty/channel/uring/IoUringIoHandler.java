@@ -566,7 +566,9 @@ public final class IoUringIoHandler implements IoHandler {
         void handle(int res, int flags, byte op, short data) {
             event.update(res, flags, op, data);
             handle.handle(this, event);
-            if (--outstandingCompletions == 0 && removeLater) {
+            // Only decrement outstandingCompletions if IORING_CQE_F_MORE is not set as otherwise we know that we will
+            // receive more completions for the intial request.
+            if ((flags & Native.IORING_CQE_F_MORE) == 0 && --outstandingCompletions == 0 && removeLater) {
                 // No more outstanding completions, remove the fd <-> registration mapping now.
                 removeLater = false;
                 remove();
