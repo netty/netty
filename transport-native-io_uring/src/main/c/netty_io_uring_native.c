@@ -402,19 +402,19 @@ static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
         return registerRes;
     }
     br->tail = 0;
-    return (jlong)br;
+    return (jlong) br;
 }
 
 static jint netty_io_uring_unregister_buf_ring(JNIEnv* env, jclass clazz,
-                                        int ringFd, struct io_uring_buf_ring *br,
-                                        unsigned int nentries, int bgid) {
-    struct io_uring_buf_reg reg = { .bgid = bgid };
+                                        jint ringFd, jlong br,
+                                        jint nentries, jshort bgid) {
+    struct io_uring_buf_reg reg = { .bgid = (__u16) bgid };
     int registerRes = sys_io_uring_register(ringFd, IORING_UNREGISTER_PBUF_RING, &reg, 1);
     if (registerRes) {
         return registerRes;
     }
     size_t ring_size = nentries * sizeof(struct io_uring_buf);
-    munmap(br,ring_size);
+    munmap((struct io_uring_buf_ring *) br, ring_size);
     return 0;
 }
 
@@ -751,7 +751,7 @@ static const JNINativeMethod method_table[] = {
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
     {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 },
     {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring},
-    {"ioUringUnRegisterBufRing", "(IJII)I", (void *) netty_io_uring_unregister_buf_ring}
+    {"ioUringUnRegisterBufRing", "(IJIS)I", (void *) netty_io_uring_unregister_buf_ring}
 };
 static const jint method_table_size =
     sizeof(method_table) / sizeof(method_table[0]);

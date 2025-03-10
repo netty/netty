@@ -60,7 +60,7 @@ public class IoUringBufferRingTest {
             assumeTrue(
                     ioUringBufRingAddr > 0,
                     "ioUringSetupBufRing result must great than 0, but now result is " + ioUringBufRingAddr);
-            int freeRes = Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, 4, 1);
+            int freeRes = Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, 4, (short) 1);
             assertEquals(
                     0,
                     freeRes,
