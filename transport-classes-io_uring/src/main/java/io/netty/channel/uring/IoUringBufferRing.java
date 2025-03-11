@@ -30,6 +30,7 @@ final class IoUringBufferRing {
     private final long ioUringBufRingAddr;
     private final long tailFieldAddress;
     private final short entries;
+    private final int batchSize;
     private final int maxUnreleasedBuffers;
     private final short mask;
     private final short bufferGroupId;
@@ -42,13 +43,17 @@ final class IoUringBufferRing {
     private volatile boolean usable;
     private boolean corrupted;
     private boolean closed;
+    private int numBuffers;
+    private boolean expanded;
+
     IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
-                      short entries, int maxUnreleasedBuffers, short bufferGroupId, boolean incremental,
+                      short entries, int batchSize, int maxUnreleasedBuffers, short bufferGroupId, boolean incremental,
                       IoUringBufferRingAllocator allocator) {
         assert entries % 2 == 0;
         this.ioUringBufRingAddr = ioUringBufRingAddr;
         this.tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
         this.entries = entries;
+        this.batchSize = batchSize;
         this.maxUnreleasedBuffers = maxUnreleasedBuffers;
         this.mask = (short) (entries - 1);
         this.bufferGroupId = bufferGroupId;
@@ -63,11 +68,30 @@ final class IoUringBufferRing {
         return !corrupted && usable;
     }
 
-    void fill() {
-        for (short i = 0; i < entries; i++) {
-            fillBuffer(i);
-        }
+    void initialize() {
+        fillBuffers();
         usable = true;
+    }
+
+    /**
+     * Try to expand by adding more buffers to the ring if there is any space left.
+     * This method might be called multiple times before we call {@link #fillBuffer()} again.
+     */
+    void expand() {
+        // TODO: We could also shrink the number of elements again if we find out we not use all of it frequently.
+        if (!expanded) {
+            // Only expand once before we reset expanded in fillBuffer() which is called once a buffer was completely
+            // used and moved out of the buffer ring.
+            fillBuffers();
+            expanded = true;
+        }
+    }
+
+    private void fillBuffers() {
+        int num = Math.min(batchSize, entries - numBuffers);
+        for (short i = 0; i < num; i++) {
+            fillBuffer();
+        }
     }
 
     /**
@@ -78,14 +102,13 @@ final class IoUringBufferRing {
         return exhaustedEvent;
     }
 
-    void fillBuffer(short bid) {
+    void fillBuffer() {
         if (corrupted || closed) {
             return;
         }
         short oldTail = PlatformDependent.getShort(tailFieldAddress);
-        int ringIndex = oldTail & mask;
-        assert ringIndex == bid;
-        assert buffers[bid] == null;
+        short ringIndex = (short) (oldTail & mask);
+        assert buffers[ringIndex] == null;
         final ByteBuf byteBuf;
         try {
             byteBuf = allocator.allocate();
@@ -97,7 +120,7 @@ final class IoUringBufferRing {
             throw e;
         }
         byteBuf.writerIndex(byteBuf.capacity());
-        buffers[bid] = new IoUringBufferRingByteBuf(byteBuf);
+        buffers[ringIndex] = new IoUringBufferRingByteBuf(byteBuf);
 
         //  see:
         //  https://github.com/axboe/liburing/
@@ -106,9 +129,13 @@ final class IoUringBufferRing {
         PlatformDependent.putLong(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_ADDR,
                 byteBuf.memoryAddress() + byteBuf.readerIndex());
         PlatformDependent.putInt(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.capacity());
-        PlatformDependent.putShort(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
+        PlatformDependent.putShort(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_BID, ringIndex);
         // Now advanced the tail by the number of buffers that we just added.
         PlatformDependent.putShortOrdered(tailFieldAddress, (short) (oldTail + 1));
+        numBuffers++;
+        // We added a buffer to the ring, let's reset the expanded variable so we can expand it if we receive
+        // ENOBUFS.
+        expanded = false;
     }
 
     /**
@@ -144,6 +171,7 @@ final class IoUringBufferRing {
 
         // The buffer is considered to be used, null out the slot.
         buffers[bid] = null;
+        numBuffers--;
         byteBuf.markUsed();
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
