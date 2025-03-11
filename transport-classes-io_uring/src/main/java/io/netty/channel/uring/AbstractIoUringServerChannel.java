@@ -208,7 +208,6 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
                 acceptId = 0;
                 return;
             }
-            assert acceptId != 0;
             boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
             if (rearm) {
                 // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.

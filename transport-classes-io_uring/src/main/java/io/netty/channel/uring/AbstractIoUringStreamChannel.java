@@ -408,7 +408,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 }
                 return;
             }
-            assert readId != 0;
             boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
             boolean useBufferRing = (flags & Native.IORING_CQE_F_BUFFER) != 0;
             short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
@@ -568,7 +567,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
-            assert writeId != 0;
             writeId = 0;
             writeOpCode = 0;
 
@@ -631,8 +629,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             IoUringIoOps ops = IoUringIoOps.newAsyncCancel((byte) 0, readId, Native.IORING_OP_RECV);
             long id = registration.submit(ops);
             assert id != 0;
-        } else {
-            assert numOutstandingReads == 0 || numOutstandingReads == -1;
+            readId = 0;
         }
     }
 
@@ -645,8 +642,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             assert writeOpCode != 0;
             long id = registration.submit(IoUringIoOps.newAsyncCancel((byte) 0, writeId, writeOpCode));
             assert id != 0;
-        } else {
-            assert numOutstandingWrites == 0;
+            writeId = 0;
         }
     }
 
