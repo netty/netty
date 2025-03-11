@@ -1478,6 +1478,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
         void connectStream(QuicStreamType type, @Nullable ChannelHandler handler,
                            Promise<QuicStreamChannel> promise) {
+            if (!promise.setUncancellable()) {
+                return;
+            }
             long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
 
             try {
@@ -1511,6 +1514,9 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         @Override
         public void connect(SocketAddress remote, SocketAddress local, ChannelPromise channelPromise) {
             assert eventLoop().inEventLoop();
+            if (!channelPromise.setUncancellable()) {
+                return;
+            }
             if (server) {
                 channelPromise.setFailure(new UnsupportedOperationException());
                 return;

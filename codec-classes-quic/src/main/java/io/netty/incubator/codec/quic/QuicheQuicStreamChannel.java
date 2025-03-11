@@ -137,6 +137,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     private void updatePriority0(QuicStreamPriority priority, ChannelPromise promise) {
         assert eventLoop().inEventLoop();
+        if (!promise.setUncancellable()) {
+            return;
+        }
         try {
             parent().streamPriority(streamId(), (byte) priority.urgency(), priority.isIncremental());
         } catch (Throwable cause) {
@@ -164,6 +167,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     private void shutdownOutput0(ChannelPromise promise) {
         assert eventLoop().inEventLoop();
+        if (!promise.setUncancellable()) {
+            return;
+        }
         outputShutdown = true;
         unsafe.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, promise);
         unsafe.flush();
@@ -196,6 +202,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     private void shutdownInput0(int err, ChannelPromise channelPromise) {
         assert eventLoop().inEventLoop();
+        if (!channelPromise.setUncancellable()) {
+            return;
+        }
         inputShutdown = true;
         parent().streamShutdown(streamId(), true, false, err, channelPromise);
         closeIfDone();
@@ -208,6 +217,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     private void shutdownOutput0(int error, ChannelPromise channelPromise) {
         assert eventLoop().inEventLoop();
+        if (!channelPromise.setUncancellable()) {
+            return;
+        }
         parent().streamShutdown(streamId(), false, true, error, channelPromise);
         outputShutdown = true;
         closeIfDone();
@@ -230,6 +242,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     private void shutdown0(ChannelPromise promise) {
         assert eventLoop().inEventLoop();
+        if (!promise.setUncancellable()) {
+            return;
+        }
         inputShutdown = true;
         outputShutdown = true;
         unsafe.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, unsafe.voidPromise());
@@ -250,6 +265,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     private void shutdown0(int error, ChannelPromise channelPromise) {
         assert eventLoop().inEventLoop();
+        if (!channelPromise.setUncancellable()) {
+            return;
+        }
         inputShutdown = true;
         outputShutdown = true;
         parent().streamShutdown(streamId(), true, true, error, channelPromise);
@@ -477,6 +495,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @Override
         public void register(EventLoop eventLoop, ChannelPromise promise) {
             assert eventLoop.inEventLoop();
+            if (!promise.setUncancellable()) {
+                return;
+            }
             if (registered) {
                 promise.setFailure(new IllegalStateException());
                 return;
@@ -494,6 +515,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @Override
         public void bind(SocketAddress localAddress, ChannelPromise promise) {
             assert eventLoop().inEventLoop();
+            if (!promise.setUncancellable()) {
+                return;
+            }
             promise.setFailure(new UnsupportedOperationException());
         }
 
@@ -510,6 +534,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
         void close(@Nullable ClosedChannelException writeFailCause, ChannelPromise promise) {
             assert eventLoop().inEventLoop();
+            if (!promise.setUncancellable()) {
+                return;
+            }
             if (!active || closePromise.isDone()) {
                 if (promise.isVoid()) {
                     return;
@@ -694,7 +721,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @Override
         public void write(Object msg, ChannelPromise promise) {
             assert eventLoop().inEventLoop();
-
+            if (!promise.setUncancellable()) {
+                ReferenceCountUtil.release(msg);
+                return;
+            }
             // Check first if the Channel is in a state in which it will accept writes, if not fail everything
             // with the right exception
             if (!isOpen()) {
