@@ -49,6 +49,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * System property with boolean (true or false) type value, that determine if the methods {@link #sync()} and
      * {@link #syncUninterruptibly()} should wrap the exception of any failed future in a {@link CompletionException}.
      * <p>
+     * <strong>Caution:</strong> This is a debugging feature. Changing the wrapping behavior may cause other code
+     * to break.
+     * <p>
      * This is useful because {@link #sync()} and {@link #syncUninterruptibly()} otherwise blindly rethrows the
      * original cause exception, which will have the stack trace that shows why the promise failed, but won't have
      * any stack trace telling you which {@link #sync()} or {@link #syncUninterruptibly()} method call propagated
@@ -63,7 +66,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      * This is {@code false} by default for compatibility with Netty 4.1.
      * In Netty 5, the exception wrapping will always be enabled and cannot be turned off.
      */
-    public static final String PROPERTY_COMPLETION_EXCEPTION_WRAP = "io.netty.defaultPromise.completionExceptionWrap";
+    public static final String PROPERTY_DEBUG_COMPLETION_EXCEPTION_WRAP =
+            "io.netty.defaultPromise.debug.completionExceptionWrap";
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
     private static final InternalLogger rejectedExecutionLogger =
@@ -71,7 +75,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     private static final int MAX_LISTENER_STACK_DEPTH = Math.min(8,
             SystemPropertyUtil.getInt(PROPERTY_MAX_LISTENER_STACK_DEPTH, 8));
     private static final boolean COMPLETION_EXCEPTION_WRAP =
-            SystemPropertyUtil.getBoolean(PROPERTY_COMPLETION_EXCEPTION_WRAP, false);
+            SystemPropertyUtil.getBoolean(PROPERTY_DEBUG_COMPLETION_EXCEPTION_WRAP, false);
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
