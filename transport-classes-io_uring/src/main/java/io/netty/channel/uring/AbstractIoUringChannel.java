@@ -588,28 +588,29 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 return;
             }
             byte flags = (byte) 0;
-            if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
-                assert pollRdhupId != 0;
+            if ((ioState & POLL_RDHUP_SCHEDULED) != 0 && pollRdhupId != 0) {
                 long id = registration.submit(
                         IoUringIoOps.newAsyncCancel(flags, pollRdhupId, Native.IORING_OP_POLL_ADD));
                 assert id != 0;
+                pollRdhupId = 0;
             }
-            if ((ioState & POLL_IN_SCHEDULED) != 0) {
-                assert pollInId != 0;
+            if ((ioState & POLL_IN_SCHEDULED) != 0 && pollInId != 0) {
                 long id = registration.submit(
                         IoUringIoOps.newAsyncCancel(flags, pollInId, Native.IORING_OP_POLL_ADD));
                 assert id != 0;
+                pollInId = 0;
             }
-            if ((ioState & POLL_OUT_SCHEDULED) != 0) {
-                assert pollOutId != 0;
+            if ((ioState & POLL_OUT_SCHEDULED) != 0 && pollOutId != 0) {
                 long id = registration.submit(
                         IoUringIoOps.newAsyncCancel(flags, pollOutId, Native.IORING_OP_POLL_ADD));
                 assert id != 0;
+                pollOutId = 0;
             }
             if (cancelConnect && connectId != 0) {
                 // Best effort to cancel the already submitted connect request.
                 long id = registration.submit(IoUringIoOps.newAsyncCancel(flags, connectId, Native.IORING_OP_CONNECT));
                 assert id != 0;
+                connectId = 0;
             }
             cancelOutstandingReads(registration, numOutstandingReads);
             cancelOutstandingWrites(registration, numOutstandingWrites);
