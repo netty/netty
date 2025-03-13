@@ -170,7 +170,7 @@ public abstract class AbstractEventLoopTest {
         private final DeregisterMethod method;
         private final AtomicReference<Throwable> throwable;
 
-        public ReRegisterHandler(EventLoopGroup eventLoopGroup,
+        ReRegisterHandler(EventLoopGroup eventLoopGroup,
                                  DeregisterMethod method,
                                  AtomicReference<Throwable> throwable) {
             this.eventLoopGroup = eventLoopGroup;
