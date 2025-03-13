@@ -77,7 +77,7 @@ public abstract class AbstractEventLoopTest {
      */
     @ParameterizedTest
     @EnumSource(DeregisterMethod.class)
-    void tesrReregisterOnChannelHandlerContext(DeregisterMethod method) throws Exception {
+    void testReregisterOnChannelHandlerContext(DeregisterMethod method) throws Exception {
         EventLoopGroup bossGroup = newEventLoopGroup();
         EventLoopGroup workerGroup = newEventLoopGroup();
         AtomicReference<Throwable> throwable = new AtomicReference<>();
