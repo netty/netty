@@ -15,17 +15,25 @@
  */
 package io.netty.channel;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -64,6 +72,149 @@ public abstract class AbstractEventLoopTest {
         assertSame(executor, future.channel().pipeline().context(TestChannelHandler2.class).executor());
     }
 
+    /**
+     * Test for https://github.com/netty/netty/issues/14923
+     */
+    @ParameterizedTest
+    @EnumSource(DeregisterMethod.class)
+    void tesrReregisterOnChannelHandlerContext(DeregisterMethod method) throws Exception {
+        EventLoopGroup bossGroup = newEventLoopGroup();
+        EventLoopGroup workerGroup = newEventLoopGroup();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        try {
+            ServerBootstrap b = new ServerBootstrap();
+            ReRegisterHandler reRegisterHandler = new ReRegisterHandler(workerGroup, method, throwable);
+            b.group(bossGroup, workerGroup)
+                    .channel(newChannel())
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) {
+                            ChannelPipeline p = ch.pipeline();
+                            p.addLast("logging", new LoggingHandler());
+                            p.addLast(reRegisterHandler);
+                        }
+                    });
+
+            ChannelFuture f = b.bind(0).sync();
+
+            Channel client = new Bootstrap()
+                    .group(workerGroup)
+                    .channel(newSocketChannel())
+                    .handler(new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            ReferenceCountUtil.release(msg);
+                        }
+
+                        @Override
+                        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                            super.channelReadComplete(ctx);
+                            ctx.close();
+                        }
+
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                            throwable.set(cause);
+                            super.exceptionCaught(ctx, cause);
+                            ctx.close();
+                        }
+                    })
+                    .connect(f.channel().localAddress())
+                    .sync()
+                    .channel();
+            client.closeFuture().addListener(ignore -> f.channel().close());
+            client.writeAndFlush(Unpooled.copiedBuffer("hello", StandardCharsets.US_ASCII));
+
+            f.channel().closeFuture().sync();
+            Throwable caughtThrowable = throwable.get();
+            if (caughtThrowable != null) {
+                fail(caughtThrowable);
+            }
+        } finally {
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
+        }
+    }
+
+    enum DeregisterMethod implements Function<ChannelHandlerContext, ChannelFuture> {
+        CONTEXT {
+            @Override
+            public ChannelFuture apply(ChannelHandlerContext ctx) {
+                return ctx.deregister();
+            }
+        },
+        CONTEXT_PROMISE {
+            @Override
+            public ChannelFuture apply(ChannelHandlerContext ctx) {
+                return ctx.deregister(ctx.newPromise());
+            }
+        },
+        CHANNEL {
+            @Override
+            public ChannelFuture apply(ChannelHandlerContext ctx) {
+                return ctx.channel().deregister();
+            }
+        },
+        CHANNEL_PROMISE {
+            @Override
+            public ChannelFuture apply(ChannelHandlerContext ctx) {
+                return ctx.channel().deregister(ctx.channel().newPromise());
+            }
+        }
+    }
+
+    @ChannelHandler.Sharable
+    static class ReRegisterHandler extends ChannelInboundHandlerAdapter {
+
+        final EventLoopGroup eventLoopGroup;
+        private final DeregisterMethod method;
+        private final AtomicReference<Throwable> throwable;
+
+        public ReRegisterHandler(EventLoopGroup eventLoopGroup,
+                                 DeregisterMethod method,
+                                 AtomicReference<Throwable> throwable) {
+            this.eventLoopGroup = eventLoopGroup;
+            this.method = method;
+            this.throwable = throwable;
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            super.exceptionCaught(ctx, cause);
+            throwable.set(cause);
+            ctx.close();
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext outCtx, Object msg) throws Exception {
+            final EventLoop newLoop = anyNotEqual(outCtx.channel().eventLoop());
+            // ctx.pipeline().deregister() | ctx.channel().deregister()
+            // In both of them we set null for `contextExecutor`, but unfortunately it doesn't work :(
+            // Here we use ctx.deregister() where this erasing logic missed at all
+            method.apply(outCtx)
+                    .addListener((ChannelFutureListener) deregister -> newLoop.register(deregister.channel())
+                            .addListener((ChannelFutureListener) register -> {
+                                outCtx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                    @Override
+                                    public void channelRead(ChannelHandlerContext inCtx, Object inMsg) {
+                                        outCtx.writeAndFlush(inMsg);
+                                    }
+                                });
+                                outCtx.fireChannelRead(msg);
+                            })
+                    );
+        }
+
+        private EventLoop anyNotEqual(EventLoop eventLoop) {
+            EventLoop next;
+            do {
+                next = eventLoopGroup.next();
+            } while (eventLoop == next);
+
+            return next;
+        }
+    }
+
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testShutdownGracefullyNoQuietPeriod() throws Exception {
@@ -92,4 +243,5 @@ public abstract class AbstractEventLoopTest {
 
     protected abstract EventLoopGroup newEventLoopGroup();
     protected abstract Class<? extends ServerChannel> newChannel();
+    protected abstract Class<? extends SocketChannel> newSocketChannel();
 }

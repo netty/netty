@@ -980,15 +980,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelFuture deregister() {
-        try {
-            return tail.deregister();
-        } finally {
-            AbstractChannelHandlerContext context = tail;
-            do {
-                context.contextExecutor = null; // Clear cached executors in case channel gets re-registered.
-                context = context.prev;
-            } while (context != null);
-        }
+        return tail.deregister();
     }
 
     @Override
@@ -1412,7 +1404,15 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelUnregistered(ChannelHandlerContext ctx) {
-            ctx.fireChannelUnregistered();
+            try {
+                ctx.fireChannelUnregistered();
+            } finally {
+                AbstractChannelHandlerContext context = tail;
+                do {
+                    context.contextExecutor = null; // Clear cached executors in case channel gets re-registered.
+                    context = context.prev;
+                } while (context != null);
+            }
 
             // Remove all handlers sequentially if channel is closed and unregistered.
             if (!channel.isOpen()) {
