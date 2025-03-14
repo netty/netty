@@ -35,7 +35,7 @@ final class IoUringBufferRing {
     private final short mask;
     private final short bufferGroupId;
     private final int ringFd;
-    private final IoUringBufferRingByteBuf[] buffers;
+    private final ByteBuf[] buffers;
     private final IoUringBufferRingAllocator allocator;
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
     private final boolean incremental;
@@ -58,7 +58,7 @@ final class IoUringBufferRing {
         this.mask = (short) (entries - 1);
         this.bufferGroupId = bufferGroupId;
         this.ringFd = ringFd;
-        this.buffers = new IoUringBufferRingByteBuf[entries];
+        this.buffers = new ByteBuf[entries];
         this.incremental = incremental;
         this.allocator = allocator;
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
@@ -120,7 +120,7 @@ final class IoUringBufferRing {
             throw e;
         }
         byteBuf.writerIndex(byteBuf.capacity());
-        buffers[ringIndex] = new IoUringBufferRingByteBuf(byteBuf);
+        buffers[ringIndex] = byteBuf;
 
         //  see:
         //  https://github.com/axboe/liburing/
@@ -161,7 +161,7 @@ final class IoUringBufferRing {
      */
     ByteBuf useBuffer(short bid, int readableBytes, boolean more) {
         assert readableBytes > 0;
-        IoUringBufferRingByteBuf byteBuf = buffers[bid];
+        ByteBuf byteBuf = buffers[bid];
 
         allocator.lastBytesRead(byteBuf.readableBytes(), readableBytes);
         if (incremental && more && byteBuf.readableBytes() > readableBytes) {
@@ -172,7 +172,7 @@ final class IoUringBufferRing {
         // The buffer is considered to be used, null out the slot.
         buffers[bid] = null;
         numBuffers--;
-        byteBuf.markUsed();
+        //byteBuf.markUsed();
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
     }
