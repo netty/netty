@@ -29,6 +29,7 @@ import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.SingleThreadIoEventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
@@ -65,6 +66,11 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     @Override
     protected Class<? extends ServerSocketChannel> newChannel() {
         return NioServerSocketChannel.class;
+    }
+
+    @Override
+    protected Class<? extends io.netty.channel.socket.SocketChannel> newSocketChannel() {
+        return NioSocketChannel.class;
     }
 
     @Test
