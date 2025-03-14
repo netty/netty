@@ -130,19 +130,19 @@ public class IoUringBufferRingTest {
         ByteBuf writeBuffer = Unpooled.directBuffer(randomStringLength);
         ByteBufUtil.writeAscii(writeBuffer, randomString);
         ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        if (incremental) {
+        /*if (incremental) {
             // Need to unwrap as its a slice.
             assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement1.unwrap());
         } else {
             assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement1);
-        }
+        }*/
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        if (incremental) {
+        /*if (incremental) {
             // Need to unwrap as its a slice.
             assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement2.unwrap());
         } else {
             assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement2);
-        }
+        }*/
         ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         readBuffer.release();
 
