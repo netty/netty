@@ -46,7 +46,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
             WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true),
             IoUringIoHandler.newFactory(new IoUringIoHandlerConfig()
                     .setBufferRingConfig(
-                            new IoUringBufferRingConfig(BGID, (short) 16, 16 * 16,
+                            new IoUringBufferRingConfig(BGID, (short) 16,
                                     new IoUringFixedBufferRingAllocator(1024)))));
     @Override
     public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {

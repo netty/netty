@@ -202,7 +202,7 @@ public final class IoUringIoHandler implements IoHandler {
             throw Errors.newIOException("ioUringRegisterBufRing", (int) ioUringBufRingAddr);
         }
         return new IoUringBufferRing(ringFd, ioUringBufRingAddr,
-                bufferRingSize, bufferRingConfig.batchSize(), bufferRingConfig.maxUnreleasedBuffers(),
+                bufferRingSize, bufferRingConfig.batchSize(),
                 bufferGroupId, bufferRingConfig.isIncremental(), bufferRingConfig.allocator()
         );
     }
