@@ -188,21 +188,20 @@ public abstract class AbstractEventLoopTest {
         @Override
         public void channelRead(ChannelHandlerContext outCtx, Object msg) throws Exception {
             final EventLoop newLoop = anyNotEqual(outCtx.channel().eventLoop());
-            // ctx.pipeline().deregister() | ctx.channel().deregister()
-            // In both of them we set null for `contextExecutor`, but unfortunately it doesn't work :(
-            // Here we use ctx.deregister() where this erasing logic missed at all
-            method.apply(outCtx)
-                    .addListener((ChannelFutureListener) deregister -> newLoop.register(deregister.channel())
-                            .addListener((ChannelFutureListener) register -> {
-                                outCtx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-                                    @Override
-                                    public void channelRead(ChannelHandlerContext inCtx, Object inMsg) {
-                                        outCtx.writeAndFlush(inMsg);
-                                    }
-                                });
-                                outCtx.fireChannelRead(msg);
-                            })
-                    );
+            ChannelFutureListener pipelieModifyingListener = register -> {
+                outCtx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void channelRead(ChannelHandlerContext inCtx, Object inMsg) {
+                        outCtx.writeAndFlush(inMsg);
+                    }
+                });
+                outCtx.fireChannelRead(msg);
+            };
+            ChannelFutureListener reregisteringListener = deregister -> {
+                deregister.channel().pipeline().fireUserEventTriggered("Unregistered user event");
+                newLoop.register(deregister.channel()).addListener(pipelieModifyingListener);
+            };
+            method.apply(outCtx).addListener(reregisteringListener);
         }
 
         private EventLoop anyNotEqual(EventLoop eventLoop) {
