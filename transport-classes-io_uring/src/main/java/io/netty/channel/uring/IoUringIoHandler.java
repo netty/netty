@@ -495,6 +495,11 @@ public final class IoUringIoHandler implements IoHandler {
             if (!isValid()) {
                 return INVALID_ID;
             }
+            if ((ioOps.flags() & Native.IOSQE_CQE_SKIP_SUCCESS) != 0) {
+                // Because we expect at least 1 completion per submission we can't support IOSQE_CQE_SKIP_SUCCESS
+                // as it will only produce a completion on failure.
+                throw new IllegalArgumentException("IOSQE_CQE_SKIP_SUCCESS not supported");
+            }
             long udata = UserData.encode(id, ioOps.opcode(), ioOps.data());
             if (executor.isExecutorThread(Thread.currentThread())) {
                 submit0(ioOps, udata);
