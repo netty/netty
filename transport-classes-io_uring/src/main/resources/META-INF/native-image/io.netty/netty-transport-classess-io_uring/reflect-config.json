@@ -1,0 +1,23 @@
+[
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name":"io.netty.channel.uring.IoUringServerSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name":"io.netty.channel.uring.IoUringSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name":"io.netty.channel.uring.IoUringDatagramChannel",
+    "methods":[{"name":"<init>","parameterTypes":[] }]
+  }
+]
