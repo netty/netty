@@ -15,14 +15,20 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.IoEvent;
 import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.IoRegistration;
 import io.netty.util.concurrent.ThreadAwareExecutor;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
 
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringIoHandlerTest {
@@ -52,6 +58,41 @@ public class IoUringIoHandlerTest {
             }
         });
         handler.initialize();
+        handler.destroy();
+    }
+
+    @Test
+    public void testSkipNotSupported() throws Exception {
+        IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory();
+        IoHandler handler = ioHandlerFactory.newHandler(new ThreadAwareExecutor() {
+
+            @Override
+            public boolean isExecutorThread(Thread thread) {
+                return true;
+            }
+
+            @Override
+            public void execute(Runnable command) {
+                command.run();
+            }
+        });
+        handler.initialize();
+        IoRegistration registration = handler.register(new IoUringIoHandle() {
+            @Override
+            public void handle(IoRegistration registration, IoEvent ioEvent) {
+                fail();
+            }
+
+            @Override
+            public void close() {
+                // Noop
+            }
+        });
+        assertThrows(IllegalArgumentException.class, () ->
+                registration.submit(new IoUringIoOps(Native.IORING_OP_NOP, (byte) Native.IOSQE_CQE_SKIP_SUCCESS,
+                            (short) 0, -1, 0, 0, 0, 0, (short) 0, (short) 0, (short) 0, 0, 0)));
+        assertTrue(registration.cancel());
+        assertFalse(registration.isValid());
         handler.destroy();
     }
 
