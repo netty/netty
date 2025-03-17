@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeAll;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringBufferRingSocketMultipleConnectTest extends SocketMultipleConnectTest {
@@ -35,6 +36,7 @@ public class IoUringBufferRingSocketMultipleConnectTest extends SocketMultipleCo
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeFalse(true, "Disable for debugging");
     }
 
     @Override

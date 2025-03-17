@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeAll;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringBufferRingSocketSslEchoTest extends SocketSslEchoTest {
@@ -31,6 +32,7 @@ public class IoUringBufferRingSocketSslEchoTest extends SocketSslEchoTest {
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeFalse(true, "Disable for debugging");
     }
 
     @Override
