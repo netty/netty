@@ -26,7 +26,6 @@ import org.junit.jupiter.api.TestInfo;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringBufferRingSocketFileRegionTest extends SocketFileRegionTest {
@@ -34,7 +33,6 @@ public class IoUringBufferRingSocketFileRegionTest extends SocketFileRegionTest 
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
-        assumeFalse(true, "Disable for debugging");
     }
 
     @Override

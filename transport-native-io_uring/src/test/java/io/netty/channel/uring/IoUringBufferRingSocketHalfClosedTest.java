@@ -29,7 +29,6 @@ import org.junit.jupiter.api.TestInfo;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringBufferRingSocketHalfClosedTest extends SocketHalfClosedTest {
@@ -37,7 +36,6 @@ public class IoUringBufferRingSocketHalfClosedTest extends SocketHalfClosedTest 
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
-        assumeFalse(true, "Disable for debugging");
     }
 
     @Override

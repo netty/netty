@@ -21,11 +21,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.CompositeBufferGatheringWriteTest;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringBufferRingCompositeBufferGatheringWriteTest extends CompositeBufferGatheringWriteTest  {
@@ -33,7 +31,6 @@ public class IoUringBufferRingCompositeBufferGatheringWriteTest extends Composit
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
-        assumeFalse(true, "Disable for debugging");
     }
 
     @Override

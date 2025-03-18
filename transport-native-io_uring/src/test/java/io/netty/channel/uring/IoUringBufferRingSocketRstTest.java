@@ -29,7 +29,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class IoUringBufferRingSocketRstTest extends SocketRstTest {
@@ -37,7 +36,6 @@ public class IoUringBufferRingSocketRstTest extends SocketRstTest {
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
-        assumeFalse(true, "Disable for debugging");
     }
 
     @Override
