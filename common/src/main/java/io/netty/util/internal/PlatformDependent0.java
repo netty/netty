@@ -570,7 +570,7 @@ final class PlatformDependent0 {
             return null;
         }
         try {
-            return Class.forName("java.lang.BaseVirtualThread", false, ClassLoader.getSystemClassLoader());
+            return Class.forName("java.lang.BaseVirtualThread", false, getSystemClassLoader());
         } catch (Throwable e) {
             if (logger.isTraceEnabled()) {
                 logger.debug("java.lang.BaseVirtualThread is not available: ", e);
