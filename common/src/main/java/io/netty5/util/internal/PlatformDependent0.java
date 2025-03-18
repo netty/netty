@@ -360,7 +360,7 @@ final class PlatformDependent0 {
                 if (maybeException instanceof MethodHandle) {
                     try {
                         MethodHandle m = (MethodHandle) maybeException;
-                        byte[] bytes = (byte[]) m.invoke(byte.class, 8);
+                        byte[] bytes = (byte[])  (Object) m.invoke(byte.class, 8);
                         assert bytes.length == 8;
                         allocateArrayHandle = m;
                     } catch (Throwable e) {
@@ -482,7 +482,7 @@ final class PlatformDependent0 {
 
     static byte[] allocateUninitializedArray(int size) {
         try {
-            return (byte[]) ALLOCATE_ARRAY_HANDLE.invoke(byte.class, size);
+            return (byte[]) (Object) ALLOCATE_ARRAY_HANDLE.invoke(byte.class, size);
         } catch (Throwable e) {
             if (e instanceof Error) {
                 throw (Error) e;
