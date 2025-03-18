@@ -31,6 +31,7 @@ import java.util.Queue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.util.internal.PlatformDependent.newMpscQueue;
+import static io.netty.util.internal.VirtualThreadCheckResult.NOT_VIRTUAL;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -178,7 +179,7 @@ public abstract class Recycler<T> {
                 // If the current thread is virtual thread,
                 // or we are not able to determine the thread type,
                 // then do not use thread-local.
-                || PlatformDependent.checkVirtualThread(Thread.currentThread()) != 1) {
+                || PlatformDependent.checkVirtualThread(Thread.currentThread()) != NOT_VIRTUAL) {
             return newObject((Handle<T>) NOOP_HANDLE);
         }
         LocalPool<T> localPool = threadLocal.get();
@@ -214,7 +215,7 @@ public abstract class Recycler<T> {
 
     @VisibleForTesting
     final int threadLocalSize() {
-        if (PlatformDependent.checkVirtualThread(Thread.currentThread()) != 1) {
+        if (PlatformDependent.checkVirtualThread(Thread.currentThread()) != NOT_VIRTUAL) {
             return 0;
         }
         LocalPool<T> localPool = threadLocal.getIfExists();

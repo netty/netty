@@ -31,7 +31,9 @@ import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
+import static io.netty.util.internal.VirtualThreadCheckResult.NOT_VIRTUAL;
+import static io.netty.util.internal.VirtualThreadCheckResult.IS_VIRTUAL;
+import static io.netty.util.internal.VirtualThreadCheckResult.UNKNOWN;
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
  */
@@ -582,30 +584,30 @@ final class PlatformDependent0 {
     }
 
     /**
-     * @param thread the thread to be checked.
+     * @param thread The thread to be checked.
      * @return
-     * {@code 0}: MUST be a virtual thread.
+     * {@code IS_VIRTUAL}: MUST be a virtual thread.
      * <br>
-     * {@code 1}: MUST NOT be a virtual thread.
+     * {@code NOT_VIRTUAL}: MUST NOT be a virtual thread.
      * <br>
-     * {@code -1}: Not able to check the thread type.
+     * {@code UNKNOWN}: Unable to check the thread type.
      */
-    static int checkVirtualThread(Thread thread) {
+    static VirtualThreadCheckResult checkVirtualThread(Thread thread) {
         if (thread == null || JAVA_VERSION < 19 || thread instanceof FastThreadLocalThread) {
-            return 1;
+            return NOT_VIRTUAL;
         }
         if (BASE_VIRTUAL_THREAD_CLASS != null) {
-            return BASE_VIRTUAL_THREAD_CLASS.isInstance(thread) ? 0 : 1;
+            return BASE_VIRTUAL_THREAD_CLASS.isInstance(thread) ? IS_VIRTUAL : NOT_VIRTUAL;
         }
         Class<?> clazz = thread.getClass();
         if (clazz == Thread.class || clazz.getSuperclass() == Thread.class) {
-            return 1;
+            return NOT_VIRTUAL;
         }
         if (VIRTUAL_THREAD_CHECK_METHOD == null) {
-            return -1;
+            return UNKNOWN;
         }
         try {
-            return (Boolean) VIRTUAL_THREAD_CHECK_METHOD.invoke(thread) ? 0 : 1;
+            return (Boolean) VIRTUAL_THREAD_CHECK_METHOD.invoke(thread) ? IS_VIRTUAL : NOT_VIRTUAL;
         } catch (Throwable t) {
             if (t instanceof Error) {
                 throw (Error) t;
