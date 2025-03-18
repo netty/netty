@@ -161,8 +161,8 @@ public class IoUringBufferRingTest {
 
         writeBuffer.release();
 
-        serverChannel.close();
-        clientChannel.close();
+        serverChannel.close().syncUninterruptibly();
+        clientChannel.close().syncUninterruptibly();
         group.shutdownGracefully();
     }
 
@@ -232,8 +232,8 @@ public class IoUringBufferRingTest {
             } while (received.readableBytes() != writeBuffer.readableBytes());
 
             assertEquals(writeBuffer, received);
-            serverChannel.close();
-            clientChannel.close();
+            serverChannel.close().syncUninterruptibly();
+            clientChannel.close().syncUninterruptibly();
             group.shutdownGracefully();
             assertTrue(buffers.isEmpty());
         } finally {
