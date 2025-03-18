@@ -452,7 +452,7 @@ final class PlatformDependent0 {
                         try {
                             MethodHandle m = (MethodHandle) maybeException;
                             m = m.bindTo(finalInternalUnsafe);
-                            byte[] bytes = (byte[]) m.invokeExact(byte.class, 8);
+                            byte[] bytes = (byte[]) (Object) m.invokeExact(byte.class, 8);
                             assert bytes.length == 8;
                             allocateArrayMethod = m;
                         } catch (Throwable e) {
@@ -605,7 +605,7 @@ final class PlatformDependent0 {
 
     static byte[] allocateUninitializedArray(int size) {
         try {
-            return (byte[]) ALLOCATE_ARRAY_METHOD.invokeExact(byte.class, size);
+            return (byte[]) (Object) ALLOCATE_ARRAY_METHOD.invokeExact(byte.class, size);
         } catch (Throwable e) {
             rethrowIfPossible(e);
             throw new LinkageError("Unsafe.allocateUninitializedArray not available", e);
