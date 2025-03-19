@@ -548,7 +548,8 @@ final class PlatformDependent0 {
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
     }
 
-    private static Method getVirtualThreadCheckMethod() {
+    // Package-private for testing only.
+    static Method getVirtualThreadCheckMethod() {
         if (JAVA_VERSION < 19) {
             return null;
         }
@@ -567,7 +568,8 @@ final class PlatformDependent0 {
         }
     }
 
-    private static Class<?> getBaseVirtualThreadClass() {
+    // Package-private for testing only.
+    static Class<?> getBaseVirtualThreadClass() {
         if (JAVA_VERSION < 19) {
             return null;
         }
