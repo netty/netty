@@ -58,6 +58,7 @@ public class IoUringIoHandlerTest {
             }
         });
         handler.initialize();
+        handler.prepareToDestroy();
         handler.destroy();
     }
 
@@ -93,6 +94,7 @@ public class IoUringIoHandlerTest {
                             (short) 0, -1, 0, 0, 0, 0, (short) 0, (short) 0, (short) 0, 0, 0)));
         assertTrue(registration.cancel());
         assertFalse(registration.isValid());
+        handler.prepareToDestroy();
         handler.destroy();
     }
 
@@ -118,7 +120,42 @@ public class IoUringIoHandlerTest {
             }
         });
         handler.initialize();
+        handler.prepareToDestroy();
         handler.destroy();
+    }
+
+    @Test
+    public void testSubmitAfterDestroy() throws  Exception {
+        IoHandlerFactory ioHandlerFactory = IoUringIoHandler.newFactory();
+        IoHandler handler = ioHandlerFactory.newHandler(new ThreadAwareExecutor() {
+
+            @Override
+            public boolean isExecutorThread(Thread thread) {
+                return true;
+            }
+
+            @Override
+            public void execute(Runnable command) {
+                command.run();
+            }
+        });
+        handler.initialize();
+        IoRegistration registration = handler.register(new IoUringIoHandle() {
+            @Override
+            public void handle(IoRegistration registration, IoEvent ioEvent) {
+                fail();
+            }
+
+            @Override
+            public void close() {
+                // Noop
+            }
+        });
+        handler.prepareToDestroy();
+        handler.destroy();
+        assertThrows(IllegalStateException.class,  () ->
+                registration.submit(new IoUringIoOps(Native.IORING_OP_NOP, (byte) 0,
+                        (short) 0, -1, 0, 0, 0, 0, (short) 0, (short) 0, (short) 0, 0, 0)));
     }
 
     private static boolean setUpCQSizeUnavailable() {

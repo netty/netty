@@ -154,6 +154,9 @@ public final class IoUringIoHandler implements IoHandler {
 
     @Override
     public int run(IoHandlerContext context) {
+        if (closeCompleted) {
+            return 0;
+        }
         int processedPerRun = 0;
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
@@ -184,6 +187,9 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     void submitAndRunNow(long udata) {
+        if (closeCompleted) {
+            return;
+        }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         if (submissionQueue.submit() > 0) {
@@ -192,7 +198,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    IoUringBufferRing newBufferRing(int ringFd, IoUringBufferRingConfig bufferRingConfig)
+    private static IoUringBufferRing newBufferRing(int ringFd, IoUringBufferRingConfig bufferRingConfig)
             throws Errors.NativeIoException {
         short bufferRingSize = bufferRingConfig.bufferRingSize();
         short bufferGroupId = bufferRingConfig.bufferGroupId();
