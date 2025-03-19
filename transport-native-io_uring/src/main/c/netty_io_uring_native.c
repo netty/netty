@@ -399,7 +399,7 @@ static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
         return -errno;
     }
 
-    reg.ring_addr = (__u64) br;
+    reg.ring_addr = (unsigned long) (uintptr_t) br;
     reg.ring_entries = (__u32) nentries;
     reg.bgid = (__u16) bgid;
     reg.flags |= (__u16) flags;
