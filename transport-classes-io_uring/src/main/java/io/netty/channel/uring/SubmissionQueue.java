@@ -165,11 +165,15 @@ final class SubmissionQueue {
     @Override
     public String toString() {
         StringJoiner sb = new StringJoiner(", ", "SubmissionQueue [", "]");
-        int pending = tail - head;
-        for (int i = 0; i < pending; i++) {
-            long sqe = submissionQueueArrayAddress + (head + i & ringMask) * SQE_SIZE;
-            sb.add(Native.opToStr(PlatformDependent.getByte(sqe + SQE_OP_CODE_FIELD)) +
-                    "(fd=" + PlatformDependent.getInt(sqe + SQE_FD_FIELD) + ')');
+        if (closed) {
+            sb.add("closed");
+        } else {
+            int pending = tail - head;
+            for (int i = 0; i < pending; i++) {
+                long sqe = submissionQueueArrayAddress + (head + i & ringMask) * SQE_SIZE;
+                sb.add(Native.opToStr(PlatformDependent.getByte(sqe + SQE_OP_CODE_FIELD)) +
+                        "(fd=" + PlatformDependent.getInt(sqe + SQE_FD_FIELD) + ')');
+            }
         }
         return sb.toString();
     }

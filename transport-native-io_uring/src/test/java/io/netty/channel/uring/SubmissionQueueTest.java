@@ -82,6 +82,10 @@ public class SubmissionQueueTest {
             fail("Should not be called");
             return false;
         }));
+
+        // Ensure both return not null and also not segfault.
+        assertNotNull(submissionQueue.toString());
+        assertNotNull(completionQueue.toString());
     }
 
     @Test
