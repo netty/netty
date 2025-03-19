@@ -85,8 +85,10 @@ static void netty_io_uring_native_JNI_OnUnLoad(JNIEnv* env, const char* packageP
 }
 
 static void io_uring_unmap_rings(struct io_uring_sq *sq, struct io_uring_cq *cq) {
-    munmap(sq->ring_ptr, sq->ring_sz);
-    if (cq->ring_ptr && cq->ring_ptr != sq->ring_ptr) {
+    if (sq->ring_ptr != NULL) {
+        munmap(sq->ring_ptr, sq->ring_sz);
+    }
+    if (cq->ring_ptr != NULL && cq->ring_ptr != sq->ring_ptr) {
         munmap(cq->ring_ptr, cq->ring_sz);
   }
 }
@@ -218,11 +220,18 @@ static jint netty_io_uring_getFd0(JNIEnv* env, jclass clazz, jobject fileRegion)
 static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass clazz,
         jlong submissionQueueArrayAddress, jint submissionQueueRingEntries, jlong submissionQueueRingAddress, jint submissionQueueRingSize,
         jlong completionQueueRingAddress, jint completionQueueRingSize, jint ringFd, jint enterRingFd) {
-    munmap((struct io_uring_sqe*) submissionQueueArrayAddress, submissionQueueRingEntries * sizeof(struct io_uring_sqe));
-    munmap((void*) submissionQueueRingAddress, submissionQueueRingSize);
+    void* sqa = (void *) submissionQueueArrayAddress;
+    void* sqr = (void *) submissionQueueRingAddress;
+    void* cqr = (void *) completionQueueRingAddress;
 
-    if (((void *) completionQueueRingAddress) && ((void *) completionQueueRingAddress) != ((void *) submissionQueueRingAddress)) {
-        munmap((void *)completionQueueRingAddress, completionQueueRingSize);
+    if (sqa != NULL) {
+        munmap(sqa, submissionQueueRingEntries * sizeof(struct io_uring_sqe));
+    }
+    if (sqr != NULL) {
+        munmap(sqr, submissionQueueRingSize);
+    }
+    if (cqr != NULL && cqr !=sqr ) {
+        munmap(cqr, completionQueueRingSize);
     }
     if (enterRingFd != ringFd) {
          struct io_uring_rsrc_update up = {
@@ -414,7 +423,11 @@ static jint netty_io_uring_unregister_buf_ring(JNIEnv* env, jclass clazz,
         return registerRes;
     }
     size_t ring_size = nentries * sizeof(struct io_uring_buf);
-    munmap((struct io_uring_buf_ring *) br, ring_size);
+
+    struct io_uring_buf_ring* ring = (struct io_uring_buf_ring *) br;
+    if (ring != NULL) {
+        munmap(ring, ring_size);
+    }
     return 0;
 }
 
