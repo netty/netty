@@ -50,7 +50,7 @@ final class Signed {
 
     byte[] getEncoded() throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         Signature signature = Algorithms.signature(algorithmIdentifier);
-        signature.initSign(MLDSASeedPrivateKey.unwrap(privateKey));
+        signature.initSign(privateKey);
         signature.update(toBeSigned);
         byte[] signatureBytes = signature.sign();
         try {

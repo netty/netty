@@ -983,16 +983,8 @@ public final class CertificateBuilder {
         }
 
         private KeyPair genMlDsaKeyPair(SecureRandom secureRandom) throws GeneralSecurityException {
-            final byte[] seed = new byte[32];
-            KeyPair keyPair = genKeyPair(new SecureRandom() {
-                @Override
-                public void nextBytes(byte[] bytes) {
-                    assert bytes.length == 32;
-                    secureRandom.nextBytes(bytes);
-                    System.arraycopy(bytes, 0, seed, 0, seed.length);
-                }
-            });
-            return new KeyPair(keyPair.getPublic(), new MLDSASeedPrivateKey(keyPair.getPrivate(), this, seed));
+            KeyPair keyPair = genKeyPair(secureRandom);
+            return new KeyPair(keyPair.getPublic(), keyPair.getPrivate());
         }
 
         private KeyPair genKeyPair(SecureRandom secureRandom) throws GeneralSecurityException {
