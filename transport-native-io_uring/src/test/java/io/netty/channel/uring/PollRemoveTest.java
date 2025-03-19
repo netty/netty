@@ -28,6 +28,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.net.InetSocketAddress;
+
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PollRemoveTest {
@@ -51,7 +53,7 @@ public class PollRemoveTest {
                         public void initChannel(SocketChannel ch) { }
                     });
 
-            Channel sc = b.bind(2020).sync().channel();
+            Channel sc = b.bind(new InetSocketAddress(0)).sync().channel();
 
             // close ServerChannel
             sc.close().sync();
