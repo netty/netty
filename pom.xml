@@ -650,6 +650,7 @@
       -server
       -dsa -da -ea:io.netty...
       -XX:+HeapDumpOnOutOfMemoryError
+      -XX:ErrorLogTimeOut=600
     </argLine.common>
     <argLine.jni>-D_</argLine.jni>
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
