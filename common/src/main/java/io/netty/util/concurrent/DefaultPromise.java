@@ -47,35 +47,34 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     /**
      * System property with boolean (true or false) type value, that determine if the methods {@link #sync()} and
-     * {@link #syncUninterruptibly()} should wrap the exception of any failed future in a {@link CompletionException}.
-     * <p>
-     * <strong>Caution:</strong> This is a debugging feature. Changing the wrapping behavior may cause other code
-     * to break.
+     * {@link #syncUninterruptibly()} should add a suppressed {@link CompletionException} to the cause exception of any
+     * failed future.
      * <p>
      * This is useful because {@link #sync()} and {@link #syncUninterruptibly()} otherwise blindly rethrows the
      * original cause exception, which will have the stack trace that shows why the promise failed, but won't have
      * any stack trace telling you which {@link #sync()} or {@link #syncUninterruptibly()} method call propagated
      * the exception.
      * <p>
-     * Note that {@link CancellationException}s are not wrapped. However, when this option is enabled, the produced
-     * {@link CancellationException}s will have a stack trace pointing to the first {@link #sync()},
-     * {@link #syncUninterruptibly()}, {@link #get()}, {@link #get(long, TimeUnit)}, or {@link #cause()} call that
-     * observed the cancellation.
-     * The default behavior is otherwise that {@link CancellationException}s have empty stack traces.
+     * The added suppressed exception will then carry the stack trace that points to the call of the first sync method.
+     * <p>
+     * Note that {@link CancellationException}s, and any exceptions that already have suppressed exceptions attached to
+     * them, will not have more suppressed exceptions attached. This is to avoid leaking memory, in case the cause
+     * exception is reused.
      * <p>
      * This is {@code false} by default for compatibility with Netty 4.1.
-     * In Netty 5, the exception wrapping will always be enabled and cannot be turned off.
+     * In Netty 5, the cause exceptions are always wrapped in a {@link CompletionException}, as opposed to being added
+     * as a suppressed exception, and this behavior cannot be turned off.
      */
-    public static final String PROPERTY_DEBUG_COMPLETION_EXCEPTION_WRAP =
-            "io.netty.defaultPromise.debug.completionExceptionWrap";
+    public static final String PROPERTY_DEBUG_COMPLETION_EXCEPTION_ATTACH =
+            "io.netty.defaultPromise.debug.completionExceptionAttach";
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
     private static final InternalLogger rejectedExecutionLogger =
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
     private static final int MAX_LISTENER_STACK_DEPTH = Math.min(8,
             SystemPropertyUtil.getInt(PROPERTY_MAX_LISTENER_STACK_DEPTH, 8));
-    private static final boolean COMPLETION_EXCEPTION_WRAP =
-            SystemPropertyUtil.getBoolean(PROPERTY_DEBUG_COMPLETION_EXCEPTION_WRAP, false);
+    private static final boolean COMPLETION_EXCEPTION_ATTACH =
+            SystemPropertyUtil.getBoolean(PROPERTY_DEBUG_COMPLETION_EXCEPTION_ATTACH, false);
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
@@ -203,8 +202,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return null;
         }
         if (result == CANCELLATION_CAUSE_HOLDER) {
-            CancellationException ce = COMPLETION_EXCEPTION_WRAP ?
-                    new CancellationException() : new LeanCancellationException();
+            CancellationException ce = new LeanCancellationException();
             if (RESULT_UPDATER.compareAndSet(this, CANCELLATION_CAUSE_HOLDER, new CauseHolder(ce))) {
                 return ce;
             }
@@ -708,8 +706,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return;
         }
 
-        if (COMPLETION_EXCEPTION_WRAP && !(cause instanceof CancellationException)) {
-            throw new CompletionException(cause);
+        if (COMPLETION_EXCEPTION_ATTACH && !(cause instanceof CancellationException) &&
+                cause.getSuppressed().length == 0) {
+            cause.addSuppressed(new CompletionException("Rethrowing promise failure cause", null));
         }
         PlatformDependent.throwException(cause);
     }
