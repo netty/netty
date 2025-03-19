@@ -18,10 +18,11 @@ package io.netty.util.internal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.util.internal.PlatformDependent0.BASE_VIRTUAL_THREAD_CLASS;
+import static io.netty.util.internal.PlatformDependent0.IS_VIRTUAL_THREAD_METHOD;
 import static io.netty.util.internal.VirtualThreadCheckResult.IS_VIRTUAL;
 import static io.netty.util.internal.VirtualThreadCheckResult.NOT_VIRTUAL;
 import static io.netty.util.internal.VirtualThreadCheckResult.UNKNOWN;
@@ -52,15 +53,12 @@ public class VirtualThreadCheckTest {
 
         assumeTrue(PlatformDependent.javaVersion() >= 21);
         Method startVirtualThread = getStartVirtualThreadMethod();
-        assumeTrue(startVirtualThread != null);
         Thread virtualThread = (Thread) startVirtualThread.invoke(null, new Runnable() {
             @Override
             public void run() {
             }
         });
-        Method isVirtualMethod = PlatformDependent0.getVirtualThreadCheckMethod();
-        Class<?> baseVirtualThreadClass = PlatformDependent0.getBaseVirtualThreadClass();
-        if (isVirtualMethod != null || baseVirtualThreadClass != null) {
+        if (IS_VIRTUAL_THREAD_METHOD != null || BASE_VIRTUAL_THREAD_CLASS != null) {
             assertEquals(IS_VIRTUAL, PlatformDependent.checkVirtualThread(virtualThread));
         } else {
             assertEquals(UNKNOWN, PlatformDependent.checkVirtualThread(virtualThread));
@@ -68,62 +66,46 @@ public class VirtualThreadCheckTest {
     }
 
     @Test
-    public void testGetVirtualThreadCheckMethod() throws InvocationTargetException, IllegalAccessException {
+    public void testGetVirtualThreadCheckMethod() throws Exception {
         if (PlatformDependent.javaVersion() < 19) {
-            assertNull(PlatformDependent0.getVirtualThreadCheckMethod());
+            assertNull(IS_VIRTUAL_THREAD_METHOD);
         } else {
             assumeTrue(PlatformDependent.javaVersion() >= 21);
-            Method isVirtualMethod = PlatformDependent0.getVirtualThreadCheckMethod();
-            assumeTrue(isVirtualMethod != null);
-            boolean isVirtual = (Boolean) isVirtualMethod.invoke(Thread.currentThread());
+            assumeTrue(IS_VIRTUAL_THREAD_METHOD != null);
+            boolean isVirtual = (Boolean) IS_VIRTUAL_THREAD_METHOD.invoke(Thread.currentThread());
             assertFalse(isVirtual);
 
             Method startVirtualThread = getStartVirtualThreadMethod();
-            assumeTrue(startVirtualThread != null);
             Thread virtualThread = (Thread) startVirtualThread.invoke(null, new Runnable() {
                 @Override
                 public void run() {
                 }
             });
-            isVirtual = (Boolean) isVirtualMethod.invoke(virtualThread);
+            isVirtual = (Boolean) IS_VIRTUAL_THREAD_METHOD.invoke(virtualThread);
             assertTrue(isVirtual);
         }
     }
 
     @Test
-    public void testGetBaseVirtualThreadClass() throws InvocationTargetException, IllegalAccessException {
+    public void testGetBaseVirtualThreadClass() throws Exception {
         if (PlatformDependent.javaVersion() < 19) {
-            assertNull(PlatformDependent0.getBaseVirtualThreadClass());
+            assertNull(BASE_VIRTUAL_THREAD_CLASS);
         } else {
             assumeTrue(PlatformDependent.javaVersion() >= 21);
-            Class<?> baseVirtualThreadClass = PlatformDependent0.getBaseVirtualThreadClass();
-            assumeTrue(baseVirtualThreadClass != null);
-            boolean isVirtual = baseVirtualThreadClass.isInstance(Thread.currentThread());
-            assertFalse(isVirtual);
+            assumeTrue(BASE_VIRTUAL_THREAD_CLASS != null);
+            assertFalse(BASE_VIRTUAL_THREAD_CLASS.isInstance(Thread.currentThread()));
 
             Method startVirtualThread = getStartVirtualThreadMethod();
-            assumeTrue(startVirtualThread != null);
             Thread virtualThread = (Thread) startVirtualThread.invoke(null, new Runnable() {
                 @Override
                 public void run() {
                 }
             });
-            isVirtual = baseVirtualThreadClass.isInstance(virtualThread);
-            assertTrue(isVirtual);
+            assertTrue(BASE_VIRTUAL_THREAD_CLASS.isInstance(virtualThread));
         }
     }
 
-    private Method getStartVirtualThreadMethod() {
-        try {
-            Method startVirtualThread = Thread.class.getMethod("startVirtualThread", Runnable.class);
-            Thread virtualThread = (Thread) startVirtualThread.invoke(null, new Runnable() {
-                @Override
-                public void run() {
-                }
-            });
-            return startVirtualThread;
-        } catch (Throwable e) {
-            return null;
-        }
+    private Method getStartVirtualThreadMethod() throws NoSuchMethodException {
+        return Thread.class.getMethod("startVirtualThread", Runnable.class);
     }
 }

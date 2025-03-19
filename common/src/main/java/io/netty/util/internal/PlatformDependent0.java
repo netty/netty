@@ -65,9 +65,10 @@ final class PlatformDependent0 {
 
     private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
 
-    private static final Method VIRTUAL_THREAD_CHECK_METHOD = getVirtualThreadCheckMethod();
-
-    private static final Class<?> BASE_VIRTUAL_THREAD_CLASS = getBaseVirtualThreadClass();
+    // Package-private for testing.
+    static final Method IS_VIRTUAL_THREAD_METHOD = getIsVirtualThreadMethod();
+    // Package-private for testing.
+    static final Class<?> BASE_VIRTUAL_THREAD_CLASS = getBaseVirtualThreadClass();
 
     static final Unsafe UNSAFE;
 
@@ -548,8 +549,7 @@ final class PlatformDependent0 {
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
     }
 
-    // Package-private for testing only.
-    static Method getVirtualThreadCheckMethod() {
+    private static Method getIsVirtualThreadMethod() {
         if (JAVA_VERSION < 19) {
             return null;
         }
@@ -560,16 +560,15 @@ final class PlatformDependent0 {
             return isVirtualMethod;
         } catch (Throwable e) {
             if (logger.isTraceEnabled()) {
-                logger.debug("virtual thread check method is not available: ", e);
+                logger.debug("Thread.isVirtual() is not available: ", e);
             } else {
-                logger.debug("virtual thread check method is not available: ", e.getMessage());
+                logger.debug("Thread.isVirtual() is not available: ", e.getMessage());
             }
             return null;
         }
     }
 
-    // Package-private for testing only.
-    static Class<?> getBaseVirtualThreadClass() {
+    private static Class<?> getBaseVirtualThreadClass() {
         if (JAVA_VERSION < 19) {
             return null;
         }
@@ -595,22 +594,31 @@ final class PlatformDependent0 {
      * {@code UNKNOWN}: Unable to check the thread type.
      */
     static VirtualThreadCheckResult checkVirtualThread(Thread thread) {
+        // Quick exclusion:
         if (thread == null || JAVA_VERSION < 19 || thread instanceof FastThreadLocalThread) {
             return NOT_VIRTUAL;
         }
+        // Try fast check:
         if (BASE_VIRTUAL_THREAD_CLASS != null) {
             return BASE_VIRTUAL_THREAD_CLASS.isInstance(thread) ? IS_VIRTUAL : NOT_VIRTUAL;
         }
         Class<?> clazz = thread.getClass();
-        if (clazz == Thread.class || clazz.getSuperclass() == Thread.class) {
+        // Common cases:
+        if (clazz == Thread.class || (clazz = clazz.getSuperclass()) == Thread.class) {
             return NOT_VIRTUAL;
         }
-        if (VIRTUAL_THREAD_CHECK_METHOD == null) {
+        // Uncommon cases:
+        if (IS_VIRTUAL_THREAD_METHOD == null) {
+            if (clazz.getSuperclass() != Thread.class) {
+                return NOT_VIRTUAL;
+            }
             return UNKNOWN;
         }
+        // Likely to be a virtual thread, but need to be sure.
         try {
-            return (Boolean) VIRTUAL_THREAD_CHECK_METHOD.invoke(thread) ? IS_VIRTUAL : NOT_VIRTUAL;
+            return (Boolean) IS_VIRTUAL_THREAD_METHOD.invoke(thread) ? IS_VIRTUAL : NOT_VIRTUAL;
         } catch (Throwable t) {
+            // Should not happen.
             if (t instanceof Error) {
                 throw (Error) t;
             }
