@@ -203,7 +203,7 @@
                   </properties>
                   <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
                   <trimStackTrace>false</trimStackTrace>
-                  <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
+                  <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.noJava8} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
                   <!-- Ensure a new JVM is used -->
                   <forkCount>1</forkCount>
                   <reuseForks>false</reuseForks>
@@ -236,7 +236,7 @@
                   </properties>
                   <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
                   <trimStackTrace>false</trimStackTrace>
-                  <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
+                  <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.noJava8} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
                 </configuration>
               </execution>
             </executions>

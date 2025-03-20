@@ -471,6 +471,16 @@
         <jdk>9</jdk>
       </activation>
     </profile>
+    <!-- JDK8 -->
+    <profile>
+      <id>java8</id>
+      <properties>
+        <argLine.noJava8>-D_</argLine.noJava8>
+      </properties>
+      <activation>
+        <jdk>1.8</jdk>
+      </activation>
+    </profile>
 
     <profile>
       <id>riscv64</id>
@@ -650,12 +660,12 @@
       -server
       -dsa -da -ea:io.netty...
       -XX:+HeapDumpOnOutOfMemoryError
-      -XX:ErrorLogTimeout=600
     </argLine.common>
     <argLine.jni>-D_</argLine.jni>
     <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
+    <argLine.noJava8>-XX:ErrorLogTimeout=600</argLine.noJava8>
     <jacoco.argLine />
     <argLine.printGC>-XX:+PrintGCDetails</argLine.printGC>
     <argLine.java9 /> <!-- Overridden when 'java9' profile is active -->
@@ -7970,7 +7980,7 @@
             <nativeImage.handlerMetadataGroupId>${project.groupId}</nativeImage.handlerMetadataGroupId>
             <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
-          <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
+          <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.noJava8} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
           <properties>
             <property>
               <name>listener</name>
