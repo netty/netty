@@ -89,6 +89,10 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         AdaptiveByteBufAllocator allocator = newAllocator(false);
         ByteBuf buffer = allocator.buffer(8);
         assertInstanceOf(buffer, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
+        // Unwrap if this is wrapped by a leak aware buffer.
+        if (buffer instanceof SimpleLeakAwareByteBuf) {
+            buffer = buffer.unwrap();
+        }
         assertNull(buffer.unwrap());
 
         ByteBuf derived = slice ? buffer.slice(0, 4) : buffer.duplicate();
