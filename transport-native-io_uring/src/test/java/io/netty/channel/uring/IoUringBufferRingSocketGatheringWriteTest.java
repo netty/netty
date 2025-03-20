@@ -31,6 +31,7 @@ public class IoUringBufferRingSocketGatheringWriteTest extends SocketGatheringWr
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override
