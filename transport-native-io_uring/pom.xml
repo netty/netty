@@ -47,7 +47,6 @@
     <extraConfigureArg2 />
     <!-- Always check JNI during test run so we catch bugs that could cause crashes -->
     <argLine.jni>-Xcheck:jni</argLine.jni>
-    <test.argLine>-D_</test.argLine>
   </properties>
 
   <profiles>
@@ -204,7 +203,7 @@
                   </properties>
                   <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
                   <trimStackTrace>false</trimStackTrace>
-                  <argLine>${test.argLine}</argLine>
+                  <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
                   <!-- Ensure a new JVM is used -->
                   <forkCount>1</forkCount>
                   <reuseForks>false</reuseForks>
@@ -237,7 +236,7 @@
                   </properties>
                   <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
                   <trimStackTrace>false</trimStackTrace>
-                  <argLine>${test.argLine}</argLine>
+                  <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
                 </configuration>
               </execution>
             </executions>
@@ -287,12 +286,6 @@
         <skipTests>true</skipTests>
         <extraConfigureArg>--host=riscv64-linux-gnu</extraConfigureArg>
         <extraConfigureArg2>CC=riscv64-linux-gnu-gcc</extraConfigureArg2>
-      </properties>
-    </profile>
-    <profile>
-      <id>leak</id>
-      <properties>
-        <test.argLine>-Dio.netty.leakDetection.level=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
       </properties>
     </profile>
   </profiles>
