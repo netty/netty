@@ -31,6 +31,7 @@ public class IoUringBufferRingCompositeBufferGatheringWriteTest extends Composit
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

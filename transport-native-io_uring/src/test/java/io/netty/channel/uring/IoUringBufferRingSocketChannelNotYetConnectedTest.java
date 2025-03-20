@@ -30,6 +30,7 @@ public class IoUringBufferRingSocketChannelNotYetConnectedTest extends SocketCha
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

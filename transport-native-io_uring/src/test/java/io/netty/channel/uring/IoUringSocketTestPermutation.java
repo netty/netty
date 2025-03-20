@@ -44,10 +44,18 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
             BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());
     static final EventLoopGroup IO_URING_WORKER_GROUP = new MultiThreadIoEventLoopGroup(
             WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true),
-            IoUringIoHandler.newFactory(new IoUringIoHandlerConfig()
-                    .setBufferRingConfig(
-                            new IoUringBufferRingConfig(BGID, (short) 16, 16 * 16,
-                                    new IoUringFixedBufferRingAllocator(1024)))));
+            IoUringIoHandler.newFactory(buildConfig()));
+
+    static IoUringIoHandlerConfig buildConfig() {
+        IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
+        if (IoUring.isRegisterBufferRingSupported()) {
+            config.setBufferRingConfig(
+                    new IoUringBufferRingConfig(BGID, (short) 16, 16 * 16,
+                            new IoUringFixedBufferRingAllocator(1024)));
+        }
+        return config;
+    }
+
     @Override
     public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
 

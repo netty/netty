@@ -30,6 +30,7 @@ public class IoUringBufferRingSocketConnectionAttemptTest extends SocketConnecti
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

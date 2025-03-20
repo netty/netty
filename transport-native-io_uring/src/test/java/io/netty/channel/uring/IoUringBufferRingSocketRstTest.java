@@ -36,6 +36,7 @@ public class IoUringBufferRingSocketRstTest extends SocketRstTest {
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override
