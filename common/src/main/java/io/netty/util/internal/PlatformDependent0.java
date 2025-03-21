@@ -15,12 +15,14 @@
  */
 package io.netty.util.internal;
 
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import sun.misc.Unsafe;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -31,6 +33,9 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static io.netty.util.internal.VirtualThreadCheckResult.IS_VIRTUAL;
+import static io.netty.util.internal.VirtualThreadCheckResult.NOT_VIRTUAL;
+import static io.netty.util.internal.VirtualThreadCheckResult.UNKNOWN;
 import static java.lang.invoke.MethodType.methodType;
 
 /**
@@ -60,6 +65,9 @@ final class PlatformDependent0 {
             "org.graalvm.nativeimage.imagecode");
 
     private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
+
+    // Package-private for testing.
+    static final MethodHandle IS_VIRTUAL_THREAD_METHOD_HANDLE = getIsVirtualThreadMethodHandle();
 
     static final Unsafe UNSAFE;
 
@@ -496,6 +504,62 @@ final class PlatformDependent0 {
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
+    }
+
+    private static MethodHandle getIsVirtualThreadMethodHandle() {
+        if (JAVA_VERSION < 19) {
+            return null;
+        }
+        try {
+            MethodHandle methodHandle = MethodHandles.publicLookup().findVirtual(Thread.class, "isVirtual",
+                    MethodType.methodType(boolean.class));
+            // Call once to make sure the invocation works.
+            boolean isVirtual = (boolean) methodHandle.invokeExact(Thread.currentThread());
+            return methodHandle;
+        } catch (Throwable e) {
+            if (logger.isTraceEnabled()) {
+                logger.debug("Thread.isVirtual() is not available: ", e);
+            } else {
+                logger.debug("Thread.isVirtual() is not available: ", e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
+     * @param thread The thread to be checked.
+     * @return
+     * {@code IS_VIRTUAL}: MUST be a virtual thread.
+     * <br>
+     * {@code NOT_VIRTUAL}: MUST NOT be a virtual thread.
+     * <br>
+     * {@code UNKNOWN}: Unable to check the thread type.
+     */
+    static VirtualThreadCheckResult checkVirtualThread(Thread thread) {
+        // Quick exclusion.
+        if (thread == null || JAVA_VERSION < 19 || thread instanceof FastThreadLocalThread) {
+            return NOT_VIRTUAL;
+        }
+        // Uncommon case: IS_VIRTUAL_THREAD_METHOD_HANDLE is null.
+        if (IS_VIRTUAL_THREAD_METHOD_HANDLE == null) {
+            Class<?> clazz = thread.getClass();
+            if (clazz == Thread.class
+                    || (clazz = clazz.getSuperclass()) == Thread.class
+                    || clazz.getSuperclass() != Thread.class) {
+                return NOT_VIRTUAL;
+            }
+            return UNKNOWN;
+        }
+        // Preferred fast check path:
+        try {
+            return (boolean) IS_VIRTUAL_THREAD_METHOD_HANDLE.invokeExact(thread) ? IS_VIRTUAL : NOT_VIRTUAL;
+        } catch (Throwable t) {
+            // Should not happen.
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
+            throw new Error(t);
+        }
     }
 
     private static boolean unsafeStaticFieldOffsetSupported() {
