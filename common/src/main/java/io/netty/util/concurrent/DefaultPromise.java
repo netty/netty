@@ -24,6 +24,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -33,11 +34,47 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
+    /**
+     * System property with integer type value, that determine the max reentrancy/recursion level for when
+     * listener notifications prompt other listeners to be notified.
+     * <p>
+     * When the reentrancy/recursion level becomes greater than this number, a new task will instead be scheduled
+     * on the event loop, to finish notifying any subsequent listners.
+     * <p>
+     * The default value is {@code 8}.
+     */
+    public static final String PROPERTY_MAX_LISTENER_STACK_DEPTH = "io.netty.defaultPromise.maxListenerStackDepth";
+
+    /**
+     * System property with boolean (true or false) type value, that determine if the methods {@link #sync()} and
+     * {@link #syncUninterruptibly()} should add a suppressed {@link CompletionException} to the cause exception of any
+     * failed future.
+     * <p>
+     * This is useful because {@link #sync()} and {@link #syncUninterruptibly()} otherwise blindly rethrows the
+     * original cause exception, which will have the stack trace that shows why the promise failed, but won't have
+     * any stack trace telling you which {@link #sync()} or {@link #syncUninterruptibly()} method call propagated
+     * the exception.
+     * <p>
+     * The added suppressed exception will then carry the stack trace that points to the call of the first sync method.
+     * <p>
+     * Note that {@link CancellationException}s, and any exceptions that already have suppressed exceptions attached to
+     * them, will not have more suppressed exceptions attached. This is to avoid leaking memory, in case the cause
+     * exception is reused.
+     * <p>
+     * This is {@code false} by default for compatibility with Netty 4.1.
+     * In Netty 5, the cause exceptions are always wrapped in a {@link CompletionException}, as opposed to being added
+     * as a suppressed exception, and this behavior cannot be turned off.
+     */
+    public static final String PROPERTY_DEBUG_COMPLETION_EXCEPTION_ATTACH =
+            "io.netty.defaultPromise.debug.completionExceptionAttach";
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
     private static final InternalLogger rejectedExecutionLogger =
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
     private static final int MAX_LISTENER_STACK_DEPTH = Math.min(8,
-            SystemPropertyUtil.getInt("io.netty.defaultPromise.maxListenerStackDepth", 8));
+            SystemPropertyUtil.getInt(PROPERTY_MAX_LISTENER_STACK_DEPTH, 8));
+    private static final boolean COMPLETION_EXCEPTION_ATTACH =
+            SystemPropertyUtil.getBoolean(PROPERTY_DEBUG_COMPLETION_EXCEPTION_ATTACH, false);
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
@@ -49,10 +86,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     private volatile Object result;
     private final EventExecutor executor;
+
     /**
      * One or more listeners. Can be a {@link GenericFutureListener} or a {@link DefaultFutureListeners}.
      * If {@code null}, it means either 1) no listeners were added yet or 2) all listeners were notified.
-     *
+     * <p>
      * Threading - synchronized(this). We must support adding listeners when there is no EventExecutor.
      */
     private GenericFutureListener<? extends Future<?>> listener;
@@ -70,7 +108,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     /**
      * Creates a new instance.
-     *
+     * <p>
      * It is preferable to use {@link EventExecutor#newPromise()} to create a new promise
      *
      * @param executor
@@ -668,6 +706,10 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return;
         }
 
+        if (COMPLETION_EXCEPTION_ATTACH && !(cause instanceof CancellationException) &&
+                cause.getSuppressed().length == 0) {
+            cause.addSuppressed(new CompletionException("Rethrowing promise failure cause", null));
+        }
         PlatformDependent.throwException(cause);
     }
 
