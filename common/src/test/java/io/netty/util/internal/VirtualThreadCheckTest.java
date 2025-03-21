@@ -51,6 +51,26 @@ public class VirtualThreadCheckTest {
         subThread.join();
         assertEquals(NOT_VIRTUAL, atomicRes.get());
 
+        Thread subOfSubThread = new SubThread() {
+            @Override
+            public void run() {
+                atomicRes.set(PlatformDependent.checkVirtualThread(Thread.currentThread()));
+            }
+        };
+        subOfSubThread.start();
+        subOfSubThread.join();
+        assertEquals(NOT_VIRTUAL, atomicRes.get());
+
+        Thread subOfSubOfSubThread = new SubOfSubThread() {
+            @Override
+            public void run() {
+                atomicRes.set(PlatformDependent.checkVirtualThread(Thread.currentThread()));
+            }
+        };
+        subOfSubOfSubThread.start();
+        subOfSubOfSubThread.join();
+        assertEquals(NOT_VIRTUAL, atomicRes.get());
+
         assumeTrue(PlatformDependent.javaVersion() >= 21);
         Method startVirtualThread = getStartVirtualThreadMethod();
         Thread virtualThread = (Thread) startVirtualThread.invoke(null, new Runnable() {
@@ -107,5 +127,13 @@ public class VirtualThreadCheckTest {
 
     private Method getStartVirtualThreadMethod() throws NoSuchMethodException {
         return Thread.class.getMethod("startVirtualThread", Runnable.class);
+    }
+
+    private static class SubThread extends Thread {
+
+    }
+
+    private static class SubOfSubThread extends SubThread {
+
     }
 }
