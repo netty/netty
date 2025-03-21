@@ -64,7 +64,7 @@ final class SubmissionQueue {
 
     private boolean closed;
 
-    SubmissionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
+    SubmissionQueue(long kHeadAddress, long kTailAddress, int ringMask, int ringEntries,
                     long kFlagsAddress, long kDroppedAddress, long kArrayAddress,
                     long submissionQueueArrayAddress, int ringSize, long ringAddress,
                     int ringFd) {
@@ -78,8 +78,8 @@ final class SubmissionQueue {
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
         this.enterRingFd = ringFd;
-        this.ringEntries = PlatformDependent.getIntVolatile(kRingEntriesAddress);
-        this.ringMask = PlatformDependent.getIntVolatile(kRingMaskAddress);
+        this.ringEntries = ringEntries;
+        this.ringMask = ringMask;
         this.head = PlatformDependent.getIntVolatile(kHeadAddress);
         this.tail = PlatformDependent.getIntVolatile(kTailAddress);
 

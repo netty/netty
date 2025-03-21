@@ -48,7 +48,7 @@ final class CompletionQueue {
     private int ringHead;
     private boolean closed;
 
-    CompletionQueue(long kHeadAddress, long kTailAddress, long kRingMaskAddress, long kRingEntriesAddress,
+    CompletionQueue(long kHeadAddress, long kTailAddress, int ringMask, int ringEntries,
                     long kOverflowAddress, long completionQueueArrayAddress, int ringSize, long ringAddress,
                     int ringFd, int ringCapacity) {
         this.kHeadAddress = kHeadAddress;
@@ -59,8 +59,8 @@ final class CompletionQueue {
         this.ringFd = ringFd;
         this.ringCapacity = ringCapacity;
 
-        ringEntries = PlatformDependent.getIntVolatile(kRingEntriesAddress);
-        ringMask = PlatformDependent.getIntVolatile(kRingMaskAddress);
+        this.ringEntries = ringEntries;
+        this.ringMask = ringMask;
         ringHead = PlatformDependent.getIntVolatile(kHeadAddress);
     }
 

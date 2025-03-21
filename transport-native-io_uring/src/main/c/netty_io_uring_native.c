@@ -333,8 +333,10 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
     jlong completionArrayElements[] = {
         (jlong)io_uring_ring.cq.khead,
         (jlong)io_uring_ring.cq.ktail,
-        (jlong)io_uring_ring.cq.kring_mask,
-        (jlong)io_uring_ring.cq.kring_entries,
+        // Should be replaced by ring_mask when we depend on later kernel versions
+        (jlong)*io_uring_ring.cq.kring_mask,
+        // Should be replaced by ring_entries when we depend on later kernel versions
+        (jlong)*io_uring_ring.cq.kring_entries,
         (jlong)io_uring_ring.cq.koverflow,
         (jlong)io_uring_ring.cq.cqes,
         (jlong)io_uring_ring.cq.ring_sz,
@@ -347,8 +349,10 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
     jlong submissionArrayElements[] = {
         (jlong)io_uring_ring.sq.khead,
         (jlong)io_uring_ring.sq.ktail,
-        (jlong)io_uring_ring.sq.kring_mask,
-        (jlong)io_uring_ring.sq.kring_entries,
+        // Should be replaced by ring_mask when we depend on later kernel versions
+        (jlong)*io_uring_ring.sq.kring_mask,
+        // Should be replaced by ring_entries when we depend on later kernel versions
+        (jlong)*io_uring_ring.sq.kring_entries,
         (jlong)io_uring_ring.sq.kflags,
         (jlong)io_uring_ring.sq.kdropped,
         (jlong)io_uring_ring.sq.array,
