@@ -130,10 +130,10 @@ public class VirtualThreadCheckTest {
     }
 
     private static class SubThread extends Thread {
-
+        // for test
     }
 
     private static class SubOfSubThread extends SubThread {
-
+        // for test
     }
 }
