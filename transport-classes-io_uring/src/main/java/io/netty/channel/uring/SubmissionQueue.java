@@ -152,8 +152,8 @@ final class SubmissionQueue {
 
         if (logger.isTraceEnabled()) {
             if (opcode == Native.IORING_OP_WRITEV || opcode == Native.IORING_OP_READV) {
-                logger.trace("add(ring={}, enterRing:{} ): {}(fd={}, len={} ({} bytes), off={}, data={})",
-                        ringFd, enterRingFd, Native.opToStr(opcode), fd, len, Iov.sumSize(union2, len), union1, udata);
+                logger.trace("add(ring={}, enterRing:{} ): {}(fd={}, len={}, off={}, data={})",
+                        ringFd, enterRingFd, Native.opToStr(opcode), fd, len, union1, udata);
             } else {
                 logger.trace("add(ring={}, enterRing:{}): {}(fd={}, len={}, off={}, data={})",
                         ringFd, enterRingFd, Native.opToStr(opcode), fd, len, union1, udata);

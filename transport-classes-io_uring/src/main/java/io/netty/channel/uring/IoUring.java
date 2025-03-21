@@ -15,7 +15,9 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -301,6 +303,13 @@ public final class IoUring {
             throw (Error) new UnsatisfiedLinkError(
                     "failed to load the required native library").initCause(UNAVAILABILITY_CAUSE);
         }
+    }
+
+    static long memoryAddress(ByteBuf buffer) {
+        if (buffer.hasMemoryAddress()) {
+            return buffer.memoryAddress();
+        }
+        return Buffer.memoryAddress(buffer.internalNioBuffer(0, buffer.capacity()));
     }
 
     public static Throwable unavailabilityCause() {

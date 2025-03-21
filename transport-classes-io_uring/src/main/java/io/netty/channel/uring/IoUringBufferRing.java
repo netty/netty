@@ -127,7 +127,7 @@ final class IoUringBufferRing {
         //      blob/19134a8fffd406b22595a5813a3e319c19630ac9/src/include/liburing.h#L1561
         long ioUringBufAddress = ioUringBufRingAddr + (long) Native.SIZEOF_IOURING_BUF * ringIndex;
         PlatformDependent.putLong(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_ADDR,
-                byteBuf.memoryAddress() + byteBuf.readerIndex());
+                IoUring.memoryAddress(byteBuf) + byteBuf.readerIndex());
         PlatformDependent.putInt(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.capacity());
         PlatformDependent.putShort(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_BID, ringIndex);
         // Now advanced the tail by the number of buffers that we just added.
