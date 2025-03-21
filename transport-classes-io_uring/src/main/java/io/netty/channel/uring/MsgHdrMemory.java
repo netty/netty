@@ -42,8 +42,6 @@ final class MsgHdrMemory {
         iovMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_IOVEC);
         cmsgDataMemory = Buffer.allocateDirectWithNativeOrder(Native.CMSG_SPACE);
 
-        //PlatformDependent.setMemory(memory, size, (byte) 0);
-
         // We retrieve the address of the data once so we can just be JNI free after construction.
         long cmsgDataMemoryAddr = Buffer.memoryAddress(cmsgDataMemory);
         long cmsgDataAddr = Native.cmsghdrData(cmsgDataMemoryAddr);
@@ -64,7 +62,8 @@ final class MsgHdrMemory {
             addressLength = SockaddrIn.set(socket.isIpv6(), socketAddrMemory, address);
         }
         Iov.set(iovMemory, bufferAddress, length);
-        MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, iovMemory, 1, cmsgDataMemory, cmsgDataOffset, segmentSize);
+        MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, iovMemory, 1, cmsgDataMemory,
+                cmsgDataOffset, segmentSize);
     }
 
     boolean hasPort(IoUringDatagramChannel channel) {
@@ -108,5 +107,6 @@ final class MsgHdrMemory {
         PlatformDependent.freeDirectBuffer(msgHdrMemory);
         PlatformDependent.freeDirectBuffer(socketAddrMemory);
         PlatformDependent.freeDirectBuffer(iovMemory);
+        PlatformDependent.freeDirectBuffer(cmsgDataMemory);
     }
 }
