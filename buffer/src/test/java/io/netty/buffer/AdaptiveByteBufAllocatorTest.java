@@ -89,19 +89,26 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         AdaptiveByteBufAllocator allocator = newAllocator(false);
         ByteBuf buffer = allocator.buffer(8);
         assertInstanceOf(buffer, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
-        assertNull(buffer.unwrap());
+        // Unwrap if this is wrapped by a leak aware buffer.
+        if (buffer instanceof SimpleLeakAwareByteBuf) {
+            assertNull(buffer.unwrap().unwrap());
+        } else {
+            assertNull(buffer.unwrap());
+        }
 
         ByteBuf derived = slice ? buffer.slice(0, 4) : buffer.duplicate();
         // When we unwrap the derived buffer we should get our original buffer of type AdaptiveByteBuf back.
-        ByteBuf unwrapped = derived.unwrap();
+        ByteBuf unwrapped = derived instanceof SimpleLeakAwareByteBuf ?
+                derived.unwrap().unwrap() : derived.unwrap();
         assertInstanceOf(unwrapped, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
-        assertSameBuffer(buffer, unwrapped);
+        assertSameBuffer(buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer, unwrapped);
 
         ByteBuf retainedDerived = slice ? buffer.retainedSlice(0, 4) : buffer.retainedDuplicate();
         // When we unwrap the derived buffer we should get our original buffer of type AdaptiveByteBuf back.
-        ByteBuf unwrappedRetained = retainedDerived.unwrap();
+        ByteBuf unwrappedRetained = retainedDerived instanceof SimpleLeakAwareByteBuf ?
+                retainedDerived.unwrap().unwrap() :  retainedDerived.unwrap();
         assertInstanceOf(unwrappedRetained, AdaptivePoolingAllocator.AdaptiveByteBuf.class);
-        assertSameBuffer(buffer, unwrappedRetained);
+        assertSameBuffer(buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer, unwrappedRetained);
         retainedDerived.release();
 
         assertTrue(buffer.release());
