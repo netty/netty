@@ -23,8 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-
-import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
+import java.nio.ByteOrder;
 
 final class SockaddrIn {
     static final byte[] IPV4_MAPPED_IPV6_PREFIX = {
@@ -65,7 +64,8 @@ final class SockaddrIn {
             memory.put(SOCKADDR_IN_EMPTY_ARRAY);
 
             memory.putShort(position + Native.SOCKADDR_IN_OFFSETOF_SIN_FAMILY, Native.AF_INET);
-            memory.putShort(position + Native.SOCKADDR_IN_OFFSETOF_SIN_PORT, handleNetworkOrder((short) port));
+            memory.putShort(position + Native.SOCKADDR_IN_OFFSETOF_SIN_PORT, handleNetworkOrder(memory.order(),
+                    (short) port));
 
             byte[] bytes = address.getAddress();
             int offset = 0;
@@ -104,7 +104,8 @@ final class SockaddrIn {
             // memset
             memory.put(SOCKADDR_IN6_EMPTY_ARRAY);
             memory.putShort(position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_FAMILY, Native.AF_INET6);
-            memory.putShort(position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT, handleNetworkOrder((short) port));
+            memory.putShort(position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT,
+                    handleNetworkOrder(memory.order(), (short) port));
             // Skip sin6_flowinfo as we did memset before
             byte[] bytes = address.getAddress();
             int offset = Native.SOCKADDR_IN6_OFFSETOF_SIN6_ADDR + Native.IN6_ADDRESS_OFFSETOF_S6_ADDR;
@@ -134,7 +135,8 @@ final class SockaddrIn {
         int position = memory.position();
 
         try {
-            int port = handleNetworkOrder(memory.getShort(position + Native.SOCKADDR_IN_OFFSETOF_SIN_PORT)) & 0xFFFF;
+            int port = handleNetworkOrder(memory.order(),
+                    memory.getShort(position + Native.SOCKADDR_IN_OFFSETOF_SIN_PORT)) & 0xFFFF;
             memory.position(position + Native.SOCKADDR_IN_OFFSETOF_SIN_ADDR + Native.IN_ADDRESS_OFFSETOF_S_ADDR);
             memory.get(tmpArray);
             try {
@@ -153,7 +155,7 @@ final class SockaddrIn {
         int position = memory.position();
 
         try {
-            int port = handleNetworkOrder(memory.getShort(
+            int port = handleNetworkOrder(memory.order(), memory.getShort(
                     position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT)) & 0xFFFF;
             memory.position(position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_ADDR + Native.IN6_ADDRESS_OFFSETOF_S6_ADDR);
             memory.get(ipv6Array);
@@ -188,7 +190,7 @@ final class SockaddrIn {
         return port > 0;
     }
 
-    private static short handleNetworkOrder(short v) {
-        return BIG_ENDIAN_NATIVE_ORDER ? v : Short.reverseBytes(v);
+    private static short handleNetworkOrder(ByteOrder order, short v) {
+        return order != ByteOrder.nativeOrder() ? v : Short.reverseBytes(v);
     }
 }
