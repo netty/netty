@@ -45,11 +45,11 @@ final class PlatformDependent0 {
     private static final long LONG_ARRAY_BASE_OFFSET;
     private static final long LONG_ARRAY_INDEX_SCALE;
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
-    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final Method ALLOCATE_ARRAY_METHOD;
     private static final Method ALIGN_SLICE;
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
+    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final boolean STORE_FENCE_AVAILABLE;
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
@@ -550,19 +550,27 @@ final class PlatformDependent0 {
     }
 
     private static Throwable explicitNoUnsafeCause0() {
+        boolean explicitProperty = SystemPropertyUtil.contains("io.netty.noUnsafe");
         boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
         logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
 
         // See JDK 23 JEP 471 https://openjdk.org/jeps/471 and sun.misc.Unsafe.beforeMemoryAccess() on JDK 23+.
-        String unsafeMemoryAccess = SystemPropertyUtil.get("sun.misc.unsafe.memory.access", "<unspecified>");
-        if (!("allow".equals(unsafeMemoryAccess) || "<unspecified>".equals(unsafeMemoryAccess))) {
-            logger.debug("--sun-misc-unsafe-memory-access={}", unsafeMemoryAccess);
+        // And JDK 24 JEP 498 https://openjdk.org/jeps/498, that enable warnings by default.
+        String reason = "io.netty.noUnsafe";
+        String unspecified = "<unspecified>";
+        String unsafeMemoryAccess = SystemPropertyUtil.get("sun.misc.unsafe.memory.access", unspecified);
+        if (!explicitProperty && unspecified.equals(unsafeMemoryAccess) && javaVersion() >= 24) {
+            reason = "io.netty.noUnsafe=true by default on Java 24+";
+            noUnsafe = true;
+        } else if (!("allow".equals(unsafeMemoryAccess) || unspecified.equals(unsafeMemoryAccess))) {
+            reason = "--sun-misc-unsafe-memory-access=" + unsafeMemoryAccess;
             noUnsafe = true;
         }
 
         if (noUnsafe) {
-            logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
-            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
+            String msg = "sun.misc.Unsafe: unavailable (" + reason + ')';
+            logger.debug(msg);
+            return new UnsupportedOperationException(msg);
         }
 
         // Legacy properties
@@ -574,7 +582,7 @@ final class PlatformDependent0 {
         }
 
         if (!SystemPropertyUtil.getBoolean(unsafePropName, true)) {
-            String msg = "sun.misc.Unsafe: unavailable (" + unsafePropName + ")";
+            String msg = "sun.misc.Unsafe: unavailable (" + unsafePropName + ')';
             logger.debug(msg);
             return new UnsupportedOperationException(msg);
         }
