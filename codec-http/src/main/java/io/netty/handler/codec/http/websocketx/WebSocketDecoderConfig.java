@@ -20,10 +20,9 @@ import io.netty.util.internal.ObjectUtil;
 /**
  * Frames decoder configuration.
  */
-public final class WebSocketDecoderConfig {
+public class WebSocketDecoderConfig {
 
-    static final WebSocketDecoderConfig DEFAULT =
-        new WebSocketDecoderConfig(65536, true, false, false, true, true);
+    static final WebSocketDecoderConfig DEFAULT = new WebSocketDecoderConfig();
 
     private final int maxFramePayloadLength;
     private final boolean expectMaskedFrames;
@@ -31,6 +30,13 @@ public final class WebSocketDecoderConfig {
     private final boolean allowExtensions;
     private final boolean closeOnProtocolViolation;
     private final boolean withUTF8Validator;
+
+    /**
+     * Default Constructor
+     */
+    protected WebSocketDecoderConfig() {
+        this(65536, true, false, false, true, true);
+    }
 
     /**
      * Constructor
