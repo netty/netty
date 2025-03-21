@@ -350,8 +350,8 @@ final class Native {
         CompletionQueue completionQueue = new CompletionQueue(
                 values[0],
                 values[1],
-                values[2],
-                values[3],
+                (int) values[2],
+                (int) values[3],
                 values[4],
                 values[5],
                 (int) values[6],
@@ -361,8 +361,8 @@ final class Native {
         SubmissionQueue submissionQueue = new SubmissionQueue(
                 values[10],
                 values[11],
-                values[12],
-                values[13],
+                (int) values[12],
+                (int) values[13],
                 values[14],
                 values[15],
                 values[16],
