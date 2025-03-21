@@ -65,4 +65,10 @@ public final class Buffer {
     // If Unsafe can not be used we will need to do JNI calls.
     private static native int addressSize0();
     private static native long memoryAddress0(ByteBuffer buffer);
+
+    public static ByteBuffer wrapMemoryAddressWithNativeOrder(long memoryAddress, int capacity) {
+        return wrapMemoryAddress(memoryAddress, capacity).order(ByteOrder.nativeOrder());
+    }
+
+    public static native ByteBuffer wrapMemoryAddress(long memoryAddress, int capacity);
 }

@@ -22,22 +22,24 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-
-import static io.netty.util.internal.PlatformDependent.BIG_ENDIAN_NATIVE_ORDER;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 final class SockaddrIn {
     static final byte[] IPV4_MAPPED_IPV6_PREFIX = {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
     static final int IPV4_ADDRESS_LENGTH = 4;
     static final int IPV6_ADDRESS_LENGTH = 16;
+    static final byte[] SOCKADDR_IN6_EMPTY_ARRAY = new byte[Native.SIZEOF_SOCKADDR_IN6];
+    static final byte[] SOCKADDR_IN_EMPTY_ARRAY = new byte[Native.SIZEOF_SOCKADDR_IN];
 
     private SockaddrIn() { }
 
-    static int write(boolean ipv6, long memory, InetSocketAddress address) {
+    static int set(boolean ipv6, ByteBuffer memory, InetSocketAddress address) {
         if (ipv6) {
-            return writeIPv6(memory, address.getAddress(), address.getPort());
+            return setIPv6(memory, address.getAddress(), address.getPort());
         } else {
-            return writeIPv4(memory, address.getAddress(), address.getPort());
+            return setIPv4(memory, address.getAddress(), address.getPort());
         }
     }
 
@@ -55,21 +57,30 @@ final class SockaddrIn {
      * };
      * }</pre>
      */
-    static int writeIPv4(long memory, InetAddress address, int port) {
-        PlatformDependent.setMemory(memory, Native.SIZEOF_SOCKADDR_IN, (byte) 0);
+    static int setIPv4(ByteBuffer memory, InetAddress address, int port) {
+        int position = memory.position();
+        try {
+            // memset
+            memory.put(SOCKADDR_IN_EMPTY_ARRAY);
 
-        PlatformDependent.putShort(memory + Native.SOCKADDR_IN_OFFSETOF_SIN_FAMILY, Native.AF_INET);
-        PlatformDependent.putShort(memory + Native.SOCKADDR_IN_OFFSETOF_SIN_PORT, handleNetworkOrder((short) port));
-        byte[] bytes = address.getAddress();
-        int offset = 0;
-        if (bytes.length == IPV6_ADDRESS_LENGTH) {
-            // IPV6 mapped IPV4 address, we only need the last 4 bytes.
-            offset = IPV4_MAPPED_IPV6_PREFIX.length;
+            memory.putShort(position + Native.SOCKADDR_IN_OFFSETOF_SIN_FAMILY, Native.AF_INET);
+            memory.putShort(position + Native.SOCKADDR_IN_OFFSETOF_SIN_PORT, handleNetworkOrder(memory.order(),
+                    (short) port));
+
+            byte[] bytes = address.getAddress();
+            int offset = 0;
+            if (bytes.length == IPV6_ADDRESS_LENGTH) {
+                // IPV6 mapped IPV4 address, we only need the last 4 bytes.
+                offset = IPV4_MAPPED_IPV6_PREFIX.length;
+            }
+            assert bytes.length == offset + IPV4_ADDRESS_LENGTH;
+            memory.position(position + Native.SOCKADDR_IN_OFFSETOF_SIN_ADDR + Native.IN_ADDRESS_OFFSETOF_S_ADDR);
+            memory.put(bytes, offset, IPV4_ADDRESS_LENGTH);
+            return Native.SIZEOF_SOCKADDR_IN;
+        } finally {
+            // Restore position as we did change it via memory.put(byte[]...).
+            memory.position(position);
         }
-        assert bytes.length == offset + 4;
-        PlatformDependent.copyMemory(bytes, offset,
-                memory + Native.SOCKADDR_IN_OFFSETOF_SIN_ADDR + Native.IN_ADDRESS_OFFSETOF_S_ADDR, 4);
-        return Native.SIZEOF_SOCKADDR_IN;
     }
 
     /**
@@ -87,81 +98,99 @@ final class SockaddrIn {
      * };
      * }</pre>
      */
-    static int writeIPv6(long memory, InetAddress address, int port) {
-        PlatformDependent.setMemory(memory, Native.SIZEOF_SOCKADDR_IN6, (byte) 0);
-        PlatformDependent.putShort(memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_FAMILY, Native.AF_INET6);
-        PlatformDependent.putShort(memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT, handleNetworkOrder((short) port));
-        // Skip sin6_flowinfo as we did memset before
-        byte[] bytes = address.getAddress();
-        if  (bytes.length == IPV4_ADDRESS_LENGTH) {
-            int offset = Native.SOCKADDR_IN6_OFFSETOF_SIN6_ADDR + Native.IN6_ADDRESS_OFFSETOF_S6_ADDR;
-            PlatformDependent.copyMemory(IPV4_MAPPED_IPV6_PREFIX, 0, memory + offset, IPV4_MAPPED_IPV6_PREFIX.length);
-            PlatformDependent.copyMemory(bytes, 0,
-                    memory + offset + IPV4_MAPPED_IPV6_PREFIX.length, IPV4_ADDRESS_LENGTH);
-            // Skip sin6_scope_id as we did memset before
-        } else {
-            PlatformDependent.copyMemory(
-                    bytes, 0, memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_ADDR + Native.IN6_ADDRESS_OFFSETOF_S6_ADDR,
-                    IPV6_ADDRESS_LENGTH);
-            PlatformDependent.putInt(
-                    memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_SCOPE_ID, ((Inet6Address) address).getScopeId());
-        }
-        return Native.SIZEOF_SOCKADDR_IN6;
-    }
-
-    static InetSocketAddress readIPv4(long memory, byte[] tmpArray) {
-        assert tmpArray.length == IPV4_ADDRESS_LENGTH;
-        int port = handleNetworkOrder(PlatformDependent.getShort(
-                memory + Native.SOCKADDR_IN_OFFSETOF_SIN_PORT)) & 0xFFFF;
-        PlatformDependent.copyMemory(memory + Native.SOCKADDR_IN_OFFSETOF_SIN_ADDR + Native.IN_ADDRESS_OFFSETOF_S_ADDR,
-                tmpArray, 0, IPV4_ADDRESS_LENGTH);
+    static int setIPv6(ByteBuffer memory, InetAddress address, int port) {
+        int position = memory.position();
         try {
-            return new InetSocketAddress(InetAddress.getByAddress(tmpArray), port);
-        } catch (UnknownHostException ignore) {
-            return null;
+            // memset
+            memory.put(SOCKADDR_IN6_EMPTY_ARRAY);
+            memory.putShort(position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_FAMILY, Native.AF_INET6);
+            memory.putShort(position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT,
+                    handleNetworkOrder(memory.order(), (short) port));
+            // Skip sin6_flowinfo as we did memset before
+            byte[] bytes = address.getAddress();
+            int offset = Native.SOCKADDR_IN6_OFFSETOF_SIN6_ADDR + Native.IN6_ADDRESS_OFFSETOF_S6_ADDR;
+            if (bytes.length == IPV4_ADDRESS_LENGTH) {
+                memory.position(position + offset);
+                memory.put(IPV4_MAPPED_IPV6_PREFIX);
+
+                memory.position(position + offset + IPV4_MAPPED_IPV6_PREFIX.length);
+                memory.put(bytes, 0, IPV4_ADDRESS_LENGTH);
+
+                // Skip sin6_scope_id as we did memset before
+            } else {
+                memory.position(position + offset);
+                memory.put(bytes, 0, IPV6_ADDRESS_LENGTH);
+
+                memory.putInt(position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_SCOPE_ID,
+                        ((Inet6Address) address).getScopeId());
+            }
+            return Native.SIZEOF_SOCKADDR_IN6;
+        } finally {
+            memory.position(position);
         }
     }
 
-    static InetSocketAddress readIPv6(long memory, byte[] ipv6Array, byte[] ipv4Array) {
+    static InetSocketAddress getIPv4(ByteBuffer memory, byte[] tmpArray) {
+        assert tmpArray.length == IPV4_ADDRESS_LENGTH;
+        int position = memory.position();
+
+        try {
+            int port = handleNetworkOrder(memory.order(),
+                    memory.getShort(position + Native.SOCKADDR_IN_OFFSETOF_SIN_PORT)) & 0xFFFF;
+            memory.position(position + Native.SOCKADDR_IN_OFFSETOF_SIN_ADDR + Native.IN_ADDRESS_OFFSETOF_S_ADDR);
+            memory.get(tmpArray);
+            try {
+                return new InetSocketAddress(InetAddress.getByAddress(tmpArray), port);
+            } catch (UnknownHostException ignore) {
+                return null;
+            }
+        } finally {
+            memory.position(position);
+        }
+    }
+
+    static InetSocketAddress getIPv6(ByteBuffer memory, byte[] ipv6Array, byte[] ipv4Array) {
         assert ipv6Array.length == IPV6_ADDRESS_LENGTH;
         assert ipv4Array.length == IPV4_ADDRESS_LENGTH;
+        int position = memory.position();
 
-        int port = handleNetworkOrder(PlatformDependent.getShort(
-                memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT)) & 0xFFFF;
-        PlatformDependent.copyMemory(
-                memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_ADDR + Native.IN6_ADDRESS_OFFSETOF_S6_ADDR,
-                ipv6Array, 0, IPV6_ADDRESS_LENGTH);
-        if (PlatformDependent.equals(
-                ipv6Array, 0, IPV4_MAPPED_IPV6_PREFIX, 0, IPV4_MAPPED_IPV6_PREFIX.length)) {
-            System.arraycopy(ipv6Array, IPV4_MAPPED_IPV6_PREFIX.length, ipv4Array, 0, IPV4_ADDRESS_LENGTH);
-            try {
-                return new InetSocketAddress(Inet4Address.getByAddress(ipv4Array), port);
-            } catch (UnknownHostException ignore) {
-                return null;
+        try {
+            int port = handleNetworkOrder(memory.order(), memory.getShort(
+                    position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT)) & 0xFFFF;
+            memory.position(position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_ADDR + Native.IN6_ADDRESS_OFFSETOF_S6_ADDR);
+            memory.get(ipv6Array);
+            if (PlatformDependent.equals(
+                    ipv6Array, 0, IPV4_MAPPED_IPV6_PREFIX, 0, IPV4_MAPPED_IPV6_PREFIX.length)) {
+                System.arraycopy(ipv6Array, IPV4_MAPPED_IPV6_PREFIX.length, ipv4Array, 0, IPV4_ADDRESS_LENGTH);
+                try {
+                    return new InetSocketAddress(Inet4Address.getByAddress(ipv4Array), port);
+                } catch (UnknownHostException ignore) {
+                    return null;
+                }
+            } else {
+                int scopeId = memory.getInt(position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_SCOPE_ID);
+                try {
+                    return new InetSocketAddress(Inet6Address.getByAddress(null, ipv6Array, scopeId), port);
+                } catch (UnknownHostException ignore) {
+                    return null;
+                }
             }
-        } else {
-            int scopeId = PlatformDependent.getInt(memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_SCOPE_ID);
-            try {
-                return new InetSocketAddress(Inet6Address.getByAddress(null, ipv6Array, scopeId), port);
-            } catch (UnknownHostException ignore) {
-                return null;
-            }
+        } finally {
+            memory.position(position);
         }
     }
 
-    static boolean hasPortIpv4(long memory) {
-        int port = handleNetworkOrder(PlatformDependent.getShort(
-                memory + Native.SOCKADDR_IN_OFFSETOF_SIN_PORT)) & 0xFFFF;
+    static boolean hasPortIpv4(ByteBuffer memory) {
+        int port = memory.getShort(memory.position() + Native.SOCKADDR_IN_OFFSETOF_SIN_PORT) & 0xFFFF;
         return port > 0;
     }
 
-    static boolean hasPortIpv6(long memory) {
-        int port = handleNetworkOrder(PlatformDependent.getShort(
-                memory + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT)) & 0xFFFF;
+    static boolean hasPortIpv6(ByteBuffer memory) {
+        int port = memory.getShort(memory.position() + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT) & 0xFFFF;
         return port > 0;
     }
 
-    private static short handleNetworkOrder(short v) {
-        return BIG_ENDIAN_NATIVE_ORDER ? v : Short.reverseBytes(v);
+    private static short handleNetworkOrder(ByteOrder order, short v) {
+        return order != ByteOrder.nativeOrder() ? v : Short.reverseBytes(v);
     }
 }

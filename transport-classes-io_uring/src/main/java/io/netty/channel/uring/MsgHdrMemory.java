@@ -17,64 +17,74 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.channel.unix.Buffer;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 
 final class MsgHdrMemory {
-    private final long memory;
+    private static final byte[] EMPTY_SOCKADDR_STORAGE = new byte[Native.SIZEOF_SOCKADDR_STORAGE];
+    private final ByteBuffer msgHdrMemory;
+    private final ByteBuffer socketAddrMemory;
+    private final ByteBuffer iovMemory;
+    private final ByteBuffer cmsgDataMemory;
+
+    private final long msgHdrMemoryAddress;
     private final short idx;
-    private final long cmsgDataAddr;
+    private final int cmsgDataOffset;
 
     MsgHdrMemory(short idx) {
         this.idx = idx;
-        int size = Native.SIZEOF_MSGHDR + Native.SIZEOF_SOCKADDR_STORAGE + Native.SIZEOF_IOVEC + Native.CMSG_SPACE;
-        memory = PlatformDependent.allocateMemory(size);
-        PlatformDependent.setMemory(memory, size, (byte) 0);
+        msgHdrMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_MSGHDR);
+        msgHdrMemoryAddress = Buffer.memoryAddress(msgHdrMemory);
+        socketAddrMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
+        iovMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_IOVEC);
+        cmsgDataMemory = Buffer.allocateDirectWithNativeOrder(Native.CMSG_SPACE);
 
         // We retrieve the address of the data once so we can just be JNI free after construction.
-        cmsgDataAddr = Native.cmsghdrData(memory + Native.SIZEOF_MSGHDR +
-                Native.SIZEOF_SOCKADDR_STORAGE + Native.SIZEOF_IOVEC);
+        long cmsgDataMemoryAddr = Buffer.memoryAddress(cmsgDataMemory);
+        long cmsgDataAddr = Native.cmsghdrData(cmsgDataMemoryAddr);
+        cmsgDataOffset = (int) (cmsgDataAddr + cmsgDataMemoryAddr);
     }
 
-    void write(LinuxSocket socket, InetSocketAddress address, long bufferAddress , int length, short segmentSize) {
-        long sockAddress = memory + Native.SIZEOF_MSGHDR;
-        long iovAddress = sockAddress + Native.SIZEOF_SOCKADDR_STORAGE;
-        long cmsgAddr = iovAddress + Native.SIZEOF_IOVEC;
+    void set(LinuxSocket socket, InetSocketAddress address, long bufferAddress , int length, short segmentSize) {
         int addressLength;
         if (address == null) {
             addressLength = socket.isIpv6() ? Native.SIZEOF_SOCKADDR_IN6 : Native.SIZEOF_SOCKADDR_IN;
-            PlatformDependent.setMemory(sockAddress, Native.SIZEOF_SOCKADDR_STORAGE, (byte) 0);
+            int socketAddrMemoryPosition = socketAddrMemory.position();
+            try {
+                socketAddrMemory.put(EMPTY_SOCKADDR_STORAGE);
+            } finally {
+                socketAddrMemory.position(socketAddrMemoryPosition);
+            }
         } else {
-            addressLength = SockaddrIn.write(socket.isIpv6(), sockAddress, address);
+            addressLength = SockaddrIn.set(socket.isIpv6(), socketAddrMemory, address);
         }
-        Iov.write(iovAddress, bufferAddress, length);
-        MsgHdr.write(memory, sockAddress, addressLength, iovAddress, 1, cmsgAddr, cmsgDataAddr, segmentSize);
+        Iov.set(iovMemory, bufferAddress, length);
+        MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, iovMemory, 1, cmsgDataMemory,
+                cmsgDataOffset, segmentSize);
     }
 
     boolean hasPort(IoUringDatagramChannel channel) {
-        long sockAddress = memory + Native.SIZEOF_MSGHDR;
         if (channel.socket.isIpv6()) {
-            return SockaddrIn.hasPortIpv6(sockAddress);
+            return SockaddrIn.hasPortIpv6(socketAddrMemory);
         }
-        return SockaddrIn.hasPortIpv4(sockAddress);
+        return SockaddrIn.hasPortIpv4(socketAddrMemory);
     }
 
-    DatagramPacket read(IoUringDatagramChannel channel, IoUringIoHandler handler, ByteBuf buffer, int bytesRead) {
-        long sockAddress = memory + Native.SIZEOF_MSGHDR;
+    DatagramPacket get(IoUringDatagramChannel channel, IoUringIoHandler handler, ByteBuf buffer, int bytesRead) {
         InetSocketAddress sender;
         if (channel.socket.isIpv6()) {
             byte[] ipv6Bytes = handler.inet6AddressArray();
             byte[] ipv4bytes = handler.inet4AddressArray();
 
-            sender = SockaddrIn.readIPv6(sockAddress, ipv6Bytes, ipv4bytes);
+            sender = SockaddrIn.getIPv6(socketAddrMemory, ipv6Bytes, ipv4bytes);
         } else {
             byte[] bytes = handler.inet4AddressArray();
-            sender = SockaddrIn.readIPv4(sockAddress, bytes);
+            sender = SockaddrIn.getIPv4(socketAddrMemory, bytes);
         }
-        long iovAddress = memory + Native.SIZEOF_MSGHDR + Native.SIZEOF_SOCKADDR_STORAGE;
-        long bufferAddress = Iov.readBufferAddress(iovAddress);
-        int bufferLength = Iov.readBufferLength(iovAddress);
+        long bufferAddress = Iov.getBufferAddress(iovMemory);
+        int bufferLength = Iov.getBufferLength(iovMemory);
         // reconstruct the reader index based on the memoryAddress of the buffer and the bufferAddress that was used
         // in the iovec.
         int readerIndex = (int) (bufferAddress - buffer.memoryAddress());
@@ -89,10 +99,13 @@ final class MsgHdrMemory {
     }
 
     long address() {
-        return memory;
+        return msgHdrMemoryAddress;
     }
 
     void release() {
-        PlatformDependent.freeMemory(memory);
+        Buffer.free(msgHdrMemory);
+        Buffer.free(socketAddrMemory);
+        Buffer.free(iovMemory);
+        Buffer.free(cmsgDataMemory);
     }
 }

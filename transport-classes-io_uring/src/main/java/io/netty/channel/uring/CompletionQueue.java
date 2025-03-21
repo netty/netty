@@ -15,8 +15,10 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.util.internal.PlatformDependent;
-
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.StringJoiner;
 
 /**
@@ -30,14 +32,14 @@ final class CompletionQueue {
     private static final int CQE_RES_FIELD = 8;
     private static final int CQE_FLAGS_FIELD = 12;
 
-    private static final long CQE_SIZE = 16;
+    static final int CQE_SIZE = 16;
 
-    //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
-    private final long kHeadAddress;
-    private final long kTailAddress;
-
-    private final long completionQueueArrayAddress;
-
+    //these unsigned integer pointers(shared with the kernel) will be changed by the kernel and us
+    // using a VarHandle.
+    private final ByteBuffer khead;
+    private final ByteBuffer ktail;
+    private final ByteBuffer completionQueueArray;
+    private final VarHandle intHandle;
     final int ringSize;
     final long ringAddress;
     final int ringFd;
@@ -48,12 +50,13 @@ final class CompletionQueue {
     private int ringHead;
     private boolean closed;
 
-    CompletionQueue(long kHeadAddress, long kTailAddress, int ringMask, int ringEntries,
-                    long completionQueueArrayAddress, int ringSize, long ringAddress,
+    CompletionQueue(ByteBuffer kHead, ByteBuffer kTail, int ringMask, int ringEntries,
+                    ByteBuffer completionQueueArray, int ringSize, long ringAddress,
                     int ringFd, int ringCapacity) {
-        this.kHeadAddress = kHeadAddress;
-        this.kTailAddress = kTailAddress;
-        this.completionQueueArrayAddress = completionQueueArrayAddress;
+        intHandle = MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.nativeOrder());
+        this.khead = kHead;
+        this.ktail = kTail;
+        this.completionQueueArray = completionQueueArray;
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
@@ -61,7 +64,7 @@ final class CompletionQueue {
 
         this.ringEntries = ringEntries;
         this.ringMask = ringMask;
-        ringHead = PlatformDependent.getIntVolatile(kHeadAddress);
+        ringHead = (int) intHandle.getVolatile(kHead, 0);
     }
 
     void close() {
@@ -73,14 +76,14 @@ final class CompletionQueue {
      * {@link #process(CompletionCallback)}, {@code false} otherwise.
      */
     boolean hasCompletions() {
-        return !closed && ringHead != PlatformDependent.getIntVolatile(kTailAddress);
+        return !closed && ringHead != (int) intHandle.getVolatile(ktail, 0);
     }
 
     int count() {
         if (closed) {
             return 0;
         }
-        return PlatformDependent.getIntVolatile(kTailAddress) - ringHead;
+        return (int) intHandle.getVolatile(ktail, 0) - ringHead;
     }
 
     /**
@@ -91,15 +94,15 @@ final class CompletionQueue {
         if (closed) {
             return 0;
         }
-        int tail = PlatformDependent.getIntVolatile(kTailAddress);
+        int tail = (int) intHandle.getVolatile(ktail, 0);
         try {
             int i = 0;
             while (ringHead != tail) {
-                long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
+                int cqePosition = cqeIdx(ringHead, ringMask);
 
-                long udata = PlatformDependent.getLong(cqeAddress + CQE_USER_DATA_FIELD);
-                int res = PlatformDependent.getInt(cqeAddress + CQE_RES_FIELD);
-                int flags = PlatformDependent.getInt(cqeAddress + CQE_FLAGS_FIELD);
+                long udata = completionQueueArray.getLong(cqePosition + CQE_USER_DATA_FIELD);
+                int res = completionQueueArray.getInt(cqePosition + CQE_RES_FIELD);
+                int flags = completionQueueArray.getInt(cqePosition + CQE_FLAGS_FIELD);
 
                 ringHead++;
 
@@ -112,7 +115,7 @@ final class CompletionQueue {
             return i;
         } finally {
             // Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
-            PlatformDependent.putIntOrdered(kHeadAddress, ringHead);
+            intHandle.setRelease(khead, 0, ringHead);
         }
     }
 
@@ -122,18 +125,21 @@ final class CompletionQueue {
         if (closed) {
             sb.add("closed");
         } else {
-            int tail = PlatformDependent.getIntVolatile(kTailAddress);
+            int tail = (int) intHandle.getVolatile(ktail, 0);
             int head = ringHead;
             while (head != tail) {
-                long cqeAddress = completionQueueArrayAddress + (ringHead & ringMask) * CQE_SIZE;
-                long udata = PlatformDependent.getLong(cqeAddress + CQE_USER_DATA_FIELD);
-                int res = PlatformDependent.getInt(cqeAddress + CQE_RES_FIELD);
-                int flags = PlatformDependent.getInt(cqeAddress + CQE_FLAGS_FIELD);
+                int cqePosition = cqeIdx(head++, ringMask);
+                long udata = completionQueueArray.getLong(cqePosition + CQE_USER_DATA_FIELD);
+                int res = completionQueueArray.getInt(cqePosition + CQE_RES_FIELD);
+                int flags = completionQueueArray.getInt(cqePosition + CQE_FLAGS_FIELD);
 
                 sb.add("(res=" + res).add(", flags=" + flags).add(", udata=" + udata).add(")");
-                head++;
             }
         }
         return sb.toString();
+    }
+
+    private static int cqeIdx(int ringHead, int ringMask) {
+        return (ringHead & ringMask) * CQE_SIZE;
     }
 }

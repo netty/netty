@@ -15,16 +15,20 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.util.internal.PlatformDependent;
+import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.StringJoiner;
 
 final class SubmissionQueue {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SubmissionQueue.class);
 
-    private static final long SQE_SIZE = 64;
+    static final int SQE_SIZE = 64;
 
     //these offsets are used to access specific properties
     //SQE https://github.com/axboe/liburing/blob/liburing-2.6/src/include/liburing/io_uring.h#L30
@@ -42,10 +46,12 @@ final class SubmissionQueue {
     private static final int SQE_UNION5_FIELD = 44;
     private static final int SQE_UNION6_FIELD = 48;
 
-    //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
-    private final long kHeadAddress;
-    private final long kTailAddress;
-    final long submissionQueueArrayAddress;
+    // These unsigned integer pointers(shared with the kernel) will be changed by the kernel and us
+    // using a VarHandle.
+    private final VarHandle intHandle;
+    private final ByteBuffer kHead;
+    private final ByteBuffer kTail;
+    private final ByteBuffer submissionQueueArray;
 
     final int ringEntries;
     private final int ringMask; // = ringEntries - 1
@@ -60,20 +66,25 @@ final class SubmissionQueue {
 
     private boolean closed;
 
-    SubmissionQueue(long kHeadAddress, long kTailAddress, int ringMask, int ringEntries,
-                    long submissionQueueArrayAddress, int ringSize, long ringAddress,
+    SubmissionQueue(ByteBuffer khead, ByteBuffer ktail, int ringMask, int ringEntries, ByteBuffer submissionQueueArray,
+                    int ringSize, long ringAddress,
                     int ringFd) {
-        this.kHeadAddress = kHeadAddress;
-        this.kTailAddress = kTailAddress;
-        this.submissionQueueArrayAddress = submissionQueueArrayAddress;
+        intHandle = MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.nativeOrder());
+        this.kHead = khead;
+        this.kTail = ktail;
+        this.submissionQueueArray = submissionQueueArray;
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
         this.ringFd = ringFd;
         this.enterRingFd = ringFd;
         this.ringEntries = ringEntries;
         this.ringMask = ringMask;
-        this.head = PlatformDependent.getIntVolatile(kHeadAddress);
-        this.tail = PlatformDependent.getIntVolatile(kTailAddress);
+        this.head = (int) intHandle.getVolatile(khead, 0);
+        this.tail = (int) intHandle.getVolatile(ktail, 0);
+    }
+
+    long submissionQueueArrayAddress() {
+        return Buffer.memoryAddress(submissionQueueArray);
     }
 
     void close() {
@@ -114,29 +125,28 @@ final class SubmissionQueue {
                 throw new RuntimeException("SQ ring full and no submissions accepted");
             }
         }
-        long sqe = submissionQueueArrayAddress + (tail++ & ringMask) * SQE_SIZE;
+        int sqe = sqeIndex(tail++, ringMask);
 
         //set sqe(submission queue) properties
-
-        PlatformDependent.putByte(sqe + SQE_OP_CODE_FIELD, opcode);
-        PlatformDependent.putByte(sqe + SQE_FLAGS_FIELD, flags);
+        submissionQueueArray.put(sqe + SQE_OP_CODE_FIELD, opcode);
+        submissionQueueArray.put(sqe + SQE_FLAGS_FIELD, flags);
         // This constant is set up-front
-        PlatformDependent.putShort(sqe + SQE_IOPRIO_FIELD, ioPrio);
-        PlatformDependent.putInt(sqe + SQE_FD_FIELD, fd);
-        PlatformDependent.putLong(sqe + SQE_UNION1_FIELD, union1);
-        PlatformDependent.putLong(sqe + SQE_UNION2_FIELD, union2);
-        PlatformDependent.putInt(sqe + SQE_LEN_FIELD, len);
-        PlatformDependent.putInt(sqe + SQE_UNION3_FIELD, union3);
-        PlatformDependent.putLong(sqe + SQE_USER_DATA_FIELD, udata);
-        PlatformDependent.putShort(sqe + SQE_UNION4_FIELD, union4);
-        PlatformDependent.putShort(sqe + SQE_PERSONALITY_FIELD, personality);
-        PlatformDependent.putInt(sqe + SQE_UNION5_FIELD, union5);
-        PlatformDependent.putLong(sqe + SQE_UNION6_FIELD, union6);
+        submissionQueueArray.putShort(sqe + SQE_IOPRIO_FIELD, ioPrio);
+        submissionQueueArray.putInt(sqe + SQE_FD_FIELD, fd);
+        submissionQueueArray.putLong(sqe + SQE_UNION1_FIELD, union1);
+        submissionQueueArray.putLong(sqe + SQE_UNION2_FIELD, union2);
+        submissionQueueArray.putInt(sqe + SQE_LEN_FIELD, len);
+        submissionQueueArray.putInt(sqe + SQE_UNION3_FIELD, union3);
+        submissionQueueArray.putLong(sqe + SQE_USER_DATA_FIELD, udata);
+        submissionQueueArray.putShort(sqe + SQE_UNION4_FIELD, union4);
+        submissionQueueArray.putShort(sqe + SQE_PERSONALITY_FIELD, personality);
+        submissionQueueArray.putInt(sqe + SQE_UNION5_FIELD, union5);
+        submissionQueueArray.putLong(sqe + SQE_UNION6_FIELD, union6);
 
         if (logger.isTraceEnabled()) {
             if (opcode == Native.IORING_OP_WRITEV || opcode == Native.IORING_OP_READV) {
-                logger.trace("add(ring={}, enterRing:{} ): {}(fd={}, len={} ({} bytes), off={}, data={})",
-                        ringFd, enterRingFd, Native.opToStr(opcode), fd, len, Iov.sumSize(union2, len), union1, udata);
+                logger.trace("add(ring={}, enterRing:{} ): {}(fd={}, len={}, off={}, data={})",
+                        ringFd, enterRingFd, Native.opToStr(opcode), fd, len, union1, udata);
             } else {
                 logger.trace("add(ring={}, enterRing:{}): {}(fd={}, len={}, off={}, data={})",
                         ringFd, enterRingFd, Native.opToStr(opcode), fd, len, union1, udata);
@@ -152,13 +162,18 @@ final class SubmissionQueue {
             sb.add("closed");
         } else {
             int pending = tail - head;
+            int idx = tail;
             for (int i = 0; i < pending; i++) {
-                long sqe = submissionQueueArrayAddress + (head + i & ringMask) * SQE_SIZE;
-                sb.add(Native.opToStr(PlatformDependent.getByte(sqe + SQE_OP_CODE_FIELD)) +
-                        "(fd=" + PlatformDependent.getInt(sqe + SQE_FD_FIELD) + ')');
+                int sqe = sqeIndex(idx++, ringMask);
+                sb.add(Native.opToStr(submissionQueueArray.get(sqe + SQE_OP_CODE_FIELD)) +
+                        "(fd=" + submissionQueueArray.getInt(sqe + SQE_FD_FIELD) + ')');
             }
         }
         return sb.toString();
+    }
+
+    private static int sqeIndex(int tail, int ringMask) {
+        return (tail & ringMask) * SQE_SIZE;
     }
 
     long addNop(byte flags, long udata) {
@@ -215,9 +230,9 @@ final class SubmissionQueue {
     }
 
     private int submit(int toSubmit, int minComplete, int flags) {
-        PlatformDependent.putIntOrdered(kTailAddress, tail); // release memory barrier
+        intHandle.setRelease(kTail, 0, tail);
         int ret = ioUringEnter(toSubmit, minComplete, flags);
-        head = PlatformDependent.getIntVolatile(kHeadAddress); // acquire memory barrier
+        head = (int) intHandle.getVolatile(kHead, 0); // acquire memory barrier
         if (ret != toSubmit) {
             if (ret < 0) {
                 throw new RuntimeException("ioUringEnter syscall returned " + ret);

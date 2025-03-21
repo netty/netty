@@ -65,7 +65,7 @@ final class RingBuffer {
         ioUringSubmissionQueue.close();
         ioUringCompletionQueue.close();
         Native.ioUringExit(
-                ioUringSubmissionQueue.submissionQueueArrayAddress,
+                ioUringSubmissionQueue.submissionQueueArrayAddress(),
                 ioUringSubmissionQueue.ringEntries,
                 ioUringSubmissionQueue.ringAddress,
                 ioUringSubmissionQueue.ringSize,

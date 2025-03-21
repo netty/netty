@@ -28,6 +28,9 @@
 
   <properties>
     <javaModuleName>io.netty.transport.classes.io_uring</javaModuleName>
+    <maven.compiler.source>1.9</maven.compiler.source>
+    <maven.compiler.target>1.9</maven.compiler.target>
+    <maven.compiler.release>9</maven.compiler.release>
   </properties>
 
   <dependencies>
@@ -55,6 +58,63 @@
 
   <build>
     <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <!--
+          We need to compile everything except the IoUring class with Java9+
+          The reason for this is that we want still be able to use IoUring.ensureAvaibility() on Java8.
+        -->
+        <executions>
+          <execution>
+            <id>default-compile</id>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <compilerVersion>1.8</compilerVersion>
+              <fork>true</fork>
+              <source>${maven.compiler.source}</source>
+              <target>${maven.compiler.target}</target>
+              <release>${maven.compiler.release}</release>
+              <debug>true</debug>
+              <optimize>true</optimize>
+              <showDeprecation>true</showDeprecation>
+              <showWarnings>true</showWarnings>
+              <compilerArgument>-Xlint:-options</compilerArgument>
+              <meminitial>256m</meminitial>
+              <maxmem>1024m</maxmem>
+              <excludes>
+                <exclude>**/package-info.java</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-jdk8</id>
+            <goals>
+              <goal>compile</goal>
+            </goals>
+            <configuration>
+              <compilerVersion>1.8</compilerVersion>
+              <fork>true</fork>
+              <source>1.8</source>
+              <target>1.8</target>
+              <release>8</release>
+              <debug>true</debug>
+              <optimize>true</optimize>
+              <showDeprecation>true</showDeprecation>
+              <showWarnings>true</showWarnings>
+              <compilerArgument>-Xlint:-options</compilerArgument>
+              <meminitial>256m</meminitial>
+              <maxmem>1024m</maxmem>
+              <includes>
+                <include>**/IoUring.java</include>
+              </includes>
+            </configuration>
+          </execution>
+        </executions>
+
+      </plugin>
       <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>
