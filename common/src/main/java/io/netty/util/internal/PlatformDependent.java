@@ -366,14 +366,10 @@ public final class PlatformDependent {
     /**
      * @param thread The thread to be checked.
      * @return
-     * {@code IS_VIRTUAL}: MUST be a virtual thread.
-     * <br>
-     * {@code NOT_VIRTUAL}: MUST NOT be a virtual thread.
-     * <br>
-     * {@code UNKNOWN}: Unable to check the thread type.
+     * {@code true}: if the {@code thread} is a virtual thread.
      */
-    public static VirtualThreadCheckResult checkVirtualThread(Thread thread) {
-        return PlatformDependent0.checkVirtualThread(thread);
+    public static boolean isVirtualThread(Thread thread) {
+        return PlatformDependent0.isVirtualThread(thread);
     }
 
     /**
