@@ -32,10 +32,6 @@ import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicLong;
-
-import static io.netty.util.internal.VirtualThreadCheckResult.IS_VIRTUAL;
-import static io.netty.util.internal.VirtualThreadCheckResult.NOT_VIRTUAL;
-import static io.netty.util.internal.VirtualThreadCheckResult.UNKNOWN;
 import static java.lang.invoke.MethodType.methodType;
 
 /**
@@ -68,6 +64,8 @@ final class PlatformDependent0 {
 
     // Package-private for testing.
     static final MethodHandle IS_VIRTUAL_THREAD_METHOD_HANDLE = getIsVirtualThreadMethodHandle();
+
+    private static final String BASE_VIRTUAL_THREAD_CLASS_BINARY_NAME = "java.lang.BaseVirtualThread";
 
     static final Unsafe UNSAFE;
 
@@ -529,30 +527,24 @@ final class PlatformDependent0 {
     /**
      * @param thread The thread to be checked.
      * @return
-     * {@code IS_VIRTUAL}: MUST be a virtual thread.
-     * <br>
-     * {@code NOT_VIRTUAL}: MUST NOT be a virtual thread.
-     * <br>
-     * {@code UNKNOWN}: Unable to check the thread type.
+     * {@code true}: if this {@code thread} is a virtual thread.
      */
-    static VirtualThreadCheckResult checkVirtualThread(Thread thread) {
+    static boolean isVirtualThread(Thread thread) {
         // Quick exclusion.
         if (thread == null || JAVA_VERSION < 19 || thread instanceof FastThreadLocalThread) {
-            return NOT_VIRTUAL;
+            return false;
         }
-        // Uncommon case: IS_VIRTUAL_THREAD_METHOD_HANDLE is null.
+        // Uncommon case: `IS_VIRTUAL_THREAD_METHOD_HANDLE` is null.
         if (IS_VIRTUAL_THREAD_METHOD_HANDLE == null) {
             Class<?> clazz = thread.getClass();
-            if (clazz == Thread.class
-                    || (clazz = clazz.getSuperclass()) == Thread.class
-                    || clazz.getSuperclass() != Thread.class) {
-                return NOT_VIRTUAL;
+            if (clazz == Thread.class || (clazz = clazz.getSuperclass()) == Thread.class) {
+                return false;
             }
-            return UNKNOWN;
+            return BASE_VIRTUAL_THREAD_CLASS_BINARY_NAME.equals(clazz.getName());
         }
         // Preferred fast check path:
         try {
-            return (boolean) IS_VIRTUAL_THREAD_METHOD_HANDLE.invokeExact(thread) ? IS_VIRTUAL : NOT_VIRTUAL;
+            return (boolean) IS_VIRTUAL_THREAD_METHOD_HANDLE.invokeExact(thread);
         } catch (Throwable t) {
             // Should not happen.
             if (t instanceof Error) {

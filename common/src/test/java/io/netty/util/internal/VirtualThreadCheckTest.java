@@ -22,10 +22,6 @@ import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.internal.PlatformDependent0.IS_VIRTUAL_THREAD_METHOD_HANDLE;
-import static io.netty.util.internal.VirtualThreadCheckResult.IS_VIRTUAL;
-import static io.netty.util.internal.VirtualThreadCheckResult.NOT_VIRTUAL;
-import static io.netty.util.internal.VirtualThreadCheckResult.UNKNOWN;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,40 +31,40 @@ public class VirtualThreadCheckTest {
 
     @Test
     public void testCheckVirtualThread() throws Exception {
-        assertEquals(NOT_VIRTUAL, PlatformDependent.checkVirtualThread(null));
-        assertEquals(NOT_VIRTUAL, PlatformDependent.checkVirtualThread(Thread.currentThread()));
+        assertFalse(PlatformDependent.isVirtualThread(null));
+        assertFalse(PlatformDependent.isVirtualThread(Thread.currentThread()));
         FastThreadLocalThread fastThreadLocalThread = new FastThreadLocalThread();
-        assertEquals(NOT_VIRTUAL, PlatformDependent.checkVirtualThread(fastThreadLocalThread));
-        final AtomicReference<VirtualThreadCheckResult> atomicRes = new AtomicReference<VirtualThreadCheckResult>();
+        assertFalse(PlatformDependent.isVirtualThread(fastThreadLocalThread));
+        final AtomicReference<Boolean> atomicRes = new AtomicReference<Boolean>();
         Thread subThread = new Thread() {
             @Override
             public void run() {
-                atomicRes.set(PlatformDependent.checkVirtualThread(Thread.currentThread()));
+                atomicRes.set(PlatformDependent.isVirtualThread(Thread.currentThread()));
             }
         };
         subThread.start();
         subThread.join();
-        assertEquals(NOT_VIRTUAL, atomicRes.get());
+        assertFalse(atomicRes.get());
 
         Thread subOfSubThread = new SubThread() {
             @Override
             public void run() {
-                atomicRes.set(PlatformDependent.checkVirtualThread(Thread.currentThread()));
+                atomicRes.set(PlatformDependent.isVirtualThread(Thread.currentThread()));
             }
         };
         subOfSubThread.start();
         subOfSubThread.join();
-        assertEquals(NOT_VIRTUAL, atomicRes.get());
+        assertFalse(atomicRes.get());
 
         Thread subOfSubOfSubThread = new SubOfSubThread() {
             @Override
             public void run() {
-                atomicRes.set(PlatformDependent.checkVirtualThread(Thread.currentThread()));
+                atomicRes.set(PlatformDependent.isVirtualThread(Thread.currentThread()));
             }
         };
         subOfSubOfSubThread.start();
         subOfSubOfSubThread.join();
-        assertEquals(NOT_VIRTUAL, atomicRes.get());
+        assertFalse(atomicRes.get());
 
         assumeTrue(PlatformDependent.javaVersion() >= 21);
         Method startVirtualThread = getStartVirtualThreadMethod();
@@ -77,11 +73,7 @@ public class VirtualThreadCheckTest {
             public void run() {
             }
         });
-        if (IS_VIRTUAL_THREAD_METHOD_HANDLE != null) {
-            assertEquals(IS_VIRTUAL, PlatformDependent.checkVirtualThread(virtualThread));
-        } else {
-            assertEquals(UNKNOWN, PlatformDependent.checkVirtualThread(virtualThread));
-        }
+        assertTrue(PlatformDependent.isVirtualThread(virtualThread));
     }
 
     @Test
