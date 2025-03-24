@@ -49,7 +49,7 @@ final class CompletionQueue {
     private boolean closed;
 
     CompletionQueue(long kHeadAddress, long kTailAddress, int ringMask, int ringEntries,
-                    long kOverflowAddress, long completionQueueArrayAddress, int ringSize, long ringAddress,
+                    long completionQueueArrayAddress, int ringSize, long ringAddress,
                     int ringFd, int ringCapacity) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;

@@ -144,6 +144,11 @@ static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *
     cq->koverflow = cq->ring_ptr + p->cq_off.overflow;
     cq->cqes = cq->ring_ptr + p->cq_off.cqes;
 
+    if (!(p->flags & IORING_SETUP_NO_SQARRAY)) {
+        for (int index = 0; index < p->sq_entries; index++) {
+            sq->array[index] = index;
+        }
+    }
     return 0;
 err:
     io_uring_unmap_rings(sq, cq);
@@ -302,7 +307,7 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         p.cq_entries = (__u32) cqSize;
     }
 
-    jlongArray array = (*env)->NewLongArray(env, 22);
+    jlongArray array = (*env)->NewLongArray(env, 18);
     if (array == NULL) {
         // This will put an OOME on the stack
         return NULL;
@@ -337,14 +342,13 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         (jlong)*io_uring_ring.cq.kring_mask,
         // Should be replaced by ring_entries when we depend on later kernel versions
         (jlong)*io_uring_ring.cq.kring_entries,
-        (jlong)io_uring_ring.cq.koverflow,
         (jlong)io_uring_ring.cq.cqes,
         (jlong)io_uring_ring.cq.ring_sz,
         (jlong)io_uring_ring.cq.ring_ptr,
         (jlong)ring_fd,
         (jlong)p.cq_entries
     };
-    (*env)->SetLongArrayRegion(env, array, 0, 10, completionArrayElements);
+    (*env)->SetLongArrayRegion(env, array, 0, 9, completionArrayElements);
 
     jlong submissionArrayElements[] = {
         (jlong)io_uring_ring.sq.khead,
@@ -353,18 +357,15 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         (jlong)*io_uring_ring.sq.kring_mask,
         // Should be replaced by ring_entries when we depend on later kernel versions
         (jlong)*io_uring_ring.sq.kring_entries,
-        (jlong)io_uring_ring.sq.kflags,
-        (jlong)io_uring_ring.sq.kdropped,
-        (jlong)io_uring_ring.sq.array,
         (jlong)io_uring_ring.sq.sqes,
         (jlong)io_uring_ring.sq.ring_sz,
         (jlong)io_uring_ring.sq.ring_ptr,
         (jlong)ring_fd
     };
-    (*env)->SetLongArrayRegion(env, array, 10, 11, submissionArrayElements);
+    (*env)->SetLongArrayRegion(env, array, 9, 8, submissionArrayElements);
 
     jlong features = (jlong) p.features;
-    (*env)->SetLongArrayRegion(env, array, 21, 1, &features);
+    (*env)->SetLongArrayRegion(env, array, 17, 1, &features);
     return array;
 }
 

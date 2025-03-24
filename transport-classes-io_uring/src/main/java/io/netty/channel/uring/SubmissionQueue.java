@@ -25,7 +25,6 @@ final class SubmissionQueue {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(SubmissionQueue.class);
 
     private static final long SQE_SIZE = 64;
-    private static final int INT_SIZE = Integer.BYTES; //no 32 Bit support?
 
     //these offsets are used to access specific properties
     //SQE https://github.com/axboe/liburing/blob/liburing-2.6/src/include/liburing/io_uring.h#L30
@@ -46,9 +45,6 @@ final class SubmissionQueue {
     //these unsigned integer pointers(shared with the kernel) will be changed by the kernel
     private final long kHeadAddress;
     private final long kTailAddress;
-    private final long kFlagsAddress;
-    private final long kDroppedAddress;
-    private final long kArrayAddress;
     final long submissionQueueArrayAddress;
 
     final int ringEntries;
@@ -65,14 +61,10 @@ final class SubmissionQueue {
     private boolean closed;
 
     SubmissionQueue(long kHeadAddress, long kTailAddress, int ringMask, int ringEntries,
-                    long kFlagsAddress, long kDroppedAddress, long kArrayAddress,
                     long submissionQueueArrayAddress, int ringSize, long ringAddress,
                     int ringFd) {
         this.kHeadAddress = kHeadAddress;
         this.kTailAddress = kTailAddress;
-        this.kFlagsAddress = kFlagsAddress;
-        this.kDroppedAddress = kDroppedAddress;
-        this.kArrayAddress = kArrayAddress;
         this.submissionQueueArrayAddress = submissionQueueArrayAddress;
         this.ringSize = ringSize;
         this.ringAddress = ringAddress;
@@ -82,15 +74,6 @@ final class SubmissionQueue {
         this.ringMask = ringMask;
         this.head = PlatformDependent.getIntVolatile(kHeadAddress);
         this.tail = PlatformDependent.getIntVolatile(kTailAddress);
-
-        // Zero the whole SQE array first
-        PlatformDependent.setMemory(submissionQueueArrayAddress, ringEntries * SQE_SIZE, (byte) 0);
-
-        // Fill SQ array indices (1-1 with SQE array) and set nonzero constant SQE fields
-        long address = kArrayAddress;
-        for (int i = 0; i < ringEntries; i++, address += INT_SIZE) {
-            PlatformDependent.putInt(address, i);
-        }
     }
 
     void close() {
