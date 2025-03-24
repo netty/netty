@@ -174,11 +174,7 @@ public abstract class Recycler<T> {
 
     @SuppressWarnings("unchecked")
     public final T get() {
-        if (maxCapacityPerThread == 0 ||
-                // If the current thread is virtual thread,
-                // or we are not able to determine the thread type,
-                // then do not use thread-local.
-                PlatformDependent.isVirtualThread(Thread.currentThread())) {
+        if (maxCapacityPerThread == 0 || PlatformDependent.isVirtualThread(Thread.currentThread())) {
             return newObject((Handle<T>) NOOP_HANDLE);
         }
         LocalPool<T> localPool = threadLocal.get();

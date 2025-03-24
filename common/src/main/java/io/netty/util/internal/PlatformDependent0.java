@@ -67,8 +67,6 @@ final class PlatformDependent0 {
     // Package-private for testing.
     static final Class<?> BASE_VIRTUAL_THREAD_CLASS = getBaseVirtualThreadClass();
 
-    private static final String BASE_VIRTUAL_THREAD_CLASS_BINARY_NAME = "java.lang.BaseVirtualThread";
-
     static final Unsafe UNSAFE;
 
     // constants borrowed from murmur3
@@ -549,9 +547,6 @@ final class PlatformDependent0 {
     }
 
     private static Method getIsVirtualThreadMethod() {
-        if (JAVA_VERSION < 19) {
-            return null;
-        }
         try {
             Method isVirtualMethod = Thread.class.getMethod("isVirtual");
             // Call once to make sure the invocation works.
@@ -568,9 +563,6 @@ final class PlatformDependent0 {
     }
 
     private static Class<?> getBaseVirtualThreadClass() {
-        if (JAVA_VERSION < 19) {
-            return null;
-        }
         try {
             return Class.forName("java.lang.BaseVirtualThread", false, getSystemClassLoader());
         } catch (Throwable e) {
@@ -590,23 +582,21 @@ final class PlatformDependent0 {
      */
     static boolean isVirtualThread(Thread thread) {
         // Quick exclusion:
-        if (thread == null || JAVA_VERSION < 19 || thread instanceof FastThreadLocalThread) {
+        if (thread == null || IS_VIRTUAL_THREAD_METHOD == null) {
             return false;
         }
         // Try fast check:
         if (BASE_VIRTUAL_THREAD_CLASS != null) {
             return BASE_VIRTUAL_THREAD_CLASS.isInstance(thread);
         }
-        Class<?> clazz = thread.getClass();
-        // Common cases:
-        if (clazz == Thread.class || (clazz = clazz.getSuperclass()) == Thread.class) {
+        if (thread instanceof FastThreadLocalThread) {
             return false;
         }
-        // Uncommon case:
-        if (IS_VIRTUAL_THREAD_METHOD == null) {
-            return BASE_VIRTUAL_THREAD_CLASS_BINARY_NAME.equals(clazz.getName());
+        Class<?> clazz = thread.getClass();
+        // Common cases:
+        if (clazz == Thread.class || clazz.getSuperclass() == Thread.class) {
+            return false;
         }
-        // Likely to be a virtual thread, but need to be sure.
         try {
             return (Boolean) IS_VIRTUAL_THREAD_METHOD.invoke(thread);
         } catch (Throwable t) {
