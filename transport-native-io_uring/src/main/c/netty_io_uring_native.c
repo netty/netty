@@ -96,6 +96,7 @@ static void io_uring_unmap_rings(struct io_uring_sq *sq, struct io_uring_cq *cq)
 static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *sq, struct io_uring_cq *cq) {
     size_t size;
     int ret;
+    int index;
 
     sq->ring_sz = p->sq_off.array + p->sq_entries * sizeof(unsigned);
     cq->ring_sz = p->cq_off.cqes + p->cq_entries * sizeof(struct io_uring_cqe);
@@ -145,7 +146,7 @@ static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *
     cq->cqes = cq->ring_ptr + p->cq_off.cqes;
 
     if (!(p->flags & IORING_SETUP_NO_SQARRAY)) {
-        for (int index = 0; index < p->sq_entries; index++) {
+        for (index = 0; index < p->sq_entries; index++) {
             sq->array[index] = index;
         }
     }
