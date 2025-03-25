@@ -19,7 +19,7 @@ RUN microdnf install -y \
 RUN curl -s  "https://get.sdkman.io" | bash
 
 ARG java_version=22.0.2-zulu
-ENV JAVA_VERSION $java_version
+ENV JAVA_VERSION=$java_version
 
 # Installing Java removing some unnecessary SDKMAN files
 RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \

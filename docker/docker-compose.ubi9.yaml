@@ -25,5 +25,8 @@ services:
   build-boringssl-snapshot:
     image: netty:ubi9-22
 
+  build-unsafe-buffer:
+    image: netty:ubi9-22
+
   shell:
     image: netty:ubi9-22
