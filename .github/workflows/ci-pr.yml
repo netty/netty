@@ -61,7 +61,7 @@ jobs:
 
   build-pr-windows:
     runs-on: windows-2019
-    name: windows-x86_64-java22-boringssl
+    name: windows-x86_64-java22
     needs: verify-pr
     steps:
       - uses: actions/checkout@v4
@@ -151,7 +151,7 @@ jobs:
           #
           # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |
-            JAVA_HOME=/usr/lib/jvm/java-22-openjdk-arm64 ./mvnw -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
+            JAVA_HOME=/usr/lib/jvm/java-22-openjdk-arm64 ./mvnw -B -ntp -pl testsuite-native -am clean package -Pboringssl -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
     runs-on: ubuntu-latest
@@ -162,9 +162,6 @@ jobs:
           - setup: linux-x86_64-java22
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=22.0.2-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak"
-          - setup: linux-x86_64-java22-boringssl
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=22.0.2-zulu"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak-boringssl-static"
           - setup: linux-x86_64-java22-unsafe-buffer
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=22.0.2-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-unsafe-buffer"
@@ -174,9 +171,6 @@ jobs:
           - setup: linux-x86_64-java23
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=23.0.2-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak"
-          - setup: linux-x86_64-java23-boringssl
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=23.0.2-zulu"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak-boringssl-static"
           - setup: linux-x86_64-java23-unsafe-buffer
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=23.0.2-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-unsafe-buffer"
@@ -189,9 +183,6 @@ jobs:
           - setup: linux-x86_64-java24
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=24-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak"
-          - setup: linux-x86_64-java24-boringssl
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=24-zulu"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak-boringssl-static"
           - setup: linux-x86_64-java24-unsafe-buffer
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=24-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-unsafe-buffer"
