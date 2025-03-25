@@ -577,8 +577,7 @@ final class PlatformDependent0 {
 
     /**
      * @param thread The thread to be checked.
-     * @return
-     * {@code true}: if the {@code thread} is a virtual thread.
+     * @return {@code true} if this {@link Thread} is a virtual thread, {@code false} otherwise.
      */
     static boolean isVirtualThread(Thread thread) {
         // Quick exclusion:
