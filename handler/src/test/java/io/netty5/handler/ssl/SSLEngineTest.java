@@ -2124,9 +2124,10 @@ public abstract class SSLEngineTest {
     @ParameterizedTest
     public void testHandshakeCompletesWithNonContiguousProtocolsTLSv1_2CipherOnly(SSLEngineTestParam param)
             throws Exception {
-        // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
-        // due to no shared/supported cipher.
-        final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        // We use this cipher because the original "mandatory" TLSv1.2 cipher, TLS_RSA_WITH_AES_128_CBC_SHA, is now
+        // considered weak, and will be rejected from Java 24 onward.
+        // See https://jdk.java.net/24/release-notes#JDK-8341964
+        final String sharedCipher = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher))
@@ -2157,9 +2158,10 @@ public abstract class SSLEngineTest {
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testHandshakeCompletesWithoutFilteringSupportedCipher(SSLEngineTestParam param) throws Exception {
-        // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
-        // due to no shared/supported cipher.
-        final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        // We use this cipher because the original "mandatory" TLSv1.2 cipher, TLS_RSA_WITH_AES_128_CBC_SHA, is now
+        // considered weak, and will be rejected from Java 24 onward.
+        // See https://jdk.java.net/24/release-notes#JDK-8341964
+        final String sharedCipher = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher), SupportedCipherSuiteFilter.INSTANCE)
