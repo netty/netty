@@ -25,6 +25,8 @@ import java.util.StringJoiner;
  * Completion queue implementation for io_uring.
  */
 final class CompletionQueue {
+    private static final VarHandle INT_HANDLE =
+            MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.nativeOrder());
 
     //these offsets are used to access specific properties
     //CQE (https://github.com/axboe/liburing/blob/master/src/include/liburing/io_uring.h#L162)
@@ -39,7 +41,7 @@ final class CompletionQueue {
     private final ByteBuffer khead;
     private final ByteBuffer ktail;
     private final ByteBuffer completionQueueArray;
-    private final VarHandle intHandle;
+
     final int ringSize;
     final long ringAddress;
     final int ringFd;
@@ -53,7 +55,6 @@ final class CompletionQueue {
     CompletionQueue(ByteBuffer kHead, ByteBuffer kTail, int ringMask, int ringEntries,
                     ByteBuffer completionQueueArray, int ringSize, long ringAddress,
                     int ringFd, int ringCapacity) {
-        intHandle = MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.nativeOrder());
         this.khead = kHead;
         this.ktail = kTail;
         this.completionQueueArray = completionQueueArray;
@@ -64,7 +65,7 @@ final class CompletionQueue {
 
         this.ringEntries = ringEntries;
         this.ringMask = ringMask;
-        ringHead = (int) intHandle.getVolatile(kHead, 0);
+        ringHead = (int) INT_HANDLE.getVolatile(kHead, 0);
     }
 
     void close() {
@@ -76,14 +77,14 @@ final class CompletionQueue {
      * {@link #process(CompletionCallback)}, {@code false} otherwise.
      */
     boolean hasCompletions() {
-        return !closed && ringHead != (int) intHandle.getVolatile(ktail, 0);
+        return !closed && ringHead != (int) INT_HANDLE.getVolatile(ktail, 0);
     }
 
     int count() {
         if (closed) {
             return 0;
         }
-        return (int) intHandle.getVolatile(ktail, 0) - ringHead;
+        return (int) INT_HANDLE.getVolatile(ktail, 0) - ringHead;
     }
 
     /**
@@ -94,7 +95,7 @@ final class CompletionQueue {
         if (closed) {
             return 0;
         }
-        int tail = (int) intHandle.getVolatile(ktail, 0);
+        int tail = (int) INT_HANDLE.getVolatile(ktail, 0);
         try {
             int i = 0;
             while (ringHead != tail) {
@@ -115,7 +116,7 @@ final class CompletionQueue {
             return i;
         } finally {
             // Ensure that the kernel only sees the new value of the head index after the CQEs have been read.
-            intHandle.setRelease(khead, 0, ringHead);
+            INT_HANDLE.setRelease(khead, 0, ringHead);
         }
     }
 
@@ -125,7 +126,7 @@ final class CompletionQueue {
         if (closed) {
             sb.add("closed");
         } else {
-            int tail = (int) intHandle.getVolatile(ktail, 0);
+            int tail = (int) INT_HANDLE.getVolatile(ktail, 0);
             int head = ringHead;
             while (head != tail) {
                 int cqePosition = cqeIdx(head++, ringMask);

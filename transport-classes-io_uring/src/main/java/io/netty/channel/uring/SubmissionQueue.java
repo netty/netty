@@ -48,7 +48,8 @@ final class SubmissionQueue {
 
     // These unsigned integer pointers(shared with the kernel) will be changed by the kernel and us
     // using a VarHandle.
-    private final VarHandle intHandle;
+    private static final VarHandle INT_HANDLE =
+            MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.nativeOrder());
     private final ByteBuffer kHead;
     private final ByteBuffer kTail;
     private final ByteBuffer submissionQueueArray;
@@ -69,7 +70,6 @@ final class SubmissionQueue {
     SubmissionQueue(ByteBuffer khead, ByteBuffer ktail, int ringMask, int ringEntries, ByteBuffer submissionQueueArray,
                     int ringSize, long ringAddress,
                     int ringFd) {
-        intHandle = MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.nativeOrder());
         this.kHead = khead;
         this.kTail = ktail;
         this.submissionQueueArray = submissionQueueArray;
@@ -79,8 +79,8 @@ final class SubmissionQueue {
         this.enterRingFd = ringFd;
         this.ringEntries = ringEntries;
         this.ringMask = ringMask;
-        this.head = (int) intHandle.getVolatile(khead, 0);
-        this.tail = (int) intHandle.getVolatile(ktail, 0);
+        this.head = (int) INT_HANDLE.getVolatile(khead, 0);
+        this.tail = (int) INT_HANDLE.getVolatile(ktail, 0);
     }
 
     long submissionQueueArrayAddress() {
@@ -230,9 +230,9 @@ final class SubmissionQueue {
     }
 
     private int submit(int toSubmit, int minComplete, int flags) {
-        intHandle.setRelease(kTail, 0, tail);
+        INT_HANDLE.setRelease(kTail, 0, tail);
         int ret = ioUringEnter(toSubmit, minComplete, flags);
-        head = (int) intHandle.getVolatile(kHead, 0); // acquire memory barrier
+        head = (int) INT_HANDLE.getVolatile(kHead, 0); // acquire memory barrier
         if (ret != toSubmit) {
             if (ret < 0) {
                 throw new RuntimeException("ioUringEnter syscall returned " + ret);

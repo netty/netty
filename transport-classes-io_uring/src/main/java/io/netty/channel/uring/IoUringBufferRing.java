@@ -30,7 +30,8 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class IoUringBufferRing {
-    private final VarHandle shortHandle;
+    private static final VarHandle SHORT_HANDLE =
+            MethodHandles.byteBufferViewVarHandle(short[].class, ByteOrder.nativeOrder());
     private final ByteBuffer ioUringBufRing;
     private final int tailFieldPosition;
     private final short entries;
@@ -54,7 +55,6 @@ final class IoUringBufferRing {
                       short entries, int batchSize, int maxUnreleasedBuffers, short bufferGroupId, boolean incremental,
                       IoUringBufferRingAllocator allocator) {
         assert entries % 2 == 0;
-        shortHandle = MethodHandles.byteBufferViewVarHandle(short[].class, ByteOrder.nativeOrder());
         this.ioUringBufRing = ioUringBufRing;
         this.tailFieldPosition = Native.IO_URING_BUFFER_RING_TAIL;
         this.entries = entries;
@@ -111,7 +111,7 @@ final class IoUringBufferRing {
         if (corrupted || closed) {
             return;
         }
-        short oldTail = (short) shortHandle.get(ioUringBufRing, tailFieldPosition);
+        short oldTail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
         short ringIndex = (short) (oldTail & mask);
         assert buffers[ringIndex] == null;
         final ByteBuf byteBuf;
@@ -137,7 +137,7 @@ final class IoUringBufferRing {
         ioUringBufRing.putShort(position + Native.IOURING_BUFFER_OFFSETOF_BID, ringIndex);
 
         // Now advanced the tail by the number of buffers that we just added.
-        shortHandle.setRelease(ioUringBufRing, tailFieldPosition, (short) (oldTail + 1));
+        SHORT_HANDLE.setRelease(ioUringBufRing, tailFieldPosition, (short) (oldTail + 1));
         numBuffers++;
         // We added a buffer to the ring, let's reset the expanded variable so we can expand it if we receive
         // ENOBUFS.
