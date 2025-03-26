@@ -72,7 +72,7 @@
               <goal>compile</goal>
             </goals>
             <configuration>
-              <compilerVersion>1.8</compilerVersion>
+              <compilerVersion>1.9</compilerVersion>
               <fork>true</fork>
               <source>${maven.compiler.source}</source>
               <target>${maven.compiler.target}</target>
