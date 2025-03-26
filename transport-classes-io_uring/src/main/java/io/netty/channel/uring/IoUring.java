@@ -63,12 +63,13 @@ public final class IoUring {
         boolean registerBufferRingSupported = false;
         boolean registerBufferRingIncSupported = false;
 
+        String kernelVersion = "[unknown]";
         try {
             if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
                 cause = new UnsupportedOperationException(
                         "Native transport was explicit disabled with -Dio.netty.transport.noNative=true");
             } else {
-                String kernelVersion = Native.kernelVersion();
+                kernelVersion = Native.kernelVersion();
                 Native.checkKernelVersion(kernelVersion);
                 Throwable unsafeCause = PlatformDependent.getUnsafeUnavailabilityCause();
                 if (unsafeCause == null) {
@@ -113,13 +114,13 @@ public final class IoUring {
         }
         if (cause != null) {
             if (logger.isTraceEnabled()) {
-                logger.debug("IoUring support is not available", cause);
+                logger.debug("IoUring support is not available using kernel {}", kernelVersion, cause);
             } else if (logger.isDebugEnabled()) {
-                logger.debug("IoUring support is not available: {}", cause.getMessage());
+                logger.debug("IoUring support is not available using kernel {}: {}", kernelVersion, cause.getMessage());
             }
         } else {
             if (logger.isDebugEnabled()) {
-                logger.debug("IoUring support is available (" +
+                logger.debug("IoUring support is available using kernel {} (" +
                         "CQE_F_SOCK_NONEMPTY_SUPPORTED={}, " +
                         "SPLICE_SUPPORTED={}, " +
                         "ACCEPT_NO_WAIT_SUPPORTED={}, " +
@@ -133,9 +134,10 @@ public final class IoUring {
                         "SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
                         "REGISTER_BUFFER_RING_SUPPORTED={}, " +
                         "REGISTER_BUFFER_RING_INC_SUPPORTED={}" +
-                        ")", socketNonEmptySupported, spliceSupported, acceptSupportNoWait, acceptMultishotSupported,
-                        pollAddMultishotSupported, recvMultishotSupported, recvsendBundleSupported,
-                        registerIowqWorkersSupported, submitAllSupported, singleIssuerSupported, deferTaskrunSupported,
+                        ")", kernelVersion, socketNonEmptySupported, spliceSupported, acceptSupportNoWait,
+                        acceptMultishotSupported, pollAddMultishotSupported, recvMultishotSupported,
+                        recvsendBundleSupported, registerIowqWorkersSupported, submitAllSupported,
+                        singleIssuerSupported, deferTaskrunSupported,
                         registerBufferRingSupported, registerBufferRingIncSupported);
             }
         }
