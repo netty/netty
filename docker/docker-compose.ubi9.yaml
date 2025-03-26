@@ -22,5 +22,8 @@ services:
   build-unsafe-buffer:
     image: netty:ubi9
 
+  build-leak-adaptive:
+    image: netty:ubi9
+
   shell:
     image: netty:ubi9
