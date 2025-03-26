@@ -57,32 +57,6 @@ public class PlatformDependent0Test {
     }
 
     @Test
-    public void testMajorVersionFromJavaSpecificationVersion() {
-        final SecurityManager current = System.getSecurityManager();
-
-        try {
-            System.setSecurityManager(new SecurityManager() {
-                @Override
-                public void checkPropertyAccess(String key) {
-                    if (key.equals("java.specification.version")) {
-                        // deny
-                        throw new SecurityException(key);
-                    }
-                }
-
-                // so we can restore the security manager
-                @Override
-                public void checkPermission(Permission perm) {
-                }
-            });
-
-            assertEquals(11, PlatformDependent0.majorVersionFromJavaSpecificationVersion());
-        } finally {
-            System.setSecurityManager(current);
-        }
-    }
-
-    @Test
     public void testMajorVersion() {
         assertEquals(6, PlatformDependent0.majorVersion("1.6"));
         assertEquals(7, PlatformDependent0.majorVersion("1.7"));

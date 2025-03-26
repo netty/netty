@@ -196,6 +196,19 @@
       </properties>
     </profile>
     <profile>
+      <id>java24</id>
+      <activation>
+        <jdk>24</jdk>
+      </activation>
+      <properties>
+        <argLine.java9.extras />
+        <!-- Export some stuff which is used during our tests -->
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
+        <!-- pax-exam does not work on latest Java12 EA 22 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+      </properties>
+    </profile>
+    <profile>
       <id>java23</id>
       <activation>
         <jdk>23</jdk>
@@ -203,7 +216,7 @@
       <properties>
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -216,7 +229,7 @@
       <properties>
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
@@ -323,9 +336,9 @@
       </properties>
     </profile>
     <profile>
-      <id>noPrintGC</id>
+      <id>printGC</id>
       <properties>
-        <argLine.printGC>-D_</argLine.printGC>
+        <argLine.printGC>-Xlog:gc</argLine.printGC>
       </properties>
     </profile>
     <profile>
@@ -403,7 +416,7 @@
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
     <jacoco.argLine/>
-    <argLine.printGC>-Xlog:gc</argLine.printGC>
+    <argLine.printGC>-D_</argLine.printGC>
     <argLine.java9 /> <!-- Overridden when 'java9' profile is active -->
     <argLine.javaProperties>-D_</argLine.javaProperties>
     <!-- Configure the os-maven-plugin extension to expand the classifier on                  -->
