@@ -29,9 +29,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -43,7 +41,7 @@ import static io.netty.incubator.codec.quic.Quiche.allocateNativeOrder;
  */
 abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicCodec.class);
-    private final Map<ByteBuffer, QuicheQuicChannel> connectionIdToChannel = new HashMap<>();
+    private final ConnectionIdChannelMap connectionIdToChannel = new ConnectionIdChannelMap();
     private final Set<QuicheQuicChannel> channels = new HashSet<>();
     private final Queue<QuicheQuicChannel> needsFireChannelReadComplete = new ArrayDeque<>();
     private final Queue<QuicheQuicChannel> delayedRemoval = new ArrayDeque<>();
