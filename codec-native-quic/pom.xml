@@ -46,7 +46,7 @@
     <boringsslHomeIncludeDir>${boringsslHomeDir}/include</boringsslHomeIncludeDir>
     <boringsslRepository>https://boringssl.googlesource.com/boringssl</boringsslRepository>
     <!-- Lets use what we use in netty-tcnative-boringssl-static -->
-    <boringsslBranch>master</boringsslBranch>
+    <boringsslBranch>main</boringsslBranch>
     <boringsslCommitSha>b8c97f5b4bc5d4758612a0430e5c2792d0f9ca7f</boringsslCommitSha>
 
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
