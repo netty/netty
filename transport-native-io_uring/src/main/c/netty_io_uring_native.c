@@ -156,11 +156,6 @@ err:
     return ret;
 }
 
-static int setup_io_uring(int ring_fd, struct io_uring *io_uring_ring,
-                    struct io_uring_params *p) {
-    return io_uring_mmap(ring_fd, p, &io_uring_ring->sq, &io_uring_ring->cq);
-}
-
 static jint netty_io_uring_enter(JNIEnv *env, jclass class1, jint ring_fd, jint to_submit,
                                  jint min_complete, jint flags) {
     int result;
@@ -236,7 +231,7 @@ static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass clazz,
     if (sqr != NULL) {
         munmap(sqr, submissionQueueRingSize);
     }
-    if (cqr != NULL && cqr !=sqr ) {
+    if (cqr != NULL && cqr != sqr) {
         munmap(cqr, completionQueueRingSize);
     }
     if (enterRingFd != ringFd) {
@@ -326,8 +321,10 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         }
         return NULL;
     }
+
     struct io_uring io_uring_ring;
-    int ret = setup_io_uring(ring_fd, &io_uring_ring, &p);
+    memset(&io_uring_ring, 0, sizeof(io_uring_ring));
+    int ret = io_uring_mmap(ring_fd, &p, &io_uring_ring.sq, &io_uring_ring.cq);
 
     if (ret != 0) {
         // Close ring fd before return.
