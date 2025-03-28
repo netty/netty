@@ -1010,10 +1010,11 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     Http2StreamFrame frame = validateStreamFrame((Http2StreamFrame) msg).stream(stream());
                     if (msg instanceof Http2WindowUpdateFrame) {
                         Http2WindowUpdateFrame updateFrame = (Http2WindowUpdateFrame) msg;
-                        if (!config.autoFlowControl) {
+                        if (config.autoFlowControl) {
                             ReferenceCountUtil.release(msg);
                             promise.setFailure(new UnsupportedOperationException(
                                     Http2StreamChannelOption.AUTO_WRITE_WINDOW_UPDATE_FRAME + " is set to false"));
+                            return;
                         }
                         try {
                             ObjectUtil.checkInRange(updateFrame.windowSizeIncrement(), 0,
