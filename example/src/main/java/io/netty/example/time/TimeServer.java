@@ -37,7 +37,6 @@ public final class TimeServer {
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-        final TimeServerHandler serverHandler = new TimeServerHandler();
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
@@ -48,7 +47,7 @@ public final class TimeServer {
                  @Override
                  public void initChannel(SocketChannel ch) throws Exception {
                      ChannelPipeline p = ch.pipeline();
-                     p.addLast(serverHandler);
+                     p.addLast(new TimeServerHandler());
                  }
              });
 
