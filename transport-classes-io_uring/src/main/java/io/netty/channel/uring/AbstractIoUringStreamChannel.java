@@ -280,7 +280,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             } else {
                 ByteBuf buf = (ByteBuf) msg;
                 ops = IoUringIoOps.newWrite(fd, (byte) 0, 0,
-                        buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
+                        IoUring.memoryAddress(buf) + buf.readerIndex(), buf.readableBytes(), nextOpsId());
             }
 
             byte opCode = ops.opcode();
@@ -337,7 +337,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 int recvFlags = calculateRecvFlags(first);
 
                 IoUringIoOps ops = IoUringIoOps.newRecv(fd, (byte) 0, ioPrio, recvFlags,
-                        byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
+                        IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
                 readId = registration.submit(ops);
                 if (readId == 0) {
                     return 0;

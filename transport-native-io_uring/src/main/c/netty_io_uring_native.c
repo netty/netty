@@ -130,7 +130,6 @@ static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *
     sq->kflags = sq->ring_ptr + p->sq_off.flags;
     sq->kdropped = sq->ring_ptr + p->sq_off.dropped;
     sq->array = sq->ring_ptr + p->sq_off.array;
-
     size = p->sq_entries * sizeof(struct io_uring_sqe);
     sq->sqes = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQES);
     if (sq->sqes == MAP_FAILED) {
@@ -150,6 +149,7 @@ static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *
             sq->array[index] = index;
         }
     }
+
     return 0;
 err:
     io_uring_unmap_rings(sq, cq);
@@ -417,6 +417,10 @@ static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
     }
     br->tail = 0;
     return (jlong) br;
+}
+
+static jint netty_io_uring_buf_ring_size(JNIEnv* env, jclass clazz, jint nentries) {
+    return (jint) nentries * sizeof(struct io_uring_buf);
 }
 
 static jint netty_io_uring_unregister_buf_ring(JNIEnv* env, jclass clazz,
@@ -768,8 +772,9 @@ static const JNINativeMethod method_table[] = {
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
     {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 },
-    {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring},
-    {"ioUringUnRegisterBufRing", "(IJIS)I", (void *) netty_io_uring_unregister_buf_ring}
+    {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring },
+    {"ioUringUnRegisterBufRing", "(IJIS)I", (void *) netty_io_uring_unregister_buf_ring },
+    {"ioUringBufRingSize", "(I)I", (void *) netty_io_uring_buf_ring_size }
 };
 static const jint method_table_size =
     sizeof(method_table) / sizeof(method_table[0]);

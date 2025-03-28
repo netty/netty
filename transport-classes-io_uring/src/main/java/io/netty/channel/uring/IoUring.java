@@ -15,7 +15,9 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -71,8 +73,7 @@ public final class IoUring {
             } else {
                 kernelVersion = Native.kernelVersion();
                 Native.checkKernelVersion(kernelVersion);
-                Throwable unsafeCause = PlatformDependent.getUnsafeUnavailabilityCause();
-                if (unsafeCause == null) {
+                if (PlatformDependent.javaVersion() >= 9) {
                     RingBuffer ringBuffer = null;
                     try {
                         ringBuffer = Native.createRingBuffer(1, 0);
@@ -106,7 +107,7 @@ public final class IoUring {
                         }
                     }
                 } else {
-                    cause = new UnsupportedOperationException("Unsafe is not supported", unsafeCause);
+                    cause = new UnsupportedOperationException("Java 9+ is required");
                 }
             }
         } catch (Throwable t) {
@@ -303,6 +304,13 @@ public final class IoUring {
             throw (Error) new UnsatisfiedLinkError(
                     "failed to load the required native library").initCause(UNAVAILABILITY_CAUSE);
         }
+    }
+
+    static long memoryAddress(ByteBuf buffer) {
+        if (buffer.hasMemoryAddress()) {
+            return buffer.memoryAddress();
+        }
+        return Buffer.memoryAddress(buffer.internalNioBuffer(0, buffer.capacity()));
     }
 
     public static Throwable unavailabilityCause() {
