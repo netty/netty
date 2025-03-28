@@ -41,7 +41,6 @@ final class MsgHdrMemory {
         iovMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_IOVEC);
         cmsgDataMemory = Buffer.allocateDirectWithNativeOrder(Native.CMSG_SPACE);
 
-        // We retrieve the address of the data once so we can just be JNI free after construction.
         long cmsgDataMemoryAddr = Buffer.memoryAddress(cmsgDataMemory);
         long cmsgDataAddr = Native.cmsghdrData(cmsgDataMemoryAddr);
         cmsgDataOffset = (int) (cmsgDataAddr + cmsgDataMemoryAddr);
@@ -51,11 +50,11 @@ final class MsgHdrMemory {
         int addressLength;
         if (address == null) {
             addressLength = socket.isIpv6() ? Native.SIZEOF_SOCKADDR_IN6 : Native.SIZEOF_SOCKADDR_IN;
-            int socketAddrMemoryPosition = socketAddrMemory.position();
+            socketAddrMemory.mark();
             try {
                 socketAddrMemory.put(EMPTY_SOCKADDR_STORAGE);
             } finally {
-                socketAddrMemory.position(socketAddrMemoryPosition);
+                socketAddrMemory.reset();
             }
         } else {
             addressLength = SockaddrIn.set(socket.isIpv6(), socketAddrMemory, address);

@@ -38,9 +38,8 @@ final class SockaddrIn {
     static int set(boolean ipv6, ByteBuffer memory, InetSocketAddress address) {
         if (ipv6) {
             return setIPv6(memory, address.getAddress(), address.getPort());
-        } else {
-            return setIPv4(memory, address.getAddress(), address.getPort());
         }
+        return setIPv4(memory, address.getAddress(), address.getPort());
     }
 
     /**
@@ -59,6 +58,7 @@ final class SockaddrIn {
      */
     static int setIPv4(ByteBuffer memory, InetAddress address, int port) {
         int position = memory.position();
+        memory.mark();
         try {
             // memset
             memory.put(SOCKADDR_IN_EMPTY_ARRAY);
@@ -79,7 +79,7 @@ final class SockaddrIn {
             return Native.SIZEOF_SOCKADDR_IN;
         } finally {
             // Restore position as we did change it via memory.put(byte[]...).
-            memory.position(position);
+            memory.reset();
         }
     }
 
@@ -100,6 +100,7 @@ final class SockaddrIn {
      */
     static int setIPv6(ByteBuffer memory, InetAddress address, int port) {
         int position = memory.position();
+        memory.mark();
         try {
             // memset
             memory.put(SOCKADDR_IN6_EMPTY_ARRAY);
@@ -112,8 +113,6 @@ final class SockaddrIn {
             if (bytes.length == IPV4_ADDRESS_LENGTH) {
                 memory.position(position + offset);
                 memory.put(IPV4_MAPPED_IPV6_PREFIX);
-
-                memory.position(position + offset + IPV4_MAPPED_IPV6_PREFIX.length);
                 memory.put(bytes, 0, IPV4_ADDRESS_LENGTH);
 
                 // Skip sin6_scope_id as we did memset before
@@ -126,14 +125,14 @@ final class SockaddrIn {
             }
             return Native.SIZEOF_SOCKADDR_IN6;
         } finally {
-            memory.position(position);
+            memory.reset();
         }
     }
 
     static InetSocketAddress getIPv4(ByteBuffer memory, byte[] tmpArray) {
         assert tmpArray.length == IPV4_ADDRESS_LENGTH;
         int position = memory.position();
-
+        memory.mark();
         try {
             int port = handleNetworkOrder(memory.order(),
                     memory.getShort(position + Native.SOCKADDR_IN_OFFSETOF_SIN_PORT)) & 0xFFFF;
@@ -145,7 +144,7 @@ final class SockaddrIn {
                 return null;
             }
         } finally {
-            memory.position(position);
+            memory.reset();
         }
     }
 
@@ -153,7 +152,7 @@ final class SockaddrIn {
         assert ipv6Array.length == IPV6_ADDRESS_LENGTH;
         assert ipv4Array.length == IPV4_ADDRESS_LENGTH;
         int position = memory.position();
-
+        memory.mark();
         try {
             int port = handleNetworkOrder(memory.order(), memory.getShort(
                     position + Native.SOCKADDR_IN6_OFFSETOF_SIN6_PORT)) & 0xFFFF;
@@ -176,7 +175,7 @@ final class SockaddrIn {
                 }
             }
         } finally {
-            memory.position(position);
+            memory.reset();
         }
     }
 

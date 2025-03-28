@@ -29,7 +29,6 @@ static jint netty_unix_buffer_addressSize0(JNIEnv* env, jclass clazz) {
    return (jint) sizeof(int*);
 }
 
-// JNI Registered Methods Begin
 static jobject netty_unix_buffer_wrapMemoryAddress(JNIEnv* env, jclass clazz, jlong address, jint capacity) {
     return (*env)->NewDirectByteBuffer(env, (void*) address, capacity);
 }

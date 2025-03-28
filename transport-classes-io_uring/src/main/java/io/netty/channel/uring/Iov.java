@@ -30,13 +30,14 @@ final class Iov {
     private Iov() { }
 
     static void set(ByteBuffer buffer, long bufferAddress, int length) {
+        int position = buffer.position();
         if (Native.SIZEOF_SIZE_T == 4) {
-            buffer.putInt(buffer.position() + Native.IOVEC_OFFSETOF_IOV_BASE, (int) bufferAddress);
-            buffer.putInt(buffer.position() + Native.IOVEC_OFFSETOF_IOV_LEN, length);
+            buffer.putInt(position + Native.IOVEC_OFFSETOF_IOV_BASE, (int) bufferAddress);
+            buffer.putInt(position + Native.IOVEC_OFFSETOF_IOV_LEN, length);
         } else {
             assert Native.SIZEOF_SIZE_T == 8;
-            buffer.putLong(buffer.position() + Native.IOVEC_OFFSETOF_IOV_BASE, bufferAddress);
-            buffer.putLong(buffer.position() + Native.IOVEC_OFFSETOF_IOV_LEN, length);
+            buffer.putLong(position + Native.IOVEC_OFFSETOF_IOV_BASE, bufferAddress);
+            buffer.putLong(position + Native.IOVEC_OFFSETOF_IOV_LEN, length);
         }
     }
 
