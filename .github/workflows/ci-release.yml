@@ -86,11 +86,11 @@ jobs:
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run stage-release"
           - setup: linux-aarch64
-            docker-compose-build: "-f docker/docker-compose.centos-7.yaml build"
-            docker-compose-run: "-f docker/docker-compose.centos-7.yaml run cross-compile-aarch64-stage-release"
+            docker-compose-build: "-f docker/docker-compose.centos-7.cross.yaml build"
+            docker-compose-run: "-f docker/docker-compose.centos-7.cross.yaml run cross-compile-aarch64-stage-release"
           - setup: linux-riscv64
-            docker-compose-build: "-f docker/docker-compose.ubuntu-20.04.yaml build"
-            docker-compose-run: "-f docker/docker-compose.ubuntu-20.04.yaml run cross-compile-riscv64-stage-release"
+            docker-compose-build: "-f docker/docker-compose.ubuntu-20.04.cross.yaml build"
+            docker-compose-run: "-f docker/docker-compose.ubuntu-20.04.cross.yaml run cross-compile-riscv64-stage-release"
 
     name: stage-release-${{ matrix.setup }}
 

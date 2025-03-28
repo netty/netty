@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty:centos-7-1.8
+    build:
+      args:
+        java_version : "8.0.442-zulu"
+
+  build:
+    image: netty:centos-7-1.8
+
+  build-leak:
+    image: netty:centos-7-1.8
+
+  build-boringssl-static:
+    image: netty:centos-7-1.8
+
+  build-leak-boringssl-static:
+    image: netty:centos-7-1.8
+
+  build-boringssl-snapshot:
+    image: netty:centos-7-1.8
+
+  stage-snapshot:
+    image: netty:centos-7-1.8
+
+  stage-release:
+    image: netty:centos-7-1.8
+
+  deploy:
+    image: netty:centos-7-1.8
+
+  shell:
+    image: netty:centos-7-1.8
