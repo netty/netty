@@ -1563,11 +1563,23 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
     @Test
     public void windowUpdatesAreFlushed() {
+        windowUpdatesAreFlushed(true);
+    }
+
+    @Test
+    public void windowUpdatesNotDoneAutomatically() {
+        windowUpdatesAreFlushed(false);
+    }
+
+    private void windowUpdatesAreFlushed(boolean autoWriteWindowUpdateFrames) {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         FlushSniffer flushSniffer = new FlushSniffer();
         parentChannel.pipeline().addFirst(flushSniffer);
 
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
+        childChannel.config().setOption(
+                Http2StreamChannelOption.AUTO_WRITE_WINDOW_UPDATE_FRAME, autoWriteWindowUpdateFrames);
+
         assertTrue(childChannel.config().isAutoRead());
         childChannel.config().setAutoRead(false);
         assertFalse(childChannel.config().isAutoRead());
@@ -1591,17 +1603,40 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // Trigger a read of the second frame.
         childChannel.read();
         verifyFramesMultiplexedToCorrectChannel(childChannel, inboundHandler, 1);
-        // We expect a flush here because the StreamChannel will flush the smaller increment but the
-        // connection will collect the bytes and decide not to send a wire level frame until more are consumed.
-        assertTrue(flushSniffer.checkFlush());
+        if (autoWriteWindowUpdateFrames) {
+            // We expect a flush here because the StreamChannel will flush the smaller increment but the
+            // connection will collect the bytes and decide not to send a wire level frame until more are consumed.
+            assertTrue(flushSniffer.checkFlush());
+        } else {
+            assertFalse(flushSniffer.checkFlush());
+        }
+
         verify(frameWriter, never()).writeWindowUpdate(eqCodecCtx(), anyInt(), anyInt(), anyChannelPromise());
 
         // Call read one more time which should trigger the writing of the flow control update.
         childChannel.read();
-        verify(frameWriter).writeWindowUpdate(eqCodecCtx(), eq(0), eq(32 * 1024), anyChannelPromise());
-        verify(frameWriter).writeWindowUpdate(
-            eqCodecCtx(), eq(childChannel.stream().id()), eq(32 * 1024), anyChannelPromise());
-        assertTrue(flushSniffer.checkFlush());
+        if (autoWriteWindowUpdateFrames) {
+            verify(frameWriter).writeWindowUpdate(eqCodecCtx(), eq(0), eq(32 * 1024), anyChannelPromise());
+            verify(frameWriter).writeWindowUpdate(
+                    eqCodecCtx(), eq(childChannel.stream().id()), eq(32 * 1024), anyChannelPromise());
+            assertTrue(flushSniffer.checkFlush());
+        } else {
+            verify(frameWriter, never()).writeWindowUpdate(eqCodecCtx(), anyInt(), anyInt(), anyChannelPromise());
+            assertFalse(flushSniffer.checkFlush());
+
+            // Let's manually send a window update frame now.
+            childChannel.writeAndFlush(new DefaultHttp2WindowUpdateFrame(32 * 1024)
+                    .stream(childChannel.stream()));
+            verify(frameWriter).writeWindowUpdate(eqCodecCtx(), eq(0), eq(32 * 1024), anyChannelPromise());
+            verify(frameWriter).writeWindowUpdate(
+                    eqCodecCtx(), eq(childChannel.stream().id()), eq(32 * 1024), anyChannelPromise());
+            assertTrue(flushSniffer.checkFlush());
+
+            // Let's try to send one more even though there are no more pending bytes
+            ChannelFuture f = childChannel.writeAndFlush(new DefaultHttp2WindowUpdateFrame(32 * 1024)
+                    .stream(childChannel.stream()));
+            assertNotNull(f.cause());
+        }
     }
 
     @ParameterizedTest(name = "{displayName} [{index}] value={0}")
