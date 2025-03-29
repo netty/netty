@@ -15,7 +15,9 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.util.internal.PlatformDependent;
+import io.netty.channel.unix.Buffer;
+
+import java.nio.ByteBuffer;
 
 /**
  * <pre>{@code
@@ -34,32 +36,35 @@ final class MsgHdr {
 
     private MsgHdr() { }
 
-    static void write(long memoryAddress, long address, int addressSize,  long iovAddress, int iovLength,
-                      long msgControlAddr, long cmsgHdrDataAddress, short segmentSize) {
-        PlatformDependent.putInt(memoryAddress + Native.MSGHDR_OFFSETOF_MSG_NAMELEN, addressSize);
+    static void set(ByteBuffer memory, ByteBuffer sockAddrMemory, int addressSize, ByteBuffer iovMemory, int iovLength,
+                    ByteBuffer msgControl, int cmsgHdrDataOffset, short segmentSize) {
+        int memoryPosition = memory.position();
+        memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAMELEN, addressSize);
 
         int msgControlLen = 0;
+        long msgControlAddr;
         if (segmentSize > 0) {
             msgControlLen = Native.CMSG_LEN;
-            CmsgHdr.write(msgControlAddr, cmsgHdrDataAddress, Native.CMSG_LEN, Native.SOL_UDP,
+            CmsgHdr.write(msgControl, cmsgHdrDataOffset, Native.CMSG_LEN, Native.SOL_UDP,
                     Native.UDP_SEGMENT, segmentSize);
+            msgControlAddr = Buffer.memoryAddress(msgControl) + msgControl.position();
         } else {
             // Set to 0 if we not explicit requested GSO.
             msgControlAddr = 0;
         }
         if (Native.SIZEOF_SIZE_T == 4) {
-            PlatformDependent.putInt(memoryAddress + Native.MSGHDR_OFFSETOF_MSG_NAME, (int) address);
-            PlatformDependent.putInt(memoryAddress + Native.MSGHDR_OFFSETOF_MSG_IOV, (int) iovAddress);
-            PlatformDependent.putInt(memoryAddress + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
-            PlatformDependent.putInt(memoryAddress + Native.MSGHDR_OFFSETOF_MSG_CONTROL, (int) msgControlAddr);
-            PlatformDependent.putInt(memoryAddress + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, msgControlLen);
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAME, (int) Buffer.memoryAddress(sockAddrMemory));
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, (int) Buffer.memoryAddress(iovMemory));
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, (int) msgControlAddr);
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, msgControlLen);
         } else {
             assert Native.SIZEOF_SIZE_T == 8;
-            PlatformDependent.putLong(memoryAddress + Native.MSGHDR_OFFSETOF_MSG_NAME, address);
-            PlatformDependent.putLong(memoryAddress + Native.MSGHDR_OFFSETOF_MSG_IOV, iovAddress);
-            PlatformDependent.putLong(memoryAddress + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
-            PlatformDependent.putLong(memoryAddress + Native.MSGHDR_OFFSETOF_MSG_CONTROL, msgControlAddr);
-            PlatformDependent.putLong(memoryAddress + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, msgControlLen);
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_NAME, Buffer.memoryAddress(sockAddrMemory));
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, Buffer.memoryAddress(iovMemory));
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, msgControlAddr);
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, msgControlLen);
         }
         // No flags (we assume the memory was memset before)
     }

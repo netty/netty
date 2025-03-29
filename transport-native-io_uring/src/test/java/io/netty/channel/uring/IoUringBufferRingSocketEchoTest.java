@@ -31,6 +31,7 @@ public class IoUringBufferRingSocketEchoTest extends SocketEchoTest {
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

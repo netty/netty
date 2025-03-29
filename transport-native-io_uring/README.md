@@ -4,8 +4,8 @@ The new io_uring interface added to the Linux Kernel 5.1 is a high I/O performan
 
 ## Requirements:
 
-- x86-64 / aarch64 processor
-- at least 5.14.
+- x86-64 / aarch64 / riscv64 processor
+- at least Kernel 5.14, compiled with `CONFIG_IO_URING=y`
 - to run the tests, you have to increase memlock(default 64K)
 
 

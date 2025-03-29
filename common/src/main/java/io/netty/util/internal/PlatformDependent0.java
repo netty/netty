@@ -61,6 +61,9 @@ final class PlatformDependent0 {
 
     private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
 
+    // Package-private for testing.
+    static final MethodHandle IS_VIRTUAL_THREAD_METHOD_HANDLE = getIsVirtualThreadMethodHandle();
+
     static final Unsafe UNSAFE;
 
     // constants borrowed from murmur3
@@ -452,7 +455,7 @@ final class PlatformDependent0 {
                         try {
                             MethodHandle m = (MethodHandle) maybeException;
                             m = m.bindTo(finalInternalUnsafe);
-                            byte[] bytes = (byte[]) m.invokeExact(byte.class, 8);
+                            byte[] bytes = (byte[]) (Object) m.invokeExact(byte.class, 8);
                             assert bytes.length == 8;
                             allocateArrayMethod = m;
                         } catch (Throwable e) {
@@ -496,6 +499,42 @@ final class PlatformDependent0 {
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
+    }
+
+    private static MethodHandle getIsVirtualThreadMethodHandle() {
+        try {
+            MethodHandle methodHandle = MethodHandles.publicLookup().findVirtual(Thread.class, "isVirtual",
+                    methodType(boolean.class));
+            // Call once to make sure the invocation works.
+            boolean isVirtual = (boolean) methodHandle.invokeExact(Thread.currentThread());
+            return methodHandle;
+        } catch (Throwable e) {
+            if (logger.isTraceEnabled()) {
+                logger.debug("Thread.isVirtual() is not available: ", e);
+            } else {
+                logger.debug("Thread.isVirtual() is not available: ", e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
+     * @param thread The thread to be checked.
+     * @return {@code true} if this {@link Thread} is a virtual thread, {@code false} otherwise.
+     */
+    static boolean isVirtualThread(Thread thread) {
+        if (thread == null || IS_VIRTUAL_THREAD_METHOD_HANDLE == null) {
+            return false;
+        }
+        try {
+            return (boolean) IS_VIRTUAL_THREAD_METHOD_HANDLE.invokeExact(thread);
+        } catch (Throwable t) {
+            // Should not happen.
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
+            throw new Error(t);
+        }
     }
 
     private static boolean unsafeStaticFieldOffsetSupported() {
@@ -605,7 +644,7 @@ final class PlatformDependent0 {
 
     static byte[] allocateUninitializedArray(int size) {
         try {
-            return (byte[]) ALLOCATE_ARRAY_METHOD.invokeExact(byte.class, size);
+            return (byte[]) (Object) ALLOCATE_ARRAY_METHOD.invokeExact(byte.class, size);
         } catch (Throwable e) {
             rethrowIfPossible(e);
             throw new LinkageError("Unsafe.allocateUninitializedArray not available", e);

@@ -62,12 +62,12 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
 
     @Override
     protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
-        return heap.allocate(initialCapacity, maxCapacity);
+        return toLeakAwareBuffer(heap.allocate(initialCapacity, maxCapacity));
     }
 
     @Override
     protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
-        return direct.allocate(initialCapacity, maxCapacity);
+        return toLeakAwareBuffer(direct.allocate(initialCapacity, maxCapacity));
     }
 
     @Override

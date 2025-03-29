@@ -96,8 +96,8 @@ public class IoUringFileRegionTest {
             expected.release();
         }
 
-        serverChannel.close();
-        clientChannel.close();
+        serverChannel.close().syncUninterruptibly();
+        clientChannel.close().syncUninterruptibly();
         group.shutdownGracefully();
     }
 }

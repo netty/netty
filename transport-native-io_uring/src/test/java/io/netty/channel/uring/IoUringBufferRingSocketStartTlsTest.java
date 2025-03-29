@@ -31,6 +31,7 @@ public class IoUringBufferRingSocketStartTlsTest extends SocketStartTlsTest {
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

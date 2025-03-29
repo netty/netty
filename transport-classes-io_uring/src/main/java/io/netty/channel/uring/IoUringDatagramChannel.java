@@ -413,7 +413,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 allocHandle.lastBytesRead(res);
                 if (hdr.hasPort(IoUringDatagramChannel.this)) {
                     allocHandle.incMessagesRead(1);
-                    DatagramPacket packet = hdr.read(
+                    DatagramPacket packet = hdr.get(
                             IoUringDatagramChannel.this, registration().attachment(), byteBuf, res);
                     pipeline.fireChannelRead(packet);
                 }
@@ -473,7 +473,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
         private int scheduleRecvmsg(ByteBuf byteBuf, int numDatagram, int datagramSize) {
             int writable = byteBuf.writableBytes();
-            long bufferAddress = byteBuf.memoryAddress() + byteBuf.writerIndex();
+            long bufferAddress = IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex();
             if (numDatagram <= 1) {
                 return scheduleRecvmsg0(bufferAddress, writable, true) ? 1 : 0;
             }
@@ -495,7 +495,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 // We can not continue reading before we did not submit the recvmsg(s) and received the results.
                 return false;
             }
-            msgHdrMemory.write(socket, null, bufferAddress, bufferLength, (short) 0);
+            msgHdrMemory.set(socket, null, bufferAddress, bufferLength, (short) 0);
 
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
@@ -590,7 +590,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 segmentSize = 0;
             }
 
-            long bufferAddress = data.memoryAddress();
+            long bufferAddress = IoUring.memoryAddress(data);
             return scheduleSendmsg(remoteAddress, bufferAddress, data.readableBytes(), segmentSize, first);
         }
 
@@ -602,7 +602,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 // before we can write again.
                 return false;
             }
-            hdr.write(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
+            hdr.set(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
 
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;

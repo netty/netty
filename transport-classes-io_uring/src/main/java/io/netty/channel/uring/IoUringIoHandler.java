@@ -21,19 +21,20 @@ import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
+import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.ThreadAwareExecutor;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -59,7 +60,9 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final AtomicBoolean eventfdAsyncNotify = new AtomicBoolean();
     private final FileDescriptor eventfd;
-    private final long eventfdReadBuf;
+    private final ByteBuffer eventfdReadBuf;
+    private final long eventfdReadBufAddress;
+    private final ByteBuffer timeoutMemory;
     private final long timeoutMemoryAddress;
 
     private long eventfdReadSubmitted;
@@ -135,9 +138,10 @@ public final class IoUringIoHandler implements IoHandler {
 
         registrations = new IntObjectHashMap<>();
         eventfd = Native.newBlockingEventFd();
-        eventfdReadBuf = PlatformDependent.allocateMemory(8);
-        this.timeoutMemoryAddress = PlatformDependent.allocateMemory(KERNEL_TIMESPEC_SIZE);
-
+        eventfdReadBuf = Buffer.allocateDirectWithNativeOrder(Long.BYTES);
+        eventfdReadBufAddress = Buffer.memoryAddress(eventfdReadBuf);
+        this.timeoutMemory = Buffer.allocateDirectWithNativeOrder(KERNEL_TIMESPEC_SIZE);
+        this.timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
         // We buffer a maximum of 2 * CompletionQueue.ringCapacity completions before we drain them in batches.
         // Also as we never submit an udata which is 0L we use this as the tombstone marker.
         completionBuffer = new CompletionBuffer(ringBuffer.ioUringCompletionQueue().ringCapacity * 2, 0);
@@ -154,6 +158,9 @@ public final class IoUringIoHandler implements IoHandler {
 
     @Override
     public int run(IoHandlerContext context) {
+        if (closeCompleted) {
+            return 0;
+        }
         int processedPerRun = 0;
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
@@ -184,6 +191,9 @@ public final class IoUringIoHandler implements IoHandler {
     }
 
     void submitAndRunNow(long udata) {
+        if (closeCompleted) {
+            return;
+        }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         if (submissionQueue.submit() > 0) {
@@ -192,7 +202,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    IoUringBufferRing newBufferRing(int ringFd, IoUringBufferRingConfig bufferRingConfig)
+    private static IoUringBufferRing newBufferRing(int ringFd, IoUringBufferRingConfig bufferRingConfig)
             throws Errors.NativeIoException {
         short bufferRingSize = bufferRingConfig.bufferRingSize();
         short bufferGroupId = bufferRingConfig.bufferGroupId();
@@ -201,7 +211,8 @@ public final class IoUringIoHandler implements IoHandler {
         if (ioUringBufRingAddr < 0) {
             throw Errors.newIOException("ioUringRegisterBufRing", (int) ioUringBufRingAddr);
         }
-        return new IoUringBufferRing(ringFd, ioUringBufRingAddr,
+        return new IoUringBufferRing(ringFd,
+                Buffer.wrapMemoryAddressWithNativeOrder(ioUringBufRingAddr, Native.ioUringBufRingSize(bufferRingSize)),
                 bufferRingSize, bufferRingConfig.batchSize(), bufferRingConfig.maxUnreleasedBuffers(),
                 bufferGroupId, bufferRingConfig.isIncremental(), bufferRingConfig.allocator()
         );
@@ -288,7 +299,7 @@ public final class IoUringIoHandler implements IoHandler {
         long udata = UserData.encode(EVENTFD_ID, Native.IORING_OP_READ, (short) 0);
 
         eventfdReadSubmitted = submissionQueue.addEventFdRead(
-                eventfd.intValue(), eventfdReadBuf, 0, 8, udata);
+                eventfd.intValue(), eventfdReadBufAddress, 0, 8, udata);
     }
 
     private int submitAndWaitWithTimeout(SubmissionQueue submissionQueue,
@@ -307,9 +318,8 @@ public final class IoUringIoHandler implements IoHandler {
                 nanoSeconds = (int) max(timeoutNanoSeconds - seconds * 1000000000L, 0);
             }
 
-            PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_SEC_FIELD, seconds);
-            PlatformDependent.putLong(timeoutMemoryAddress + KERNEL_TIMESPEC_TV_NSEC_FIELD, nanoSeconds);
-
+            timeoutMemory.putLong(KERNEL_TIMESPEC_TV_SEC_FIELD, seconds);
+            timeoutMemory.putLong(KERNEL_TIMESPEC_TV_NSEC_FIELD, nanoSeconds);
             if (linkTimeout) {
                 submissionQueue.addLinkTimeout(timeoutMemoryAddress, udata);
             } else {
@@ -436,8 +446,8 @@ public final class IoUringIoHandler implements IoHandler {
         } catch (IOException e) {
             logger.warn("Failed to close eventfd", e);
         }
-        PlatformDependent.freeMemory(eventfdReadBuf);
-        PlatformDependent.freeMemory(timeoutMemoryAddress);
+        Buffer.free(eventfdReadBuf);
+        Buffer.free(timeoutMemory);
     }
 
     @Override
@@ -494,6 +504,11 @@ public final class IoUringIoHandler implements IoHandler {
             IoUringIoOps ioOps = (IoUringIoOps) ops;
             if (!isValid()) {
                 return INVALID_ID;
+            }
+            if ((ioOps.flags() & Native.IOSQE_CQE_SKIP_SUCCESS) != 0) {
+                // Because we expect at least 1 completion per submission we can't support IOSQE_CQE_SKIP_SUCCESS
+                // as it will only produce a completion on failure.
+                throw new IllegalArgumentException("IOSQE_CQE_SKIP_SUCCESS not supported");
             }
             long udata = UserData.encode(id, ioOps.opcode(), ioOps.data());
             if (executor.isExecutorThread(Thread.currentThread())) {

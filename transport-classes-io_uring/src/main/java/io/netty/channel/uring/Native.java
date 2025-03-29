@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -282,6 +283,7 @@ final class Native {
     static final int IOSQE_LINK = NativeStaticallyReferencedJniMethods.iosqeLink();
     static final int IOSQE_IO_DRAIN = NativeStaticallyReferencedJniMethods.iosqeDrain();
     static final int IOSQE_BUFFER_SELECT = NativeStaticallyReferencedJniMethods.iosqeBufferSelect();
+    static final int IOSQE_CQE_SKIP_SUCCESS = 1 << 6;
     static final int MSG_DONTWAIT = NativeStaticallyReferencedJniMethods.msgDontwait();
     static final int MSG_FASTOPEN = NativeStaticallyReferencedJniMethods.msgFastopen();
     static final int SOL_UDP = NativeStaticallyReferencedJniMethods.solUdp();
@@ -345,31 +347,45 @@ final class Native {
         ObjectUtil.checkPositive(ringSize, "ringSize");
         ObjectUtil.checkPositive(cqeSize, "cqeSize");
         long[] values = ioUringSetup(ringSize, cqeSize, setupFlags);
-        assert values.length == 22;
+        assert values.length == 18;
+        long cqkhead = values[0];
+        long cqktail = values[1];
+        int cqringMask = (int) values[2];
+        int cqringEntries = (int) values[3];
+        long cqArrayAddress = values[4];
+        int cqringSize = (int) values[5];
+        long cqringAddress = values[6];
+        int cqringFd = (int) values[7];
+        int cqringCapacity = (int) values[8];
         CompletionQueue completionQueue = new CompletionQueue(
-                values[0],
-                values[1],
-                values[2],
-                values[3],
-                values[4],
-                values[5],
-                (int) values[6],
-                values[7],
-                (int) values[8],
-                (int) values[9]);
+                Buffer.wrapMemoryAddressWithNativeOrder(cqkhead, Integer.BYTES),
+                Buffer.wrapMemoryAddressWithNativeOrder(cqktail, Integer.BYTES),
+                cqringMask,
+                cqringEntries,
+                Buffer.wrapMemoryAddressWithNativeOrder(cqArrayAddress, cqringEntries * CompletionQueue.CQE_SIZE),
+                cqringSize,
+                cqringAddress,
+                cqringFd,
+                cqringCapacity);
+
+        long sqkhead = values[9];
+        long sqktail = values[10];
+        int sqringMask = (int) values[11];
+        int sqringEntries = (int) values[12];
+        long sqArrayAddress = values[13];
+        int sqringSize = (int) values[14];
+        long sqringAddress = values[15];
+        int sqringFd = (int) values[16];
         SubmissionQueue submissionQueue = new SubmissionQueue(
-                values[10],
-                values[11],
-                values[12],
-                values[13],
-                values[14],
-                values[15],
-                values[16],
-                values[17],
-                (int) values[18],
-                values[19],
-                (int) values[20]);
-        return new RingBuffer(submissionQueue, completionQueue, (int) values[21]);
+                Buffer.wrapMemoryAddressWithNativeOrder(sqkhead, Integer.BYTES),
+                Buffer.wrapMemoryAddressWithNativeOrder(sqktail, Integer.BYTES),
+                sqringMask,
+                sqringEntries,
+                Buffer.wrapMemoryAddressWithNativeOrder(sqArrayAddress, sqringEntries * SubmissionQueue.SQE_SIZE),
+                sqringSize,
+                sqringAddress,
+                sqringFd);
+        return new RingBuffer(submissionQueue, completionQueue, (int) values[17]);
     }
 
     static void checkAllIOSupported(int ringFd) {
@@ -486,7 +502,7 @@ final class Native {
 
     static native long ioUringRegisterBufRing(int ringFd, int entries, short bufferGroup, int flags);
     static native int ioUringUnRegisterBufRing(int ringFd, long ioUringBufRingAddr, int entries, short bufferGroupId);
-
+    static native int ioUringBufRingSize(int entries);
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
     static native void eventFdWrite(int fd, long value);

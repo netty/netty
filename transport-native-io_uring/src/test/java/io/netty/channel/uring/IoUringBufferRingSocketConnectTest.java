@@ -31,6 +31,7 @@ public class IoUringBufferRingSocketConnectTest extends SocketConnectTest {
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

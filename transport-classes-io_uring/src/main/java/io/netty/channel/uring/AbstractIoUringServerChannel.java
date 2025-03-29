@@ -122,7 +122,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     }
 
     abstract Channel newChildChannel(
-            int fd, long acceptedAddressMemoryAddress, long acceptedAddressLengthMemoryAddress) throws Exception;
+            int fd, ByteBuffer acceptedAddressMemory) throws Exception;
 
     private final class UringServerChannelUnsafe extends AbstractIoUringChannel.AbstractUringUnsafe {
 
@@ -221,18 +221,15 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
 
             if (res >= 0) {
                 allocHandle.incMessagesRead(1);
-                final long acceptedAddressMemoryAddress;
+                final ByteBuffer acceptedAddressBuffer;
                 final long acceptedAddressLengthMemoryAddress;
                 if (acceptedAddressMemory == null) {
-                    acceptedAddressMemoryAddress = 0;
-                    acceptedAddressLengthMemoryAddress = 0;
+                    acceptedAddressBuffer = null;
                 } else {
-                    acceptedAddressMemoryAddress = acceptedAddressMemory.acceptedAddressMemoryAddress;
-                    acceptedAddressLengthMemoryAddress = acceptedAddressMemory.acceptedAddressLengthMemoryAddress;
+                    acceptedAddressBuffer = acceptedAddressMemory.acceptedAddressMemory;
                 }
                 try {
-                    Channel channel = newChildChannel(
-                            res, acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress);
+                    Channel channel = newChildChannel(res, acceptedAddressBuffer);
                     pipeline.fireChannelRead(channel);
 
                     if (allocHandle.continueReading() &&

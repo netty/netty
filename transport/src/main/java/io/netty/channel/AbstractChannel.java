@@ -335,6 +335,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             AbstractChannel.this.eventLoop = eventLoop;
 
+            // Clear any cached executors from prior event loop registrations.
+            AbstractChannelHandlerContext context = pipeline.tail;
+            do {
+                context.contextExecutor = null;
+                context = context.prev;
+            } while (context != null);
+
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {
