@@ -93,7 +93,7 @@ public class DefaultHttp2Headers
         }
     };
 
-    private HeaderEntry<CharSequence, CharSequence> firstNonPseudo = head;
+    private HeaderEntry<CharSequence, CharSequence> firstNonPseudo;
 
     /**
      * Create a new instance.
@@ -185,7 +185,7 @@ public class DefaultHttp2Headers
 
     @Override
     public Http2Headers clear() {
-        firstNonPseudo = head;
+        firstNonPseudo = null;
         return super.clear();
     }
 
@@ -279,24 +279,48 @@ public class DefaultHttp2Headers
 
             // Make sure the pseudo headers fields are first in iteration order
             if (hasPseudoHeaderFormat(key)) {
-                after = firstNonPseudo;
-                before = firstNonPseudo.before();
+                if (head == null) {
+                    head = this;
+                    after = this;
+                    before = this;
+                } else {
+                    if (firstNonPseudo == null) {
+                        after = head;
+                        before = head.before();
+                    } else {
+                        if (head == firstNonPseudo) {
+                            head = this;
+                        }
+                        after = firstNonPseudo;
+                        before = firstNonPseudo.before();
+                    }
+                }
             } else {
-                after = head;
-                before = head.before();
-                if (firstNonPseudo == head) {
+                if (head == null) {
+                    head = this;
                     firstNonPseudo = this;
+                    after = this;
+                    before = this;
+                } else {
+                    after = head;
+                    before = head.before();
+                    if (firstNonPseudo == null) {
+                        firstNonPseudo = this;
+                    }
                 }
             }
             pointNeighborsToThis();
         }
 
         @Override
-        protected void remove() {
+        protected void remove(DefaultHeaders<CharSequence, CharSequence, ?> headers) {
             if (this == firstNonPseudo) {
                 firstNonPseudo = firstNonPseudo.after();
+                if (firstNonPseudo == this) {
+                    firstNonPseudo = null;
+                }
             }
-            super.remove();
+            super.remove(headers);
         }
     }
 }
