@@ -30,6 +30,7 @@ public class IoUringBufferRingWriteBeforeRegisteredTest extends WriteBeforeRegis
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

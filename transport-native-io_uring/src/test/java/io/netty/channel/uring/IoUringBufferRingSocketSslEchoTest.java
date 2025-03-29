@@ -31,6 +31,7 @@ public class IoUringBufferRingSocketSslEchoTest extends SocketSslEchoTest {
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

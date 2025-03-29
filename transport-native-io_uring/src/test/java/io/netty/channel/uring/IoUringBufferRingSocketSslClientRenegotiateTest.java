@@ -31,6 +31,7 @@ public class IoUringBufferRingSocketSslClientRenegotiateTest extends SocketSslCl
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

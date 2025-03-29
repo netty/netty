@@ -31,6 +31,7 @@ public class IoUringBufferRingSocketSslGreetingTest extends SocketSslGreetingTes
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

@@ -22,6 +22,7 @@ import io.netty.channel.socket.ServerSocketChannelConfig;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 
 public final class IoUringServerSocketChannel extends AbstractIoUringServerChannel implements ServerSocketChannel {
     private final IoUringServerSocketChannelConfig config;
@@ -45,19 +46,19 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
     }
 
     @Override
-    Channel newChildChannel(int fd, long acceptedAddressMemoryAddress, long acceptedAddressLengthMemoryAddress) {
+    Channel newChildChannel(int fd, ByteBuffer acceptedAddressMemory) {
         IoUringIoHandler handler = registration().attachment();
         LinuxSocket socket = new LinuxSocket(fd);
-        if (acceptedAddressMemoryAddress != 0 && acceptedAddressLengthMemoryAddress != 0) {
+        if (acceptedAddressMemory != null) {
             // We didnt use ACCEPT_MULTISHOT And so can depend on the addresses.
             final InetSocketAddress address;
             if (socket.isIpv6()) {
                 byte[] ipv6Array = handler.inet6AddressArray();
                 byte[] ipv4Array = handler.inet4AddressArray();
-                address = SockaddrIn.readIPv6(acceptedAddressMemoryAddress, ipv6Array, ipv4Array);
+                address = SockaddrIn.getIPv6(acceptedAddressMemory, ipv6Array, ipv4Array);
             } else {
                 byte[] addressArray = handler.inet4AddressArray();
-                address = SockaddrIn.readIPv4(acceptedAddressMemoryAddress, addressArray);
+                address = SockaddrIn.getIPv4(acceptedAddressMemory, addressArray);
             }
             return new IoUringSocketChannel(this, new LinuxSocket(fd), address);
         }

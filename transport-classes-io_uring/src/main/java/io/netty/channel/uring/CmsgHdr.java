@@ -15,7 +15,7 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.util.internal.PlatformDependent;
+import java.nio.ByteBuffer;
 
 /**
  * <pre>{@code
@@ -31,16 +31,17 @@ final class CmsgHdr {
 
     private CmsgHdr() { }
 
-    static void write(long cmsghdrAddress, long cmsgHdrDataAddress,
+    static void write(ByteBuffer cmsghdr, int cmsgHdrDataOffset,
                       int cmsgLen, int cmsgLevel, int cmsgType, short segmentSize) {
+        int cmsghdrPosition = cmsghdr.position();
         if (Native.SIZEOF_SIZE_T == 4) {
-            PlatformDependent.putInt(cmsghdrAddress + Native.CMSG_OFFSETOF_CMSG_LEN, cmsgLen);
+            cmsghdr.putInt(cmsghdrPosition + Native.CMSG_OFFSETOF_CMSG_LEN, cmsgLen);
         } else {
             assert Native.SIZEOF_SIZE_T == 8;
-            PlatformDependent.putLong(cmsghdrAddress + Native.CMSG_OFFSETOF_CMSG_LEN, cmsgLen);
+            cmsghdr.putLong(cmsghdrPosition + Native.CMSG_OFFSETOF_CMSG_LEN, cmsgLen);
         }
-        PlatformDependent.putInt(cmsghdrAddress + Native.CMSG_OFFSETOF_CMSG_LEVEL, cmsgLevel);
-        PlatformDependent.putInt(cmsghdrAddress + Native.CMSG_OFFSETOF_CMSG_TYPE, cmsgType);
-        PlatformDependent.putShort(cmsgHdrDataAddress, segmentSize);
+        cmsghdr.putInt(cmsghdrPosition + Native.CMSG_OFFSETOF_CMSG_LEVEL, cmsgLevel);
+        cmsghdr.putInt(cmsghdrPosition + Native.CMSG_OFFSETOF_CMSG_TYPE, cmsgType);
+        cmsghdr.putShort(cmsghdrPosition + cmsgHdrDataOffset, segmentSize);
     }
 }

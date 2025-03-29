@@ -20,15 +20,20 @@ import io.netty.buffer.DuplicatedByteBuf;
 import io.netty.buffer.SlicedByteBuf;
 import io.netty.buffer.SwappedByteBuf;
 import io.netty.buffer.WrappedByteBuf;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.channel.unix.Buffer;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class IoUringBufferRing {
-    private final long ioUringBufRingAddr;
-    private final long tailFieldAddress;
+    private static final VarHandle SHORT_HANDLE =
+            MethodHandles.byteBufferViewVarHandle(short[].class, ByteOrder.nativeOrder());
+    private final ByteBuffer ioUringBufRing;
+    private final int tailFieldPosition;
     private final short entries;
     private final int batchSize;
     private final int maxUnreleasedBuffers;
@@ -46,12 +51,12 @@ final class IoUringBufferRing {
     private int numBuffers;
     private boolean expanded;
 
-    IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
+    IoUringBufferRing(int ringFd, ByteBuffer ioUringBufRing,
                       short entries, int batchSize, int maxUnreleasedBuffers, short bufferGroupId, boolean incremental,
                       IoUringBufferRingAllocator allocator) {
         assert entries % 2 == 0;
-        this.ioUringBufRingAddr = ioUringBufRingAddr;
-        this.tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
+        this.ioUringBufRing = ioUringBufRing;
+        this.tailFieldPosition = Native.IO_URING_BUFFER_RING_TAIL;
         this.entries = entries;
         this.batchSize = batchSize;
         this.maxUnreleasedBuffers = maxUnreleasedBuffers;
@@ -106,7 +111,7 @@ final class IoUringBufferRing {
         if (corrupted || closed) {
             return;
         }
-        short oldTail = PlatformDependent.getShort(tailFieldAddress);
+        short oldTail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
         short ringIndex = (short) (oldTail & mask);
         assert buffers[ringIndex] == null;
         final ByteBuf byteBuf;
@@ -125,13 +130,14 @@ final class IoUringBufferRing {
         //  see:
         //  https://github.com/axboe/liburing/
         //      blob/19134a8fffd406b22595a5813a3e319c19630ac9/src/include/liburing.h#L1561
-        long ioUringBufAddress = ioUringBufRingAddr + (long) Native.SIZEOF_IOURING_BUF * ringIndex;
-        PlatformDependent.putLong(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_ADDR,
-                byteBuf.memoryAddress() + byteBuf.readerIndex());
-        PlatformDependent.putInt(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.capacity());
-        PlatformDependent.putShort(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_BID, ringIndex);
+        int  position = Native.SIZEOF_IOURING_BUF * ringIndex;
+        ioUringBufRing.putLong(position + Native.IOURING_BUFFER_OFFSETOF_ADDR,
+                IoUring.memoryAddress(byteBuf) + byteBuf.readerIndex());
+        ioUringBufRing.putInt(position + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.capacity());
+        ioUringBufRing.putShort(position + Native.IOURING_BUFFER_OFFSETOF_BID, ringIndex);
+
         // Now advanced the tail by the number of buffers that we just added.
-        PlatformDependent.putShortOrdered(tailFieldAddress, (short) (oldTail + 1));
+        SHORT_HANDLE.setRelease(ioUringBufRing, tailFieldPosition, (short) (oldTail + 1));
         numBuffers++;
         // We added a buffer to the ring, let's reset the expanded variable so we can expand it if we receive
         // ENOBUFS.
@@ -198,7 +204,7 @@ final class IoUringBufferRing {
             return;
         }
         closed = true;
-        Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, entries, bufferGroupId);
+        Native.ioUringUnRegisterBufRing(ringFd, Buffer.memoryAddress(ioUringBufRing), entries, bufferGroupId);
         for (ByteBuf byteBuf : buffers) {
             if (byteBuf != null) {
                 byteBuf.release();

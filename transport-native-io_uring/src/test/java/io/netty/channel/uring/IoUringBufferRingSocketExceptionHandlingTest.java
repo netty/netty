@@ -31,6 +31,7 @@ public class IoUringBufferRingSocketExceptionHandlingTest extends SocketExceptio
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

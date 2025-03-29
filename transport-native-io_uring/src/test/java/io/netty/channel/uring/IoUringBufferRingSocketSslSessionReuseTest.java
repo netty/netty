@@ -31,6 +31,7 @@ public class IoUringBufferRingSocketSslSessionReuseTest extends SocketSslSession
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override

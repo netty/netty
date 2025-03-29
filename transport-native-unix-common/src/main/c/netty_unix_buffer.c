@@ -29,12 +29,16 @@ static jint netty_unix_buffer_addressSize0(JNIEnv* env, jclass clazz) {
    return (jint) sizeof(int*);
 }
 
+static jobject netty_unix_buffer_wrapMemoryAddress(JNIEnv* env, jclass clazz, jlong address, jint capacity) {
+    return (*env)->NewDirectByteBuffer(env, (void*) address, capacity);
+}
 // JNI Registered Methods End
 
 // JNI Method Registration Table Begin
 static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "memoryAddress0", "(Ljava/nio/ByteBuffer;)J", (void *) netty_unix_buffer_memoryAddress0 },
-  { "addressSize0", "()I", (void *) netty_unix_buffer_addressSize0 }
+  { "addressSize0", "()I", (void *) netty_unix_buffer_addressSize0 },
+  { "wrapMemoryAddress","(JI)Ljava/nio/ByteBuffer;", (void *) netty_unix_buffer_wrapMemoryAddress },
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 // JNI Method Registration Table End

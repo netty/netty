@@ -1106,7 +1106,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 if (initialData != null) {
                     msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
                     MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
-                    hdr.write(socket, inetSocketAddress, initialData.memoryAddress(),
+                    hdr.set(socket, inetSocketAddress, IoUring.memoryAddress(initialData),
                             initialData.readableBytes(), (short) 0);
 
                     int fd = fd().intValue();
@@ -1164,14 +1164,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     private void submitConnect(InetSocketAddress inetSocketAddress) {
         remoteAddressMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
-        long remoteAddressMemoryAddress = Buffer.memoryAddress(remoteAddressMemory);
 
-        SockaddrIn.write(socket.isIpv6(), remoteAddressMemoryAddress, inetSocketAddress);
+        SockaddrIn.set(socket.isIpv6(), remoteAddressMemory, inetSocketAddress);
 
         int fd = fd().intValue();
         IoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newConnect(
-                fd, (byte) 0, remoteAddressMemoryAddress, nextOpsId());
+                fd, (byte) 0, Buffer.memoryAddress(remoteAddressMemory), nextOpsId());
         connectId = registration.submit(ops);
         if (connectId == 0) {
             // Directly release the memory if submitting failed.
