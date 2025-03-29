@@ -1625,15 +1625,16 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             assertFalse(flushSniffer.checkFlush());
 
             // Let's manually send a window update frame now.
-            childChannel.writeAndFlush(new DefaultHttp2WindowUpdateFrame(32 * 1024)
+            ChannelFuture f = childChannel.writeAndFlush(new DefaultHttp2WindowUpdateFrame(32 * 1024)
                     .stream(childChannel.stream()));
+            assertTrue(f.isSuccess());
             verify(frameWriter).writeWindowUpdate(eqCodecCtx(), eq(0), eq(32 * 1024), anyChannelPromise());
             verify(frameWriter).writeWindowUpdate(
                     eqCodecCtx(), eq(childChannel.stream().id()), eq(32 * 1024), anyChannelPromise());
             assertTrue(flushSniffer.checkFlush());
 
             // Let's try to send one more even though there are no more pending bytes
-            ChannelFuture f = childChannel.writeAndFlush(new DefaultHttp2WindowUpdateFrame(32 * 1024)
+            f = childChannel.writeAndFlush(new DefaultHttp2WindowUpdateFrame(32 * 1024)
                     .stream(childChannel.stream()));
             assertNotNull(f.cause());
         }

@@ -972,7 +972,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             pipeline().fireChannelRead(frame);
         }
 
-        private void writeWindowUpdateFrame(Http2WindowUpdateFrame windowUpdateFrame) {
+        private ChannelFuture writeWindowUpdateFrame(Http2WindowUpdateFrame windowUpdateFrame) {
             ChannelFuture future = write0(parentContext(), windowUpdateFrame);
             // window update frames are commonly swallowed by the Http2FrameCodec and the promise is synchronously
             // completed but the flow controller _may_ have generated a wire level WINDOW_UPDATE. Therefore we need,
@@ -987,6 +987,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             } else {
                 future.addListener(windowUpdateFrameWriteListener);
             }
+            return future;
         }
 
         @Override
@@ -1030,7 +1031,17 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                             promise.setFailure(new ClosedChannelException());
                             return;
                         }
-                        writeWindowUpdateFrame(updateFrame);
+                        ChannelFuture f = writeWindowUpdateFrame(updateFrame);
+                        if (f.isDone()) {
+                            writeComplete(f, promise);
+                        } else {
+                            f.addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture future) {
+                                    writeComplete(future, promise);
+                                }
+                            });
+                        }
                     } else {
                         writeHttp2StreamFrame(frame, promise);
                     }
