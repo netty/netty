@@ -138,11 +138,14 @@ public final class IoUring {
                         "SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
                         "REGISTER_BUFFER_RING_SUPPORTED={}, " +
                         "REGISTER_BUFFER_RING_INC_SUPPORTED={}" +
+                        "SEND_ZC_SUPPORTED={}" +
                         ")", kernelVersion, socketNonEmptySupported, spliceSupported, acceptSupportNoWait,
                         acceptMultishotSupported, pollAddMultishotSupported, recvMultishotSupported,
                         recvsendBundleSupported, registerIowqWorkersSupported, submitAllSupported,
                         singleIssuerSupported, deferTaskrunSupported,
-                        registerBufferRingSupported, registerBufferRingIncSupported);
+                        registerBufferRingSupported, registerBufferRingIncSupported,
+                        sendZCSupported
+                );
             }
         }
         UNAVAILABILITY_CAUSE = cause;
@@ -241,11 +244,7 @@ public final class IoUring {
         return IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     }
 
-    /**
-     * Returns {@code true} if the io_uring native transport supports IORING_SETUP_CQ_SIZE.
-     * @return @code true} if the io_uring native transport supports IO_URING_SENDZC, otherwise {@code false}.
-     */
-    public static boolean isSetupCqeSizeSupported() {
+    static boolean isSetupCqeSizeSupported() {
         return IORING_SETUP_CQ_SIZE_SUPPORTED;
     }
 

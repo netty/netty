@@ -18,11 +18,9 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -68,8 +66,17 @@ public class IoUringSendZCTest {
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             ByteBuf buf = (ByteBuf) msg;
                             compositeByteBuf.addComponent(true, buf);
+                        }
+
+                        @Override
+                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                            cause.printStackTrace();
+                        }
+
+                        @Override
+                        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
                             if (compositeByteBuf.readableBytes() == targetResult.get()) {
-                                zcResult.put(compositeByteBuf);
+                                zcResult.offer(compositeByteBuf);
                                 compositeByteBuf = ctx.alloc().compositeBuffer();
                             }
                         }
@@ -102,7 +109,7 @@ public class IoUringSendZCTest {
             serverChannel.close().sync();
             clientChannel.close().sync();
         } finally {
-            group.shutdownGracefully().syncUninterruptibly();
+            group.shutdownNow();
         }
     }
 

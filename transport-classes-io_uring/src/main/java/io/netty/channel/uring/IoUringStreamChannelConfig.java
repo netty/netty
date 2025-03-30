@@ -68,7 +68,10 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID,   IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD);
+        return getOptions(super.getOptions(),
+                IoUringChannelOption.IO_URING_BUFFER_GROUP_ID,
+                IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD
+        );
     }
 
     short getBufferGroupId() {
