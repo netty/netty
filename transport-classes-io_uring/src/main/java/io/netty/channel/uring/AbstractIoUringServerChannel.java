@@ -77,7 +77,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         //       time to process a past connection. If the application knows that a
         //       new connection cannot come in before a previous one has been
         //       processed, it may be used as expected.
-        if (IoUring.isIOUringAcceptMultishotSupported()) {
+        if (IoUring.isAcceptMultishotEnabled()) {
             acceptedAddressMemory = null;
         } else {
             acceptedAddressMemory = new AcceptedAddressMemory();
@@ -108,7 +108,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     protected final void cancelOutstandingReads(IoRegistration registration, int numOutstandingReads) {
         if (acceptId != 0) {
             assert numOutstandingReads == 1 || numOutstandingReads == -1;
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(flags((byte) 0), acceptId, Native.IORING_OP_ACCEPT);
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel((byte) 0, acceptId, Native.IORING_OP_ACCEPT);
             registration.submit(ops);
             acceptId = 0;
         } else {
@@ -122,7 +122,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     }
 
     abstract Channel newChildChannel(
-            int fd, long acceptedAddressMemoryAddress, long acceptedAddressLengthMemoryAddress) throws Exception;
+            int fd, ByteBuffer acceptedAddressMemory) throws Exception;
 
     private final class UringServerChannelUnsafe extends AbstractIoUringChannel.AbstractUringUnsafe {
 
@@ -150,45 +150,46 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
             int fd = fd().intValue();
             IoRegistration registration = registration();
 
-            // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
-            // attempt.
-            // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
-            //
-            // Depending on if this is the first read or not we will use Native.IORING_ACCEPT_DONT_WAIT.
-            // The idea is that if the socket is blocking we can do the first read in a blocking fashion
-            // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
-            // be possible directly we schedule these with Native.IORING_ACCEPT_DONT_WAIT. This allows us to still be
-            // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
-            // transports.
-            short ioPrio;
-
-            // IORING_ACCEPT_POLL_FIRST and IORING_ACCEPT_DONTWAIT were added in the same release.
-            // We need to check if its supported as otherwise providing these would result in an -EINVAL.
-            if (IoUring.isIOUringAcceptNoWaitSupported()) {
-                if (first) {
-                    ioPrio = socketIsEmpty ? Native.IORING_ACCEPT_POLL_FIRST : 0;
-                } else {
-                    ioPrio = Native.IORING_ACCEPT_DONTWAIT;
-                }
-            } else {
-                ioPrio = 0;
-            }
+            final short ioPrio;
 
             final long acceptedAddressMemoryAddress;
             final long acceptedAddressLengthMemoryAddress;
-            if (IoUring.isIOUringAcceptMultishotSupported()) {
+            if (IoUring.isAcceptMultishotEnabled()) {
                 // Let's use multi-shot accept to reduce overhead.
-                ioPrio |= Native.IORING_ACCEPT_MULTISHOT;
+                ioPrio = Native.IORING_ACCEPT_MULTISHOT;
                 acceptedAddressMemoryAddress = 0;
                 acceptedAddressLengthMemoryAddress = 0;
             } else {
+                // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
+                // attempt.
+                // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
+                //
+                // Depending on if this is the first read or not we will use Native.IORING_ACCEPT_DONT_WAIT.
+                // The idea is that if the socket is blocking we can do the first read in a blocking fashion
+                // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
+                // be possible directly we schedule these with Native.IORING_ACCEPT_DONT_WAIT. This allows us to still
+                // be able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
+                // transports.
+                //
+                // IORING_ACCEPT_POLL_FIRST and IORING_ACCEPT_DONTWAIT were added in the same release.
+                // We need to check if its supported as otherwise providing these would result in an -EINVAL.
+                if (IoUring.isAcceptNoWaitSupported()) {
+                    if (first) {
+                        ioPrio = socketIsEmpty ? Native.IORING_ACCEPT_POLL_FIRST : 0;
+                    } else {
+                        ioPrio = Native.IORING_ACCEPT_DONTWAIT;
+                    }
+                } else {
+                    ioPrio = 0;
+                }
+
                 assert acceptedAddressMemory != null;
                 acceptedAddressMemoryAddress = acceptedAddressMemory.acceptedAddressMemoryAddress;
                 acceptedAddressLengthMemoryAddress = acceptedAddressMemory.acceptedAddressLengthMemoryAddress;
             }
 
             // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10#improvements-for-accept
-            IoUringIoOps ops = IoUringIoOps.newAccept(fd, flags((byte) 0), 0, ioPrio,
+            IoUringIoOps ops = IoUringIoOps.newAccept(fd, (byte) 0, 0, ioPrio,
                     acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, nextOpsId());
             acceptId = registration.submit(ops);
             if (acceptId == 0) {
@@ -207,7 +208,6 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
                 acceptId = 0;
                 return;
             }
-            assert acceptId != 0;
             boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
             if (rearm) {
                 // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
@@ -221,18 +221,15 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
 
             if (res >= 0) {
                 allocHandle.incMessagesRead(1);
-                final long acceptedAddressMemoryAddress;
+                final ByteBuffer acceptedAddressBuffer;
                 final long acceptedAddressLengthMemoryAddress;
                 if (acceptedAddressMemory == null) {
-                    acceptedAddressMemoryAddress = 0;
-                    acceptedAddressLengthMemoryAddress = 0;
+                    acceptedAddressBuffer = null;
                 } else {
-                    acceptedAddressMemoryAddress = acceptedAddressMemory.acceptedAddressMemoryAddress;
-                    acceptedAddressLengthMemoryAddress = acceptedAddressMemory.acceptedAddressLengthMemoryAddress;
+                    acceptedAddressBuffer = acceptedAddressMemory.acceptedAddressMemory;
                 }
                 try {
-                    Channel channel = newChildChannel(
-                            res, acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress);
+                    Channel channel = newChildChannel(res, acceptedAddressBuffer);
                     pipeline.fireChannelRead(channel);
 
                     if (allocHandle.continueReading() &&
@@ -287,8 +284,8 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     protected boolean socketIsEmpty(int flags) {
         // IORING_CQE_F_SOCK_NONEMPTY is used for accept since IORING_ACCEPT_DONTWAIT was added.
         // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10
-        return IoUring.isIOUringAcceptNoWaitSupported() &&
-                IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
+        return IoUring.isAcceptNoWaitSupported() &&
+                IoUring.isCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
     }
 
     @Override

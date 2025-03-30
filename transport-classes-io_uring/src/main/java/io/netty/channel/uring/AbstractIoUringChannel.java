@@ -98,6 +98,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     private boolean readPending;
     private boolean inReadComplete;
+    private boolean socketHasMoreData;
 
     private static final class DelayedClose {
         private final ChannelPromise promise;
@@ -151,6 +152,41 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         // See https://github.com/netty/netty/issues/2359
         this.remote = remote;
         this.local = fd.localAddress();
+    }
+
+    // Called once a Channel changed from AUTO_READ=true to AUTO_READ=false
+    final void autoReadCleared() {
+        if (!isRegistered()) {
+            return;
+        }
+        readPending = false;
+        IoRegistration registration = this.registration;
+        if (registration == null || !registration.isValid()) {
+            return;
+        }
+        if (eventLoop().inEventLoop()) {
+            clearRead();
+        } else {
+            eventLoop().execute(this::clearRead);
+        }
+    }
+
+    private void clearRead() {
+        assert eventLoop().inEventLoop();
+        readPending = false;
+        IoRegistration registration = this.registration;
+        if (registration == null || !registration.isValid()) {
+            return;
+        }
+        if ((ioState & POLL_IN_SCHEDULED) != 0) {
+            // There was a POLLIN scheduled, let's cancel it so we are not notified of any more reads for now.
+            assert pollInId != 0;
+            long id = registration.submit(
+                    IoUringIoOps.newAsyncCancel((byte) 0, pollInId, Native.IORING_OP_POLL_ADD));
+            assert id != 0;
+        }
+        // Also cancel all outstanding reads as the user did signal there is no more desire to read.
+        cancelOutstandingReads(registration(), numOutstandingReads);
     }
 
     /**
@@ -244,10 +280,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected void doDisconnect() throws Exception {
     }
 
-    protected byte flags(byte flags) {
-        return flags;
-    }
-
     private void freeRemoteAddressMemory() {
         if (remoteAddressMemory != null) {
             Buffer.free(remoteAddressMemory);
@@ -269,7 +301,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         if (registration != null) {
             if (socket.markClosed()) {
                 int fd = fd().intValue();
-                IoUringIoOps ops = IoUringIoOps.newClose(fd, flags((byte) 0), nextOpsId());
+                IoUringIoOps ops = IoUringIoOps.newClose(fd, (byte) 0, nextOpsId());
                 registration.submit(ops);
             }
         } else {
@@ -300,7 +332,14 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void doBeginReadNow() {
-        if (!isPollInFirst()) {
+        if (inputClosedSeenErrorOnRead) {
+            // We did see an error while reading and so closed the input.
+            return;
+        }
+        if (!isPollInFirst() ||
+                // If the socket was not empty, and we stopped reading we need to ensure we just force the
+                // read as POLLIN might be edge-triggered (in case of POLL_ADD_MULTI).
+                socketHasMoreData) {
             // If the socket is blocking we will directly call scheduleFirstReadIfNeeded() as we can use FASTPOLL.
             ioUringUnsafe().scheduleFirstReadIfNeeded();
         } else if ((ioState & POLL_IN_SCHEDULED) == 0) {
@@ -363,19 +402,19 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void schedulePollOut() {
-        pollOutId = schedulePollAdd(POLL_OUT_SCHEDULED, Native.POLLOUT);
+        pollOutId = schedulePollAdd(POLL_OUT_SCHEDULED, Native.POLLOUT, false);
     }
 
     final void schedulePollRdHup() {
-        pollRdhupId = schedulePollAdd(POLL_RDHUP_SCHEDULED, Native.POLLRDHUP);
+        pollRdhupId = schedulePollAdd(POLL_RDHUP_SCHEDULED, Native.POLLRDHUP, false);
     }
 
-    private long schedulePollAdd(int ioMask, int mask) {
+    private long schedulePollAdd(int ioMask, int mask, boolean multishot) {
         assert (ioState & ioMask) == 0;
         int fd = fd().intValue();
         IoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newPollAdd(
-                fd, flags((byte) 0), mask, nextOpsId());
+                fd, (byte) 0, mask, multishot ? Native.IORING_POLL_ADD_MULTI : 0, nextOpsId());
         long id = registration.submit(ops);
         if (id != 0) {
             ioState |= (byte) ioMask;
@@ -390,9 +429,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
         private IoUringRecvByteAllocatorHandle allocHandle;
-        private boolean socketIsEmpty;
         private boolean closed;
         private boolean freed;
+        private boolean socketIsEmpty;
 
         /**
          * Schedule the write of multiple messages in the {@link ChannelOutboundBuffer} and returns the number of
@@ -493,7 +532,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 pollOut(res);
             }
             if ((res & Native.POLLIN) != 0) {
-                pollIn(res);
+                pollIn(res, flags, data);
             }
             if ((res & Native.POLLRDHUP) != 0) {
                 pollRdHup(res);
@@ -549,29 +588,30 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             if (registration == null || !registration.isValid()) {
                 return;
             }
-            byte flags = flags((byte) 0);
-            if ((ioState & POLL_RDHUP_SCHEDULED) != 0) {
-                assert pollRdhupId != 0;
+            byte flags = (byte) 0;
+            if ((ioState & POLL_RDHUP_SCHEDULED) != 0 && pollRdhupId != 0) {
                 long id = registration.submit(
                         IoUringIoOps.newAsyncCancel(flags, pollRdhupId, Native.IORING_OP_POLL_ADD));
                 assert id != 0;
+                pollRdhupId = 0;
             }
-            if ((ioState & POLL_IN_SCHEDULED) != 0) {
-                assert pollInId != 0;
+            if ((ioState & POLL_IN_SCHEDULED) != 0 && pollInId != 0) {
                 long id = registration.submit(
                         IoUringIoOps.newAsyncCancel(flags, pollInId, Native.IORING_OP_POLL_ADD));
                 assert id != 0;
+                pollInId = 0;
             }
-            if ((ioState & POLL_OUT_SCHEDULED) != 0) {
-                assert pollOutId != 0;
+            if ((ioState & POLL_OUT_SCHEDULED) != 0 && pollOutId != 0) {
                 long id = registration.submit(
                         IoUringIoOps.newAsyncCancel(flags, pollOutId, Native.IORING_OP_POLL_ADD));
                 assert id != 0;
+                pollOutId = 0;
             }
             if (cancelConnect && connectId != 0) {
                 // Best effort to cancel the already submitted connect request.
                 long id = registration.submit(IoUringIoOps.newAsyncCancel(flags, connectId, Native.IORING_OP_CONNECT));
                 assert id != 0;
+                connectId = 0;
             }
             cancelOutstandingReads(registration, numOutstandingReads);
             cancelOutstandingWrites(registration, numOutstandingWrites);
@@ -690,29 +730,34 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             if (!isActive() || shouldBreakIoUringInReady(config())) {
                 return;
             }
-            pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN);
+            pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, IoUring.isPollAddMultishotEnabled());
         }
 
         private void readComplete(byte op, int res, int flags, short data) {
             assert numOutstandingReads > 0 || numOutstandingReads == -1 : numOutstandingReads;
-            // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm. This works for
-            // multi-shot and non multi-shot variants.
-            if ((flags & Native.IORING_CQE_F_MORE) == 0) {
+
+            boolean multishot = numOutstandingReads == -1;
+            boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
+            if (rearm) {
+                // Reset READ_SCHEDULED if there is nothing more to handle and so we need to re-arm. This works for
+                // multi-shot and non multi-shot variants.
                 ioState &= ~READ_SCHEDULED;
             }
             boolean pending = readPending;
-            if (numOutstandingReads == -1) {
+            if (multishot) {
                 // Reset readPending so we can still keep track if we might need to cancel the multi-shot read or
                 // not.
                 readPending = false;
             } else if (--numOutstandingReads == 0) {
+                // We received all outstanding completions.
                 readPending = false;
                 ioState &= ~READ_SCHEDULED;
             }
             inReadComplete = true;
             try {
                 socketIsEmpty = socketIsEmpty(flags);
-
+                socketHasMoreData = IoUring.isCqeFSockNonEmptySupported() &&
+                        (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0;
                 readComplete0(op, res, flags, data, numOutstandingReads);
             } finally {
                 try {
@@ -722,7 +767,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         recvBufAllocHandle().reset(config());
 
                         // Check if this was a readComplete(...) triggered by a read or multi-shot read.
-                        if (numOutstandingReads != -1) {
+                        if (!multishot) {
                             if (readPending) {
                                 // This was a "normal" read and the user did signal we should continue reading.
                                 // Let's schedule the read now.
@@ -731,6 +776,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         } else {
                             // The readComplete(...) was triggered by a multi-shot read. Because of this the state
                             // machine is a bit more complicated.
+
                             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                                 // The readComplete(...) was triggered because the previous read was cancelled.
                                 // In this case we we need to check if the user did signal the desire to read again
@@ -739,6 +785,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                                 if (pending) {
                                     doBeginReadNow();
                                 }
+                            } else if (rearm) {
+                                // We need to rearm the multishot as otherwise we might miss some data.
+                                doBeginReadNow();
                             } else if (!readPending) {
                                 // Cancel the multi-shot read now as the user did not signal that we want to keep
                                 // reading while we handle the completion event.
@@ -753,11 +802,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         if (pending) {
                             doBeginReadNow();
                         }
+                    } else if (multishot && rearm) {
+                        // We need to rearm the multishot as otherwise we might miss some data.
                         doBeginReadNow();
                     }
                 } finally {
-                    socketIsEmpty = false;
                     inReadComplete = false;
+                    socketIsEmpty = false;
                 }
             }
         }
@@ -791,13 +842,22 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         /**
          * Called once POLLIN event is ready to be processed
          */
-        private void pollIn(int res) {
-            ioState &= ~POLL_IN_SCHEDULED;
-            pollInId = 0;
+        private void pollIn(int res, int flags, short data) {
+            // Check if we need to rearm. This works for both cases, POLL_ADD and POLL_ADD_MULTI.
+            boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
+            if (rearm) {
+                ioState &= ~POLL_IN_SCHEDULED;
+                pollInId = 0;
+            }
             if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
-
+            if (!readPending) {
+                // We received the POLLIN but the user is not interested yet in reading, just mark socketHasMoreData
+                // as true so we will trigger a read directly once the user calls read()
+                socketHasMoreData = true;
+                return;
+            }
             scheduleFirstReadIfNeeded();
         }
 
@@ -1047,12 +1107,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 if (initialData != null) {
                     msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
                     MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
-                    hdr.write(socket, inetSocketAddress, initialData.memoryAddress(),
+                    hdr.set(socket, inetSocketAddress, IoUring.memoryAddress(initialData),
                             initialData.readableBytes(), (short) 0);
 
                     int fd = fd().intValue();
                     IoRegistration registration = registration();
-                    IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, flags((byte) 0), Native.MSG_FASTOPEN,
+                    IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
                             hdr.address(), hdr.idx());
                     connectId = registration.submit(ops);
                     if (connectId == 0) {
@@ -1105,14 +1165,13 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     private void submitConnect(InetSocketAddress inetSocketAddress) {
         remoteAddressMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
-        long remoteAddressMemoryAddress = Buffer.memoryAddress(remoteAddressMemory);
 
-        SockaddrIn.write(socket.isIpv6(), remoteAddressMemoryAddress, inetSocketAddress);
+        SockaddrIn.set(socket.isIpv6(), remoteAddressMemory, inetSocketAddress);
 
         int fd = fd().intValue();
         IoRegistration registration = registration();
         IoUringIoOps ops = IoUringIoOps.newConnect(
-                fd, flags((byte) 0), remoteAddressMemoryAddress, nextOpsId());
+                fd, (byte) 0, Buffer.memoryAddress(remoteAddressMemory), nextOpsId());
         connectId = registration.submit(ops);
         if (connectId == 0) {
             // Directly release the memory if submitting failed.

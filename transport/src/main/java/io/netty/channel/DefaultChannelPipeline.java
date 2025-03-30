@@ -980,15 +980,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelFuture deregister() {
-        try {
-            return tail.deregister();
-        } finally {
-            AbstractChannelHandlerContext context = tail;
-            do {
-                context.contextExecutor = null; // Clear cached executors in case channel gets re-registered.
-                context = context.prev;
-            } while (context != null);
-        }
+        return tail.deregister();
     }
 
     @Override

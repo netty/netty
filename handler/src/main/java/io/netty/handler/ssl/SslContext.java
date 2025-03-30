@@ -50,6 +50,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -61,6 +62,7 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -805,7 +807,9 @@ public abstract class SslContext {
                                             toX509Certificates(keyCertChainFile), toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter,
                                             apn, null, sessionCacheSize, sessionTimeout, false,
-                                            null, KeyStore.getDefaultType(), "HTTPS");
+                                            null, KeyStore.getDefaultType(),
+                                            SslUtils.defaultEndpointVerificationAlgorithm,
+                                            Collections.emptyList());
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -822,6 +826,7 @@ public abstract class SslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
             long sessionCacheSize, long sessionTimeout, boolean enableOcsp,
             SecureRandom secureRandom, String keyStoreType, String endpointIdentificationAlgorithm,
+            List<SNIServerName> serverNames,
             Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
         if (provider == null) {
             provider = defaultClientProvider();
@@ -838,21 +843,23 @@ public abstract class SslContext {
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize,
                         sessionTimeout, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
-                        resumptionController);
+                        serverNames, resumptionController);
             case OPENSSL:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 OpenSsl.ensureAvailability();
                 return new OpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
-                        enableOcsp, keyStoreType, endpointIdentificationAlgorithm, resumptionController, options);
+                        enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames, resumptionController,
+                        options);
             case OPENSSL_REFCNT:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 OpenSsl.ensureAvailability();
                 return new ReferenceCountedOpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
-                        enableOcsp, keyStoreType, endpointIdentificationAlgorithm, resumptionController, options);
+                        enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames, resumptionController,
+                        options);
             default:
                 throw new Error(provider.toString());
         }

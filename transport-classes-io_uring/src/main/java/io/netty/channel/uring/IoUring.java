@@ -15,7 +15,9 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -30,6 +32,8 @@ public final class IoUring {
     private static final boolean IORING_ACCEPT_NO_WAIT_SUPPORTED;
     private static final boolean IORING_ACCEPT_MULTISHOT_SUPPORTED;
     private static final boolean IORING_RECV_MULTISHOT_SUPPORTED;
+    private static final boolean IORING_RECVSEND_BUNDLE_SUPPORTED;
+    private static final boolean IORING_POLL_ADD_MULTISHOT_SUPPORTED;
     private static final boolean IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     private static final boolean IORING_SETUP_SUBMIT_ALL_SUPPORTED;
     private static final boolean IORING_SETUP_CQ_SIZE_SUPPORTED;
@@ -37,6 +41,10 @@ public final class IoUring {
     private static final boolean IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
     private static final boolean IORING_REGISTER_BUFFER_RING_SUPPORTED;
     private static final boolean IORING_REGISTER_BUFFER_RING_INC_SUPPORTED;
+    private static final boolean IORING_ACCEPT_MULTISHOT_ENABLED;
+    private static final boolean IORING_RECV_MULTISHOT_ENABLED;
+    private static final boolean IORING_RECVSEND_BUNDLE_ENABLED;
+    private static final boolean IORING_POLL_ADD_MULTISHOT_ENABLED;
 
     private static final InternalLogger logger;
 
@@ -48,7 +56,9 @@ public final class IoUring {
         boolean sendZCSupported = false;
         boolean acceptSupportNoWait = false;
         boolean acceptMultishotSupported = false;
+        boolean recvsendBundleSupported = false;
         boolean recvMultishotSupported = false;
+        boolean pollAddMultishotSupported = false;
         boolean registerIowqWorkersSupported = false;
         boolean submitAllSupported = false;
         boolean setUpCqSizeSupported = false;
@@ -57,27 +67,29 @@ public final class IoUring {
         boolean registerBufferRingSupported = false;
         boolean registerBufferRingIncSupported = false;
 
+        String kernelVersion = "[unknown]";
         try {
             if (SystemPropertyUtil.getBoolean("io.netty.transport.noNative", false)) {
                 cause = new UnsupportedOperationException(
                         "Native transport was explicit disabled with -Dio.netty.transport.noNative=true");
             } else {
-                String kernelVersion = Native.kernelVersion();
+                kernelVersion = Native.kernelVersion();
                 Native.checkKernelVersion(kernelVersion);
-                Throwable unsafeCause = PlatformDependent.getUnsafeUnavailabilityCause();
-                if (unsafeCause == null) {
+                if (PlatformDependent.javaVersion() >= 9) {
                     RingBuffer ringBuffer = null;
                     try {
                         ringBuffer = Native.createRingBuffer(1, 0);
                         Native.checkAllIOSupported(ringBuffer.fd());
-                        socketNonEmptySupported = Native.isIOUringCqeFSockNonEmptySupported(ringBuffer.fd());
-                        spliceSupported = Native.isIOUringSupportSplice(ringBuffer.fd());
+                        socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ringBuffer.fd());
+                        spliceSupported = Native.isSpliceSupported(ringBuffer.fd());
+                        recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
                         sendZCSupported = Native.isIOUringSupportSendZC(ringBuffer.fd());
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
-                        acceptSupportNoWait = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
-                        acceptMultishotSupported = Native.isIOUringAcceptMultishotSupported(ringBuffer.fd());
-                        recvMultishotSupported = Native.isIOUringRecvMultishotSupported();
-                        registerIowqWorkersSupported = Native.isRegisterIOWQWorkerSupported(ringBuffer.fd());
+                        acceptSupportNoWait = recvsendBundleSupported;
+                        acceptMultishotSupported = Native.isAcceptMultishotSupported(ringBuffer.fd());
+                        recvMultishotSupported = Native.isRecvMultishotSupported();
+                        pollAddMultishotSupported = Native.isPollAddMultiShotSupported(ringBuffer.fd());
+                        registerIowqWorkersSupported = Native.isRegisterIoWqWorkerSupported(ringBuffer.fd());
                         submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
                         setUpCqSizeSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQSIZE);
                         singleIssuerSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
@@ -98,7 +110,7 @@ public final class IoUring {
                         }
                     }
                 } else {
-                    cause = new UnsupportedOperationException("Unsafe is not supported", unsafeCause);
+                    cause = new UnsupportedOperationException("Java 9+ is required");
                 }
             }
         } catch (Throwable t) {
@@ -106,27 +118,31 @@ public final class IoUring {
         }
         if (cause != null) {
             if (logger.isTraceEnabled()) {
-                logger.debug("IoUring support is not available", cause);
+                logger.debug("IoUring support is not available using kernel {}", kernelVersion, cause);
             } else if (logger.isDebugEnabled()) {
-                logger.debug("IoUring support is not available: {}", cause.getMessage());
+                logger.debug("IoUring support is not available using kernel {}: {}", kernelVersion, cause.getMessage());
             }
         } else {
             if (logger.isDebugEnabled()) {
-                logger.debug("IoUring support is available (" +
-                        "IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED={}, " +
-                        "IORING_SPLICE_SUPPORTED={}, " +
-                        "IORING_ACCEPT_NO_WAIT_SUPPORTED={}, " +
-                        "IORING_ACCEPT_MULTISHOT_SUPPORTED={}, " +
-                        "IORING_RECV_MULTISHOT_SUPPORTED={}, " +
-                        "IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED={}, " +
-                        "IORING_SETUP_SUBMIT_ALL_SUPPORTED={}, " +
-                        "IORING_SETUP_SINGLE_ISSUER_SUPPORTED={}, " +
-                        "IORING_SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
-                        "IORING_REGISTER_BUFFER_RING_SUPPORTED={}, " +
-                        "IOU_PBUF_RING_INC_SUPPORTED={}" +
-                        ")", socketNonEmptySupported, spliceSupported, acceptSupportNoWait, acceptMultishotSupported,
-                        recvMultishotSupported, registerIowqWorkersSupported, submitAllSupported, singleIssuerSupported,
-                        deferTaskrunSupported, registerBufferRingSupported, registerBufferRingIncSupported);
+                logger.debug("IoUring support is available using kernel {} (" +
+                        "CQE_F_SOCK_NONEMPTY_SUPPORTED={}, " +
+                        "SPLICE_SUPPORTED={}, " +
+                        "ACCEPT_NO_WAIT_SUPPORTED={}, " +
+                        "ACCEPT_MULTISHOT_SUPPORTED={}, " +
+                        "POLL_ADD_MULTISHOT_SUPPORTED={} " +
+                        "RECV_MULTISHOT_SUPPORTED={}, " +
+                        "IORING_RECVSEND_BUNDLE_SUPPORTED={}, " +
+                        "REGISTER_IOWQ_MAX_WORKERS_SUPPORTED={}, " +
+                        "SETUP_SUBMIT_ALL_SUPPORTED={}, " +
+                        "SETUP_SINGLE_ISSUER_SUPPORTED={}, " +
+                        "SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
+                        "REGISTER_BUFFER_RING_SUPPORTED={}, " +
+                        "REGISTER_BUFFER_RING_INC_SUPPORTED={}" +
+                        ")", kernelVersion, socketNonEmptySupported, spliceSupported, acceptSupportNoWait,
+                        acceptMultishotSupported, pollAddMultishotSupported, recvMultishotSupported,
+                        recvsendBundleSupported, registerIowqWorkersSupported, submitAllSupported,
+                        singleIssuerSupported, deferTaskrunSupported,
+                        registerBufferRingSupported, registerBufferRingIncSupported);
             }
         }
         UNAVAILABILITY_CAUSE = cause;
@@ -136,6 +152,8 @@ public final class IoUring {
         IORING_ACCEPT_NO_WAIT_SUPPORTED = acceptSupportNoWait;
         IORING_ACCEPT_MULTISHOT_SUPPORTED = acceptMultishotSupported;
         IORING_RECV_MULTISHOT_SUPPORTED = recvMultishotSupported;
+        IORING_RECVSEND_BUNDLE_SUPPORTED = recvsendBundleSupported;
+        IORING_POLL_ADD_MULTISHOT_SUPPORTED = pollAddMultishotSupported;
         IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED = registerIowqWorkersSupported;
         IORING_SETUP_SUBMIT_ALL_SUPPORTED = submitAllSupported;
         IORING_SETUP_CQ_SIZE_SUPPORTED = setUpCqSizeSupported;
@@ -143,6 +161,15 @@ public final class IoUring {
         IORING_SETUP_DEFER_TASKRUN_SUPPORTED = deferTaskrunSupported;
         IORING_REGISTER_BUFFER_RING_SUPPORTED = registerBufferRingSupported;
         IORING_REGISTER_BUFFER_RING_INC_SUPPORTED = registerBufferRingIncSupported;
+
+        IORING_ACCEPT_MULTISHOT_ENABLED = IORING_ACCEPT_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
+                "io.netty.iouring.acceptMultiShotEnabled", true);
+        IORING_RECV_MULTISHOT_ENABLED = IORING_RECV_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
+                "io.netty.iouring.recvMultiShotEnabled", true);
+        IORING_RECVSEND_BUNDLE_ENABLED = IORING_RECVSEND_BUNDLE_SUPPORTED && SystemPropertyUtil.getBoolean(
+                "io.netty.iouring.recvsendBundleEnabled", true);
+       IORING_POLL_ADD_MULTISHOT_ENABLED = IORING_POLL_ADD_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
+               "io.netty.iouring.pollAddMultishotEnabled", true);
     }
 
     public static boolean isAvailable() {
@@ -169,11 +196,16 @@ public final class IoUring {
         return isAvailable() && Native.IS_SUPPORTING_TCP_FASTOPEN_SERVER;
     }
 
-    static boolean isIOUringCqeFSockNonEmptySupported() {
+    static boolean isCqeFSockNonEmptySupported() {
         return IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED;
     }
 
-    static boolean isIOUringSpliceSupported() {
+    /**
+     * Returns if SPLICE is supported or not.
+     *
+     * @return {@code true} if supported, {@code false} otherwise.
+     */
+    public static boolean isSpliceSupported() {
         return IORING_SPLICE_SUPPORTED;
     }
 
@@ -185,16 +217,24 @@ public final class IoUring {
         return IORING_SEND_ZC_SUPPORTED;
     }
 
-    static boolean isIOUringAcceptNoWaitSupported() {
+    static boolean isAcceptNoWaitSupported() {
         return IORING_ACCEPT_NO_WAIT_SUPPORTED;
     }
 
-    static boolean isIOUringAcceptMultishotSupported() {
+    static boolean isAcceptMultishotSupported() {
         return IORING_ACCEPT_MULTISHOT_SUPPORTED;
     }
 
-    static boolean isIOUringRecvMultishotSupported() {
+    static boolean isRecvMultishotSupported() {
         return IORING_RECV_MULTISHOT_SUPPORTED;
+    }
+
+    static boolean isRecvsendBundleSupported() {
+        return IORING_RECVSEND_BUNDLE_SUPPORTED;
+    }
+
+    static boolean isPollAddMultishotSupported() {
+        return IORING_POLL_ADD_MULTISHOT_SUPPORTED;
     }
 
     static boolean isRegisterIowqMaxWorkersSupported() {
@@ -205,28 +245,74 @@ public final class IoUring {
      * Returns {@code true} if the io_uring native transport supports IORING_SETUP_CQ_SIZE.
      * @return @code true} if the io_uring native transport supports IO_URING_SENDZC, otherwise {@code false}.
      */
-    public static boolean isIOUringSetupCqeSizeSupported() {
+    public static boolean isSetupCqeSizeSupported() {
         return IORING_SETUP_CQ_SIZE_SUPPORTED;
     }
 
-    static boolean isIOUringSetupSubmitAllSupported() {
+    static boolean isSetupSubmitAllSupported() {
         return IORING_SETUP_SUBMIT_ALL_SUPPORTED;
     }
 
-    static boolean isIOUringSetupSingleIssuerSupported() {
+    static boolean isSetupSingleIssuerSupported() {
         return IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
     }
 
-    static boolean isIOUringSetupDeferTaskrunSupported() {
+    static boolean isSetupDeferTaskrunSupported() {
         return IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
     }
 
+    /**
+     * Returns if it is supported to use a buffer ring.
+     *
+     * @return {@code true} if supported, {@code false} otherwise.
+     */
     public static boolean isRegisterBufferRingSupported() {
         return IORING_REGISTER_BUFFER_RING_SUPPORTED;
     }
 
+    /**
+     * Returns if it is supported to use an incremental buffer ring.
+     *
+     * @return {@code true} if supported, {@code false} otherwise.
+     */
     public static boolean isRegisterBufferRingIncSupported() {
         return IORING_REGISTER_BUFFER_RING_INC_SUPPORTED;
+    }
+
+    /**
+     * Returns if multi-shot ACCEPT is used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isAcceptMultishotEnabled() {
+        return IORING_ACCEPT_MULTISHOT_ENABLED;
+    }
+
+    /**
+     * Returns if multi-shot RECV is used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isRecvMultishotEnabled() {
+        return IORING_RECV_MULTISHOT_ENABLED;
+    }
+
+    /**
+     * Returns if RECVSEND bundles are used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isRecvsendBundleEnabled() {
+        return IORING_RECVSEND_BUNDLE_ENABLED;
+    }
+
+    /**
+     * Returns if multi-shot POLL_ADD is used or not.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise.
+     */
+    public static boolean isPollAddMultishotEnabled() {
+        return IORING_POLL_ADD_MULTISHOT_ENABLED;
     }
 
     public static void ensureAvailability() {
@@ -234,6 +320,13 @@ public final class IoUring {
             throw (Error) new UnsatisfiedLinkError(
                     "failed to load the required native library").initCause(UNAVAILABILITY_CAUSE);
         }
+    }
+
+    static long memoryAddress(ByteBuf buffer) {
+        if (buffer.hasMemoryAddress()) {
+            return buffer.memoryAddress();
+        }
+        return Buffer.memoryAddress(buffer.internalNioBuffer(0, buffer.capacity()));
     }
 
     public static Throwable unavailabilityCause() {

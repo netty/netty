@@ -92,7 +92,7 @@ jobs:
     - uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
-        java-version: '8' # The JDK version to make available on the path.
+        java-version: '11' # The JDK version to make available on the path.
 
     - name: Compile project
       run: ./mvnw -B -ntp clean package -DskipTests=true

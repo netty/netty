@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -133,7 +134,7 @@ final class Native {
     static final int POLLRDHUP = NativeStaticallyReferencedJniMethods.pollrdhup();
     static final int ERRNO_ECANCELED_NEGATIVE = -NativeStaticallyReferencedJniMethods.ecanceled();
     static final int ERRNO_ETIME_NEGATIVE = -NativeStaticallyReferencedJniMethods.etime();
-    static final int ERRNO_NO_BUFFER_NEGATIVE = -NativeStaticallyReferencedJniMethods.enobufs();
+    static final int ERRNO_NOBUFS_NEGATIVE = -NativeStaticallyReferencedJniMethods.enobufs();
 
     static final int PAGE_SIZE = NativeStaticallyReferencedJniMethods.pageSize();
 
@@ -202,19 +203,25 @@ final class Native {
     static final byte IORING_OP_FIXED_FD_INSTALL = 54;
     static final byte IORING_OP_FTRUNCATE = 55;
     static final byte IORING_OP_BIND = 56;
+    static final byte IORING_CQE_F_BUFFER = 1 << 0;
     static final byte IORING_CQE_F_MORE = 1 << 1;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
     static final byte IORING_CQE_F_NOTIF = 1 << 3;
+    static final byte IORING_CQE_F_BUF_MORE = 1 << 4;
 
     static final int IORING_SETUP_CQSIZE = 1 << 3;
+    static final int IORING_SETUP_CLAMP = 1 << 4;
+
     static final int IORING_SETUP_R_DISABLED = 1 << 6;
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
     static final int IORING_CQE_BUFFER_SHIFT = 16;
-    static final int IORING_CQE_F_BUF_MORE = 1 << 4;
+
+    static final short IORING_POLL_ADD_MULTI = 1 << 0;
 
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
+    static final short IORING_RECVSEND_BUNDLE = 1 << 4;
     static final short IORING_RECV_MULTISHOT = 1 << 1;
     static final short IORING_SEND_ZC_REPORT_USAGE = 1 << 3;
 
@@ -280,6 +287,7 @@ final class Native {
     static final int IOSQE_LINK = NativeStaticallyReferencedJniMethods.iosqeLink();
     static final int IOSQE_IO_DRAIN = NativeStaticallyReferencedJniMethods.iosqeDrain();
     static final int IOSQE_BUFFER_SELECT = NativeStaticallyReferencedJniMethods.iosqeBufferSelect();
+    static final int IOSQE_CQE_SKIP_SUCCESS = 1 << 6;
     static final int MSG_DONTWAIT = NativeStaticallyReferencedJniMethods.msgDontwait();
     static final int MSG_FASTOPEN = NativeStaticallyReferencedJniMethods.msgFastopen();
     static final int SOL_UDP = NativeStaticallyReferencedJniMethods.solUdp();
@@ -320,16 +328,16 @@ final class Native {
     };
 
     static int setupFlags() {
-        int flags = Native.IORING_SETUP_R_DISABLED;
-        if (IoUring.isIOUringSetupSubmitAllSupported()) {
+        int flags = Native.IORING_SETUP_R_DISABLED | Native.IORING_SETUP_CLAMP;
+        if (IoUring.isSetupSubmitAllSupported()) {
             flags |= Native.IORING_SETUP_SUBMIT_ALL;
         }
 
         // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#task-work
-        if (IoUring.isIOUringSetupSingleIssuerSupported()) {
+        if (IoUring.isSetupSingleIssuerSupported()) {
             flags |= Native.IORING_SETUP_SINGLE_ISSUER;
         }
-        if (IoUring.isIOUringSetupDeferTaskrunSupported()) {
+        if (IoUring.isSetupDeferTaskrunSupported()) {
             flags |= Native.IORING_SETUP_DEFER_TASKRUN;
         }
         return flags;
@@ -343,30 +351,45 @@ final class Native {
         ObjectUtil.checkPositive(ringSize, "ringSize");
         ObjectUtil.checkPositive(cqeSize, "cqeSize");
         long[] values = ioUringSetup(ringSize, cqeSize, setupFlags);
-        assert values.length == 21;
+        assert values.length == 18;
+        long cqkhead = values[0];
+        long cqktail = values[1];
+        int cqringMask = (int) values[2];
+        int cqringEntries = (int) values[3];
+        long cqArrayAddress = values[4];
+        int cqringSize = (int) values[5];
+        long cqringAddress = values[6];
+        int cqringFd = (int) values[7];
+        int cqringCapacity = (int) values[8];
         CompletionQueue completionQueue = new CompletionQueue(
-                values[0],
-                values[1],
-                values[2],
-                values[3],
-                values[4],
-                values[5],
-                (int) values[6],
-                values[7],
-                (int) values[8]);
+                Buffer.wrapMemoryAddressWithNativeOrder(cqkhead, Integer.BYTES),
+                Buffer.wrapMemoryAddressWithNativeOrder(cqktail, Integer.BYTES),
+                cqringMask,
+                cqringEntries,
+                Buffer.wrapMemoryAddressWithNativeOrder(cqArrayAddress, cqringEntries * CompletionQueue.CQE_SIZE),
+                cqringSize,
+                cqringAddress,
+                cqringFd,
+                cqringCapacity);
+
+        long sqkhead = values[9];
+        long sqktail = values[10];
+        int sqringMask = (int) values[11];
+        int sqringEntries = (int) values[12];
+        long sqArrayAddress = values[13];
+        int sqringSize = (int) values[14];
+        long sqringAddress = values[15];
+        int sqringFd = (int) values[16];
         SubmissionQueue submissionQueue = new SubmissionQueue(
-                values[9],
-                values[10],
-                values[11],
-                values[12],
-                values[13],
-                values[14],
-                values[15],
-                values[16],
-                (int) values[17],
-                values[18],
-                (int) values[19]);
-        return new RingBuffer(submissionQueue, completionQueue, (int) values[20]);
+                Buffer.wrapMemoryAddressWithNativeOrder(sqkhead, Integer.BYTES),
+                Buffer.wrapMemoryAddressWithNativeOrder(sqktail, Integer.BYTES),
+                sqringMask,
+                sqringEntries,
+                Buffer.wrapMemoryAddressWithNativeOrder(sqArrayAddress, sqringEntries * SubmissionQueue.SQE_SIZE),
+                sqringSize,
+                sqringAddress,
+                sqringFd);
+        return new RingBuffer(submissionQueue, completionQueue, (int) values[17]);
     }
 
     static void checkAllIOSupported(int ringFd) {
@@ -376,24 +399,29 @@ final class Native {
         }
     }
 
-    static boolean isIOUringRecvMultishotSupported() {
+    static boolean isRecvMultishotSupported() {
         // Added in the same release as IORING_SETUP_SINGLE_ISSUER.
         return Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
     }
 
-    static boolean isIOUringAcceptMultishotSupported(int ringFd) {
+    static boolean isAcceptMultishotSupported(int ringFd) {
         // IORING_OP_SOCKET was added in the same release (5.19);
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
     }
 
-    static boolean isIOUringCqeFSockNonEmptySupported(int ringFd) {
+    static boolean isCqeFSockNonEmptySupported(int ringFd) {
         // IORING_OP_SOCKET was added in the same release (5.19);
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
     }
 
-    static boolean isIOUringSupportSplice(int ringFd) {
+    static boolean isSpliceSupported(int ringFd) {
         // IORING_OP_SPLICE Available since 5.7
         return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
+    }
+
+    static boolean isPollAddMultiShotSupported(int ringfd) {
+        // Was added in the same release and we also need this feature to correctly handle edge-triggered mode.
+        return isCqeFSockNonEmptySupported(ringfd);
     }
 
     static boolean isIOUringSupportSendZC(int ringFd) {
@@ -406,7 +434,7 @@ final class Native {
      * Available since 5.15.
      * @return true if support io_uring_register_io_wq_worker
      */
-    static boolean isRegisterIOWQWorkerSupported(int ringFd) {
+    static boolean isRegisterIoWqWorkerSupported(int ringFd) {
         // See https://github.com/torvalds/linux/blob/v5.5/fs/io_uring.c#L5488C10-L5488C16
         int result = ioUringRegisterIoWqMaxWorkers(ringFd, 0, 0);
         if (result >= 0) {
@@ -419,7 +447,7 @@ final class Native {
     static boolean isRegisterBufferRingSupported(int ringFd, int flags) {
         int entries = 2;
         short bgid = 1;
-        long result = ioUringRegisterBuffRing(ringFd, entries, bgid, flags);
+        long result = ioUringRegisterBufRing(ringFd, entries, bgid, flags);
         if (result >= 0) {
             ioUringUnRegisterBufRing(ringFd, result, entries, bgid);
             return true;
@@ -481,9 +509,9 @@ final class Native {
     static native int ioUringRegisterEnableRings(int ringFd);
     static native int ioUringRegisterRingFds(int ringFds);
 
-    static native long ioUringRegisterBuffRing(int ringFd, int entries, short bufferGroup, int flags);
-    static native int ioUringUnRegisterBufRing(int ringFd, long ioUringBufRingAddr, int entries, int bufferGroupId);
-
+    static native long ioUringRegisterBufRing(int ringFd, int entries, short bufferGroup, int flags);
+    static native int ioUringUnRegisterBufRing(int ringFd, long ioUringBufRingAddr, int entries, short bufferGroupId);
+    static native int ioUringBufRingSize(int entries);
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
     static native void eventFdWrite(int fd, long value);

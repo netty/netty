@@ -20,6 +20,7 @@ final class RingBuffer {
     private final SubmissionQueue ioUringSubmissionQueue;
     private final CompletionQueue ioUringCompletionQueue;
     private final int features;
+    private boolean closed;
 
     RingBuffer(SubmissionQueue ioUringSubmissionQueue,
                CompletionQueue ioUringCompletionQueue, int features) {
@@ -57,8 +58,14 @@ final class RingBuffer {
     }
 
     void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
+        ioUringSubmissionQueue.close();
+        ioUringCompletionQueue.close();
         Native.ioUringExit(
-                ioUringSubmissionQueue.submissionQueueArrayAddress,
+                ioUringSubmissionQueue.submissionQueueArrayAddress(),
                 ioUringSubmissionQueue.ringEntries,
                 ioUringSubmissionQueue.ringAddress,
                 ioUringSubmissionQueue.ringSize,

@@ -15,35 +15,33 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.Map;
 
-abstract class IoUringStreamChannelConfig extends DefaultChannelConfig {
+abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
     static final int DISABLE_SEND_ZC = -1;
 
-    private volatile boolean useIoUringBufferGroup;
+    private volatile short bufferGroupId = -1;
 
     private volatile int sendZcThreshold = DISABLE_SEND_ZC;
 
-    IoUringStreamChannelConfig(Channel channel) {
+    IoUringStreamChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
     }
 
-    IoUringStreamChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
+    IoUringStreamChannelConfig(AbstractIoUringChannel channel, RecvByteBufAllocator allocator) {
         super(channel, allocator);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == IoUringChannelOption.USE_IO_URING_BUFFER_GROUP) {
-            return (T) Boolean.valueOf(getUseIoUringBufferGroup());
+        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
+            return (T) Short.valueOf(getBufferGroupId());
         }
 
         if (option == IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD) {
@@ -55,8 +53,8 @@ abstract class IoUringStreamChannelConfig extends DefaultChannelConfig {
 
     @Override
     public <T> boolean setOption(ChannelOption<T> option, T value) {
-        if (option == IoUringChannelOption.USE_IO_URING_BUFFER_GROUP) {
-            setUseIoUringBufferGroup((Boolean) value);
+        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
+            setBufferGroupId((Short) value);
             return true;
         }
 
@@ -70,22 +68,19 @@ abstract class IoUringStreamChannelConfig extends DefaultChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(
-                super.getOptions(), IoUringChannelOption.USE_IO_URING_BUFFER_GROUP,
-                IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD
-        );
+        return getOptions(super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID,   IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD);
     }
 
-    boolean getUseIoUringBufferGroup() {
-        return useIoUringBufferGroup;
+    short getBufferGroupId() {
+        return bufferGroupId;
     }
 
     int getSendZcThreshold() {
         return sendZcThreshold;
     }
 
-    IoUringStreamChannelConfig setUseIoUringBufferGroup(boolean useIoUringBufferGroup) {
-        this.useIoUringBufferGroup = useIoUringBufferGroup;
+    IoUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
+        this.bufferGroupId = (short) ObjectUtil.checkPositiveOrZero(bufferGroupId, "bufferGroupId");
         return this;
     }
 

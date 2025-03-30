@@ -57,7 +57,7 @@ public class FastThreadLocalSlowPathBenchmark extends AbstractMicrobenchmark {
     }
 
     public FastThreadLocalSlowPathBenchmark() {
-        super(false, true);
+        super(true, true);
     }
 
     @Benchmark

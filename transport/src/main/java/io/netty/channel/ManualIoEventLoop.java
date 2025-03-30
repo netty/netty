@@ -17,11 +17,13 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThreadExecutorMap;
 
 import java.util.Collection;
 import java.util.List;
@@ -44,12 +46,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
 public final class ManualIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
-    private static final int ST_STARTED = 4;
-    private static final int ST_SHUTTING_DOWN = 5;
-    private static final int ST_SHUTDOWN = 6;
-    private static final int ST_TERMINATED = 7;
+    private static final int ST_STARTED = 0;
+    private static final int ST_SHUTTING_DOWN = 1;
+    private static final int ST_SHUTDOWN = 2;
+    private static final int ST_TERMINATED = 3;
 
-    private final AtomicInteger state = new AtomicInteger();
+    private final AtomicInteger state;
     private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
     private final Queue<Runnable> taskQueue = PlatformDependent.newMpscQueue();
     private final IoHandlerContext nonBlockingContext = new IoHandlerContext() {
@@ -72,6 +74,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         }
     };
     private final BlockingIoHandlerContext blockingContext = new BlockingIoHandlerContext();
+    private final IoEventLoopGroup parent;
     private final Thread owningThread;
     private final IoHandler handler;
 
@@ -93,8 +96,26 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      *                          used by this {@link IoEventLoop}.
      */
     public ManualIoEventLoop(Thread owningThread, IoHandlerFactory factory) {
+        this(null, owningThread, factory);
+    }
+
+    /**
+     * Create a new {@link IoEventLoop} that is owned by the user and so needs to be driven by the user with the given
+     * {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or
+     * {@link #run(long)} to execute IO or tasks that were submitted to this {@link IoEventLoop}.
+     *
+     * @param parent            the parent {@link IoEventLoopGroup} or {@code null} if no parent.
+     * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link IoEventLoop}. The
+     *                          user will use this {@link Thread} to call {@link #runNow()} or {@link #run(long)} to
+     *                          make progress.
+     * @param factory           the {@link IoHandlerFactory} that will be used to create the {@link IoHandler} that is
+     *                          used by this {@link IoEventLoop}.
+     */
+    public ManualIoEventLoop(IoEventLoopGroup parent, Thread owningThread, IoHandlerFactory factory) {
+        this.parent = parent;
         this.owningThread = Objects.requireNonNull(owningThread, "owningThread");
         this.handler = factory.newHandler(this);
+        state = new AtomicInteger(ST_STARTED);
     }
 
     private int runAllTasks() {
@@ -123,35 +144,40 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
             initialized = true;
             handler.initialize();
         }
-        if (isShuttingDown()) {
-            if (terminationFuture.isDone()) {
-                // Already completely terminated
-                return 0;
-            }
-            // Run all tasks before prepare to destroy.
-            int run = runAllTasks();
-            handler.prepareToDestroy();
-            if (confirmShutdown()) {
-                // Destroy the handler now and run all remaining tasks.
-                try {
-                    handler.destroy();
-                    for (;;) {
-                        int r = runAllTasks();
-                        run += r;
-                        if (r == 0) {
-                            break;
-                        }
-                    }
-                } finally {
-                    state.set(ST_TERMINATED);
-                    terminationFuture.setSuccess(null);
+        EventExecutor old = ThreadExecutorMap.setCurrentExecutor(this);
+        try {
+            if (isShuttingDown()) {
+                if (terminationFuture.isDone()) {
+                    // Already completely terminated
+                    return 0;
                 }
+                // Run all tasks before prepare to destroy.
+                int run = runAllTasks();
+                handler.prepareToDestroy();
+                if (confirmShutdown()) {
+                    // Destroy the handler now and run all remaining tasks.
+                    try {
+                        handler.destroy();
+                        for (;;) {
+                            int r = runAllTasks();
+                            run += r;
+                            if (r == 0) {
+                                break;
+                            }
+                        }
+                    } finally {
+                        state.set(ST_TERMINATED);
+                        terminationFuture.setSuccess(null);
+                    }
+                }
+                return run;
             }
-            return run;
+            int run = handler.run(context);
+            // Now run all tasks.
+            return run + runAllTasks();
+        } finally {
+            ThreadExecutorMap.setCurrentExecutor(old);
         }
-        int run = handler.run(context);
-        // Now run all tasks.
-        return run + runAllTasks();
     }
 
     /**
@@ -207,7 +233,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
 
     @Override
     public IoEventLoopGroup parent() {
-        return null;
+        return parent;
     }
 
     @Deprecated

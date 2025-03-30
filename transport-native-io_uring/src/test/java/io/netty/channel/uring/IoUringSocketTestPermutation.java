@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
@@ -40,15 +39,23 @@ import java.util.List;
 public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
     static final IoUringSocketTestPermutation INSTANCE = new IoUringSocketTestPermutation();
-    private static final short BGID = 0;
-    static final IoUringBufferRingHandler RING_SELECTOR = (channel, size) -> BGID;
+    static final short BGID = 0;
     static final EventLoopGroup IO_URING_BOSS_GROUP = new MultiThreadIoEventLoopGroup(
             BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());
     static final EventLoopGroup IO_URING_WORKER_GROUP = new MultiThreadIoEventLoopGroup(
             WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true),
-            IoUringIoHandler.newFactory(new IoUringIoHandlerConfig()
-                    .setBufferRingConfig(RING_SELECTOR,
-                            new IoUringBufferRingConfig(BGID, (short) 16, 1024, ByteBufAllocator.DEFAULT))));
+            IoUringIoHandler.newFactory(buildConfig()));
+
+    static IoUringIoHandlerConfig buildConfig() {
+        IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
+        if (IoUring.isRegisterBufferRingSupported()) {
+            config.setBufferRingConfig(
+                    new IoUringBufferRingConfig(BGID, (short) 16, 16 * 16,
+                            new IoUringFixedBufferRingAllocator(1024)));
+        }
+        return config;
+    }
+
     @Override
     public List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
 

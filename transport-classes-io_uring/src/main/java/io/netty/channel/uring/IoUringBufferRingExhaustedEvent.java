@@ -16,7 +16,7 @@
 package io.netty.channel.uring;
 
 /**
- * Event that is fired when a cqe`s res is NO_BUFFER
+ * Event that is fired when a read failed because the buffer ring was exhausted for now.
  */
 public final class IoUringBufferRingExhaustedEvent {
     private final short bufferGroupId;
@@ -25,6 +25,11 @@ public final class IoUringBufferRingExhaustedEvent {
         this.bufferGroupId = bufferGroupId;
     }
 
+    /**
+     * Returns the buffer group id of the buffer ring that caused this event.
+     *
+     * @return  the id.
+     */
     public short bufferGroupId() {
         return bufferGroupId;
     }

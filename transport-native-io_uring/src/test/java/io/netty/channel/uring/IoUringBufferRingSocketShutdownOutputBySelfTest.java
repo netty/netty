@@ -30,6 +30,7 @@ public class IoUringBufferRingSocketShutdownOutputBySelfTest extends SocketShutd
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
+        assumeTrue(IoUring.isRegisterBufferRingSupported());
     }
 
     @Override
@@ -40,6 +41,6 @@ public class IoUringBufferRingSocketShutdownOutputBySelfTest extends SocketShutd
     @Override
     protected void configure(Bootstrap bootstrap, ByteBufAllocator allocator) {
         super.configure(bootstrap, allocator);
-        bootstrap.option(IoUringChannelOption.USE_IO_URING_BUFFER_GROUP, true);
+        bootstrap.option(IoUringChannelOption.IO_URING_BUFFER_GROUP_ID, IoUringSocketTestPermutation.BGID);
     }
 }
