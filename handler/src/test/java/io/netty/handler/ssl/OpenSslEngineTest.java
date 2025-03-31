@@ -542,7 +542,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
         engine.setVerify(SSL_CVERIFY_IGNORED, 1);
     }
 
-    @Disabled
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testWrapWithDifferentSizesTLSv1(SSLEngineTestParam param) throws Exception {
@@ -576,7 +575,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1, "ECDHE-RSA-RC4-SHA");
     }
 
-    @Disabled
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testWrapWithDifferentSizesTLSv1_1(SSLEngineTestParam param) throws Exception {
@@ -647,7 +645,6 @@ public class OpenSslEngineTest extends SSLEngineTest {
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1_2, "ECDHE-RSA-RC4-SHA");
     }
 
-    @Disabled
     @MethodSource("newTestParams")
     @ParameterizedTest
     public void testWrapWithDifferentSizesSSLv3(SSLEngineTestParam param) throws Exception {
