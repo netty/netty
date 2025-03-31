@@ -909,11 +909,19 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             readEOS = true;
         }
 
-        private void updateLocalWindowIfNeeded() {
+        private boolean updateLocalWindowIfNeeded() {
             if (flowControlledBytes != 0 && !parentContext().isRemoved() && config.autoFlowControl) {
                 int bytes = flowControlledBytes;
                 flowControlledBytes = 0;
                 writeWindowUpdateFrame(new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
+                return true;
+            }
+            return false;
+        }
+
+        void updateLocalWindowIfNeededAndFlush() {
+            if (updateLocalWindowIfNeeded()) {
+                flush();
             }
         }
 
@@ -1241,7 +1249,24 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         public <T> boolean setOption(ChannelOption<T> option, T value) {
             validate(option, value);
             if (option == Http2StreamChannelOption.AUTO_WRITE_WINDOW_UPDATE_FRAME) {
+                boolean newValue = (Boolean) value;
+                boolean changed = newValue && !autoFlowControl;
                 autoFlowControl = (Boolean) value;
+                if (changed) {
+                    if (channel.isRegistered()) {
+                        final Http2ChannelUnsafe unsafe = (Http2ChannelUnsafe) channel.unsafe();
+                        if (channel.eventLoop().inEventLoop()) {
+                            unsafe.updateLocalWindowIfNeededAndFlush();
+                        } else {
+                            channel.eventLoop().execute(new Runnable() {
+                                @Override
+                                public void run() {
+                                    unsafe.updateLocalWindowIfNeededAndFlush();
+                                }
+                            });
+                        }
+                    }
+                }
                 return true;
             }
             return super.setOption(option, value);
