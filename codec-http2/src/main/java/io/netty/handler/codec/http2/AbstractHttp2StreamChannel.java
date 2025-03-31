@@ -910,7 +910,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         private boolean updateLocalWindowIfNeeded() {
-            if (flowControlledBytes != 0 && !parentContext().isRemoved() && config.autoFlowControl) {
+            if (flowControlledBytes != 0 && !parentContext().isRemoved() && config.autoStreamFlowControl) {
                 int bytes = flowControlledBytes;
                 flowControlledBytes = 0;
                 writeWindowUpdateFrame(new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
@@ -1019,10 +1019,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     Http2StreamFrame frame = validateStreamFrame((Http2StreamFrame) msg).stream(stream());
                     if (msg instanceof Http2WindowUpdateFrame) {
                         Http2WindowUpdateFrame updateFrame = (Http2WindowUpdateFrame) msg;
-                        if (config.autoFlowControl) {
+                        if (config.autoStreamFlowControl) {
                             ReferenceCountUtil.release(msg);
                             promise.setFailure(new UnsupportedOperationException(
-                                    Http2StreamChannelOption.AUTO_WRITE_WINDOW_UPDATE_FRAME + " is set to false"));
+                                    Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL + " is set to false"));
                             return;
                         }
                         try {
@@ -1204,7 +1204,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
      */
     private static final class Http2StreamChannelConfig extends DefaultChannelConfig {
 
-        volatile boolean autoFlowControl = true;
+        volatile boolean autoStreamFlowControl = true;
         Http2StreamChannelConfig(Channel channel) {
             super(channel);
         }
@@ -1233,14 +1233,14 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         public Map<ChannelOption<?>, Object> getOptions() {
             return getOptions(
                     super.getOptions(),
-                    Http2StreamChannelOption.AUTO_WRITE_WINDOW_UPDATE_FRAME);
+                    Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL);
         }
 
         @SuppressWarnings("unchecked")
         @Override
         public <T> T getOption(ChannelOption<T> option) {
-            if (option == Http2StreamChannelOption.AUTO_WRITE_WINDOW_UPDATE_FRAME) {
-                return (T) Boolean.valueOf(autoFlowControl);
+            if (option == Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL) {
+                return (T) Boolean.valueOf(autoStreamFlowControl);
             }
             return super.getOption(option);
         }
@@ -1248,10 +1248,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         @Override
         public <T> boolean setOption(ChannelOption<T> option, T value) {
             validate(option, value);
-            if (option == Http2StreamChannelOption.AUTO_WRITE_WINDOW_UPDATE_FRAME) {
+            if (option == Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL) {
                 boolean newValue = (Boolean) value;
-                boolean changed = newValue && !autoFlowControl;
-                autoFlowControl = (Boolean) value;
+                boolean changed = newValue && !autoStreamFlowControl;
+                autoStreamFlowControl = (Boolean) value;
                 if (changed) {
                     if (channel.isRegistered()) {
                         final Http2ChannelUnsafe unsafe = (Http2ChannelUnsafe) channel.unsafe();

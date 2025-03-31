@@ -45,7 +45,6 @@ import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -1578,7 +1577,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
         childChannel.config().setOption(
-                Http2StreamChannelOption.AUTO_WRITE_WINDOW_UPDATE_FRAME, autoWriteWindowUpdateFrames);
+                Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL, autoWriteWindowUpdateFrames);
 
         assertTrue(childChannel.config().isAutoRead());
         childChannel.config().setAutoRead(false);
@@ -1648,7 +1647,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
         childChannel.config().setOption(
-                Http2StreamChannelOption.AUTO_WRITE_WINDOW_UPDATE_FRAME, false);
+                Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL, false);
 
         assertTrue(childChannel.config().isAutoRead());
         childChannel.config().setAutoRead(false);
@@ -1683,7 +1682,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertFalse(flushSniffer.checkFlush());
 
         childChannel.config().setOption(
-                Http2StreamChannelOption.AUTO_WRITE_WINDOW_UPDATE_FRAME, true);
+                Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL, true);
         verify(frameWriter).writeWindowUpdate(eqCodecCtx(), eq(0), eq(32 * 1024), anyChannelPromise());
         verify(frameWriter).writeWindowUpdate(
                 eqCodecCtx(), eq(childChannel.stream().id()), eq(32 * 1024), anyChannelPromise());

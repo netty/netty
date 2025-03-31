@@ -33,7 +33,10 @@ public final class Http2StreamChannelOption<T> extends ChannelOption<T> {
      * {@link io.netty.channel.ChannelPipeline#fireChannelRead(Object)}. If the user wants more control on when a
      * window update is send its possible to set it to {@code false}. In this case the user is responsible to
      * generate the correct {@link Http2WindowUpdateFrame}s and eventually write these to the channel.
+     * <p>
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc9113#section-5.2">RFC9113 5.2. Flow Control</a> for more
+     * details.
      */
-    public static final ChannelOption<Boolean> AUTO_WRITE_WINDOW_UPDATE_FRAME =
-            valueOf("AUTO_WRITE_WINDOW_UPDATE_FRAME");
+    public static final ChannelOption<Boolean> AUTO_STREAM_FLOW_CONTROL =
+            valueOf("AUTO_STREAM_FLOW_CONTROL");
 }
