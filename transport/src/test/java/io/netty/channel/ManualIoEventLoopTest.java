@@ -243,6 +243,22 @@ public class ManualIoEventLoopTest {
         cf.get();
 
         eventLoop.shutdownGracefully();
+        thread.join();
+    }
+
+    @Test
+    public void testRunWithoutOwner() throws ExecutionException, InterruptedException {
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(null, executor ->
+                new TestIoHandler(new Semaphore(0)));
+
+        // prior to setOwningThread, runNow is forbidden
+        assertThrows(IllegalStateException.class, eventLoop::runNow);
+
+        eventLoop.setOwningThread(Thread.currentThread());
+
+        eventLoop.runNow(); // runs fine
+
+        eventLoop.shutdownGracefully();
     }
 
     private static final class TestRunnable implements Runnable {
