@@ -26,6 +26,8 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
@@ -214,6 +216,33 @@ public class ManualIoEventLoopTest {
             }
             assertTrue(eventLoop.terminationFuture().isSuccess());
         }
+    }
+
+    @Test
+    public void testDelayOwningThread() throws ExecutionException, InterruptedException {
+        Semaphore semaphore = new Semaphore(0);
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(null, executor ->
+                new TestIoHandler(semaphore));
+        Thread thread = new Thread(() -> {
+            eventLoop.setOwningThread(Thread.currentThread());
+            assertTrue(eventLoop.inEventLoop());
+            while (!eventLoop.isTerminated()) {
+                eventLoop.runNow();
+            }
+        });
+
+        assertFalse(eventLoop.inEventLoop());
+
+        CompletableFuture<Void> cf = new CompletableFuture<>();
+        eventLoop.execute(() -> {
+            assertTrue(eventLoop.inEventLoop());
+            cf.complete(null);
+        });
+
+        thread.start();
+        eventLoop.shutdownGracefully();
+
+        cf.get();
     }
 
     private static final class TestRunnable implements Runnable {

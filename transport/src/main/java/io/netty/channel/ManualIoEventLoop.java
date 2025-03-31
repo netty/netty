@@ -75,7 +75,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     };
     private final BlockingIoHandlerContext blockingContext = new BlockingIoHandlerContext();
     private final IoEventLoopGroup parent;
-    private final Thread owningThread;
+    private Thread owningThread;
     private final IoHandler handler;
 
     private volatile long gracefulShutdownQuietPeriod;
@@ -107,13 +107,14 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * @param parent            the parent {@link IoEventLoopGroup} or {@code null} if no parent.
      * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link IoEventLoop}. The
      *                          user will use this {@link Thread} to call {@link #runNow()} or {@link #run(long)} to
-     *                          make progress.
+     *                          make progress. If {@code null}, must be set later using
+     *                          {@link #setOwningThread(Thread)}.
      * @param factory           the {@link IoHandlerFactory} that will be used to create the {@link IoHandler} that is
      *                          used by this {@link IoEventLoop}.
      */
     public ManualIoEventLoop(IoEventLoopGroup parent, Thread owningThread, IoHandlerFactory factory) {
         this.parent = parent;
-        this.owningThread = Objects.requireNonNull(owningThread, "owningThread");
+        this.owningThread = owningThread;
         this.handler = factory.newHandler(this);
         state = new AtomicInteger(ST_STARTED);
     }
@@ -141,6 +142,9 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
 
     private int run(IoHandlerContext context) {
         if (!initialized) {
+            if (owningThread == null) {
+                throw new IllegalStateException("Owning thread not set");
+            }
             initialized = true;
             handler.initialize();
         }
@@ -296,6 +300,19 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     @Override
     public boolean inEventLoop(Thread thread) {
         return this.owningThread == thread;
+    }
+
+    /**
+     * Set the owning thread that will call {@link #run}. May only be called once, and only if the owning thread was
+     * not set in the constructor already.
+     *
+     * @param owningThread The owning thread
+     */
+    public void setOwningThread(Thread owningThread) {
+        if (this.owningThread != null) {
+            throw new IllegalStateException("Owning thread already set");
+        }
+        this.owningThread = Objects.requireNonNull(owningThread, "owningThread");
     }
 
     private void shutdown0(long quietPeriod, long timeout, int shutdownState) {
