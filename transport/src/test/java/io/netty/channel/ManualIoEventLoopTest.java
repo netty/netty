@@ -240,9 +240,9 @@ public class ManualIoEventLoopTest {
         });
 
         thread.start();
-        eventLoop.shutdownGracefully();
-
         cf.get();
+
+        eventLoop.shutdownGracefully();
     }
 
     private static final class TestRunnable implements Runnable {
