@@ -74,7 +74,7 @@ public class OpenSslKeyMaterialManagerTest {
                 fail("Should not be called when alias is null");
                 return null;
             }
-        });
+        }, false);
         SslContext context = SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL).build();
         OpenSslEngine engine =
                 (OpenSslEngine) context.newEngine(UnpooledByteBufAllocator.DEFAULT);

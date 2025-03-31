@@ -128,7 +128,8 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                     }
 
                     if (keyMaterialProvider != null) {
-                        OpenSslKeyMaterialManager materialManager = new OpenSslKeyMaterialManager(keyMaterialProvider);
+                        OpenSslKeyMaterialManager materialManager =
+                                new OpenSslKeyMaterialManager(keyMaterialProvider, thiz.hasTmpDhKeys);
                         SSLContext.setCertificateCallback(ctx, new OpenSslClientCertificateCallback(
                                 engineMap, materialManager));
                     }
