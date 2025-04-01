@@ -713,7 +713,8 @@ public final class OpenSsl {
 
     static boolean isOptionSupported(SslContextOption<?> option) {
         if (isAvailable()) {
-            if (option == OpenSslContextOption.USE_TASKS) {
+            if (option == OpenSslContextOption.USE_TASKS ||
+                    option == OpenSslContextOption.TMP_DH_KEYLENGTH) {
                 return true;
             }
             // Check for options that are only supported by BoringSSL atm.
