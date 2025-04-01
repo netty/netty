@@ -15,6 +15,7 @@
  */
 package io.netty.incubator.codec.quic;
 
+import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -129,7 +130,7 @@ public class SipHashTest {
 
     @ParameterizedTest
     @MethodSource("params")
-    void testReferenceCases(ReferenceTestParam param ) {
+    void testReferenceCases(ReferenceTestParam param) {
         SipHash hash = new SipHash(2, 4, REFERENCE_SEED);
         long h = hash.macHash(ByteBuffer.wrap(param.input));
         assertEquals(param.expectedOutput, h);
@@ -145,7 +146,7 @@ public class SipHashTest {
         SipHash hash = new SipHash(1, 3, seed);
 
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        ByteBuffer emptyBuffer = ByteBuffer.wrap(new byte[0]);
+        ByteBuffer emptyBuffer = ByteBuffer.wrap(EmptyArrays.EMPTY_BYTES);
 
         long bufferHash = hash.macHash(buffer);
         assertEquals(bufferHash, hash.macHash(buffer));

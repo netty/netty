@@ -21,7 +21,8 @@ final class BoringSSLPrivateKeyMethodSignTask extends BoringSSLPrivateKeyMethodT
     private final int signatureAlgorithm;
     private final byte[] digest;
 
-    BoringSSLPrivateKeyMethodSignTask(long ssl, int signatureAlgorithm, byte[] digest, BoringSSLPrivateKeyMethod method) {
+    BoringSSLPrivateKeyMethodSignTask(
+            long ssl, int signatureAlgorithm, byte[] digest, BoringSSLPrivateKeyMethod method) {
         super(ssl, method);
         this.signatureAlgorithm = signatureAlgorithm;
         // It's OK to not clone the arrays as we create these in JNI and not reuse.

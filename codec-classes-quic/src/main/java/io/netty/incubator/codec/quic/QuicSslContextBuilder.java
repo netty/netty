@@ -288,7 +288,8 @@ public final class QuicSslContextBuilder {
      *     password-protected
      * @param keyCertChainFile an X.509 certificate chain file in PEM format
      */
-    public QuicSslContextBuilder keyManager(@Nullable File keyFile, @Nullable String keyPassword, @Nullable File keyCertChainFile) {
+    public QuicSslContextBuilder keyManager(
+            @Nullable File keyFile, @Nullable String keyPassword, @Nullable File keyCertChainFile) {
         X509Certificate[] keyCertChain;
         PrivateKey key;
         try {
@@ -313,7 +314,8 @@ public final class QuicSslContextBuilder {
      *     password-protected
      * @param certChain an X.509 certificate chain
      */
-    public QuicSslContextBuilder keyManager(@Nullable PrivateKey key, @Nullable String keyPassword, X509Certificate @Nullable ... certChain) {
+    public QuicSslContextBuilder keyManager(
+            @Nullable PrivateKey key, @Nullable String keyPassword, X509Certificate @Nullable ... certChain) {
         try {
             java.security.KeyStore ks = java.security.KeyStore.getInstance(KeyStore.getDefaultType());
             ks.load(null);
@@ -332,7 +334,8 @@ public final class QuicSslContextBuilder {
      * Identifying manager for this host. {@code keyManagerFactory} may be {@code null} for
      * client contexts, which disables mutual authentication.
      */
-    public QuicSslContextBuilder keyManager(@Nullable KeyManagerFactory keyManagerFactory, @Nullable String keyPassword) {
+    public QuicSslContextBuilder keyManager(
+            @Nullable KeyManagerFactory keyManagerFactory, @Nullable String keyPassword) {
         this.keyPassword = keyPassword;
         this.keyManagerFactory = keyManagerFactory;
         return this;

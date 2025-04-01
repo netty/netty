@@ -61,7 +61,6 @@ public interface QuicTransportParameters {
      */
     long initialMaxStreamDataUni();
 
-
     /**
      * The initial maximum bidirectional streams.
      *

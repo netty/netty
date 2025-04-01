@@ -26,7 +26,6 @@ import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -48,7 +47,8 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
         testStreamLimitEnforcedWhenCreatingViaClient(executor, QuicStreamType.UNIDIRECTIONAL);
     }
 
-    private static void testStreamLimitEnforcedWhenCreatingViaClient(Executor executor, QuicStreamType type) throws Throwable {
+    private static void testStreamLimitEnforcedWhenCreatingViaClient(Executor executor, QuicStreamType type)
+            throws Throwable {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(1)
@@ -132,7 +132,8 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
         testStreamLimitEnforcedWhenCreatingViaServer(executor, QuicStreamType.UNIDIRECTIONAL);
     }
 
-    private static void testStreamLimitEnforcedWhenCreatingViaServer(Executor executor, QuicStreamType type) throws Throwable {
+    private static void testStreamLimitEnforcedWhenCreatingViaServer(Executor executor, QuicStreamType type)
+            throws Throwable {
         Promise<Void> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
         Promise<Throwable> stream2Promise = ImmediateEventExecutor.INSTANCE.newPromise();
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler() {

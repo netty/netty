@@ -29,7 +29,6 @@ final class HmacSignQuicResetTokenGenerator implements QuicResetTokenGenerator {
     private HmacSignQuicResetTokenGenerator() {
     }
 
-
     @Override
     public ByteBuffer newResetToken(ByteBuffer cid) {
         ObjectUtil.checkNotNull(cid, "cid");

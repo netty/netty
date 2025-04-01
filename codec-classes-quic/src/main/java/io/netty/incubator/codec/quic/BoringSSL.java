@@ -115,7 +115,7 @@ final class BoringSSL {
         sb.setLength(sb.length() - 1);
         return SSLContext_set1_sigalgs_list(ctx, sb.toString());
     }
- 
+
     private static native int SSLContext_set1_sigalgs_list(long context, String sigalgs);
 
     private static native int SSLContext_set1_groups_list(long context, String groups);

@@ -254,7 +254,8 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
 
         QuicheQuicSslEngine quicSslEngine = (QuicheQuicSslEngine) engine;
         QuicheQuicConnection connection = quicSslEngine.createConnection(ssl -> {
-            ByteBuffer localAddrMemory = recipientSockaddrMemory.internalNioBuffer(0, recipientSockaddrMemory.capacity());
+            ByteBuffer localAddrMemory =
+                    recipientSockaddrMemory.internalNioBuffer(0, recipientSockaddrMemory.capacity());
             int localLen = SockaddrIn.setAddress(localAddrMemory, recipient);
 
             ByteBuffer peerAddrMemory = senderSockaddrMemory.internalNioBuffer(0, senderSockaddrMemory.capacity());

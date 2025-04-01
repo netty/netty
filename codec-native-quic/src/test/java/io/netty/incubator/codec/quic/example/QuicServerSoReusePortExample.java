@@ -122,7 +122,8 @@ public final class QuicServerSoReusePortExample {
                                                                     ByteBuf buffer = ctx.alloc().directBuffer();
                                                                     buffer.writeCharSequence(
                                                                             "Hello World!\r\n", CharsetUtil.US_ASCII);
-                                                                    // Write the buffer and shutdown the output by writing a FIN.
+                                                                    // Write the buffer and shutdown the output
+                                                                    // by writing a FIN.
                                                                     ctx.writeAndFlush(buffer).addListener(
                                                                             QuicStreamChannel.SHUTDOWN_OUTPUT);
                                                                 }

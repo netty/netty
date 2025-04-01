@@ -54,7 +54,7 @@ public final class QuicClientZeroRTTExample {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslEarlyDataReadyEvent) {
-                    createStream(((QuicChannel) ctx.channel())).addListener(f -> {
+                    createStream((QuicChannel) ctx.channel()).addListener(f -> {
                         if (f.isSuccess()) {
                             QuicStreamChannel streamChannel = (QuicStreamChannel) f.getNow();
                             streamChannel.writeAndFlush(
@@ -84,7 +84,6 @@ public final class QuicClientZeroRTTExample {
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
                     .bind(0).sync().channel();
-
 
             QuicChannelBootstrap quicChannelBootstrap = QuicChannel.newBootstrap(channel)
                     .streamHandler(new ChannelInboundHandlerAdapter() {

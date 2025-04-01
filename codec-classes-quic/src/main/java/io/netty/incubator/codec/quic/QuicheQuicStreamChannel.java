@@ -804,7 +804,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     ReferenceCountUtil.release(msg);
                     promise.setSuccess();
                     mayNeedWritabilityUpdate = capacity == 0;
-                } else if (res == 0 || res == Quiche.QUICHE_ERR_DONE ) {
+                } else if (res == 0 || res == Quiche.QUICHE_ERR_DONE) {
                     // Touch the message to make things easier in terms of debugging buffer leaks.
                     ReferenceCountUtil.touch(msg);
                     queue.add(msg, promise);

@@ -40,23 +40,24 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
         Channel channel = null;
         CountDownLatch latch = new CountDownLatch(2);
         try {
-            server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(), new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                    ChannelFutureListener futureListener = new ChannelFutureListener() {
+            server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(),
+                    new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void operationComplete(ChannelFuture channelFuture) {
-                            Throwable cause = channelFuture.cause();
-                            if (cause instanceof ChannelOutputShutdownException) {
-                                latch.countDown();
-                            }
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            ChannelFutureListener futureListener = new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture channelFuture) {
+                                    Throwable cause = channelFuture.cause();
+                                    if (cause instanceof ChannelOutputShutdownException) {
+                                        latch.countDown();
+                                    }
+                                }
+                            };
+                            ByteBuf buffer = (ByteBuf) msg;
+                            ctx.write(buffer.retainedDuplicate()).addListener(futureListener);
+                            ctx.writeAndFlush(buffer).addListener(futureListener);
                         }
-                    };
-                    ByteBuf buffer = (ByteBuf) msg;
-                    ctx.write(buffer.retainedDuplicate()).addListener(futureListener);
-                    ctx.writeAndFlush(buffer).addListener(futureListener);
-                }
-            });
+                    });
             channel = QuicTestUtils.newClient(executor);
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(new ChannelInboundHandlerAdapter())

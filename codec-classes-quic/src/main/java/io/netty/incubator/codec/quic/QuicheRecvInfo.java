@@ -45,7 +45,8 @@ final class QuicheRecvInfo {
     static void setRecvInfo(ByteBuffer memory, InetSocketAddress from, InetSocketAddress to) {
         int position = memory.position();
         try {
-            setAddress(memory, Quiche.SIZEOF_QUICHE_RECV_INFO, Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM, Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM_LEN, from);
+            setAddress(memory, Quiche.SIZEOF_QUICHE_RECV_INFO, Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM,
+                    Quiche.QUICHE_RECV_INFO_OFFSETOF_FROM_LEN, from);
             setAddress(memory, Quiche.SIZEOF_QUICHE_RECV_INFO + Quiche.SIZEOF_SOCKADDR_STORAGE,
                     Quiche.QUICHE_RECV_INFO_OFFSETOF_TO, Quiche.QUICHE_RECV_INFO_OFFSETOF_TO_LEN, to);
         } finally {
@@ -53,10 +54,11 @@ final class QuicheRecvInfo {
         }
     }
 
-    private static void setAddress(ByteBuffer memory, int socketAddressOffset, int addrOffset, int lenOffset, InetSocketAddress address) {
+    private static void setAddress(ByteBuffer memory, int socketAddressOffset, int addrOffset, int lenOffset,
+                                   InetSocketAddress address) {
         int position = memory.position();
         try {
-            int sockaddrPosition = position +socketAddressOffset;
+            int sockaddrPosition = position + socketAddressOffset;
             memory.position(sockaddrPosition);
             long sockaddrMemoryAddress = Quiche.memoryAddressWithPosition(memory);
             int len = SockaddrIn.setAddress(memory, address);

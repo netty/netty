@@ -155,7 +155,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean streamReadable;
     private boolean handshakeCompletionNotified;
     private boolean earlyDataReadyNotified;
-    private int reantranceGuard = 0;
+    private int reantranceGuard;
     private static final int IN_RECV = 1 << 1;
     private static final int IN_CONNECTION_SEND = 1 << 2;
     private static final int IN_HANDLE_WRITABLE_STREAMS = 1 << 3;
@@ -185,7 +185,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                               Map.Entry<ChannelOption<?>, Object>[] streamOptionsArray,
                               Map.Entry<AttributeKey<?>, Object>[] streamAttrsArray,
                               @Nullable Consumer<QuicheQuicChannel> freeTask,
-                              @Nullable Executor sslTaskExecutor, @Nullable QuicConnectionIdGenerator connectionIdAddressGenerator,
+                              @Nullable Executor sslTaskExecutor,
+                              @Nullable QuicConnectionIdGenerator connectionIdAddressGenerator,
                               @Nullable QuicResetTokenGenerator resetTokenGenerator) {
         super(parent);
         config = new QuicheQuicChannelConfig(this);
@@ -254,7 +255,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return connection == null ? null : connection.engine();
     }
 
-    private void notifyAboutHandshakeCompletionIfNeeded(QuicheQuicConnection conn, @Nullable SSLHandshakeException cause) {
+    private void notifyAboutHandshakeCompletionIfNeeded(QuicheQuicConnection conn,
+                                                        @Nullable SSLHandshakeException cause) {
         if (handshakeCompletionNotified) {
             return;
         }
@@ -577,7 +579,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             failPendingConnectPromise();
             return;
         }
-
 
         // Call connectionSend() so we ensure we send all that is queued before we close the channel
         SendResult sendResult = connectionSend(conn);
@@ -990,7 +991,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     List<ByteBuffer> newSourceConnectionIds() {
-        if (connectionIdAddressGenerator != null && resetTokenGenerator != null ) {
+        if (connectionIdAddressGenerator != null && resetTokenGenerator != null) {
             QuicheQuicConnection connection = this.connection;
             if (connection == null || connection.isFreed()) {
                 return Collections.emptyList();
@@ -1982,7 +1983,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private final class TimeoutHandler implements Runnable {
         private ScheduledFuture<?> timeoutFuture;
 
-
         @Override
         public void run() {
             QuicheQuicConnection conn = connection;
@@ -2113,7 +2113,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
         promise.setSuccess(new QuicheQuicConnectionPathStats(stats));
     }
-
 
     @Override
     public QuicTransportParameters peerTransportParameters() {

@@ -37,7 +37,8 @@ final class BoringSSLSessionCallback {
     }
 
     @SuppressWarnings("unused")
-    void newSession(long ssl, long creationTime, long timeout, byte[] session, boolean isSingleUse, byte @Nullable [] peerParams) {
+    void newSession(long ssl, long creationTime, long timeout, byte[] session, boolean isSingleUse,
+                    byte @Nullable [] peerParams) {
         if (sessionCache == null) {
             return;
         }

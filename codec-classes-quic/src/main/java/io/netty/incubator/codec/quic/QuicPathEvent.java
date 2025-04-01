@@ -169,6 +169,11 @@ public abstract class QuicPathEvent implements QuicEvent {
         }
 
         @Override
+        public int hashCode() {
+            return 31 * super.hashCode();
+        }
+
+        @Override
         public String toString() {
             return "QuicPathEvent.Closed{" +
                     "local=" + local() +

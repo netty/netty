@@ -144,7 +144,7 @@ public final class QuicHeaderParser implements AutoCloseable {
 
     // Check if the connection id is not longer then 20. This is what is the maximum for QUIC version 1.
     // See https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2
-    private void checkCidLength(int length) throws QuicException{
+    private static void checkCidLength(int length) throws QuicException {
         if (length > Quic.MAX_CONN_ID_LEN) {
             throw new QuicException("connection id to large: "  + length + " > " + Quic.MAX_CONN_ID_LEN,
                     QuicTransportError.PROTOCOL_VIOLATION);

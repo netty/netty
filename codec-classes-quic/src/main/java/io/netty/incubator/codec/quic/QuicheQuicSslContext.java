@@ -307,10 +307,7 @@ final class QuicheQuicSslContext extends QuicSslContext {
         return toX509Certificates(file);
     }
 
-    static PrivateKey toPrivateKey0(@Nullable File keyFile, @Nullable String keyPassword) throws NoSuchAlgorithmException,
-            NoSuchPaddingException, InvalidKeySpecException,
-            InvalidAlgorithmParameterException,
-            KeyException, IOException {
+    static PrivateKey toPrivateKey0(@Nullable File keyFile, @Nullable String keyPassword) throws Exception {
         return toPrivateKey(keyFile, keyPassword);
     }
 

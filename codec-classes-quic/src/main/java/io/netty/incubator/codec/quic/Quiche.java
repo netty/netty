@@ -261,7 +261,6 @@ final class Quiche {
     static final int QUICHE_ERR_STREAM_STOPPED =
             QuicheNativeStaticallyReferencedJniMethods.quiche_err_stream_stopped();
 
-
     // Too many identifiers were provided.
     static final int QUICHE_ERR_ID_LIMIT =
             QuicheNativeStaticallyReferencedJniMethods.quiche_err_id_limit();
@@ -296,11 +295,15 @@ final class Quiche {
     static final int QUICHE_CC_BBR = QuicheNativeStaticallyReferencedJniMethods.quiche_cc_bbr();
 
     static final int QUICHE_PATH_EVENT_NEW = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_new();
-    static final int QUICHE_PATH_EVENT_VALIDATED = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_validated();
-    static final int QUICHE_PATH_EVENT_FAILED_VALIDATION = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_failed_validation();
+    static final int QUICHE_PATH_EVENT_VALIDATED =
+            QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_validated();
+    static final int QUICHE_PATH_EVENT_FAILED_VALIDATION =
+            QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_failed_validation();
     static final int QUICHE_PATH_EVENT_CLOSED = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_closed();
-    static final int QUICHE_PATH_EVENT_REUSED_SOURCE_CONNECTION_ID = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_reused_source_connection_id();
-    static final int QUICHE_PATH_EVENT_PEER_MIGRATED = QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_peer_migrated();
+    static final int QUICHE_PATH_EVENT_REUSED_SOURCE_CONNECTION_ID =
+            QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_reused_source_connection_id();
+    static final int QUICHE_PATH_EVENT_PEER_MIGRATED =
+            QuicheNativeStaticallyReferencedJniMethods.quiche_path_event_peer_migrated();
 
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L105">quiche_version</a>.
@@ -512,10 +515,10 @@ final class Quiche {
      */
     static native void quiche_stream_iter_free(long iterAddr);
 
-
     /**
      * See
-     * <a href="https://github.com/cloudflare/quiche/blob/0.20.0/quiche/include/quiche.h#L672">quiche_conn_path_stats</a>.
+     * <a href="https://github.com/cloudflare/quiche/blob/0.20.0/quiche/include/quiche.h#L672">
+     *     quiche_conn_path_stats</a>.
      */
     static native Object @Nullable [] quiche_conn_path_stats(long connAddr, long streamIdx);
 
@@ -564,7 +567,8 @@ final class Quiche {
 
     static native int quiche_conn_scids_left(long connAddr);
 
-    static native long quiche_conn_new_scid(long connAddr, long scidAddr, int scidLen, byte[] resetToken, boolean retire_if_needed, long seq);
+    static native long quiche_conn_new_scid(
+            long connAddr, long scidAddr, int scidLen, byte[] resetToken, boolean retire_if_needed, long seq);
 
     static native byte @Nullable [] quiche_conn_retired_scid_next(long connAddr);
 
@@ -851,7 +855,8 @@ final class Quiche {
         ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_STREAM_STATE,
                 new QuicTransportErrorHolder(QuicTransportError.STREAM_STATE_ERROR, "QUICHE_ERR_INVALID_STREAM_STATE"));
         ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_TRANSPORT_PARAM,
-                new QuicTransportErrorHolder(QuicTransportError.TRANSPORT_PARAMETER_ERROR, "QUICHE_ERR_INVALID_TRANSPORT_PARAM"));
+                new QuicTransportErrorHolder(QuicTransportError.TRANSPORT_PARAMETER_ERROR,
+                        "QUICHE_ERR_INVALID_TRANSPORT_PARAM"));
         ERROR_MAPPINGS.put(QUICHE_ERR_FLOW_CONTROL,
                 new QuicTransportErrorHolder(QuicTransportError.FLOW_CONTROL_ERROR, "QUICHE_ERR_FLOW_CONTROL"));
         ERROR_MAPPINGS.put(QUICHE_ERR_STREAM_LIMIT,
@@ -861,7 +866,8 @@ final class Quiche {
         ERROR_MAPPINGS.put(QUICHE_ERR_FINAL_SIZE,
                 new QuicTransportErrorHolder(QuicTransportError.FINAL_SIZE_ERROR, "QUICHE_ERR_FINAL_SIZE"));
         ERROR_MAPPINGS.put(QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED,
-                new QuicTransportErrorHolder(QuicTransportError.CRYPTO_BUFFER_EXCEEDED, "QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED"));
+                new QuicTransportErrorHolder(QuicTransportError.CRYPTO_BUFFER_EXCEEDED,
+                        "QUICHE_ERR_CRYPTO_BUFFER_EXCEEDED"));
         ERROR_MAPPINGS.put(QUICHE_ERR_KEY_UPDATE,
                 new QuicTransportErrorHolder(QuicTransportError.KEY_UPDATE_ERROR, "QUICHE_ERR_KEY_UPDATE"));
 
@@ -873,12 +879,18 @@ final class Quiche {
 
         ERROR_MAPPINGS.put(QUICHE_ERR_BUFFER_TOO_SHORT,
                 new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_BUFFER_TOO_SHORT"));
-        ERROR_MAPPINGS.put(QUICHE_ERR_UNKNOWN_VERSION, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_UNKNOWN_VERSION"));
-        ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_PACKET, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_INVALID_PACKET"));
-        ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_STATE, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_INVALID_STATE"));
-        ERROR_MAPPINGS.put(QUICHE_ERR_CONGESTION_CONTROL, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_CONGESTION_CONTROL"));
-        ERROR_MAPPINGS.put(QUICHE_ERR_STREAM_STOPPED, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_STREAM_STOPPED"));
-        ERROR_MAPPINGS.put(QUICHE_ERR_OUT_OF_IDENTIFIERS, new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_OUT_OF_IDENTIFIERS"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_UNKNOWN_VERSION,
+                new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_UNKNOWN_VERSION"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_PACKET,
+                new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_INVALID_PACKET"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_INVALID_STATE,
+                new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_INVALID_STATE"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_CONGESTION_CONTROL,
+                new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_CONGESTION_CONTROL"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_STREAM_STOPPED,
+                new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_STREAM_STOPPED"));
+        ERROR_MAPPINGS.put(QUICHE_ERR_OUT_OF_IDENTIFIERS,
+                new QuicTransportErrorHolder(QuicTransportError.PROTOCOL_VIOLATION, "QUICHE_ERR_OUT_OF_IDENTIFIERS"));
     }
 
     static Exception convertToException(int result) {

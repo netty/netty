@@ -344,7 +344,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         // Have the server drop the few first numDroppedPackets incoming packets.
         server.pipeline().addFirst(
                 new ChannelInboundHandlerAdapter() {
-                    private int counter = 0;
+                    private int counter;
 
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         if (counter++ < numDroppedPackets) {
@@ -467,7 +467,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                         if (dropPackets.get()) {
                             ReferenceCountUtil.release(msg);
                             promise.setSuccess();
-                        } else{
+                        } else {
                             ctx.write(msg, promise);
                         }
                     }
@@ -599,7 +599,6 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             shutdown(executor);
         }
     }
-
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")
@@ -837,7 +836,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 .sslEngineProvider(q -> sslContext.newEngine(q.alloc(), "localhost", 9999)));
 
         try {
-            assertThrows(ExecutionException.class, ()->{
+            assertThrows(ExecutionException.class, () -> {
                 QuicTestUtils.newQuicChannelBootstrap(channel)
                                 .streamHandler(new ChannelInboundHandlerAdapter())
                                 .remoteAddress(address)
@@ -1543,7 +1542,6 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             shutdown(executor);
         }
     }
-
 
     @ParameterizedTest
     @MethodSource("newSslTaskExecutors")

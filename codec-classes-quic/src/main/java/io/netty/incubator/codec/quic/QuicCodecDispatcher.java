@@ -154,7 +154,6 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
         }
     }
 
-
     /**
      * Init the {@link Channel} and add all the needed {@link io.netty.channel.ChannelHandler} to the pipeline.
      * This also included building the {@code QUIC} codec via {@link QuicCodecBuilder} sub-type using the given local
@@ -193,7 +192,7 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
      */
     // Package-private for testing
     @Nullable
-    static ByteBuf getDestinationConnectionId(ByteBuf buffer, int localConnectionIdLength) throws QuicException{
+    static ByteBuf getDestinationConnectionId(ByteBuf buffer, int localConnectionIdLength) throws QuicException {
         if (buffer.readableBytes() > Byte.BYTES) {
             int offset = buffer.readerIndex();
             boolean shortHeader = hasShortHeader(buffer);

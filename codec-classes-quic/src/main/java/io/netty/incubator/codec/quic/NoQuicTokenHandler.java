@@ -26,7 +26,7 @@ import java.net.InetSocketAddress;
  */
 final class NoQuicTokenHandler implements QuicTokenHandler {
 
-    public final static QuicTokenHandler INSTANCE = new NoQuicTokenHandler();
+    public static final QuicTokenHandler INSTANCE = new NoQuicTokenHandler();
 
     private NoQuicTokenHandler() {
     }

@@ -80,7 +80,6 @@ public class QuicPortReuseTest extends AbstractQuicTest {
             serverBootstrap.option(reusePort, true);
         }
 
-
         SocketAddress bindAddress = null;
         for (int i = 0; i < numBinds; i++) {
             Channel bindChannel;

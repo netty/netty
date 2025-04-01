@@ -21,14 +21,27 @@ final class QuicheConfig {
     private final boolean isDatagramSupported;
     private long config = -1;
 
-    QuicheConfig(int version, @Nullable Boolean grease, @Nullable Long maxIdleTimeout, @Nullable Long maxSendUdpPayloadSize,
-                 @Nullable Long maxRecvUdpPayloadSize, @Nullable Long initialMaxData,
-                 @Nullable Long initialMaxStreamDataBidiLocal, @Nullable Long initialMaxStreamDataBidiRemote,
-                 @Nullable Long initialMaxStreamDataUni, @Nullable Long initialMaxStreamsBidi, @Nullable Long initialMaxStreamsUni,
-                 @Nullable Long ackDelayExponent, @Nullable Long maxAckDelay, @Nullable Boolean disableActiveMigration, @Nullable Boolean enableHystart,
-                 @Nullable QuicCongestionControlAlgorithm congestionControlAlgorithm, @Nullable Integer initialCongestionWindowPackets,
-                 @Nullable Integer recvQueueLen, @Nullable Integer sendQueueLen,
-                 @Nullable Long activeConnectionIdLimit, byte @Nullable [] statelessResetToken) {
+    QuicheConfig(int version,
+                 @Nullable Boolean grease,
+                 @Nullable Long maxIdleTimeout,
+                 @Nullable Long maxSendUdpPayloadSize,
+                 @Nullable Long maxRecvUdpPayloadSize,
+                 @Nullable Long initialMaxData,
+                 @Nullable Long initialMaxStreamDataBidiLocal,
+                 @Nullable Long initialMaxStreamDataBidiRemote,
+                 @Nullable Long initialMaxStreamDataUni,
+                 @Nullable Long initialMaxStreamsBidi,
+                 @Nullable Long initialMaxStreamsUni,
+                 @Nullable Long ackDelayExponent,
+                 @Nullable Long maxAckDelay,
+                 @Nullable Boolean disableActiveMigration,
+                 @Nullable Boolean enableHystart,
+                 @Nullable QuicCongestionControlAlgorithm congestionControlAlgorithm,
+                 @Nullable Integer initialCongestionWindowPackets,
+                 @Nullable Integer recvQueueLen,
+                 @Nullable Integer sendQueueLen,
+                 @Nullable Long activeConnectionIdLimit,
+                 byte @Nullable [] statelessResetToken) {
         long config = Quiche.quiche_config_new(version);
         try {
             if (grease != null) {

@@ -333,7 +333,6 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                                                ByteBuf recipientSockaddrMemory, Consumer<QuicheQuicChannel> freeTask,
                                                int localConnIdLength, QuicheConfig config, ChannelPromise promise);
 
-
     private void flushIfNeeded(ChannelHandlerContext ctx) {
         // Check if we should force a flush() and so ensure the packets are delivered in a timely
         // manner and also make room in the outboundbuffer again that belongs to the underlying channel.

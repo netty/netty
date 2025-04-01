@@ -18,7 +18,8 @@ package io.netty.incubator.codec.quic;
 import java.net.InetSocketAddress;
 
 /**
- * Statistics about a path of the {@code QUIC} connection. If unknown by the implementation it might return {@code -1} values
+ * Statistics about a path of the {@code QUIC} connection.
+ * If unknown by the implementation it might return {@code -1} values
  * for the various methods.
  */
 public interface QuicConnectionPathStats {

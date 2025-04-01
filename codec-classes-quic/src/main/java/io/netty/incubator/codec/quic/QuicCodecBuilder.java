@@ -443,11 +443,9 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
      */
     public final B activeConnectionIdLimit(long limit) {
         checkPositive(limit, "limit");
-
-        this.activeConnectionIdLimit = limit;
+        activeConnectionIdLimit = limit;
         return self();
     }
-
 
     /**
      * Allows to configure the {@code active connect id limit} that should be used.
@@ -470,7 +468,8 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
                 initialMaxStreamDataBidiLocal, initialMaxStreamDataBidiRemote,
                 initialMaxStreamDataUni, initialMaxStreamsBidi, initialMaxStreamsUni,
                 ackDelayExponent, maxAckDelay, disableActiveMigration, enableHystart,
-                congestionControlAlgorithm, initialCongestionWindowPackets, recvQueueLen, sendQueueLen, activeConnectionIdLimit, statelessResetToken);
+                congestionControlAlgorithm, initialCongestionWindowPackets, recvQueueLen, sendQueueLen,
+                activeConnectionIdLimit, statelessResetToken);
     }
 
     /**

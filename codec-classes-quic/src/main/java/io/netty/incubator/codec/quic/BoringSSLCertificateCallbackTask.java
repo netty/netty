@@ -28,8 +28,8 @@ final class BoringSSLCertificateCallbackTask extends BoringSSLTask {
     private long key;
     private long chain;
 
-    BoringSSLCertificateCallbackTask(long ssl, byte[] keyTypeBytes, byte[][] asn1DerEncodedPrincipals, String[] authMethods,
-                                     BoringSSLCertificateCallback callback) {
+    BoringSSLCertificateCallbackTask(long ssl, byte[] keyTypeBytes, byte[][] asn1DerEncodedPrincipals,
+                                     String[] authMethods, BoringSSLCertificateCallback callback) {
         // It is important that this constructor never throws. Be sure to not change this!
         super(ssl);
         // It's ok to not clone the arrays as we create these in JNI and not-reuse.

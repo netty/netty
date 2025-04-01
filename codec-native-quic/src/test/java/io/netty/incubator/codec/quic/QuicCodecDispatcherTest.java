@@ -69,7 +69,8 @@ public class QuicCodecDispatcherTest {
                     }
                 try {
                     boolean hasShortHeader = QuicCodecDispatcher.hasShortHeader(packet.content());
-                    ByteBuf id = QuicCodecDispatcher.getDestinationConnectionId(packet.content(), localConnectionIdLength);
+                    ByteBuf id = QuicCodecDispatcher.getDestinationConnectionId(
+                            packet.content(), localConnectionIdLength);
                     if (hasShortHeader) {
                         assertNotNull(id);
                         assertEquals(idx, QuicCodecDispatcher.decodeIdx(id));

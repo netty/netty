@@ -56,7 +56,8 @@ final class QuicClientSessionCache {
                 }
             };
 
-    void saveSession(@Nullable String host, int port, long creationTime, long timeout, byte[] session, boolean isSingleUse) {
+    void saveSession(@Nullable String host, int port, long creationTime, long timeout, byte[] session,
+                     boolean isSingleUse) {
         HostPort hostPort = keyFor(host, port);
         if (hostPort != null) {
             synchronized (sessions) {
@@ -146,7 +147,6 @@ final class QuicClientSessionCache {
             sessions.clear();
         }
     }
-
 
     private void expungeInvalidSessions() {
         assert Thread.holdsLock(sessions);

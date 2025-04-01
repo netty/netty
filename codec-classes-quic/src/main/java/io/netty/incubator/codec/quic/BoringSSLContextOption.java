@@ -44,15 +44,18 @@ public final class BoringSSLContextOption<T> extends SslContextOption<T> {
      * See <a href="https://github.com/google/boringssl/blob/master/include/openssl/ssl.h#L5166">
      *     SSL_CTX_set1_sigalgs</a>.
      */
-    public static final BoringSSLContextOption<String[]> SIGNATURE_ALGORITHMS = new BoringSSLContextOption<>("SIGNATURE_ALGORITHMS");
+    public static final BoringSSLContextOption<String[]> SIGNATURE_ALGORITHMS =
+            new BoringSSLContextOption<>("SIGNATURE_ALGORITHMS");
 
     /**
      * Set the supported client key/certificate types used in BoringSSLCertificateCallback
      */
-    public static final BoringSSLContextOption<Set<String>> CLIENT_KEY_TYPES = new BoringSSLContextOption<>("CLIENT_KEY_TYPES");
+    public static final BoringSSLContextOption<Set<String>> CLIENT_KEY_TYPES =
+            new BoringSSLContextOption<>("CLIENT_KEY_TYPES");
 
     /**
      * Set the supported server key/certificate types used in BoringSSLCertificateCallback
      */
-    public static final BoringSSLContextOption<Map<String, String>> SERVER_KEY_TYPES = new BoringSSLContextOption<>("SERVER_KEY_TYPES");
+    public static final BoringSSLContextOption<Map<String, String>> SERVER_KEY_TYPES =
+            new BoringSSLContextOption<>("SERVER_KEY_TYPES");
 }

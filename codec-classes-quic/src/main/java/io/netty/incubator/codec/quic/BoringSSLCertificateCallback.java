@@ -93,7 +93,11 @@ final class BoringSSLCertificateCallback {
     private final Map<String, String> serverKeyTypes;
     private final Set<String> clientKeyTypes;
 
-    BoringSSLCertificateCallback(QuicheQuicSslEngineMap engineMap, @Nullable X509ExtendedKeyManager keyManager, String password, Map<String, String> serverKeyTypes, Set<String> clientKeyTypes) {
+    BoringSSLCertificateCallback(QuicheQuicSslEngineMap engineMap,
+                                 @Nullable X509ExtendedKeyManager keyManager,
+                                 String password,
+                                 Map<String, String> serverKeyTypes,
+                                 Set<String> clientKeyTypes) {
         this.engineMap = engineMap;
         this.keyManager = keyManager;
         this.password = password;
@@ -103,7 +107,8 @@ final class BoringSSLCertificateCallback {
     }
 
     @SuppressWarnings("unused")
-    long @Nullable [] handle(long ssl, byte[] keyTypeBytes, byte @Nullable [][] asn1DerEncodedPrincipals, String[] authMethods) {
+    long @Nullable [] handle(long ssl, byte[] keyTypeBytes, byte @Nullable [][] asn1DerEncodedPrincipals,
+                             String[] authMethods) {
         QuicheQuicSslEngine engine = engineMap.get(ssl);
         if (engine == null) {
             return null;
