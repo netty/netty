@@ -1,7 +1,7 @@
-FROM --platform=linux/amd64 centos:6.10
+FROM --platform=linux/amd64 centos:7.6.1810
 
 # Update as we need to use the vault now.
-RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/6.10\//g' /etc/yum.repos.d/CentOS-Base.repo
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/7.6.1810\//g' /etc/yum.repos.d/CentOS-Base.repo
 
 # install dependencies
 RUN yum install -y \
@@ -24,7 +24,7 @@ RUN yum install -y \
 # Downloading and installing SDKMAN!
 RUN curl -s "https://get.sdkman.io" | bash
 
-ARG java_version="8.0.302-zulu"
+ARG java_version="11.0.26-zulu"
 ENV JAVA_VERSION=$java_version
 
 # Installing Java removing some unnecessary SDKMAN files
