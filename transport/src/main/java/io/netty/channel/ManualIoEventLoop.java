@@ -35,6 +35,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * {@link IoEventLoop} implementation that is owned by the user and so needs to be driven by the user manually with the
@@ -75,7 +76,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     };
     private final BlockingIoHandlerContext blockingContext = new BlockingIoHandlerContext();
     private final IoEventLoopGroup parent;
-    private volatile Thread owningThread;
+    private final AtomicReference<Thread> owningThread;
     private final IoHandler handler;
 
     private volatile long gracefulShutdownQuietPeriod;
@@ -114,7 +115,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      */
     public ManualIoEventLoop(IoEventLoopGroup parent, Thread owningThread, IoHandlerFactory factory) {
         this.parent = parent;
-        this.owningThread = owningThread;
+        this.owningThread = new AtomicReference<>(owningThread);
         this.handler = factory.newHandler(this);
         state = new AtomicInteger(ST_STARTED);
     }
@@ -142,7 +143,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
 
     private int run(IoHandlerContext context) {
         if (!initialized) {
-            if (owningThread == null) {
+            if (owningThread.get() == null) {
                 throw new IllegalStateException("Owning thread not set");
             }
             initialized = true;
@@ -299,7 +300,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
 
     @Override
     public boolean inEventLoop(Thread thread) {
-        return this.owningThread == thread;
+        return this.owningThread.get() == thread;
     }
 
     /**
@@ -309,10 +310,10 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * @param owningThread The owning thread
      */
     public void setOwningThread(Thread owningThread) {
-        if (this.owningThread != null) {
+        Objects.requireNonNull(owningThread, "owningThread");
+        if (!this.owningThread.compareAndSet(null, owningThread)) {
             throw new IllegalStateException("Owning thread already set");
         }
-        this.owningThread = Objects.requireNonNull(owningThread, "owningThread");
     }
 
     private void shutdown0(long quietPeriod, long timeout, int shutdownState) {

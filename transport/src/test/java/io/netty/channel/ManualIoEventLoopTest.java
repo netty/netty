@@ -261,6 +261,16 @@ public class ManualIoEventLoopTest {
         eventLoop.shutdownGracefully();
     }
 
+    @Test
+    public void testSetOwnerMultipleTimes() {
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(null, executor ->
+                new TestIoHandler(new Semaphore(0)));
+        eventLoop.setOwningThread(Thread.currentThread());
+        assertThrows(IllegalStateException.class, () -> eventLoop.setOwningThread(Thread.currentThread()));
+
+        eventLoop.shutdownGracefully();
+    }
+
     private static final class TestRunnable implements Runnable {
         private boolean done;
         @Override
