@@ -174,7 +174,7 @@ public abstract class Recycler<T> {
 
     @SuppressWarnings("unchecked")
     public final T get() {
-        if (maxCapacityPerThread == 0) {
+        if (maxCapacityPerThread == 0 || PlatformDependent.isVirtualThread(Thread.currentThread())) {
             return newObject((Handle<T>) NOOP_HANDLE);
         }
         LocalPool<T> localPool = threadLocal.get();
@@ -210,6 +210,9 @@ public abstract class Recycler<T> {
 
     @VisibleForTesting
     final int threadLocalSize() {
+        if (PlatformDependent.isVirtualThread(Thread.currentThread())) {
+            return 0;
+        }
         LocalPool<T> localPool = threadLocal.getIfExists();
         return localPool == null ? 0 : localPool.pooledHandles.size() + localPool.batch.size();
     }
