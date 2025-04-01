@@ -75,7 +75,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     };
     private final BlockingIoHandlerContext blockingContext = new BlockingIoHandlerContext();
     private final IoEventLoopGroup parent;
-    private Thread owningThread;
+    private volatile Thread owningThread;
     private final IoHandler handler;
 
     private volatile long gracefulShutdownQuietPeriod;
