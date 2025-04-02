@@ -77,7 +77,7 @@
       </properties>
     </profile>
 
-    <!-- Profiles related to native-image -->
+    <!-- Profiles related to native-image testing of QUIC -->
     <profile>
       <id>native-image-quic-server</id>
       <activation>
@@ -109,7 +109,7 @@
         </dependency>
         <dependency>
           <groupId>org.bouncycastle</groupId>
-          <artifactId>bcpkix-jdk15on</artifactId>
+          <artifactId>bcpkix-jdk18on</artifactId>
           <scope>runtime</scope>
         </dependency>
       </dependencies>
@@ -201,7 +201,7 @@
         </dependency>
         <dependency>
           <groupId>org.bouncycastle</groupId>
-          <artifactId>bcpkix-jdk15on</artifactId>
+          <artifactId>bcpkix-jdk18on</artifactId>
           <scope>runtime</scope>
         </dependency>
       </dependencies>
