@@ -523,7 +523,7 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
               <excludes>
-                <exclude>io.netty.incubator.codec.quic.QuicChannelEchoTest</exclude>
+                <exclude>io.netty.codec.quic.QuicChannelEchoTest</exclude>
               </excludes>
             </configuration>
           </plugin>

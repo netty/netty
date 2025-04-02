@@ -89,7 +89,7 @@
       <dependencies>
         <dependency>
           <groupId>${project.groupId}</groupId>
-          <artifactId>netty-incubator-codec-native-quic</artifactId>
+          <artifactId>netty-codec-native-quic</artifactId>
           <version>${project.version}</version>
           <classifier>${os.detected.classifier}</classifier>
         </dependency>
@@ -134,7 +134,7 @@
                 </goals>
                 <configuration>
                   <sources>
-                    <source>${project.basedir}/../codec-native-quic/src/test/java/io/netty/incubator/codec/quic/example/</source>
+                    <source>${project.basedir}/../codec-native-quic/src/test/java/io/netty/codec/quic/example/</source>
                   </sources>
                 </configuration>
               </execution>
@@ -156,7 +156,7 @@
               </execution>
             </executions>
             <configuration>
-              <mainClass>io.netty.incubator.codec.quic.example.QuicServerExample</mainClass>
+              <mainClass>io.netty.codec.quic.example.QuicServerExample</mainClass>
               <imageName>native-image-quic-server</imageName>
               <metadataRepository>
                 <enabled>true</enabled>
@@ -195,7 +195,7 @@
       <dependencies>
         <dependency>
           <groupId>${project.groupId}</groupId>
-          <artifactId>netty-incubator-codec-native-quic</artifactId>
+          <artifactId>netty-codec-native-quic</artifactId>
           <version>${project.version}</version>
           <classifier>${os.detected.classifier}</classifier>
         </dependency>
@@ -226,7 +226,7 @@
                 </goals>
                 <configuration>
                   <sources>
-                    <source>${project.basedir}/../codec-native-quic/src/test/java/io/netty/incubator/codec/quic/example/</source>
+                    <source>${project.basedir}/../codec-native-quic/src/test/java/io/netty/codec/quic/example/</source>
                   </sources>
                 </configuration>
               </execution>
@@ -248,7 +248,7 @@
               </execution>
             </executions>
             <configuration>
-              <mainClass>io.netty.incubator.codec.quic.example.QuicClientExample</mainClass>
+              <mainClass>io.netty.codec.quic.example.QuicClientExample</mainClass>
               <imageName>native-image-quic-client</imageName>
               <metadataRepository>
                 <enabled>true</enabled>

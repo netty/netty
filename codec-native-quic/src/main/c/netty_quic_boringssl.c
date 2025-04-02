@@ -31,8 +31,8 @@
 #define NETTY_JNI_UTIL_BUILD_STATIC
 #endif
 
-#define STATICALLY_CLASSNAME "io/netty/incubator/codec/quic/BoringSSLNativeStaticallyReferencedJniMethods"
-#define CLASSNAME "io/netty/incubator/codec/quic/BoringSSL"
+#define STATICALLY_CLASSNAME "io/netty/codec/quic/BoringSSLNativeStaticallyReferencedJniMethods"
+#define CLASSNAME "io/netty/codec/quic/BoringSSL"
 
 #define ERR_LEN 256
 
@@ -1547,7 +1547,7 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_LOAD_CLASS(env, byteArrayClass, "[B", done);
     NETTY_JNI_UTIL_LOAD_CLASS(env, stringClass, "java/lang/String", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLTask", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLTask", name, done);
 
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sslTaskClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sslTaskClass, sslTaskClassWeak, done);
@@ -1556,35 +1556,35 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_GET_FIELD(env, sslTaskClass, sslTaskComplete, "complete", "Z", done);
     NETTY_JNI_UTIL_GET_METHOD(env, sslTaskClass, sslTaskDestroyMethod, "destroy", "()V", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLPrivateKeyMethodTask", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLPrivateKeyMethodTask", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sslPrivateKeyMethodTaskClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sslPrivateKeyMethodTaskClass, sslPrivateKeyMethodTaskClassWeak, done);
     NETTY_JNI_UTIL_GET_FIELD(env, sslPrivateKeyMethodTaskClass, sslPrivateKeyMethodTaskResultBytesField, "resultBytes", "[B", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLPrivateKeyMethodSignTask", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLPrivateKeyMethodSignTask", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sslPrivateKeyMethodSignTaskClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sslPrivateKeyMethodSignTaskClass, sslPrivateKeyMethodSignTaskClassWeak, done);
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLPrivateKeyMethod;)V", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLPrivateKeyMethod;)V", name, done);
     NETTY_JNI_UTIL_PREPEND("(JI[BL", name, combinedName, done);
     free(name);
     name = combinedName;
     combinedName = NULL;
     NETTY_JNI_UTIL_GET_METHOD(env, sslPrivateKeyMethodSignTaskClass, sslPrivateKeyMethodSignTaskInitMethod, "<init>", name, done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLPrivateKeyMethodDecryptTask", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLPrivateKeyMethodDecryptTask", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sslPrivateKeyMethodDecryptTaskClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sslPrivateKeyMethodDecryptTaskClass, sslPrivateKeyMethodDecryptTaskClassWeak, done);
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLPrivateKeyMethod;)V", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLPrivateKeyMethod;)V", name, done);
     NETTY_JNI_UTIL_PREPEND("(J[BL", name, combinedName, done);
     free(name);
     name = combinedName;
     combinedName = NULL;
     NETTY_JNI_UTIL_GET_METHOD(env, sslPrivateKeyMethodDecryptTaskClass, sslPrivateKeyMethodDecryptTaskInitMethod, "<init>", name, done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateCallbackTask", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLCertificateCallbackTask", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, certificateTaskClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, certificateTaskClass, certificateTaskClassWeak, done);
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateCallback;)V", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLCertificateCallback;)V", name, done);
     NETTY_JNI_UTIL_PREPEND("(J[B[[B[Ljava/lang/String;L", name, combinedName, done);
     free(name);
     name = combinedName;
@@ -1593,37 +1593,37 @@ jint netty_boringssl_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
     NETTY_JNI_UTIL_GET_FIELD(env, certificateTaskClass, certificateTaskClassChainField, "chain", "J", done);
     NETTY_JNI_UTIL_GET_FIELD(env, certificateTaskClass, certificateTaskClassKeyField, "key", "J", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateVerifyCallbackTask", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLCertificateVerifyCallbackTask", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, verifyTaskClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, verifyTaskClass, verifyTaskClassWeak, done);
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLCertificateVerifyCallback;)V", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLCertificateVerifyCallback;)V", name, done);
     NETTY_JNI_UTIL_PREPEND("(J[[BLjava/lang/String;L", name, combinedName, done);
     free(name);
     name = combinedName;
     combinedName = NULL;
     NETTY_JNI_UTIL_GET_METHOD(env, verifyTaskClass, verifyTaskClassInitMethod, "<init>", name, done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLHandshakeCompleteCallback", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLHandshakeCompleteCallback", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, handshakeCompleteCallbackClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, handshakeCompleteCallbackClass, handshakeCompleteCallbackClassWeak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, handshakeCompleteCallbackClass, handshakeCompleteCallbackMethod, "handshakeComplete", "(J[BLjava/lang/String;Ljava/lang/String;[B[[BJJ[BZ)V", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLTlsextServernameCallback", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLTlsextServernameCallback", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, servernameCallbackClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, servernameCallbackClass, servernameCallbackClassWeak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, servernameCallbackClass, servernameCallbackMethod, "selectCtx", "(JLjava/lang/String;)J", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLKeylogCallback", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLKeylogCallback", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, keylogCallbackClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, keylogCallbackClass, keylogCallbackClassWeak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, keylogCallbackClass, keylogCallbackMethod, "logKey", "(JLjava/lang/String;)V", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLSessionCallback", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLSessionCallback", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sessionCallbackClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sessionCallbackClass, sessionCallbackClassWeak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, sessionCallbackClass, sessionCallbackMethod, "newSession", "(JJJ[BZ[B)V", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/incubator/codec/quic/BoringSSLSessionTicketCallback", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/BoringSSLSessionTicketCallback", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, sessionTicketCallbackClassWeak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, sessionTicketCallbackClass, sessionTicketCallbackClassWeak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, sessionTicketCallbackClass, sessionTicketCallbackMethod, "findSessionTicket", "([B)[B", done);

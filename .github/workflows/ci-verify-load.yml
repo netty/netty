@@ -93,4 +93,4 @@ jobs:
 
           # Check if we can load the native code on aarch64
           run: |
-            .github/scripts/check_load_native.sh /root/jars io.netty.incubator.codec.quic.Quic ensureAvailability
+            .github/scripts/check_load_native.sh /root/jars io.netty.codec.quic.Quic ensureAvailability
