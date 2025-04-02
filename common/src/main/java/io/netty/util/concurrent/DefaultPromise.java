@@ -24,6 +24,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -33,11 +34,22 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
+    /**
+     * System property with integer type value, that determine the max reentrancy/recursion level for when
+     * listener notifications prompt other listeners to be notified.
+     * <p>
+     * When the reentrancy/recursion level becomes greater than this number, a new task will instead be scheduled
+     * on the event loop, to finish notifying any subsequent listners.
+     * <p>
+     * The default value is {@code 8}.
+     */
+    public static final String PROPERTY_MAX_LISTENER_STACK_DEPTH = "io.netty.defaultPromise.maxListenerStackDepth";
+
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultPromise.class);
     private static final InternalLogger rejectedExecutionLogger =
             InternalLoggerFactory.getInstance(DefaultPromise.class.getName() + ".rejectedExecution");
     private static final int MAX_LISTENER_STACK_DEPTH = Math.min(8,
-            SystemPropertyUtil.getInt("io.netty.defaultPromise.maxListenerStackDepth", 8));
+            SystemPropertyUtil.getInt(PROPERTY_MAX_LISTENER_STACK_DEPTH, 8));
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultPromise, Object> RESULT_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(DefaultPromise.class, Object.class, "result");
@@ -49,10 +61,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     private volatile Object result;
     private final EventExecutor executor;
+
     /**
      * One or more listeners. Can be a {@link GenericFutureListener} or a {@link DefaultFutureListeners}.
      * If {@code null}, it means either 1) no listeners were added yet or 2) all listeners were notified.
-     *
+     * <p>
      * Threading - synchronized(this). We must support adding listeners when there is no EventExecutor.
      */
     private GenericFutureListener<? extends Future<?>> listener;
@@ -70,7 +83,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     /**
      * Creates a new instance.
-     *
+     * <p>
      * It is preferable to use {@link EventExecutor#newPromise()} to create a new promise
      *
      * @param executor
@@ -668,6 +681,9 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return;
         }
 
+        if (!(cause instanceof CancellationException) && cause.getSuppressed().length == 0) {
+            cause.addSuppressed(new CompletionException("Rethrowing promise failure cause", null));
+        }
         PlatformDependent.throwException(cause);
     }
 
