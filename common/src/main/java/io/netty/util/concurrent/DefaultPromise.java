@@ -681,8 +681,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
             return;
         }
 
-        if (!(cause instanceof CancellationException) && cause.getSuppressed().length == 0) {
-            cause.addSuppressed(new CompletionException("Rethrowing promise failure cause", null));
+        if (!(cause instanceof CancellationException) && ThrowableUtil.getSuppressed(cause).length == 0) {
+            ThrowableUtil.addSuppressed(cause, new RuntimeException("Rethrowing promise failure cause"));
         }
         PlatformDependent.throwException(cause);
     }
