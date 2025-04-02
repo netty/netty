@@ -13,11 +13,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 # ----------------------------------------------------------------------------
-# For most projects, this workflow file will not need changing; you simply need
-# to commit it to your repository.
-#
-# You may wish to alter this file to override the set of languages analyzed,
-# or to provide custom queries or build logic.
 name: "CodeQL"
 
 on:
@@ -93,6 +88,12 @@ jobs:
       with:
         distribution: 'zulu'
         java-version: '11' # The JDK version to make available on the path.
+
+    #- run: |
+    #   make bootstrap
+    #   make release
+    - name: Install tools / libraries
+      run: sudo apt-get update && sudo apt-get -y install autoconf automake libtool make tar cmake perl ninja-build git cargo
 
     - name: Compile project
       run: ./mvnw -B -ntp clean package -DskipTests=true

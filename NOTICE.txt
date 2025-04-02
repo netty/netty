@@ -213,7 +213,7 @@ the HTTP/2 HPACK algorithm written by Twitter. It can be obtained at:
     * license/LICENSE.hpack.txt (Apache License 2.0)
   * HOMEPAGE:
     * https://github.com/twitter/hpack
-    
+
 This product contains a modified version of 'HPACK', a Java implementation of
 the HTTP/2 HPACK algorithm written by Cory Benfield. It can be obtained at:
 
@@ -262,3 +262,18 @@ decompression for Java., which can be obtained at:
     * license/LICENSE.brotli4j.txt (Apache License 2.0)
   * HOMEPAGE:
     * https://github.com/hyperxpro/Brotli4j
+
+This product is statically linked against Quiche.
+
+ * LICENSE:
+    * license/LICENSE.quiche.txt (BSD2)
+  * HOMEPAGE:
+    * https://github.com/cloudflare/quiche
+
+
+This product is statically linked against boringssl.
+
+  * LICENSE (Combination ISC and OpenSSL license)
+    * license/LICENSE.boringssl.txt (Combination ISC and OpenSSL license)
+  * HOMEPAGE:
+    * https://boringssl.googlesource.com/boringssl/
