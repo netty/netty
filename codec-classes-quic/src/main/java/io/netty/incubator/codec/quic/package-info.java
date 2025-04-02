@@ -19,3 +19,4 @@
 @NotNullByDefault
 package io.netty.incubator.codec.quic;
 
+import org.jetbrains.annotations.NotNullByDefault;
