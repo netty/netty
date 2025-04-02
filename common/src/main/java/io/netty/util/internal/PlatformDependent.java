@@ -28,6 +28,8 @@ import org.jctools.queues.atomic.MpscAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscChunkedAtomicArrayQueue;
 import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
+import org.jctools.queues.atomic.unpadded.MpscAtomicUnpaddedArrayQueue;
+import org.jctools.queues.unpadded.MpscUnpaddedArrayQueue;
 import org.jctools.util.Pow2;
 import org.jctools.util.UnsafeAccess;
 
@@ -237,9 +239,8 @@ public final class PlatformDependent {
                         if (file.exists()) {
                             BufferedReader reader = null;
                             try {
-                                reader = new BufferedReader(
-                                        new InputStreamReader(
-                                                new FileInputStream(file), CharsetUtil.UTF_8));
+                                reader = new BufferedReader(new InputStreamReader(
+                                        new BoundedInputStream(new FileInputStream(file)), CharsetUtil.UTF_8));
 
                                 String line;
                                 while ((line = reader.readLine()) != null) {
@@ -360,6 +361,14 @@ public final class PlatformDependent {
      */
     public static int javaVersion() {
         return PlatformDependent0.javaVersion();
+    }
+
+    /**
+     * @param thread The thread to be checked.
+     * @return {@code true} if this {@link Thread} is a virtual thread, {@code false} otherwise.
+     */
+    public static boolean isVirtualThread(Thread thread) {
+        return PlatformDependent0.isVirtualThread(thread);
     }
 
     /**
@@ -1090,6 +1099,15 @@ public final class PlatformDependent {
      */
     public static <T> Queue<T> newFixedMpscQueue(int capacity) {
         return hasUnsafe() ? new MpscArrayQueue<T>(capacity) : new MpscAtomicArrayQueue<T>(capacity);
+    }
+
+    /**
+     * Create a new un-padded {@link Queue} which is safe to use for multiple producers (different threads) and a single
+     * consumer (one thread!) with the given fixes {@code capacity}.<br>
+     * This should be preferred to {@link #newFixedMpscQueue(int)} when the queue is not to be heavily contended.
+     */
+    public static <T> Queue<T> newFixedMpscUnpaddedQueue(int capacity) {
+        return hasUnsafe() ? new MpscUnpaddedArrayQueue<T>(capacity) : new MpscAtomicUnpaddedArrayQueue<T>(capacity);
     }
 
     /**

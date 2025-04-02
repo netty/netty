@@ -51,10 +51,13 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.CertificateRevokedException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -156,6 +159,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final String[] protocols;
     final String endpointIdentificationAlgorithm;
     final boolean hasTLSv13Cipher;
+    final boolean hasTmpDhKeys;
 
     final boolean enableOcsp;
     final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
@@ -233,7 +237,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         OpenSslAsyncPrivateKeyMethod asyncPrivateKeyMethod = null;
         OpenSslCertificateCompressionConfig certCompressionConfig = null;
         Integer maxCertificateList = null;
-
+        Integer tmpDhKeyLength = null;
+        String[] groups = OpenSsl.NAMED_GROUPS;
         if (ctxOptions != null) {
             for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
                 SslContextOption<?> option = ctxOpt.getKey();
@@ -250,6 +255,15 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     certCompressionConfig = (OpenSslCertificateCompressionConfig) ctxOpt.getValue();
                 } else if (option == OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES) {
                     maxCertificateList = (Integer) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.TMP_DH_KEYLENGTH) {
+                    tmpDhKeyLength = (Integer) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.GROUPS) {
+                    String[] groupsArray = (String[]) ctxOpt.getValue();
+                    Set<String> groupsSet = new LinkedHashSet<String>(groupsArray.length);
+                    for (String group : groupsArray) {
+                        groupsSet.add(GroupsConverter.toOpenSsl(group));
+                    }
+                    groups = groupsSet.toArray(EmptyArrays.EMPTY_STRINGS);
                 } else {
                     logger.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
                             + ": " + ctxOpt.getKey());
@@ -372,8 +386,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             // See https://github.com/netty/netty-tcnative/issues/100
             SSLContext.setMode(ctx, SSLContext.getMode(ctx) | SSL.SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
-            if (DH_KEY_LENGTH != null) {
+            if (tmpDhKeyLength != null) {
+                SSLContext.setTmpDHLength(ctx, tmpDhKeyLength);
+                hasTmpDhKeys = true;
+            } else if (DH_KEY_LENGTH != null) {
                 SSLContext.setTmpDHLength(ctx, DH_KEY_LENGTH);
+                hasTmpDhKeys = true;
+            } else {
+                hasTmpDhKeys = false;
             }
 
             List<String> nextProtoList = apn.protocols();
@@ -433,8 +453,17 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             if (maxCertificateList != null) {
                 SSLContext.setMaxCertList(ctx, maxCertificateList);
             }
-            // Set the curves.
-            SSLContext.setCurvesList(ctx, OpenSsl.NAMED_GROUPS);
+
+            // Set the curves / groups if anything is configured.
+            if (groups.length > 0 && !SSLContext.setCurvesList(ctx, groups)) {
+                String msg = "failed to set curves / groups suite: " + Arrays.toString(groups);
+                int err = SSL.getLastErrorNumber();
+                if (err != 0) {
+                    // We have some more details about why the operations failed, include these into the message.
+                    msg += ". " + SSL.getErrorString(err);
+                }
+                throw new SSLException(msg);
+            }
             success = true;
         } finally {
             if (!success) {

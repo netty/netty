@@ -23,6 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.mqtt.MqttReasonCodes.PubAck;
 import io.netty.util.Attribute;
 import io.netty.util.CharsetUtil;
@@ -1100,9 +1101,7 @@ public class MqttCodecTest {
         assertNull(message.payload());
         assertTrue(message.decoderResult().isFailure());
         Throwable cause = message.decoderResult().cause();
-        assertThat(cause, instanceOf(DecoderException.class));
-
-        assertTrue(cause.getMessage().contains("too large message:"));
+        assertThat(cause, instanceOf(TooLongFrameException.class));
     }
 
     private static void validatePubReplyVariableHeader(

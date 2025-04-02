@@ -569,11 +569,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                     ranTasks = runAllTasks(0); // This will run the minimum number of tasks
                 }
 
-                if (ranTasks || strategy > 0) {
-                    if (selectCnt > MIN_PREMATURE_SELECTOR_RETURNS && logger.isDebugEnabled()) {
-                        logger.debug("Selector.select() returned prematurely {} times in a row for Selector {}.",
-                                selectCnt - 1, selector);
-                    }
+                if (selectReturnPrematurely(selectCnt, ranTasks, strategy)) {
                     selectCnt = 0;
                 } else if (unexpectedSelectorWakeup(selectCnt)) { // Unexpected wakeup (unusual case)
                     selectCnt = 0;
@@ -604,6 +600,18 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 }
             }
         }
+    }
+
+    // returns true if selectCnt should be reset
+    private boolean selectReturnPrematurely(int selectCnt, boolean ranTasks, int strategy) {
+        if (ranTasks || strategy > 0) {
+            if (selectCnt > MIN_PREMATURE_SELECTOR_RETURNS && logger.isDebugEnabled()) {
+                logger.debug("Selector.select() returned prematurely {} times in a row for Selector {}.",
+                    selectCnt - 1, selector);
+            }
+            return true;
+        }
+        return false;
     }
 
     // returns true if selectCnt should be reset

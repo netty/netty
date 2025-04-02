@@ -97,12 +97,12 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
             frameSize <<= 7;
             frameSize |= b & 0x7f;
             if (frameSize > maxFrameSize) {
-                throw new TooLongFrameException();
+                throw new TooLongFrameException("frame length exceeds " + maxFrameSize + ": " + frameSize);
             }
             lengthFieldSize++;
             if (lengthFieldSize > 8) {
                 // Perhaps a malicious peer?
-                throw new TooLongFrameException();
+                throw new TooLongFrameException("frame length field size exceeds 8: " + lengthFieldSize);
             }
         } while ((b & 0x80) == 0x80);
 
@@ -122,7 +122,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
             // Frame delimiter (0xFF) not found
             if (rbytes > maxFrameSize) {
                 // Frame length exceeded the maximum
-                throw new TooLongFrameException();
+                throw new TooLongFrameException("frame length exceeds " + maxFrameSize + ": " + rbytes);
             } else {
                 // Wait until more data is received
                 return null;
@@ -131,7 +131,7 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
 
         int frameSize = delimPos - ridx;
         if (frameSize > maxFrameSize) {
-            throw new TooLongFrameException();
+            throw new TooLongFrameException("frame length exceeds " + maxFrameSize + ": " + frameSize);
         }
 
         ByteBuf binaryData = readBytes(ctx.alloc(), buffer, frameSize);

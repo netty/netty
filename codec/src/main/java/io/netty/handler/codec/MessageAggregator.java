@@ -460,12 +460,12 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
         }
     }
 
-    private void releaseCurrentMessage() {
+    protected final void releaseCurrentMessage() {
         if (currentMessage != null) {
             currentMessage.release();
             currentMessage = null;
-            handlingOversizedMessage = false;
-            aggregating = false;
         }
+        handlingOversizedMessage = false;
+        aggregating = false;
     }
 }

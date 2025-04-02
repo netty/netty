@@ -40,6 +40,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -106,6 +107,34 @@ public class HttpResponseDecoderTest {
 
         assertFalse(ch.finish());
         assertNull(ch.readInbound());
+    }
+
+    @Test
+    void testTotalHeaderLimit() throws Exception {
+        String requestStr = "HTTP/1.1 200 OK\r\n" +
+                "Server: X\r\n" + // 9 content bytes
+                "a1: b\r\n" +     // + 5 = 14 bytes,
+                "a2: b\r\n\r\n";  // + 5 = 19 bytes
+
+        // Decoding with a max header size of 18 bytes must fail:
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpResponseDecoder(1024, 18, 1024));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpResponse response = channel.readInbound();
+        assertTrue(response.decoderResult().isFailure());
+        assertInstanceOf(TooLongHttpHeaderException.class, response.decoderResult().cause());
+        assertFalse(channel.finish());
+
+        // Decoding with a max header size of 19 must pass:
+        channel = new EmbeddedChannel(new HttpResponseDecoder(1024, 19, 1024));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        response = channel.readInbound();
+        assertTrue(response.decoderResult().isSuccess());
+        assertEquals("X", response.headers().get("Server"));
+        assertEquals("b", response.headers().get("a1"));
+        assertEquals("b", response.headers().get("a2"));
+        channel.close();
+        assertEquals(LastHttpContent.EMPTY_LAST_CONTENT, channel.readInbound());
+        assertFalse(channel.finish());
     }
 
     @Test

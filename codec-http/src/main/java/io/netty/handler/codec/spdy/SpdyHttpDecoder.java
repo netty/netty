@@ -131,7 +131,7 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
      */
     protected SpdyHttpDecoder(SpdyVersion version, int maxContentLength, Map<Integer,
             FullHttpMessage> messageMap, HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
-        spdyVersion = ObjectUtil.checkNotNull(version, "version").getVersion();
+        spdyVersion = ObjectUtil.checkNotNull(version, "version").version();
         this.maxContentLength = checkPositive(maxContentLength, "maxContentLength");
         this.messageMap = messageMap;
         this.headersFactory = headersFactory;
@@ -363,7 +363,8 @@ public class SpdyHttpDecoder extends MessageToMessageDecoder<SpdyFrame> {
             if (content.readableBytes() > maxContentLength - spdyDataFrame.content().readableBytes()) {
                 removeMessage(streamId);
                 throw new TooLongFrameException(
-                        "HTTP content length exceeded " + maxContentLength + " bytes.");
+                        "HTTP content length exceeded " + maxContentLength + " bytes: "
+                                + spdyDataFrame.content().readableBytes());
             }
 
             ByteBuf spdyDataFrameData = spdyDataFrame.content();

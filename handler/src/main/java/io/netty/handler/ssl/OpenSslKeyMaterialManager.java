@@ -60,9 +60,11 @@ final class OpenSslKeyMaterialManager {
     }
 
     private final OpenSslKeyMaterialProvider provider;
+    private final boolean hasTmpDhKeys;
 
-    OpenSslKeyMaterialManager(OpenSslKeyMaterialProvider provider) {
+    OpenSslKeyMaterialManager(OpenSslKeyMaterialProvider provider, boolean hasTmpDhKeys) {
         this.provider = provider;
+        this.hasTmpDhKeys = hasTmpDhKeys;
     }
 
     void setKeyMaterialServerSide(ReferenceCountedOpenSslEngine engine) throws SSLException {
@@ -85,6 +87,10 @@ final class OpenSslKeyMaterialManager {
                     return;
                 }
             }
+        }
+        if (hasTmpDhKeys && authMethods.length == 1 &&
+                ("DH_anon".equals(authMethods[0]) || "ECDH_anon".equals(authMethods[0]))) {
+            return; // These auth methods don't require certificates.
         }
         throw new SSLHandshakeException("Unable to find key material for auth method(s): "
                 + Arrays.toString(authMethods));

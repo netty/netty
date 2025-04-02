@@ -15,6 +15,7 @@
  */
 package io.netty.util.internal;
 
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import sun.misc.Unsafe;
@@ -30,7 +31,6 @@ import java.security.PrivilegedAction;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 /**
  * The {@link PlatformDependent} operations which requires access to {@code sun.misc.*}.
  */
@@ -45,11 +45,11 @@ final class PlatformDependent0 {
     private static final long LONG_ARRAY_BASE_OFFSET;
     private static final long LONG_ARRAY_INDEX_SCALE;
     private static final Constructor<?> DIRECT_BUFFER_CONSTRUCTOR;
-    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final Method ALLOCATE_ARRAY_METHOD;
     private static final Method ALIGN_SLICE;
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
+    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final boolean STORE_FENCE_AVAILABLE;
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
@@ -61,6 +61,11 @@ final class PlatformDependent0 {
             "org.graalvm.nativeimage.imagecode");
 
     private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
+
+    // Package-private for testing.
+    static final Method IS_VIRTUAL_THREAD_METHOD = getIsVirtualThreadMethod();
+    // Package-private for testing.
+    static final Class<?> BASE_VIRTUAL_THREAD_CLASS = getBaseVirtualThreadClass();
 
     static final Unsafe UNSAFE;
 
@@ -541,6 +546,67 @@ final class PlatformDependent0 {
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
     }
 
+    private static Method getIsVirtualThreadMethod() {
+        try {
+            Method isVirtualMethod = Thread.class.getMethod("isVirtual");
+            // Call once to make sure the invocation works.
+            boolean isVirtual = (Boolean) isVirtualMethod.invoke(Thread.currentThread());
+            return isVirtualMethod;
+        } catch (Throwable e) {
+            if (logger.isTraceEnabled()) {
+                logger.debug("Thread.isVirtual() is not available: ", e);
+            } else {
+                logger.debug("Thread.isVirtual() is not available: ", e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    private static Class<?> getBaseVirtualThreadClass() {
+        try {
+            return Class.forName("java.lang.BaseVirtualThread", false, getSystemClassLoader());
+        } catch (Throwable e) {
+            if (logger.isTraceEnabled()) {
+                logger.debug("java.lang.BaseVirtualThread is not available: ", e);
+            } else {
+                logger.debug("java.lang.BaseVirtualThread is not available: ", e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
+     * @param thread The thread to be checked.
+     * @return {@code true} if this {@link Thread} is a virtual thread, {@code false} otherwise.
+     */
+    static boolean isVirtualThread(Thread thread) {
+        // Quick exclusion:
+        if (thread == null || IS_VIRTUAL_THREAD_METHOD == null) {
+            return false;
+        }
+        // Try fast check:
+        if (BASE_VIRTUAL_THREAD_CLASS != null) {
+            return BASE_VIRTUAL_THREAD_CLASS.isInstance(thread);
+        }
+        if (thread instanceof FastThreadLocalThread) {
+            return false;
+        }
+        Class<?> clazz = thread.getClass();
+        // Common cases:
+        if (clazz == Thread.class || clazz.getSuperclass() == Thread.class) {
+            return false;
+        }
+        try {
+            return (Boolean) IS_VIRTUAL_THREAD_METHOD.invoke(thread);
+        } catch (Throwable t) {
+            // Should not happen.
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
+            throw new Error(t);
+        }
+    }
+
     private static boolean unsafeStaticFieldOffsetSupported() {
         return !RUNNING_IN_NATIVE_IMAGE;
     }
@@ -550,19 +616,27 @@ final class PlatformDependent0 {
     }
 
     private static Throwable explicitNoUnsafeCause0() {
+        boolean explicitProperty = SystemPropertyUtil.contains("io.netty.noUnsafe");
         boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
         logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
 
         // See JDK 23 JEP 471 https://openjdk.org/jeps/471 and sun.misc.Unsafe.beforeMemoryAccess() on JDK 23+.
-        String unsafeMemoryAccess = SystemPropertyUtil.get("sun.misc.unsafe.memory.access", "<unspecified>");
-        if (!("allow".equals(unsafeMemoryAccess) || "<unspecified>".equals(unsafeMemoryAccess))) {
-            logger.debug("--sun-misc-unsafe-memory-access={}", unsafeMemoryAccess);
+        // And JDK 24 JEP 498 https://openjdk.org/jeps/498, that enable warnings by default.
+        String reason = "io.netty.noUnsafe";
+        String unspecified = "<unspecified>";
+        String unsafeMemoryAccess = SystemPropertyUtil.get("sun.misc.unsafe.memory.access", unspecified);
+        if (!explicitProperty && unspecified.equals(unsafeMemoryAccess) && javaVersion() >= 24) {
+            reason = "io.netty.noUnsafe=true by default on Java 24+";
+            noUnsafe = true;
+        } else if (!("allow".equals(unsafeMemoryAccess) || unspecified.equals(unsafeMemoryAccess))) {
+            reason = "--sun-misc-unsafe-memory-access=" + unsafeMemoryAccess;
             noUnsafe = true;
         }
 
         if (noUnsafe) {
-            logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
-            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
+            String msg = "sun.misc.Unsafe: unavailable (" + reason + ')';
+            logger.debug(msg);
+            return new UnsupportedOperationException(msg);
         }
 
         // Legacy properties
@@ -574,7 +648,7 @@ final class PlatformDependent0 {
         }
 
         if (!SystemPropertyUtil.getBoolean(unsafePropName, true)) {
-            String msg = "sun.misc.Unsafe: unavailable (" + unsafePropName + ")";
+            String msg = "sun.misc.Unsafe: unavailable (" + unsafePropName + ')';
             logger.debug(msg);
             return new UnsupportedOperationException(msg);
         }

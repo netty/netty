@@ -42,13 +42,23 @@ import java.util.concurrent.TimeUnit;
 @Warmup(iterations = 5, time = 1)
 @Measurement(iterations = 8, time = 1)
 public class ByteBufLastIndexOfBenchmark extends AbstractMicrobenchmark {
-    @Param({ "7", "16", "23", "32" })
+    @Param({
+            "7",
+            "16",
+            "23",
+            "32",
+    })
     int size;
 
-    @Param({ "4", "11" })
+    @Param({
+            "4",
+            "11",
+    })
     int logPermutations;
 
-    @Param({ "1" })
+    @Param({
+            "1",
+    })
     int seed;
 
     int permutations;
@@ -57,16 +67,27 @@ public class ByteBufLastIndexOfBenchmark extends AbstractMicrobenchmark {
 
     private int i;
 
-    @Param({ "0" })
+    @Param({
+            "0",
+    })
     private byte needleByte;
 
-    @Param({ "true", "false" })
+    @Param({
+            "true",
+            "false",
+    })
     private boolean direct;
 
-    @Param({ "false", "true" })
+    @Param({
+            "true",
+            "false",
+    })
     private boolean noUnsafe;
 
-    @Param({ "false", "true" })
+    @Param({
+            "true",
+            "false",
+    })
     private boolean pooled;
 
     @Setup(Level.Trial)

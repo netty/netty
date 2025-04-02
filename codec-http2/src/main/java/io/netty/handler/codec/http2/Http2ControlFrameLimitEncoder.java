@@ -95,8 +95,8 @@ final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncod
                 limitReached = true;
                 Http2Exception exception = Http2Exception.connectionError(Http2Error.ENHANCE_YOUR_CALM,
                         "Maximum number %d of outstanding control frames reached", maxOutstandingControlFrames);
-                logger.info("Maximum number {} of outstanding control frames reached. Closing channel {}",
-                        maxOutstandingControlFrames, ctx.channel(), exception);
+                logger.info("{} Maximum number {} of outstanding control frames reached, closing channel.",
+                        ctx.channel(), maxOutstandingControlFrames, exception);
 
                 // First notify the Http2LifecycleManager and then close the connection.
                 lifecycleManager.onError(ctx, true, exception);

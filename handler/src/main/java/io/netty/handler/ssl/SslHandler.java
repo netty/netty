@@ -51,6 +51,13 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
+import javax.net.ssl.SSLEngineResult.Status;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -63,14 +70,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
-
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLEngineResult.HandshakeStatus;
-import javax.net.ssl.SSLEngineResult.Status;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLSession;
 
 import static io.netty.handler.ssl.SslUtils.NOT_ENOUGH_DATA;
 import static io.netty.handler.ssl.SslUtils.getEncryptedPacketLength;
@@ -852,27 +851,39 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
                 SSLEngineResult result;
 
-                if (buf.readableBytes() > MAX_PLAINTEXT_LENGTH) {
-                    // If we pulled a buffer larger than the supported packet size, we can slice it up and iteratively,
-                    // encrypting multiple packets into a single larger buffer. This substantially saves on allocations
-                    // for large responses. Here we estimate how large of a buffer we need. If we overestimate a bit,
-                    // that's fine. If we underestimate, we'll simply re-enqueue the remaining buffer and get it on the
-                    // next outer loop.
-                    int readableBytes = buf.readableBytes();
-                    int numPackets = readableBytes / MAX_PLAINTEXT_LENGTH;
-                    if (readableBytes % MAX_PLAINTEXT_LENGTH != 0) {
-                        numPackets += 1;
-                    }
+                try {
+                    if (buf.readableBytes() > MAX_PLAINTEXT_LENGTH) {
+                        // If we pulled a buffer larger than the supported packet size, we can slice it up and
+                        // iteratively, encrypting multiple packets into a single larger buffer. This substantially
+                        // saves on allocations for large responses. Here we estimate how large of a buffer we need.
+                        // If we overestimate a bit, that's fine. If we underestimate, we'll simply re-enqueue the
+                        // remaining buffer and get it on the next outer loop.
+                        int readableBytes = buf.readableBytes();
+                        int numPackets = readableBytes / MAX_PLAINTEXT_LENGTH;
+                        if (readableBytes % MAX_PLAINTEXT_LENGTH != 0) {
+                            numPackets += 1;
+                        }
 
-                    if (out == null) {
-                        out = allocateOutNetBuf(ctx, readableBytes, buf.nioBufferCount() + numPackets);
+                        if (out == null) {
+                            out = allocateOutNetBuf(ctx, readableBytes, buf.nioBufferCount() + numPackets);
+                        }
+                        result = wrapMultiple(alloc, engine, buf, out);
+                    } else {
+                        if (out == null) {
+                            out = allocateOutNetBuf(ctx, buf.readableBytes(), buf.nioBufferCount());
+                        }
+                        result = wrap(alloc, engine, buf, out);
                     }
-                    result = wrapMultiple(alloc, engine, buf, out);
-                } else {
-                    if (out == null) {
-                        out = allocateOutNetBuf(ctx, buf.readableBytes(), buf.nioBufferCount());
-                    }
-                    result = wrap(alloc, engine, buf, out);
+                } catch (SSLException e) {
+                    // Either wrapMultiple(...) or wrap(...) did throw. In this case we need to release the buffer
+                    // that we removed from pendingUnencryptedWrites before failing the promise and rethrowing it.
+                    // Failing to do so would result in a buffer leak.
+                    // See https://github.com/netty/netty/issues/14644
+                    //
+                    // We don't need to release out here as this is done in a finally block already.
+                    buf.release();
+                    promise.setFailure(e);
+                    throw e;
                 }
 
                 if (buf.isReadable()) {
@@ -1364,9 +1375,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         this.packetLength = 0;
         try {
             final int bytesConsumed = unwrap(ctx, in, packetLength);
-            assert bytesConsumed == packetLength || engine.isInboundDone() :
-                    "we feed the SSLEngine a packets worth of data: " + packetLength + " but it only consumed: " +
-                            bytesConsumed;
+            if (bytesConsumed != packetLength && !engine.isInboundDone()) {
+                // The JDK equivalent of getEncryptedPacketLength has some optimizations and can behave slightly
+                // differently to ours, but this should always be a sign of bad input data.
+                throw new NotSslRecordException();
+            }
         } catch (Throwable cause) {
             handleUnwrapThrowable(ctx, cause);
         }
@@ -1488,7 +1501,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (handshakeStatus == HandshakeStatus.FINISHED || handshakeStatus == HandshakeStatus.NOT_HANDSHAKING) {
                     wrapLater |= (decodeOut.isReadable() ?
                             setHandshakeSuccessUnwrapMarkReentry() : setHandshakeSuccess()) ||
-                            handshakeStatus == HandshakeStatus.FINISHED || !pendingUnencryptedWrites.isEmpty();
+                            handshakeStatus == HandshakeStatus.FINISHED ||
+                            // We need to check if pendingUnecryptedWrites is null as the SslHandler
+                            // might have been removed in the meantime.
+                            (pendingUnencryptedWrites != null  && !pendingUnencryptedWrites.isEmpty());
                 }
 
                 // Dispatch decoded data after we have notified of handshake success. If this method has been invoked

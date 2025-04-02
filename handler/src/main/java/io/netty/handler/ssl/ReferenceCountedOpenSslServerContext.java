@@ -135,7 +135,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                     keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
 
                     SSLContext.setCertificateCallback(ctx, new OpenSslServerCertificateCallback(
-                            engineMap, new OpenSslKeyMaterialManager(keyMaterialProvider)));
+                            engineMap, new OpenSslKeyMaterialManager(keyMaterialProvider, thiz.hasTmpDhKeys)));
                 }
             } catch (Exception e) {
                 throw new SSLException("failed to set certificate and key", e);
@@ -167,7 +167,12 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                     try {
                         bio = toBIO(ByteBufAllocator.DEFAULT, issuers);
                         if (!SSLContext.setCACertificateBio(ctx, bio)) {
-                            throw new SSLException("unable to setup accepted issuers for trustmanager " + manager);
+                            String msg = "unable to setup accepted issuers for trustmanager " + manager;
+                            int error = SSL.getLastErrorNumber();
+                            if (error != 0) {
+                                msg += ". " + SSL.getErrorString(error);
+                            }
+                            throw new SSLException(msg);
                         }
                     } finally {
                         freeBio(bio);

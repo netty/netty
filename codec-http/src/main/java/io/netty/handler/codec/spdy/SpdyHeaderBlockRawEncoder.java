@@ -30,7 +30,7 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
     private final int version;
 
     public SpdyHeaderBlockRawEncoder(SpdyVersion version) {
-        this.version = ObjectUtil.checkNotNull(version, "version").getVersion();
+        this.version = ObjectUtil.checkNotNull(version, "version").version();
     }
 
     private static void setLengthField(ByteBuf buffer, int writerIndex, int length) {

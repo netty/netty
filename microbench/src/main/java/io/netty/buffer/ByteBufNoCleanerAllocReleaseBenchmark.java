@@ -29,7 +29,11 @@ import org.openjdk.jmh.annotations.Warmup;
 @Measurement(iterations = 10)
 public class ByteBufNoCleanerAllocReleaseBenchmark extends AbstractByteBufNoCleanerBenchmark {
 
-    @Param({ "64", "1024", "8192" })
+    @Param({
+            "64",
+            "1024",
+            "8192",
+    })
     public int initialCapacity;
 
     @Benchmark

@@ -3782,6 +3782,7 @@ public abstract class SSLEngineTest {
                 Certificate[] serverPeerCertificates = serverSession.getPeerCertificates();
                 assertEquals(1, serverPeerCertificates.length);
                 assertArrayEquals(clientLocalCertificates[0].getEncoded(), serverPeerCertificates[0].getEncoded());
+                additionalPeerAssertions(serverSession, mutualAuth);
 
                 try {
                     X509Certificate[] serverPeerX509Certificates = serverSession.getPeerCertificateChain();
@@ -3808,6 +3809,8 @@ public abstract class SSLEngineTest {
                 } catch (SSLPeerUnverifiedException expected) {
                     // As we did not use mutual auth this is expected
                 }
+
+                additionalPeerAssertions(serverSession, mutualAuth);
 
                 try {
                     serverSession.getPeerCertificateChain();
@@ -3845,6 +3848,10 @@ public abstract class SSLEngineTest {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
         }
+    }
+
+    protected void additionalPeerAssertions(final SSLSession sslSession, final boolean mutualAuth) {
+        // noop
     }
 
     @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
@@ -4768,7 +4775,7 @@ public abstract class SSLEngineTest {
 
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
             fail();
-        } catch (SSLHandshakeException expected) {
+        } catch (SSLException expected) {
             // Expected
         } finally {
             cleanupClientSslEngine(clientEngine);

@@ -24,6 +24,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
@@ -41,6 +42,7 @@ import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -49,6 +51,7 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -790,7 +793,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             //
             // See:
             // https://github.com/netty/netty/issues/4435
-            invokeLater(new Runnable() {
+            invokeLater(promise.channel(), new Runnable() {
                 @Override
                 public void run() {
                     if (fireChannelInactive) {
@@ -809,11 +812,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         private void safeSetSuccess(ChannelPromise promise) {
             if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
-                logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
+                logger.warn("{} Failed to mark a promise as success because it is done already: {}",
+                        promise.channel(), promise);
             }
         }
 
-        private void invokeLater(Runnable task) {
+        private void invokeLater(Channel channel, Runnable task) {
             try {
                 // This method is used by outbound operation implementations to trigger an inbound event later.
                 // They do not trigger an inbound event immediately because an outbound operation might have been
@@ -828,7 +832,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 // which means the execution of two inbound handler methods of the same handler overlap undesirably.
                 eventLoop().execute(task);
             } catch (RejectedExecutionException e) {
-                logger.warn("Can't invoke task later as EventLoop rejected it", e);
+                logger.warn("{} Can't invoke task later as EventLoop rejected it", channel, e);
             }
         }
 
@@ -905,24 +909,19 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             readEOS = true;
         }
 
-        private void updateLocalWindowIfNeeded() {
-            if (flowControlledBytes != 0 && !parentContext().isRemoved()) {
+        private boolean updateLocalWindowIfNeeded() {
+            if (flowControlledBytes != 0 && !parentContext().isRemoved() && config.autoStreamFlowControl) {
                 int bytes = flowControlledBytes;
                 flowControlledBytes = 0;
-                ChannelFuture future = write0(parentContext(), new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
-                // window update frames are commonly swallowed by the Http2FrameCodec and the promise is synchronously
-                // completed but the flow controller _may_ have generated a wire level WINDOW_UPDATE. Therefore we need,
-                // to assume there was a write done that needs to be flushed or we risk flow control starvation.
-                writeDoneAndNoFlush = true;
-                // Add a listener which will notify and teardown the stream
-                // when a window update fails if needed or check the result of the future directly if it was completed
-                // already.
-                // See https://github.com/netty/netty/issues/9663
-                if (future.isDone()) {
-                    windowUpdateFrameWriteComplete(future, AbstractHttp2StreamChannel.this);
-                } else {
-                    future.addListener(windowUpdateFrameWriteListener);
-                }
+                writeWindowUpdateFrame(new DefaultHttp2WindowUpdateFrame(bytes).stream(stream));
+                return true;
+            }
+            return false;
+        }
+
+        void updateLocalWindowIfNeededAndFlush() {
+            if (updateLocalWindowIfNeeded()) {
+                flush();
             }
         }
 
@@ -981,6 +980,24 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             pipeline().fireChannelRead(frame);
         }
 
+        private ChannelFuture writeWindowUpdateFrame(Http2WindowUpdateFrame windowUpdateFrame) {
+            ChannelFuture future = write0(parentContext(), windowUpdateFrame);
+            // window update frames are commonly swallowed by the Http2FrameCodec and the promise is synchronously
+            // completed but the flow controller _may_ have generated a wire level WINDOW_UPDATE. Therefore we need,
+            // to assume there was a write done that needs to be flushed or we risk flow control starvation.
+            writeDoneAndNoFlush = true;
+            // Add a listener which will notify and teardown the stream
+            // when a window update fails if needed or check the result of the future directly if it was completed
+            // already.
+            // See https://github.com/netty/netty/issues/9663
+            if (future.isDone()) {
+                windowUpdateFrameWriteComplete(future, AbstractHttp2StreamChannel.this);
+            } else {
+                future.addListener(windowUpdateFrameWriteListener);
+            }
+            return future;
+        }
+
         @Override
         public void write(Object msg, final ChannelPromise promise) {
             // After this point its not possible to cancel a write anymore.
@@ -1000,7 +1017,42 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             try {
                 if (msg instanceof Http2StreamFrame) {
                     Http2StreamFrame frame = validateStreamFrame((Http2StreamFrame) msg).stream(stream());
-                    writeHttp2StreamFrame(frame, promise);
+                    if (msg instanceof Http2WindowUpdateFrame) {
+                        Http2WindowUpdateFrame updateFrame = (Http2WindowUpdateFrame) msg;
+                        if (config.autoStreamFlowControl) {
+                            ReferenceCountUtil.release(msg);
+                            promise.setFailure(new UnsupportedOperationException(
+                                    Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL + " is set to false"));
+                            return;
+                        }
+                        try {
+                            ObjectUtil.checkInRange(updateFrame.windowSizeIncrement(), 0,
+                                    flowControlledBytes, "windowSizeIncrement");
+                        } catch (RuntimeException e) {
+                            ReferenceCountUtil.release(updateFrame);
+                            promise.setFailure(e);
+                            return;
+                        }
+                        flowControlledBytes -= updateFrame.windowSizeIncrement();
+                        if (parentContext().isRemoved()) {
+                            ReferenceCountUtil.release(msg);
+                            promise.setFailure(new ClosedChannelException());
+                            return;
+                        }
+                        ChannelFuture f = writeWindowUpdateFrame(updateFrame);
+                        if (f.isDone()) {
+                            writeComplete(f, promise);
+                        } else {
+                            f.addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture future) {
+                                    writeComplete(future, promise);
+                                }
+                            });
+                        }
+                    } else {
+                        writeHttp2StreamFrame(frame, promise);
+                    }
                 } else {
                     String msgStr = msg.toString();
                     ReferenceCountUtil.release(msg);
@@ -1151,6 +1203,8 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
      * changes.
      */
     private static final class Http2StreamChannelConfig extends DefaultChannelConfig {
+
+        volatile boolean autoStreamFlowControl = true;
         Http2StreamChannelConfig(Channel channel) {
             super(channel);
         }
@@ -1173,6 +1227,49 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             }
             super.setRecvByteBufAllocator(allocator);
             return this;
+        }
+
+        @Override
+        public Map<ChannelOption<?>, Object> getOptions() {
+            return getOptions(
+                    super.getOptions(),
+                    Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> T getOption(ChannelOption<T> option) {
+            if (option == Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL) {
+                return (T) Boolean.valueOf(autoStreamFlowControl);
+            }
+            return super.getOption(option);
+        }
+
+        @Override
+        public <T> boolean setOption(ChannelOption<T> option, T value) {
+            validate(option, value);
+            if (option == Http2StreamChannelOption.AUTO_STREAM_FLOW_CONTROL) {
+                boolean newValue = (Boolean) value;
+                boolean changed = newValue && !autoStreamFlowControl;
+                autoStreamFlowControl = (Boolean) value;
+                if (changed) {
+                    if (channel.isRegistered()) {
+                        final Http2ChannelUnsafe unsafe = (Http2ChannelUnsafe) channel.unsafe();
+                        if (channel.eventLoop().inEventLoop()) {
+                            unsafe.updateLocalWindowIfNeededAndFlush();
+                        } else {
+                            channel.eventLoop().execute(new Runnable() {
+                                @Override
+                                public void run() {
+                                    unsafe.updateLocalWindowIfNeededAndFlush();
+                                }
+                            });
+                        }
+                    }
+                }
+                return true;
+            }
+            return super.setOption(option, value);
         }
     }
 

@@ -56,6 +56,7 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.X509ExtendedKeyManager;
 
 import static io.netty.handler.ssl.OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES;
@@ -163,6 +164,13 @@ public class OpenSslEngineTest extends SSLEngineTest {
     public void testSupportedSignatureAlgorithms(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testSupportedSignatureAlgorithms(param);
+    }
+
+    @Override
+    protected void additionalPeerAssertions(SSLSession sslSession, boolean mutualAuth) {
+        if (sslSession instanceof OpenSslSession) {
+            assertEquals(mutualAuth, ((OpenSslSession) sslSession).hasPeerCertificates());
+        }
     }
 
     private static boolean isNpnSupported(String versionString) {
@@ -542,8 +550,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .build());
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                                        .sslProvider(sslServerProvider())
-                                        .build());
+                .sslProvider(sslServerProvider())
+                .option(OpenSslContextOption.TMP_DH_KEYLENGTH, 2048)
+                .build());
 
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1, "AES128-SHA");
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1, "ECDHE-RSA-AES128-SHA");
@@ -574,8 +583,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .build());
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                                        .sslProvider(sslServerProvider())
-                                        .build());
+                .sslProvider(sslServerProvider())
+                .option(OpenSslContextOption.TMP_DH_KEYLENGTH, 2048)
+                .build());
 
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1_1, "ECDHE-RSA-AES256-SHA");
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1_1, "AES256-SHA");
@@ -604,6 +614,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
+                .option(OpenSslContextOption.TMP_DH_KEYLENGTH, 2048)
                 .build());
 
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1_2, "AES128-SHA");
@@ -643,6 +654,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
+                .option(OpenSslContextOption.TMP_DH_KEYLENGTH, 2048)
                 .build());
 
         testWrapWithDifferentSizes(param, SslProtocols.SSL_v3, "ADH-AES128-SHA");

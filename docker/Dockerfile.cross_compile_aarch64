@@ -1,4 +1,4 @@
-FROM centos:7.6.1810
+FROM --platform=linux/amd64 centos:7.6.1810
 
 ARG gcc_version=10.2-2020.11
 ENV GCC_VERSION $gcc_version
