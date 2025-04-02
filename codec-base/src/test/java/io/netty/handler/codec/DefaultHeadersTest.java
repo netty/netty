@@ -578,7 +578,7 @@ public class DefaultHeadersTest {
         expected.add(of("name2"), of("value2"));
 
         headers1.setAll(headers2);
-        assertEquals(headers1, expected);
+        assertEquals(expected, headers1);
     }
 
     @Test

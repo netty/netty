@@ -281,29 +281,30 @@ public class DefaultHttp2Headers
             if (hasPseudoHeaderFormat(key)) {
                 if (head == null) {
                     head = this;
-                    after = this;
-                    before = this;
+                    tail = this;
                 } else {
                     if (firstNonPseudo == null) {
-                        after = head;
-                        before = head.before();
+                        ((Http2HeaderEntry) tail).after = this;
+                        before = tail;
+                        tail = this;
                     } else {
                         if (head == firstNonPseudo) {
                             head = this;
                         }
                         after = firstNonPseudo;
                         before = firstNonPseudo.before();
+                        ((Http2HeaderEntry) firstNonPseudo).before = this ;
                     }
                 }
             } else {
                 if (head == null) {
                     head = this;
+                    tail = this;
                     firstNonPseudo = this;
-                    after = this;
-                    before = this;
                 } else {
-                    after = head;
-                    before = head.before();
+                    ((Http2HeaderEntry) tail).after = this;
+                    before = tail;
+                    tail = this;
                     if (firstNonPseudo == null) {
                         firstNonPseudo = this;
                     }

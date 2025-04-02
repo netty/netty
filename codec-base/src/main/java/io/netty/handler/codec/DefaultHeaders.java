@@ -49,6 +49,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     private final HeaderEntry<K, V>[] entries;
     protected HeaderEntry<K, V> head;
+    protected HeaderEntry<K, V> tail;
 
     private final byte hashMask;
     private final ValueConverter<V> valueConverter;
@@ -316,12 +317,9 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             return Collections.emptySet();
         }
         Set<K> names = new LinkedHashSet<K>(size());
-        HeaderEntry<K, V> e = head;
-        do {
+        for (HeaderEntry<K, V> e = head; e != null; e = e.after) {
             names.add(e.getKey());
-            e = e.after;
         }
-        while (e != head);
         return names;
     }
 
@@ -440,25 +438,18 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             @SuppressWarnings("unchecked")
             final DefaultHeaders<? extends K, ? extends V, T> defaultHeaders =
                     (DefaultHeaders<? extends K, ? extends V, T>) headers;
-            HeaderEntry<? extends K, ? extends V> e = defaultHeaders.head;
-            if (e == null) {
-                return;
-            }
+            HeaderEntry<? extends K, ? extends V> e = defaultHeaders.tail;
             if (defaultHeaders.hashingStrategy == hashingStrategy &&
                     defaultHeaders.nameValidator == nameValidator) {
                 // Fastest copy
-                do {
+                for (e = defaultHeaders.head; e != null; e = e.after) {
                     add0(e.hash, index(e.hash), e.key, e.value);
-                    e = e.after;
                 }
-                while (e != defaultHeaders.head);
             } else {
                 // Fast copy
-                do {
+                for (e = defaultHeaders.head; e != null; e = e.after) {
                     add(e.key, e.value);
-                    e = e.after;
                 }
-                while (e != defaultHeaders.head);
             }
         } else {
             // Slow copy
@@ -639,7 +630,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public T clear() {
         Arrays.fill(entries, null);
-        head = null;
+        head = tail = null;
         size = 0;
         return thisT();
     }
@@ -1300,7 +1291,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             }
             HeaderEntry<K, V> e = current;
             HeaderEntry<K, V> next = e.after;
-            current = next == head ? null : next;
+            current = next;
             return e;
         }
 
@@ -1389,12 +1380,12 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             HeaderEntry<K, V> head = headers.head;
             if (head == null) {
                 headers.head = this;
-                after = this;
-                before = this;
+                headers.tail = this;
             } else {
-                after = head;
-                before = head.before;
-                pointNeighborsToThis();
+                HeaderEntry<K, V> tail = headers.tail;
+                headers.tail = this;
+                tail.after = this;
+                before = tail;
             }
         }
 
@@ -1405,8 +1396,12 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         }
 
         protected final void pointNeighborsToThis() {
-            before.after = this;
-            after.before = this;
+            if (before != null) {
+                before.after = this;
+            }
+            if (after != null) {
+                after.before = this;
+            }
         }
 
         public final HeaderEntry<K, V> before() {
@@ -1418,15 +1413,18 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         }
 
         protected void remove(DefaultHeaders<K, V, ?> headers) {
-            if (this == headers.head) {
-                if (headers.head.after == headers.head) {
-                    headers.head = null;
-                } else {
-                    headers.head = headers.head.after;
-                }
+            if (before == null) {
+                headers.head = after;
+            } else {
+                before.after = after;
             }
-            before.after = after;
-            after.before = before;
+            if (after == null) {
+                headers.tail = before;
+            } else {
+                after.before = before;
+            }
+            before = null;
+            after = null;
         }
 
         @Override
