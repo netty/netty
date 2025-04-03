@@ -212,6 +212,15 @@
         <extraLdflags>-static-libstdc++ -l:libstdc++.a -Wl,--strip-debug -Wl,--exclude-libs,ALL -Wl,-lrt</extraLdflags>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=${os.detected.arch}</bundleNativeCode>
       </properties>
+      <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
     </profile>
     <profile>
       <id>android-armeabi-v7a</id>
@@ -1174,25 +1183,9 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-transport-native-epoll</artifactId>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-classes-epoll</artifactId>
       <version>${project.version}</version>
-      <classifier>${jni.classifier}</classifier>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-api</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-params</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -1207,20 +1200,10 @@
       <version>${netty.build.version}</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <scope>test</scope>
-    </dependency>
     <!-- Also include bouncycastle so we can use SelfSignedCertificate even on more recent JDKs during testing -->
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk18on</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
