@@ -43,7 +43,8 @@ public class IoUringAutoReadTest {
     @Test
     @Timeout(value = 1, unit = TimeUnit.MINUTES)
     public void testLateAutoRead() throws Exception {
-        try (IoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory())) {
+        IoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
+        try {
             ServerSocketChannel server = (ServerSocketChannel) new ServerBootstrap()
                     .group(group)
                     .channel(IoUringServerSocketChannel.class)
@@ -73,6 +74,8 @@ public class IoUringAutoReadTest {
                 out.flush();
                 Assertions.assertEquals(2, in.read());
             }
+        } finally {
+            group.shutdownGracefully();
         }
     }
 }
