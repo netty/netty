@@ -538,8 +538,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                     if (useCacheForAllThreads ||
                             // If the current thread is a FastThreadLocalThread we will always use the cache
                             current instanceof FastThreadLocalThread ||
-                            // The Thread is used by an EventExecutor, let's use the cache as the chances are good that we
-                            // will allocate a lot!
+                            // The Thread is used by an EventExecutor,
+                            // let's use the cache as the chances are good that we will allocate a lot!
                             executor != null) {
                         final PoolThreadCache cache = new PoolThreadCache(
                                 heapArena, directArena, smallCacheSize, normalCacheSize,
