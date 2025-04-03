@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static io.netty.buffer.PoolChunk.isSubpage;
+import static io.netty.buffer.PooledByteBufAllocator.ARENA_BUFFER_QUEUE_CAPACITY_FOR_VIRTUAL_THREAD;
 import static java.lang.Math.max;
 
 abstract class PoolArena<T> implements PoolArenaMetric {
@@ -79,9 +80,6 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private final ReentrantLock lock = new ReentrantLock();
 
     final SizeClasses sizeClass;
-
-    private static final int ARENA_BUFFER_QUEUE_CAPACITY = Math.max(SystemPropertyUtil.getInt(
-            "io.netty.allocator.arenaBufferQueueCapacity", 1024), 2);
 
     protected PoolArena(PooledByteBufAllocator parent, SizeClasses sizeClass) {
         assert null != sizeClass;
@@ -633,8 +631,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         HeapArena(PooledByteBufAllocator parent, SizeClasses sizeClass) {
             super(parent, sizeClass);
             lastDestroyedChunk = new AtomicReference<PoolChunk<byte[]>>();
-            // Virtual-thread not available, so no need to create `bufferQueue`.
-            if (PlatformDependent.javaVersion() < 19) {
+            if (PlatformDependent.javaVersion() < 19 || ARENA_BUFFER_QUEUE_CAPACITY_FOR_VIRTUAL_THREAD <= 0) {
                 bufferQueue = null;
                 handle = new ObjectPool.Handle<PooledHeapByteBuf>() {
                     @Override
@@ -643,7 +640,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     }
                 };
             } else {
-                bufferQueue = PlatformDependent.newFixedMpmcQueue(ARENA_BUFFER_QUEUE_CAPACITY);
+                int qSize = Math.max(ARENA_BUFFER_QUEUE_CAPACITY_FOR_VIRTUAL_THREAD, 2);
+                bufferQueue = PlatformDependent.newFixedMpmcQueue(qSize);
                 handle = new ObjectPool.Handle<PooledHeapByteBuf>() {
                     @Override
                     public void recycle(PooledHeapByteBuf self) {
@@ -720,8 +718,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         DirectArena(PooledByteBufAllocator parent, SizeClasses sizeClass) {
             super(parent, sizeClass);
-            // Virtual-thread not available, so no need to create `bufferQueue`.
-            if (PlatformDependent.javaVersion() < 19) {
+            if (PlatformDependent.javaVersion() < 19 || ARENA_BUFFER_QUEUE_CAPACITY_FOR_VIRTUAL_THREAD <= 0) {
                 bufferQueue = null;
                 handle = new ObjectPool.Handle<PooledByteBuf<ByteBuffer>>() {
                     @Override
@@ -730,7 +727,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                     }
                 };
             } else {
-                bufferQueue = PlatformDependent.newFixedMpmcQueue(ARENA_BUFFER_QUEUE_CAPACITY);
+                int qSize = Math.max(ARENA_BUFFER_QUEUE_CAPACITY_FOR_VIRTUAL_THREAD, 2);
+                bufferQueue = PlatformDependent.newFixedMpmcQueue(qSize);
                 handle = new ObjectPool.Handle<PooledByteBuf<ByteBuffer>>() {
                     @Override
                     public void recycle(PooledByteBuf<ByteBuffer> self) {

@@ -63,6 +63,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
             PooledByteBufAllocator.this.trimCurrentThreadCache();
         }
     };
+    static final int ARENA_BUFFER_QUEUE_CAPACITY_FOR_VIRTUAL_THREAD =
+            SystemPropertyUtil.getInt("io.netty.allocator.arenaBufferQueueCapacityForVirtualThread", 1024);
 
     static {
         int defaultAlignment = SystemPropertyUtil.getInt(
@@ -180,6 +182,8 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                     DEFAULT_MAX_CACHED_BYTEBUFFERS_PER_CHUNK);
             logger.debug("-Dio.netty.allocator.disableCacheFinalizersForFastThreadLocalThreads: {}",
                          DEFAULT_DISABLE_CACHE_FINALIZERS_FOR_FAST_THREAD_LOCAL_THREADS);
+            logger.debug("-Dio.netty.allocator.arenaBufferQueueCapacityForVirtualThread: {}",
+                    ARENA_BUFFER_QUEUE_CAPACITY_FOR_VIRTUAL_THREAD);
         }
     }
 
@@ -531,8 +535,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                     final EventExecutor executor = ThreadExecutorMap.currentExecutor();
                     final PoolArena<byte[]> heapArena = leastUsedArena(heapArenas);
                     final PoolArena<ByteBuffer> directArena = leastUsedArena(directArenas);
-                    // If 'useCacheForAllThreads' is true, or the current thread is FastThreadLocalThread.
-                    if (useCacheForAllThreads || current instanceof FastThreadLocalThread) {
+                    if (useCacheForAllThreads ||
+                            // If the current thread is a FastThreadLocalThread we will always use the cache
+                            current instanceof FastThreadLocalThread ||
+                            // The Thread is used by an EventExecutor, let's use the cache as the chances are good that we
+                            // will allocate a lot!
+                            executor != null) {
                         final PoolThreadCache cache = new PoolThreadCache(
                                 heapArena, directArena, smallCacheSize, normalCacheSize,
                                 DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL,
@@ -556,20 +564,20 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         }
 
         PoolThreadCache get() {
-            return feasibleToUseThreadLocal(Thread.currentThread()) ? threadLocalCache.get() :
-                    PoolThreadCache.THREAD_CACHE_WITHOUT_THREAD_LOCAL;
+            return PlatformDependent.isVirtualThread(Thread.currentThread()) ?
+                    PoolThreadCache.THREAD_CACHE_WITHOUT_THREAD_LOCAL : threadLocalCache.get();
         }
 
         PoolThreadCache getIfExists() {
-            return feasibleToUseThreadLocal(Thread.currentThread()) ? threadLocalCache.getIfExists() : null;
+            return PlatformDependent.isVirtualThread(Thread.currentThread()) ? null : threadLocalCache.getIfExists();
         }
 
         boolean isSet() {
-            return feasibleToUseThreadLocal(Thread.currentThread()) && threadLocalCache.isSet();
+            return !PlatformDependent.isVirtualThread(Thread.currentThread()) && threadLocalCache.isSet();
         }
 
         void remove() {
-            if (feasibleToUseThreadLocal(Thread.currentThread())) {
+            if (!PlatformDependent.isVirtualThread(Thread.currentThread())) {
                 threadLocalCache.remove();
             }
         }
@@ -616,10 +624,6 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
             return minArena;
         }
-    }
-
-    private static boolean feasibleToUseThreadLocal(Thread thread) {
-        return PlatformDependent.checkVirtualThread(thread) == 1;
     }
 
     private static boolean useCacheFinalizers(Thread current) {
