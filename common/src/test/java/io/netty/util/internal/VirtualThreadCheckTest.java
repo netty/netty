@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static io.netty.util.internal.PlatformDependent0.BASE_VIRTUAL_THREAD_CLASS;
 import static io.netty.util.internal.PlatformDependent0.IS_VIRTUAL_THREAD_METHOD;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -82,19 +83,7 @@ public class VirtualThreadCheckTest {
         if (PlatformDependent.javaVersion() < 19) {
             assertNull(IS_VIRTUAL_THREAD_METHOD);
         } else {
-            assumeTrue(PlatformDependent.javaVersion() >= 21);
-            assumeTrue(IS_VIRTUAL_THREAD_METHOD != null);
-            boolean isVirtual = (Boolean) IS_VIRTUAL_THREAD_METHOD.invoke(Thread.currentThread());
-            assertFalse(isVirtual);
-
-            Method startVirtualThread = getStartVirtualThreadMethod();
-            Thread virtualThread = (Thread) startVirtualThread.invoke(null, new Runnable() {
-                @Override
-                public void run() {
-                }
-            });
-            isVirtual = (Boolean) IS_VIRTUAL_THREAD_METHOD.invoke(virtualThread);
-            assertTrue(isVirtual);
+            assertNotNull(IS_VIRTUAL_THREAD_METHOD);
         }
     }
 

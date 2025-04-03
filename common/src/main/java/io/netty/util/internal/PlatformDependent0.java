@@ -67,6 +67,8 @@ final class PlatformDependent0 {
     // Package-private for testing.
     static final Class<?> BASE_VIRTUAL_THREAD_CLASS = getBaseVirtualThreadClass();
 
+    private static final String BASE_VIRTUAL_CLASS_BINARY_NAME = "java.lang.BaseVirtualThread";
+
     static final Unsafe UNSAFE;
 
     // constants borrowed from murmur3
@@ -593,18 +595,10 @@ final class PlatformDependent0 {
         }
         Class<?> clazz = thread.getClass();
         // Common cases:
-        if (clazz == Thread.class || clazz.getSuperclass() == Thread.class) {
+        if (clazz == Thread.class || (clazz = clazz.getSuperclass()) == Thread.class) {
             return false;
         }
-        try {
-            return (Boolean) IS_VIRTUAL_THREAD_METHOD.invoke(thread);
-        } catch (Throwable t) {
-            // Should not happen.
-            if (t instanceof Error) {
-                throw (Error) t;
-            }
-            throw new Error(t);
-        }
+        return clazz.getName() == BASE_VIRTUAL_CLASS_BINARY_NAME;
     }
 
     private static boolean unsafeStaticFieldOffsetSupported() {
