@@ -17,7 +17,12 @@ package io.netty.handler.codec.doh;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.dns.*;
+import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsOpCode;
+import io.netty.handler.codec.dns.DnsRecordDecoder;
+import io.netty.handler.codec.dns.DnsResponse;
+import io.netty.handler.codec.dns.DnsResponseCode;
+import io.netty.handler.codec.dns.DnsResponseDecoder;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 
