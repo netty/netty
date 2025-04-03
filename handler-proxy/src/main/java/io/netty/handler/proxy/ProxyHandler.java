@@ -53,6 +53,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     static final String AUTH_NONE = "none";
 
     private final SocketAddress proxyAddress;
+    private boolean isManuallySetDestination = false;
     private volatile SocketAddress destinationAddress;
     private volatile long connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
 
@@ -172,6 +173,10 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
             ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
             ChannelPromise promise) throws Exception {
 
+        if (this.isManuallySetDestination) {
+            ctx.connect(remoteAddress, localAddress, promise);
+            return;
+        }
         if (destinationAddress != null) {
             promise.setFailure(new ConnectionPendingException());
             return;
@@ -455,5 +460,10 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
             }
             return ctx.executor();
         }
+    }
+
+    public void setDestinationAddress(SocketAddress destinationAddress) {
+        this.isManuallySetDestination = true;
+        this.destinationAddress = destinationAddress;
     }
 }
