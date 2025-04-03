@@ -57,6 +57,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     private static final int MAX_CHUNK_SIZE = (int) (((long) Integer.MAX_VALUE + 1) / 2);
 
     private static final int CACHE_NOT_USED = 0;
+
     private final Runnable trimTask = new Runnable() {
         @Override
         public void run() {
@@ -531,10 +532,12 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
                 @Override
                 protected synchronized PoolThreadCache initialValue() {
                     // Virtual thread should NEVER reach here, which guarded by method `PoolThreadLocalCache.get()`.
-                    final Thread current = Thread.currentThread();
-                    final EventExecutor executor = ThreadExecutorMap.currentExecutor();
                     final PoolArena<byte[]> heapArena = leastUsedArena(heapArenas);
                     final PoolArena<ByteBuffer> directArena = leastUsedArena(directArenas);
+
+                    final Thread current = Thread.currentThread();
+                    final EventExecutor executor = ThreadExecutorMap.currentExecutor();
+
                     if (useCacheForAllThreads ||
                             // If the current thread is a FastThreadLocalThread we will always use the cache
                             current instanceof FastThreadLocalThread ||
