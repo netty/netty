@@ -1275,6 +1275,13 @@
               <differences>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <regex>true</regex>
+                  <package>io\.netty\..*</package>
+                  <justification>They're not "external classes" if they're from a Netty package.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.missing.oldClass</code> <!-- Missing in prior Netty versions -->
                   <old>missing-class org.slf4j.Logger</old>
                   <new>missing-class org.slf4j.Logger</new>
