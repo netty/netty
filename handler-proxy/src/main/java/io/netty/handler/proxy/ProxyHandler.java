@@ -462,7 +462,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
         }
     }
 
-    public void setDestinationAddress(SocketAddress destinationAddress) {
+    public final void setDestinationAddress(SocketAddress destinationAddress) {
         this.isManuallySetDestination = true;
         this.destinationAddress = destinationAddress;
     }
