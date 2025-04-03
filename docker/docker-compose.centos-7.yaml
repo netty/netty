@@ -41,7 +41,7 @@ services:
 
   build-4.2:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp clean package -Dnetty.version=4.2.0.Beta1"
+    command: /bin/bash -cl "./mvnw -B -ntp clean package -Dnetty.version=4.2.0.RC4"
 
   deploy:
     <<: *common
