@@ -1177,14 +1177,7 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-transport-native-epoll</artifactId>
       <version>${project.version}</version>
-      <classifier>linux-x86_64</classifier>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-transport-native-epoll</artifactId>
-      <version>${project.version}</version>
-      <classifier>linux-aarch_64</classifier>
+      <classifier>${jni.classifier}</classifier>
       <scope>test</scope>
     </dependency>
     <dependency>
