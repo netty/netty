@@ -864,7 +864,28 @@
       </dependency>
 
       <!--
-        Completely optional integration with Bouncy Castle TLS.
+        Completely optional integration of netty-handler with Bouncy Castle.
+
+        In particular, BouncyCastleAlpnSslUtils is using
+        org.bouncycastle.jsse.{BCApplicationProtocolSelector,BCSSLEngine}
+        via reflection, loading them via Class.forName(String).
+
+        This method of use leads to zero bytecode-level traces of this
+        dependency and works for plain Java without any further reference to
+        bctls.
+
+        maven-bundle-plugin recognizes the invocation of Class.forName() parses
+        its argument to recognize the call requires the org.bouncycastle.jsse
+        to succeed. It generates an Import-Package stanza for it, resulting in
+        a bundle which does not resolve without bctls.
+
+        This declaration, along with its corresponding dependency declaration
+        in netty-handler, provides the additional information about our use.
+        Its presence allows maven-bundle-plugin to observe
+        'org.bouncycastle.jsse' to live in an optional dependency, which is
+        enough for it to also add ';resolution=optional' and thus netty-handler
+        will resolve successfully even when bctls is not present, matching our
+        intent.
       -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
