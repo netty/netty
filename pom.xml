@@ -863,6 +863,17 @@
         <optional>true</optional>
       </dependency>
 
+      <!--
+        Completely optional integration with Bouncy Castle TLS.
+      -->
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bctls-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
       <dependency>
         <groupId>com.fasterxml</groupId>
         <artifactId>aalto-xml</artifactId>
