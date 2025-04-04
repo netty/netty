@@ -187,6 +187,9 @@ public final class OpenSsl {
                         // fips and the configure group is not supported when using FIPS.
                         // See https://github.com/netty/netty-tcnative/issues/883
                         defaultGroupsIter.remove();
+
+                        // Clear the error as otherwise we might fail later.
+                        SSL.clearError();
                     }
                 }
                 namedGroups = defaultConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
@@ -318,6 +321,9 @@ public final class OpenSsl {
                                 supportedNamedGroups.add(namedGroup);
                             } else {
                                 unsupportedNamedGroups.add(namedGroup);
+
+                                // Clear the error as otherwise we might fail later.
+                                SSL.clearError();
                             }
                         }
 
