@@ -717,6 +717,8 @@
     <module>codec-http2</module>
     <module>codec-memcache</module>
     <module>codec-mqtt</module>
+    <module>codec-classes-quic</module>
+    <module>codec-native-quic</module>
     <module>codec-redis</module>
     <module>codec-smtp</module>
     <module>codec-socks</module>
@@ -956,8 +958,8 @@
       <!-- Annotations for IDE integration and analysis -->
       <dependency>
         <groupId>org.jetbrains</groupId>
-        <artifactId>annotations-java5</artifactId>
-        <version>23.0.0</version>
+        <artifactId>annotations</artifactId>
+        <version>26.0.2</version>
         <scope>provided</scope>
       </dependency>
 
@@ -1271,6 +1273,13 @@
             </revapi.filter>
             <revapi.differences>
               <differences>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <regex>true</regex>
+                  <package>io\.netty\..*</package>
+                  <justification>They're not "external classes" if they're from a Netty package.</justification>
+                </item>
                 <item>
                   <ignore>true</ignore>
                   <code>java.missing.oldClass</code> <!-- Missing in prior Netty versions -->

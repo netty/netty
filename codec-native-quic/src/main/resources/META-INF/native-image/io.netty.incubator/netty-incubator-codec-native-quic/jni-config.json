@@ -1,0 +1,147 @@
+[
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"[B"
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"[Ljava.lang.Object;"
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"[Ljava.lang.String;"
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"[[B"
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSL"
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLCertificateCallbackTask",
+  "fields":[
+    {"name":"chain"}, 
+    {"name":"key"}
+  ],
+  "methods":[{"name":"<init>","parameterTypes":["long","byte[]","byte[][]","java.lang.String[]","io.netty.codec.quic.BoringSSLCertificateCallback"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLCertificateVerifyCallbackTask",
+  "methods":[{"name":"<init>","parameterTypes":["long","byte[][]","java.lang.String","io.netty.codec.quic.BoringSSLCertificateVerifyCallback"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLHandshakeCompleteCallback",
+  "methods":[{"name":"handshakeComplete","parameterTypes":["long","byte[]","java.lang.String","java.lang.String","byte[]","byte[][]","long","long","byte[]","boolean"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLKeylogCallback",
+  "methods":[{"name":"logKey","parameterTypes":["long","java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLNativeStaticallyReferencedJniMethods"
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLPrivateKeyMethodDecryptTask",
+  "methods":[{"name":"<init>","parameterTypes":["long","byte[]","io.netty.codec.quic.BoringSSLPrivateKeyMethod"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLPrivateKeyMethodSignTask",
+  "methods":[{"name":"<init>","parameterTypes":["long","int","byte[]","io.netty.codec.quic.BoringSSLPrivateKeyMethod"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLPrivateKeyMethodTask",
+  "fields":[{"name":"resultBytes"}]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLSessionCallback",
+  "methods":[{"name":"newSession","parameterTypes":["long","long","long","byte[]","boolean","byte[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLTask",
+  "fields":[
+    {"name":"complete"}, 
+    {"name":"returnValue"}
+  ],
+  "methods":[{"name":"destroy","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLTlsextServernameCallback",
+  "methods":[{"name":"selectCtx","parameterTypes":["long","java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.Quiche"
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.QuicheLogger",
+  "methods":[{"name":"log","parameterTypes":["java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.QuicheNativeStaticallyReferencedJniMethods"
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"java.lang.Boolean",
+  "methods":[
+    {"name":"getBoolean","parameterTypes":["java.lang.String"] }, 
+    {"name":"valueOf","parameterTypes":["boolean"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"java.lang.Integer",
+  "methods":[{"name":"<init>","parameterTypes":["int"] },{"name":"valueOf","parameterTypes":["int"]} ]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"java.lang.Object"
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"java.lang.String"
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"io.netty.codec.quic.BoringSSLSessionTicketCallback",
+  "methods":[{"name":"findSessionTicket","parameterTypes":["byte[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"java.lang.Long",
+  "methods":[{"name":"valueOf","parameterTypes":["long"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"java.net.Inet4Address"
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"java.net.Inet6Address",
+  "methods":[{"name":"getByAddress","parameterTypes":["java.lang.String","byte[]","int"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"java.net.InetAddress",
+  "methods":[{"name":"getByAddress","parameterTypes":["byte[]"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+  "name":"java.net.InetSocketAddress",
+  "methods":[{"name":"<init>","parameterTypes":["java.net.InetAddress","int"] }]
+}
+]

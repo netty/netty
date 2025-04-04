@@ -63,6 +63,10 @@ jobs:
     runs-on: windows-2019
     name: windows-x86_64-java11-boringssl
     needs: verify-pr
+    env:
+      # Let's limit the amount of ram that is used to unpack rustup as we saw
+      # failures sometimes due the fact that not enough memory could be reserved.
+      RUSTUP_UNPACK_RAM: 134217728  # Use 128 MiB
     steps:
       - uses: actions/checkout@v4
 
@@ -71,6 +75,24 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
+
+      - name: Install stable rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Configuring Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86_amd64
+
+      - name: Install tools
+        uses: crazy-max/ghaction-chocolatey@v3
+        with:
+          args: install ninja nasm
 
       # Cache .m2/repository
       # Caching of maven dependencies
@@ -170,9 +192,9 @@ jobs:
           - setup: linux-x86_64-java11
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build"
-          - setup: linux-x86_64-java11-graal
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm111.yaml run build"
+          - setup: linux-x86_64-java21-graal
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm121.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm121.yaml run build"
           - setup: linux-x86_64-java17
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build"
