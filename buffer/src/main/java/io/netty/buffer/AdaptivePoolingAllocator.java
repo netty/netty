@@ -136,10 +136,6 @@ final class AdaptivePoolingAllocator {
     private volatile boolean freed;
 
     static {
-        if (CENTRAL_QUEUE_CAPACITY < 2) {
-            throw new IllegalArgumentException("CENTRAL_QUEUE_CAPACITY: " + CENTRAL_QUEUE_CAPACITY
-                    + " (expected: >= " + 2 + ')');
-        }
         if (MAGAZINE_BUFFER_QUEUE_CAPACITY < 2) {
             throw new IllegalArgumentException("MAGAZINE_BUFFER_QUEUE_CAPACITY: " + MAGAZINE_BUFFER_QUEUE_CAPACITY
                     + " (expected: >= " + 2 + ')');
