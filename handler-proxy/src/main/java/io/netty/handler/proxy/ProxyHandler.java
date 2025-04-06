@@ -462,8 +462,17 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     * Manually sets the destination address for the packet.
+     * <p>
+     * This method allows you to set the destination address directly, without waiting for it to be filled
+     * during the pipeline process.
+     * </p>
+     *
+     * @param destinationAddress the destination address to set
+     */
     public void setDestinationAddress(SocketAddress destinationAddress) {
         this.isManuallySetDestination = true;
-        this.destinationAddress = destinationAddress;
+        this.destinationAddress = ObjectUtil.checkNotNull(destinationAddress, "destinationAddress");
     }
 }
