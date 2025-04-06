@@ -531,17 +531,18 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         @Override
         public long delayNanos(long currentTimeNanos) {
             assert inEventLoop();
-            return ManualIoEventLoop.this.delayNanos(currentTimeNanos, maxBlockingNanos);
+            return Math.min(maxBlockingNanos, ManualIoEventLoop.this.delayNanos(currentTimeNanos, maxBlockingNanos));
         }
 
         @Override
         public long deadlineNanos() {
             assert inEventLoop();
             long next = nextScheduledTaskDeadlineNanos();
+            long maxDeadlineNanos = getCurrentTimeNanos() + maxBlockingNanos;
             if (next == -1) {
-                return maxBlockingNanos;
+                return maxDeadlineNanos;
             }
-            return Math.min(next, maxBlockingNanos);
+            return Math.min(next, maxDeadlineNanos);
         }
     };
 }

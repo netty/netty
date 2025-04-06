@@ -50,6 +50,7 @@
   <suppress message="http://www.soap-service.by/foo/add" checks="NoHttp"/>
   <suppress message="http://www.tavendo.de/autobahn/testsuite.html" checks="NoHttp"/>
   <suppress message="http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/main/java/util/concurrent/ThreadLocalRandom.java" checks="NoHttp"/>
+  <suppress message="http://schemas.microsoft.com/developer/msbuild/2003" checks="NoHttp"/>
 
   <!-- Need to use http as the maven release plugin will fail otherwise
        See https://issues.apache.org/jira/browse/HBASE-24014 -->

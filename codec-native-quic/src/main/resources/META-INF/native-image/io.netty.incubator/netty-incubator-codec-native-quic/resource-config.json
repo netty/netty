@@ -1,0 +1,26 @@
+{
+  "resources":{
+  "includes":[
+    {
+      "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+      "pattern":"\\QMETA-INF/native/libnetty_quiche_osx_x86_64.jnilib\\E"
+    },
+    {
+      "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+      "pattern":"\\QMETA-INF/native/libnetty_quiche_osx_aarch_64.jnilib\\E"
+    },
+    {
+      "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+      "pattern":"\\QMETA-INF/native/libnetty_quiche_linux_x86_64.so\\E"
+    },
+    {
+      "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+      "pattern":"\\QMETA-INF/native/libnetty_quiche_linux_aarch_64.so\\E"
+    },
+    {
+      "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
+      "pattern":"\\QMETA-INF/native/netty_quiche_windows_x86_64.dll\\E"
+    }
+  ]},
+  "bundles":[]
+}
