@@ -254,7 +254,7 @@ public final class HttpProxyHandler extends ProxyHandler {
         implements ChannelInboundHandler, ChannelOutboundHandler {
         private final T codec;
 
-        public HttpClientCodecWrapper(T codec) {
+        HttpClientCodecWrapper(T codec) {
             this.codec = codec;
         }
 
