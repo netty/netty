@@ -65,7 +65,7 @@ final class PlatformDependent0 {
     // Package-private for testing.
     static final Method IS_VIRTUAL_THREAD_METHOD = getIsVirtualThreadMethod();
     // Package-private for testing.
-    static final Class<?> BASE_VIRTUAL_THREAD_CLASS = getBaseVirtualThreadClass();
+    static volatile Class<?> BASE_VIRTUAL_THREAD_CLASS = getBaseVirtualThreadClass();
 
     private static final String BASE_VIRTUAL_CLASS_BINARY_NAME = "java.lang.BaseVirtualThread";
 
@@ -598,7 +598,11 @@ final class PlatformDependent0 {
         if (clazz == Thread.class || (clazz = clazz.getSuperclass()) == Thread.class) {
             return false;
         }
-        return clazz.getName() == BASE_VIRTUAL_CLASS_BINARY_NAME;
+        if (clazz.getName() == BASE_VIRTUAL_CLASS_BINARY_NAME) {
+            BASE_VIRTUAL_THREAD_CLASS = clazz;
+            return true;
+        }
+        return false;
     }
 
     private static boolean unsafeStaticFieldOffsetSupported() {
