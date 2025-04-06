@@ -53,7 +53,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     static final String AUTH_NONE = "none";
 
     private final SocketAddress proxyAddress;
-    private boolean isManuallySetDestination = false;
+    private volatile boolean isManuallySetDestination = false;
     private volatile SocketAddress destinationAddress;
     private volatile long connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
 
@@ -462,7 +462,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
         }
     }
 
-    public final void setDestinationAddress(SocketAddress destinationAddress) {
+    public void setDestinationAddress(SocketAddress destinationAddress) {
         this.isManuallySetDestination = true;
         this.destinationAddress = destinationAddress;
     }

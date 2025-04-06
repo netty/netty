@@ -184,6 +184,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             long id = registration.submit(
                     IoUringIoOps.newAsyncCancel((byte) 0, pollInId, Native.IORING_OP_POLL_ADD));
             assert id != 0;
+            ioState &= ~POLL_IN_SCHEDULED;
         }
         // Also cancel all outstanding reads as the user did signal there is no more desire to read.
         cancelOutstandingReads(registration(), numOutstandingReads);
