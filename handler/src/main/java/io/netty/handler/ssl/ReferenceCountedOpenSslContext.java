@@ -159,6 +159,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final String endpointIdentificationAlgorithm;
     final List<SNIServerName> serverNames;
     final boolean hasTLSv13Cipher;
+    final boolean hasTmpDhKeys;
 
     final boolean enableOcsp;
     final OpenSslEngineMap engineMap = new DefaultOpenSslEngineMap();
@@ -237,6 +238,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         OpenSslAsyncPrivateKeyMethod asyncPrivateKeyMethod = null;
         OpenSslCertificateCompressionConfig certCompressionConfig = null;
         Integer maxCertificateList = null;
+        Integer tmpDhKeyLength = null;
         String[] groups = OpenSsl.NAMED_GROUPS;
         if (ctxOptions != null) {
             for (Map.Entry<SslContextOption<?>, Object> ctxOpt : ctxOptions) {
@@ -254,6 +256,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                     certCompressionConfig = (OpenSslCertificateCompressionConfig) ctxOpt.getValue();
                 } else if (option == OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES) {
                     maxCertificateList = (Integer) ctxOpt.getValue();
+                } else if (option == OpenSslContextOption.TMP_DH_KEYLENGTH) {
+                    tmpDhKeyLength = (Integer) ctxOpt.getValue();
                 } else if (option == OpenSslContextOption.GROUPS) {
                     String[] groupsArray = (String[]) ctxOpt.getValue();
                     Set<String> groupsSet = new LinkedHashSet<String>(groupsArray.length);
@@ -384,8 +388,14 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             // See https://github.com/netty/netty-tcnative/issues/100
             SSLContext.setMode(ctx, SSLContext.getMode(ctx) | SSL.SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
-            if (DH_KEY_LENGTH != null) {
+            if (tmpDhKeyLength != null) {
+                SSLContext.setTmpDHLength(ctx, tmpDhKeyLength);
+                hasTmpDhKeys = true;
+            } else if (DH_KEY_LENGTH != null) {
                 SSLContext.setTmpDHLength(ctx, DH_KEY_LENGTH);
+                hasTmpDhKeys = true;
+            } else {
+                hasTmpDhKeys = false;
             }
 
             List<String> nextProtoList = apn.protocols();

@@ -1,10 +1,10 @@
 {
-  name: "netty-on-ubuntu",
-  containerEnv: {
-    CPATH: "/usr/lib/jvm/java-21-openjdk-arm64/include/:/usr/lib/jvm/java-21-openjdk-arm64/include/linux/"
+  "name": "netty-on-ubuntu",
+  "containerEnv": {
+    "CPATH": "/usr/lib/jvm/java-21-openjdk-arm64/include/:/usr/lib/jvm/java-21-openjdk-arm64/include/linux/"
   },
-  build: {
-    dockerfile: "Dockerfile",
+  "build": {
+    "dockerfile": "Dockerfile",
   },
   "securityOpt": [ "seccomp=unconfined" ],
   "runArgs": [

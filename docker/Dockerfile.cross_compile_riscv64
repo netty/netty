@@ -16,10 +16,10 @@ RUN apt-get update -qq \
         libssl-dev \
         libtool \
         make \
-        openjdk-8-jdk-headless \
+        openjdk-11-jdk-headless \
         tar \
         unzip \
         zip \
  && rm -rf /var/lib/apt/lists/*
 
-ENV JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"
+ENV JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"

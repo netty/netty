@@ -1,28 +1,78 @@
-FROM --platform=linux/amd64 centos:7.6.1810
+FROM --platform=linux/amd64 centos:7.9.2009
 
 ARG gcc_version=10.2-2020.11
-ENV GCC_VERSION $gcc_version
-ENV SOURCE_DIR /root/source
+ENV GCC_VERSION=$gcc_version
+ENV SOURCE_DIR=/root/source
+ENV CMAKE_VERSION_BASE=3.26
+ENV CMAKE_VERSION=$CMAKE_VERSION_BASE.4
+ENV SOURCE_DIR=/root/source
+ENV WORKSPACE_DIR=/root/workspace
+ENV PROJECT_DIR=/root/workspace/project
 
 
 # Update to use the vault
-RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/7.6.1810\//g' /etc/yum.repos.d/CentOS-Base.repo
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/7.9.2009\//g' /etc/yum.repos.d/CentOS-Base.repo
+
+# We want to have git 2.x for the maven scm plugin and also for boringssl
+RUN yum install -y https://opensource.wandisco.com/centos/6/git/x86_64/wandisco-git-release-6-1.noarch.rpm
+
+RUN yum -y install epel-release
 
 # Install requirements
-RUN yum install -y wget tar git make redhat-lsb-core autoconf automake libtool glibc-devel libaio-devel openssl-devel apr-devel lksctp-tools unzip zip
+RUN yum install -y \
+ apr-devel \
+ autoconf \
+ automake \
+ bzip2 \
+ git \
+ glibc-devel \
+ golang \
+ gnupg \
+ libaio-devel \
+ libtool \
+ lksctp-tools \
+ redhat-lsb-core \
+ ninja-build \
+ make \
+ openssl-devel \
+ perl \
+ tar \
+ unzip \
+ wget \
+ zip
 
 # Install Java
-RUN yum install -y java-1.8.0-openjdk-devel
+RUN yum install -y java-11-openjdk-devel
+ENV JAVA_HOME="/usr/lib/jvm/java-11-openjdk/"
 
 RUN mkdir $SOURCE_DIR
 WORKDIR $SOURCE_DIR
 
 # Install aarch64 gcc 10.2 toolchain
 RUN wget https://developer.arm.com/-/media/Files/downloads/gnu-a/$GCC_VERSION/binrel/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && \
-   tar xvf gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && mv gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu /opt/
+  tar xvf gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && mv gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu /opt/
 ENV PATH="/opt/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu/bin:${PATH}"
 
-ENV JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk/"
+
+# Install CMake
+RUN curl -s https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz --output cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zvxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
+
+# install rust and setup PATH and install correct toolchain
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="$HOME/.cargo/bin:${PATH}"
+RUN /root/.cargo/bin/rustup target add aarch64-unknown-linux-gnu
+
+# Setup the correct linker
+RUN echo '[target.aarch64-unknown-linux-gnu]' >> /root/.cargo/config
+RUN echo 'linker = "aarch64-none-linux-gnu-gcc"' >> /root/.cargo/config
+
+# Downloading and installing SDKMAN!
+RUN curl -s "https://get.sdkman.io" | bash
+
+# Installing Java and Maven, removing some unnecessary SDKMAN files
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
 
 # Cleanup
 RUN rm -rf $SOURCE_DIR

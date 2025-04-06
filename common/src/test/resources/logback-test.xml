@@ -9,14 +9,13 @@
     <appender-ref ref="STDOUT" />
   </root>
 
-
-  // Disable logging for apacheds to reduce noise.
+  <!-- Disable logging for apacheds to reduce noise. -->
   <logger name="org.apache.directory" level="OFF"/>
   <logger name="org.apache.mina" level="OFF"/>
   <!-- Force info logging to reduce noise -->
   <logger name="io.netty.handler.pcap" level="INFO"/>
 
-  // Enable trace logging for the loading of our native transports
+  <!-- Enable trace logging for the loading of our native transports. -->
   <logger name="io.netty.channel.epoll.Epoll" level="trace"/>
   <logger name="io.netty.channel.kqueue.KQueue" level="trace"/>
   <logger name="io.netty.channel.uring.IoUring" level="trace"/>
