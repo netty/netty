@@ -33,6 +33,8 @@
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
     <packaging.type>jar</packaging.type>
+    <native.maven.plugin.version>0.10.6</native.maven.plugin.version>
+    <netty.version>${project.version}</netty.version>
   </properties>
 
   <dependencies>
@@ -61,7 +63,16 @@
       <artifactId>netty-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
-
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-classes-epoll</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-classes-io_uring</artifactId>
+      <version>${netty.version}</version>
+    </dependency>
   </dependencies>
 
   <profiles>
@@ -276,6 +287,50 @@
         </plugins>
       </build>
     </profile>
+
+    <profile>
+      <id>native-image-http-server</id>
+
+      <properties>
+        <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
+      </properties>
+      <activation>
+        <file>
+          <!-- GraalVM 'native-image' should exist when using GraalVM -->
+          <exists>${java.home}/bin/native-image</exists>
+        </file>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${netty.version}</version>
+          <classifier>linux-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${netty.version}</version>
+          <classifier>linux-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-io_uring</artifactId>
+          <version>${netty.version}</version>
+          <classifier>linux-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-io_uring</artifactId>
+          <version>${netty.version}</version>
+          <classifier>linux-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+      </dependencies>
+    </profile>
   </profiles>
 
   <build>
@@ -296,7 +351,7 @@
           <skip>${skipNativeImageTestsuite}</skip>
           <imageName>${project.artifactId}</imageName>
           <mainClass>io.netty.testsuite.svm.HttpNativeServer</mainClass>
-          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath</buildArgs>
+          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath -Ob</buildArgs>
         </configuration>
       </plugin>
       <plugin>
