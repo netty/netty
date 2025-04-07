@@ -42,7 +42,7 @@ public class HttpSnoopClientInitializer extends ChannelInitializer<SocketChannel
         p.addLast(new HttpClientCodec());
 
         // Remove the following line if you don't want automatic content decompression.
-        p.addLast(new HttpContentDecompressor());
+        p.addLast(new HttpContentDecompressor(65536));
 
         // Uncomment the following line if you don't want to handle HttpContents.
         //p.addLast(new HttpObjectAggregator(1048576));

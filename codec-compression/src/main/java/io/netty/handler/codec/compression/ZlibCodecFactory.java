@@ -104,27 +104,42 @@ public final class ZlibCodecFactory {
         }
     }
 
+    @Deprecated
     public static ZlibDecoder newZlibDecoder() {
+        return newZlibDecoder(0);
+    }
+
+    public static ZlibDecoder newZlibDecoder(int maxAllocation) {
         if (noJdkZlibDecoder) {
-            return new JZlibDecoder();
+            return new JZlibDecoder(maxAllocation);
         } else {
-            return new JdkZlibDecoder(true);
+            return new JdkZlibDecoder(true, maxAllocation);
         }
     }
 
+    @Deprecated
     public static ZlibDecoder newZlibDecoder(ZlibWrapper wrapper) {
+        return newZlibDecoder(wrapper, 0);
+    }
+
+    public static ZlibDecoder newZlibDecoder(ZlibWrapper wrapper, int maxAllocation) {
         if (noJdkZlibDecoder) {
-            return new JZlibDecoder(wrapper);
+            return new JZlibDecoder(wrapper, maxAllocation);
         } else {
-            return new JdkZlibDecoder(wrapper, true);
+            return new JdkZlibDecoder(wrapper, true, maxAllocation);
         }
     }
 
+    @Deprecated
     public static ZlibDecoder newZlibDecoder(byte[] dictionary) {
+        return newZlibDecoder(dictionary, 0);
+    }
+
+    public static ZlibDecoder newZlibDecoder(byte[] dictionary, int maxAllocation) {
         if (noJdkZlibDecoder) {
-            return new JZlibDecoder(dictionary);
+            return new JZlibDecoder(dictionary, maxAllocation);
         } else {
-            return new JdkZlibDecoder(dictionary);
+            return new JdkZlibDecoder(dictionary, maxAllocation);
         }
     }
 

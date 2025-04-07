@@ -27,10 +27,25 @@ public class WebSocketServerCompressionHandler extends WebSocketServerExtensionH
 
     /**
      * Constructor with default configuration.
+     *
+     * @deprecated
+     *            Use {@link WebSocketServerCompressionHandler#WebSocketServerCompressionHandler(int)}.
      */
+    @Deprecated
     public WebSocketServerCompressionHandler() {
-        super(new PerMessageDeflateServerExtensionHandshaker(),
-                new DeflateFrameServerExtensionHandshaker());
+        this(0);
+    }
+
+    /**
+     * Constructor with default configuration.
+     *
+     * @param maxAllocation
+     *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
+     */
+    public WebSocketServerCompressionHandler(int maxAllocation) {
+        super(new PerMessageDeflateServerExtensionHandshaker(maxAllocation),
+                new DeflateFrameServerExtensionHandshaker(
+                        DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL, maxAllocation));
     }
 
 }

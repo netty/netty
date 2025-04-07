@@ -121,7 +121,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
     private void enableGzip(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
         p.addLast("gzipdeflater", ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP));
-        p.addLast("gzipinflater", ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
+        p.addLast("gzipinflater", ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, 65536));
         p.addLast("unificationB", new PortUnificationServerHandler(sslCtx, detectSsl, false));
         p.remove(this);
     }
