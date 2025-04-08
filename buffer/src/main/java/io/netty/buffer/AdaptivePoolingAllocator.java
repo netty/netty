@@ -940,7 +940,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
             // Retire chunks with a 0.5% probability per unit of MIN_CHUNK_SIZE deviation from preference.
             return deviation != 0 &&
-                    PlatformDependent.threadLocalRandom().nextDouble() * 200.0 > deviation;
+                    PlatformDependent.threadLocalRandom().nextDouble() * 200.0 < deviation;
         }
 
         public void readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
