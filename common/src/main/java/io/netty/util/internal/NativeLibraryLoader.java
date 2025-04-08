@@ -66,7 +66,8 @@ public final class NativeLibraryLoader {
         if (workdir != null) {
             File f = new File(workdir);
             if (!f.exists() && !f.mkdirs()) {
-             throw new ExceptionInInitializerError(new IOException("Custom native workdir mkdirs failed: " + workdir));
+                throw new ExceptionInInitializerError(
+                    new IOException("Custom native workdir mkdirs failed: " + workdir));
             }
 
             try {
