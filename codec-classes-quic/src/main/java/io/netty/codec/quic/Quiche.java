@@ -32,7 +32,7 @@ import java.nio.ByteOrder;
 
 final class Quiche {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Quiche.class);
-    private static final boolean DEBUG_LOGGING_ENABLED = logger.isDebugEnabled();
+    private static final boolean TRACE_LOGGING_ENABLED = logger.isTraceEnabled();
     private static final IntObjectHashMap<QuicTransportErrorHolder> ERROR_MAPPINGS = new IntObjectHashMap<>();
 
     static {
@@ -59,8 +59,8 @@ final class Quiche {
             loadNativeLibrary();
         }
 
-        // Let's enable debug logging for quiche if its enabled in our logger.
-        if (DEBUG_LOGGING_ENABLED) {
+        // Let's enable debug logging for quiche if the TRACE level is enabled in our logger.
+        if (TRACE_LOGGING_ENABLED) {
             quiche_enable_debug_logging(new QuicheLogger(logger));
         }
     }
