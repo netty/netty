@@ -935,7 +935,7 @@ final class AdaptivePoolingAllocator {
 
             // Retire chunks with a 0.5% probability per unit of MIN_CHUNK_SIZE deviation from preference.
             return deviation != 0 &&
-                    ThreadLocalRandom.current().nextDouble() * 200.0 > deviation;
+                    ThreadLocalRandom.current().nextDouble() * 200.0 < deviation;
         }
 
         public void readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
