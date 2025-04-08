@@ -532,6 +532,12 @@
         </dependency>
       </dependencies>
     </profile>
+    <profile>
+      <id>oss-fuzz</id>
+      <properties>
+        <jni.compiler.args.cflags>CFLAGS=${env.CFLAGS} -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
+      </properties>
+    </profile>
   </profiles>
 
   <dependencies>
