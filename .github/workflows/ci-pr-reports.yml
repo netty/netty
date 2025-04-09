@@ -36,8 +36,6 @@ jobs:
       matrix:
         ignore-if-missing: [false]
         include:
-          - setup: linux-x86_64-java8
-            ignore-if-missing: true
           - setup: linux-x86_64-java11
           - setup: linux-x86_64-java11-boringssl
           - setup: linux-x86_64-java17
