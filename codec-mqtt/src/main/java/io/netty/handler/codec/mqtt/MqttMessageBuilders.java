@@ -380,7 +380,7 @@ public final class MqttMessageBuilders {
                 props.add(new MqttProperties.IntegerProperty(MqttPropertyType.RECEIVE_MAXIMUM.value(), receiveMaximum));
             }
             if (maximumQos != null) {
-                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.MAXIMUM_QOS.value(), receiveMaximum));
+                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.MAXIMUM_QOS.value(), maximumQos.intValue()));
             }
             props.add(new MqttProperties.IntegerProperty(MqttPropertyType.RETAIN_AVAILABLE.value(), retain ? 1 : 0));
             if (maximumPacketSize != null) {
