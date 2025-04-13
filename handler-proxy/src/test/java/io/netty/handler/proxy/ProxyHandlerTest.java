@@ -911,19 +911,16 @@ public class ProxyHandlerTest {
             this.name = name;
             assert clientHandlers.length > 0;
             assert clientHandlers[clientHandlers.length - 1] instanceof ProxyHandler;
-
-            if (isManuallySetDestination) {
-                if (destination != null) {
-                    ChannelHandler clientHandler = clientHandlers[clientHandlers.length - 1];
-                    ((ProxyHandler) clientHandler).setDestinationAddress(destination);
-                    this.destination = ((ProxyHandler) clientHandler).proxyAddress();
-                } else {
-                    this.destination = null;
-                }
-            } else {
-                this.destination = destination;
-            }
             this.clientHandlers = clientHandlers;
+
+            if (!isManuallySetDestination || destination == null) {
+                this.destination = destination;
+                return;
+            }
+
+            ChannelHandler clientHandler = clientHandlers[clientHandlers.length - 1];
+            ((ProxyHandler) clientHandler).setDestinationAddress(destination);
+            this.destination = ((ProxyHandler) clientHandler).proxyAddress();
         }
 
         abstract void test() throws Exception;
