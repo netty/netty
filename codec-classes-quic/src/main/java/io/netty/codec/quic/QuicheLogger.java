@@ -30,6 +30,6 @@ final class QuicheLogger {
     // Called from JNI.
     @SuppressWarnings("unused")
     void log(String msg) {
-        logger.debug(msg);
+        logger.trace(msg);
     }
 }
