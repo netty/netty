@@ -124,8 +124,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     void clearFlag(int flag) throws IOException {
         IoRegistration registration = registration();
-        ops = ops.without(EpollIoOps.valueOf(flag));
-        registration.submit(ops);
+        EpollIoOps newOps = ops.without(EpollIoOps.valueOf(flag));
+        // we can save a syscall if the ops did not change
+        if (newOps == ops) {
+            return;
+        }
+        ops = newOps;
+        registration.submit(newOps);
     }
 
     protected final IoRegistration registration() {
