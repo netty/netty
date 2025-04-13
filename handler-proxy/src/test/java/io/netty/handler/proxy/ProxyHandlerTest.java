@@ -146,223 +146,517 @@ public class ProxyHandlerTest {
                 // HTTP -------------------------------------------------------
 
                 new SuccessTestItem(
-                        "Anonymous HTTP proxy: successful connection, AUTO_READ on",
+                        "Anonymous HTTP proxy: successful connection, AUTO_READ on, ManuallySetDestination false",
                         DESTINATION,
+                        true,
+                        false,
+                        new HttpProxyHandler(anonHttpProxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous HTTP proxy: successful connection, AUTO_READ on, ManuallySetDestination true",
+                        DESTINATION,
+                        true,
                         true,
                         new HttpProxyHandler(anonHttpProxy.address())),
 
                 new SuccessTestItem(
-                        "Anonymous HTTP proxy: successful connection, AUTO_READ off",
+                        "Anonymous HTTP proxy: successful connection, AUTO_READ off, ManuallySetDestination false",
                         DESTINATION,
+                        false,
+                        false,
+                        new HttpProxyHandler(anonHttpProxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous HTTP proxy: successful connection, AUTO_READ off, ManuallySetDestination true",
+                        DESTINATION,
+                        false,
+                        true,
+                        new HttpProxyHandler(anonHttpProxy.address())),
+
+                new FailureTestItem(
+                        "Anonymous HTTP proxy: rejected connection, ManuallySetDestination false",
+                        BAD_DESTINATION, "status: 403",
                         false,
                         new HttpProxyHandler(anonHttpProxy.address())),
 
                 new FailureTestItem(
-                        "Anonymous HTTP proxy: rejected connection",
+                        "Anonymous HTTP proxy: rejected connection, ManuallySetDestination true",
                         BAD_DESTINATION, "status: 403",
+                        true,
                         new HttpProxyHandler(anonHttpProxy.address())),
 
                 new FailureTestItem(
-                        "HTTP proxy: rejected anonymous connection",
+                        "HTTP proxy: rejected anonymous connection, ManuallySetDestination false",
                         DESTINATION, "status: 401",
+                        false,
+                        new HttpProxyHandler(httpProxy.address())),
+
+                new FailureTestItem(
+                        "HTTP proxy: rejected anonymous connection, ManuallySetDestination true",
+                        DESTINATION, "status: 401",
+                        true,
                         new HttpProxyHandler(httpProxy.address())),
 
                 new SuccessTestItem(
-                        "HTTP proxy: successful connection, AUTO_READ on",
+                        "HTTP proxy: successful connection, AUTO_READ on, ManuallySetDestination false",
                         DESTINATION,
+                        true,
+                        false,
+                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                        "HTTP proxy: successful connection, AUTO_READ on, ManuallySetDestination true",
+                        DESTINATION,
+                        true,
                         true,
                         new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
 
                 new SuccessTestItem(
-                        "HTTP proxy: successful connection, AUTO_READ off",
+                        "HTTP proxy: successful connection, AUTO_READ off, ManuallySetDestination false",
                         DESTINATION,
+                        false,
+                        false,
+                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                        "HTTP proxy: successful connection, AUTO_READ off, ManuallySetDestination true",
+                        DESTINATION,
+                        false,
+                        true,
+                        new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
+
+                new FailureTestItem(
+                        "HTTP proxy: rejected connection, ManuallySetDestination false",
+                        BAD_DESTINATION, "status: 403",
                         false,
                         new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
 
                 new FailureTestItem(
-                        "HTTP proxy: rejected connection",
+                        "HTTP proxy: rejected connection, ManuallySetDestination true",
                         BAD_DESTINATION, "status: 403",
+                        true,
                         new HttpProxyHandler(httpProxy.address(), USERNAME, PASSWORD)),
 
                 new FailureTestItem(
-                        "HTTP proxy: authentication failure",
+                        "HTTP proxy: authentication failure, ManuallySetDestination false",
                         DESTINATION, "status: 401",
+                        false,
+                        new HttpProxyHandler(httpProxy.address(), BAD_USERNAME, BAD_PASSWORD)),
+
+                new FailureTestItem(
+                        "HTTP proxy: authentication failure, ManuallySetDestination true",
+                        DESTINATION, "status: 401",
+                        true,
                         new HttpProxyHandler(httpProxy.address(), BAD_USERNAME, BAD_PASSWORD)),
 
                 new TimeoutTestItem(
-                        "HTTP proxy: timeout",
+                        "HTTP proxy: timeout, ManuallySetDestination false",
+                        false,
+                        new HttpProxyHandler(deadHttpProxy.address())),
+
+                new TimeoutTestItem(
+                        "HTTP proxy: timeout, ManuallySetDestination true",
+                        true,
                         new HttpProxyHandler(deadHttpProxy.address())),
 
                 // HTTPS ------------------------------------------------------
 
                 new SuccessTestItem(
-                        "Anonymous HTTPS proxy: successful connection, AUTO_READ on",
+                        "Anonymous HTTPS proxy: successful connection, AUTO_READ on, ManuallySetDestination false",
                         DESTINATION,
+                        true,
+                        false,
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(anonHttpsProxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous HTTPS proxy: successful connection, AUTO_READ on, ManuallySetDestination true",
+                        DESTINATION,
+                        true,
                         true,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(anonHttpsProxy.address())),
 
                 new SuccessTestItem(
-                        "Anonymous HTTPS proxy: successful connection, AUTO_READ off",
+                        "Anonymous HTTPS proxy: successful connection, AUTO_READ off, ManuallySetDestination false",
                         DESTINATION,
+                        false,
+                        false,
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(anonHttpsProxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous HTTPS proxy: successful connection, AUTO_READ off, ManuallySetDestination true",
+                        DESTINATION,
+                        false,
+                        true,
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(anonHttpsProxy.address())),
+
+                new FailureTestItem(
+                        "Anonymous HTTPS proxy: rejected connection, ManuallySetDestination false",
+                        BAD_DESTINATION, "status: 403",
                         false,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(anonHttpsProxy.address())),
 
                 new FailureTestItem(
-                        "Anonymous HTTPS proxy: rejected connection",
+                        "Anonymous HTTPS proxy: rejected connection, ManuallySetDestination true",
                         BAD_DESTINATION, "status: 403",
+                        true,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(anonHttpsProxy.address())),
 
                 new FailureTestItem(
-                        "HTTPS proxy: rejected anonymous connection",
+                        "HTTPS proxy: rejected anonymous connection, ManuallySetDestination false",
                         DESTINATION, "status: 401",
+                        false,
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(httpsProxy.address())),
+
+                new FailureTestItem(
+                        "HTTPS proxy: rejected anonymous connection, ManuallySetDestination true",
+                        DESTINATION, "status: 401",
+                        true,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(httpsProxy.address())),
 
                 new SuccessTestItem(
-                        "HTTPS proxy: successful connection, AUTO_READ on",
+                        "HTTPS proxy: successful connection, AUTO_READ on, ManuallySetDestination false",
                         DESTINATION,
+                        true,
+                        false,
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                        "HTTPS proxy: successful connection, AUTO_READ on, ManuallySetDestination true",
+                        DESTINATION,
+                        true,
                         true,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
 
                 new SuccessTestItem(
-                        "HTTPS proxy: successful connection, AUTO_READ off",
+                        "HTTPS proxy: successful connection, AUTO_READ off, ManuallySetDestination false",
                         DESTINATION,
+                        false,
+                        false,
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                        "HTTPS proxy: successful connection, AUTO_READ off, ManuallySetDestination true",
+                        DESTINATION,
+                        false,
+                        true,
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
+
+                new FailureTestItem(
+                        "HTTPS proxy: rejected connection, ManuallySetDestination false",
+                        BAD_DESTINATION, "status: 403",
                         false,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
 
                 new FailureTestItem(
-                        "HTTPS proxy: rejected connection",
+                        "HTTPS proxy: rejected connection, ManuallySetDestination true",
                         BAD_DESTINATION, "status: 403",
+                        true,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(httpsProxy.address(), USERNAME, PASSWORD)),
 
                 new FailureTestItem(
-                        "HTTPS proxy: authentication failure",
+                        "HTTPS proxy: authentication failure, ManuallySetDestination false",
                         DESTINATION, "status: 401",
+                        false,
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(httpsProxy.address(), BAD_USERNAME, BAD_PASSWORD)),
+
+                new FailureTestItem(
+                        "HTTPS proxy: authentication failure, ManuallySetDestination true",
+                        DESTINATION, "status: 401",
+                        true,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(httpsProxy.address(), BAD_USERNAME, BAD_PASSWORD)),
 
                 new TimeoutTestItem(
-                        "HTTPS proxy: timeout",
+                        "HTTPS proxy: timeout, ManuallySetDestination false",
+                        false,
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(deadHttpsProxy.address())),
+
+                new TimeoutTestItem(
+                        "HTTPS proxy: timeout, ManuallySetDestination true",
+                        true,
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(deadHttpsProxy.address())),
 
                 // SOCKS4 -----------------------------------------------------
 
                 new SuccessTestItem(
-                        "Anonymous SOCKS4: successful connection, AUTO_READ on",
+                        "Anonymous SOCKS4: successful connection, AUTO_READ on, ManuallySetDestination false",
                         DESTINATION,
+                        true,
+                        false,
+                        new Socks4ProxyHandler(anonSocks4Proxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous SOCKS4: successful connection, AUTO_READ on, ManuallySetDestination true",
+                        DESTINATION,
+                        true,
                         true,
                         new Socks4ProxyHandler(anonSocks4Proxy.address())),
 
                 new SuccessTestItem(
-                        "Anonymous SOCKS4: successful connection, AUTO_READ off",
+                        "Anonymous SOCKS4: successful connection, AUTO_READ off, ManuallySetDestination false",
                         DESTINATION,
+                        false,
+                        false,
+                        new Socks4ProxyHandler(anonSocks4Proxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous SOCKS4: successful connection, AUTO_READ off, ManuallySetDestination true",
+                        DESTINATION,
+                        false,
+                        true,
+                        new Socks4ProxyHandler(anonSocks4Proxy.address())),
+
+                new FailureTestItem(
+                        "Anonymous SOCKS4: rejected connection, ManuallySetDestination false",
+                        BAD_DESTINATION, "status: REJECTED_OR_FAILED",
                         false,
                         new Socks4ProxyHandler(anonSocks4Proxy.address())),
 
                 new FailureTestItem(
-                        "Anonymous SOCKS4: rejected connection",
+                        "Anonymous SOCKS4: rejected connection, ManuallySetDestination true",
                         BAD_DESTINATION, "status: REJECTED_OR_FAILED",
+                        true,
                         new Socks4ProxyHandler(anonSocks4Proxy.address())),
 
                 new FailureTestItem(
-                        "SOCKS4: rejected anonymous connection",
+                        "SOCKS4: rejected anonymous connection, ManuallySetDestination false",
                         DESTINATION, "status: IDENTD_AUTH_FAILURE",
+                        false,
+                        new Socks4ProxyHandler(socks4Proxy.address())),
+
+                new FailureTestItem(
+                        "SOCKS4: rejected anonymous connection, ManuallySetDestination true",
+                        DESTINATION, "status: IDENTD_AUTH_FAILURE",
+                        true,
                         new Socks4ProxyHandler(socks4Proxy.address())),
 
                 new SuccessTestItem(
-                        "SOCKS4: successful connection, AUTO_READ on",
+                        "SOCKS4: successful connection, AUTO_READ on, ManuallySetDestination false",
                         DESTINATION,
+                        true,
+                        false,
+                        new Socks4ProxyHandler(socks4Proxy.address(), USERNAME)),
+
+                new SuccessTestItem(
+                        "SOCKS4: successful connection, AUTO_READ on, ManuallySetDestination true",
+                        DESTINATION,
+                        true,
                         true,
                         new Socks4ProxyHandler(socks4Proxy.address(), USERNAME)),
 
                 new SuccessTestItem(
-                        "SOCKS4: successful connection, AUTO_READ off",
+                        "SOCKS4: successful connection, AUTO_READ off, ManuallySetDestination false",
                         DESTINATION,
+                        false,
+                        false,
+                        new Socks4ProxyHandler(socks4Proxy.address(), USERNAME)),
+
+                new SuccessTestItem(
+                        "SOCKS4: successful connection, AUTO_READ off, ManuallySetDestination true",
+                        DESTINATION,
+                        false,
+                        true,
+                        new Socks4ProxyHandler(socks4Proxy.address(), USERNAME)),
+
+                new FailureTestItem(
+                        "SOCKS4: rejected connection, ManuallySetDestination false",
+                        BAD_DESTINATION, "status: REJECTED_OR_FAILED",
                         false,
                         new Socks4ProxyHandler(socks4Proxy.address(), USERNAME)),
 
                 new FailureTestItem(
-                        "SOCKS4: rejected connection",
+                        "SOCKS4: rejected connection, ManuallySetDestination true",
                         BAD_DESTINATION, "status: REJECTED_OR_FAILED",
+                        true,
                         new Socks4ProxyHandler(socks4Proxy.address(), USERNAME)),
 
                 new FailureTestItem(
-                        "SOCKS4: authentication failure",
+                        "SOCKS4: authentication failure, ManuallySetDestination false",
                         DESTINATION, "status: IDENTD_AUTH_FAILURE",
+                        false,
+                        new Socks4ProxyHandler(socks4Proxy.address(), BAD_USERNAME)),
+
+                new FailureTestItem(
+                        "SOCKS4: authentication failure, ManuallySetDestination true",
+                        DESTINATION, "status: IDENTD_AUTH_FAILURE",
+                        true,
                         new Socks4ProxyHandler(socks4Proxy.address(), BAD_USERNAME)),
 
                 new TimeoutTestItem(
-                        "SOCKS4: timeout",
+                        "SOCKS4: timeout, ManuallySetDestination false",
+                        false,
+                        new Socks4ProxyHandler(deadSocks4Proxy.address())),
+
+                new TimeoutTestItem(
+                        "SOCKS4: timeout, ManuallySetDestination true",
+                        true,
                         new Socks4ProxyHandler(deadSocks4Proxy.address())),
 
                 // SOCKS5 -----------------------------------------------------
 
                 new SuccessTestItem(
-                        "Anonymous SOCKS5: successful connection, AUTO_READ on",
+                        "Anonymous SOCKS5: successful connection, AUTO_READ on, ManuallySetDestination false",
                         DESTINATION,
+                        true,
+                        false,
+                        new Socks5ProxyHandler(anonSocks5Proxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous SOCKS5: successful connection, AUTO_READ on, ManuallySetDestination true",
+                        DESTINATION,
+                        true,
                         true,
                         new Socks5ProxyHandler(anonSocks5Proxy.address())),
 
                 new SuccessTestItem(
-                        "Anonymous SOCKS5: successful connection, AUTO_READ off",
+                        "Anonymous SOCKS5: successful connection, AUTO_READ off, ManuallySetDestination false",
                         DESTINATION,
+                        false,
+                        false,
+                        new Socks5ProxyHandler(anonSocks5Proxy.address())),
+
+                new SuccessTestItem(
+                        "Anonymous SOCKS5: successful connection, AUTO_READ off, ManuallySetDestination true",
+                        DESTINATION,
+                        false,
+                        true,
+                        new Socks5ProxyHandler(anonSocks5Proxy.address())),
+
+                new FailureTestItem(
+                        "Anonymous SOCKS5: rejected connection, ManuallySetDestination false",
+                        BAD_DESTINATION, "status: FORBIDDEN",
                         false,
                         new Socks5ProxyHandler(anonSocks5Proxy.address())),
 
                 new FailureTestItem(
-                        "Anonymous SOCKS5: rejected connection",
+                        "Anonymous SOCKS5: rejected connection, ManuallySetDestination true",
                         BAD_DESTINATION, "status: FORBIDDEN",
+                        true,
                         new Socks5ProxyHandler(anonSocks5Proxy.address())),
 
                 new FailureTestItem(
-                        "SOCKS5: rejected anonymous connection",
+                        "SOCKS5: rejected anonymous connection, ManuallySetDestination false",
                         DESTINATION, "unexpected authMethod: PASSWORD",
+                        false,
+                        new Socks5ProxyHandler(socks5Proxy.address())),
+
+                new FailureTestItem(
+                        "SOCKS5: rejected anonymous connection, ManuallySetDestination true",
+                        DESTINATION, "unexpected authMethod: PASSWORD",
+                        true,
                         new Socks5ProxyHandler(socks5Proxy.address())),
 
                 new SuccessTestItem(
-                        "SOCKS5: successful connection to anonymous server, AUTO_READ on",
+                        "SOCKS5: successful connection to anonymous server, AUTO_READ on, ManuallySetDestination false",
                         DESTINATION,
+                        true,
+                        false,
+                        new Socks5ProxyHandler(anonSocks5Proxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                        "SOCKS5: successful connection to anonymous server, AUTO_READ on, ManuallySetDestination true",
+                        DESTINATION,
+                        true,
                         true,
                         new Socks5ProxyHandler(anonSocks5Proxy.address(), USERNAME, PASSWORD)),
 
                 new SuccessTestItem(
-                        "SOCKS5: successful connection, AUTO_READ on",
+                        "SOCKS5: successful connection, AUTO_READ on, ManuallySetDestination false",
                         DESTINATION,
+                        true,
+                        false,
+                        new Socks5ProxyHandler(socks5Proxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                        "SOCKS5: successful connection, AUTO_READ on, ManuallySetDestination true",
+                        DESTINATION,
+                        true,
                         true,
                         new Socks5ProxyHandler(socks5Proxy.address(), USERNAME, PASSWORD)),
 
                 new SuccessTestItem(
-                        "SOCKS5: successful connection, AUTO_READ off",
+                        "SOCKS5: successful connection, AUTO_READ off, ManuallySetDestination false",
                         DESTINATION,
+                        false,
+                        false,
+                        new Socks5ProxyHandler(socks5Proxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                        "SOCKS5: successful connection, AUTO_READ off, ManuallySetDestination true",
+                        DESTINATION,
+                        false,
+                        true,
+                        new Socks5ProxyHandler(socks5Proxy.address(), USERNAME, PASSWORD)),
+
+                new FailureTestItem(
+                        "SOCKS5: rejected connection, ManuallySetDestination false",
+                        BAD_DESTINATION, "status: FORBIDDEN",
                         false,
                         new Socks5ProxyHandler(socks5Proxy.address(), USERNAME, PASSWORD)),
 
                 new FailureTestItem(
-                        "SOCKS5: rejected connection",
+                        "SOCKS5: rejected connection, ManuallySetDestination true",
                         BAD_DESTINATION, "status: FORBIDDEN",
+                        true,
                         new Socks5ProxyHandler(socks5Proxy.address(), USERNAME, PASSWORD)),
 
                 new FailureTestItem(
-                        "SOCKS5: authentication failure",
+                        "SOCKS5: authentication failure, ManuallySetDestination false",
                         DESTINATION, "authStatus: FAILURE",
+                        false,
+                        new Socks5ProxyHandler(socks5Proxy.address(), BAD_USERNAME, BAD_PASSWORD)),
+
+                new FailureTestItem(
+                        "SOCKS5: authentication failure, ManuallySetDestination true",
+                        DESTINATION, "authStatus: FAILURE",
+                        true,
                         new Socks5ProxyHandler(socks5Proxy.address(), BAD_USERNAME, BAD_PASSWORD)),
 
                 new TimeoutTestItem(
-                        "SOCKS5: timeout",
+                        "SOCKS5: timeout, ManuallySetDestination false",
+                        false,
+                        new Socks5ProxyHandler(deadSocks5Proxy.address())),
+
+                new TimeoutTestItem(
+                        "SOCKS5: timeout, ManuallySetDestination true",
+                        true,
                         new Socks5ProxyHandler(deadSocks5Proxy.address())),
 
                 // HTTP + HTTPS + SOCKS4 + SOCKS5
 
                 new SuccessTestItem(
-                        "Single-chain: successful connection, AUTO_READ on",
+                        "Single-chain: successful connection, AUTO_READ on, ManuallySetDestination false",
                         DESTINATION,
+                        true,
+                        false,
+                        new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
+                        new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
+                        new HttpProxyHandler(anonHttpProxy.address())),
+
+                new SuccessTestItem(
+                        "Single-chain: successful connection, AUTO_READ on, ManuallySetDestination true",
+                        DESTINATION,
+                        true,
                         true,
                         new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
                         new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
@@ -372,9 +666,22 @@ public class ProxyHandlerTest {
                         new HttpProxyHandler(anonHttpProxy.address())),
 
                 new SuccessTestItem(
-                        "Single-chain: successful connection, AUTO_READ off",
+                        "Single-chain: successful connection, AUTO_READ off, ManuallySetDestination false",
                         DESTINATION,
                         false,
+                        false,
+                        new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
+                        new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
+                        new HttpProxyHandler(anonHttpProxy.address())),
+
+                new SuccessTestItem(
+                        "Single-chain: successful connection, AUTO_READ off, ManuallySetDestination true",
+                        DESTINATION,
+                        false,
+                        true,
                         new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
                         new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
@@ -385,8 +692,26 @@ public class ProxyHandlerTest {
                 // (HTTP + HTTPS + SOCKS4 + SOCKS5) * 2
 
                 new SuccessTestItem(
-                        "Double-chain: successful connection, AUTO_READ on",
+                        "Double-chain: successful connection, AUTO_READ on, ManuallySetDestination false",
                         DESTINATION,
+                        true,
+                        false,
+                        new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
+                        new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
+                        new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
+                        new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
+                        new HttpProxyHandler(anonHttpProxy.address())),
+
+                new SuccessTestItem(
+                        "Double-chain: successful connection, AUTO_READ on, ManuallySetDestination true",
+                        DESTINATION,
+                        true,
                         true,
                         new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
                         new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
@@ -401,9 +726,27 @@ public class ProxyHandlerTest {
                         new HttpProxyHandler(anonHttpProxy.address())),
 
                 new SuccessTestItem(
-                        "Double-chain: successful connection, AUTO_READ off",
+                        "Double-chain: successful connection, AUTO_READ off, ManuallySetDestination false",
                         DESTINATION,
                         false,
+                        false,
+                        new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
+                        new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
+                        new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
+                        new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
+                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                        new HttpProxyHandler(interHttpsProxy.address()), // HTTPS
+                        new HttpProxyHandler(interHttpProxy.address()), // HTTP
+                        new HttpProxyHandler(anonHttpProxy.address())),
+
+                new SuccessTestItem(
+                        "Double-chain: successful connection, AUTO_READ off, ManuallySetDestination true",
+                        DESTINATION,
+                        false,
+                        true,
                         new Socks5ProxyHandler(interSocks5Proxy.address()), // SOCKS5
                         new Socks4ProxyHandler(interSocks4Proxy.address()), // SOCKS4
                         clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
@@ -564,9 +907,22 @@ public class ProxyHandlerTest {
         final InetSocketAddress destination;
         final ChannelHandler[] clientHandlers;
 
-        protected TestItem(String name, InetSocketAddress destination, ChannelHandler... clientHandlers) {
+        protected TestItem(String name, InetSocketAddress destination, boolean isManuallySetDestination, ChannelHandler... clientHandlers) {
             this.name = name;
-            this.destination = destination;
+            assert clientHandlers.length > 0;
+            assert clientHandlers[clientHandlers.length - 1] instanceof ProxyHandler;
+
+            if (isManuallySetDestination) {
+                if (destination != null) {
+                    ChannelHandler clientHandler = clientHandlers[clientHandlers.length - 1];
+                    ((ProxyHandler) clientHandler).setDestinationAddress(destination);
+                    this.destination = ((ProxyHandler) clientHandler).proxyAddress();
+                } else {
+                    this.destination = null;
+                }
+            } else {
+                this.destination = destination;
+            }
             this.clientHandlers = clientHandlers;
         }
 
@@ -623,8 +979,8 @@ public class ProxyHandlerTest {
         SuccessTestItem(String name,
                         InetSocketAddress destination,
                         boolean autoRead,
-                        ChannelHandler... clientHandlers) {
-            super(name, destination, clientHandlers);
+                        boolean isManuallySetDestination, ChannelHandler... clientHandlers) {
+            super(name, destination, isManuallySetDestination, clientHandlers);
             int expectedEventCount = 0;
             for (ChannelHandler h: clientHandlers) {
                 if (h instanceof ProxyHandler) {
@@ -680,8 +1036,8 @@ public class ProxyHandlerTest {
         private final String expectedMessage;
 
         FailureTestItem(
-                String name, InetSocketAddress destination, String expectedMessage, ChannelHandler... clientHandlers) {
-            super(name, destination, clientHandlers);
+            String name, InetSocketAddress destination, String expectedMessage, boolean isManuallySetDestination, ChannelHandler... clientHandlers) {
+            super(name, destination, isManuallySetDestination, clientHandlers);
             this.expectedMessage = expectedMessage;
         }
 
@@ -719,8 +1075,8 @@ public class ProxyHandlerTest {
 
     private static final class TimeoutTestItem extends TestItem {
 
-        TimeoutTestItem(String name, ChannelHandler... clientHandlers) {
-            super(name, null, clientHandlers);
+        TimeoutTestItem(String name, boolean isManuallySetDestination, ChannelHandler... clientHandlers) {
+            super(name, null, isManuallySetDestination, clientHandlers);
         }
 
         @Override
