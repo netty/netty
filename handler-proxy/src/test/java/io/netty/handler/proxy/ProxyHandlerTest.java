@@ -250,14 +250,8 @@ public class ProxyHandlerTest {
                         new HttpProxyHandler(httpProxy.address(), BAD_USERNAME, BAD_PASSWORD)),
 
                 new TimeoutTestItem(
-                        "HTTP proxy: timeout, ManuallySetDestination false",
-                        false,
-                        new HttpProxyHandler(deadHttpProxy.address())),
-
-                new TimeoutTestItem(
-                        "HTTP proxy: timeout, ManuallySetDestination true",
-                        true,
-                        new HttpProxyHandler(deadHttpProxy.address())),
+                    "HTTP proxy: timeout",
+                    new HttpProxyHandler(deadHttpProxy.address())),
 
                 // HTTPS ------------------------------------------------------
 
@@ -382,15 +376,8 @@ public class ProxyHandlerTest {
                         new HttpProxyHandler(httpsProxy.address(), BAD_USERNAME, BAD_PASSWORD)),
 
                 new TimeoutTestItem(
-                        "HTTPS proxy: timeout, ManuallySetDestination false",
-                        false,
-                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
-                        new HttpProxyHandler(deadHttpsProxy.address())),
-
-                new TimeoutTestItem(
-                        "HTTPS proxy: timeout, ManuallySetDestination true",
-                        true,
-                        clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
+                    "HTTPS proxy: timeout",
+                    clientSslCtx.newHandler(PooledByteBufAllocator.DEFAULT),
                         new HttpProxyHandler(deadHttpsProxy.address())),
 
                 // SOCKS4 -----------------------------------------------------
@@ -500,14 +487,8 @@ public class ProxyHandlerTest {
                         new Socks4ProxyHandler(socks4Proxy.address(), BAD_USERNAME)),
 
                 new TimeoutTestItem(
-                        "SOCKS4: timeout, ManuallySetDestination false",
-                        false,
-                        new Socks4ProxyHandler(deadSocks4Proxy.address())),
-
-                new TimeoutTestItem(
-                        "SOCKS4: timeout, ManuallySetDestination true",
-                        true,
-                        new Socks4ProxyHandler(deadSocks4Proxy.address())),
+                    "SOCKS4: timeout",
+                    new Socks4ProxyHandler(deadSocks4Proxy.address())),
 
                 // SOCKS5 -----------------------------------------------------
 
@@ -630,14 +611,8 @@ public class ProxyHandlerTest {
                         new Socks5ProxyHandler(socks5Proxy.address(), BAD_USERNAME, BAD_PASSWORD)),
 
                 new TimeoutTestItem(
-                        "SOCKS5: timeout, ManuallySetDestination false",
-                        false,
-                        new Socks5ProxyHandler(deadSocks5Proxy.address())),
-
-                new TimeoutTestItem(
-                        "SOCKS5: timeout, ManuallySetDestination true",
-                        true,
-                        new Socks5ProxyHandler(deadSocks5Proxy.address())),
+                        "SOCKS5: timeout",
+                    new Socks5ProxyHandler(deadSocks5Proxy.address())),
 
                 // HTTP + HTTPS + SOCKS4 + SOCKS5
 
@@ -1072,8 +1047,8 @@ public class ProxyHandlerTest {
 
     private static final class TimeoutTestItem extends TestItem {
 
-        TimeoutTestItem(String name, boolean isManuallySetDestination, ChannelHandler... clientHandlers) {
-            super(name, null, isManuallySetDestination, clientHandlers);
+        TimeoutTestItem(String name, ChannelHandler... clientHandlers) {
+            super(name, null, false, clientHandlers);
         }
 
         @Override
