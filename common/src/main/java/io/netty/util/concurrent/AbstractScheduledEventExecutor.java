@@ -37,8 +37,6 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
                 }
             };
 
-    private static final long START_TIME = System.nanoTime();
-
     static final Runnable WAKEUP_TASK = new Runnable() {
        @Override
        public void run() { } // Do nothing
@@ -55,6 +53,11 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         super(parent);
     }
 
+    @Override
+    public Ticker ticker() {
+        return Ticker.systemTicker();
+    }
+
     /**
      * Get the current time in nanoseconds by this executor's clock. This is not the same as {@link System#nanoTime()}
      * for two reasons:
@@ -64,21 +67,29 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      *     <li>Implementations (in particular EmbeddedEventLoop) may use their own time source so they can control time
      *     for testing purposes.</li>
      * </ul>
+     *
+     * @deprecated Please use (or override) {@link #ticker()} instead. This method delegates to {@link #ticker()}. Old
+     * code may still call this method for compatibility.
      */
+    @Deprecated
     protected long getCurrentTimeNanos() {
-        return defaultCurrentTimeNanos();
+        return ticker().nanoTime();
     }
 
     /**
-     * @deprecated Use the non-static {@link #getCurrentTimeNanos()} instead.
+     * @deprecated Use the non-static {@link #ticker()} instead.
      */
     @Deprecated
     protected static long nanoTime() {
-        return defaultCurrentTimeNanos();
+        return Ticker.systemTicker().nanoTime();
     }
 
+    /**
+     * @deprecated Use the non-static {@link #ticker()} instead.
+     */
+    @Deprecated
     static long defaultCurrentTimeNanos() {
-        return System.nanoTime() - START_TIME;
+        return Ticker.systemTicker().nanoTime();
     }
 
     static long deadlineNanos(long nanoTime, long delay) {
@@ -92,7 +103,9 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      * {@code deadlineNanos} would expire.
      * @param deadlineNanos An arbitrary deadline in nano seconds.
      * @return the number of nano seconds from now {@code deadlineNanos} would expire.
+     * @deprecated Use {@link #ticker()} instead
      */
+    @Deprecated
     protected static long deadlineToDelayNanos(long deadlineNanos) {
         return ScheduledFutureTask.deadlineToDelayNanos(defaultCurrentTimeNanos(), deadlineNanos);
     }
@@ -101,7 +114,7 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
      * Returns the amount of time left until the scheduled task with the closest dead line is executed.
      */
     protected long delayNanos(long currentTimeNanos, long scheduledPurgeInterval) {
-        currentTimeNanos -= initialNanoTime();
+        currentTimeNanos -= ticker().initialNanoTime();
 
         ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
         if (scheduledTask == null) {
@@ -114,9 +127,11 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
     /**
      * The initial value used for delay and computations based upon a monatomic time source.
      * @return initial value used for delay and computations based upon a monatomic time source.
+     * @deprecated Use {@link #ticker()} instead
      */
+    @Deprecated
     protected static long initialNanoTime() {
-        return START_TIME;
+        return Ticker.systemTicker().initialNanoTime();
     }
 
     PriorityQueue<ScheduledFutureTask<?>> scheduledTaskQueue() {
