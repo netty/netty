@@ -19,6 +19,8 @@ import io.netty.pkitesting.CertificateBuilder.Algorithm;
 import io.netty.pkitesting.CertificateBuilder.KeyUsage;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -49,6 +51,7 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -60,6 +63,7 @@ class CertificateBuilderTest {
             .notBefore(NOW.minus(1, DAYS))
             .notAfter(NOW.plus(1, DAYS))
             .subject(SUBJECT);
+    private static final SecureRandom RNG = new SecureRandom();
 
     @ParameterizedTest
     @EnumSource
@@ -68,6 +72,7 @@ class CertificateBuilderTest {
         // These big keys just take too long to test with.
         assumeTrue(algorithm != Algorithm.rsa4096 && algorithm != Algorithm.rsa8192);
         assumeTrue(algorithm.isSupported());
+        assumeTrue(algorithm.supportSigning());
 
         X509Bundle bundle = BASE.copy()
                 .algorithm(algorithm)
@@ -77,6 +82,56 @@ class CertificateBuilderTest {
         assertTrue(bundle.isCertificateAuthority());
         assertTrue(bundle.isSelfSigned());
         assertThat(cert.getSubjectX500Principal()).isEqualTo(new X500Principal(SUBJECT));
+    }
+
+    @ParameterizedTest
+    @EnumSource
+    void createKeyPairOfEveryKeyType(Algorithm algorithm) throws Exception {
+        // Assume that RSA 4096 and RSA 8192 work if the other RSA bit-widths work.
+        // These big keys just take too long to test with.
+        assumeTrue(algorithm != Algorithm.rsa4096 && algorithm != Algorithm.rsa8192);
+        assumeTrue(algorithm.isSupported());
+
+        KeyPair keyPair = algorithm.generateKeyPair(RNG);
+        assertNotNull(keyPair);
+        assertNotNull(keyPair.getPrivate());
+        assertNotNull(keyPair.getPublic());
+    }
+
+    @EnabledForJreRange(
+            min = JRE.JAVA_24,
+            disabledReason = "ML-KEM is only supported in Java 24 onwards")
+    @ParameterizedTest
+    @EnumSource(names = {"mlKem512", "mlKem768", "mlKem1024"})
+    void createMlKemCerts(Algorithm algorithm) throws Exception {
+        CertificateBuilder mlKemBuilder = BASE.copy()
+                .algorithm(algorithm);
+
+        // ML-KEM cannot be used to sign itself
+        assertThrows(IllegalStateException.class, () -> {
+            mlKemBuilder.copy().setIsCertificateAuthority(true).buildSelfSigned();
+        });
+
+        CertificateBuilder mlDsaBuilder = BASE.copy()
+                .algorithm(Algorithm.mlDsa44);
+        X509Bundle issuer = mlDsaBuilder
+                .subject("CN=issuer.netty.io, O=Netty")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+
+        // ML-KEM can be signed by others
+        X509Bundle mlKemBundle = mlKemBuilder.buildIssuedBy(issuer);
+
+        X509Certificate cert = mlKemBundle.getCertificate();
+        assertFalse(mlKemBundle.isCertificateAuthority());
+        assertFalse(mlKemBundle.isSelfSigned());
+        assertThat(cert.getSubjectX500Principal()).isEqualTo(new X500Principal(SUBJECT));
+
+        // ML-KEM cannot sign others
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> {
+            mlDsaBuilder.buildIssuedBy(mlKemBundle);
+        });
+        assertThat(e).hasMessageContaining("cannot be used for signing");
     }
 
     @Test
