@@ -118,7 +118,6 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assertTrue(buffer.release());
     }
 
-    // See https://github.com/netty/netty/issues/15028
     @Test
     public void testAllocateWithoutLock() throws InterruptedException {
         final AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator();
