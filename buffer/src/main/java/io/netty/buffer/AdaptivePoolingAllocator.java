@@ -594,8 +594,10 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
                 curr.attachToMagazine(this);
             }
+            boolean allocated = false;
             if (curr.remainingCapacity() >= size) {
                 curr.readInitInto(buf, size, maxCapacity);
+                allocated = true;
             }
             try {
                 if (curr.remainingCapacity() >= RETIRE_CAPACITY) {
@@ -607,7 +609,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     curr.release();
                 }
             }
-            return true;
+            return allocated;
         }
 
         private boolean allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
