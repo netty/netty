@@ -83,6 +83,10 @@ public final class EpollIoOps implements IoOps {
         return (value & ops.value) != 0;
     }
 
+    boolean contains(int value) {
+        return (this.value & value) != 0;
+    }
+
     /**
      * Return a {@link EpollIoOps} which is a combination of the current and the given {@link EpollIoOps}.
      *

@@ -113,6 +113,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     protected void setFlag(int flag) throws IOException {
+        if (ops.contains(flag)) {
+            // we can save a syscall if the ops did not change
+            return;
+        }
         ops = ops.with(EpollIoOps.valueOf(flag));
         if (isRegistered()) {
             IoRegistration registration = registration();
@@ -124,13 +128,12 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     void clearFlag(int flag) throws IOException {
         IoRegistration registration = registration();
-        EpollIoOps newOps = ops.without(EpollIoOps.valueOf(flag));
-        // we can save a syscall if the ops did not change
-        if (newOps == ops) {
+        if (!ops.contains(flag)) {
+            // we can save a syscall if the ops did not change
             return;
         }
-        ops = newOps;
-        registration.submit(newOps);
+        ops = ops.without(EpollIoOps.valueOf(flag));
+        registration.submit(ops);
     }
 
     protected final IoRegistration registration() {
@@ -613,6 +616,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             assert eventLoop().inEventLoop();
             try {
                 readPending = false;
+                if (!ops.contains(EpollIoOps.EPOLLIN)) {
+                    return;
+                }
                 ops = ops.without(EpollIoOps.EPOLLIN);
                 IoRegistration registration = registration();
                 registration.submit(ops);
