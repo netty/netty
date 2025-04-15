@@ -15,14 +15,22 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.NettyRuntime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
     @Override
@@ -112,5 +120,39 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         retainedDerived.release();
 
         assertTrue(buffer.release());
+    }
+
+    @Test
+    public void testAllocateWithoutLock() throws InterruptedException {
+        final AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator();
+        // Make `threadCount` bigger than `AdaptivePoolingAllocator.MAX_STRIPES`, to let thread collision easily happen.
+        int threadCount = NettyRuntime.availableProcessors() * 4;
+        final CountDownLatch countDownLatch = new CountDownLatch(threadCount);
+        final AtomicReference<Throwable> throwableAtomicReference = new AtomicReference<Throwable>();
+        for (int i = 0; i < threadCount; i++) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for (int j = 0; j < 1024; j++) {
+                        try {
+                            ByteBuf buffer = null;
+                            try {
+                                buffer = alloc.heapBuffer(128);
+                                buffer.ensureWritable(ThreadLocalRandom.current().nextInt(512, 32769));
+                            } finally {
+                                if (buffer != null) {
+                                    buffer.release();
+                                }
+                            }
+                        } catch (Throwable t) {
+                            throwableAtomicReference.set(t);
+                        }
+                    }
+                    countDownLatch.countDown();
+                }
+            }).start();
+        }
+        countDownLatch.await();
+        assertNull(throwableAtomicReference.get());
     }
 }
