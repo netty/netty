@@ -910,7 +910,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             AdaptivePoolingAllocator parent = mag.parent;
             int chunkSize = mag.preferredChunkSize();
             int memSize = delegate.capacity();
-            if (!pooled || shouldReleaseSuboptimalChunkSuze(memSize, chunkSize)) {
+            if (!pooled || shouldReleaseSuboptimalChunkSize(memSize, chunkSize)) {
                 // Drop the chunk if the parent allocator is closed,
                 // or if the chunk deviates too much from the preferred chunk size.
                 detachFromMagazine();
@@ -933,14 +933,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             }
         }
 
-        private static boolean shouldReleaseSuboptimalChunkSuze(int givenSize, int preferredSize) {
+        private static boolean shouldReleaseSuboptimalChunkSize(int givenSize, int preferredSize) {
             int givenChunks = givenSize / MIN_CHUNK_SIZE;
             int preferredChunks = preferredSize / MIN_CHUNK_SIZE;
             int deviation = Math.abs(givenChunks - preferredChunks);
 
-            // Retire chunks with a 0.5% probability per unit of MIN_CHUNK_SIZE deviation from preference.
+            // Retire chunks with a 5% probability per unit of MIN_CHUNK_SIZE deviation from preference.
             return deviation != 0 &&
-                    PlatformDependent.threadLocalRandom().nextDouble() * 200.0 > deviation;
+                    PlatformDependent.threadLocalRandom().nextDouble() * 20.0 < deviation;
         }
 
         public void readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
