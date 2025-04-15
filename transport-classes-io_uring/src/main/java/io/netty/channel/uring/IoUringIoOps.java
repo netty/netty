@@ -375,6 +375,15 @@ public final class IoUringIoOps implements IoOps {
                 0, memoryAddress, length, recvFlags, data, bid, (short) 0, 0, 0);
     }
 
+    static IoUringIoOps newSendZC(
+            int fd, long memoryAddress, int length,
+            int flags, short data, int zcFlags
+    ) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L867
+        return new IoUringIoOps(Native.IORING_OP_SEND_ZC, (byte) 0, (byte) zcFlags, fd,
+                0, memoryAddress, length, flags, data, (short) 0, (short) 0, 0, 0);
+    }
+
     /**
      * Returns a new {@code OP_RECVMSG} {@link IoUringIoOps}.
      *
