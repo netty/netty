@@ -18,6 +18,7 @@ package io.netty.channel.uring;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.unix.Buffer;
+import io.netty.channel.unix.Limits;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -45,6 +46,8 @@ public final class IoUring {
     private static final boolean IORING_RECVSEND_BUNDLE_ENABLED;
     private static final boolean IORING_POLL_ADD_MULTISHOT_ENABLED;
 
+    static final int NUM_ELEMENTS_IOVEC;
+
     private static final InternalLogger logger;
 
     static {
@@ -64,6 +67,7 @@ public final class IoUring {
         boolean deferTaskrunSupported = false;
         boolean registerBufferRingSupported = false;
         boolean registerBufferRingIncSupported = false;
+        int numElementsIoVec = 10;
 
         String kernelVersion = "[unknown]";
         try {
@@ -77,6 +81,14 @@ public final class IoUring {
                     RingBuffer ringBuffer = null;
                     try {
                         ringBuffer = Native.createRingBuffer(1, 0);
+                        if ((ringBuffer.features() & Native.IORING_FEAT_SUBMIT_STABLE) == 0) {
+                            // This should only happen on kernels < 5.4 which we don't support anyway.
+                            throw new UnsupportedOperationException("IORING_FEAT_SUBMIT_STABLE not supported!");
+                        }
+                        // IOV_MAX should be 1024 and an IOV is 16 bytes which means that by default we reserve around
+                        // 160kb.
+                        numElementsIoVec = SystemPropertyUtil.getInt(
+                                "io.netty.iouring.numElementsIoVec", 10 *  Limits.IOV_MAX);
                         Native.checkAllIOSupported(ringBuffer.fd());
                         socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ringBuffer.fd());
                         spliceSupported = Native.isSpliceSupported(ringBuffer.fd());
@@ -164,8 +176,9 @@ public final class IoUring {
                 "io.netty.iouring.recvMultiShotEnabled", true);
         IORING_RECVSEND_BUNDLE_ENABLED = IORING_RECVSEND_BUNDLE_SUPPORTED && SystemPropertyUtil.getBoolean(
                 "io.netty.iouring.recvsendBundleEnabled", true);
-       IORING_POLL_ADD_MULTISHOT_ENABLED = IORING_POLL_ADD_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
+        IORING_POLL_ADD_MULTISHOT_ENABLED = IORING_POLL_ADD_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
                "io.netty.iouring.pollAddMultishotEnabled", true);
+        NUM_ELEMENTS_IOVEC = numElementsIoVec;
     }
 
     public static boolean isAvailable() {

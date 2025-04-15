@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
@@ -24,6 +25,7 @@ import io.netty.channel.IoRegistration;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.channel.unix.IovArray;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.ThreadAwareExecutor;
@@ -64,7 +66,7 @@ public final class IoUringIoHandler implements IoHandler {
     private final long eventfdReadBufAddress;
     private final ByteBuffer timeoutMemory;
     private final long timeoutMemoryAddress;
-
+    private final IovArray iovArray;
     private long eventfdReadSubmitted;
     private boolean eventFdClosing;
     private volatile boolean shuttingDown;
@@ -145,6 +147,10 @@ public final class IoUringIoHandler implements IoHandler {
         // We buffer a maximum of 2 * CompletionQueue.ringCapacity completions before we drain them in batches.
         // Also as we never submit an udata which is 0L we use this as the tombstone marker.
         completionBuffer = new CompletionBuffer(ringBuffer.ioUringCompletionQueue().ringCapacity * 2, 0);
+
+        iovArray = new IovArray(Unpooled.wrappedBuffer(
+                Buffer.allocateDirectWithNativeOrder(IoUring.NUM_ELEMENTS_IOVEC * IovArray.IOV_SIZE))
+                .setIndex(0, 0));
     }
 
     @Override
@@ -171,7 +177,7 @@ public final class IoUringIoHandler implements IoHandler {
             long timeoutNanos = context.deadlineNanos() == -1 ? -1 : context.delayNanos(System.nanoTime());
             submitAndWaitWithTimeout(submissionQueue, false, timeoutNanos);
         } else {
-            submissionQueue.submit();
+            submitAndClear(submissionQueue);
         }
         for (;;) {
             // we might call submitAndRunNow() while processing stuff in the completionArray we need to
@@ -182,7 +188,7 @@ public final class IoUringIoHandler implements IoHandler {
             // Let's submit again.
             // If we were not able to submit anything and there was nothing left in the completionBuffer we will
             // break out of the loop and return to the caller.
-            if (submissionQueue.submit() == 0 && processed == 0) {
+            if (submitAndClear(submissionQueue) == 0 && processed == 0) {
                 break;
             }
         }
@@ -196,10 +202,19 @@ public final class IoUringIoHandler implements IoHandler {
         }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
-        if (submissionQueue.submit() > 0) {
+        if (submitAndClear(submissionQueue) > 0) {
             completionBuffer.drain(completionQueue);
             completionBuffer.processOneNow(this::handle, udata);
         }
+    }
+
+    private int submitAndClear(SubmissionQueue submissionQueue) {
+        int submitted = submissionQueue.submit();
+
+        // Clear the iovArray as we can re-use it now as things are considered stable after submission:
+        // See https://man7.org/linux/man-pages/man3/io_uring_prep_sendmsg.3.html
+        iovArray.clear();
+        return submitted;
     }
 
     private static IoUringBufferRing newBufferRing(int ringFd, IoUringBufferRingConfig bufferRingConfig)
@@ -326,7 +341,11 @@ public final class IoUringIoHandler implements IoHandler {
                 submissionQueue.addTimeout(timeoutMemoryAddress, udata);
             }
         }
-        return submissionQueue.submitAndWait();
+        int submitted = submissionQueue.submitAndWait();
+        // Clear the iovArray as we can re-use it now as things are considered stable after submission:
+        // See https://man7.org/linux/man-pages/man3/io_uring_prep_sendmsg.3.html
+        iovArray.clear();
+        return submitted;
     }
 
     @Override
@@ -448,6 +467,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
         Buffer.free(eventfdReadBuf);
         Buffer.free(timeoutMemory);
+        iovArray.release();
     }
 
     @Override
@@ -610,6 +630,15 @@ public final class IoUringIoHandler implements IoHandler {
     @Override
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
         return IoUringIoHandle.class.isAssignableFrom(handleType);
+    }
+
+    IovArray iovArray() {
+        if (iovArray.isFull()) {
+            // Submit so we can reuse the iovArray.
+            submitAndClear(ringBuffer.ioUringSubmissionQueue());
+        }
+        assert iovArray.count() == 0;
+        return iovArray;
     }
 
     /**
