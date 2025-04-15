@@ -74,14 +74,30 @@ public final class Base64 {
         return encode(src, breakLines(dialect), dialect);
     }
 
+    public static Buffer encode(Buffer src, Base64Dialect dialect, boolean addPadding) {
+        return encode(src, breakLines(dialect), dialect, addPadding);
+    }
+
     public static Buffer encode(Buffer src, boolean breakLines) {
         return encode(src, breakLines, Base64Dialect.STANDARD);
+    }
+
+    public static Buffer encode(Buffer src, boolean breakLines, boolean addPadding) {
+        return encode(src, breakLines, Base64Dialect.STANDARD, addPadding);
     }
 
     public static Buffer encode(Buffer src, boolean breakLines, Base64Dialect dialect) {
         requireNonNull(src, "src");
 
         Buffer dest = encode(src, src.readerOffset(), src.readableBytes(), breakLines, dialect);
+        src.readerOffset(src.writerOffset());
+        return dest;
+    }
+
+    public static Buffer encode(Buffer src, boolean breakLines, Base64Dialect dialect, boolean addPadding) {
+        requireNonNull(src, "src");
+
+        Buffer dest = encode(src, src.readerOffset(), src.readableBytes(), breakLines, dialect, addPadding);
         src.readerOffset(src.writerOffset());
         return dest;
     }
@@ -94,19 +110,40 @@ public final class Base64 {
         return encode(src, off, len, breakLines(dialect), dialect);
     }
 
+    public static Buffer encode(Buffer src, int off, int len, Base64Dialect dialect, boolean addPadding) {
+        return encode(src, off, len, breakLines(dialect), dialect, true);
+    }
+
     public static Buffer encode(
             Buffer src, int off, int len, boolean breakLines) {
         return encode(src, off, len, breakLines, Base64Dialect.STANDARD);
     }
 
     public static Buffer encode(
+            Buffer src, int off, int len, boolean breakLines, boolean addPadding) {
+        return encode(src, off, len, breakLines, Base64Dialect.STANDARD, addPadding);
+    }
+
+    public static Buffer encode(
             Buffer src, int off, int len, boolean breakLines, Base64Dialect dialect) {
         return encode(src, off, len, breakLines, dialect,
-                      src.isDirect() ? offHeapAllocator() : onHeapAllocator());
+                      src.isDirect() ? offHeapAllocator() : onHeapAllocator(), true);
+    }
+
+    public static Buffer encode(
+            Buffer src, int off, int len, boolean breakLines, Base64Dialect dialect, boolean addPadding) {
+        return encode(src, off, len, breakLines, dialect,
+                src.isDirect() ? offHeapAllocator() : onHeapAllocator(), addPadding);
     }
 
     public static Buffer encode(
             Buffer src, int off, int len, boolean breakLines, Base64Dialect dialect, BufferAllocator allocator) {
+        return encode(src, off, len, breakLines, dialect, allocator, true);
+    }
+
+    public static Buffer encode(
+            Buffer src, int off, int len, boolean breakLines, Base64Dialect dialect, BufferAllocator allocator,
+            boolean addPadding) {
         requireNonNull(src, "src");
         requireNonNull(dialect, "dialect");
 
@@ -117,7 +154,7 @@ public final class Base64 {
         int len2 = len - 2;
         int lineLength = 0;
         for (; d < len2; d += 3, e += 4) {
-            encode3to4(src, d + off, 3, dest, e, alphabet);
+            encode3to4(src, d + off, 3, dest, e, alphabet, addPadding);
 
             lineLength += 4;
 
@@ -129,8 +166,7 @@ public final class Base64 {
         } // end for: each piece of array
 
         if (d < len) {
-            encode3to4(src, d + off, len - d, dest, e, alphabet);
-            e += 4;
+            e += encode3to4(src, d + off, len - d, dest, e, alphabet, addPadding);
         } // end if: some padding needed
 
         // Remove last byte if it's a newline
@@ -141,8 +177,9 @@ public final class Base64 {
         return dest.writerOffset(e);
     }
 
-    private static void encode3to4(
-            Buffer src, int srcOffset, int numSigBytes, Buffer dest, int destOffset, byte[] alphabet) {
+    private static int encode3to4(
+            Buffer src, int srcOffset, int numSigBytes, Buffer dest, int destOffset, byte[] alphabet,
+            boolean addPadding) {
         //           1         2         3
         // 01234567890123456789012345678901 Bit position
         // --------000000001111111122222222 Array position from threeBytes
@@ -166,7 +203,7 @@ public final class Base64 {
             inBuff = numSigBytes <= 0 ? 0 : toIntBE(src.getMedium(srcOffset));
             break;
         }
-        encode3to4BigEndian(inBuff, numSigBytes, dest, destOffset, alphabet);
+        return encode3to4BigEndian(inBuff, numSigBytes, dest, destOffset, alphabet, addPadding);
     }
 
     // package-private for testing
@@ -197,8 +234,8 @@ public final class Base64 {
         return (mediumValue & 0xff0000) | (mediumValue & 0xff00) | (mediumValue & 0xff);
     }
 
-    private static void encode3to4BigEndian(
-            int inBuff, int numSigBytes, Buffer dest, int destOffset, byte[] alphabet) {
+    private static int encode3to4BigEndian(
+            int inBuff, int numSigBytes, Buffer dest, int destOffset, byte[] alphabet, boolean addPadding) {
         // Packing bytes into an int to reduce bound and reference count checking.
         switch (numSigBytes) {
             case 3:
@@ -206,22 +243,35 @@ public final class Base64 {
                                         alphabet[inBuff >>> 12 & 0x3f] << 16 |
                                         alphabet[inBuff >>>  6 & 0x3f] << 8  |
                                         alphabet[inBuff        & 0x3f]);
-                break;
+                return 4;
             case 2:
-                dest.setInt(destOffset, alphabet[inBuff >>> 18       ] << 24 |
-                                        alphabet[inBuff >>> 12 & 0x3f] << 16 |
-                                        alphabet[inBuff >>> 6  & 0x3f] << 8  |
-                                        EQUALS_SIGN);
-                break;
+                if (addPadding) {
+                    dest.setInt(destOffset, alphabet[inBuff >>> 18       ] << 24 |
+                                            alphabet[inBuff >>> 12 & 0x3f] << 16 |
+                                            alphabet[inBuff >>> 6  & 0x3f] << 8  |
+                                            EQUALS_SIGN);
+                    return 4;
+                } else {
+                    dest.setMedium(destOffset, alphabet[inBuff >>> 18       ] << 16 |
+                                               alphabet[inBuff >>> 12 & 0x3f] << 8  |
+                                               alphabet[inBuff >>> 6 & 0x3f ]);
+                    return 3;
+                }
             case 1:
-                dest.setInt(destOffset, alphabet[inBuff >>> 18       ] << 24 |
-                                        alphabet[inBuff >>> 12 & 0x3f] << 16 |
-                                        EQUALS_SIGN << 8                     |
-                                        EQUALS_SIGN);
-                break;
+                if (addPadding) {
+                    dest.setInt(destOffset, alphabet[inBuff >>> 18       ] << 24 |
+                                            alphabet[inBuff >>> 12 & 0x3f] << 16 |
+                                            EQUALS_SIGN                    << 8  |
+                                            EQUALS_SIGN);
+                    return 4;
+                } else {
+                    dest.setShort(destOffset, (short) (alphabet[inBuff >>> 18       ] << 8 |
+                                                       alphabet[inBuff >>> 12 & 0x3f]));
+                    return 2;
+                }
             default:
                 // NOOP
-                break;
+                return 0;
         }
     }
 
@@ -275,6 +325,20 @@ public final class Base64 {
             try {
                 decodabet = decodabet(dialect);
                 src.openCursor(off, len).process(this);
+
+                // Padding missing, process additional bytes
+                if (b4Posn == 1) {
+                    throw new IllegalArgumentException(
+                            "Invalid Base64 input, single remaining character implies incorrect length or padding");
+                } else if (b4Posn == 2) {
+                    b4[2] = EQUALS_SIGN;
+                    b4[3] = EQUALS_SIGN;
+                    outBuffPosn += decode4to3(b4, dest, outBuffPosn, decodabet);
+                } else if (b4Posn == 3) {
+                    b4[3] = EQUALS_SIGN;
+                    outBuffPosn += decode4to3(b4, dest, outBuffPosn, decodabet);
+                }
+
                 return dest.writerOffset(outBuffPosn);
             } catch (Throwable cause) {
                 dest.close();

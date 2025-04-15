@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.ThreadLocalRandom;
@@ -119,27 +121,104 @@ public class Base64Test {
     }
 
     @Test
-    public void testEncodeDecode() {
-        testEncodeDecode(64);
-        testEncodeDecode(128);
-        testEncodeDecode(512);
-        testEncodeDecode(1024);
-        testEncodeDecode(4096);
-        testEncodeDecode(8192);
-        testEncodeDecode(16384);
+    public void testEncodeDecode() throws IOException {
+        testEncodeDecode(Base64Dialect.STANDARD);
+        testEncodeDecode(Base64Dialect.URL_SAFE);
     }
 
-    private static void testEncodeDecode(int size) {
+    private static void testEncodeDecode(Base64Dialect dialect) throws IOException {
+        testEncodeDecode(dialect, true, true);
+        testEncodeDecode(dialect, true, false);
+        testEncodeDecode(dialect, false, true);
+        testEncodeDecode(dialect, false, false);
+    }
+
+    private static void testEncodeDecode(Base64Dialect dialect, boolean breakLines, boolean padded)
+            throws IOException {
+        testEncodeDecode(64, dialect, breakLines, padded);
+        testEncodeDecode(128, dialect, breakLines, padded);
+        testEncodeDecode(512, dialect, breakLines, padded);
+        testEncodeDecode(1024, dialect, breakLines, padded);
+        testEncodeDecode(4096, dialect, breakLines, padded);
+        testEncodeDecode(8192, dialect, breakLines, padded);
+        testEncodeDecode(16384, dialect, breakLines, padded);
+    }
+
+    private static void testEncodeDecode(
+            int size, Base64Dialect dialect, boolean breakLines, boolean padded) throws IOException {
         byte[] bytes = new byte[size];
         ThreadLocalRandom.current().nextBytes(bytes);
 
+        // JDK encoder / decoder
+        java.util.Base64.Encoder jdkEncoder =
+                dialect == Base64Dialect.STANDARD ? java.util.Base64.getEncoder() : java.util.Base64.getUrlEncoder();
+        jdkEncoder = padded ? jdkEncoder : jdkEncoder.withoutPadding();
+        java.util.Base64.Decoder jdkDecoder =
+                dialect == Base64Dialect.STANDARD ? java.util.Base64.getDecoder() : java.util.Base64.getUrlDecoder();
+
+        byte[] jdKEncoded = breakLines ? insertNewLines(jdkEncoder.encode(bytes)) : jdkEncoder.encode(bytes);
+
+        // check Encoded
         try (Buffer src = onHeapAllocator().copyOf(bytes);
-             Buffer encoded = Base64.encode(src);
-             Buffer decoded = Base64.decode(encoded);
-             Buffer expectedBuf = onHeapAllocator().copyOf(bytes)) {
+             Buffer encoded = Base64.encode(src, breakLines, dialect, padded);
+             Buffer jdkExpectedEnc = onHeapAllocator().copyOf(jdKEncoded)) {
+            // Assert JDK encoded equals netty encoded
+            assertEquals(jdkExpectedEnc, encoded,
+                    StringUtil.NEWLINE + "expected: " + BufferUtil.hexDump(jdKEncoded) +
+                    StringUtil.NEWLINE + "actual--: " + BufferUtil.hexDump(encoded));
+        }
+
+        // Check Decoded
+        try (Buffer src = onHeapAllocator().copyOf(bytes);
+             Buffer expectedBuf = onHeapAllocator().copyOf(bytes);
+             Buffer encoded = Base64.encode(src, breakLines, dialect, padded);
+             Buffer decoded = Base64.decode(encoded, dialect)) {
+
+            encoded.readerOffset(0);
+            byte[] jdkDecoded = jdkDecoder.decode(stripNewLines(BufferUtil.getBytes(encoded)));
+
+            // Assert JDK decoded equals netty decoded
+            try (Buffer jdkExpectedDec = onHeapAllocator().copyOf(jdkDecoded)) {
+                assertEquals(jdkExpectedDec, decoded,
+                        StringUtil.NEWLINE + "expected: " + BufferUtil.hexDump(jdkDecoded) +
+                        StringUtil.NEWLINE + "actual--: " + BufferUtil.hexDump(decoded));
+            }
+
+            // Assert netty decoded equals expected
             assertEquals(expectedBuf, decoded,
-                         StringUtil.NEWLINE + "expected: " + BufferUtil.hexDump(expectedBuf) +
-                         StringUtil.NEWLINE + "actual--: " + BufferUtil.hexDump(decoded));
+                    StringUtil.NEWLINE + "expected: " + BufferUtil.hexDump(expectedBuf) +
+                    StringUtil.NEWLINE + "actual--: " + BufferUtil.hexDump(decoded));
+        }
+    }
+
+    private static byte[] insertNewLines(byte[] src) throws IOException {
+        if (src == null || src.length == 0) {
+            return src;
+        }
+
+        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+            for (int i = 0; i < src.length; i++) {
+                os.write(src[i]);
+                if (i + 1 < src.length && (i + 1) % 76 == 0) {
+                    os.write('\n');
+                }
+            }
+            return os.toByteArray();
+        }
+    }
+
+    private static byte[] stripNewLines(byte[] src) throws IOException {
+        if (src == null || src.length == 0) {
+            return src;
+        }
+
+        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+            for (byte b : src) {
+                if (b != '\n') {
+                    os.write(b);
+                }
+            }
+            return os.toByteArray();
         }
     }
 
