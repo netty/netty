@@ -15,6 +15,7 @@
  */
 package io.netty5.handler.codec.dns;
 
+import io.netty5.buffer.Buffer;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.Resource;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,25 @@ public class TcpDnsTest {
         assertThat(readQuery.recordAt(DnsSection.QUESTION).name(), is(query.recordAt(DnsSection.QUESTION).name()));
         readQuery.release();
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testDecoderLeak() {
+        EmbeddedChannel decoder = new EmbeddedChannel(new TcpDnsQueryDecoder());
+        EmbeddedChannel encoder = new EmbeddedChannel(new TcpDnsQueryEncoder());
+        int randomID = new Random().nextInt(60000 - 1000) + 1000;
+        DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
+                .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
+        assertTrue(encoder.writeOutbound(query));
+        final Buffer encoded = encoder.readOutbound();
+        assertTrue(decoder.writeInbound(encoded));
+        final DnsQuery decoded = decoder.readInbound();
+        assertThat(decoded, is(query));
+        // Make sure the ByteBuf is released by TcpDnsQueryDecoder
+        assertFalse(encoded.isAccessible());
+
+        assertFalse(encoder.finish());
+        assertFalse(decoder.finish());
     }
 
     @Test

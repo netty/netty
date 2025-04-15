@@ -44,10 +44,11 @@ public final class TcpDnsQueryDecoder extends LengthFieldBasedFrameDecoder {
     @Override
     protected Object decode0(ChannelHandlerContext ctx, Buffer in) throws Exception {
         Buffer frame = (Buffer) super.decode0(ctx, in);
-        if (frame == null) {
-            return null;
+        try (frame) {
+            if (frame == null) {
+                return null;
+            }
+            return DnsMessageUtil.decodeDnsQuery(decoder, ctx.bufferAllocator(), frame.split(), DefaultDnsQuery::new);
         }
-
-        return DnsMessageUtil.decodeDnsQuery(decoder, ctx.bufferAllocator(), frame.split(), DefaultDnsQuery::new);
     }
 }
