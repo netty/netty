@@ -221,6 +221,7 @@ public final class OpenSsl {
 
                         } catch (Exception ignore) {
                             tlsv13Supported = false;
+                            SSL.clearError();
                         }
                     }
 
@@ -288,6 +289,7 @@ public final class OpenSsl {
                             }
                         } catch (Exception e) {
                             logger.debug("KeyManagerFactory not supported", e);
+                            SSL.clearError();
                         } finally {
                             privateKey.release();
                         }
@@ -342,7 +344,7 @@ public final class OpenSsl {
                                         Arrays.toString(groupArray),
                                         Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)));
                             }
-                            namedGroups =  supportedConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
+                            namedGroups = supportedConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
                         }
                     } else {
                         namedGroups = defaultConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
