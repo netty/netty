@@ -445,7 +445,7 @@
     <logging.logLevel>debug</logging.logLevel>
     <log4j2.version>2.17.2</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
-    <junit.version>5.11.0-M1</junit.version>
+    <junit.version>5.12.1</junit.version>
     <nativebuildtools.version>0.9.13</nativebuildtools.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
