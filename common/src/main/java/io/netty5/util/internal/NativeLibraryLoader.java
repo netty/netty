@@ -64,7 +64,10 @@ public final class NativeLibraryLoader {
         String workdir = SystemPropertyUtil.get("io.netty5.native.workdir");
         if (workdir != null) {
             File f = new File(workdir);
-            f.mkdirs();
+            if (!f.exists() && !f.mkdirs()) {
+                throw new ExceptionInInitializerError(
+                    new IOException("Custom native workdir mkdirs failed: " + workdir));
+            }
 
             try {
                 f = f.getAbsoluteFile();
