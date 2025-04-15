@@ -227,7 +227,9 @@ final class Native {
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;
     static final short IORING_ACCEPT_POLL_FIRST = 1 << 2;
 
+    static final int IORING_FEAT_SUBMIT_STABLE = 1 << 2;
     static final int IORING_FEAT_RECVSEND_BUNDLE = 1 << 14;
+
     static final int SPLICE_F_MOVE = 1;
 
     static final int IOU_PBUF_RING_INC = 2;
