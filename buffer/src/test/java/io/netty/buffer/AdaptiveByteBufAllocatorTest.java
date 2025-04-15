@@ -19,6 +19,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicReference;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -112,5 +116,39 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         retainedDerived.release();
 
         assertTrue(buffer.release());
+    }
+
+    // See https://github.com/netty/netty/issues/15028
+    @Test
+    public void testAllocateWithoutLock() throws InterruptedException {
+        final AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator();
+        int threadCount = 32;
+        final CountDownLatch countDownLatch = new CountDownLatch(threadCount);
+        final AtomicReference<Throwable> throwableAtomicReference = new AtomicReference<Throwable>();
+        for (int i = 0; i < threadCount; i++) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for (int j = 0; j < 1024; j++) {
+                        try {
+                            ByteBuf buffer = null;
+                            try {
+                                buffer = alloc.heapBuffer(128);
+                                buffer.ensureWritable(ThreadLocalRandom.current().nextInt(512, 32768 + 1));
+                            } finally {
+                                if (buffer != null) {
+                                    buffer.release();
+                                }
+                            }
+                        } catch (Throwable t) {
+                            throwableAtomicReference.set(t);
+                        }
+                    }
+                    countDownLatch.countDown();
+                }
+            }).start();
+        }
+        countDownLatch.await();
+        assertNull(throwableAtomicReference.get());
     }
 }
