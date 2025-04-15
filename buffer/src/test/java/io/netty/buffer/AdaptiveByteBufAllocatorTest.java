@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.NettyRuntime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -124,7 +125,8 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @Test
     public void testAllocateWithoutLock() throws InterruptedException {
         final AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator();
-        int threadCount = 32;
+        // Make `threadCount` bigger than `AdaptivePoolingAllocator.MAX_STRIPES`, to let thread collision easily happen.
+        int threadCount = NettyRuntime.availableProcessors() * 4;
         final CountDownLatch countDownLatch = new CountDownLatch(threadCount);
         final AtomicReference<Throwable> throwableAtomicReference = new AtomicReference<Throwable>();
         for (int i = 0; i < threadCount; i++) {
@@ -136,7 +138,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                             ByteBuf buffer = null;
                             try {
                                 buffer = alloc.heapBuffer(128);
-                                buffer.ensureWritable(ThreadLocalRandom.current().nextInt(512, 32768 + 1));
+                                buffer.ensureWritable(ThreadLocalRandom.current().nextInt(512, 32769));
                             } finally {
                                 if (buffer != null) {
                                     buffer.release();
