@@ -1346,6 +1346,15 @@
                   <new>interface com.google.protobuf.MutabilityOracle</new>
                   <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.constantValueChanged</code>
+                  <classQualifiedName>io.netty.handler.codec.http2.Http2CodecUtil</classQualifiedName>
+                  <field>NUM_STANDARD_SETTINGS</field>
+                  <oldValue>6</oldValue>
+                  <newValue>7</newValue>
+                  <justification>SETTINGS_ENABLE_CONNECT_PROTOCOL was added to the standard HTTP/2 settings.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
