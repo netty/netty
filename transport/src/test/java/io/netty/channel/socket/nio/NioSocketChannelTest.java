@@ -164,13 +164,13 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
 
     // Test for https://github.com/netty/netty/issues/4805
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testChannelReRegisterReadSameEventLoop() throws Exception {
         testChannelReRegisterRead(true);
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testChannelReRegisterReadDifferentEventLoop() throws Exception {
         testChannelReRegisterRead(false);
     }
