@@ -40,6 +40,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -192,10 +193,12 @@ public class SingleThreadEventLoopTest {
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
         final CountDownLatch cancelLatch = new CountDownLatch(1);
         final int period = 200;
+        final AtomicReference<Long> runTimeRef = new AtomicReference<>();
         ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                timestamps.add(System.nanoTime());
+                long timeStamp = System.nanoTime();
+                timestamps.add(timeStamp);
                 try {
                     Thread.sleep(50);
                 } catch (InterruptedException e) {
@@ -209,6 +212,12 @@ public class SingleThreadEventLoopTest {
                     } catch (InterruptedException e) {
                         // ignore
                     }
+                } else {
+                    Long run = runTimeRef.get();
+                    long runTime = System.nanoTime()  - timeStamp;
+                    if (run == null || run < runTime) {
+                        runTimeRef.set(runTime);
+                    }
                 }
             }
         }, 100, period, TimeUnit.MILLISECONDS);
@@ -220,7 +229,7 @@ public class SingleThreadEventLoopTest {
 
         // Check if the task was run without a lag.
         Long firstTimestamp = null;
-        int cnt = 0;
+        long cnt = 0;
         for (Long t: timestamps) {
             if (firstTimestamp == null) {
                 firstTimestamp = t;
@@ -228,9 +237,8 @@ public class SingleThreadEventLoopTest {
             }
 
             long timepoint = t - firstTimestamp;
-            assertThat(timepoint, is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(period * cnt + 80))));
-            assertThat(timepoint, is(lessThan(TimeUnit.MILLISECONDS.toNanos((period * (cnt + 1)) + 20))));
-
+            assertThat(timepoint, is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(period * cnt))));
+            assertThat(timepoint, is(lessThan(TimeUnit.MILLISECONDS.toNanos((period * (cnt + 1)) * runTimeRef.get()))));
             cnt ++;
         }
     }
