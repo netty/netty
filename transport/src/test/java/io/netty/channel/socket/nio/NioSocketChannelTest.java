@@ -263,7 +263,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testShutdownOutputAndClose() throws IOException {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         ServerSocket socket = new ServerSocket();

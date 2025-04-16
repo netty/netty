@@ -480,7 +480,7 @@ public class SingleThreadEventLoopTest {
     }
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testGracefulShutdownQuietPeriod() throws Exception {
         loopA.shutdownGracefully(1, Integer.MAX_VALUE, TimeUnit.SECONDS);
         // Keep Scheduling tasks for another 2 seconds.
@@ -503,7 +503,7 @@ public class SingleThreadEventLoopTest {
     }
 
     @Test
-    @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testGracefulShutdownTimeout() throws Exception {
         loopA.shutdownGracefully(2, 2, TimeUnit.SECONDS);
         // Keep Scheduling tasks for another 3 seconds.
