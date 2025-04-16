@@ -190,6 +190,7 @@ public class SingleThreadEventLoopTest {
         final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
         final int expectedTimeStamps = 5;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
+        final CountDownLatch cancelLatch = new CountDownLatch(1);
         ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -200,10 +201,19 @@ public class SingleThreadEventLoopTest {
                     // Ignore
                 }
                 allTimeStampsLatch.countDown();
+                if (allTimeStampsLatch.getCount() == 0) {
+                    try {
+                        // Wait until we did called cancel() to ensure there is no race.
+                        cancelLatch.await();
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                }
             }
         }, 100, 100, TimeUnit.MILLISECONDS);
         allTimeStampsLatch.await();
         assertTrue(f.cancel(true));
+        cancelLatch.countDown();
         Thread.sleep(300);
         assertEquals(expectedTimeStamps, timestamps.size());
 
@@ -240,6 +250,7 @@ public class SingleThreadEventLoopTest {
         final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
         final int expectedTimeStamps = 5;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
+        final CountDownLatch cancelLatch = new CountDownLatch(1);
         ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -253,10 +264,19 @@ public class SingleThreadEventLoopTest {
                     }
                 }
                 allTimeStampsLatch.countDown();
+                if (allTimeStampsLatch.getCount() == 0) {
+                    try {
+                        // Wait until we did called cancel() to ensure there is no race.
+                        cancelLatch.await();
+                    } catch (InterruptedException e) {
+                        // Ignore
+                    }
+                }
             }
         }, 100, 100, TimeUnit.MILLISECONDS);
         allTimeStampsLatch.await();
         assertTrue(f.cancel(true));
+        cancelLatch.countDown();
         Thread.sleep(300);
         assertEquals(expectedTimeStamps, timestamps.size());
 
@@ -296,6 +316,7 @@ public class SingleThreadEventLoopTest {
         final Queue<Long> timestamps = new LinkedBlockingQueue<Long>();
         final int expectedTimeStamps = 3;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
+        final CountDownLatch cancelLatch = new CountDownLatch(1);
         ScheduledFuture<?> f = loopA.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
@@ -306,10 +327,19 @@ public class SingleThreadEventLoopTest {
                     // Ignore
                 }
                 allTimeStampsLatch.countDown();
+                if (allTimeStampsLatch.getCount() == 0) {
+                    try {
+                        // Wait until we did called cancel() to ensure there is no race.
+                        cancelLatch.await();
+                    } catch (InterruptedException e) {
+                        // Ignore
+                    }
+                }
             }
         }, 100, 100, TimeUnit.MILLISECONDS);
         allTimeStampsLatch.await();
         assertTrue(f.cancel(true));
+        cancelLatch.countDown();
         Thread.sleep(300);
         assertEquals(expectedTimeStamps, timestamps.size());
 
