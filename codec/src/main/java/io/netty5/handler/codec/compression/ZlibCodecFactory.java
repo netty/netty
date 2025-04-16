@@ -21,13 +21,12 @@ import io.netty5.channel.ChannelHandler;
  * Creates a new ZLIB encoder / decoder.
  */
 public final class ZlibCodecFactory {
-    private static final boolean supportsWindowSizeAndMemLevel = true;
 
     /**
      * Returns {@code true} if specify a custom window size and mem level is supported.
      */
     public static boolean isSupportingWindowSizeAndMemLevel() {
-        return supportsWindowSizeAndMemLevel;
+        return false;
     }
 
     public static ChannelHandler newZlibEncoder(int compressionLevel) {
