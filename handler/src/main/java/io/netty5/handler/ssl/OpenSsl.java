@@ -183,6 +183,9 @@ public final class OpenSsl {
                         // fips and the configure group is not supported when using FIPS.
                         // See https://github.com/netty/netty-tcnative/issues/883
                         defaultGroupsIter.remove();
+
+                        // Clear the error as otherwise we might fail later.
+                        SSL.clearError();
                     }
                 }
                 namedGroups = defaultConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
@@ -214,6 +217,7 @@ public final class OpenSsl {
 
                         } catch (Exception ignore) {
                             tlsv13Supported = false;
+                            SSL.clearError();
                         }
                     }
 
@@ -258,6 +262,7 @@ public final class OpenSsl {
                             supportsKeyManagerFactory = true;
                         } catch (Exception e) {
                             logger.debug("KeyManagerFactory not supported", e);
+                            SSL.clearError();
                         }
                     } finally {
                         SSL.freeSSL(ssl);
@@ -289,6 +294,9 @@ public final class OpenSsl {
                                 supportedNamedGroups.add(namedGroup);
                             } else {
                                 unsupportedNamedGroups.add(namedGroup);
+
+                                // Clear the error as otherwise we might fail later.
+                                SSL.clearError();
                             }
                         }
 
@@ -307,7 +315,7 @@ public final class OpenSsl {
                                         Arrays.toString(groupArray),
                                         Arrays.toString(unsupportedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS)));
                             }
-                            namedGroups =  supportedConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
+                            namedGroups = supportedConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
                         }
                     } else {
                         namedGroups = defaultConvertedNamedGroups.toArray(EmptyArrays.EMPTY_STRINGS);
