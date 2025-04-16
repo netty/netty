@@ -195,6 +195,16 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                  protected void initChannel(Channel ch) throws Exception {
                      ChannelPipeline pipeline = ch.pipeline();
                      pipeline.addLast(new SimpleChannelInboundHandler<ByteBuf>() {
+
+                         private EventLoop pickDifferentLoop(EventLoop loop) {
+                             for (;;) {
+                                 EventLoop nextLoop = group.next();
+                                 if (nextLoop != loop) {
+                                     return nextLoop;
+                                 }
+                             }
+                         }
+
                          @Override
                          protected void channelRead0(ChannelHandlerContext ctx, ByteBuf byteBuf) {
                              // We was able to read something from the Channel after reregister.
@@ -203,14 +213,14 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
 
                          @Override
                          public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-                             final EventLoop loop = group.next();
+                             final EventLoop nextLoop = pickDifferentLoop(ctx.channel().eventLoop());
                              if (sameEventLoop) {
-                                 deregister(ctx, loop);
+                                 deregister(ctx, nextLoop);
                              } else {
-                                 loop.execute(new Runnable() {
+                                 nextLoop.execute(new Runnable() {
                                      @Override
                                      public void run() {
-                                         deregister(ctx, loop);
+                                         deregister(ctx, nextLoop);
                                      }
                                  });
                              }
@@ -225,7 +235,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                                  public void operationComplete(ChannelFuture cf) {
                                      Channel channel = cf.channel();
                                      assertNotSame(loop, channel.eventLoop());
-                                     group.next().register(channel);
+                                     pickDifferentLoop(channel.eventLoop()).register(channel);
                                  }
                              });
                          }
