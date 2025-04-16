@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -31,19 +32,34 @@ public final class ZlibCodecFactory {
     private static final boolean noJdkZlibDecoder;
     private static final boolean noJdkZlibEncoder;
 
+    private static final boolean JZLIB_AVAILABLE;
+
     static {
         noJdkZlibDecoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder", false);
         logger.debug("-Dio.netty.noJdkZlibDecoder: {}", noJdkZlibDecoder);
 
         noJdkZlibEncoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibEncoder", false);
         logger.debug("-Dio.netty.noJdkZlibEncoder: {}", noJdkZlibEncoder);
+
+        boolean jzlibAvailable;
+        try {
+            Class.forName("com.jcraft.jzlib.JZlib", false,
+                PlatformDependent.getClassLoader(ZlibCodecFactory.class));
+            jzlibAvailable = true;
+        } catch (ClassNotFoundException t) {
+            jzlibAvailable = false;
+            logger.debug(
+                "JZlib not in the classpath; the only window bits supported value will be " +
+                    DEFAULT_JDK_WINDOW_SIZE);
+        }
+        JZLIB_AVAILABLE = jzlibAvailable;
     }
 
     /**
      * Returns {@code true} if specify a custom window size and mem level is supported.
      */
     public static boolean isSupportingWindowSizeAndMemLevel() {
-        return true;
+        return JZLIB_AVAILABLE;
     }
 
     public static ZlibEncoder newZlibEncoder(int compressionLevel) {
