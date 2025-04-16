@@ -193,7 +193,7 @@ public class SingleThreadEventLoopTest {
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
         final CountDownLatch cancelLatch = new CountDownLatch(1);
         final int period = 200;
-        final AtomicReference<Long> runTimeRef = new AtomicReference<>();
+        final AtomicReference<Long> runTimeRef = new AtomicReference<Long>();
         ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
