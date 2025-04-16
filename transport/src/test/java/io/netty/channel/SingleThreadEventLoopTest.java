@@ -191,6 +191,7 @@ public class SingleThreadEventLoopTest {
         final int expectedTimeStamps = 5;
         final CountDownLatch allTimeStampsLatch = new CountDownLatch(expectedTimeStamps);
         final CountDownLatch cancelLatch = new CountDownLatch(1);
+        final int period = 200;
         ScheduledFuture<?> f = loopA.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -210,7 +211,7 @@ public class SingleThreadEventLoopTest {
                     }
                 }
             }
-        }, 100, 100, TimeUnit.MILLISECONDS);
+        }, 100, period, TimeUnit.MILLISECONDS);
         allTimeStampsLatch.await();
         assertTrue(f.cancel(true));
         cancelLatch.countDown();
@@ -227,8 +228,8 @@ public class SingleThreadEventLoopTest {
             }
 
             long timepoint = t - firstTimestamp;
-            assertThat(timepoint, is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(100 * cnt + 80))));
-            assertThat(timepoint, is(lessThan(TimeUnit.MILLISECONDS.toNanos(100 * (cnt + 1) + 20))));
+            assertThat(timepoint, is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(period * cnt + 80))));
+            assertThat(timepoint, is(lessThan(TimeUnit.MILLISECONDS.toNanos((period * (cnt + 1)) + period / 2))));
 
             cnt ++;
         }
