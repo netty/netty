@@ -31,7 +31,8 @@ public final class ZlibCodecFactory {
 
     private static final boolean noJdkZlibDecoder;
     private static final boolean noJdkZlibEncoder;
-    private static final boolean supportsWindowSizeAndMemLevel;
+
+    private static final boolean JZLIB_AVAILABLE;
 
     static {
         noJdkZlibDecoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder",
@@ -40,15 +41,25 @@ public final class ZlibCodecFactory {
 
         noJdkZlibEncoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibEncoder", false);
         logger.debug("-Dio.netty.noJdkZlibEncoder: {}", noJdkZlibEncoder);
-
-        supportsWindowSizeAndMemLevel = noJdkZlibDecoder || PlatformDependent.javaVersion() >= 7;
+        boolean jzlibAvailable;
+        try {
+            Class.forName("com.jcraft.jzlib.JZlib", false,
+                PlatformDependent.getClassLoader(ZlibCodecFactory.class));
+            jzlibAvailable = true;
+        } catch (ClassNotFoundException t) {
+            jzlibAvailable = false;
+            logger.debug(
+                "JZlib not in the classpath; the only window bits supported value will be " +
+                    DEFAULT_JDK_WINDOW_SIZE);
+        }
+        JZLIB_AVAILABLE = jzlibAvailable;
     }
 
     /**
      * Returns {@code true} if specify a custom window size and mem level is supported.
      */
     public static boolean isSupportingWindowSizeAndMemLevel() {
-        return supportsWindowSizeAndMemLevel;
+        return JZLIB_AVAILABLE;
     }
 
     public static ZlibEncoder newZlibEncoder(int compressionLevel) {
