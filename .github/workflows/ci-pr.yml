@@ -267,6 +267,9 @@ jobs:
           restore-keys: |
             pr-macos-x86_64-maven-cache-
 
+      - name: Install tools via brew
+        run: brew bundle
+
       - name: Build project
         run: ./mvnw -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -DskipTests=true
 
@@ -311,6 +314,9 @@ jobs:
           key: pr-macos-aarch64-maven-cache-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             pr-macos-aarch64-maven-cache-
+
+      - name: Install tools via brew
+        run: brew bundle
 
       - name: Build project
         run: ./mvnw -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -DskipTests=true
