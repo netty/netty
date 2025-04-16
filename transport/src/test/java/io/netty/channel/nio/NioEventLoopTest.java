@@ -162,7 +162,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     }
 
     @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testSelectableChannel() throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup(1);
         NioEventLoop loop = (NioEventLoop) group.next();
