@@ -229,7 +229,7 @@ public class SingleThreadEventLoopTest {
 
             long timepoint = t - firstTimestamp;
             assertThat(timepoint, is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(period * cnt + 80))));
-            assertThat(timepoint, is(lessThan(TimeUnit.MILLISECONDS.toNanos((period * (cnt + 1)) + period / 2))));
+            assertThat(timepoint, is(lessThan(TimeUnit.MILLISECONDS.toNanos((period * (cnt + 1)) + 20))));
 
             cnt ++;
         }
