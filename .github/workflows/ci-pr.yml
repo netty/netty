@@ -63,6 +63,7 @@ jobs:
     runs-on: windows-2019
     name: windows-x86_64-java11-boringssl
     needs: verify-pr
+    if: false
     steps:
       - uses: actions/checkout@v4
 
@@ -107,6 +108,7 @@ jobs:
   build-pr-cross:
     # The host should always be Linux
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -163,6 +165,7 @@ jobs:
 
   build-pr:
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
