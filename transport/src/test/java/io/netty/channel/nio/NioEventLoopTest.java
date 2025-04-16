@@ -172,6 +172,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             loop.register(channel).syncUninterruptibly();
             channel.bind(new InetSocketAddress(0)).syncUninterruptibly();
 
+            System.err.println("LOCAL : " + channel.localAddress());
             SocketChannel selectableChannel = SocketChannel.open();
             selectableChannel.configureBlocking(false);
             selectableChannel.connect(channel.localAddress());
