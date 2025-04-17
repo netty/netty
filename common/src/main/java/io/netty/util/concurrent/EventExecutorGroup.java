@@ -95,6 +95,19 @@ public interface EventExecutorGroup extends ScheduledExecutorService, Iterable<E
     @Override
     <T> Future<T> submit(Callable<T> task);
 
+    /**
+     * The ticker for this executor. Usually the {@link #schedule} methods will follow the
+     * {@link Ticker#systemTicker() system ticker} (i.e. {@link System#nanoTime()}), but especially for testing it is
+     * sometimes useful to have more control over the ticker. In that case, this method will be overridden. Code that
+     * schedules tasks on this executor should use this ticker in order to stay consistent with the executor (e.g. not
+     * be surprised by scheduled tasks running "early").
+     *
+     * @return The ticker for this scheduler
+     */
+    default Ticker ticker() {
+        return Ticker.systemTicker();
+    }
+
     @Override
     ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit);
 
