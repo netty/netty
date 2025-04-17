@@ -200,7 +200,7 @@ jobs:
           ./mvnw -B --file pom.xml -Plinux-native-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Merge staging repositories
-        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging ~/windows-x86_64-local-staging ~/linux-aarch64-local-staging ~/linux-x86_64-local-staging ~/linux-riscv64-local-staging
+        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging ~/windows-x86_64-local-staging ~/linux-aarch64-local-staging ~/linux-x86_64-java11-local-staging ~/linux-riscv64-local-staging
 
       - uses: s4u/maven-settings-action@v3.0.0
         with:
