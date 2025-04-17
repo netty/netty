@@ -31,7 +31,7 @@ env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
 
 jobs:
-  stage-snapshot:
+  stage-snapshot-linux:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -78,10 +78,59 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
 
+  stage-snapshot-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - setup: macos-x86_64-java8
+            os: macos-13
+          - setup: macos-aarch64-java8
+            os: macos-15
+
+    runs-on: ${{ matrix.os }}
+    name:  ${{ matrix.setup }}  build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+
+      # Cache .m2/repository
+      # Caching of maven dependencies
+      - uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: pr-${{ matrix.setup }}-maven-cache-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            pr-${{ matrix.setup }}-maven-cache-
+
+      - name: Install tools via brew
+        run: brew bundle
+
+      - name: Create local staging directory
+        run: mkdir -p /home/runner/local-staging
+
+      - name: Stage snapshots to local staging directory
+        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/home/runner/local-staging -DskipRemoteStaging=true -DskipTests=true
+
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.setup }}-local-staging
+          path: /home/runner/local-staging
+          if-no-files-found: error
+          include-hidden-files: true
+
   deploy-staged-snapshots:
     runs-on: ubuntu-latest
     # Wait until we have staged everything
-    needs: stage-snapshot
+    needs: [ stage-snapshot-linux, stage-snapshot-macos ]
     steps:
       - uses: actions/checkout@v4
 
@@ -109,6 +158,18 @@ jobs:
 
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups. There is currently no way to pull this out of the config.
+      - name: Download macos-aarch64-java8 staging directory
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-aarch64-java8-local-staging
+          path: ~/macos-aarch64-java8-local-staging
+
+      - name: Download macos-x86_64-java8 staging directory
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-x86_64-java8-local-staging
+          path: ~/macos-x86_64-java8-local-staging
+
       - name: Download linux-aarch64 staging directory
         uses: actions/download-artifact@v4
         with:
@@ -129,6 +190,8 @@ jobs:
 
       - name: Copy previous build artifacts to local maven repository
         run: |
+          cp -r ~/macos-aarch64-java8-local-staging/deferred/* ~/.m2/repository/
+          cp -r ~/macos-x86_64-java8-local-staging/deferred/* ~/.m2/repository/
           cp -r ~/linux-aarch64-local-staging/deferred/* ~/.m2/repository/
           cp -r ~/linux-riscv64-local-staging/deferred/* ~/.m2/repository/
           cp -r ~/linux-x86_64-java8-local-staging/deferred/* ~/.m2/repository/
@@ -136,11 +199,15 @@ jobs:
       - name: Generate netty-all and deploy to local staging.
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Plinux-native-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
+          ./mvnw -B --file pom.xml -Pnative-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Merge staging repositories
         run: |
           mkdir -p ~/local-staging/deferred
+          cat ~/macos-aarch64-java8-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/macos-aarch64-java8-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/macos-x86_64-java8-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/macos-x86_64-java8-local-staging/deferred/* ~/local-staging/deferred/
           cat ~/linux-aarch64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
           cp -r ~/linux-aarch64-local-staging/deferred/* ~/local-staging/deferred/
           cat ~/linux-riscv64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
