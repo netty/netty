@@ -278,7 +278,8 @@ public class ManualIoEventLoopTest {
     @Test
     public void testTicker() {
         MockTicker ticker = Ticker.newMockTicker();
-        ManualIoEventLoop eventLoop = new ManualIoEventLoop(null, Thread.currentThread(), NioIoHandler.newFactory(), ticker);
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(
+                null, Thread.currentThread(), NioIoHandler.newFactory(), ticker);
 
         AtomicInteger counter = new AtomicInteger();
         eventLoop.schedule(counter::incrementAndGet, 60, TimeUnit.SECONDS);
