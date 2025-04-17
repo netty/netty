@@ -14,7 +14,6 @@ for BIN in "${BINARIES[@]}"; do
   fi
 done
 
-
 for BIN in "${BINARIES[@]}"; do
   echo "Running ${BIN}..."
   "${BIN_DIR}/${BIN}" &
