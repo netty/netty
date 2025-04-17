@@ -86,6 +86,11 @@
       <optional>true</optional>
     </dependency>
     <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bctls-jdk18on</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>${conscrypt.groupId}</groupId>
       <artifactId>${conscrypt.artifactId}</artifactId>
       <classifier>${conscrypt.classifier}</classifier>
