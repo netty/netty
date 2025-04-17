@@ -259,3 +259,61 @@ jobs:
             **/target/autobahntestsuite-reports/
             **/hs_err*.log
             **/core.*
+
+  build-pr-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - setup: macos-x86_64-java11-boringssl
+            os: macos-13
+          - setup: macos-aarch64-java11-boringssl
+            os: macos-15
+
+    runs-on: ${{ matrix.os }}
+    name:  ${{ matrix.setup }}  build
+    needs: verify-pr
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
+      # Cache .m2/repository
+      # Caching of maven dependencies
+      - uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: pr-${{ matrix.setup }}-maven-cache-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            pr-${{ matrix.setup }}-maven-cache-
+
+      - name: Install tools via brew
+        run: brew bundle
+
+      - name: Build project
+        run: ./mvnw -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -DskipTests=true
+
+      - name: print JVM thread dumps when cancelled
+        uses: ./.github/actions/thread-dump-jvms
+        if: cancelled()
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.setup }}
+          path: '**/target/surefire-reports/TEST-*.xml'
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: build-pr-${{ matrix.setup }}-target
+          path: |
+            **/target/surefire-reports/
+            **/hs_err*.log
