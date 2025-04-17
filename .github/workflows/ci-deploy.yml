@@ -31,7 +31,7 @@ env:
   MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
 
 jobs:
-  stage-snapshot:
+  stage-snapshot-linux:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -135,7 +135,7 @@ jobs:
   deploy-staged-snapshots:
     runs-on: ubuntu-latest
     # Wait until we have staged everything
-    needs: stage-snapshot
+    needs: [ stage-snapshot-linux, stage-snapshot-windows-x86_64 ]
     steps:
       - uses: actions/checkout@v4
 
@@ -189,6 +189,7 @@ jobs:
 
       - name: Copy previous build artifacts to local maven repository
         run: |
+          cp -r ~/windows-x86_64-local-staging/deferred/* ~/.m2/repository/
           cp -r ~/linux-aarch64-local-staging/deferred/* ~/.m2/repository/
           cp -r ~/linux-riscv64-local-staging/deferred/* ~/.m2/repository/
           cp -r ~/linux-x86_64-java11-local-staging/deferred/* ~/.m2/repository/
