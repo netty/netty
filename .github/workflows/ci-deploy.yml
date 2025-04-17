@@ -143,10 +143,59 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
 
+  stage-snapshot-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - setup: macos-x86_64
+            os: macos-13
+          - setup: macos-aarch64
+            os: macos-15
+
+    runs-on: ${{ matrix.os }}
+    name:  ${{ matrix.setup }}  build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+
+      # Cache .m2/repository
+      # Caching of maven dependencies
+      - uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: pr-${{ matrix.setup }}-maven-cache-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            pr-${{ matrix.setup }}-maven-cache-
+
+      - name: Install tools via brew
+        run: brew bundle
+
+      - name: Create local staging directory
+        run: mkdir -p ~/local-staging
+
+      - name: Stage snapshots to local staging directory
+        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/local-staging -DskipRemoteStaging=true -DskipTests=true
+
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.setup }}-local-staging
+          path: ~/local-staging
+          if-no-files-found: error
+          include-hidden-files: true
+
   deploy-staged-snapshots:
     runs-on: ubuntu-latest
     # Wait until we have staged everything
-    needs: [stage-snapshot-linux, stage-snapshot-windows-x86_64]
+    needs: [stage-snapshot-linux, stage-snapshot-windows-x86_64, stage-snapshot-macos]
     steps:
       - uses: actions/checkout@v4
 
@@ -178,6 +227,18 @@ jobs:
           name: windows-x86_64-local-staging
           path: ~/windows-x86_64-local-staging
 
+      - name: Download macos-x86_64 staging directory
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-x86_64-local-staging
+          path: ~/macos-x86_64-local-staging
+
+      - name: Download macos-aarch64 staging directory
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-aarch64-local-staging
+          path: ~/macos-aarch64-local-staging
+
       - name: Download linux-aarch64 staging directory
         uses: actions/download-artifact@v4
         with:
@@ -191,7 +252,7 @@ jobs:
           path: ~/linux-x86_64-local-staging
 
       - name: Merge staging repositories
-        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging ~/windows-x86_64-local-staging ~/linux-aarch64-local-staging ~/linux-x86_64-local-staging
+        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-x86_64-local-staging ~/macos-aarch64-local-staging ~/linux-aarch64-local-staging ~/linux-x86_64-local-staging
 
       - uses: s4u/maven-settings-action@v3.0.0
         with:
