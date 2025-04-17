@@ -114,16 +114,16 @@ jobs:
         run: brew bundle
 
       - name: Create local staging directory
-        run: mkdir -p /home/runner/local-staging
+        run: mkdir -p ~/local-staging
 
       - name: Stage snapshots to local staging directory
-        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/home/runner/local-staging -DskipRemoteStaging=true -DskipTests=true
+        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.setup }}-local-staging
-          path: /home/runner/local-staging
+          path: ~/local-staging
           if-no-files-found: error
           include-hidden-files: true
 
