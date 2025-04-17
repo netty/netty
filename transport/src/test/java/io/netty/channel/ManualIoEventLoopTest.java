@@ -15,8 +15,11 @@
  */
 package io.netty.channel;
 
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.MockTicker;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.ThreadExecutorMap;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -33,6 +36,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -267,6 +271,28 @@ public class ManualIoEventLoopTest {
                 new TestIoHandler(new Semaphore(0)));
         eventLoop.setOwningThread(Thread.currentThread());
         assertThrows(IllegalStateException.class, () -> eventLoop.setOwningThread(Thread.currentThread()));
+
+        eventLoop.shutdownGracefully();
+    }
+
+    @Test
+    public void testTicker() {
+        MockTicker ticker = Ticker.newMockTicker();
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(null, Thread.currentThread(), NioIoHandler.newFactory(), ticker);
+
+        AtomicInteger counter = new AtomicInteger();
+        eventLoop.schedule(counter::incrementAndGet, 60, TimeUnit.SECONDS);
+
+        eventLoop.runNow();
+        assertEquals(0, counter.get());
+
+        ticker.advance(50, TimeUnit.SECONDS);
+        eventLoop.runNow();
+        assertEquals(0, counter.get());
+
+        ticker.advance(20, TimeUnit.SECONDS);
+        eventLoop.runNow();
+        assertEquals(1, counter.get());
 
         eventLoop.shutdownGracefully();
     }
