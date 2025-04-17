@@ -33,6 +33,8 @@
     <skipNativeTestsuite>false</skipNativeTestsuite>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <jni.classifier.linux/>
+    <jni.classifier.macos/>
   </properties>
 
   <dependencies>
@@ -43,6 +45,27 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-native-epoll</artifactId>
+      <version>${project.version}</version>
+      <classifier>${jni.classifier.linux}</classifier>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport-native-kqueue</artifactId>
+      <version>${project.version}</version>
+      <classifier>${jni.classifier.macos}</classifier>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-resolver-dns-native-macos</artifactId>
+      <version>${project.version}</version>
+      <classifier>${jni.classifier.macos}</classifier>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
   <profiles>
@@ -57,34 +80,6 @@
         <skipNativeTestsuite>true</skipNativeTestsuite>
       </properties>
     </profile>
-
-    <profile>
-      <id>default</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty-transport-classes-epoll</artifactId>
-          <version>${project.version}</version>
-          <scope>compile</scope>
-        </dependency>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty-transport-classes-kqueue</artifactId>
-          <version>${project.version}</version>
-          <scope>compile</scope>
-        </dependency>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty-resolver-dns-classes-macos</artifactId>
-          <version>${project.version}</version>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-
     <profile>
       <id>linux</id>
       <activation>
@@ -92,27 +87,9 @@
           <family>linux</family>
         </os>
       </activation>
-      <dependencies>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty-transport-native-epoll</artifactId>
-          <version>${project.version}</version>
-          <classifier>${jni.classifier}</classifier>
-          <scope>compile</scope>
-        </dependency>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty-transport-native-kqueue</artifactId>
-          <version>${project.version}</version>
-          <scope>compile</scope>
-        </dependency>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty-resolver-dns-native-macos</artifactId>
-          <version>${project.version}</version>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
+      <properties>
+        <jni.classifier.linux>${jni.classifier}</jni.classifier.linux>
+      </properties>
     </profile>
 
     <profile>
@@ -122,28 +99,9 @@
           <family>mac</family>
         </os>
       </activation>
-      <dependencies>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty-transport-native-kqueue</artifactId>
-          <version>${project.version}</version>
-          <classifier>${jni.classifier}</classifier>
-          <scope>compile</scope>
-        </dependency>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty-resolver-dns-native-macos</artifactId>
-          <version>${project.version}</version>
-          <classifier>${jni.classifier}</classifier>
-          <scope>compile</scope>
-        </dependency>
-        <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>netty-transport-native-epoll</artifactId>
-          <version>${project.version}</version>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
+      <properties>
+        <jni.classifier.macos>${jni.classifier}</jni.classifier.macos>
+      </properties>
     </profile>
   </profiles>
 
