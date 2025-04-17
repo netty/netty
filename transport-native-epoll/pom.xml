@@ -95,7 +95,7 @@
                     </requireProperty>
                     <requireFilesContent>
                       <message>
-                        Release process must be performed on RHEL 6.8 or its derivatives.
+                        Release process must be performed on RHEL 6.9 or its derivatives.
                       </message>
                       <files>
                         <file>/etc/redhat-release</file>
@@ -263,12 +263,12 @@
                     </requireProperty>
                     <requireFilesContent>
                       <message>
-                        Cross compile and Release process must be performed on RHEL 7.6 or its derivatives.
+                        Cross compile and Release process must be performed on RHEL 7.9 or its derivatives.
                       </message>
                       <files>
                         <file>/etc/redhat-release</file>
                       </files>
-                      <content>release 7.6</content>
+                      <content>release 7.9</content>
                     </requireFilesContent>
                   </rules>
                 </configuration>
