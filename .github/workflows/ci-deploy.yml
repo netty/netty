@@ -263,7 +263,22 @@ jobs:
           ./mvnw -B --file pom.xml -Pnative-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Merge staging repositories
-        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging ~/windows-x86_64-local-staging ~/linux-aarch64-local-staging ~/linux-x86_64-java11-local-staging ~/linux-riscv64-local-staging
+        run: |
+          mkdir -p ~/local-staging/deferred
+          cat ~/windows-x86_64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/windows-x86_64-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/macos-aarch64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/macos-aarch64-java11-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/macos-x86_64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/macos-x86_64-java11-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/linux-aarch64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/linux-aarch64-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/linux-riscv64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/linux-riscv64-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/linux-x86_64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/linux-x86_64-java11-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/all-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/all-local-staging/deferred/io/netty/netty-all/* ~/local-staging/deferred/io/netty/netty-all/
 
       - uses: s4u/maven-settings-action@v3.0.0
         with:
