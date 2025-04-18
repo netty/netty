@@ -20,9 +20,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.incubator.codec.quic.QuicChannel;
-import io.netty.incubator.codec.quic.QuicStreamChannel;
-import io.netty.incubator.codec.quic.QuicStreamType;
+import io.netty.codec.quic.QuicChannel;
+import io.netty.codec.quic.QuicStreamChannel;
+import io.netty.codec.quic.QuicStreamType;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static io.netty.channel.ChannelFutureListener.CLOSE_ON_FAILURE;
 import static io.netty.incubator.codec.http3.Http3ErrorCode.H3_INTERNAL_ERROR;
-import static io.netty.incubator.codec.quic.QuicStreamType.UNIDIRECTIONAL;
+import static io.netty.codec.quic.QuicStreamType.UNIDIRECTIONAL;
 
 final class Http3CodecUtils {
 

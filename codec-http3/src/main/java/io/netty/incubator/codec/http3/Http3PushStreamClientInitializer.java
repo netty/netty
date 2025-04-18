@@ -17,7 +17,7 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.codec.quic.QuicStreamChannel;
 
 import static io.netty.incubator.codec.http3.Http3CodecUtils.isServerInitiatedQuicStream;
 import static io.netty.incubator.codec.http3.Http3RequestStreamCodecState.NO_STATE;

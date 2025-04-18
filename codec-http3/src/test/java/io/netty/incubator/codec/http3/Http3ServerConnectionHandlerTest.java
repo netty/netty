@@ -17,7 +17,7 @@ package io.netty.incubator.codec.http3;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.incubator.codec.quic.QuicStreamChannel;
+import io.netty.codec.quic.QuicStreamChannel;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 

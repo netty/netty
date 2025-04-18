@@ -16,7 +16,7 @@
 package io.netty.incubator.codec.http3;
 
 import io.netty.channel.ChannelHandler;
-import io.netty.incubator.codec.quic.QuicStreamType;
+import io.netty.codec.quic.QuicStreamType;
 
 import java.util.Arrays;
 import java.util.Collections;
