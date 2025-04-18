@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.Objects;
 
 import static io.netty.util.HashingStrategy.JAVA_HASHER;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
@@ -47,7 +48,8 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     static final int HASH_CODE_SEED = 0xc2b2ae35;
 
     private final HeaderEntry<K, V>[] entries;
-    protected final HeaderEntry<K, V> head;
+    protected HeaderEntry<K, V> head;
+    protected HeaderEntry<K, V> tail;
 
     private final byte hashMask;
     private final ValueConverter<V> valueConverter;
@@ -144,7 +146,6 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         // than the length of this array, and we want the mask to be > 0.
         entries = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
         hashMask = (byte) (entries.length - 1);
-        head = new HeaderEntry<K, V>();
     }
 
     @Override
@@ -307,7 +308,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
 
     @Override
     public boolean isEmpty() {
-        return head == head.after;
+        return head == null;
     }
 
     @Override
@@ -316,10 +317,8 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             return Collections.emptySet();
         }
         Set<K> names = new LinkedHashSet<K>(size());
-        HeaderEntry<K, V> e = head.after;
-        while (e != head) {
+        for (HeaderEntry<K, V> e = head; e != null; e = e.after) {
             names.add(e.getKey());
-            e = e.after;
         }
         return names;
     }
@@ -439,19 +438,17 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             @SuppressWarnings("unchecked")
             final DefaultHeaders<? extends K, ? extends V, T> defaultHeaders =
                     (DefaultHeaders<? extends K, ? extends V, T>) headers;
-            HeaderEntry<? extends K, ? extends V> e = defaultHeaders.head.after;
+            HeaderEntry<? extends K, ? extends V> e = defaultHeaders.tail;
             if (defaultHeaders.hashingStrategy == hashingStrategy &&
                     defaultHeaders.nameValidator == nameValidator) {
                 // Fastest copy
-                while (e != defaultHeaders.head) {
+                for (e = defaultHeaders.head; e != null; e = e.after) {
                     add0(e.hash, index(e.hash), e.key, e.value);
-                    e = e.after;
                 }
             } else {
                 // Fast copy
-                while (e != defaultHeaders.head) {
+                for (e = defaultHeaders.head; e != null; e = e.after) {
                     add(e.key, e.value);
-                    e = e.after;
                 }
             }
         } else {
@@ -633,13 +630,17 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     @Override
     public T clear() {
         Arrays.fill(entries, null);
-        head.before = head.after = head;
+        head = tail = null;
         size = 0;
         return thisT();
     }
 
     @Override
     public Iterator<Entry<K, V>> iterator() {
+        HeaderEntry<K, V> h = head;
+        if (h == null) {
+            return Collections.emptyIterator();
+        }
         return new HeaderIterator();
     }
 
@@ -1021,7 +1022,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     }
 
     protected HeaderEntry<K, V> newHeaderEntry(int h, K name, V value, HeaderEntry<K, V> next) {
-        return new HeaderEntry<K, V>(h, name, value, next, head);
+        return new HeaderEntry<K, V>(h, name, value, next, this);
     }
 
     protected ValueConverter<V> valueConverter() {
@@ -1061,7 +1062,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             if (next.hash == h && hashingStrategy.equals(name, next.key)) {
                 value = next.value;
                 e.next = next.next;
-                next.remove();
+                next.remove(this);
                 --size;
             } else {
                 e = next;
@@ -1076,7 +1077,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
                 value = e.value;
             }
             entries[i] = e.next;
-            e.remove();
+            e.remove(this);
             --size;
         }
 
@@ -1102,7 +1103,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         } else {
             previous.next = entry.next;
         }
-        entry.remove();
+        entry.remove(this);
         --size;
         return previous;
     }
@@ -1276,22 +1277,22 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     }
 
     private final class HeaderIterator implements Iterator<Entry<K, V>> {
-        private HeaderEntry<K, V> current = head;
+        private HeaderEntry<K, V> current = Objects.requireNonNull(head);
 
         @Override
         public boolean hasNext() {
-            return current.after != head;
+            return current != null;
         }
 
         @Override
         public Entry<K, V> next() {
-            current = current.after;
-
-            if (current == head) {
+            if (current == null) {
                 throw new NoSuchElementException();
             }
-
-            return current;
+            HeaderEntry<K, V> e = current;
+            HeaderEntry<K, V> next = e.after;
+            current = next;
+            return e;
         }
 
         @Override
@@ -1370,15 +1371,22 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             this.key = key;
         }
 
-        HeaderEntry(int hash, K key, V value, HeaderEntry<K, V> next, HeaderEntry<K, V> head) {
+        HeaderEntry(int hash, K key, V value, HeaderEntry<K, V> next, DefaultHeaders<K, V, ?> headers) {
             this.hash = hash;
             this.key = key;
             this.value = value;
             this.next = next;
 
-            after = head;
-            before = head.before;
-            pointNeighborsToThis();
+            HeaderEntry<K, V> head = headers.head;
+            if (head == null) {
+                headers.head = this;
+                headers.tail = this;
+            } else {
+                HeaderEntry<K, V> tail = headers.tail;
+                headers.tail = this;
+                tail.after = this;
+                before = tail;
+            }
         }
 
         HeaderEntry() {
@@ -1388,8 +1396,12 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         }
 
         protected final void pointNeighborsToThis() {
-            before.after = this;
-            after.before = this;
+            if (before != null) {
+                before.after = this;
+            }
+            if (after != null) {
+                after.before = this;
+            }
         }
 
         public final HeaderEntry<K, V> before() {
@@ -1400,9 +1412,19 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
             return after;
         }
 
-        protected void remove() {
-            before.after = after;
-            after.before = before;
+        protected void remove(DefaultHeaders<K, V, ?> headers) {
+            if (before == null) {
+                headers.head = after;
+            } else {
+                before.after = after;
+            }
+            if (after == null) {
+                headers.tail = before;
+            } else {
+                after.before = before;
+            }
+            before = null;
+            after = null;
         }
 
         @Override
