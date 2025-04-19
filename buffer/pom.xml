@@ -34,6 +34,13 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.graalvm.nativeimage</groupId>
+      <artifactId>svm</artifactId>
+      <version>${graalvm.version}</version>
+      <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-common</artifactId>
       <version>${project.version}</version>

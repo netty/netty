@@ -77,6 +77,8 @@ public final class QuicServerExample {
                             if (f.isSuccess()) {
                                 LOGGER.info("Connection closed: {}", f.getNow());
                             }
+                            //only test for first connection
+                            ctx.channel().parent().close();
                         });
                     }
 

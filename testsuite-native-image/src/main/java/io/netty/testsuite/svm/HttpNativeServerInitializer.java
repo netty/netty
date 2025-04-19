@@ -21,13 +21,21 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerExpectContinueHandler;
 
+import java.util.concurrent.CompletableFuture;
+
 public class HttpNativeServerInitializer extends ChannelInitializer<SocketChannel> {
+
+    private final CompletableFuture<Void> httpRequestFuture;
+
+    public HttpNativeServerInitializer(CompletableFuture<Void> httpRequestFuture) {
+        this.httpRequestFuture = httpRequestFuture;
+    }
 
     @Override
     public void initChannel(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
         p.addLast(new HttpServerCodec());
         p.addLast(new HttpServerExpectContinueHandler());
-        p.addLast(new HttpNativeServerHandler());
+        p.addLast(new HttpNativeServerHandler(httpRequestFuture));
     }
 }

@@ -24,6 +24,13 @@
     "condition": {
       "typeReachable": "io.netty.channel.epoll.Native"
     },
+    "name":"io.netty.channel.epoll.EpollSocketChannel",
+    "allDeclaredConstructors": true
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.epoll.Native"
+    },
     "name":"io.netty.channel.epoll.EpollDatagramChannel",
     "allDeclaredConstructors": true
   },
