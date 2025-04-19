@@ -124,30 +124,32 @@ public class Base64Test {
 
     @Test
     public void testEncodeDecodeBE() {
-        testEncodeDecode(ByteOrder.BIG_ENDIAN);
+        testEncodeDecode(ByteOrder.BIG_ENDIAN, true);
+        testEncodeDecode(ByteOrder.BIG_ENDIAN, false);
     }
 
     @Test
     public void testEncodeDecodeLE() {
-        testEncodeDecode(ByteOrder.LITTLE_ENDIAN);
+        testEncodeDecode(ByteOrder.LITTLE_ENDIAN, true);
+        testEncodeDecode(ByteOrder.LITTLE_ENDIAN, false);
     }
 
-    private static void testEncodeDecode(ByteOrder order) {
-        testEncodeDecode(64, order);
-        testEncodeDecode(128, order);
-        testEncodeDecode(512, order);
-        testEncodeDecode(1024, order);
-        testEncodeDecode(4096, order);
-        testEncodeDecode(8192, order);
-        testEncodeDecode(16384, order);
+    private static void testEncodeDecode(ByteOrder order, boolean padded) {
+        testEncodeDecode(64, order, padded);
+        testEncodeDecode(128, order, padded);
+        testEncodeDecode(512, order, padded);
+        testEncodeDecode(1024, order, padded);
+        testEncodeDecode(4096, order, padded);
+        testEncodeDecode(8192, order, padded);
+        testEncodeDecode(16384, order, padded);
     }
 
-    private static void testEncodeDecode(int size, ByteOrder order) {
+    private static void testEncodeDecode(int size, ByteOrder order, boolean padded) {
         byte[] bytes = new byte[size];
         PlatformDependent.threadLocalRandom().nextBytes(bytes);
 
         ByteBuf src = Unpooled.wrappedBuffer(bytes).order(order);
-        ByteBuf encoded = Base64.encode(src);
+        ByteBuf encoded = Base64.encode(src, true, padded);
         ByteBuf decoded = Base64.decode(encoded);
         ByteBuf expectedBuf = Unpooled.wrappedBuffer(bytes);
         try {
