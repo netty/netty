@@ -22,7 +22,7 @@ RUN yum install -y \
 
 
 # Downloading and installing SDKMAN!
-RUN curl -s "https://get.sdkman.io" | bash
+RUN curl -s "https://get.sdkman.io?ci=true" | bash
 
 ARG java_version="11.0.26-zulu"
 ENV JAVA_VERSION=$java_version
