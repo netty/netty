@@ -118,8 +118,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      *
      * @return a new codec.
      */
-    public final ChannelHandler newCodec(Http3RequestStreamCodecState encodeState,
-                                         Http3RequestStreamCodecState decodeState) {
+    final ChannelHandler newCodec(Http3RequestStreamCodecState encodeState,
+                                  Http3RequestStreamCodecState decodeState) {
         return codecFactory.newCodec(Http3RequestStreamFrameTypeValidator.INSTANCE, encodeState, decodeState);
     }
 
