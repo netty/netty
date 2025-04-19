@@ -63,7 +63,7 @@ jobs:
 
       - name: Prepare release with Maven
         run: |
-          ./mvnw -B -ntp --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true
+          ./mvnw -B -ntp --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true -DskipH3Spec=true
           ./mvnw -B -ntp clean
 
       - name: Checkout tag
@@ -244,7 +244,7 @@ jobs:
 
       - name: Stage release to local staging directory
         working-directory: ./prepare-release-workspace/
-        run: ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=$HOME/local-staging -DskipRemoteStaging=true -DskipTests=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
+        run: ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=$HOME/local-staging -DskipRemoteStaging=true -DskipTests=true -DskipH3Spec=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -331,7 +331,7 @@ jobs:
             stage-release-windows-x86_64-maven-cache-
 
       - name: Stage snapshots to local staging directory
-        run: ./mvnw.cmd -B -ntp --file pom.xml javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=$HOME/local-staging -DskipRemoteStaging=true -DskipTests=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
+        run: ./mvnw.cmd -B -ntp --file pom.xml javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=$HOME/local-staging -DskipRemoteStaging=true -DskipTests=true -DskipH3Spec=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -442,7 +442,7 @@ jobs:
       - name: Generate netty-all and deploy to local staging.
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
+          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true -DskipH3Spec=true
 
       # This step takes care of merging all the previous staged repositories in a way that will allow us to deploy
       # all together with one maven command.

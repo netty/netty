@@ -719,6 +719,7 @@
     <module>codec-mqtt</module>
     <module>codec-classes-quic</module>
     <module>codec-native-quic</module>
+    <module>codec-http3</module>
     <module>codec-redis</module>
     <module>codec-smtp</module>
     <module>codec-socks</module>
@@ -1108,7 +1109,7 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>2.18.3</version>
+        <version>3.6.28</version>
         <scope>test</scope>
       </dependency>
       <dependency>
