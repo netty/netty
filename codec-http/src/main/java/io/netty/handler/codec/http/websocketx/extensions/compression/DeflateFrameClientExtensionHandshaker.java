@@ -36,12 +36,27 @@ public final class DeflateFrameClientExtensionHandshaker implements WebSocketCli
     private final int compressionLevel;
     private final boolean useWebkitExtensionName;
     private final WebSocketExtensionFilterProvider extensionFilterProvider;
+    private final int maxAllocation;
 
     /**
      * Constructor with default configuration.
+     *
+     * @deprecated
+     *            Use {@link DeflateFrameClientExtensionHandshaker#DeflateFrameClientExtensionHandshaker(boolean, int)}.
      */
+    @Deprecated
     public DeflateFrameClientExtensionHandshaker(boolean useWebkitExtensionName) {
-        this(6, useWebkitExtensionName);
+        this(6, useWebkitExtensionName, 0);
+    }
+
+    /**
+     * Constructor with default configuration.
+     *
+     * @param maxAllocation
+     *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
+     */
+    public DeflateFrameClientExtensionHandshaker(boolean useWebkitExtensionName, int maxAllocation) {
+        this(6, useWebkitExtensionName, maxAllocation);
     }
 
     /**
@@ -49,9 +64,26 @@ public final class DeflateFrameClientExtensionHandshaker implements WebSocketCli
      *
      * @param compressionLevel
      *            Compression level between 0 and 9 (default is 6).
+     * @deprecated
+     *            Use {@link
+     *            DeflateFrameClientExtensionHandshaker#DeflateFrameClientExtensionHandshaker(int, boolean, int)}.
      */
+    @Deprecated
     public DeflateFrameClientExtensionHandshaker(int compressionLevel, boolean useWebkitExtensionName) {
-        this(compressionLevel, useWebkitExtensionName, WebSocketExtensionFilterProvider.DEFAULT);
+        this(compressionLevel, useWebkitExtensionName, 0);
+    }
+
+    /**
+     * Constructor with custom configuration.
+     *
+     * @param compressionLevel
+     *            Compression level between 0 and 9 (default is 6).
+     * @param maxAllocation
+     *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
+     */
+    public DeflateFrameClientExtensionHandshaker(int compressionLevel, boolean useWebkitExtensionName,
+                                                 int maxAllocation) {
+        this(compressionLevel, useWebkitExtensionName, WebSocketExtensionFilterProvider.DEFAULT, maxAllocation);
     }
 
     /**
@@ -61,9 +93,28 @@ public final class DeflateFrameClientExtensionHandshaker implements WebSocketCli
      *            Compression level between 0 and 9 (default is 6).
      * @param extensionFilterProvider
      *            provides client extension filters for per frame deflate encoder and decoder.
+     * @deprecated
+     *            Use {@link DeflateFrameClientExtensionHandshaker#DeflateFrameClientExtensionHandshaker(int, boolean,
+     *            WebSocketExtensionFilterProvider, int)}.
+     */
+    @Deprecated
+    public DeflateFrameClientExtensionHandshaker(int compressionLevel, boolean useWebkitExtensionName,
+                                                 WebSocketExtensionFilterProvider extensionFilterProvider) {
+        this(compressionLevel, useWebkitExtensionName, extensionFilterProvider, 0);
+    }
+
+    /**
+     * Constructor with custom configuration.
+     *
+     * @param compressionLevel
+     *            Compression level between 0 and 9 (default is 6).
+     * @param extensionFilterProvider
+     *            provides client extension filters for per frame deflate encoder and decoder.
+     * @param maxAllocation
+     *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
      */
     public DeflateFrameClientExtensionHandshaker(int compressionLevel, boolean useWebkitExtensionName,
-            WebSocketExtensionFilterProvider extensionFilterProvider) {
+            WebSocketExtensionFilterProvider extensionFilterProvider, int maxAllocation) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
@@ -71,6 +122,7 @@ public final class DeflateFrameClientExtensionHandshaker implements WebSocketCli
         this.compressionLevel = compressionLevel;
         this.useWebkitExtensionName = useWebkitExtensionName;
         this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
+        this.maxAllocation = maxAllocation;
     }
 
     @Override
@@ -88,7 +140,7 @@ public final class DeflateFrameClientExtensionHandshaker implements WebSocketCli
         }
 
         if (extensionData.parameters().isEmpty()) {
-            return new DeflateFrameClientExtension(compressionLevel, extensionFilterProvider);
+            return new DeflateFrameClientExtension(compressionLevel, extensionFilterProvider, maxAllocation);
         } else {
             return null;
         }
@@ -98,10 +150,13 @@ public final class DeflateFrameClientExtensionHandshaker implements WebSocketCli
 
         private final int compressionLevel;
         private final WebSocketExtensionFilterProvider extensionFilterProvider;
+        private final int maxAllocation;
 
-        DeflateFrameClientExtension(int compressionLevel, WebSocketExtensionFilterProvider extensionFilterProvider) {
+        DeflateFrameClientExtension(int compressionLevel, WebSocketExtensionFilterProvider extensionFilterProvider,
+                                    int maxAllocation) {
             this.compressionLevel = compressionLevel;
             this.extensionFilterProvider = extensionFilterProvider;
+            this.maxAllocation = maxAllocation;
         }
 
         @Override
@@ -117,7 +172,7 @@ public final class DeflateFrameClientExtensionHandshaker implements WebSocketCli
 
         @Override
         public WebSocketExtensionDecoder newExtensionDecoder() {
-            return new PerFrameDeflateDecoder(false, extensionFilterProvider.decoderFilter());
+            return new PerFrameDeflateDecoder(false, extensionFilterProvider.decoderFilter(), maxAllocation);
         }
     }
 

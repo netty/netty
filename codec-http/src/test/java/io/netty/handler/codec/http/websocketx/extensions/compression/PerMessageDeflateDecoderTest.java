@@ -51,7 +51,7 @@ public class PerMessageDeflateDecoderTest {
     public void testCompressedFrame() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         // initialize
         byte[] payload = new byte[300];
@@ -82,7 +82,7 @@ public class PerMessageDeflateDecoderTest {
 
     @Test
     public void testNormalFrame() {
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         // initialize
         byte[] payload = new byte[300];
@@ -111,7 +111,7 @@ public class PerMessageDeflateDecoderTest {
     public void testFragmentedFrame() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         // initialize
         byte[] payload = new byte[300];
@@ -161,7 +161,7 @@ public class PerMessageDeflateDecoderTest {
     public void testMultiCompressedPayloadWithinFrame() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         // initialize
         byte[] payload1 = new byte[100];
@@ -203,7 +203,7 @@ public class PerMessageDeflateDecoderTest {
     public void testDecompressionSkipForBinaryFrame() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, ALWAYS_SKIP));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, ALWAYS_SKIP, 0));
 
         byte[] payload = new byte[300];
         random.nextBytes(payload);
@@ -236,7 +236,7 @@ public class PerMessageDeflateDecoderTest {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
-                new PerMessageDeflateDecoder(false, selectivityDecompressionFilter));
+                new PerMessageDeflateDecoder(false, selectivityDecompressionFilter, 0));
 
         String textPayload = "compressed payload";
         byte[] binaryPayload = new byte[300];
@@ -282,7 +282,7 @@ public class PerMessageDeflateDecoderTest {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
         final EmbeddedChannel decoderChannel = new EmbeddedChannel(
-                new PerMessageDeflateDecoder(false, selectivityDecompressionFilter));
+                new PerMessageDeflateDecoder(false, selectivityDecompressionFilter, 0));
 
         byte[] firstPayload = new byte[200];
         random.nextBytes(firstPayload);
@@ -324,7 +324,7 @@ public class PerMessageDeflateDecoderTest {
 
     @Test
     public void testEmptyFrameDecompression() {
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         TextWebSocketFrame emptyDeflateBlockFrame = new TextWebSocketFrame(true, WebSocketExtension.RSV1,
                                                                            EMPTY_DEFLATE_BLOCK);
@@ -349,7 +349,7 @@ public class PerMessageDeflateDecoderTest {
                          "977616f79736475676f76736f7178746a7a7479626c64636b6b6778637768746c62";
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerMessageDeflateDecoder(false, 0));
 
         ByteBuf originPayload = Unpooled.wrappedBuffer(ByteBufUtil.decodeHexDump(hexDump));
         assertTrue(encoderChannel.writeOutbound(originPayload.duplicate().retain()));

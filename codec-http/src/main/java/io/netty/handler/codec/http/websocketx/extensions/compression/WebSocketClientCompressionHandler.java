@@ -27,12 +27,14 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensio
 @ChannelHandler.Sharable
 public final class WebSocketClientCompressionHandler extends WebSocketClientExtensionHandler {
 
+    private static final int MAX_ALLOCATION = 1024 * 1024 * 10;
+
     public static final WebSocketClientCompressionHandler INSTANCE = new WebSocketClientCompressionHandler();
 
     private WebSocketClientCompressionHandler() {
-        super(new PerMessageDeflateClientExtensionHandshaker(),
-                new DeflateFrameClientExtensionHandshaker(false),
-                new DeflateFrameClientExtensionHandshaker(true));
+        super(new PerMessageDeflateClientExtensionHandshaker(MAX_ALLOCATION),
+                new DeflateFrameClientExtensionHandshaker(false, MAX_ALLOCATION),
+                new DeflateFrameClientExtensionHandshaker(true, MAX_ALLOCATION));
     }
 
 }

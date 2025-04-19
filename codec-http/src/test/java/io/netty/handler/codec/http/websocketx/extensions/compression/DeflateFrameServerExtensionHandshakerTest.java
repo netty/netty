@@ -37,7 +37,8 @@ public class DeflateFrameServerExtensionHandshakerTest {
     public void testNormalHandshake() {
         // initialize
         DeflateFrameServerExtensionHandshaker handshaker =
-                new DeflateFrameServerExtensionHandshaker();
+                new DeflateFrameServerExtensionHandshaker(
+                        DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL, 0);
 
         // execute
         WebSocketServerExtension extension = handshaker.handshakeExtension(
@@ -54,7 +55,8 @@ public class DeflateFrameServerExtensionHandshakerTest {
     public void testWebkitHandshake() {
         // initialize
         DeflateFrameServerExtensionHandshaker handshaker =
-                new DeflateFrameServerExtensionHandshaker();
+                new DeflateFrameServerExtensionHandshaker(
+                        DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL, 0);
 
         // execute
         WebSocketServerExtension extension = handshaker.handshakeExtension(
@@ -71,7 +73,8 @@ public class DeflateFrameServerExtensionHandshakerTest {
     public void testFailedHandshake() {
         // initialize
         DeflateFrameServerExtensionHandshaker handshaker =
-                new DeflateFrameServerExtensionHandshaker();
+                new DeflateFrameServerExtensionHandshaker(
+                        DeflateFrameServerExtensionHandshaker.DEFAULT_COMPRESSION_LEVEL, 0);
 
         Map<String, String> parameters;
         parameters = new HashMap<String, String>();
