@@ -50,12 +50,12 @@ WORKDIR $SOURCE_DIR
 
 # Install aarch64 gcc 10.2 toolchain
 RUN wget https://developer.arm.com/-/media/Files/downloads/gnu-a/$GCC_VERSION/binrel/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && \
-  tar xvf gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && mv gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu /opt/
+  tar xf gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu.tar.xz && mv gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu /opt/
 ENV PATH="/opt/gcc-arm-$GCC_VERSION-x86_64-aarch64-none-linux-gnu/bin:${PATH}"
 
 
 # Install CMake
-RUN curl -s https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz --output cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zvxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
+RUN curl -s https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz --output cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
 
 # install rust and setup PATH and install correct toolchain
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -67,7 +67,7 @@ RUN echo '[target.aarch64-unknown-linux-gnu]' >> /root/.cargo/config
 RUN echo 'linker = "aarch64-none-linux-gnu-gcc"' >> /root/.cargo/config
 
 # Downloading and installing SDKMAN!
-RUN curl -s "https://get.sdkman.io" | bash
+RUN curl -s "https://get.sdkman.io?ci=true" | bash
 
 # Installing Java and Maven, removing some unnecessary SDKMAN files
 RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
