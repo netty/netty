@@ -295,6 +295,12 @@
         <test.argLine>-Dio.netty.leakDetection.level=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
       </properties>
     </profile>
+    <profile>
+      <id>oss-fuzz</id>
+      <properties>
+        <jni.compiler.args.cflags>CFLAGS=${env.CFLAGS} -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
+      </properties>
+    </profile>
   </profiles>
 
   <dependencies>

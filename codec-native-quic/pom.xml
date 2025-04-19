@@ -80,6 +80,12 @@
 
   <profiles>
     <profile>
+      <id>oss-fuzz</id>
+      <properties>
+        <cflags>-std=c99 ${env.CFLAGS} -I${quicheHomeIncludeDir} -I${boringsslHomeIncludeDir}</cflags>
+      </properties>
+    </profile>
+    <profile>
       <id>windows</id>
       <activation>
         <os>
