@@ -695,6 +695,7 @@
     <brotli4j.version>1.16.0</brotli4j.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
+    <native.maven.plugin.version>0.10.6</native.maven.plugin.version>
     <skipShadingTestsuite>false</skipShadingTestsuite>
     <skipDeploy>false</skipDeploy>
     <multiReleaseJar>true</multiReleaseJar>
