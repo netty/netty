@@ -127,7 +127,8 @@
 },
 {
   "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},
-  "name":"java.net.Inet4Address"
+  "name":"java.net.Inet4Address",
+  "methods":[{"name":"getByAddress","parameterTypes":["byte[]"] }]
 },
 {
   "condition":{"typeReachable":"io.netty.codec.quic.Quiche"},

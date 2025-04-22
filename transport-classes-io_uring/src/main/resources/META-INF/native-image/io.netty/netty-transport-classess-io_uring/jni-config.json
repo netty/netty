@@ -1,0 +1,252 @@
+[
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.ChannelException"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "java.nio.channels.ClosedChannelException",
+    "methods":[{"name":"<init>","parameterTypes":[] }]
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "[J"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.unix.LimitsStaticallyReferencedJniMethods"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.unix.ErrorsStaticallyReferencedJniMethods"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.DefaultFileRegion",
+    "allDeclaredFields": true,
+    "fields": [
+      {
+        "name": "file"
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "java.io.FileDescriptor",
+    "fields": [
+      {
+        "name": "fd"
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.unix.FileDescriptor",
+    "fields": [
+      {
+        "name": "state"
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.unix.Buffer"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.unix.PeerCredentials",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "int",
+          "int",
+          "int[]"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.uring.LinuxSocket"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.uring.Native"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.uring.NativeStaticallyReferencedJniMethods"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.unix.DomainDatagramSocketAddress",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "byte[]",
+          "int",
+          "io.netty.channel.unix.DomainDatagramSocketAddress"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.unix.DatagramSocketAddress",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "byte[]",
+          "int",
+          "int",
+          "int",
+          "io.netty.channel.unix.DatagramSocketAddress"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "io.netty.channel.unix.Socket"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "java.lang.OutOfMemoryError"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "java.lang.RuntimeException"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "java.net.InetSocketAddress",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "java.lang.String",
+          "int"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "java.io.IOException"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "java.lang.Boolean",
+    "methods": [
+      {
+        "name": "getBoolean",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "java.net.PortUnreachableException"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "java.nio.DirectByteBuffer"
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "java.nio.Buffer",
+    "fields": [
+      {
+        "name": "limit"
+      },
+      {
+        "name": "position"
+      }
+    ],
+    "methods": [
+      {
+        "name": "limit",
+        "parameterTypes": []
+      },
+      {
+        "name": "position",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "sun.nio.ch.FileChannelImpl",
+    "fields": [
+      {
+        "name": "fd"
+      }
+    ]
+  },
+  {
+    "condition": {
+      "typeReachable": "io.netty.channel.uring.Native"
+    },
+    "name": "java.nio.channels.FileChannel",
+    "fields": [
+      {
+        "name": "file"
+      }
+    ]
+  }
+]
