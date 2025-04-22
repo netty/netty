@@ -139,8 +139,10 @@ public class HttpConversionUtilTest {
 
     @Test
     public void stripTEHeadersAccountsForOWS() {
-        HttpHeaders inHeaders = new DefaultHttpHeaders(false);
-        inHeaders.add(TE, " " + TRAILERS + " ");
+        // Disable header validation, since it will otherwise reject the header.
+        boolean validate = false;
+        HttpHeaders inHeaders = new DefaultHttpHeaders(validate);
+        inHeaders.add(TE, " " + TRAILERS + ' ');
         Http3Headers out = new DefaultHttp3Headers();
         HttpConversionUtil.toHttp3Headers(inHeaders, out);
         assertSame(TRAILERS, out.get(TE));
