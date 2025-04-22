@@ -94,17 +94,9 @@ final class Http3CodecUtils {
     }
 
     static boolean isReservedHttp2Setting(long key) {
-        switch ((int) key) {
-            // Reserved types that were used in HTTP/2
-            // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-11.2.2
-            case 0x2:
-            case 0x3:
-            case 0x4:
-            case 0x5:
-                return true;
-            default:
-                return false;
-        }
+        // Reserved types that were used in HTTP/2
+        // https://tools.ietf.org/html/draft-ietf-quic-http-32#section-11.2.2
+        return 0x2L <= key && key <= 0x5L;
     }
 
     /**
