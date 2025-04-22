@@ -142,7 +142,7 @@
                 </goals>
                 <configuration>
                   <sources>
-                    <source>${project.basedir}/../codec-native-quic/src/test/java/io/netty/codec/quic/example/</source>
+                    <source>${project.basedir}/../codec-native-quic/src/test/java/io/netty/handler/codec/quic/example/</source>
                   </sources>
                 </configuration>
               </execution>
@@ -177,7 +177,7 @@
                 <configuration>
                   <metadataRepository><enabled>false</enabled></metadataRepository>
                   <imageName>native-image-quic-client</imageName>
-                  <mainClass>io.netty.codec.quic.example.QuicClientExample</mainClass>
+                  <mainClass>io.netty.handler.codec.quic.example.QuicClientExample</mainClass>
                   <buildArgs>
                     <arg>--report-unsupported-elements-at-runtime</arg>
                     <arg>--allow-incomplete-classpath</arg>
@@ -193,7 +193,7 @@
                 <configuration>
                   <metadataRepository><enabled>false</enabled></metadataRepository>
                   <imageName>native-image-quic-server</imageName>
-                  <mainClass>io.netty.codec.quic.example.QuicServerExample</mainClass>
+                  <mainClass>io.netty.handler.codec.quic.example.QuicServerExample</mainClass>
                   <buildArgs>
                     <arg>--report-unsupported-elements-at-runtime</arg>
                     <arg>--allow-incomplete-classpath</arg>
