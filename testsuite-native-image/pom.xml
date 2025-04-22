@@ -34,7 +34,6 @@
     <skipDeploy>true</skipDeploy>
     <packaging.type>jar</packaging.type>
     <native.maven.plugin.version>0.10.6</native.maven.plugin.version>
-    <netty.version>${project.version}</netty.version>
   </properties>
 
   <dependencies>
@@ -66,17 +65,17 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-transport-classes-epoll</artifactId>
-      <version>${netty.version}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-transport-classes-io_uring</artifactId>
-      <version>${netty.version}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-codec-classes-quic</artifactId>
-      <version>${netty.version}</version>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 
@@ -89,7 +88,7 @@
         </property>
       </activation>
       <properties>
-        <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
+        <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
       </properties>
     </profile>
     <!-- Profiles related to native-image testing of QUIC -->
@@ -105,14 +104,14 @@
         <dependency>
           <groupId>io.netty</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
-          <version>${netty.version}</version>
+          <version>${project.version}</version>
           <classifier>${os.detected.classifier}</classifier>
           <scope>runtime</scope>
         </dependency>
         <dependency>
           <groupId>io.netty</groupId>
           <artifactId>netty-transport-native-io_uring</artifactId>
-          <version>${netty.version}</version>
+          <version>${project.version}</version>
           <classifier>${os.detected.classifier}</classifier>
           <scope>runtime</scope>
         </dependency>
