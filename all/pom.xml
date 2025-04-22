@@ -127,6 +127,42 @@
           <classifier>osx-aarch_64</classifier>
           <scope>runtime</scope>
         </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <classifier>linux-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <classifier>linux-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <classifier>linux-riscv64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <classifier>osx-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <classifier>osx-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <classifier>windows-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
       </dependencies>
     </profile>
     <profile>
@@ -171,6 +207,24 @@
           <classifier>linux-riscv64</classifier>
           <scope>runtime</scope>
         </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <classifier>linux-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <classifier>linux-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <classifier>linux-riscv64</classifier>
+          <scope>runtime</scope>
+        </dependency>
       </dependencies>
     </profile>
 
@@ -186,6 +240,18 @@
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-io_uring</artifactId>
+          <classifier>${jni.classifier}</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
           <classifier>${jni.classifier}</classifier>
           <scope>runtime</scope>
         </dependency>
@@ -210,6 +276,12 @@
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
           <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
           <classifier>${jni.classifier}</classifier>
           <scope>runtime</scope>
         </dependency>
@@ -472,6 +544,11 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-transport-classes-io_uring</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-classes-quic</artifactId>
       <scope>compile</scope>
     </dependency>
   </dependencies>
