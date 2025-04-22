@@ -33,6 +33,7 @@
     <argLine.java9.extras>--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/jdk.internal.loader=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.security=ALL-UNNAMED</argLine.java9.extras>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
 
   <profiles>

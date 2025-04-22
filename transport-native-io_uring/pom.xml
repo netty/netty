@@ -48,6 +48,8 @@
     <!-- Always check JNI during test run so we catch bugs that could cause crashes -->
     <argLine.jni>-Xcheck:jni</argLine.jni>
     <test.argLine>-D_</test.argLine>
+    <javadoc.release>9</javadoc.release>
+    <javadoc.source>9</javadoc.source>
   </properties>
 
   <profiles>

@@ -78,7 +78,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.2.0</version>
+            <version>3.11.2</version>
             <executions>
               <execution>
                 <id>aggregate</id>
@@ -88,6 +88,7 @@
               </execution>
             </executions>
             <configuration>
+              <legacyMode>true</legacyMode>
               <skippedModules>
                 netty-all,netty-bom,netty-testsuite,netty-testsuite-autobahn,netty-testsuite-http2,
                 netty-testsuite-native,netty-testsuite-native-image,netty-testsuite-native-image-client,
@@ -112,6 +113,8 @@
               <doctitle>Netty API Reference (${project.version})</doctitle>
               <windowtitle>Netty API Reference (${project.version})</windowtitle>
               <detectJavaApiLink>false</detectJavaApiLink>
+              <release>${javadoc.release}</release>
+              <source>${javadoc.source}</source>
               <links>
                 <link>https://docs.oracle.com/javase/8/docs/api/</link>
                 <link>https://developers.google.com/protocol-buffers/docs/reference/java/</link>
@@ -640,6 +643,8 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <maven.compiler.release />
+    <javadoc.release>9</javadoc.release>
+    <javadoc.source>9</javadoc.source>
     <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -1605,13 +1610,17 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.10.4</version>
+        <version>3.11.2</version>
         <configuration>
           <detectOfflineLinks>false</detectOfflineLinks>
           <breakiterator>true</breakiterator>
           <version>false</version>
           <author>false</author>
           <keywords>true</keywords>
+          <release>${javadoc.release}</release>
+          <source>${javadoc.source}</source>
+          <failOnError>false</failOnError>
+          <failOnWarnings>false</failOnWarnings>
         </configuration>
       </plugin>
       <plugin>
@@ -1850,7 +1859,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-jxr-plugin</artifactId>
-          <version>3.1.1</version>
+          <version>3.6.0</version>
         </plugin>
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>
