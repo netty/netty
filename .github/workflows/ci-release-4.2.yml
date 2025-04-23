@@ -438,6 +438,7 @@ jobs:
         run: bash ./.github/scripts/install_local_staging.sh ~/.m2/repository ~/windows-x86_64-local-staging/staging ~/macos-aarch64-java11-local-staging/staging ~/macos-x86_64-java11-local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-riscv64-local-staging/staging ~/linux-x86_64-java11-local-staging/staging
 
       - name: Generate netty-all and deploy to local staging.
+        working-directory: ./prepare-release-workspace/
         run: |
           mkdir -p ~/all-local-staging
           ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
