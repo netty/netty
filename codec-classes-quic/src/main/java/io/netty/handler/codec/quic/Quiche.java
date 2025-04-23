@@ -67,7 +67,8 @@ final class Quiche {
 
     private static void loadNativeLibrary() {
         // This needs to be kept in sync with what is defined in netty_quic_quiche.c
-        String libName = "netty_quiche";
+        // and pom.xml as jniLibPrefix.
+        String libName = "netty_quiche42";
         ClassLoader cl = PlatformDependent.getClassLoader(Quiche.class);
 
         if (!PlatformDependent.isAndroid()) {
