@@ -1006,13 +1006,6 @@ final class AdaptivePoolingAllocator {
             throw new IllegalReferenceCountException();
         }
 
-        private ByteBuffer getTmpNioBuf() {
-            if (tmpNioBuf == null) {
-                tmpNioBuf = rootParent().internalNioBuffer(adjustment, length).slice();
-            }
-            return tmpNioBuf;
-        }
-
         @Override
         public int capacity() {
             return length;
@@ -1096,7 +1089,10 @@ final class AdaptivePoolingAllocator {
         }
 
         private ByteBuffer internalNioBuffer() {
-            return (ByteBuffer) getTmpNioBuf().clear();
+            if (tmpNioBuf == null) {
+                tmpNioBuf = rootParent().internalNioBuffer(adjustment, length).slice();
+            }
+            return (ByteBuffer) tmpNioBuf.clear();
         }
 
         @Override
