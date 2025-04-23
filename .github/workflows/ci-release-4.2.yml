@@ -434,13 +434,8 @@ jobs:
           path: ~/linux-x86_64-java11-local-staging
 
       - name: Copy previous build artifacts to local maven repository
-        run: |
-          cp -r ~/windows-x86_64-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/macos-aarch64-java11-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/macos-x86_64-java11-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/linux-aarch64-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/linux-riscv64-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/linux-x86_64-java11-local-staging/deferred/* ~/.m2/repository/
+        working-directory: ./prepare-release-workspace/
+        run: bash ./.github/scripts/install_local_staging.sh ~/.m2/repository ~/windows-x86_64-local-staging/staging ~/macos-aarch64-java11-local-staging/staging ~/macos-x86_64-java11-local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-riscv64-local-staging/staging ~/linux-x86_64-java11-local-staging/staging
 
       - name: Generate netty-all and deploy to local staging.
         run: |
@@ -451,22 +446,7 @@ jobs:
       # all together with one maven command.
       - name: Merge staging repositories
         working-directory: ./prepare-release-workspace/
-        run: |
-          mkdir -p ~/local-staging/deferred
-          cat ~/windows-x86_64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/windows-x86_64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/macos-aarch64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/macos-aarch64-java11-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/macos-x86_64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/macos-x86_64-java11-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-aarch64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-aarch64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-riscv64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-riscv64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-x86_64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-x86_64-java11-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/all-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/all-local-staging/deferred/io/netty/netty-all/* ~/local-staging/deferred/io/netty/netty-all/
+        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging/staging ~/windows-x86_64-local-staging/staging ~/macos-aarch64-java11-local-staging/staging ~/macos-x86_64-java11-local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-riscv64-local-staging/staging ~/linux-x86_64-java11-local-staging/staging ~/all-local-staging/staging
 
       - name: Deploy local staged artifacts
         working-directory: ./prepare-release-workspace/
