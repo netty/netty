@@ -237,6 +237,7 @@ jobs:
             pr-${{ matrix.setup }}-maven-cache-
 
       - name: Install tools via brew
+        working-directory: ./prepare-release-workspace/
         run: brew bundle
 
       - name: Create local staging directory
