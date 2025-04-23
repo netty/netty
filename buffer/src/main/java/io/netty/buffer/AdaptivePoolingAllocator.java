@@ -1037,9 +1037,10 @@ final class AdaptivePoolingAllocator {
             int readerIndex = this.readerIndex;
             int writerIndex = this.writerIndex;
             int baseOldRootIndex = adjustment;
+            int oldCapacity = length;
             AbstractByteBuf oldRoot = rootParent();
             allocator.allocate(newCapacity, maxCapacity(), this);
-            oldRoot.getBytes(baseOldRootIndex, this, 0, writerIndex);
+            oldRoot.getBytes(baseOldRootIndex, this, 0, oldCapacity);
             chunk.release();
             this.readerIndex = readerIndex;
             this.writerIndex = writerIndex;
