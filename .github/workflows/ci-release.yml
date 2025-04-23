@@ -252,7 +252,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.setup }}-local-staging
-          path: /local-staging
+          path: $HOME/local-staging
           if-no-files-found: error
           include-hidden-files: true
 

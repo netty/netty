@@ -252,7 +252,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.setup }}-local-staging
-          path: /local-staging
+          path: $HOME/local-staging
           if-no-files-found: error
           include-hidden-files: true
 
@@ -328,7 +328,7 @@ jobs:
       - uses: actions/cache@v4
         continue-on-error: true
         with:
-          path: ~/.m2/repository
+          path: $HOME/.m2/repository
           key: stage-release-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             stage-release-windows-x86_64-maven-cache-
@@ -340,7 +340,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-x86_64-local-staging
-          path: local-staging
+          path: $HOME/local-staging
           if-no-files-found: error
           include-hidden-files: true
 
