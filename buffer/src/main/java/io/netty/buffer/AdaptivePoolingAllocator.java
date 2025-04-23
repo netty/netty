@@ -995,7 +995,7 @@ final class AdaptivePoolingAllocator {
             hasArray = unwrapped.hasArray();
             hasMemoryAddress = unwrapped.hasMemoryAddress();
             rootParent = unwrapped;
-            tmpNioBuf = unwrapped.internalNioBuffer(adjustment, capacity).slice();
+            tmpNioBuf = null;
         }
 
         private AbstractByteBuf rootParent() {
@@ -1004,6 +1004,13 @@ final class AdaptivePoolingAllocator {
                 return rootParent;
             }
             throw new IllegalReferenceCountException();
+        }
+
+        private ByteBuffer getTmpNioBuf() {
+            if (tmpNioBuf == null) {
+                tmpNioBuf = rootParent().internalNioBuffer(adjustment, length).slice();
+            }
+            return tmpNioBuf;
         }
 
         @Override
@@ -1025,16 +1032,14 @@ final class AdaptivePoolingAllocator {
             }
 
             // Reallocation required.
-            ByteBuffer data = tmpNioBuf;
-            data.clear();
-            tmpNioBuf = null;
             Chunk chunk = this.chunk;
             AdaptivePoolingAllocator allocator = chunk.allocator;
             int readerIndex = this.readerIndex;
             int writerIndex = this.writerIndex;
+            int baseOldRootIndex = adjustment;
+            AbstractByteBuf oldRoot = rootParent();
             allocator.allocate(newCapacity, maxCapacity(), this);
-            tmpNioBuf.put(data);
-            tmpNioBuf.clear();
+            oldRoot.getBytes(baseOldRootIndex, this, 0, writerIndex);
             chunk.release();
             this.readerIndex = readerIndex;
             this.writerIndex = writerIndex;
@@ -1090,7 +1095,7 @@ final class AdaptivePoolingAllocator {
         }
 
         private ByteBuffer internalNioBuffer() {
-            return (ByteBuffer) tmpNioBuf.clear();
+            return (ByteBuffer) getTmpNioBuf().clear();
         }
 
         @Override
