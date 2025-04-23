@@ -1818,7 +1818,19 @@
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <version>5.1.8</version>
+        <configuration>
+          <!-- Common for all executions -->
+          <supportedProjectTypes>
+            <supportedProjectType>jar</supportedProjectType>
+            <supportedProjectType>bundle</supportedProjectType>
+          </supportedProjectTypes>
+          <instructions>
+            <Export-Package>${project.groupId}.*</Export-Package>
+            <Private-Package>!*</Private-Package>
+          </instructions>
+        </configuration>
         <executions>
+          <!-- Default execution. Note that transport-native-* have additional executions. -->
           <execution>
             <id>generate-manifest</id>
             <phase>process-classes</phase>
@@ -1826,16 +1838,9 @@
               <goal>manifest</goal>
             </goals>
             <configuration>
-              <supportedProjectTypes>
-                <supportedProjectType>jar</supportedProjectType>
-                <supportedProjectType>bundle</supportedProjectType>
-              </supportedProjectTypes>
               <instructions>
-                <Export-Package>${project.groupId}.*</Export-Package>
                 <!-- enforce JVM vendor package as optional -->
                 <Import-Package>sun.net.dns.*;resolution:=optional,sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.eclipse.jetty.alpn;version="[1,2)";resolution:=optional,org.bouncycastle.jcajce.provider;version="[1.0,2)";resolution:=optional,*</Import-Package>
-                <!-- override "internal" private package convention -->
-                <Private-Package>!*</Private-Package>
               </instructions>
             </configuration>
           </execution>
