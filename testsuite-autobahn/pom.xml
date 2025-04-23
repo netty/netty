@@ -32,6 +32,7 @@
     <revapi.skip>true</revapi.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
 
   <dependencies>
