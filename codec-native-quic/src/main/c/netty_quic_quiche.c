@@ -45,7 +45,10 @@
 
 #define STATICALLY_CLASSNAME "io/netty/handler/codec/quic/QuicheNativeStaticallyReferencedJniMethods"
 #define QUICHE_CLASSNAME "io/netty/handler/codec/quic/Quiche"
-#define LIBRARYNAME "netty_quiche"
+
+// This needs to be kept in sync with what is defined in Quiche.java
+// and pom.xml as jniLibPrefix.
+#define LIBRARYNAME "netty_quiche42"
 
 static jweak    quiche_logger_class_weak = NULL;
 static jmethodID quiche_logger_class_log = NULL;
