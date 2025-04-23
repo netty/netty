@@ -234,12 +234,17 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * <p>
      * <strong>Must be called from the owning {@link Thread} that was passed as an parameter on construction.</strong>
      *
-     * @param waitNanos the maximum amount of nanoseconds to wait before returning.
+     * @param waitNanos the maximum amount of nanoseconds to wait before returning. IF {@code 0} it will block until
+     *                  there is some IO / tasks ready, if {@code -1} will not block at all and just return directly
+     *                  if there is nothing to run (like {@link #runNow()}).
      * @return          the number of IO and tasks executed.
      */
     public int run(long waitNanos) {
         checkCurrentThread();
-        blockingContext.maxBlockingNanos = waitNanos;
+        if (waitNanos < 0) {
+            return run(nonBlockingContext);
+        }
+        blockingContext.maxBlockingNanos = waitNanos == 0 ? Long.MAX_VALUE : waitNanos;
         return run(blockingContext);
     }
 
