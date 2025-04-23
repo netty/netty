@@ -241,11 +241,15 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      */
     public int run(long waitNanos) {
         checkCurrentThread();
+
+        final IoHandlerContext context;
         if (waitNanos < 0) {
-            return run(nonBlockingContext);
+            context = nonBlockingContext;
+        } else {
+            context = blockingContext;
+            blockingContext.maxBlockingNanos = waitNanos == 0 ? Long.MAX_VALUE : waitNanos;
         }
-        blockingContext.maxBlockingNanos = waitNanos == 0 ? Long.MAX_VALUE : waitNanos;
-        return run(blockingContext);
+        return run(context);
     }
 
     private void checkCurrentThread() {
