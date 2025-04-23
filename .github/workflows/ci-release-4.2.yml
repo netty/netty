@@ -171,6 +171,7 @@ jobs:
         run: bash ./.github/scripts/release_rollback.sh release.properties netty/netty 4.2
 
   stage-release-macos:
+    needs: prepare-release
     strategy:
       fail-fast: false
       matrix:
@@ -262,6 +263,7 @@ jobs:
         run: bash ./.github/scripts/release_rollback.sh release.properties netty/netty 4.2
 
   stage-release-windows:
+    needs: prepare-release
     runs-on: windows-2019
     name: stage-release-windows-x86_64
     env:

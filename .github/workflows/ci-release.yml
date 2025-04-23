@@ -171,6 +171,7 @@ jobs:
         run: bash ./.github/scripts/release_rollback.sh release.properties netty/netty 4.1
 
   stage-release-macos:
+    needs: prepare-release
     strategy:
       fail-fast: false
       matrix:
