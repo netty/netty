@@ -30,7 +30,7 @@
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
     <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
-    <javaModuleName>io.netty.codec.quic</javaModuleName>
+    <javaModuleName>io.netty.handler.codec.quic</javaModuleName>
     <fragmentHost>io.netty.netty-codec-classes-quic</fragmentHost>
     <logging.config>${project.basedir}/../codec-native-quic/src/test/resources/logback-test.xml</logging.config>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
@@ -538,7 +538,7 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
               <excludes>
-                <exclude>io.netty.codec.quic.QuicChannelEchoTest</exclude>
+                <exclude>io.netty.handler.codec.quic.QuicChannelEchoTest</exclude>
               </excludes>
             </configuration>
           </plugin>
