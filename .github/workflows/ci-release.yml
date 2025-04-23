@@ -300,6 +300,15 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
 
+      - uses: s4u/maven-settings-action@v3.0.0
+        with:
+          servers: |
+            [{
+              "id": "sonatype-nexus-staging",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
+
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups. There is currently no way to pull this out of the config.
       - name: Download macos-aarch64-java8 staging directory
@@ -347,15 +356,6 @@ jobs:
       - name: Merge staging repositories
         working-directory: ./prepare-release-workspace/
         run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging/staging ~/macos-aarch64-java8-local-staging/staging ~/macos-x86_64-java8-local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-riscv64-local-staging/staging ~/linux-x86_64-java8-local-staging/staging ~/all-local-staging/staging
-
-      - uses: s4u/maven-settings-action@v3.0.0
-        with:
-          servers: |
-            [{
-              "id": "sonatype-nexus-staging",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
-            }]
 
       # Cache .m2/repository
       - name: Cache local Maven repository
