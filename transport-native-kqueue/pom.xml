@@ -135,7 +135,7 @@
                       <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
-                    <manifestFile>${project.build.directory}/${jni.classifier}/META-INF/MANIFEST.MF</manifestFile>
+                    <manifestFile>${project.build.directory}/${jni.classifier}/MANIFEST.MF</manifestFile>
                   </archive>
                   <classifier>${jni.classifier}</classifier>
                 </configuration>
@@ -264,7 +264,7 @@
                       <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
-                    <manifestFile>${project.build.directory}/${jni.classifier}/META-INF/MANIFEST.MF</manifestFile>
+                    <manifestFile>${project.build.directory}/${jni.classifier}/MANIFEST.MF</manifestFile>
                   </archive>
                   <classifier>${jni.classifier}</classifier>
                 </configuration>
@@ -393,7 +393,7 @@
                       <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
-                    <manifestFile>${project.build.directory}/${jni.classifier}/META-INF/MANIFEST.MF</manifestFile>
+                    <manifestFile>${project.build.directory}/${jni.classifier}/MANIFEST.MF</manifestFile>
                   </archive>
                   <classifier>${jni.classifier}</classifier>
                 </configuration>
@@ -519,7 +519,7 @@
                       <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
-                    <manifestFile>${project.build.directory}/${jni.classifier}/META-INF/MANIFEST.MF</manifestFile>
+                    <manifestFile>${project.build.directory}/${jni.classifier}/MANIFEST.MF</manifestFile>
                   </archive>
                   <classifier>${jni.classifier}</classifier>
                 </configuration>
@@ -645,7 +645,7 @@
                       <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
-                    <manifestFile>${project.build.directory}/${jni.classifier}/META-INF/MANIFEST.MF</manifestFile>
+                    <manifestFile>${project.build.directory}/${jni.classifier}/MANIFEST.MF</manifestFile>
                   </archive>
                   <classifier>${jni.classifier}</classifier>
                 </configuration>
