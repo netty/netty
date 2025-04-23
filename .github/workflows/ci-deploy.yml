@@ -177,7 +177,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-x86_64-local-staging
-          path: $HOME/local-staging
+          path: ~/local-staging
           if-no-files-found: error
           include-hidden-files: true
 
