@@ -264,7 +264,7 @@ jobs:
             os: macos-13
           - setup: macos-aarch64
             os: macos-15
-
+    needs: prepare-release
     runs-on: ${{ matrix.os }}
     name:  stage-release-${{ matrix.setup }}
 
