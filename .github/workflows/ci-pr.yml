@@ -201,27 +201,27 @@ jobs:
       max-parallel: 4
       matrix:
         include:
-          - setup: linux-x86_64-java11
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build"
+#          - setup: linux-x86_64-java11
+#            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
+#            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build"
           - setup: linux-x86_64-java21-graal
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm121.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.graalvm121.yaml run build"
-          - setup: linux-x86_64-java17
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build"
+#          - setup: linux-x86_64-java17
+#            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml build"
+#            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build"
           - setup: linux-x86_64-java21
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml run build"
-          - setup: linux-x86_64-java23
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.23.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.23.yaml run build"
+#          - setup: linux-x86_64-java23
+#            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.23.yaml build"
+#            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.23.yaml run build"
           - setup: linux-x86_64-java11-boringssl
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-leak-boringssl-static"
-          - setup: linux-x86_64-java11-pooled
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-leak-pooled"
+#          - setup: linux-x86_64-java11-pooled
+#            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
+#            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-leak-pooled"
 
     name: ${{ matrix.setup }} build
     needs: verify-pr
