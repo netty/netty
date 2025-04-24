@@ -24,7 +24,7 @@
 
   <groupId>io.netty.incubator</groupId>
   <artifactId>netty-incubator-codec-parent-quic</artifactId>
-  <version>0.0.73.Final-SNAPSHOT</version>
+  <version>0.0.72.Final-SNAPSHOT</version>
   <name>Netty/Incubator/Codec/Parent/Quic</name>
   <packaging>pom</packaging>
   <url>https://netty.io/</url>
