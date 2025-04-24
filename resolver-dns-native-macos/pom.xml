@@ -92,6 +92,28 @@
           </plugin>
 
           <plugin>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>maven-bundle-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>native-manifest</id>
+                <phase>process-classes</phase>
+                <goals>
+                  <goal>manifest</goal>
+                </goals>
+                <configuration>
+                  <instructions>
+                    <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_${os.detected.arch}.jnilib; osname=MacOSX; processor=${os.detected.arch}</Bundle-NativeCode>
+                    <Bundle-SymbolicName>${maven-symbolicname}.${jni.classifier}</Bundle-SymbolicName>
+                    <Fragment-Host>io.netty.resolver-dns-classes-macos</Fragment-Host>
+                  </instructions>
+                  <manifestLocation>${project.build.directory}/${jni.classifier}</manifestLocation>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
             <artifactId>maven-jar-plugin</artifactId>
             <executions>
               <!-- Generate the JAR that contains the native library in it. -->
@@ -107,12 +129,10 @@
                       <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_${os.detected.arch}.jnilib; osname=MacOSX; processor=${os.detected.arch}</Bundle-NativeCode>
-                      <Fragment-Host>io.netty.resolver-dns-classes-macos</Fragment-Host>
                       <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
-                    <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                    <manifestFile>${project.build.directory}/${jni.classifier}/MANIFEST.MF</manifestFile>
                   </archive>
                   <classifier>${jni.classifier}</classifier>
                 </configuration>
@@ -201,6 +221,28 @@
           </plugin>
 
           <plugin>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>maven-bundle-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>native-manifest</id>
+                <phase>process-classes</phase>
+                <goals>
+                  <goal>manifest</goal>
+                </goals>
+                <configuration>
+                  <instructions>
+                    <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_aarch_64.jnilib; osname=MacOSX; processor=aarch64</Bundle-NativeCode>
+                    <Bundle-SymbolicName>${maven-symbolicname}.${jni.classifier}</Bundle-SymbolicName>
+                    <Fragment-Host>io.netty.resolver-dns-classes-macos</Fragment-Host>
+                  </instructions>
+                  <manifestLocation>${project.build.directory}/${jni.classifier}</manifestLocation>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
             <artifactId>maven-jar-plugin</artifactId>
             <executions>
               <!-- Generate the JAR that contains the native library in it. -->
@@ -216,12 +258,10 @@
                       <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_aarch_64.jnilib; osname=MacOSX; processor=aarch64</Bundle-NativeCode>
-                      <Fragment-Host>io.netty.resolver-dns-classes-macos</Fragment-Host>
                       <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
-                    <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                    <manifestFile>${project.build.directory}/${jni.classifier}/MANIFEST.MF</manifestFile>
                   </archive>
                   <classifier>${jni.classifier}</classifier>
                 </configuration>
@@ -311,6 +351,28 @@
           </plugin>
 
           <plugin>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>maven-bundle-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>native-manifest</id>
+                <phase>process-classes</phase>
+                <goals>
+                  <goal>manifest</goal>
+                </goals>
+                <configuration>
+                  <instructions>
+                    <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_x86_64.jnilib; osname=MacOSX; processor=x86_64</Bundle-NativeCode>
+                    <Bundle-SymbolicName>${maven-symbolicname}.${jni.classifier}</Bundle-SymbolicName>
+                    <Fragment-Host>io.netty.resolver-dns-classes-macos</Fragment-Host>
+                  </instructions>
+                  <manifestLocation>${project.build.directory}/${jni.classifier}</manifestLocation>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
             <artifactId>maven-jar-plugin</artifactId>
             <executions>
               <!-- Generate the JAR that contains the native library in it. -->
@@ -326,12 +388,10 @@
                       <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_resolver_dns_native_macos_x86_64.jnilib; osname=MacOSX; processor=x86_64</Bundle-NativeCode>
-                      <Fragment-Host>io.netty.resolver-dns-classes-macos</Fragment-Host>
                       <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
-                    <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                    <manifestFile>${project.build.directory}/${jni.classifier}/MANIFEST.MF</manifestFile>
                   </archive>
                   <classifier>${jni.classifier}</classifier>
                 </configuration>
