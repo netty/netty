@@ -123,7 +123,6 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                                             }
                                         });
                                     }
-
                                 }
                             });
                         }
