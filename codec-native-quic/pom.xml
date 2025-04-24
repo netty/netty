@@ -684,6 +684,7 @@
                           <arg value="clone" />
                           <arg value="--branch" />
                           <arg value="${boringsslBranch}" />
+                          <arg value="--single-branch"/>
                           <arg value="${boringsslRepository}" />
                           <arg value="${boringsslSourceDir}" />
                         </exec>
@@ -795,6 +796,7 @@
                           <arg value="clone" />
                           <arg value="--branch" />
                           <arg value="${quicheBranch}" />
+                          <arg value="--single-branch"/>
                           <arg value="${quicheRepository}" />
                           <arg value="${quicheSourceDir}" />
                         </exec>
