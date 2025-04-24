@@ -756,6 +756,9 @@
                     <copy todir="${boringsslHomeIncludeDir}" verbose="true">
                       <fileset dir="${boringsslSourceDir}/include" />
                     </copy>
+
+                    <!-- Delete boringssl source directory after build to free up space -->
+                    <delete dir="${boringsslSourceDir}"/>
                   </else>
                 </if>
               </target>
@@ -876,6 +879,9 @@
                     <copy todir="${quicheHomeIncludeDir}">
                       <fileset dir="${quicheSourceDir}/quiche/include" />
                     </copy>
+
+                    <!-- Delete quiche source directory after build to free up space -->
+                    <delete dir="${quicheSourceDir}"/>
                   </else>
                 </if>
               </target>
