@@ -43,9 +43,12 @@
 #define NETTY_JNI_UTIL_BUILD_STATIC
 #endif
 
-#define STATICALLY_CLASSNAME "io/netty/codec/quic/QuicheNativeStaticallyReferencedJniMethods"
-#define QUICHE_CLASSNAME "io/netty/codec/quic/Quiche"
-#define LIBRARYNAME "netty_quiche"
+#define STATICALLY_CLASSNAME "io/netty/handler/codec/quic/QuicheNativeStaticallyReferencedJniMethods"
+#define QUICHE_CLASSNAME "io/netty/handler/codec/quic/Quiche"
+
+// This needs to be kept in sync with what is defined in Quiche.java
+// and pom.xml as jniLibPrefix.
+#define LIBRARYNAME "netty_quiche42"
 
 static jweak    quiche_logger_class_weak = NULL;
 static jmethodID quiche_logger_class_log = NULL;
@@ -1257,7 +1260,7 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     memcpy(dynamicMethods, fixed_method_table, sizeof(fixed_method_table));
 
     JNINativeMethod* dynamicMethod = &dynamicMethods[fixed_method_table_size];
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/QuicheLogger;)V", dynamicTypeName, error);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/handler/codec/quic/QuicheLogger;)V", dynamicTypeName, error);
     NETTY_JNI_UTIL_PREPEND("(L", dynamicTypeName,  dynamicMethod->signature, error);
     netty_jni_util_free_dynamic_name(&dynamicTypeName);
     dynamicMethod->name = "quiche_enable_debug_logging";
@@ -1334,7 +1337,7 @@ static jint netty_quiche_JNI_OnLoad(JNIEnv* env, char const* packagePrefix) {
 
     NETTY_JNI_UTIL_LOAD_CLASS(env, object_class, "java/lang/Object", done);
 
-    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/codec/quic/QuicheLogger", name, done);
+    NETTY_JNI_UTIL_PREPEND(packagePrefix, "io/netty/handler/codec/quic/QuicheLogger", name, done);
     NETTY_JNI_UTIL_LOAD_CLASS_WEAK(env, quiche_logger_class_weak, name, done);
     NETTY_JNI_UTIL_NEW_LOCAL_FROM_WEAK(env, quiche_logger_class, quiche_logger_class_weak, done);
     NETTY_JNI_UTIL_GET_METHOD(env, quiche_logger_class, quiche_logger_class_log, "log", "(Ljava/lang/String;)V", done);

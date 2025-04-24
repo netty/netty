@@ -142,12 +142,6 @@
         <dependency>
           <groupId>io.netty</groupId>
           <artifactId>netty-codec-native-quic</artifactId>
-          <classifier>linux-riscv64</classifier>
-          <scope>runtime</scope>
-        </dependency>
-        <dependency>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-codec-native-quic</artifactId>
           <classifier>osx-x86_64</classifier>
           <scope>runtime</scope>
         </dependency>
@@ -217,12 +211,6 @@
           <groupId>io.netty</groupId>
           <artifactId>netty-codec-native-quic</artifactId>
           <classifier>linux-aarch_64</classifier>
-          <scope>runtime</scope>
-        </dependency>
-        <dependency>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-codec-native-quic</artifactId>
-          <classifier>linux-riscv64</classifier>
           <scope>runtime</scope>
         </dependency>
       </dependencies>

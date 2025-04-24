@@ -21,9 +21,9 @@
         </encoder>
     </appender>
 
-    <appender name="TEST" class="io.netty.codec.quic.TestLogBackAppender"/>
+    <appender name="TEST" class="io.netty.handler.codec.quic.TestLogBackAppender"/>
 
-    <logger name="io.netty.codec.quic.BoringSSLLoggingKeylog" level="debug" additivity="false">
+    <logger name="io.netty.handler.codec.quic.BoringSSLLoggingKeylog" level="debug" additivity="false">
         <appender-ref ref="TEST" />
     </logger>
 

@@ -32,6 +32,7 @@
     <revapi.skip>true</revapi.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
     <javaModuleName>io.netty.testsuite_jpms</javaModuleName>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>

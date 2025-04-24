@@ -30,6 +30,7 @@
 
   <properties>
     <javaModuleName>io.netty.codec.unused</javaModuleName>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
 
   <dependencies>
