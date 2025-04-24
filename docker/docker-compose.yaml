@@ -22,8 +22,6 @@ services:
       - ~/.m2:/root/.m2
       - ..:/code
     working_dir: /code
-    storage_opt:
-      size: '6g'
     security_opt:
       - seccomp:unconfined
 
