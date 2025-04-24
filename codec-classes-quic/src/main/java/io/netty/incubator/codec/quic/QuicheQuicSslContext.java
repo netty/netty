@@ -105,11 +105,12 @@ final class QuicheQuicSslContext extends QuicSslContext {
                     Set<String> unsupportedNamedGroups = new LinkedHashSet<>();
                     for (String namedGroup : nGroups) {
                         String converted = GroupsConverter.toBoringSSL(namedGroup);
+                        // Will return 0 on failure.
                         if (BoringSSL.SSLContext_set1_groups_list(sslCtx, converted) == 0) {
+                            unsupportedNamedGroups.add(namedGroup);
+                        } else {
                             supportedConvertedNamedGroups.add(converted);
                             supportedNamedGroups.add(namedGroup);
-                        } else {
-                            unsupportedNamedGroups.add(namedGroup);
                         }
                     }
 
