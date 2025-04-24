@@ -429,14 +429,20 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     void forceClose(int error) {
+        if (error == Quiche.QUICHE_ERR_DONE) {
+            return;
+        }
         if (!queue.isEmpty()) {
-            if (error != Quiche.QUICHE_ERR_DONE) {
-                if (error == Quiche.QUICHE_ERR_STREAM_STOPPED) {
-                    queue.removeAndFailAll(new ChannelOutputShutdownException("STOP_SENDING frame received"));
-                } else {
-                    queue.removeAndFailAll(Quiche.convertToException(error));
-                }
+            if (error == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+                queue.removeAndFailAll(new ChannelOutputShutdownException("STOP_SENDING frame received"));
+                // If STOP_SENDING is received we should not close the channel but just fail all queued writes.
+                return;
+            } else {
+                queue.removeAndFailAll(Quiche.convertToException(error));
             }
+        } else if (error == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+            // If STOP_SENDING is received we should not close the channel
+            return;
         }
         forceClose();
     }
@@ -696,10 +702,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                             break;
                         } else if (res == Quiche.QUICHE_ERR_STREAM_STOPPED) {
                             // Once its signaled that the stream is stopped we can just fail everything.
-                            // We can also force the close as quiche will generate a RESET_STREAM frame.
+                            // That said we should not close the channel yet as there might be some data that is
+                            // not read yet by the user.
                             queue.removeAndFailAll(
                                     new ChannelOutputShutdownException("STOP_SENDING frame received"));
-                            forceClose();
                             break;
                         } else {
                             queue.remove().setFailure(Quiche.convertToException(res));
