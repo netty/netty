@@ -686,7 +686,7 @@
     <corretto.classifier>${os.detected.name}-${os.detected.arch}</corretto.classifier>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
-    <logging.logLevel>debug</logging.logLevel>
+    <logging.logLevel>info</logging.logLevel>
     <log4j2.version>2.23.1</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.12.1</junit.version>
