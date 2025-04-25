@@ -47,6 +47,10 @@ RUN wget -q https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSI
 RUN wget -q https://storage.googleapis.com/golang/go$GO_VERSION.linux-amd64.tar.gz && tar zxf go$GO_VERSION.linux-amd64.tar.gz && mv go /opt/ && echo 'PATH=/opt/go/bin:$PATH' >> ~/.bashrc && echo 'export GOROOT=/opt/go/' >> ~/.bashrc
 RUN curl -s https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz --output cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
 
+# install rust and setup PATH
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
+
 # Downloading and installing SDKMAN!
 RUN curl -s "https://get.sdkman.io?ci=true" | bash
 
@@ -61,10 +65,6 @@ RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
 
 RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
 RUN echo 'PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
-
-# install rust and setup PATH
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
 
 # Prepare our own build
 ENV PATH=/root/.sdkman/candidates/maven/current:$PATH
