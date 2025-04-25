@@ -152,7 +152,7 @@ jobs:
           haskell: true
           large-packages: true
           docker-images: true
-          swap-storage: true
+          swap-storage: false
 
       - uses: actions/checkout@v4
 
@@ -235,7 +235,7 @@ jobs:
           haskell: true
           large-packages: true
           docker-images: true
-          swap-storage: true
+          swap-storage: false
 
       - uses: actions/checkout@v4
 
