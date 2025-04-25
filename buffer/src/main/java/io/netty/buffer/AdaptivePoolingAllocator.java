@@ -628,7 +628,7 @@ final class AdaptivePoolingAllocator {
                 current = null;
                 if (remainingCapacity >= size) {
                     try {
-                        curr.readInitInto(buf, size, Math.min(remainingCapacity, startingCapacity), maxCapacity);
+                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
                         return true;
                     } finally {
                         curr.release();
@@ -674,7 +674,7 @@ final class AdaptivePoolingAllocator {
                     // At this point we know that this will be the last time curr will be used, so directly set it to
                     // null and release it once we are done.
                     try {
-                        curr.readInitInto(buf, size, Math.min(remainingCapacity, startingCapacity), maxCapacity);
+                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
                         return true;
                     } finally {
                         // Release in a finally block so even if readInitInto(...) would throw we would still correctly
@@ -716,7 +716,7 @@ final class AdaptivePoolingAllocator {
                     curr.readInitInto(buf, size, startingCapacity, maxCapacity);
                     curr = null;
                 } else {
-                    curr.readInitInto(buf, size, Math.min(remainingCapacity, startingCapacity), maxCapacity);
+                    curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
                 }
             } finally {
                 if (curr != null) {
