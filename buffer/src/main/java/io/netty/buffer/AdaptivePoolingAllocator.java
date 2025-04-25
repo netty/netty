@@ -102,10 +102,9 @@ final class AdaptivePoolingAllocator {
     /**
      * The maximum size of a pooled chunk, in bytes. Allocations bigger than this will never be pooled.
      * <p>
-     * This number is 10 MiB, and is derived from the limitations of internal histograms.
+     * This number is 8 MiB, and is derived from the limitations of internal histograms.
      */
-    private static final int MAX_CHUNK_SIZE =
-            BUFS_PER_CHUNK * (1 << AllocationStatistics.HISTO_MAX_BUCKET_SHIFT); // 10 MiB.
+    private static final int MAX_CHUNK_SIZE = 1 << AllocationStatistics.HISTO_MAX_BUCKET_SHIFT; // 8 MiB.
 
     /**
      * The capacity if the central queue that allow chunks to be shared across magazines.
@@ -411,9 +410,9 @@ final class AdaptivePoolingAllocator {
         private static final int MIN_DATUM_TARGET = 1024;
         private static final int MAX_DATUM_TARGET = 65534;
         private static final int INIT_DATUM_TARGET = 9;
-        private static final int HISTO_MIN_BUCKET_SHIFT = 13; // Smallest bucket is 1 << 13 = 8192 bytes in size.
-        private static final int HISTO_MAX_BUCKET_SHIFT = 20; // Biggest bucket is 1 << 20 = 1 MiB bytes in size.
-        private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 8 buckets.
+        private static final int HISTO_MIN_BUCKET_SHIFT = 8; // Smallest bucket is 1 << 8 = 256 bytes in size.
+        private static final int HISTO_MAX_BUCKET_SHIFT = 23; // Biggest bucket is 1 << 23 = 8 MiB bytes in size.
+        private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 16 buckets
         private static final int HISTO_MAX_BUCKET_MASK = HISTO_BUCKET_COUNT - 1;
         private static final int SIZE_MAX_MASK = MAX_CHUNK_SIZE - 1;
 
@@ -449,9 +448,9 @@ final class AdaptivePoolingAllocator {
             if (size == 0) {
                 return 0;
             }
-            // Minimum chunk size is 128 KiB. We'll only make bigger chunks if the 99-percentile is 16 KiB or greater,
-            // so we truncate and roll up the bottom part of the histogram to 8 KiB.
-            // The upper size band is 1 MiB, and that gives us exactly 8 size buckets,
+            // Minimum chunk size is 128 KiB. We'll only make bigger chunks if the 99-percentile is 16 KiB or greater.
+            // We truncate and roll up the bottom part of the histogram to 256 bytes.
+            // The upper size bound is 8 MiB, and that gives us exactly 16 size buckets,
             // which is a magical number for JIT optimisations.
             int normalizedSize = size - 1 >> HISTO_MIN_BUCKET_SHIFT & SIZE_MAX_MASK;
             return Math.min(Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize), HISTO_MAX_BUCKET_MASK);
@@ -773,6 +772,10 @@ final class AdaptivePoolingAllocator {
                 // but without the potentially high overhead that power-of-2 chunk sizes would bring.
                 size = MIN_CHUNK_SIZE * (1 + minChunks);
             }
+
+            // Limit chunks to the max size, even if the histogram suggests to go above it.
+            size = Math.min(size, MAX_CHUNK_SIZE);
+
             ChunkAllocator chunkAllocator = parent.chunkAllocator;
             return new Chunk(chunkAllocator.allocate(size, size), this, true);
         }
