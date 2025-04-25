@@ -216,17 +216,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Cache .m2/repository
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
-        continue-on-error: true
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-${{ matrix.setup }}-
-            ${{ runner.os }}-maven-
-
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
 
