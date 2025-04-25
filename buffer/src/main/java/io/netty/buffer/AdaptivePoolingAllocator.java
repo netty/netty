@@ -1030,6 +1030,11 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
+        public int maxFastWritableBytes() {
+            return maxFastCapacity;
+        }
+
+        @Override
         public ByteBuf capacity(int newCapacity) {
             if (length <= newCapacity && newCapacity <= maxFastCapacity) {
                 ensureAccessible();
