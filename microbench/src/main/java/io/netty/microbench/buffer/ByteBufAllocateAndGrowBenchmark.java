@@ -42,9 +42,7 @@ public class ByteBufAllocateAndGrowBenchmark extends AbstractMicrobenchmark {
 
     private static final int MAX_LIVE_BUFFERS = 8192;
     private static final Random rand = new Random();
-    private static final ByteBuf[] pooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
     private static final ByteBuf[] pooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
-    private static final ByteBuf[] adaptiveHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
     private static final ByteBuf[] adaptiveDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
 
     @Param({
@@ -59,9 +57,7 @@ public class ByteBufAllocateAndGrowBenchmark extends AbstractMicrobenchmark {
     @TearDown
     public void releaseBuffers() {
         List<ByteBuf[]> bufferLists = Arrays.asList(
-                pooledHeapBuffers,
                 pooledDirectBuffers,
-                adaptiveHeapBuffers,
                 adaptiveDirectBuffers);
         for (ByteBuf[] bufs : bufferLists) {
             for (ByteBuf buf : bufs) {
@@ -94,7 +90,7 @@ public class ByteBufAllocateAndGrowBenchmark extends AbstractMicrobenchmark {
         }
         ByteBuf buf = adaptiveAllocator.directBuffer();
         expandBuffer(buf, stats);
-        adaptiveHeapBuffers[idx] = buf;
+        adaptiveDirectBuffers[idx] = buf;
     }
 
     private void expandBuffer(ByteBuf buf, BufStats stats) {
