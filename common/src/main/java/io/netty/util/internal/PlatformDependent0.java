@@ -46,11 +46,11 @@ final class PlatformDependent0 {
     private static final long LONG_ARRAY_BASE_OFFSET;
     private static final long LONG_ARRAY_INDEX_SCALE;
     private static final MethodHandle DIRECT_BUFFER_CONSTRUCTOR;
-    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final MethodHandle ALLOCATE_ARRAY_METHOD;
     private static final MethodHandle ALIGN_SLICE;
-    private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
+    private static final int JAVA_VERSION = javaVersion0();
+    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
 
@@ -1076,7 +1076,7 @@ final class PlatformDependent0 {
     private static int javaVersion0() {
         final int majorVersion;
 
-        if (isAndroid0()) {
+        if (isAndroid()) {
             majorVersion = 6;
         } else {
             majorVersion = majorVersionFromJavaSpecificationVersion();
