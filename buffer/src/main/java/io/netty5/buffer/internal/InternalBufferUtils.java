@@ -26,6 +26,7 @@ import io.netty5.util.AsciiString;
 import io.netty5.util.internal.PlatformDependent;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.foreign.MemorySegment;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
@@ -478,15 +479,7 @@ public interface InternalBufferUtils {
         if (PlatformDependent.hasUnsafe()) {
             return PlatformDependent.directBufferAddress(byteBuffer);
         }
-        if (JniBufferAccess.IS_AVAILABLE) {
-            try {
-                return (long) JniBufferAccess.MEMORY_ADDRESS.invokeExact(byteBuffer);
-            } catch (Throwable e) {
-                throw new LinkageError("JNI bypass native memory address accessor was supposed to be available, " +
-                                       "but threw an exception", e);
-            }
-        }
-        return 0;
+        return MemorySegment.ofBuffer(byteBuffer).address();
     }
 
     /**
