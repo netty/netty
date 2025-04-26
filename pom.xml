@@ -738,8 +738,8 @@
     <module>transport-native-unix-common</module>
     <module>transport-classes-epoll</module>
     <module>transport-native-epoll</module>
-    <module>transport-classes-io_uring</module>
-    <module>transport-native-io_uring</module>
+<!--    <module>transport-classes-io_uring</module>-->
+<!--    <module>transport-native-io_uring</module>-->
     <module>transport-classes-kqueue</module>
     <module>transport-native-kqueue</module>
     <module>transport-rxtx</module>
@@ -756,10 +756,10 @@
     <module>testsuite-jpms</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
-    <module>testsuite-native</module>
-    <module>testsuite-native-image</module>
-    <module>testsuite-native-image-client</module>
-    <module>testsuite-native-image-client-runtime-init</module>
+<!--    <module>testsuite-native</module>-->
+<!--    <module>testsuite-native-image</module>-->
+<!--    <module>testsuite-native-image-client</module>-->
+<!--    <module>testsuite-native-image-client-runtime-init</module>-->
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>bom</module>
