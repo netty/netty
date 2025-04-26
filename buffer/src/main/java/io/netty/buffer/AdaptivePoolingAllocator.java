@@ -1000,7 +1000,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             hasArray = unwrapped.hasArray();
             hasMemoryAddress = unwrapped.hasMemoryAddress();
             rootParent = unwrapped;
-            tmpNioBuf = unwrapped.internalNioBuffer(adjustment, capacity).slice();
+            tmpNioBuf = null;
         }
 
         private AbstractByteBuf rootParent() {
@@ -1030,16 +1030,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             }
 
             // Reallocation required.
-            ByteBuffer data = tmpNioBuf;
-            data.clear();
-            tmpNioBuf = null;
             Chunk chunk = this.chunk;
             AdaptivePoolingAllocator allocator = chunk.allocator;
             int readerIndex = this.readerIndex;
             int writerIndex = this.writerIndex;
+            int baseOldRootIndex = adjustment;
+            int oldCapacity = length;
+            AbstractByteBuf oldRoot = rootParent();
             allocator.allocate(newCapacity, maxCapacity(), this);
-            tmpNioBuf.put(data);
-            tmpNioBuf.clear();
+            oldRoot.getBytes(baseOldRootIndex, this, 0, oldCapacity);
             chunk.release();
             this.readerIndex = readerIndex;
             this.writerIndex = writerIndex;
@@ -1095,6 +1094,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         private ByteBuffer internalNioBuffer() {
+            if (tmpNioBuf == null) {
+                tmpNioBuf = rootParent().internalNioBuffer(adjustment, length).slice();
+            }
             return (ByteBuffer) tmpNioBuf.clear();
         }
 

@@ -150,6 +150,9 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             }).start();
         }
         countDownLatch.await();
-        assertNull(throwableAtomicReference.get());
+        Throwable throwable = throwableAtomicReference.get();
+        if (throwable != null) {
+            fail("Expected no exception, but got", throwable);
+        }
     }
 }
