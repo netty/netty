@@ -659,6 +659,7 @@
                           <arg value="clone" />
                           <arg value="--branch" />
                           <arg value="${boringsslBranch}" />
+                          <arg value="--single-branch" />
                           <arg value="${boringsslRepository}" />
                           <arg value="${boringsslSourceDir}" />
                         </exec>
@@ -731,6 +732,9 @@
                     <copy todir="${boringsslHomeIncludeDir}" verbose="true">
                       <fileset dir="${boringsslSourceDir}/include" />
                     </copy>
+
+                    <!-- Delete boringssl source directory after build to free up space -->
+                    <delete dir="${boringsslSourceDir}"/>
                   </else>
                 </if>
               </target>
@@ -765,9 +769,9 @@
 
                         <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
                           <arg value="clone" />
-                          <arg value="--recursive" />
                           <arg value="--branch" />
                           <arg value="${quicheBranch}" />
+                          <arg value="--single-branch" />
                           <arg value="${quicheRepository}" />
                           <arg value="${quicheSourceDir}" />
                         </exec>
@@ -851,6 +855,9 @@
                     <copy todir="${quicheHomeIncludeDir}">
                       <fileset dir="${quicheSourceDir}/quiche/include" />
                     </copy>
+
+                    <!-- Delete quiche source directory after build to free up space -->
+                    <delete dir="${quicheSourceDir}"/>
                   </else>
                 </if>
               </target>
