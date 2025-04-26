@@ -40,7 +40,7 @@ public class ByteBufAllocateAndGrowBenchmark extends AbstractMicrobenchmark {
     private static final ByteBufAllocator pooledAllocator = PooledByteBufAllocator.DEFAULT;
     private static final ByteBufAllocator adaptiveAllocator = new AdaptiveByteBufAllocator();
 
-    private static final int MAX_LIVE_BUFFERS = 8192;
+    private static final int MAX_LIVE_BUFFERS = 2048;
     private static final Random rand = new Random();
     private static final ByteBuf[] pooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
     private static final ByteBuf[] adaptiveDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
