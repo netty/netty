@@ -195,20 +195,29 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
     @Override
     protected final void doRegister(ChannelPromise promise) {
-        super.doRegister(promise);
-        promise.addListener(f -> {
+        ChannelPromise registerPromise = this.newPromise();
+        // Ensure that the buffer group is properly set before channel::read
+        registerPromise.addListener(f -> {
             if (f.isSuccess()) {
-                short bgid = ((IoUringStreamChannelConfig) config()).getBufferGroupId();
-                if (bgid >= 0) {
-                    final IoUringIoHandler ioUringIoHandler = registration().attachment();
-                    bufferRing = ioUringIoHandler.findBufferRing(bgid);
-                }
-                if (active) {
-                    // Register for POLLRDHUP if this channel is already considered active.
-                    schedulePollRdHup();
-                }
+               try {
+                   short bgid = ((IoUringStreamChannelConfig) config()).getBufferGroupId();
+                   if (bgid >= 0) {
+                       final IoUringIoHandler ioUringIoHandler = registration().attachment();
+                       bufferRing = ioUringIoHandler.findBufferRing(bgid);
+                   }
+                   if (active) {
+                       // Register for POLLRDHUP if this channel is already considered active.
+                       schedulePollRdHup();
+                   }
+               } finally {
+                   promise.setSuccess();
+               }
+            } else {
+                promise.setFailure(f.cause());
             }
         });
+
+        super.doRegister(registerPromise);
     }
 
     @Override
@@ -225,15 +234,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     private final class IoUringStreamUnsafe extends AbstractUringUnsafe {
 
         private ByteBuf readBuffer;
-        private IovArray iovArray;
 
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
-            assert iovArray == null;
             assert writeId == 0;
             int numElements = Math.min(in.size(), Limits.IOV_MAX);
-            ByteBuf iovArrayBuffer = alloc().directBuffer(numElements * IovArray.IOV_SIZE);
-            iovArray = new IovArray(iovArrayBuffer);
+            IoUringIoHandler handler = registration().attachment();
+            IovArray iovArray = handler.iovArray();
             try {
                 int offset = iovArray.count();
                 in.forEachFlushedMessage(iovArray);
@@ -246,14 +253,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 writeId = registration.submit(ops);
                 writeOpCode = opCode;
                 if (writeId == 0) {
-                    iovArray.release();
-                    iovArray = null;
                     return 0;
                 }
             } catch (Exception e) {
-                iovArray.release();
-                iovArray = null;
-
                 // This should never happen, anyway fallback to single write.
                 scheduleWriteSingle(in.current());
             }
@@ -262,7 +264,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         protected int scheduleWriteSingle(Object msg) {
-            assert iovArray == null;
             assert writeId == 0;
 
             int fd = fd().intValue();
@@ -593,11 +594,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 return true;
             }
 
-            IovArray iovArray = this.iovArray;
-            if (iovArray != null) {
-                this.iovArray = null;
-                iovArray.release();
-            }
             if (res >= 0) {
                 channelOutboundBuffer.removeBytes(res);
             } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {

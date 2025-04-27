@@ -370,6 +370,47 @@
         <version>${project.version}</version>
         <classifier>osx-aarch_64</classifier>
       </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-classes-quic</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+        <classifier>linux-x86_64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+        <classifier>linux-aarch_64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+        <classifier>osx-x86_64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+        <classifier>osx-aarch_64</classifier>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+        <classifier>windows-x86_64</classifier>
+      </dependency>
+
       <!-- Add netty-tcnative* as well as users need to ensure they use the correct version -->
       <dependency>
         <groupId>io.netty</groupId>

@@ -78,7 +78,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.2.0</version>
+            <version>3.11.2</version>
             <executions>
               <execution>
                 <id>aggregate</id>
@@ -88,6 +88,7 @@
               </execution>
             </executions>
             <configuration>
+              <legacyMode>true</legacyMode>
               <skippedModules>
                 netty-all,netty-bom,netty-testsuite,netty-testsuite-autobahn,netty-testsuite-http2,
                 netty-testsuite-native,netty-testsuite-native-image,netty-testsuite-native-image-client,
@@ -112,6 +113,8 @@
               <doctitle>Netty API Reference (${project.version})</doctitle>
               <windowtitle>Netty API Reference (${project.version})</windowtitle>
               <detectJavaApiLink>false</detectJavaApiLink>
+              <release>${javadoc.release}</release>
+              <source>${javadoc.source}</source>
               <links>
                 <link>https://docs.oracle.com/javase/8/docs/api/</link>
                 <link>https://developers.google.com/protocol-buffers/docs/reference/java/</link>
@@ -640,6 +643,8 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <maven.compiler.release />
+    <javadoc.release>9</javadoc.release>
+    <javadoc.source>9</javadoc.source>
     <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -860,6 +865,38 @@
       <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcprov-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
+        <scope>compile</scope>
+        <optional>true</optional>
+      </dependency>
+
+      <!--
+        Completely optional integration of netty-handler with Bouncy Castle.
+
+        In particular, BouncyCastleAlpnSslUtils is using
+        org.bouncycastle.jsse.{BCApplicationProtocolSelector,BCSSLEngine}
+        via reflection, loading them via Class.forName(String).
+
+        This method of use leads to zero bytecode-level traces of this
+        dependency and works for plain Java without any further reference to
+        bctls.
+
+        maven-bundle-plugin recognizes the invocation of Class.forName() parses
+        its argument to recognize the call requires the org.bouncycastle.jsse
+        to succeed. It generates an Import-Package stanza for it, resulting in
+        a bundle which does not resolve without bctls.
+
+        This declaration, along with its corresponding dependency declaration
+        in netty-handler, provides the additional information about our use.
+        Its presence allows maven-bundle-plugin to observe
+        'org.bouncycastle.jsse' to live in an optional dependency, which is
+        enough for it to also add ';resolution=optional' and thus netty-handler
+        will resolve successfully even when bctls is not present, matching our
+        intent.
+      -->
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bctls-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
         <scope>compile</scope>
         <optional>true</optional>
@@ -1497,7 +1534,20 @@
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <version>5.1.8</version>
+        <configuration>
+          <!-- Common for all executions -->
+          <supportedProjectTypes>
+            <supportedProjectType>jar</supportedProjectType>
+            <supportedProjectType>bundle</supportedProjectType>
+          </supportedProjectTypes>
+          <instructions>
+            <Export-Package>${project.groupId}.*</Export-Package>
+            <!-- override "internal" private package convention -->
+            <Private-Package>!*</Private-Package>
+          </instructions>
+        </configuration>
         <executions>
+          <!-- Default execution. Note that transport-native-* have additional executions. -->
           <execution>
             <id>generate-manifest</id>
             <phase>process-classes</phase>
@@ -1505,16 +1555,9 @@
               <goal>manifest</goal>
             </goals>
             <configuration>
-              <supportedProjectTypes>
-                <supportedProjectType>jar</supportedProjectType>
-                <supportedProjectType>bundle</supportedProjectType>
-              </supportedProjectTypes>
               <instructions>
-                <Export-Package>${project.groupId}.*</Export-Package>
                 <!-- enforce JVM vendor package as optional -->
                 <Import-Package>sun.net.dns.*;resolution:=optional,sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.bouncycastle.jcajce.provider;version="[1.0,2)";resolution:=optional,*</Import-Package>
-                <!-- override "internal" private package convention -->
-                <Private-Package>!*</Private-Package>
               </instructions>
             </configuration>
           </execution>
@@ -1573,13 +1616,17 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.10.4</version>
+        <version>3.11.2</version>
         <configuration>
           <detectOfflineLinks>false</detectOfflineLinks>
           <breakiterator>true</breakiterator>
           <version>false</version>
           <author>false</author>
           <keywords>true</keywords>
+          <release>${javadoc.release}</release>
+          <source>${javadoc.source}</source>
+          <failOnError>false</failOnError>
+          <failOnWarnings>false</failOnWarnings>
         </configuration>
       </plugin>
       <plugin>
@@ -1818,7 +1865,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-jxr-plugin</artifactId>
-          <version>3.1.1</version>
+          <version>3.6.0</version>
         </plugin>
         <plugin>
           <artifactId>maven-antrun-plugin</artifactId>

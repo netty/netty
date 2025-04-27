@@ -29,6 +29,9 @@
 
   <name>Netty/Dev-Tools</name>
 
+  <properties>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+  </properties>
   <build>
     <plugins>
       <plugin>

@@ -128,6 +128,15 @@ public final class IovArray implements MessageProcessor {
         }
     }
 
+    /**
+     * Return {@code true} if there is no more space left in the {@link IovArray}.
+     *
+     * @return full or not.
+     */
+    public boolean isFull() {
+        return memory.capacity() < (count + 1) * IOV_SIZE || size >= maxBytes;
+    }
+
     private boolean add(long memoryAddress, long addr, int len) {
         assert addr != 0;
 

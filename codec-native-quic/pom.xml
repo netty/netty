@@ -30,7 +30,7 @@
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
     <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
-    <javaModuleName>io.netty.codec.quic</javaModuleName>
+    <javaModuleName>io.netty.handler.codec.quic</javaModuleName>
     <fragmentHost>io.netty.netty-codec-classes-quic</fragmentHost>
     <logging.config>${project.basedir}/../codec-native-quic/src/test/resources/logback-test.xml</logging.config>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
@@ -38,7 +38,8 @@
     <skipTests>false</skipTests>
     <packaging.type>jar</packaging.type>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
-    <jniLibName>netty_quiche_${os.detected.name}_${os.detected.arch}</jniLibName>
+    <jniLibPrefix>netty_quiche42</jniLibPrefix>
+    <jniLibName>${jniLibPrefix}_${os.detected.name}_${os.detected.arch}</jniLibName>
     <jniUtilIncludeDir>${project.build.directory}/netty-jni-util/</jniUtilIncludeDir>
     <boringsslSourceDir>${project.build.directory}/boringssl-source</boringsslSourceDir>
     <boringsslBuildDir>${boringsslSourceDir}/build-target</boringsslBuildDir>
@@ -79,6 +80,12 @@
   </properties>
 
   <profiles>
+    <profile>
+      <id>oss-fuzz</id>
+      <properties>
+        <cflags>-std=c99 ${env.CFLAGS} -I${quicheHomeIncludeDir} -I${boringsslHomeIncludeDir}</cflags>
+      </properties>
+    </profile>
     <profile>
       <id>windows</id>
       <activation>
@@ -131,7 +138,7 @@
     <profile>
       <id>mac-m1-cross-compile</id>
       <properties>
-        <jniLibName>netty_quiche_osx_aarch_64</jniLibName>
+        <jniLibName>${jniLibPrefix}_osx_aarch_64</jniLibName>
         <jni.classifier>osx-aarch_64</jni.classifier>
         <javaModuleNameClassifier>osx.aarch_64</javaModuleNameClassifier>
         <macosxDeploymentTarget>11.0</macosxDeploymentTarget>
@@ -161,7 +168,7 @@
     <profile>
       <id>mac-intel-cross-compile</id>
       <properties>
-        <jniLibName>netty_quiche_osx_x86_64</jniLibName>
+        <jniLibName>${jniLibPrefix}_osx_x86_64</jniLibName>
         <jni.classifier>osx-x86_64</jni.classifier>
         <javaModuleNameClassifier>osx.x86_64</javaModuleNameClassifier>
         <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
@@ -480,7 +487,7 @@
         <libquiche>libquiche.a</libquiche>
         <extraLdflags>-static-libstdc++ -l:libstdc++.a -Wl,--strip-debug -Wl,--exclude-libs,ALL</extraLdflags>
         <bundleNativeCode>META-INF/native/lib${jniLibName}.so;osname=linux;processor=aarch64</bundleNativeCode>
-        <jniLibName>netty_quiche_linux_aarch_64</jniLibName>
+        <jniLibName>${jniLibPrefix}_linux_aarch_64</jniLibName>
         <jni.classifier>linux-aarch_64</jni.classifier>
         <javaModuleNameClassifier>linux.aarch_64</javaModuleNameClassifier>
         <extraConfigureArg>--host=aarch64-linux-gnu</extraConfigureArg>
@@ -532,7 +539,7 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
               <excludes>
-                <exclude>io.netty.codec.quic.QuicChannelEchoTest</exclude>
+                <exclude>io.netty.handler.codec.quic.QuicChannelEchoTest</exclude>
               </excludes>
             </configuration>
           </plugin>
@@ -677,6 +684,7 @@
                           <arg value="clone" />
                           <arg value="--branch" />
                           <arg value="${boringsslBranch}" />
+                          <arg value="--single-branch"/>
                           <arg value="${boringsslRepository}" />
                           <arg value="${boringsslSourceDir}" />
                         </exec>
@@ -749,6 +757,9 @@
                     <copy todir="${boringsslHomeIncludeDir}" verbose="true">
                       <fileset dir="${boringsslSourceDir}/include" />
                     </copy>
+
+                    <!-- Delete boringssl source directory after build to free up space -->
+                    <delete dir="${boringsslSourceDir}"/>
                   </else>
                 </if>
               </target>
@@ -783,9 +794,9 @@
 
                         <exec executable="git" failonerror="true" dir="${project.build.directory}" resolveexecutable="true">
                           <arg value="clone" />
-                          <arg value="--recursive" />
                           <arg value="--branch" />
                           <arg value="${quicheBranch}" />
+                          <arg value="--single-branch"/>
                           <arg value="${quicheRepository}" />
                           <arg value="${quicheSourceDir}" />
                         </exec>
@@ -869,6 +880,9 @@
                     <copy todir="${quicheHomeIncludeDir}">
                       <fileset dir="${quicheSourceDir}/quiche/include" />
                     </copy>
+
+                    <!-- Delete quiche source directory after build to free up space -->
+                    <delete dir="${quicheSourceDir}"/>
                   </else>
                 </if>
               </target>
