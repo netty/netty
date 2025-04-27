@@ -144,14 +144,19 @@ jobs:
           # Install dependencies
           install: |
             apt-get update -q -y
-            apt-get install -q -y openjdk-22-jdk autoconf automake libtool make tar maven git
+            apt-get install -q -y autoconf automake libtool make tar maven git gnupg ca-certificates curl
+
+            curl -s https://repos.azul.com/azul-repo.key | sudo gpg --dearmor -o /usr/share/keyrings/azul.gpg
+            echo "deb [signed-by=/usr/share/keyrings/azul.gpg] https://repos.azul.com/zulu/deb stable main" | sudo tee /etc/apt/sources.list.d/zulu.list
+            apt-get update -q -y
+            apt-get install -q -y zulu22-jdk
 
           # Compile native code and the modules it depend on and run NativeLoadingTest. This is enough to ensure
           # we can load the native module on aarch64
           #
           # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |
-            JAVA_HOME=/usr/lib/jvm/java-22-openjdk-arm64 ./mvnw -B -ntp -pl testsuite-native -am clean package -Pboringssl -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
+            JAVA_HOME=/usr/lib/jvm/zulu22 ./mvnw -B -ntp -pl testsuite-native -am clean package -Pboringssl -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
     runs-on: ubuntu-latest
