@@ -22,6 +22,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
 import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
 import static io.netty.handler.codec.http.HttpHeaderValues.SNAPPY;
 import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.Brotli;
@@ -84,7 +85,7 @@ public class HttpContentDecompressor extends HttpContentDecoder {
      */
     public HttpContentDecompressor(boolean strict, int maxAllocation) {
         this.strict = strict;
-        this.maxAllocation = maxAllocation;
+        this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
     }
 
     @Override

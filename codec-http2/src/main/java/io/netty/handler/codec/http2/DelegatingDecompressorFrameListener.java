@@ -54,28 +54,66 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
     private final Http2Connection.PropertyKey propertyKey;
     private final int maxAllocation;
 
+    /**
+     * Create a new instance.
+     *
+     * @param connection the connection to read data which should be decompressed
+     * @param listener the delegate listener used by {@link Http2FrameListenerDecorator}
+     * @deprecated
+     *      Use {@link DelegatingDecompressorFrameListener#DelegatingDecompressorFrameListener(Http2Connection,
+     *      Http2FrameListener, int)}
+     */
     @Deprecated
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener) {
         this(connection, listener, 0);
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param connection the connection to read data which should be decompressed
+     * @param listener the delegate listener used by {@link Http2FrameListenerDecorator}
+     * @param maxAllocation maximum size of the decompression buffer. Must be &gt;= 0.
+     *                      If zero, maximum size is not limited by decoder.
+     */
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
                                                int maxAllocation) {
         this(connection, listener, true, maxAllocation);
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param connection the connection to read data which should be decompressed
+     * @param listener the delegate listener used by {@link Http2FrameListenerDecorator}
+     * @param strict if `true`, {@link ZlibWrapper#ZLIB} will be used for the decoder,
+     *               otherwise the decoder can fallback to {@link ZlibWrapper#NONE}
+     * @deprecated
+     *      Use {@link DelegatingDecompressorFrameListener#DelegatingDecompressorFrameListener(Http2Connection,
+     *      Http2FrameListener, boolean, int)}
+     */
     @Deprecated
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
                                                boolean strict) {
         this(connection, listener, strict, 0);
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param connection the connection to read data which should be decompressed
+     * @param listener the delegate listener used by {@link Http2FrameListenerDecorator}
+     * @param strict if `true`, {@link ZlibWrapper#ZLIB} will be used for the decoder,
+     *               otherwise the decoder can fallback to {@link ZlibWrapper#NONE}
+     * @param maxAllocation maximum size of the decompression buffer. Must be &gt;= 0.
+     *                      If zero, maximum size is not limited by decoder.
+     */
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
                     boolean strict, int maxAllocation) {
         super(listener);
         this.connection = connection;
         this.strict = strict;
-        this.maxAllocation = maxAllocation;
+        this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
 
         propertyKey = connection.newKey();
         connection.addListener(new Http2ConnectionAdapter() {

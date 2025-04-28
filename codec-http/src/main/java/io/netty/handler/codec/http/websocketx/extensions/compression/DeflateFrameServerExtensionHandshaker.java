@@ -113,7 +113,7 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
         }
         this.compressionLevel = compressionLevel;
         this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
-        this.maxAllocation = maxAllocation;
+        this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
     }
 
     @Override

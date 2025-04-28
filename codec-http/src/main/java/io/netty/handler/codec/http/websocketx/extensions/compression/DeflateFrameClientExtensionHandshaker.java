@@ -122,7 +122,7 @@ public final class DeflateFrameClientExtensionHandshaker implements WebSocketCli
         this.compressionLevel = compressionLevel;
         this.useWebkitExtensionName = useWebkitExtensionName;
         this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
-        this.maxAllocation = maxAllocation;
+        this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
     }
 
     @Override

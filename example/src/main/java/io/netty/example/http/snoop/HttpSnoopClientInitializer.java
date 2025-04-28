@@ -24,6 +24,8 @@ import io.netty.handler.ssl.SslContext;
 
 public class HttpSnoopClientInitializer extends ChannelInitializer<SocketChannel> {
 
+    private static final int MAX_CONTENT_LENGTH = 65536;
+
     private final SslContext sslCtx;
 
     public HttpSnoopClientInitializer(SslContext sslCtx) {
@@ -42,7 +44,7 @@ public class HttpSnoopClientInitializer extends ChannelInitializer<SocketChannel
         p.addLast(new HttpClientCodec());
 
         // Remove the following line if you don't want automatic content decompression.
-        p.addLast(new HttpContentDecompressor(65536));
+        p.addLast(new HttpContentDecompressor(MAX_CONTENT_LENGTH));
 
         // Uncomment the following line if you don't want to handle HttpContents.
         //p.addLast(new HttpObjectAggregator(1048576));

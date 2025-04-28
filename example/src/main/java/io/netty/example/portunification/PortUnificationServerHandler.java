@@ -40,6 +40,8 @@ import java.util.List;
  */
 public class PortUnificationServerHandler extends ByteToMessageDecoder {
 
+    private static final int MAX_CONTENT_LENGTH = 65536;
+
     private final SslContext sslCtx;
     private final boolean detectSsl;
     private final boolean detectGzip;
@@ -121,7 +123,7 @@ public class PortUnificationServerHandler extends ByteToMessageDecoder {
     private void enableGzip(ChannelHandlerContext ctx) {
         ChannelPipeline p = ctx.pipeline();
         p.addLast("gzipdeflater", ZlibCodecFactory.newZlibEncoder(ZlibWrapper.GZIP));
-        p.addLast("gzipinflater", ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, 65536));
+        p.addLast("gzipinflater", ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, MAX_CONTENT_LENGTH));
         p.addLast("unificationB", new PortUnificationServerHandler(sslCtx, detectSsl, false));
         p.remove(this);
     }

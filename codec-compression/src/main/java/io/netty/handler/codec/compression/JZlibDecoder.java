@@ -34,7 +34,9 @@ public class JZlibDecoder extends ZlibDecoder {
      * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB}).
      *
      * @throws DecompressionException if failed to initialize zlib
+     * @deprecated Use {@link JZlibDecoder#JZlibDecoder(int)}.
      */
+    @Deprecated
     public JZlibDecoder() {
         this(ZlibWrapper.ZLIB, 0);
     }
@@ -57,7 +59,9 @@ public class JZlibDecoder extends ZlibDecoder {
      * Creates a new instance with the specified wrapper.
      *
      * @throws DecompressionException if failed to initialize zlib
+     * @deprecated Use {@link JZlibDecoder#JZlibDecoder(ZlibWrapper, int)}.
      */
+    @Deprecated
     public JZlibDecoder(ZlibWrapper wrapper) {
         this(wrapper, 0);
     }
@@ -88,7 +92,9 @@ public class JZlibDecoder extends ZlibDecoder {
      * supports the preset dictionary.
      *
      * @throws DecompressionException if failed to initialize zlib
+     * @deprecated Use {@link JZlibDecoder#JZlibDecoder(byte[], int)}.
      */
+    @Deprecated
     public JZlibDecoder(byte[] dictionary) {
         this(dictionary, 0);
     }

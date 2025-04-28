@@ -191,7 +191,7 @@ public final class PerMessageDeflateClientExtensionHandshaker implements WebSock
         this.allowClientNoContext = allowClientNoContext;
         this.requestedServerNoContext = requestedServerNoContext;
         this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
-        this.maxAllocation = maxAllocation;
+        this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
     }
 
     @Override
