@@ -64,7 +64,7 @@
 
 #define NATIVE_CLASSNAME "io/netty/channel/uring/Native"
 #define STATICALLY_CLASSNAME "io/netty/channel/uring/NativeStaticallyReferencedJniMethods"
-#define LIBRARYNAME "netty_transport_native_io_uring"
+#define LIBRARYNAME "netty_transport_native_io_uring42"
 
 static jclass longArrayClass = NULL;
 static char* staticPackagePrefix = NULL;
