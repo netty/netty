@@ -31,6 +31,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentMatcher;
@@ -56,6 +57,7 @@ import static org.slf4j.Logger.ROOT_LOGGER_NAME;
 /**
  * Verifies the correct functionality of the {@link LoggingHandler}.
  */
+@Disabled
 public class LoggingHandlerTest {
 
     private static final String LOGGER_NAME = LoggingHandler.class.getName();

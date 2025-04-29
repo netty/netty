@@ -16,7 +16,7 @@
   <logger name="io.netty.handler.pcap" level="INFO"/>
 
   <!-- Enable trace logging for the loading of our native transports. -->
-  <logger name="io.netty.channel.epoll.Epoll" level="trace"/>
-  <logger name="io.netty.channel.kqueue.KQueue" level="trace"/>
-  <logger name="io.netty.channel.uring.IoUring" level="trace"/>
+<!--  <logger name="io.netty.channel.epoll.Epoll" level="trace"/>-->
+<!--  <logger name="io.netty.channel.kqueue.KQueue" level="trace"/>-->
+<!--  <logger name="io.netty.channel.uring.IoUring" level="trace"/>-->
 </configuration>
