@@ -60,7 +60,7 @@
       </activation>
       <properties>
         <!-- Skip tests until we figured out why this kills the GHA runner -->
-        <skipTests>true</skipTests>
+        <skipTests>false</skipTests>
       </properties>
 
       <build>
