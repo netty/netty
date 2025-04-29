@@ -25,3 +25,6 @@ services:
 
   shell:
     image: netty:centos-7-21
+
+  build-iouring:
+    image: netty:centos-7-21

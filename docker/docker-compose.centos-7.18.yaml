@@ -34,3 +34,6 @@ services:
 
   shell:
     image: netty:centos-7-1.8
+
+  build-iouring:
+    image: netty:centos-7-1.8

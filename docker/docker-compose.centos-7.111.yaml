@@ -34,3 +34,6 @@ services:
 
   stage-release:
     image: netty:centos-7-1.11
+
+  build-iouring:
+    image: netty:centos-7-1.11
