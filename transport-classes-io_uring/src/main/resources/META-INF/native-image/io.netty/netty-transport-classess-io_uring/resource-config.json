@@ -5,7 +5,7 @@
         "condition": {
           "typeReachable": "io.netty.channel.uring.Native"
         },
-        "pattern":".*libnetty_transport_native_io_uring_.*\\.so"
+        "pattern":".*libnetty_transport_native_io_uring42_.*\\.so"
       }
     ]},
   "bundles":[]
