@@ -67,8 +67,7 @@ import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SocketSslEchoTest extends AbstractSocketTest {
 
@@ -387,17 +386,14 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         sc.close().awaitUninterruptibly();
         delegatedTaskExecutor.shutdown();
 
-        if (serverException.get() != null && !(serverException.get() instanceof IOException)) {
-            throw serverException.get();
+        Throwable sException = serverException.get();
+        if (sException != null && !(sException instanceof IOException)) {
+            fail("Unexpected exception on the server-side", sException);
         }
-        if (clientException.get() != null && !(clientException.get() instanceof IOException)) {
-            throw clientException.get();
-        }
-        if (serverException.get() != null) {
-            throw serverException.get();
-        }
-        if (clientException.get() != null) {
-            throw clientException.get();
+        Throwable cException = clientException.get();
+
+        if (cException != null && !(cException instanceof IOException)) {
+            fail("Unexpected exception on the client-side", cException);
         }
 
         // When renegotiation is done, at least the initiating side should be notified.
