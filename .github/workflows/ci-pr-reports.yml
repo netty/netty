@@ -41,7 +41,7 @@ jobs:
           - setup: linux-x86_64-java17
           - setup: linux-x86_64-java18
           - setup: linux-x86_64-java21
-          - setup: linux-x86_64-java22
+          - setup: linux-x86_64-java24
           - setup: windows-x86_64-java11-boringssl
           - setup: macos-x86_64-java11-boringssl
           - setup: macos-aarch64-java11-boringssl
