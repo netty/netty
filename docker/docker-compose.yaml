@@ -84,5 +84,5 @@ services:
     <<: *common
     command: '/bin/bash -cl "
       ./mvnw -B -ntp -Pboringssl clean install -Dio.netty.testsuite.badHost=netty.io  -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -DskipTests &&
-      ./mvnw -B -ntp -Pboringssl -pl transport-native-io_uring clean install -Dio.netty.testsuite.badHost=netty.io  -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true &&
+      ./mvnw -B -ntp -Pboringssl -pl transport-native-io_uring clean install -Dio.netty.testsuite.badHost=netty.io  -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true
     "'
