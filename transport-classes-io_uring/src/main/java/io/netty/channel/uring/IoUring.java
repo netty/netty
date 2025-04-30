@@ -107,8 +107,8 @@ public final class IoUring {
                         deferTaskrunSupported = Native.ioUringSetupSupportsFlags(
                                 Native.IORING_SETUP_SINGLE_ISSUER | Native.IORING_SETUP_DEFER_TASKRUN);
                         registerBufferRingSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(), 0);
-                        registerBufferRingIncSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(),
-                                Native.IOU_PBUF_RING_INC);
+                        //registerBufferRingIncSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(),
+                        //        Native.IOU_PBUF_RING_INC);
                     } finally {
                         if (ringBuffer != null) {
                             try {
