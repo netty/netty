@@ -95,7 +95,6 @@ public final class IoUring {
                         recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
                         acceptSupportNoWait = recvsendBundleSupported;
-                        recvsendBundleSupported = false;
                         acceptMultishotSupported = Native.isAcceptMultishotSupported(ringBuffer.fd());
                         recvMultishotSupported = Native.isRecvMultishotSupported();
                         pollAddMultishotSupported = Native.isPollAddMultiShotSupported(ringBuffer.fd());
