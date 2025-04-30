@@ -95,6 +95,10 @@ public final class IoUring {
                         recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
                         acceptSupportNoWait = recvsendBundleSupported;
+                        // Explicit disable recvsend bundles as there seems to be a bug which cause
+                        // and AssertionError which leads to the CI running out of memory.
+                        // We will enable this again once we found the bug and fixed it.
+                        recvsendBundleSupported = false;
                         acceptMultishotSupported = Native.isAcceptMultishotSupported(ringBuffer.fd());
                         recvMultishotSupported = Native.isRecvMultishotSupported();
                         pollAddMultishotSupported = Native.isPollAddMultiShotSupported(ringBuffer.fd());
@@ -107,8 +111,8 @@ public final class IoUring {
                         deferTaskrunSupported = Native.ioUringSetupSupportsFlags(
                                 Native.IORING_SETUP_SINGLE_ISSUER | Native.IORING_SETUP_DEFER_TASKRUN);
                         registerBufferRingSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(), 0);
-                        //registerBufferRingIncSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(),
-                        //        Native.IOU_PBUF_RING_INC);
+                        registerBufferRingIncSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(),
+                                Native.IOU_PBUF_RING_INC);
                     } finally {
                         if (ringBuffer != null) {
                             try {
