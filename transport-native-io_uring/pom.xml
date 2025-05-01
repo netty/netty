@@ -59,8 +59,8 @@
         </os>
       </activation>
       <properties>
-        <!-- Skip tests until we figured out why this kills the GHA runner -->
-        <skipTests>true</skipTests>
+        <!-- Enable testsuite -->
+        <skipTests>false</skipTests>
       </properties>
 
       <build>
