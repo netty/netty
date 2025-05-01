@@ -6,7 +6,7 @@ services:
     image: netty:ubi9
     build:
       args:
-        java_version : "22.0.2-zulu"
+        java_version: "22.0.2-zulu"
       context: .
       dockerfile: Dockerfile.ubi9
 
@@ -16,13 +16,22 @@ services:
   build-leak:
     image: netty:ubi9
 
-  build-boringssl-snapshot:
+  deploy:
+    image: netty:ubi9
+
+  stage-snapshot:
+    image: netty:ubi9
+
+  stage-release:
     image: netty:ubi9
 
   build-unsafe-buffer:
     image: netty:ubi9
 
   build-leak-adaptive:
+    image: netty:ubi9
+
+  build-boringssl-snapshot:
     image: netty:ubi9
 
   shell:
