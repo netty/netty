@@ -567,10 +567,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
             // There were tasks in the queue. Wait a little bit more until no tasks are queued for the quiet period or
             // terminate if the quiet period is 0.
             // See https://github.com/netty/netty/issues/4241
-            if (gracefulShutdownQuietPeriod == 0) {
-                return true;
-            }
-            return false;
+            return gracefulShutdownQuietPeriod == 0;
         }
 
         final long nanoTime = ticker.nanoTime();

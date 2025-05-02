@@ -25,6 +25,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -399,20 +400,12 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
             return false;
         }
 
-        if (this instanceof DnsQuery) {
-            if (!(that instanceof DnsQuery)) {
-                return false;
-            }
-        } else if (that instanceof DnsQuery) {
-            return false;
-        }
-
-        return true;
+      return (this instanceof DnsQuery) == (that instanceof DnsQuery);
     }
 
     @Override
     public int hashCode() {
-        return id() * 31 + (this instanceof DnsQuery? 0 : 1);
+        return Objects.hash(id(), this instanceof DnsQuery);
     }
 
     private Object sectionAt(int section) {
@@ -467,6 +460,6 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
     }
 
     private static ArrayList<DnsRecord> newRecordList() {
-        return new ArrayList<DnsRecord>(2);
+        return new ArrayList<>(2);
     }
 }

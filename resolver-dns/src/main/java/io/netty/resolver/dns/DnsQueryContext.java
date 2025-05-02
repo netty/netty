@@ -43,6 +43,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
@@ -548,14 +549,7 @@ abstract class DnsQueryContext {
 
         @Override
         public int hashCode() {
-            int hashCode = response.hashCode();
-            if (sender() != null) {
-                hashCode = hashCode * 31 + sender().hashCode();
-            }
-            if (recipient() != null) {
-                hashCode = hashCode * 31 + recipient().hashCode();
-            }
-            return hashCode;
+            return Objects.hash(response, sender(), recipient());
         }
     }
 }

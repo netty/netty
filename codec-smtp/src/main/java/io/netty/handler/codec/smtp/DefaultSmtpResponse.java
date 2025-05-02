@@ -19,6 +19,7 @@ import io.netty.util.internal.UnstableApi;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Default {@link SmtpResponse} implementation.
@@ -67,7 +68,7 @@ public final class DefaultSmtpResponse implements SmtpResponse {
 
     @Override
     public int hashCode() {
-        return code * 31 + details.hashCode();
+        return Objects.hash(code, details);
     }
 
     @Override

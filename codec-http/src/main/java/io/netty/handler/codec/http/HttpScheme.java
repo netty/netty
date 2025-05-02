@@ -17,6 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.AsciiString;
 
+import java.util.Objects;
+
 /**
  * Defines the common schemes used for the HTTP protocol as defined by
  * <a href="https://tools.ietf.org/html/rfc7230">rfc7230</a>.
@@ -60,7 +62,7 @@ public final class HttpScheme {
 
     @Override
     public int hashCode() {
-        return port * 31 + name.hashCode();
+        return Objects.hash(port, name);
     }
 
     @Override

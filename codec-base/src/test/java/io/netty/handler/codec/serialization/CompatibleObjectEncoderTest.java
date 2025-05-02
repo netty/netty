@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -42,6 +43,7 @@ public class CompatibleObjectEncoderTest {
         channel.writeOutbound(original);
         Object o = channel.readOutbound();
         ByteBuf buf = (ByteBuf) o;
+
         try (ObjectInputStream ois = new ObjectInputStream(new ByteBufInputStream(buf))) {
             assertEquals(original, ois.readObject());
         } finally {
@@ -71,7 +73,7 @@ public class CompatibleObjectEncoderTest {
 
         @Override
         public int hashCode() {
-            return 31 * (31 + x) + y;
+            return Objects.hash(x, y);
         }
     }
 }

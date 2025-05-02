@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.xml;
 
+import java.util.Objects;
+
 /**
  * XML namespace is part of XML element.
  */
@@ -46,22 +48,13 @@ public class XmlNamespace {
         }
 
         XmlNamespace that = (XmlNamespace) o;
-
-        if (prefix != null ? !prefix.equals(that.prefix) : that.prefix != null) {
-            return false;
-        }
-        if (uri != null ? !uri.equals(that.uri) : that.uri != null) {
-            return false;
-        }
-
-        return true;
+        return Objects.equals(prefix, that.prefix) &&
+                Objects.equals(uri, that.uri);
     }
 
     @Override
     public int hashCode() {
-        int result = prefix != null ? prefix.hashCode() : 0;
-        result = 31 * result + (uri != null ? uri.hashCode() : 0);
-        return result;
+        return Objects.hash(prefix, uri);
     }
 
     @Override

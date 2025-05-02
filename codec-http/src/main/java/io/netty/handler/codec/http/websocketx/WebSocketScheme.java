@@ -17,6 +17,8 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.util.AsciiString;
 
+import java.util.Objects;
+
 /**
  * Defines the common schemes used for the WebSocket protocol as defined by
  * <a href="https://tools.ietf.org/html/rfc6455">rfc6455</a>.
@@ -59,7 +61,7 @@ public final class WebSocketScheme {
 
     @Override
     public int hashCode() {
-        return port * 31 + name.hashCode();
+        return Objects.hash(port, name);
     }
 
     @Override

@@ -20,6 +20,8 @@ import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
 
+import java.util.Objects;
+
 public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder implements Http2UnknownFrame {
     private final byte frameType;
     private final Http2Flags flags;
@@ -118,7 +120,7 @@ public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder impleme
         }
         DefaultHttp2UnknownFrame other = (DefaultHttp2UnknownFrame) o;
         Http2FrameStream otherStream = other.stream();
-        return (stream == otherStream || otherStream != null && otherStream.equals(stream))
+        return Objects.equals(otherStream, stream)
                && flags.equals(other.flags())
                && frameType == other.frameType()
                && super.equals(other);
@@ -126,13 +128,6 @@ public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder impleme
 
     @Override
     public int hashCode() {
-        int hash = super.hashCode();
-        hash = hash * 31 + frameType;
-        hash = hash * 31 + flags.hashCode();
-        if (stream != null) {
-            hash = hash * 31 + stream.hashCode();
-        }
-
-        return hash;
+        return Objects.hash(super.hashCode(), frameType, flags, stream);
     }
 }
