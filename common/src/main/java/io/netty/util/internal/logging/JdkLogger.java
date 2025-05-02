@@ -51,7 +51,7 @@ class JdkLogger extends AbstractInternalLogger {
 
     private static final long serialVersionUID = -1767272577989225979L;
 
-    final transient Logger logger;
+    private final transient Logger logger;
 
     JdkLogger(Logger logger) {
         super(logger.getName());
