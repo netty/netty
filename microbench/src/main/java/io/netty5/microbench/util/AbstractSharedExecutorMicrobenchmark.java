@@ -63,7 +63,8 @@ public class AbstractSharedExecutorMicrobenchmark extends AbstractMicrobenchmark
      */
     public static final class DelegateHarnessExecutor extends AbstractEventExecutor {
         private static EventLoop executor;
-        private final Logger logger = LoggerFactory.getLogger(DelegateHarnessExecutor.class);
+        private static final Logger logger = LoggerFactory.getLogger(DelegateHarnessExecutor.class);
+
 
         public DelegateHarnessExecutor(int maxThreads, String prefix) {
             logger.debug("Using DelegateHarnessExecutor executor {}", this);
