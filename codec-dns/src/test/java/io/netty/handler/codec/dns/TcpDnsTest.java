@@ -61,6 +61,9 @@ public class TcpDnsTest {
         assertTrue(decoder.writeInbound(encoded));
         final DnsQuery decoded = decoder.readInbound();
         assertThat(decoded, is(query));
+
+        ReferenceCountUtil.release(decoded);
+
         // Make sure the ByteBuf is released by TcpDnsQueryDecoder
         assertTrue(encoded.refCnt() == 0);
 
