@@ -113,7 +113,7 @@ final class IoUringBufferRing {
         }
         short oldTail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
         short ringIndex = (short) (oldTail & mask);
-        assert buffers[ringIndex] == null;
+        assert buffers[ringIndex] == null : "buffers[" + ringIndex +"] == " + buffers[ringIndex];
         final ByteBuf byteBuf;
         try {
             byteBuf = allocator.allocate();
@@ -131,7 +131,7 @@ final class IoUringBufferRing {
         //  see:
         //  https://github.com/axboe/liburing/
         //      blob/19134a8fffd406b22595a5813a3e319c19630ac9/src/include/liburing.h#L1561
-        int  position = Native.SIZEOF_IOURING_BUF * ringIndex;
+        int position = Native.SIZEOF_IOURING_BUF * ringIndex;
         ioUringBufRing.putLong(position + Native.IOURING_BUFFER_OFFSETOF_ADDR,
                 IoUring.memoryAddress(byteBuf) + byteBuf.readerIndex());
         ioUringBufRing.putInt(position + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.capacity());
