@@ -107,7 +107,7 @@ final class IoUringBufferRing {
         return exhaustedEvent;
     }
 
-    void fillBuffer() {
+    private void fillBuffer() {
         if (corrupted || closed) {
             return;
         }
@@ -178,6 +178,7 @@ final class IoUringBufferRing {
         // The buffer is considered to be used, null out the slot.
         buffers[bid] = null;
         numBuffers--;
+        fillBuffer();
         byteBuf.markUsed();
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
