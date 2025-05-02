@@ -18,9 +18,10 @@ package io.netty.handler.codec.http;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 public class DefaultHttpObject implements HttpObject {
 
-    private static final int HASH_CODE_PRIME = 31;
     private DecoderResult decoderResult = DecoderResult.SUCCESS;
 
     protected DefaultHttpObject() {
@@ -45,9 +46,7 @@ public class DefaultHttpObject implements HttpObject {
 
     @Override
     public int hashCode() {
-        int result = 1;
-        result = HASH_CODE_PRIME * result + decoderResult.hashCode();
-        return result;
+        return Objects.hash(decoderResult);
     }
 
     @Override
