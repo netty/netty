@@ -113,7 +113,7 @@ final class IoUringBufferRing {
         }
         short oldTail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
         short ringIndex = (short) (oldTail & mask);
-        assert buffers[ringIndex] == null : "buffers[" + ringIndex +"] == " + buffers[ringIndex];
+        assert buffers[ringIndex] == null : "buffers[" + ringIndex + "] == " + buffers[ringIndex];
         final ByteBuf byteBuf;
         try {
             byteBuf = allocator.allocate();
