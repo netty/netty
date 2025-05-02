@@ -74,7 +74,9 @@ final class IoUringBufferRing {
     }
 
     void initialize() {
-        fillBuffers();
+        for (int i = 0; i < entries; i++) {
+            fillBuffer();
+        }
         usable = true;
     }
 
@@ -93,10 +95,10 @@ final class IoUringBufferRing {
     }
 
     private void fillBuffers() {
-        int num = Math.min(batchSize, entries - numBuffers);
+        /*int num = Math.min(batchSize, entries - numBuffers);
         for (short i = 0; i < num; i++) {
             fillBuffer();
-        }
+        }*/
     }
 
     /**
